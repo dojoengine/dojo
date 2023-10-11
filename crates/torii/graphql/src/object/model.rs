@@ -1,48 +1,17 @@
-use async_graphql::dynamic::{
-    Field, FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
-};
+use async_graphql::dynamic::{InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef};
 use async_graphql::{Name, Value};
-use dojo_types::primitive::Primitive;
 use indexmap::IndexMap;
-use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 
-use super::connection::connection_output;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count};
-use crate::types::{GraphqlType, TypeData};
+use crate::mapping::MODEL_TYPE_MAPPING;
+use crate::query::constants::MODEL_TABLE;
 
-pub struct ModelObject {
-    pub type_mapping: TypeMapping,
-}
+pub struct ModelObject;
 
-impl Default for ModelObject {
-    // Eventually used for model metadata
-    fn default() -> Self {
-        Self {
-            type_mapping: IndexMap::from([
-                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-                (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-                (
-                    Name::new("classHash"),
-                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
-                ),
-                (
-                    Name::new("transactionHash"),
-                    TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
-                ),
-                (
-                    Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
-                ),
-            ]),
-        }
-    }
-}
-
+// TODO: Refactor subscription to not use this
 impl ModelObject {
     pub fn value_mapping(model: Model) -> ValueMapping {
         IndexMap::from([
@@ -59,8 +28,8 @@ impl ModelObject {
 }
 
 impl ObjectTrait for ModelObject {
-    fn name(&self) -> &str {
-        "model"
+    fn name(&self) -> (&str, &str) {
+        ("model", "models")
     }
 
     fn type_name(&self) -> &str {
@@ -68,44 +37,15 @@ impl ObjectTrait for ModelObject {
     }
 
     fn type_mapping(&self) -> &TypeMapping {
-        &self.type_mapping
+        &MODEL_TYPE_MAPPING
     }
 
-    fn resolve_one(&self) -> Option<Field> {
-        Some(
-            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let model = query_by_id(&mut conn, "models", &id).await?;
-                    let result = ModelObject::value_mapping(model);
-                    Ok(Some(Value::Object(result)))
-                })
-            })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
-        )
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        Some(Field::new(
-            "models",
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "models", &Vec::new()).await?;
-                    let data: Vec<Model> = query_all(&mut conn, "models", DEFAULT_LIMIT).await?;
-                    let models: Vec<ValueMapping> =
-                        data.into_iter().map(ModelObject::value_mapping).collect();
-
-                    Ok(Some(Value::Object(connection_output(models, total_count))))
-                })
-            },
-        ))
+    fn table_name(&self) -> Option<&str> {
+        Some(MODEL_TABLE)
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        let name = format!("{}Registered", self.name());
+        let name = format!("{}Registered", self.name().0);
         Some(vec![
             SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
                 {

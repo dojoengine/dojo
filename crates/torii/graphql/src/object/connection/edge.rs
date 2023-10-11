@@ -1,4 +1,4 @@
-use async_graphql::dynamic::TypeRef;
+use async_graphql::dynamic::{Field, TypeRef};
 use async_graphql::Name;
 
 use crate::object::ObjectTrait;
@@ -29,8 +29,8 @@ impl EdgeObject {
 }
 
 impl ObjectTrait for EdgeObject {
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> (&str, &str) {
+        (&self.name, "")
     }
 
     fn type_name(&self) -> &str {
@@ -39,5 +39,13 @@ impl ObjectTrait for EdgeObject {
 
     fn type_mapping(&self) -> &TypeMapping {
         &self.type_mapping
+    }
+
+    fn resolve_one(&self) -> Option<Field> {
+        None
+    }
+
+    fn resolve_many(&self) -> Option<Field> {
+        None
     }
 }

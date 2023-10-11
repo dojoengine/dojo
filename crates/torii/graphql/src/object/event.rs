@@ -1,66 +1,19 @@
-use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
-use async_graphql::{Name, Value};
-use chrono::{DateTime, Utc};
-use indexmap::IndexMap;
-use serde::Deserialize;
-use sqlx::{FromRow, Pool, Sqlite};
+use async_graphql::dynamic::{Field, FieldFuture, TypeRef};
+use async_graphql::Value;
+use sqlx::{Pool, Sqlite};
 
-use super::connection::connection_output;
-use super::system_call::{SystemCall, SystemCallObject};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count};
-use crate::types::{GraphqlType, TypeData};
+use crate::mapping::{EVENT_TYPE_MAPPING, SYSTEM_CALL_TYPE_MAPPING};
+use crate::query::constants::EVENT_TABLE;
+use crate::query::data::fetch_single_row;
+use crate::query::value_mapping_from_row;
 use crate::utils::extract_value::extract;
 
-#[derive(FromRow, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Event {
-    pub id: String,
-    pub keys: String,
-    pub data: String,
-    pub created_at: DateTime<Utc>,
-    pub transaction_hash: String,
-}
-
-pub struct EventObject {
-    pub type_mapping: TypeMapping,
-}
-
-impl Default for EventObject {
-    fn default() -> Self {
-        Self {
-            type_mapping: IndexMap::from([
-                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-                (Name::new("keys"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-                (Name::new("data"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-                (
-                    Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
-                ),
-                (Name::new("transactionHash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-            ]),
-        }
-    }
-}
-impl EventObject {
-    pub fn value_mapping(event: Event) -> ValueMapping {
-        IndexMap::from([
-            (Name::new("id"), Value::from(event.id)),
-            (Name::new("keys"), Value::from(event.keys)),
-            (Name::new("data"), Value::from(event.data)),
-            (
-                Name::new("createdAt"),
-                Value::from(event.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-            ),
-            (Name::new("transactionHash"), Value::from(event.transaction_hash)),
-        ])
-    }
-}
+pub struct EventObject;
 
 impl ObjectTrait for EventObject {
-    fn name(&self) -> &str {
-        "event"
+    fn name(&self) -> (&str, &str) {
+        ("event", "events")
     }
 
     fn type_name(&self) -> &str {
@@ -68,40 +21,15 @@ impl ObjectTrait for EventObject {
     }
 
     fn type_mapping(&self) -> &TypeMapping {
-        &self.type_mapping
+        &EVENT_TYPE_MAPPING
+    }
+
+    fn table_name(&self) -> Option<&str> {
+        Some(EVENT_TABLE)
     }
 
     fn resolve_one(&self) -> Option<Field> {
-        Some(
-            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let event = query_by_id(&mut conn, "events", &id).await?;
-                    let result = EventObject::value_mapping(event);
-                    Ok(Some(Value::Object(result)))
-                })
-            })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
-        )
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        Some(Field::new(
-            "events",
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count = query_total_count(&mut conn, "events", &Vec::new()).await?;
-                    let data: Vec<Event> = query_all(&mut conn, "events", DEFAULT_LIMIT).await?;
-                    let events: Vec<ValueMapping> =
-                        data.into_iter().map(EventObject::value_mapping).collect();
-
-                    Ok(Some(Value::Object(connection_output(events, total_count))))
-                })
-            },
-        ))
+        None
     }
 
     fn related_fields(&self) -> Option<Vec<Field>> {
@@ -110,10 +38,12 @@ impl ObjectTrait for EventObject {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
                 let syscall_id = extract::<i64>(event_values, "system_call_id")?;
-                let system_call: SystemCall =
-                    query_by_id(&mut conn, "system_calls", &syscall_id.to_string()).await?;
-                let result = SystemCallObject::value_mapping(system_call);
-                Ok(Some(Value::Object(result)))
+                let data =
+                    fetch_single_row(&mut conn, "system_calls", "id", &syscall_id.to_string())
+                        .await?;
+                let system_call = value_mapping_from_row(&data, &SYSTEM_CALL_TYPE_MAPPING, false)?;
+
+                Ok(Some(Value::Object(system_call)))
             })
         })])
     }

@@ -8210,6 +8210,7 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "indexmap 1.9.3",
+ "lazy_static",
  "scarb-ui",
  "serde",
  "serde_json",

@@ -31,6 +31,7 @@ tracing.workspace = true
 url.workspace = true
 warp.workspace = true
 async-recursion = "1.0.5"
+lazy_static.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

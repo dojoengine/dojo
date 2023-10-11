@@ -1,66 +1,19 @@
-use async_graphql::dynamic::{Field, FieldFuture, InputValue, TypeRef};
-use async_graphql::{Name, Value};
-use chrono::{DateTime, Utc};
-use indexmap::IndexMap;
-use serde::Deserialize;
-use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, Pool, Result, Sqlite};
+use async_graphql::dynamic::{Field, FieldFuture, TypeRef};
+use async_graphql::Value;
+use sqlx::{Pool, Sqlite};
 
-use super::connection::connection_output;
-use super::system::SystemObject;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_all, query_by_id, query_total_count};
-use crate::types::{GraphqlType, TypeData};
+use crate::mapping::{SYSTEM_CALL_TYPE_MAPPING, SYSTEM_TYPE_MAPPING};
+use crate::query::constants::SYSTEM_CALL_TABLE;
+use crate::query::data::fetch_single_row;
+use crate::query::value_mapping_from_row;
 use crate::utils::extract_value::extract;
 
-#[derive(FromRow, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SystemCall {
-    pub id: i64,
-    pub transaction_hash: String,
-    pub data: String,
-    pub created_at: DateTime<Utc>,
-    pub system_id: String,
-}
-pub struct SystemCallObject {
-    pub type_mapping: TypeMapping,
-}
-
-impl Default for SystemCallObject {
-    fn default() -> Self {
-        Self {
-            type_mapping: IndexMap::from([
-                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-                (Name::new("transactionHash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-                (Name::new("data"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-                (Name::new("systemId"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-                (
-                    Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
-                ),
-            ]),
-        }
-    }
-}
-impl SystemCallObject {
-    pub fn value_mapping(system_call: SystemCall) -> ValueMapping {
-        IndexMap::from([
-            (Name::new("id"), Value::from(system_call.id.to_string())),
-            (Name::new("transactionHash"), Value::from(system_call.transaction_hash)),
-            (Name::new("data"), Value::from(system_call.data)),
-            (Name::new("systemId"), Value::from(system_call.system_id)),
-            (
-                Name::new("createdAt"),
-                Value::from(system_call.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-            ),
-        ])
-    }
-}
+pub struct SystemCallObject;
 
 impl ObjectTrait for SystemCallObject {
-    fn name(&self) -> &str {
-        "systemCall"
+    fn name(&self) -> (&str, &str) {
+        ("systemCall", "systemCalls")
     }
 
     fn type_name(&self) -> &str {
@@ -68,43 +21,11 @@ impl ObjectTrait for SystemCallObject {
     }
 
     fn type_mapping(&self) -> &TypeMapping {
-        &self.type_mapping
+        &SYSTEM_CALL_TYPE_MAPPING
     }
 
-    fn resolve_one(&self) -> Option<Field> {
-        Some(
-            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.i64()?;
-                    let system_call =
-                        query_by_id(&mut conn, "system_calls", &id.to_string()).await?;
-                    let result = SystemCallObject::value_mapping(system_call);
-                    Ok(Some(Value::Object(result)))
-                })
-            })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::INT))),
-        )
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        Some(Field::new(
-            "systemCalls",
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let total_count =
-                        query_total_count(&mut conn, "system_calls", &Vec::new()).await?;
-                    let data: Vec<SystemCall> =
-                        query_all(&mut conn, "system_calls", DEFAULT_LIMIT).await?;
-                    let system_calls: Vec<ValueMapping> =
-                        data.into_iter().map(SystemCallObject::value_mapping).collect();
-
-                    Ok(Some(Value::Object(connection_output(system_calls, total_count))))
-                })
-            },
-        ))
+    fn table_name(&self) -> Option<&str> {
+        Some(SYSTEM_CALL_TABLE)
     }
 
     fn related_fields(&self) -> Option<Vec<Field>> {
@@ -112,24 +33,12 @@ impl ObjectTrait for SystemCallObject {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let syscall_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-                let system_id = extract::<String>(syscall_values, "systemId")?;
-                let system = query_by_id(&mut conn, "systems", &system_id).await?;
-                let result = SystemObject::value_mapping(system);
+                let system_id = extract::<String>(syscall_values, "system_id")?;
+                let system = fetch_single_row(&mut conn, "systems", "id", &system_id).await?;
+                let result = value_mapping_from_row(&system, &SYSTEM_TYPE_MAPPING, false)?;
+
                 Ok(Some(Value::Object(result)))
             })
         })])
     }
-}
-
-pub async fn system_calls_by_system_id(
-    conn: &mut PoolConnection<Sqlite>,
-    id: &str,
-) -> Result<Vec<ValueMapping>> {
-    let system_calls: Vec<SystemCall> =
-        sqlx::query_as("SELECT * FROM system_calls WHERE system_id = $1")
-            .bind(id)
-            .fetch_all(conn)
-            .await?;
-
-    Ok(system_calls.into_iter().map(SystemCallObject::value_mapping).collect())
 }

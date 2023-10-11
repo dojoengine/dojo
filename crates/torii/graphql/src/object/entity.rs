@@ -5,61 +5,37 @@ use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
 use indexmap::IndexMap;
 use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Result, Sqlite};
+use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Entity;
 
-use super::connection::{
-    connection_arguments, connection_output, decode_cursor, parse_connection_arguments,
-    ConnectionArguments,
-};
-use super::model_data::value_mapping_from_row;
+use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::constants::DEFAULT_LIMIT;
-use crate::query::{query_by_id, type_mapping_query};
-use crate::types::{GraphqlType, TypeData};
+use crate::mapping::ENTITY_TYPE_MAPPING;
+use crate::query::constants::ENTITY_TABLE;
+use crate::query::data::{count_rows, fetch_multiple_rows};
+use crate::query::{type_mapping_query, value_mapping_from_row};
+use crate::types::TypeData;
 use crate::utils::extract_value::extract;
 
-pub struct EntityObject {
-    pub type_mapping: TypeMapping,
-}
+pub struct EntityObject;
 
-impl Default for EntityObject {
-    fn default() -> Self {
-        Self {
-            type_mapping: IndexMap::from([
-                (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-                (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
-                (Name::new("modelNames"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-                (Name::new("eventId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-                (
-                    Name::new("createdAt"),
-                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
-                ),
-                (
-                    Name::new("updatedAt"),
-                    TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
-                ),
-            ]),
-        }
-    }
-}
-
+// TODO: Refactor subscription to not use this
 impl EntityObject {
     pub fn value_mapping(entity: Entity) -> ValueMapping {
         let keys: Vec<&str> = entity.keys.split('/').filter(|&k| !k.is_empty()).collect();
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
-            (Name::new("modelNames"), Value::from(entity.model_names)),
-            (Name::new("eventId"), Value::from(entity.event_id)),
+            (Name::new("model_names"), Value::from(entity.model_names)),
+            (Name::new("event_id"), Value::from(entity.event_id)),
             (
-                Name::new("createdAt"),
+                Name::new("created_at"),
                 Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
             (
-                Name::new("updatedAt"),
+                Name::new("updated_at"),
                 Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
@@ -67,8 +43,8 @@ impl EntityObject {
 }
 
 impl ObjectTrait for EntityObject {
-    fn name(&self) -> &str {
-        "entity"
+    fn name(&self) -> (&str, &str) {
+        ("entity", "entities")
     }
 
     fn type_name(&self) -> &str {
@@ -76,36 +52,25 @@ impl ObjectTrait for EntityObject {
     }
 
     fn type_mapping(&self) -> &TypeMapping {
-        &self.type_mapping
+        &ENTITY_TYPE_MAPPING
+    }
+
+    fn table_name(&self) -> Option<&str> {
+        Some(ENTITY_TABLE)
     }
 
     fn related_fields(&self) -> Option<Vec<Field>> {
         Some(vec![model_union_field()])
     }
 
-    fn resolve_one(&self) -> Option<Field> {
-        Some(
-            Field::new(self.name(), TypeRef::named_nn(self.type_name()), |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get("id")?.string()?.to_string();
-                    let entity = query_by_id(&mut conn, "entities", &id).await?;
-                    let result = EntityObject::value_mapping(entity);
-                    Ok(Some(Value::Object(result)))
-                })
-            })
-            .argument(InputValue::new("id", TypeRef::named_nn(TypeRef::ID))),
-        )
-    }
-
     fn resolve_many(&self) -> Option<Field> {
         let mut field = Field::new(
-            "entities",
+            self.name().1,
             TypeRef::named(format!("{}Connection", self.type_name())),
             |ctx| {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let args = parse_connection_arguments(&ctx)?;
+                    let connection = parse_connection_arguments(&ctx)?;
                     let keys = ctx.args.try_get("keys").ok().and_then(|keys| {
                         keys.list().ok().map(|key_list| {
                             key_list
@@ -115,22 +80,39 @@ impl ObjectTrait for EntityObject {
                         })
                     });
 
-                    let (entities, total_count) = entities_by_sk(&mut conn, keys, args).await?;
+                    let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
+                    let data = fetch_multiple_rows(
+                        &mut conn,
+                        ENTITY_TABLE,
+                        "event_id",
+                        &keys,
+                        &None,
+                        &None,
+                        &connection,
+                    )
+                    .await?;
+                    let results = connection_output(
+                        &data,
+                        &ENTITY_TYPE_MAPPING,
+                        &None,
+                        "event_id",
+                        total_count,
+                        false,
+                    )?;
 
-                    Ok(Some(Value::Object(connection_output(entities, total_count))))
+                    Ok(Some(Value::Object(results)))
                 })
             },
         )
         .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)));
 
-        // Add relay connection fields (first, last, before, after)
         field = connection_arguments(field);
 
         Some(field)
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        let name = format!("{}Updated", self.name());
+        let name = format!("{}Updated", self.name().0);
         Some(vec![
             SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
                 SubscriptionFieldFuture::new(async move {
@@ -161,7 +143,7 @@ fn model_union_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let model_names: Vec<String> = extract::<String>(indexmap, "modelNames")?
+                    let model_names: Vec<String> = extract::<String>(indexmap, "model_names")?
                         .split(',')
                         .map(|s| s.to_string())
                         .collect();
@@ -201,7 +183,7 @@ pub async fn model_data_recursive_query(
     let table_name = path_array.join("$");
     let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", &table_name, entity_id);
     let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
-    let mut value_mapping = value_mapping_from_row(&row, type_mapping)?;
+    let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
 
     for (field_name, type_data) in type_mapping {
         if let TypeData::Nested((nested_type_ref, nested_mapping)) = type_data {
@@ -215,54 +197,4 @@ pub async fn model_data_recursive_query(
     }
 
     Ok(value_mapping)
-}
-
-async fn entities_by_sk(
-    conn: &mut PoolConnection<Sqlite>,
-    keys: Option<Vec<String>>,
-    args: ConnectionArguments,
-) -> Result<(Vec<ValueMapping>, i64)> {
-    let mut count_query = "SELECT COUNT(*) FROM entities".to_string();
-    let mut entities_query = "SELECT * FROM entities".to_string();
-    let mut conditions = Vec::new();
-
-    if let Some(keys) = &keys {
-        let keys_str = keys.join("/");
-        conditions.push(format!("keys LIKE '{}/%'", keys_str));
-        count_query.push_str(&format!(" WHERE keys LIKE '{}/%'", keys_str));
-    }
-
-    if let Some(after_cursor) = &args.after {
-        match decode_cursor(after_cursor.clone()) {
-            Ok((created_at, id)) => {
-                conditions.push(format!("(created_at, id) < ('{}', '{}')", created_at, id));
-            }
-            Err(_) => return Err(sqlx::Error::Decode("Invalid after cursor format".into())),
-        }
-    }
-
-    if let Some(before_cursor) = &args.before {
-        match decode_cursor(before_cursor.clone()) {
-            Ok((created_at, id)) => {
-                conditions.push(format!("(created_at, id) > ('{}', '{}')", created_at, id));
-            }
-            Err(_) => return Err(sqlx::Error::Decode("Invalid before cursor format".into())),
-        }
-    }
-
-    if !conditions.is_empty() {
-        let condition_string = conditions.join(" AND ");
-        entities_query.push_str(&format!(" WHERE {}", condition_string));
-    }
-
-    let limit = args.first.or(args.last).unwrap_or(DEFAULT_LIMIT);
-    let order = if args.first.is_some() { "DESC" } else { "ASC" };
-
-    entities_query
-        .push_str(&format!(" ORDER BY created_at {}, id {} LIMIT {}", order, order, limit));
-
-    let entities: Vec<Entity> = sqlx::query_as(&entities_query).fetch_all(conn.as_mut()).await?;
-    let total_result: (i64,) = sqlx::query_as(&count_query).fetch_one(conn.as_mut()).await?;
-
-    Ok((entities.into_iter().map(EntityObject::value_mapping).collect(), total_result.0))
 }

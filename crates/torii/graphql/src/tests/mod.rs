@@ -14,21 +14,18 @@ mod entities_test;
 use crate::schema::build_schema;
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct Edge<T> {
     pub node: T,
     pub cursor: String,
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub model_names: String,
     pub keys: Option<Vec<String>>,
@@ -39,15 +36,20 @@ pub struct Entity {
 pub struct Moves {
     pub __typename: String,
     pub remaining: u32,
-    pub last_direction: u8,
+    pub last_direction: String,
     pub entity: Option<Entity>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Vec2 {
+    pub x: u32,
+    pub y: u32,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Position {
     pub __typename: String,
-    pub x: u32,
-    pub y: u32,
+    pub vec: Vec2,
     pub entity: Option<Entity>,
 }
 
@@ -316,11 +318,11 @@ pub async fn paginate(
         {{
             entities ({first_last}: {page_size} {cursor}) 
             {{
-                totalCount
+                total_count
                 edges {{
                     cursor
                     node {{
-                        modelNames
+                        model_names
                     }}
                 }}
             }}

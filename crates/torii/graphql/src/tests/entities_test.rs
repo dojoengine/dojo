@@ -21,7 +21,7 @@ mod tests {
             r#"
             {{
                 entity(id: "{:#x}") {{
-                    modelNames
+                    model_names
                 }}
             }}
         "#,
@@ -34,7 +34,6 @@ mod tests {
         assert_eq!(entity.model_names, "Moves".to_string());
     }
 
-    #[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entity_models(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
@@ -52,8 +51,10 @@ mod tests {
                                 last_direction
                             }}
                             ... on Position {{
-                                x
-                                y
+                                vec {{
+                                    x
+                                    y
+                                }}
                             }}
                         }}
                     }}
@@ -69,10 +70,10 @@ mod tests {
         let model_position: Position = serde_json::from_value(models[1].clone()).unwrap();
 
         assert_eq!(model_moves.__typename, "Moves");
-        assert_eq!(model_moves.remaining, 1);
+        assert_eq!(model_moves.remaining, 10);
         assert_eq!(model_position.__typename, "Position");
-        assert_eq!(model_position.x, 69);
-        assert_eq!(model_position.y, 42);
+        assert_eq!(model_position.vec.x, 42);
+        assert_eq!(model_position.vec.y, 69);
     }
 
     #[sqlx::test(migrations = "../migrations")]
