@@ -133,7 +133,7 @@ where
     match migration::apply_diff(ws, target_dir, diff, name.clone(), world_address, account, None)
         .await
     {
-        Ok((address,_)) => {
+        Ok((address, _)) => {
             config
                 .ui()
                 .print(format!("🎉 World at address {} updated!", format_args!("{:#x}", address)));

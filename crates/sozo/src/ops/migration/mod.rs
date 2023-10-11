@@ -87,7 +87,7 @@ async fn update_world_manifest<U>(
     mut local_manifest: Manifest,
     target_dir: U,
     world_address: FieldElement,
-    deploy_output: Vec<Option<DeployOutput>>
+    deploy_output: Vec<Option<DeployOutput>>,
 ) -> Result<()>
 where
     U: AsRef<Path>,
@@ -98,13 +98,16 @@ where
 
     deploy_output.iter().for_each(|deploy_output| {
         match deploy_output {
-            Some(output) => {
-              if let Some(contract) = local_manifest.contracts.iter_mut().find(|contract|contract.class_hash == output.class_hash) {
+            Some(output) => local_manifest.contracts.iter_mut().find_map(|contract| {
+                if contract.class_hash == output.declare.as_ref().unwrap().class_hash {
                     contract.address = Some(output.contract_address);
-              }
-            },
-            None => {}
-        }
+                    Some({})
+                } else {
+                    None
+                }
+            }),
+            None => Some({}),
+        };
     });
 
     local_manifest.write_to_path(target_dir.as_ref().join("manifest.json"))?;
