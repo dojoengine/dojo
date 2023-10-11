@@ -13,6 +13,7 @@ use super::object::system::SystemObject;
 use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
+use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
 use crate::query::type_mapping_query;
 
@@ -25,6 +26,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
         Box::new(EntityObject),
+        Box::new(MetadataObject),
         Box::new(ModelObject),
         Box::new(SystemObject),
         Box::new(EventObject),

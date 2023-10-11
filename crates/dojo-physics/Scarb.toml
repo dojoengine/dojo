@@ -2,7 +2,7 @@
 cairo-version = "2.0.0-rc4"
 description = "Implementations of a physics library for the Dojo framework"
 name = "dojo_physics"
-version = "0.3.0-rc6"
+version = "0.3.0-rc7"
 
 [dependencies]
 cubit = { git = "https://github.com/influenceth/cubit" }

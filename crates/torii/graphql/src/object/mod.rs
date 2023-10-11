@@ -2,6 +2,7 @@ pub mod connection;
 pub mod entity;
 pub mod event;
 pub mod inputs;
+pub mod metadata;
 pub mod model;
 pub mod model_data;
 pub mod system;

@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "torii-server"
-version = "0.3.0-rc6"
+version = "0.3.0-rc7"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
