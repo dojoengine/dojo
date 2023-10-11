@@ -14,7 +14,7 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
-    let cairo_plugins = CairoPluginRepository::new();
+    let cairo_plugins = CairoPluginRepository::default();
 
     let cache_dir = TempDir::new().unwrap();
     let config_dir = TempDir::new().unwrap();

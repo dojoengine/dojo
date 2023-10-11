@@ -17,7 +17,7 @@ use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Pr
 use dojo_lang::inline_macros::emit::EmitMacro;
 use dojo_lang::inline_macros::get::GetMacro;
 use dojo_lang::inline_macros::set::SetMacro;
-use dojo_lang::plugin::DojoPlugin;
+use dojo_lang::plugin::BuiltinDojoPlugin;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::CompilationUnit;
 use scarb::core::Config;
@@ -92,7 +92,7 @@ pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase
     b.with_cfg(CfgSet::from_iter([Cfg::name("test")]));
 
     b.with_macro_plugin(Arc::new(TestPlugin::default()));
-    b.with_macro_plugin(Arc::new(DojoPlugin));
+    b.with_macro_plugin(Arc::new(BuiltinDojoPlugin));
     b.with_macro_plugin(Arc::new(StarkNetPlugin::default()));
 
     b.with_inline_macro_plugin(EmitMacro::NAME, Arc::new(EmitMacro));

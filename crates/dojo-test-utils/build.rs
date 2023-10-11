@@ -18,7 +18,7 @@ fn main() {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
-    let cairo_plugins = CairoPluginRepository::new();
+    let cairo_plugins = CairoPluginRepository::default();
 
     let cache_dir = assert_fs::TempDir::new().unwrap();
     let config_dir = assert_fs::TempDir::new().unwrap();

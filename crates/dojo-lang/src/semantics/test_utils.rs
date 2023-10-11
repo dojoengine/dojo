@@ -29,7 +29,7 @@ use once_cell::sync::Lazy;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
-use crate::plugin::DojoPlugin;
+use crate::plugin::BuiltinDojoPlugin;
 
 #[salsa::database(SemanticDatabase, DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
 pub struct DojoSemanticDatabase {
@@ -48,7 +48,7 @@ impl DojoSemanticDatabase {
         init_files_group(&mut db);
         let mut plugins = get_default_plugins();
         plugins.push(Arc::new(StarkNetPlugin::default()));
-        plugins.push(Arc::new(DojoPlugin));
+        plugins.push(Arc::new(BuiltinDojoPlugin));
         db.set_macro_plugins(plugins);
 
         let mut inline_plugins = get_default_inline_macro_plugins();
