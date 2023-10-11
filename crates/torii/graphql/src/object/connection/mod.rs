@@ -1,13 +1,14 @@
 use async_graphql::dynamic::{Field, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name, Value};
-use base64::engine::general_purpose;
-use base64::Engine as _;
-use serde_json::Number;
+use sqlx::sqlite::SqliteRow;
+use sqlx::Row;
 
 use super::ObjectTrait;
+use crate::query::order::Order;
+use crate::query::value_mapping_from_row;
 use crate::types::{GraphqlType, TypeData, TypeMapping, ValueMapping};
-use crate::utils::extract_value::extract;
 
+pub mod cursor;
 pub mod edge;
 pub mod page_info;
 
@@ -32,7 +33,7 @@ impl ConnectionObject {
                 Name::new("edges"),
                 TypeData::Simple(TypeRef::named_list(format!("{}Edge", type_name))),
             ),
-            (Name::new("totalCount"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
+            (Name::new("total_count"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
         ]);
 
         Self {
@@ -44,8 +45,8 @@ impl ConnectionObject {
 }
 
 impl ObjectTrait for ConnectionObject {
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> (&str, &str) {
+        (&self.name, "")
     }
 
     fn type_name(&self) -> &str {
@@ -99,45 +100,37 @@ pub fn connection_arguments(field: Field) -> Field {
         .argument(InputValue::new("after", TypeRef::named(GraphqlType::Cursor.to_string())))
 }
 
-pub fn connection_output(data: Vec<ValueMapping>, total_count: i64) -> ValueMapping {
-    let edges: Vec<Value> = data
-        .into_iter()
-        .map(|v| {
-            let id = extract::<String>(&v, "id").expect("Invalid cursor field ID");
-            let created_at =
-                extract::<String>(&v, "createdAt").expect("Invalid cursor field createdAt");
-            let cursor = encode_cursor(&created_at, &id);
+pub fn connection_output(
+    data: &[SqliteRow],
+    types: &TypeMapping,
+    order: &Option<Order>,
+    id_column: &str,
+    total_count: i64,
+    is_external: bool,
+) -> sqlx::Result<ValueMapping> {
+    let model_edges = data
+        .iter()
+        .map(|row| {
+            let order_field = match order {
+                Some(order) => format!("external_{}", order.field),
+                None => id_column.to_string(),
+            };
+
+            let primary_order = row.try_get::<String, &str>(id_column)?;
+            let secondary_order = row.try_get_unchecked::<String, &str>(&order_field)?;
+            let cursor = cursor::encode(&primary_order, &secondary_order);
+            let value_mapping = value_mapping_from_row(row, types, is_external)?;
 
             let mut edge = ValueMapping::new();
-            edge.insert(Name::new("node"), Value::Object(v));
+            edge.insert(Name::new("node"), Value::Object(value_mapping));
             edge.insert(Name::new("cursor"), Value::String(cursor));
 
-            Value::Object(edge)
+            Ok(Value::Object(edge))
         })
-        .collect();
+        .collect::<sqlx::Result<Vec<Value>>>();
 
-    ValueMapping::from([
-        (Name::new("totalCount"), Value::Number(Number::from(total_count))),
-        (Name::new("edges"), Value::List(edges)),
-    ])
-}
-
-pub fn encode_cursor(created_at: &str, id: &str) -> String {
-    let cursor = format!("cursor/{}/{}", created_at, id);
-    general_purpose::STANDARD.encode(cursor.as_bytes())
-}
-
-pub fn decode_cursor(cursor: String) -> Result<(String, String), Error> {
-    let bytes = general_purpose::STANDARD.decode(cursor)?;
-    let cursor = String::from_utf8(bytes)?;
-    let parts: Vec<&str> = cursor.split('/').collect();
-
-    if parts.len() != 3 || parts[0] != "cursor" {
-        return Err("Invalid cursor format".into());
-    }
-
-    let created_at = parts[1].parse::<String>()?;
-    let id = parts[2].parse::<String>()?;
-
-    Ok((created_at, id))
+    Ok(ValueMapping::from([
+        (Name::new("total_count"), Value::from(total_count)),
+        (Name::new("edges"), Value::List(model_edges?)),
+    ]))
 }

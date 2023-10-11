@@ -191,6 +191,9 @@ mod world {
 
             self.metadata_uri.write(resource, len.into());
 
+            // Emit event before uri is consumed.
+            EventEmitter::emit(ref self, MetadataUpdate { resource, uri });
+
             let mut i = resource + 1;
             loop {
                 match uri.pop_front() {
@@ -203,8 +206,6 @@ mod world {
                     }
                 };
             };
-
-            EventEmitter::emit(ref self, MetadataUpdate { resource, uri });
         }
 
         /// Checks if the provided account is an owner of the resource.

@@ -22,15 +22,14 @@ use crate::query::type_mapping_query;
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut schema_builder = Schema::build("Query", None, Some("Subscription"));
-
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
-        Box::<EntityObject>::default(),
-        Box::<ModelObject>::default(),
-        Box::<SystemObject>::default(),
-        Box::<EventObject>::default(),
-        Box::<SystemCallObject>::default(),
-        Box::<PageInfoObject>::default(),
+        Box::new(EntityObject),
+        Box::new(ModelObject),
+        Box::new(SystemObject),
+        Box::new(EventObject),
+        Box::new(SystemCallObject),
+        Box::new(PageInfoObject),
     ];
 
     // build model data gql objects

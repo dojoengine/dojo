@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, TypeRef};
-use async_graphql::{Error, Name};
+use async_graphql::Name;
 use dojo_types::primitive::Primitive;
 use strum::IntoEnumIterator;
 
@@ -70,14 +70,10 @@ pub fn where_argument(field: Field, type_name: &str) -> Field {
 pub fn parse_where_argument(
     ctx: &ResolverContext<'_>,
     where_mapping: &TypeMapping,
-) -> Result<Vec<Filter>, Error> {
-    let where_input = if let Some(object) = ctx.args.get("where") {
-        object
-    } else {
-        return Ok(vec![]);
-    };
+) -> Option<Vec<Filter>> {
+    let where_input = ctx.args.get("where")?;
+    let input_object = where_input.object().ok()?;
 
-    let input_object = where_input.object()?;
     where_mapping
         .iter()
         .filter_map(|(type_name, type_data)| {
@@ -85,16 +81,16 @@ pub fn parse_where_argument(
                 let filter_value = match Primitive::from_str(&type_data.type_ref().to_string()) {
                     Ok(primitive) => {
                         if primitive.to_sql_type().as_str() == "INTEGER" {
-                            FilterValue::Int(input_filter.i64()?)
+                            FilterValue::Int(input_filter.i64().ok()?)
                         } else {
-                            FilterValue::String(input_filter.string()?.to_string())
+                            FilterValue::String(input_filter.string().ok()?.to_string())
                         }
                     }
-                    _ => FilterValue::String(input_filter.string()?.to_string()),
+                    _ => FilterValue::String(input_filter.string().ok()?.to_string()),
                 };
 
-                Ok(parse_filter(type_name, filter_value))
+                Some(parse_filter(type_name, filter_value))
             })
         })
-        .collect::<Result<Vec<_>, _>>()
+        .collect::<Option<Vec<_>>>()
 }
