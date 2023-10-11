@@ -173,8 +173,7 @@ pub fn handle_introspect_enum(
             "
             (
                 '{member_name}',
-                \
-             dojo::database::schema::serialize_member_type(
+                dojo::database::schema::serialize_member_type(
                 @dojo::database::schema::Ty::Tuple(array![{}].span()))
             )",
             if !variant_type_arr.is_empty() {
