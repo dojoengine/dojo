@@ -12,6 +12,7 @@ use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
 use torii_client::contract::world::WorldContractReader;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::register_system::RegisterSystemProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
@@ -85,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(RegisterModelProcessor),
             Box::new(RegisterSystemProcessor),
             Box::new(StoreSetRecordProcessor),
+            Box::new(MetadataUpdateProcessor),
         ],
         // transaction: vec![Box::new(StoreSystemCallProcessor)],
         ..Processors::default()

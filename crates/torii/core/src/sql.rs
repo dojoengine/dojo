@@ -196,6 +196,14 @@ impl Sql {
         self.query_queue.push(query);
     }
 
+    pub fn set_metadata(&mut self, resource: &FieldElement, uri: String) {
+        self.query_queue.push(format!(
+            "INSERT INTO metadata (id, uri) VALUES ('{:#x}', '{}') ON CONFLICT(id) DO UPDATE SET \
+             id=excluded.id, updated_at=CURRENT_TIMESTAMP",
+            resource, uri
+        ));
+    }
+
     pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
         let query = format!("SELECT * FROM {model} WHERE id = {key}");
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
