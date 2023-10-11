@@ -1,7 +1,7 @@
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::Name;
 use dojo_types::primitive::Primitive;
-use indexmap::IndexMap;
 use lazy_static::lazy_static;
 
 use crate::types::{GraphqlType, TypeData, TypeMapping};
