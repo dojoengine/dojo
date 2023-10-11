@@ -4,7 +4,6 @@ use std::path::Path;
 use ::serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use cairo_lang_starknet::abi;
-use dojo_types::system::Dependency;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -82,19 +81,6 @@ pub struct Output {
     pub ty: String,
 }
 
-/// Represents a declaration of a system.
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct System {
-    pub name: SmolStr,
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub dependencies: Vec<Dependency>,
-    pub abi: Option<abi::Contract>,
-}
-
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Contract {
@@ -121,7 +107,6 @@ pub struct Manifest {
     pub world: Contract,
     pub executor: Contract,
     pub base: Class,
-    pub systems: Vec<System>,
     pub contracts: Vec<Contract>,
     pub models: Vec<Model>,
 }
@@ -197,7 +182,6 @@ impl Manifest {
             .await
             .map_err(ManifestError::Provider)?[0];
 
-        let mut systems = vec![];
         let mut models = vec![];
 
         if let Some(match_manifest) = match_manifest {
@@ -223,37 +207,9 @@ impl Manifest {
                     ..Default::default()
                 });
             }
-
-            for system in match_manifest.systems {
-                let result = provider
-                    .call(
-                        FunctionCall {
-                            contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(
-                                    // because the name returns by the `name` method of
-                                    // a system contract is without the 'System' suffix
-                                    system.name.strip_suffix("System").unwrap_or(&system.name),
-                                )
-                                .map_err(ManifestError::InvalidNameError)?,
-                            ],
-                            entry_point_selector: get_selector_from_name("system").unwrap(),
-                        },
-                        BlockId::Tag(BlockTag::Pending),
-                    )
-                    .await
-                    .map_err(ManifestError::Provider)?;
-
-                systems.push(System {
-                    name: system.name.clone(),
-                    class_hash: result[0],
-                    ..Default::default()
-                });
-            }
         }
 
         Ok(Manifest {
-            systems,
             models,
             contracts: vec![],
             world: Contract {

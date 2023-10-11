@@ -5,7 +5,6 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
-use dojo_world::manifest::System;
 use sqlx::pool::PoolConnection;
 use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::{Event, FieldElement};
@@ -122,16 +121,6 @@ impl Sql {
             transaction_hash: "0x0".to_string(),
             created_at,
         });
-        Ok(())
-    }
-
-    pub async fn register_system(&mut self, system: System) -> Result<()> {
-        let query = format!(
-            "INSERT INTO systems (id, name, class_hash) VALUES ('{}', '{}', '{:#x}') ON \
-             CONFLICT(id) DO UPDATE SET class_hash='{:#x}'",
-            system.name, system.name, system.class_hash, system.class_hash
-        );
-        self.query_queue.push(query);
         Ok(())
     }
 

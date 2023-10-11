@@ -92,10 +92,6 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
     inner_helper(&mut events_map, &manifest.world.abi);
     inner_helper(&mut events_map, &manifest.executor.abi);
 
-    for system in &manifest.systems {
-        inner_helper(&mut events_map, &system.abi);
-    }
-
     for contract in &manifest.contracts {
         inner_helper(&mut events_map, &contract.abi);
     }
