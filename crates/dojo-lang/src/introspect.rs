@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::RewriteNode;
-use cairo_lang_syntax::node::ast::ItemStruct;
+use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_syntax::node::ast::{Expr, ItemEnum, ItemStruct, OptionTypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_world::manifest::Member;
+use itertools::Itertools;
 
 #[derive(Clone, Default)]
 struct TypeIntrospection(usize, Vec<usize>);
@@ -33,23 +35,163 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
+    let name = struct_ast.name(db).text(db).into();
+
+    let mut member_types: Vec<String> = vec![];
+    let primitive_sizes = primitive_type_introspection();
+
     let members: Vec<_> = struct_ast
         .members(db)
         .elements(db)
         .iter()
-        .map(|member| Member {
-            name: member.name(db).text(db).to_string(),
-            ty: member.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string(),
-            key: member.has_attr(db, "key"),
+        .map(|member| {
+            let key = member.has_attr(db, "key");
+            let ty = member.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string();
+            let name = member.name(db).text(db).to_string();
+            let mut attrs = vec![];
+            if key {
+                attrs.push("'key'");
+            }
+
+            if primitive_sizes.get(&ty).is_some() {
+                // It's a primitive type
+                member_types.push(format!(
+                    "
+                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
+                        name: '{name}',
+                        ty: dojo::database::schema::Ty::Primitive('{ty}'),
+                        attrs: array![{}].span()
+                    }})\n",
+                    attrs.join(","),
+                ));
+            } else {
+                // It's a custom struct/enum
+                member_types.push(format!(
+                    "
+                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
+                        name: '{name}',
+                        ty: dojo::database::schema::SchemaIntrospection::<{ty}>::ty(),
+                        attrs: array![{}].span()
+                    }})\n",
+                    attrs.join(","),
+                ));
+            }
+
+            Member { name, ty, key }
         })
         .collect::<_>();
+    drop(primitive_sizes);
 
-    let primitive_sizes = primitive_type_introspection();
-    let mut size_precompute = 0;
+    let type_ty = format!(
+        "
+        dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {{
+            name: '{name}',
+            attrs: array![].span(),
+            children: array![{}].span()
+        }})",
+        member_types.join(",\n")
+    );
 
+    handle_introspect_internal(db, name, vec![], 0, type_ty, members)
+}
+
+/// A handler for Dojo code derives Introspect for an enum
+/// Parameters:
+/// * db: The semantic database.
+/// * struct_ast: The AST of the struct.
+/// Returns:
+/// * A RewriteNode containing the generated code.
+pub fn handle_introspect_enum(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    enum_ast: ItemEnum,
+) -> RewriteNode {
+    let name = enum_ast.name(db).text(db).into();
+    let variant_type = enum_ast.variants(db).elements(db).first().unwrap().type_clause(db);
+    let variant_type_text = variant_type.as_syntax_node().get_text(db);
+    let variant_type_text = variant_type_text.trim();
+    let mut variant_type_arr = vec![];
+
+    if let OptionTypeClause::TypeClause(types_tuple) = variant_type {
+        if let Expr::Tuple(paren_list) = types_tuple.ty(db) {
+            let args = (*paren_list.expressions(db)).elements(db);
+            args.iter().for_each(|arg| {
+                variant_type_arr.push(arg.as_syntax_node().get_text(db));
+            });
+        } else if let Expr::Path(type_path) = types_tuple.ty(db) {
+            variant_type_arr.push(type_path.as_syntax_node().get_text(db));
+        } else {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: types_tuple.stable_ptr().0,
+                message: "Only tuple and type paths are supported.".to_string(),
+            });
+        }
+    }
+
+    let members: Vec<_> = variant_type_arr
+        .iter()
+        .map(|ty| Member { name: ty.into(), ty: ty.into(), key: false })
+        .collect_vec();
+
+    let mut arms_ty: Vec<String> = vec![];
+
+    // Add diagnostics for different Typeclauses.
+    enum_ast.variants(db).elements(db).iter().for_each(|member| {
+        let member_name = member.name(db).text(db);
+        let member_type = member.type_clause(db).as_syntax_node();
+        let member_type_text = member_type.get_text(db);
+        if member_type_text.trim() != variant_type_text.trim() {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: member_type.stable_ptr(),
+                message: format!("Enum arms need to have same type - {}.", variant_type_text),
+            });
+        }
+
+        // @TODO: Prepare type struct
+        arms_ty.push(format!(
+            "
+            (
+                '{member_name}',
+                serialize_member_type(@dojo::database::schema::Ty::Tuple(array![{}].span()))
+            )",
+            if !variant_type_arr.is_empty() {
+                "array!['".to_string() + &variant_type_arr.join("'].span(),array!['") + "'].span()"
+            } else {
+                "".to_string()
+            }
+        ));
+    });
+
+    let type_ty = format!(
+        "
+        dojo::database::schema::Ty::Enum(
+            dojo::database::schema::Enum {{
+                name: 'Direction',
+                attrs: array![].span(),
+                children: array![
+                {}
+                ]
+                    .span()
+            }}
+        )",
+        arms_ty.join(",\n")
+    );
+    // Enums have 1 size and 8 bit layout by default
+    let layout = vec![RewriteNode::Text("layout.append(8);\n".into())];
+    let size_precompute = 1;
+    handle_introspect_internal(db, name, layout, size_precompute, type_ty, members)
+}
+
+fn handle_introspect_internal(
+    _db: &dyn SyntaxGroup,
+    name: String,
+    mut layout: Vec<RewriteNode>,
+    mut size_precompute: usize,
+    type_ty: String,
+    members: Vec<Member>,
+) -> RewriteNode {
     let mut size = vec![];
-    let mut layout = vec![];
-    let mut member_types = vec![];
+    let primitive_sizes = primitive_type_introspection();
 
     members.iter().for_each(|m| {
         let primitive_intro = primitive_sizes.get(&m.ty);
@@ -65,17 +207,6 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
                     layout.push(RewriteNode::Text(format!("layout.append({});\n", l)))
                 });
             }
-            // Do this for both keys and non keys
-            member_types.push(format!(
-                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
-                name: '{}',
-                ty: dojo::database::schema::Ty::Primitive('{}'),
-                attrs: array![{}].span()
-            }})",
-                m.name,
-                m.ty,
-                attrs.join(","),
-            ));
         } else {
             // It's a custom type
             if m.key {
@@ -90,17 +221,6 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
                     m.ty
                 )));
             }
-            // Do this for both keys and non keys
-            member_types.push(format!(
-                "dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
-                name: '{}',
-                ty: dojo::database::schema::SchemaIntrospection::<{}>::ty(),
-                attrs: array![{}].span()
-            }})",
-                m.name,
-                m.ty,
-                attrs.join(","),
-            ));
         }
     });
 
@@ -110,32 +230,29 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
 
     RewriteNode::interpolate_patched(
         "
-		impl $name$SchemaIntrospection of dojo::database::schema::SchemaIntrospection<$name$> {
-		   #[inline(always)]
-		   fn size() -> usize {
-			   $size$
-		   }
+        impl $name$SchemaIntrospection of dojo::database::schema::SchemaIntrospection<$name$> {
+            
+            #[inline(always)]
+            fn size() -> usize {
+                $size$
+            }
 
-		   #[inline(always)]
-		   fn layout(ref layout: Array<u8>) {
-			   $layout$
-		   }
+            #[inline(always)]
+            fn layout(ref layout: Array<u8>) {
+                $layout$
+            }
 
-		   #[inline(always)]
-		   fn ty() -> dojo::database::schema::Ty {
-			   dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
-				   name: '$name$',
-				   attrs: array![].span(),
-				   children: array![$member_types$].span()
-			   })
-		   }
-	    }
+            #[inline(always)]
+            fn ty() -> dojo::database::schema::Ty {
+                $ty$
+            }
+        }
         ",
         UnorderedHashMap::from([
-            ("name".to_string(), RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node())),
+            ("name".to_string(), RewriteNode::Text(name)),
             ("size".to_string(), RewriteNode::Text(size.join(" + "))),
             ("layout".to_string(), RewriteNode::new_modified(layout)),
-            ("member_types".to_string(), RewriteNode::Text(member_types.join(","))),
+            ("ty".to_string(), RewriteNode::Text(type_ty)),
         ]),
     )
 }

@@ -5,43 +5,13 @@ use dojo::database::schema::{
     Enum, Member, Ty, Struct, SchemaIntrospection, serialize_member, serialize_member_type
 };
 
-#[derive(Serde, Copy, Drop)]
+#[derive(Serde, Copy, Drop, Introspect)]
 enum Direction {
     None: (),
     Left: (),
     Right: (),
     Up: (),
     Down: (),
-}
-
-impl DirectionSchemaIntrospectionImpl of SchemaIntrospection<Direction> {
-    #[inline(always)]
-    fn size() -> usize {
-        1
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
-    }
-
-    #[inline(always)]
-    fn ty() -> Ty {
-        Ty::Enum(
-            Enum {
-                name: 'Direction',
-                attrs: array![].span(),
-                children: array![
-                    ('None', serialize_member_type(@Ty::Tuple(array![].span()))),
-                    ('Left', serialize_member_type(@Ty::Tuple(array![].span()))),
-                    ('Right', serialize_member_type(@Ty::Tuple(array![].span()))),
-                    ('Up', serialize_member_type(@Ty::Tuple(array![].span()))),
-                    ('Down', serialize_member_type(@Ty::Tuple(array![].span())))
-                ]
-                    .span()
-            }
-        )
-    }
 }
 
 impl DirectionPrintImpl of PrintTrait<Direction> {
