@@ -120,12 +120,17 @@ pub fn value_mapping_from_row(
                 field_name.to_string()
             };
 
-            let value = fetch_value(row, &column_name, &type_data.type_ref().to_string())?;
-            let value = match type_data.type_ref().to_string().as_str() {
-                "U128" | "ContractAddress" | "ClassHash" | "Felt252" => {
-                    remove_trailing_zeros(value)
-                }
-                _ => value,
+            let field_type = type_data.type_ref().to_string();
+            let value = fetch_value(row, &column_name, &field_type)?;
+            let value = match Primitive::from_str(&field_type) {
+                Ok(primitive) => match primitive {
+                    Primitive::U128(_)
+                    | Primitive::ContractAddress(_)
+                    | Primitive::ClassHash(_)
+                    | Primitive::Felt252(_) => remove_trailing_zeros(value),
+                    _ => value,
+                },
+                Err(_) => value,
             };
 
             Ok((Name::new(field_name.clone()), value))
