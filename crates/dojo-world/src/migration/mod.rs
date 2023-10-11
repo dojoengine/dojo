@@ -35,6 +35,7 @@ pub type DeclareOutput = DeclareTransactionResult;
 pub struct DeployOutput {
     pub transaction_hash: FieldElement,
     pub contract_address: FieldElement,
+    pub class_hash: FieldElement,
     pub declare: Option<DeclareOutput>,
 }
 
@@ -205,7 +206,12 @@ pub trait Deployable: Declarable + Sync {
 
         TransactionWaiter::new(transaction_hash, account.provider()).await?;
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput {
+            transaction_hash,
+            contract_address,
+            class_hash: base_class_hash[0],
+            declare,
+        })
     }
 
     async fn deploy<P, S>(
@@ -276,7 +282,7 @@ pub trait Deployable: Declarable + Sync {
 
         TransactionWaiter::new(transaction_hash, account.provider()).await?;
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput { transaction_hash, contract_address, class_hash, declare })
     }
 
     fn salt(&self) -> FieldElement;

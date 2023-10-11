@@ -135,6 +135,14 @@ impl Manifest {
             .map_err(|e| anyhow!("Failed to load World manifest from path: {e}"))
     }
 
+    pub fn write_to_path<P>(self, manifest_path: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
+        serde_json::to_writer_pretty(fs::File::options().write(true).open(manifest_path)?, &self)
+            .map_err(|e| anyhow!("Failed to update World manifest at path: {e}"))
+    }
+
     pub async fn from_remote<P>(
         provider: P,
         world_address: FieldElement,
@@ -198,10 +206,8 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(&model.name)
-                                    .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(&model.name)
+                                .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("model").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
@@ -221,14 +227,12 @@ impl Manifest {
                     .call(
                         FunctionCall {
                             contract_address: world_address,
-                            calldata: vec![
-                                cairo_short_string_to_felt(
-                                    // because the name returns by the `name` method of
-                                    // a system contract is without the 'System' suffix
-                                    system.name.strip_suffix("System").unwrap_or(&system.name),
-                                )
-                                .map_err(ManifestError::InvalidNameError)?,
-                            ],
+                            calldata: vec![cairo_short_string_to_felt(
+                                // because the name returns by the `name` method of
+                                // a system contract is without the 'System' suffix
+                                system.name.strip_suffix("System").unwrap_or(&system.name),
+                            )
+                            .map_err(ManifestError::InvalidNameError)?],
                             entry_point_selector: get_selector_from_name("system").unwrap(),
                         },
                         BlockId::Tag(BlockTag::Pending),
