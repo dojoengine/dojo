@@ -8,7 +8,7 @@ use tokio_stream::StreamExt;
 use torii_core::sql::Sql;
 
 mod entities_test;
-// mod models_test;
+mod models_test;
 // mod subscription_test;
 
 use crate::schema::build_schema;
