@@ -9,7 +9,7 @@ trait IPlayerActions<TContractState> {
     fn move(self: @TContractState, direction: Direction);
 }
 
-#[system]
+#[dojo::contract]
 mod player_actions {
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
