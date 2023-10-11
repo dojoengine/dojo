@@ -4,7 +4,7 @@
 test_expand_plugin
 
 //! > cairo_code
-#[system]
+#[dojo::contract]
 mod spawn {
     use traits::Into;
     use dojo::world::Context;
@@ -14,14 +14,14 @@ mod spawn {
     }
 }
 
-#[system]
+#[dojo::contract]
 mod proxy {
     fn execute(value: felt252) -> felt252 {
         value
     }
 }
 
-#[system]
+#[dojo::contract]
 mod ctxnamed {
     use traits::Into;
     use dojo::world::Context;

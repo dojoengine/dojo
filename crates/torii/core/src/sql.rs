@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
@@ -84,7 +85,10 @@ impl Sql {
         packed_size: u8,
         unpacked_size: u8,
     ) -> Result<()> {
-        let layout_blob = layout.iter().map(|x| (*x).try_into().unwrap()).collect::<Vec<u8>>();
+        let layout_blob = layout
+            .iter()
+            .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
+            .collect::<Vec<u8>>();
         self.query_queue.push(format!(
             "INSERT INTO models (id, name, class_hash, layout, packed_size, unpacked_size) VALUES \
              ('{id}', '{name}', '{class_hash:#x}', '{layout}', '{packed_size}', \

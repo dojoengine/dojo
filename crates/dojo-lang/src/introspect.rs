@@ -21,6 +21,7 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
         ("u64".into(), TypeIntrospection(1, vec![64])),
         ("u128".into(), TypeIntrospection(1, vec![128])),
         ("u256".into(), TypeIntrospection(2, vec![128, 128])),
+        ("usize".into(), TypeIntrospection(1, vec![32])),
         ("ContractAddress".into(), TypeIntrospection(1, vec![251])),
         ("ClassHash".into(), TypeIntrospection(1, vec![251])),
     ])
