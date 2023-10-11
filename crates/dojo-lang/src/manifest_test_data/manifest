@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x1d8c9130f4a8e59b0aac644a050734004002f7528eb9f27fdd50516eca276c9",
+    "class_hash": "0x2a8a26f0d9b1bd30efc2189bb56be0fa746f91cc67b8c4bc65b8f7e7dc01b7a",
     "abi": [
       {
         "type": "impl",
@@ -80,7 +80,12 @@ test_manifest_file
           {
             "type": "function",
             "name": "metadata_uri",
-            "inputs": [],
+            "inputs": [
+              {
+                "name": "resource",
+                "type": "core::felt252"
+              }
+            ],
             "outputs": [
               {
                 "type": "core::array::Span::<core::felt252>"
@@ -92,6 +97,10 @@ test_manifest_file
             "type": "function",
             "name": "set_metadata_uri",
             "inputs": [
+              {
+                "name": "resource",
+                "type": "core::felt252"
+              },
               {
                 "name": "uri",
                 "type": "core::array::Span::<core::felt252>"
@@ -326,7 +335,7 @@ test_manifest_file
                 "type": "core::starknet::contract_address::ContractAddress"
               },
               {
-                "name": "target",
+                "name": "resource",
                 "type": "core::felt252"
               }
             ],
@@ -346,7 +355,7 @@ test_manifest_file
                 "type": "core::starknet::contract_address::ContractAddress"
               },
               {
-                "name": "target",
+                "name": "resource",
                 "type": "core::felt252"
               }
             ],
@@ -362,7 +371,7 @@ test_manifest_file
                 "type": "core::starknet::contract_address::ContractAddress"
               },
               {
-                "name": "target",
+                "name": "resource",
                 "type": "core::felt252"
               }
             ],
@@ -456,6 +465,23 @@ test_manifest_file
       },
       {
         "type": "event",
+        "name": "dojo::world::world::MetadataUpdate",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "resource",
+            "type": "core::felt252",
+            "kind": "data"
+          },
+          {
+            "name": "uri",
+            "type": "core::array::Span::<core::felt252>",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world::ModelRegistered",
         "kind": "struct",
         "members": [
@@ -523,6 +549,11 @@ test_manifest_file
           {
             "name": "WorldSpawned",
             "type": "dojo::world::world::WorldSpawned",
+            "kind": "nested"
+          },
+          {
+            "name": "MetadataUpdate",
+            "type": "dojo::world::world::MetadataUpdate",
             "kind": "nested"
           },
           {

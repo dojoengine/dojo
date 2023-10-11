@@ -4,8 +4,8 @@ use option::OptionTrait;
 
 #[starknet::interface]
 trait IWorld<T> {
-    fn metadata_uri(self: @T) -> Span<felt252>;
-    fn set_metadata_uri(ref self: T, uri: Span<felt252>);
+    fn metadata_uri(self: @T, resource: felt252) -> Span<felt252>;
+    fn set_metadata_uri(ref self: T, resource: felt252, uri: Span<felt252>);
     fn model(self: @T, name: felt252) -> ClassHash;
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(self: @T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
@@ -34,9 +34,9 @@ trait IWorld<T> {
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
     fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>);
-    fn is_owner(self: @T, address: ContractAddress, target: felt252) -> bool;
-    fn grant_owner(ref self: T, address: ContractAddress, target: felt252);
-    fn revoke_owner(ref self: T, address: ContractAddress, target: felt252);
+    fn is_owner(self: @T, address: ContractAddress, resource: felt252) -> bool;
+    fn grant_owner(ref self: T, address: ContractAddress, resource: felt252);
+    fn revoke_owner(ref self: T, address: ContractAddress, resource: felt252);
 
     fn is_writer(self: @T, model: felt252, system: ContractAddress) -> bool;
     fn grant_writer(ref self: T, model: felt252, system: ContractAddress);
@@ -73,6 +73,7 @@ mod world {
     #[derive(Drop, starknet::Event)]
     enum Event {
         WorldSpawned: WorldSpawned,
+        MetadataUpdate: MetadataUpdate,
         ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
         StoreDelRecord: StoreDelRecord
@@ -82,6 +83,12 @@ mod world {
     struct WorldSpawned {
         address: ContractAddress,
         creator: ContractAddress
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MetadataUpdate {
+        resource: felt252,
+        uri: Span<felt252>
     }
 
     #[derive(Drop, starknet::Event)]
@@ -109,7 +116,7 @@ mod world {
         executor_dispatcher: IExecutorDispatcher,
         contract_base: ClassHash,
         nonce: usize,
-        metadata_uri: LegacyMap::<usize, felt252>,
+        metadata_uri: LegacyMap::<felt252, felt252>,
         models: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
@@ -150,15 +157,15 @@ mod world {
         /// # Returns
         ///
         /// * `Span<felt252>` - The metadata URI of the world.
-        fn metadata_uri(self: @ContractState) -> Span<felt252> {
+        fn metadata_uri(self: @ContractState, resource: felt252) -> Span<felt252> {
             let mut uri = array![];
 
             // We add one here since we start i at 1;
-            let len = self.metadata_uri.read(0) + 1;
+            let len = self.metadata_uri.read(resource) + 1;
 
-            let mut i: usize = 1;
+            let mut i = resource + 1;
             loop {
-                if len == i.into() {
+                if len == i {
                     break;
                 }
 
@@ -174,12 +181,17 @@ mod world {
         /// # Arguments
         ///
         /// * `uri` - The new metadata URI to be set.
-        fn set_metadata_uri(ref self: ContractState, mut uri: Span<felt252>) {
-            assert(self.is_owner(get_caller_address(), WORLD), 'not owner');
+        fn set_metadata_uri(ref self: ContractState, resource: felt252, mut uri: Span<felt252>) {
+            assert(self.is_owner(get_caller_address(), resource), 'not owner');
 
-            self.metadata_uri.write(0, uri.len().into());
+            let len = uri.len();
 
-            let mut i: usize = 1;
+            // Max len to avoid overflowing into other resources
+            assert(len < 255, 'metadata too long');
+
+            self.metadata_uri.write(resource, len.into());
+
+            let mut i = resource + 1;
             loop {
                 match uri.pop_front() {
                     Option::Some(item) => {
@@ -191,33 +203,35 @@ mod world {
                     }
                 };
             };
+
+            EventEmitter::emit(ref self, MetadataUpdate { resource, uri });
         }
 
-        /// Checks if the provided account is an owner of the target.
+        /// Checks if the provided account is an owner of the resource.
         ///
         /// # Arguments
         ///
         /// * `address` - The contract address.
-        /// * `target` - The target.
+        /// * `resource` - The resource.
         ///
         /// # Returns
         ///
-        /// * `bool` - True if the address is an owner of the target, false otherwise.
-        fn is_owner(self: @ContractState, address: ContractAddress, target: felt252) -> bool {
-            self.owners.read((target, address))
+        /// * `bool` - True if the address is an owner of the resource, false otherwise.
+        fn is_owner(self: @ContractState, address: ContractAddress, resource: felt252) -> bool {
+            self.owners.read((resource, address))
         }
 
-        /// Grants ownership of the target to the address.
+        /// Grants ownership of the resource to the address.
         /// Can only be called by an existing owner or the world admin.
         ///
         /// # Arguments
         ///
         /// * `address` - The contract address.
-        /// * `target` - The target.
-        fn grant_owner(ref self: ContractState, address: ContractAddress, target: felt252) {
+        /// * `resource` - The resource.
+        fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, target) || self.is_owner(caller, WORLD), 'not owner');
-            self.owners.write((target, address), bool::True(()));
+            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
+            self.owners.write((resource, address), bool::True(()));
         }
 
         /// Revokes owner permission to the system for the model.
@@ -226,11 +240,11 @@ mod world {
         /// # Arguments
         ///
         /// * `address` - The contract address.
-        /// * `target` - The target.
-        fn revoke_owner(ref self: ContractState, address: ContractAddress, target: felt252) {
+        /// * `resource` - The resource.
+        fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, target) || self.is_owner(caller, WORLD), 'not owner');
-            self.owners.write((target, address), bool::False(()));
+            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
+            self.owners.write((resource, address), bool::False(()));
         }
 
         /// Checks if the provided system is a writer of the model.

@@ -175,15 +175,15 @@ fn deploy_world() -> IWorldDispatcher {
 fn test_metadata_uri() {
     // Deploy world contract
     let world = deploy_world();
-    world.set_metadata_uri(array!['test_uri'].span());
-    let uri = world.metadata_uri();
+    world.set_metadata_uri(0, array!['test_uri'].span());
+    let uri = world.metadata_uri(0);
 
     assert(uri.len() == 1, 'Incorrect metadata uri len');
     assert(uri[0] == @'test_uri', 'Incorrect metadata uri');
 
-    world.set_metadata_uri(array!['new_uri', 'longer'].span());
+    world.set_metadata_uri(0, array!['new_uri', 'longer'].span());
 
-    let uri = world.metadata_uri();
+    let uri = world.metadata_uri(0);
     assert(uri.len() == 2, 'Incorrect metadata uri len');
     assert(uri[0] == @'new_uri', 'Incorrect metadata uri 1');
     assert(uri[1] == @'longer', 'Incorrect metadata uri 2');
@@ -197,7 +197,7 @@ fn test_set_metadata_uri_reverts_for_not_owner() {
     let world = deploy_world();
 
     starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
-    world.set_metadata_uri(array!['new_uri', 'longer'].span());
+    world.set_metadata_uri(0, array!['new_uri', 'longer'].span());
 }
 
 #[test]
