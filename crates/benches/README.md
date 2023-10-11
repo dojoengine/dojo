@@ -25,7 +25,7 @@ Last command should print a _world address_ that should be pasted into `default_
 
 ## Running with compiled `sozo`
 
-While during testing release version of the tool worked better, sozo can be run from source with
+While during testing release version of the tool worked better, Sozo can be run from source with
 
 ```bash
 cargo run -r --bin sozo -- --manifest-path crates/benches/contracts/Scarb.toml build
