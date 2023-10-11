@@ -117,11 +117,17 @@ pub fn handle_introspect_enum(
             let args = (*paren_list.expressions(db)).elements(db);
             args.iter().for_each(|arg| {
                 let ty_name = arg.as_syntax_node().get_text(db);
-                variant_type_arr.push((format!("dojo::database::schema::Ty::Primitive('{}')", ty_name), ty_name));
+                variant_type_arr.push((
+                    format!("dojo::database::schema::Ty::Primitive('{}')", ty_name),
+                    ty_name,
+                ));
             });
         } else if let Expr::Path(type_path) = types_tuple.ty(db) {
             let ty_name = type_path.as_syntax_node().get_text(db);
-            variant_type_arr.push((format!("dojo::database::schema::SchemaIntrospection::<{}>::ty()", ty_name), ty_name));
+            variant_type_arr.push((
+                format!("dojo::database::schema::SchemaIntrospection::<{}>::ty()", ty_name),
+                ty_name,
+            ));
         } else {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: types_tuple.stable_ptr().0,
@@ -157,9 +163,8 @@ pub fn handle_introspect_enum(
                 serialize_member_type(@dojo::database::schema::Ty::Tuple(array![{}].span()))
             )",
             if !variant_type_arr.is_empty() {
-                let ty_cairo: Vec<_> = variant_type_arr.iter().map(|(ty_cairo, _)| {
-                    ty_cairo.to_string()
-                }).collect();
+                let ty_cairo: Vec<_> =
+                    variant_type_arr.iter().map(|(ty_cairo, _)| ty_cairo.to_string()).collect();
                 "".to_string() + &ty_cairo.join(", ")
             } else {
                 "".to_string()
