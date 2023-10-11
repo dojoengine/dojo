@@ -84,7 +84,8 @@ impl CairoPlugin for BuiltinDojoPlugin {
         PackageId::new(
             PackageName::new("dojo_plugin"),
             Version::parse(version).unwrap(),
-            SourceId::for_git(&url, &scarb::core::GitReference::DefaultBranch).unwrap(),
+            SourceId::for_git(&url, &scarb::core::GitReference::Tag(format!("v{version}").into()))
+                .unwrap(),
         )
     }
 
