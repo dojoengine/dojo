@@ -1,9 +1,9 @@
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
-use indexmap::IndexMap;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;

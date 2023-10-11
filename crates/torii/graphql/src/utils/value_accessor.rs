@@ -3,8 +3,8 @@
 
 use std::borrow::Cow;
 
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::{Error, Name, Result, Value};
-use indexmap::IndexMap;
 use serde::de::DeserializeOwned;
 
 /// A value accessor

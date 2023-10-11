@@ -1,6 +1,6 @@
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef};
 use async_graphql::{Name, Value};
-use indexmap::IndexMap;
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
