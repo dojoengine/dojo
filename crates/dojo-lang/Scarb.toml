@@ -1,5 +1,5 @@
 [package]
 name = "dojo_plugin"
-version = "0.3.0-rc6"
+version = "0.3.0-rc7"
 
 [cairo-plugin]

@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.3.0-rc6"
+version = "0.3.0-rc7"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -3049,7 +3049,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.3.0-rc6"
+version = "0.3.0-rc7"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3074,7 +3074,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client-wasm"
-version = "0.3.0-rc6"
+version = "0.3.0-rc7"
 dependencies = [
  "async-std",
  "async-trait",
@@ -3100,7 +3100,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.3.0-rc6"
+version = "0.3.0-rc7"
 dependencies = [
  "anyhow",
  "bytes",
