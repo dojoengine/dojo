@@ -16,8 +16,9 @@ use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
     BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
 };
-use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet_crypto::poseidon_hash_many;
 use torii_client::contract::world::WorldContract;
 
 #[cfg(test)]
@@ -57,7 +58,7 @@ where
     // Calculate diff between local and remote World manifests.
 
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
-    let diff = WorldDiff::compute(local_manifest.clone(), remote_manifest);
+    let diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
     let total_diffs = diff.count_diffs();
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
@@ -65,7 +66,7 @@ where
         ui.print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
         // Mirate according to the diff.
-        let (world_address, deploy_output) = apply_diff(
+        let world_address = apply_diff(
             ws,
             &target_dir,
             diff,
@@ -76,7 +77,8 @@ where
         )
         .await?;
 
-        update_world_manifest(ws, local_manifest, target_dir, world_address, deploy_output).await?;
+        update_world_manifest(ws, local_manifest, remote_manifest, target_dir, world_address)
+            .await?;
     }
 
     Ok(())
@@ -85,9 +87,9 @@ where
 async fn update_world_manifest<U>(
     ws: &Workspace<'_>,
     mut local_manifest: Manifest,
+    remote_manifest: Option<Manifest>,
     target_dir: U,
     world_address: FieldElement,
-    deploy_output: Vec<Option<DeployOutput>>,
 ) -> Result<()>
 where
     U: AsRef<Path>,
@@ -96,18 +98,25 @@ where
     ui.print("\n✨ Updating manifest.json...");
     local_manifest.world.address = Some(world_address);
 
-    deploy_output.iter().for_each(|deploy_output| {
-        match deploy_output {
-            Some(output) => local_manifest.contracts.iter_mut().find_map(|contract| {
-                if contract.class_hash == output.declare.as_ref().unwrap().class_hash {
-                    contract.address = Some(output.contract_address);
-                    Some({})
-                } else {
-                    None
-                }
-            }),
-            None => Some({}),
-        };
+    let base_class_hash = match remote_manifest {
+        Some(manifest) => manifest.base.class_hash,
+        None => local_manifest.base.class_hash,
+    };
+
+    local_manifest.contracts.iter_mut().for_each(|c| {
+        let salt = poseidon_hash_many(
+            &c.name
+                .chars()
+                .collect::<Vec<_>>()
+                .chunks(31)
+                .map(|chunk| {
+                    let s: String = chunk.iter().collect();
+                    cairo_short_string_to_felt(&s).unwrap()
+                })
+                .collect::<Vec<_>>(),
+        );
+
+        c.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
 
     local_manifest.write_to_path(target_dir.as_ref().join("manifest.json"))?;
@@ -125,7 +134,7 @@ pub(crate) async fn apply_diff<U, P, S>(
     world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
-) -> Result<(FieldElement, Vec<Option<DeployOutput>>)>
+) -> Result<FieldElement>
 where
     U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
@@ -136,7 +145,7 @@ where
 
     println!("  ");
 
-    let (block_height, deploy_output) = execute_strategy(ws, &strategy, account, txn_config)
+    let block_height = execute_strategy(ws, &strategy, account, txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
@@ -160,7 +169,7 @@ where
         ));
     }
 
-    Ok((strategy.world_address().expect("world address must exist"), deploy_output))
+    strategy.world_address()
 }
 
 pub(crate) async fn setup_env(
@@ -289,7 +298,7 @@ pub async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
-) -> Result<(Option<u64>, Vec<Option<DeployOutput>>)>
+) -> Result<Option<u64>>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -369,12 +378,12 @@ where
     };
 
     register_models(strategy, migrator, ui, txn_config.clone()).await?;
-    let deploy_output = deploy_contracts(strategy, migrator, ui, txn_config).await?;
+    deploy_contracts(strategy, migrator, ui, txn_config).await?;
 
     // This gets current block numder if helpful
     // let block_height = migrator.provider().block_number().await.ok();
 
-    Ok((None, deploy_output))
+    Ok(None)
 }
 
 enum ContractDeploymentOutput {
