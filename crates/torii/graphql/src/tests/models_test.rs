@@ -73,8 +73,8 @@ mod tests {
 
         // fixtures inserts two position mdoels with members (x: 42, y: 69) and (x: 69, y: 42)
         // the following filters and expected total results can be simply calculated
+        // Todo: reenable where filters, change to ("where: { playerNEQ: ContractAddress }", 1),
         let where_filters = Vec::from([
-            // Todo: reenable where filters, change to ("where: { playerNEQ: ContractAddress }", 1),
             // ("where: { x: 42 }", 1),
             // ("where: { xNEQ: 42 }", 1),
             // ("where: { xGT: 42 }", 1),
@@ -196,8 +196,8 @@ mod tests {
 
         entity_fixtures(&mut db).await;
 
-        //Todo: Add `keys` field on `entity` type
-        //fixme: `keys` field return a single string from query, but the test expects vec of strings
+        // Todo: Add `keys` field on `entity` type
+        // fixme: `keys` field return a single string, but test expects vec of strings
         let query = r#"
                     {
                         positionModels {

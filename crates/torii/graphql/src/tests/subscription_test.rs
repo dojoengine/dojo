@@ -8,7 +8,7 @@ mod tests {
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
-    //use tokio_util::sync::CancellationToken;
+    // use tokio_util::sync::CancellationToken;
     use torii_core::sql::Sql;
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
@@ -18,7 +18,7 @@ mod tests {
     async fn test_entity_subscription(pool: SqlitePool) {
         // Sleep in order to run this test in a single thread
         tokio::time::sleep(Duration::from_secs(1)).await;
-        //let cts = CancellationToken::new();
+        // let cts = CancellationToken::new();
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
@@ -98,7 +98,7 @@ mod tests {
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
         // Sleep in order to run this test in a single thread
         tokio::time::sleep(Duration::from_secs(1)).await;
-        //let cts = CancellationToken::new();
+        // let cts = CancellationToken::new();
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
@@ -179,7 +179,7 @@ mod tests {
         let name = "Moves".to_string();
         let model_id = name.clone();
         let class_hash = FieldElement::TWO;
-        //let hex_class_hash = format!("{:#x}", class_hash);
+        // let hex_class_hash = format!("{:#x}", class_hash);
         // ToDo: Query class_hash from db
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":name }
@@ -233,7 +233,7 @@ mod tests {
         let name = "Test".to_string();
         let model_id = name.clone();
         let class_hash = FieldElement::TWO;
-        //let hex_class_hash = format!("{:#x}", class_hash);
+        // let hex_class_hash = format!("{:#x}", class_hash);
         // ToDo: Query class_hash from db
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":name }
