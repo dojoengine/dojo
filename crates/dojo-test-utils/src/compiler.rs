@@ -31,8 +31,7 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
 }
 
 pub fn get_test_corelib() -> PathBuf {
-    let config =
-        build_test_config("./src/manifest_test_data/example_ecs_crate/Scarb.toml").unwrap();
+    let config = build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
     let compilation_units = ops::generate_compilation_units(&resolve, &ws).unwrap();
