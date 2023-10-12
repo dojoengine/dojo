@@ -51,8 +51,7 @@ where
 
     // Load local and remote World manifests.
 
-    let (local_manifest, remote_manifest) =
-        load_world_manifests(&target_dir, world_address, &account, ui).await?;
+    let (local_manifest, remote_manifest) = load_world_manifests(&target_dir, &account, ui).await?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -201,7 +200,6 @@ pub(crate) async fn setup_env(
 
 async fn load_world_manifests<U, P, S>(
     target_dir: U,
-    world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     ui: &Ui,
 ) -> Result<(Manifest, Option<Manifest>)>
@@ -214,7 +212,7 @@ where
 
     let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
-    let remote_manifest = if let Some(world_address) = world_address {
+    let remote_manifest = if let Some(world_address) = local_manifest.world.address {
         ui.print_sub(format!("Found remote World: {world_address:#x}"));
         ui.print_sub("Fetching remote state");
 
