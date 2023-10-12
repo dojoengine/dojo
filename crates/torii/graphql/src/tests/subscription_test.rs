@@ -1,13 +1,15 @@
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
     use std::time::Duration;
 
     use async_graphql::value;
-    use dojo_types::model::{Member, Struct, Ty};
+    use dojo_types::schema::{Enum, Member, Struct, Ty};
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
     use tokio_util::sync::CancellationToken;
+    use dojo_types::primitive::Primitive;
     use torii_core::sql::Sql;
 
     use crate::tests::{init, run_graphql_subscription};
@@ -50,7 +52,7 @@ mod tests {
               }
           }"#,
         )
-        .await;
+            .await;
         // 4. The subcription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
@@ -62,7 +64,7 @@ mod tests {
         // Sleep in order to run this test in a single thread
         tokio::time::sleep(Duration::from_secs(1)).await;
         let cts = CancellationToken::new();
-        let state = init(cts, &pool).await;
+        let mut state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess expected entity value
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
@@ -79,7 +81,41 @@ mod tests {
             // Set entity with one moves model
             // remaining: 10, last_direction: 0
             let moves_values = vec![FieldElement::from_hex_be("0xa").unwrap(), FieldElement::ZERO];
-            state.set_entity("Moves".to_string(), key, moves_values).await.unwrap();
+            state.set_entity(
+                Ty::Struct(Struct {
+                    name: "Moves".to_string(),
+                    children: vec![
+                        Member {
+                            name: "player".to_string(),
+                            key: true,
+                            ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+                        },
+                        Member {
+                            name: "remaining".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U8(Some(10))),
+                        },
+                        Member {
+                            name: "last_direction".to_string(),
+                            key: false,
+                            ty: Ty::Enum(Enum {
+                                name: "Direction".to_string(),
+                                option: Some(1),
+                                options: vec![
+                                    ("None".to_string(), Ty::Tuple(vec![])),
+                                    ("Left".to_string(), Ty::Tuple(vec![])),
+                                    ("Right".to_string(), Ty::Tuple(vec![])),
+                                    ("Up".to_string(), Ty::Tuple(vec![])),
+                                    ("Down".to_string(), Ty::Tuple(vec![])),
+                                ],
+                            }),
+                        },
+                    ],
+                }),
+                &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
+            )
+                .await
+                .unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
@@ -95,8 +131,8 @@ mod tests {
 						}
 				}"#,
         )
-        .await;
-        // 4. The subcription has received the message from publish()
+            .await;
+        // 4. The subscription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
         rx.recv().await.unwrap();
@@ -107,7 +143,7 @@ mod tests {
         // Sleep in order to run this test at the end in a single thread
         tokio::time::sleep(Duration::from_secs(2)).await;
 
-        let state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+        let mut state = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let name = "Test".to_string();
         let model_id = name.to_lowercase();
@@ -126,11 +162,11 @@ mod tests {
                 name,
                 children: vec![Member {
                     name: "test".into(),
-                    ty: Ty::Name("u32".to_string()),
+                    ty: Ty::Primitive(Primitive::from_str("u32").expect("must be valid schema")),
                     key: false,
                 }],
             });
-            state.register_model(model, vec![], class_hash).await.unwrap();
+            state.register_model(model, vec![], class_hash, 0, 0).await.unwrap();
 
             // 3. fn publish() is called from state.set_entity()
 
@@ -147,7 +183,7 @@ mod tests {
                     }
             }"#,
         )
-        .await;
+            .await;
         // 4. The subcription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
@@ -178,7 +214,7 @@ mod tests {
                 name,
                 children: vec![Member {
                     name: "test".into(),
-                    ty: Ty::Name("u32".to_string()),
+                    ty: Ty::Primitive(Primitive::from_str("u32").expect("must be valid schema"))
                     key: false,
                 }],
             });
@@ -198,7 +234,7 @@ mod tests {
                     }
             }"#,
         )
-        .await;
+            .await;
         // 4. The subcription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
