@@ -13,7 +13,7 @@ use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
-use crate::utils::extract_value::extract;
+use crate::utils::ParseIndexMap;
 
 #[derive(FromRow, Deserialize, PartialEq, Eq)]
 pub struct ModelMember {
@@ -170,7 +170,8 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
                         return match ctx.parent_value.try_to_value()? {
                             Value::Object(indexmap) => {
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                                let entity_id = extract::<String>(indexmap, "entity_id")?;
+                                let entity_id: String =
+                                    ParseIndexMap::parse(indexmap, "entity_id")?;
 
                                 // TODO: remove subqueries and use JOIN in parent query
                                 let data = fetch_single_row(
@@ -219,7 +220,7 @@ fn entity_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let entity_id = extract::<String>(indexmap, "entity_id")?;
+                    let entity_id: String = ParseIndexMap::parse(indexmap, "entity_id")?;
                     let data = fetch_single_row(&mut conn, "entities", "id", &entity_id).await?;
                     let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
 

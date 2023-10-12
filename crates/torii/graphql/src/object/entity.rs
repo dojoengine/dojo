@@ -17,7 +17,7 @@ use crate::query::constants::ENTITY_TABLE;
 use crate::query::data::{count_rows, fetch_multiple_rows};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
-use crate::utils::extract_value::extract;
+use crate::utils::ParseIndexMap;
 
 pub struct EntityObject;
 
@@ -71,15 +71,7 @@ impl ObjectTrait for EntityObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
-                    let keys = ctx.args.try_get("keys").ok().and_then(|keys| {
-                        keys.list().ok().map(|key_list| {
-                            key_list
-                                    .iter()
-                                    .map(|val| val.string().unwrap().to_string()) // safe unwrap
-                                    .collect()
-                        })
-                    });
-
+                    let keys: Option<Vec<String>> = ParseIndexMap::parse(&ctx.args.as_index_map(), "keys").ok();
                     let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
                     let data = fetch_multiple_rows(
                         &mut conn,
@@ -143,17 +135,17 @@ fn model_union_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let model_names: Vec<String> = extract::<String>(indexmap, "model_names")?
-                        .split(',')
-                        .map(|s| s.to_string())
-                        .collect();
+                    let model_names: String = ParseIndexMap::parse(indexmap, "model_names")?;
+                    let model_names: Vec<String> =
+                        model_names.split(',').map(|s| s.to_string()).collect();
 
-                    let entity_id = extract::<String>(indexmap, "id")?;
+                    let entity_id: String = ParseIndexMap::parse(indexmap, "id")?;
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
                     for name in model_names {
                         let type_mapping = type_mapping_query(&mut conn, &name).await?;
                         let mut path_array = vec![name.clone()];
-                        let state = model_data_recursive_query(
+
+                        let data = model_data_recursive_query(
                             &mut conn,
                             &mut path_array,
                             &entity_id,
@@ -161,7 +153,7 @@ fn model_union_field() -> Field {
                         )
                         .await?;
 
-                        results.push(FieldValue::with_type(FieldValue::owned_any(state), name));
+                        results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
 
                     Ok(Some(FieldValue::list(results)))

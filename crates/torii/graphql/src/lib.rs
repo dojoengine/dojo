@@ -1,5 +1,6 @@
 pub mod object;
 
+mod error;
 mod mapping;
 mod query;
 pub mod route;
