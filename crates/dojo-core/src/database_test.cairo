@@ -6,7 +6,6 @@ use array::SpanTrait;
 use traits::{Into, TryInto};
 
 use starknet::syscalls::deploy_syscall;
-use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
 use dojo::world::{IWorldDispatcher};
 use dojo::executor::executor;
 use dojo::database::{get, set, set_with_index, del, scan, QueryClause, KeyValueClause};
@@ -132,7 +131,7 @@ fn test_database_scan() {
         value: 'x',
     };
 
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 2, 'Wrong number of keys clause!');
 }
 
@@ -144,12 +143,11 @@ fn test_database_scan_where() {
     let other = array![5, 5].span();
     let layout = array![251, 251].span();
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set_with_index(class_hash, 'table', 'some', array!['p'].span(), 0, some, layout);
-    set_with_index(class_hash, 'table', 'same', array!['p'].span(), 0, same, layout);
-    set_with_index(class_hash, 'table', 'other', array!['x'].span(), 0, other, layout);
+    set_with_index('table', 'some', array!['p'].span(), 0, some, layout);
+    set_with_index('table', 'same', array!['p'].span(), 0, same, layout);
+    set_with_index('table', 'other', array!['x'].span(), 0, other, layout);
 
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::All, 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::All, 2, layout);
     assert(keys.len() == 3, 'Wrong number of keys!');
     assert(*(*values.at(0)).at(0) != 0, 'value is not set');
 
@@ -158,20 +156,20 @@ fn test_database_scan_where() {
         value: 'x',
     };
 
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 1, 'Wrong number of keys for x!');
     assert(*(*values.at(0)).at(0) == 5, 'Wrong value 0 for x!!');
     assert(*(*values.at(0)).at(1) == 5, 'Wrong value 1 for x!');
 
     where.value = 'p';
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 2, 'Wrong number of keys for p!');
 
-    let (keys, values) = scan(class_hash, 'table', Option::Some(1), QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::Some(1), QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 1, 'Wrong len for second of p!');
 
     where.value = 'q';
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 0, 'Wrong number of keys for q!');
 }
 
@@ -183,34 +181,33 @@ fn test_database_scan_where_deletion() {
     let other = array![5, 5].span();
     let layout = array![251, 251].span();
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set_with_index(class_hash, 'table', 'some', array!['a', 'x'].span(), 0, some, layout);
-    set_with_index(class_hash, 'table', 'same', array!['a', 'y'].span(), 0, same, layout);
-    set_with_index(class_hash, 'table', 'other', array!['b', 'x'].span(), 0, other, layout);
+    set_with_index('table', 'some', array!['a', 'x'].span(), 0, some, layout);
+    set_with_index('table', 'same', array!['a', 'y'].span(), 0, same, layout);
+    set_with_index('table', 'other', array!['b', 'x'].span(), 0, other, layout);
 
-    del(class_hash, 'table', 'same');
+    del('table', 'same');
 
     let mut where = KeyValueClause {
         key: 0,
         value: 'a',
     };
 
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 1, 'Wrong number of keys for a!');
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value 0 for a!');
 
     where.key = 1;
     where.value = 'y';
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 0, 'Wrong number of keys for y!');
 
     where.value = 'x';
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
     assert(keys.len() == 2, 'Wrong number of keys for x!');
 
-    del(class_hash, 'table', 'some');
-    del(class_hash, 'table', 'other');
+    del('table', 'some');
+    del('table', 'other');
 
-    let (keys, values) = scan(class_hash, 'table', Option::None, QueryClause::All, 2, layout);
+    let (keys, values) = scan('table', Option::None, QueryClause::All, 2, layout);
     assert(keys.len() == 0, 'Wrong number of keys for c!');
 }

@@ -58,7 +58,6 @@ fn set(table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: S
 
 /// Creates an entry in the database and adds it to appropriate indexes.
 /// # Arguments
-/// * `class_hash` - The class hash of the contract.
 /// * `table` - The table to create the entry in.
 /// * `id` - id of the created entry.
 /// * `keys` - The keys to index the entry by.
@@ -177,7 +176,6 @@ fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
 
 /// Returns entries on the given ids.
 /// # Arguments
-/// * `class_hash` - The class hash of the contract.
 /// * `table` - The table to get the entries from.
 /// * `all_ids` - The ids of the entries to get.
 /// * `length` - The length of the entries.
