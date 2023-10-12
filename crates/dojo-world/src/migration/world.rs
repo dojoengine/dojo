@@ -39,7 +39,12 @@ impl WorldDiff {
             .map(|contract| ContractDiff {
                 name: contract.name.to_string(),
                 local: contract.class_hash,
-                remote: None,
+                remote: remote.as_ref().and_then(|m| {
+                    m.contracts
+                        .iter()
+                        .find(|r| r.class_hash == contract.class_hash)
+                        .map(|r| r.class_hash)
+                }),
             })
             .collect::<Vec<_>>();
 
