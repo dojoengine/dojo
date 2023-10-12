@@ -218,7 +218,7 @@ where
         ui.print_sub(format!("Found remote World: {world_address:#x}"));
         ui.print_sub("Fetching remote state");
 
-        Manifest::load_from_remote(account.provider(), world_address, Some(local_manifest.clone()))
+        Manifest::load_from_remote(account.provider(), world_address)
             .await
             .map(Some)
             .map_err(|e| match e {
