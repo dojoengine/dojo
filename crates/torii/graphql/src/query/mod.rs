@@ -95,7 +95,7 @@ fn parse_nested_type(
     TypeData::Nested((TypeRef::named(target_type), nested_mapping))
 }
 
-fn remove_leading_zeros(value: Value) -> Value {
+fn remove_hex_leading_zeros(value: Value) -> Value {
     if let Value::String(str_val) = &value {
         if !str_val.starts_with("0x") {
             return value;
@@ -130,7 +130,7 @@ pub fn value_mapping_from_row(
                     Primitive::U128(_)
                     | Primitive::ContractAddress(_)
                     | Primitive::ClassHash(_)
-                    | Primitive::Felt252(_) => remove_leading_zeros(value),
+                    | Primitive::Felt252(_) => remove_hex_leading_zeros(value),
                     _ => value,
                 },
                 Err(_) => value,
