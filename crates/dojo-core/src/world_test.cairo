@@ -220,7 +220,7 @@ fn test_entities() {
     let mut query_keys = ArrayTrait::new().span();
     let layout = array![251].span();
     let (keys, values) = world.entities('Foo', Option::None(()), query_keys, 2, layout);
-    assert(keys.len() == 1, 'No keys found for any!');
+    assert(keys.len() == 0, 'found value for unindexed');
     // query_keys.append(0x1337);
     // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
     // assert(keys.len() == 1, 'No keys found!');

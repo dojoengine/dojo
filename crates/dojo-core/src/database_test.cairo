@@ -19,9 +19,8 @@ fn test_database_basic() {
     values.append('database_test');
     values.append('42');
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set(class_hash, 'table', 'key', 0, values.span(), array![251, 251].span());
-    let res = get(class_hash, 'table', 'key', 0, values.len(), array![251, 251].span());
+    set('table', 'key', 0, values.span(), array![251, 251].span());
+    let res = get('table', 'key', 0, values.len(), array![251, 251].span());
 
     assert(res.at(0) == values.at(0), 'Value at 0 not equal!');
     assert(res.at(1) == values.at(1), 'Value at 0 not equal!');
@@ -39,11 +38,10 @@ fn test_database_different_tables() {
     other.append(0x3);
     other.append(0x4);
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set(class_hash, 'first', 'key', 0, values.span(), array![251, 251].span());
-    set(class_hash, 'second', 'key', 0, other.span(), array![251, 251].span());
-    let res = get(class_hash, 'first', 'key', 0, values.len(), array![251, 251].span());
-    let other_res = get(class_hash, 'second', 'key', 0, other.len(), array![251, 251].span());
+    set('first', 'key', 0, values.span(), array![251, 251].span());
+    set('second', 'key', 0, other.span(), array![251, 251].span());
+    let res = get('first', 'key', 0, values.len(), array![251, 251].span());
+    let other_res = get('second', 'key', 0, other.len(), array![251, 251].span());
 
     assert(res.len() == values.len(), 'Lengths not equal');
     assert(res.at(0) == values.at(0), 'Values different at `first`!');
@@ -62,11 +60,10 @@ fn test_database_different_keys() {
     other.append(0x3);
     other.append(0x4);
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set(class_hash, 'table', 'key', 0, values.span(), array![251, 251].span());
-    set(class_hash, 'table', 'other', 0, other.span(), array![251, 251].span());
-    let res = get(class_hash, 'table', 'key', 0, values.len(), array![251, 251].span());
-    let other_res = get(class_hash, 'table', 'other', 0, other.len(), array![251, 251].span());
+    set('table', 'key', 0, values.span(), array![251, 251].span());
+    set('table', 'other', 0, other.span(), array![251, 251].span());
+    let res = get('table', 'key', 0, values.len(), array![251, 251].span());
+    let other_res = get('table', 'other', 0, other.len(), array![251, 251].span());
 
     assert(res.len() == values.len(), 'Lengths not equal');
     assert(res.at(0) == values.at(0), 'Values different at `key`!');
@@ -84,13 +81,10 @@ fn test_database_pagination() {
     values.append(0x4);
     values.append(0x5);
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set(class_hash, 'table', 'key', 1, values.span(), array![251, 251, 251, 251, 251].span());
-    let first_res = get(class_hash, 'table', 'key', 1, 3, array![251, 251, 251].span());
-    let second_res = get(class_hash, 'table', 'key', 3, 5, array![251, 251, 251, 251, 251].span());
-    let third_res = get(
-        class_hash, 'table', 'key', 5, 7, array![251, 251, 251, 251, 251, 251, 251].span()
-    );
+    set('table', 'key', 1, values.span(), array![251, 251, 251, 251, 251].span());
+    let first_res = get('table', 'key', 1, 3, array![251, 251, 251].span());
+    let second_res = get('table', 'key', 3, 5, array![251, 251, 251, 251, 251].span());
+    let third_res = get('table', 'key', 5, 7, array![251, 251, 251, 251, 251, 251, 251].span());
 
     assert(*first_res.at(0) == *values.at(0), 'Values different at index 0!');
     assert(*first_res.at(1) == *values.at(1), 'Values different at index 1!');
@@ -106,14 +100,13 @@ fn test_database_del() {
     let mut values = ArrayTrait::new();
     values.append(0x42);
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set(class_hash, 'table', 'key', 0, values.span(), array![251].span());
+    set('table', 'key', 0, values.span(), array![251].span());
 
-    let before = get(class_hash, 'table', 'key', 0, values.len(), array![251].span());
+    let before = get('table', 'key', 0, values.len(), array![251].span());
     assert(*before.at(0) == *values.at(0), 'Values different at index 0!');
 
-    del(class_hash, 'table', 'key');
-    let after = get(class_hash, 'table', 'key', 0, 0, array![].span());
+    del('table', 'key');
+    let after = get('table', 'key', 0, 0, array![].span());
     assert(after.len() == 0, 'Non empty after deletion!');
 }
 
@@ -124,11 +117,10 @@ fn test_database_scan() {
     let odd = array![1, 3].span();
     let layout = array![251, 251].span();
 
-    let class_hash: starknet::ClassHash = executor::TEST_CLASS_HASH.try_into().unwrap();
-    set_with_index(class_hash, 'table', 'even', 0, even, layout);
-    set_with_index(class_hash, 'table', 'odd', 0, odd, layout);
+    set_with_index('table', 'even', 0, even, layout);
+    set_with_index('table', 'odd', 0, odd, layout);
 
-    let (keys, values) = scan(class_hash, 'table', Option::None(()), 2, layout);
+    let (keys, values) = scan('table', Option::None(()), 2, layout);
     assert(keys.len() == 2, 'Wrong number of keys!');
     assert(values.len() == 2, 'Wrong number of values!');
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
