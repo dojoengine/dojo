@@ -10,8 +10,6 @@ mod index_test;
 mod introspect;
 #[cfg(test)]
 mod introspect_test;
-#[cfg(test)]
-mod values_index_test;
 mod storage;
 #[cfg(test)]
 mod storage_test;
