@@ -1,4 +1,3 @@
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use starknet::{ContractAddress, ClassHash};
 
 #[starknet::interface]
@@ -18,7 +17,7 @@ mod records {
         fn create(self: @ContractState, num_records: u8) {
             let world = self.world_dispatcher.read();
             let mut record_idx = 0;
-
+            
             loop {
                 if record_idx == num_records {
                     break ();

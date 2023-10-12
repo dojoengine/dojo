@@ -301,7 +301,7 @@ pub async fn entity_fixtures(db: &mut Sql) {
     db.execute().await.unwrap();
 }
 
-pub async fn paginate(
+pub async fn cursor_paginate(
     pool: &SqlitePool,
     cursor: Option<String>,
     direction: Paginate,
@@ -317,6 +317,29 @@ pub async fn paginate(
         "
         {{
             entities ({first_last}: {page_size} {cursor}) 
+            {{
+                total_count
+                edges {{
+                    cursor
+                    node {{
+                        model_names
+                    }}
+                }}
+            }}
+        }}
+        "
+    );
+
+    let value = run_graphql_query(pool, &query).await;
+    let entities = value.get("entities").ok_or("entities not found").unwrap();
+    serde_json::from_value(entities.clone()).unwrap()
+}
+
+pub async fn offset_paginate(pool: &SqlitePool, offset: u64, limit: u64) -> Connection<Entity> {
+    let query = format!(
+        "
+        {{
+            entities (offset: {offset}, limit: {limit}) 
             {{
                 total_count
                 edges {{

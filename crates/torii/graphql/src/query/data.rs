@@ -85,9 +85,10 @@ pub async fn fetch_multiple_rows(
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }
 
+    let limit = connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT);
+
     // NOTE: Order is determined by the `order` param if provided, otherwise it's inferred from the
     // `first` or `last` param. Explicit ordering take precedence
-    let limit = connection.first.or(connection.last).unwrap_or(DEFAULT_LIMIT);
     match order {
         Some(order) => {
             let column_name = format!("external_{}", order.field);
@@ -110,6 +111,10 @@ pub async fn fetch_multiple_rows(
             ));
         }
     };
+
+    if let Some(offset) = connection.offset {
+        query.push_str(&format!(" OFFSET {}", offset));
+    }
 
     sqlx::query(&query).fetch_all(conn).await
 }

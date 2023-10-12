@@ -1,7 +1,8 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ParseError {
+#[allow(clippy::enum_variant_names)]
+pub enum ExtractError {
     #[error("Not found: {0}")]
     NotFound(String),
     #[error("Not a list: {0}")]
