@@ -13,16 +13,18 @@ use crate::sql::Sql;
 pub struct MetadataUpdateProcessor;
 
 #[async_trait]
-impl<P: Provider + Sync + 'static> EventProcessor<P> for MetadataUpdateProcessor {
+impl<P> EventProcessor<P> for MetadataUpdateProcessor
+where
+    P: Provider + Send + Sync,
+{
     fn event_key(&self) -> String {
         "MetadataUpdate".to_string()
     }
 
     async fn process(
         &self,
-        _world: &WorldContractReader<'_, P>,
+        _world: &WorldContractReader<P>,
         db: &mut Sql,
-        _provider: &P,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         _event_id: &str,

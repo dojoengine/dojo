@@ -2390,7 +2390,6 @@ dependencies = [
  "futures",
  "http",
  "ipfs-api-backend-hyper",
- "reqwest",
  "scarb",
  "serde",
  "serde_json",

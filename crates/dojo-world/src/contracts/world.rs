@@ -2,10 +2,13 @@ use std::result::Result;
 
 use http::uri::{InvalidUri, Uri};
 use starknet::accounts::{AccountError, Call, ConnectedAccount};
-use starknet::core::types::{BlockId, FieldElement, FunctionCall, InvokeTransactionResult};
+use starknet::core::types::{
+    BlockId, BlockTag, FieldElement, FunctionCall, InvokeTransactionResult,
+};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
 };
+use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
 
 use super::model::{ModelError, ModelReader};
@@ -17,29 +20,42 @@ pub(crate) mod test;
 #[derive(Debug, thiserror::Error)]
 pub enum WorldContractError<S, P> {
     #[error(transparent)]
-    ProviderError(ProviderError<P>),
+    ProviderError(#[from] ProviderError<P>),
     #[error(transparent)]
-    AccountError(AccountError<S, P>),
+    AccountError(#[from] AccountError<S, P>),
     #[error(transparent)]
-    CairoShortStringToFeltError(CairoShortStringToFeltError),
+    CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
-    ContractReaderError(ContractReaderError<P>),
+    ContractReaderError(#[from] ContractReaderError<P>),
     #[error("Invalid metadata uri")]
-    InvalidMetadataUri(InvalidUri),
+    InvalidMetadataUri(#[from] InvalidUri),
 }
 
-#[derive(Debug)]
-pub struct WorldContract<'a, A: ConnectedAccount + Sync> {
-    pub address: FieldElement,
-    pub account: &'a A,
-    pub reader: WorldContractReader<'a, A::Provider>,
+pub struct WorldContract<'a, A>
+where
+    A: ConnectedAccount,
+{
+    account: &'a A,
+    reader: WorldContractReader<&'a <A as ConnectedAccount>::Provider>,
 }
 
-impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
+impl<'a, A> WorldContract<'a, A>
+where
+    A: ConnectedAccount,
+{
     pub fn new(address: FieldElement, account: &'a A) -> Self {
-        Self { address, account, reader: WorldContractReader::new(address, account.provider()) }
+        Self { account, reader: WorldContractReader::new(address, account.provider()) }
     }
 
+    pub fn account(&self) -> &A {
+        self.account
+    }
+}
+
+impl<'a, A> WorldContract<'a, A>
+where
+    A: ConnectedAccount + Sync,
+{
     pub async fn set_executor(
         &self,
         executor: FieldElement,
@@ -47,9 +63,9 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
     {
         self.account
             .execute(vec![Call {
+                to: self.reader.address,
                 calldata: vec![executor],
-                to: self.address,
-                selector: get_selector_from_name("set_executor").unwrap(),
+                selector: selector!("set_executor"),
             }])
             .send()
             .await
@@ -83,7 +99,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         self.account
             .execute(vec![Call {
                 calldata: encoded,
-                to: self.address,
+                to: self.reader.address,
                 selector: get_selector_from_name("set_metadata_uri").unwrap(),
             }])
             .send()
@@ -105,7 +121,7 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         self.account
             .execute(vec![Call {
                 calldata: vec![model, contract],
-                to: self.address,
+                to: self.reader.address,
                 selector: get_selector_from_name("grant_writer").unwrap(),
             }])
             .send()
@@ -121,8 +137,8 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
         let calls = models
             .iter()
             .map(|c| Call {
-                to: self.address,
-                selector: get_selector_from_name("register_model").unwrap(),
+                to: self.reader.address,
+                selector: selector!("register_model"),
                 calldata: vec![*c],
             })
             .collect::<Vec<_>>();
@@ -138,8 +154,8 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
     {
         self.account
             .execute(vec![Call {
-                to: self.address,
-                selector: get_selector_from_name("deploy_contract").unwrap(),
+                to: self.reader.address,
+                selector: selector!("deploy_contract"),
                 calldata: vec![*salt, *class_hash],
             }])
             .send()
@@ -148,152 +164,153 @@ impl<'a, A: ConnectedAccount + Sync> WorldContract<'a, A> {
 
     pub async fn executor(
         &self,
-        block_id: BlockId,
     ) -> Result<FieldElement, ContractReaderError<<A::Provider as Provider>::Error>> {
-        self.reader.executor(block_id).await
+        self.reader.executor().await
     }
 
     pub async fn base(
         &self,
-        block_id: BlockId,
     ) -> Result<FieldElement, ContractReaderError<<A::Provider as Provider>::Error>> {
-        self.reader.base(block_id).await
+        self.reader.base().await
     }
 
     pub async fn model(
         &'a self,
         name: &str,
-        block_id: BlockId,
-    ) -> Result<ModelReader<'a, A::Provider>, ModelError<<A::Provider as Provider>::Error>> {
-        self.reader.model(name, block_id).await
+    ) -> Result<ModelReader<'_, &'a A::Provider>, ModelError<<A::Provider as Provider>::Error>>
+    {
+        self.reader.model(name).await
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum ContractReaderError<P> {
     #[error(transparent)]
-    ProviderError(ProviderError<P>),
+    ProviderError(#[from] ProviderError<P>),
     #[error(transparent)]
-    CairoShortStringToFeltError(CairoShortStringToFeltError),
+    CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
 }
 
-#[derive(Debug)]
-pub struct WorldContractReader<'a, P: Provider + Sync> {
-    pub address: FieldElement,
-    pub provider: &'a P,
+pub struct WorldContractReader<P> {
+    provider: P,
+    block_id: BlockId,
+    address: FieldElement,
 }
 
-impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
-    pub fn new(address: FieldElement, provider: &'a P) -> Self {
-        Self { address, provider }
+impl<P> WorldContractReader<P>
+where
+    P: Provider,
+{
+    pub fn new(address: FieldElement, provider: P) -> Self {
+        Self { address, provider, block_id: BlockId::Tag(BlockTag::Latest) }
     }
 
+    pub fn with_block(self, block: BlockId) -> Self {
+        Self { block_id: block, ..self }
+    }
+
+    pub fn address(&self) -> FieldElement {
+        self.address
+    }
+
+    pub fn provider(&self) -> &P {
+        &self.provider
+    }
+
+    pub fn block_id(&self) -> BlockId {
+        self.block_id
+    }
+}
+
+impl<P> WorldContractReader<P>
+where
+    P: Provider,
+{
     pub async fn is_authorized(
         &self,
         system: &str,
         model: &str,
         execution_role: &str,
-        block_id: BlockId,
     ) -> Result<bool, ContractReaderError<P::Error>> {
         let res = self
             .provider
             .call(
                 FunctionCall {
-                    contract_address: self.address,
                     calldata: vec![
-                        cairo_short_string_to_felt(system)
-                            .map_err(ContractReaderError::CairoShortStringToFeltError)?,
-                        cairo_short_string_to_felt(model)
-                            .map_err(ContractReaderError::CairoShortStringToFeltError)?,
-                        cairo_short_string_to_felt(execution_role)
-                            .map_err(ContractReaderError::CairoShortStringToFeltError)?,
+                        cairo_short_string_to_felt(system)?,
+                        cairo_short_string_to_felt(model)?,
+                        cairo_short_string_to_felt(execution_role)?,
                     ],
-                    entry_point_selector: get_selector_from_name("is_authorized").unwrap(),
+                    contract_address: self.address,
+                    entry_point_selector: selector!("is_authorized"),
                 },
-                block_id,
+                self.block_id,
             )
-            .await
-            .map_err(ContractReaderError::ProviderError)?;
+            .await?;
 
         Ok(res[0] == FieldElement::ONE)
     }
 
-    pub async fn is_account_admin(
-        &self,
-        block_id: BlockId,
-    ) -> Result<bool, ContractReaderError<P::Error>> {
+    pub async fn is_account_admin(&self) -> Result<bool, ContractReaderError<P::Error>> {
         let res = self
             .provider
             .call(
                 FunctionCall {
-                    contract_address: self.address,
                     calldata: vec![],
-                    entry_point_selector: get_selector_from_name("is_account_admin").unwrap(),
+                    contract_address: self.address,
+                    entry_point_selector: selector!("is_account_admin"),
                 },
-                block_id,
+                self.block_id,
             )
-            .await
-            .map_err(ContractReaderError::ProviderError)?;
+            .await?;
 
         Ok(res[0] == FieldElement::ONE)
     }
 
-    pub async fn executor(
-        &self,
-        block_id: BlockId,
-    ) -> Result<FieldElement, ContractReaderError<P::Error>> {
+    pub async fn executor(&self) -> Result<FieldElement, ContractReaderError<P::Error>> {
         let res = self
             .provider
             .call(
                 FunctionCall {
-                    contract_address: self.address,
                     calldata: vec![],
-                    entry_point_selector: get_selector_from_name("executor").unwrap(),
+                    contract_address: self.address,
+                    entry_point_selector: selector!("executor"),
                 },
-                block_id,
+                self.block_id,
             )
-            .await
-            .map_err(ContractReaderError::ProviderError)?;
+            .await?;
 
         Ok(res[0])
     }
 
-    pub async fn metadata_uri(
-        &self,
-        block_id: BlockId,
-    ) -> Result<FieldElement, ContractReaderError<P::Error>> {
+    pub async fn metadata_uri(&self) -> Result<FieldElement, ContractReaderError<P::Error>> {
         let res = self
             .provider
             .call(
                 FunctionCall {
-                    contract_address: self.address,
                     calldata: vec![],
-                    entry_point_selector: get_selector_from_name("metadata_uri").unwrap(),
+                    contract_address: self.address,
+                    entry_point_selector: selector!("metadata_uri"),
                 },
-                block_id,
+                self.block_id,
             )
-            .await
-            .map_err(ContractReaderError::ProviderError)?;
+            .await?;
 
         Ok(res[0])
     }
 
-    pub async fn base(
-        &self,
-        block_id: BlockId,
-    ) -> Result<FieldElement, ContractReaderError<P::Error>> {
+    pub async fn base(&self) -> Result<FieldElement, ContractReaderError<P::Error>> {
         let res = self
             .provider
             .call(
                 FunctionCall {
-                    contract_address: self.address,
                     calldata: vec![],
-                    entry_point_selector: get_selector_from_name("base").unwrap(),
+                    contract_address: self.address,
+                    entry_point_selector: selector!("base"),
                 },
-                block_id,
+                self.block_id,
             )
-            .await
-            .map_err(ContractReaderError::ProviderError)?;
+            .await?;
 
         Ok(res[0])
     }
@@ -302,28 +319,30 @@ impl<'a, P: Provider + Sync> WorldContractReader<'a, P> {
         &self,
         class_hash: FieldElement,
         mut calldata: Vec<FieldElement>,
-        block_id: BlockId,
     ) -> Result<Vec<FieldElement>, ContractReaderError<P::Error>> {
         calldata.insert(0, class_hash);
 
-        self.provider
+        let res = self
+            .provider
             .call(
                 FunctionCall {
-                    contract_address: self.executor(block_id).await.unwrap(),
                     calldata,
-                    entry_point_selector: get_selector_from_name("call").unwrap(),
+                    contract_address: self.executor().await?,
+                    entry_point_selector: selector!("call"),
                 },
-                block_id,
+                self.block_id,
             )
-            .await
-            .map_err(ContractReaderError::ProviderError)
-    }
+            .await?;
 
-    pub async fn model(
-        &'a self,
-        name: &str,
-        block_id: BlockId,
-    ) -> Result<ModelReader<'a, P>, ModelError<P::Error>> {
-        ModelReader::new(self, name.to_string(), block_id).await
+        Ok(res)
+    }
+}
+
+impl<'a, P> WorldContractReader<P>
+where
+    P: Provider,
+{
+    pub async fn model(&'a self, name: &str) -> Result<ModelReader<'a, P>, ModelError<P::Error>> {
+        ModelReader::new(name, self).await
     }
 }

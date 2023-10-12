@@ -14,12 +14,7 @@ cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
 camino.workspace = true
 convert_case.workspace = true
-dojo-types = { path = "../dojo-types", optional = true }
-futures = { version = "0.3.28" }
-http = { version = "0.2.9", optional = true }
-ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
-reqwest = { version = "0.11.18", default-features = false, features = [ "rustls-tls" ], optional = true }
-scarb.workspace = true
+futures.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -27,20 +22,25 @@ smol_str.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
 tracing.workspace = true
+
+dojo-types = { path = "../dojo-types", optional = true }
+http = { version = "0.2.9", optional = true }
+ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
+scarb = { git = "https://github.com/software-mansion/scarb", rev = "7adb7fd", optional = true }
+tokio = { version = "1.32.0", features = [ "time" ], default-features = false, optional = true }
 url = { version = "2.2.2", optional = true }
 
 [dev-dependencies]
 assert_fs = "1.0.9"
-assert_matches = "1.5.0"
+assert_matches.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-test-utils = { path = "../dojo-test-utils" }
-tokio = { version = "1.28.0", features = [ "full" ] }
+tokio.workspace = true
 toml.workspace = true
 
 [features]
 contracts = [ "dep:dojo-types", "dep:http" ]
 manifest = [ "dep:dojo-types" ]
-metadata = [ "dep:ipfs-api-backend-hyper", "dep:url" ]
-migration = [  ]
+metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
+migration = [ "dep:tokio" ]

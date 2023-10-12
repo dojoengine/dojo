@@ -3,34 +3,38 @@ use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
+use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::strategy::MigrationStrategy;
 use scarb::ops;
 use sozo::ops::migration::execute_strategy;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-use torii_client::contract::world::WorldContractReader;
+use starknet::providers::{JsonRpcClient, Provider};
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::sql::Sql;
 
-pub async fn bootstrap_engine<'a>(
-    world: &'a WorldContractReader<'a, JsonRpcClient<HttpTransport>>,
-    db: &'a mut Sql,
-    provider: &'a JsonRpcClient<HttpTransport>,
-    migration: &MigrationStrategy,
-    sequencer: &TestSequencer,
-) -> Result<Engine<'a, JsonRpcClient<HttpTransport>>, Box<dyn std::error::Error>> {
+pub async fn bootstrap_engine<P>(
+    world: WorldContractReader<P>,
+    db: &mut Sql,
+    provider: P,
+    migration: MigrationStrategy,
+    sequencer: TestSequencer,
+) -> Result<Engine<'_, P>, Box<dyn std::error::Error>>
+where
+    P::Error: 'static,
+    P: Provider + Send + Sync,
+{
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let config = build_test_config("../../../examples/ecs/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    execute_strategy(&ws, migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     let mut engine = Engine::new(
         world,
@@ -61,7 +65,7 @@ async fn test_load_from_remote() {
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
-    let _ = bootstrap_engine(&world, &mut db, &provider, &migration, &sequencer).await;
+    let _ = bootstrap_engine(world, &mut db, &provider, migration, sequencer).await;
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 2);

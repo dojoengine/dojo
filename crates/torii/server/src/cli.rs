@@ -93,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
     let (block_sender, block_receiver) = tokio::sync::mpsc::channel(100);
 
     let mut engine = Engine::new(
-        &world,
+        world,
         &mut db,
         &provider,
         processors,

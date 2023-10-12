@@ -105,8 +105,8 @@ pub struct Manifest {
     pub world: Contract,
     pub executor: Contract,
     pub base: Class,
-    pub models: Vec<Model>,
     pub contracts: Vec<Contract>,
+    pub models: Vec<Model>,
 }
 
 impl Manifest {

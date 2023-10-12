@@ -4,14 +4,14 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use dojo_world::manifest::Manifest;
-use dojo_world::migration::strategy::prepare_for_migration;
-use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::{Declarable, Deployable};
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::FieldElement;
 
 use super::{WorldContract, WorldContractReader};
+use crate::manifest::Manifest;
+use crate::migration::strategy::prepare_for_migration;
+use crate::migration::world::WorldDiff;
+use crate::migration::{Declarable, Deployable};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_world_contract_reader() {
@@ -21,12 +21,12 @@ async fn test_world_contract_reader() {
     let provider = account.provider();
     let (world_address, executor_address) = deploy_world(
         &sequencer,
-        Utf8PathBuf::from_path_buf("../../../examples/ecs/target/dev".into()).unwrap(),
+        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap(),
     )
     .await;
 
     let world = WorldContractReader::new(world_address, provider);
-    let executor = world.executor(BlockId::Tag(BlockTag::Latest)).await.unwrap();
+    let executor = world.executor().await.unwrap();
 
     assert_eq!(executor, executor_address);
 }
