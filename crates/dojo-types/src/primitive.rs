@@ -81,7 +81,7 @@ impl Primitive {
                     let value1_bytes = value[1].to_bytes_be();
                     buffer[..16].copy_from_slice(&value0_bytes);
                     buffer[16..].copy_from_slice(&value1_bytes);
-                    Ok(format!("'0x{}'", hex::encode(buffer)))
+                    Ok(format!("'0x{:0>64}'", hex::encode(buffer)))
                 }
             }
         }
