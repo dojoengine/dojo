@@ -12,6 +12,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::{
     parse_cairo_short_string, starknet_keccak, CairoShortStringToFeltError,
+    ParseCairoShortStringError,
 };
 use starknet::macros::selector;
 use starknet::providers::{
@@ -40,7 +41,9 @@ pub enum ManifestError<E> {
     #[error("Entry point name contains non-ASCII characters.")]
     InvalidEntryPointError,
     #[error(transparent)]
-    InvalidNameError(#[from] CairoShortStringToFeltError),
+    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
+    #[error(transparent)]
+    ParseCairoShortString(#[from] ParseCairoShortStringError),
     #[error(transparent)]
     Provider(#[from] ProviderError<E>),
     #[error(transparent)]
@@ -208,7 +211,7 @@ pub(self) static CONTRACT_DEPLOYED_EVENT_NAME: &str = "ContractDeployed";
 async fn get_remote_world_deployed_contracts<P>(
     world: FieldElement,
     provider: P,
-) -> anyhow::Result<Vec<Contract>>
+) -> Result<Vec<Contract>, ManifestError<<P as Provider>::Error>>
 where
     P::Error: 'static,
     P: Provider + Send + Sync,
@@ -244,24 +247,25 @@ where
         contract.name = name;
     }
 
-    Ok(contracts.into_iter().map(|(_, contract)| contract).collect())
+    Ok(contracts.into_values().collect())
 }
 
-async fn get_remote_world_registered_models(
+async fn get_remote_world_registered_models<P: Provider>(
     world: FieldElement,
-    provider: impl Provider,
-) -> anyhow::Result<Vec<Model>> {
+    provider: P,
+) -> Result<Vec<Model>, ManifestError<<P as Provider>::Error>> {
     let event_key = vec![starknet_keccak(MODEL_REGISTERED_EVENT_NAME.as_bytes())];
-    Ok(parse_contract_events(provider, world, vec![event_key], parse_registered_model_events)
-        .await?)
+    parse_contract_events(provider, world, vec![event_key], parse_registered_model_events)
+        .await
+        .map_err(|e| e.into())
 }
 
-async fn parse_contract_events<T>(
-    provider: impl Provider,
+async fn parse_contract_events<P: Provider, T>(
+    provider: P,
     world: FieldElement,
     keys: Vec<Vec<FieldElement>>,
     f: impl FnOnce(Vec<EmittedEvent>) -> T,
-) -> anyhow::Result<T> {
+) -> Result<T, ProviderError<<P as Provider>::Error>> {
     const DEFAULT_CHUNK_SIZE: u64 = 100;
 
     let mut events: Vec<EmittedEvent> = vec![];
@@ -271,10 +275,8 @@ async fn parse_contract_events<T>(
         EventFilter { to_block: None, from_block: None, address: Some(world), keys: Some(keys) };
 
     loop {
-        let res = provider
-            .get_events(filter.clone(), continuation_token, DEFAULT_CHUNK_SIZE)
-            .await
-            .unwrap();
+        let res =
+            provider.get_events(filter.clone(), continuation_token, DEFAULT_CHUNK_SIZE).await?;
 
         continuation_token = res.continuation_token;
         events.extend(res.events);

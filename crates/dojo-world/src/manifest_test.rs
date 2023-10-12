@@ -1,66 +1,21 @@
 use std::collections::HashMap;
 
+use camino::Utf8PathBuf;
 use dojo_test_utils::rpc::MockJsonRpcTransport;
+use dojo_test_utils::sequencer::{
+    get_default_test_starknet_config, SequencerConfig, TestSequencer,
+};
 use serde_json::json;
+use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{EmittedEvent, FieldElement};
 use starknet::macros::{felt, short_string};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{
-    parse_deployed_contracts_events, parse_registered_model_events, Class, Contract, Manifest,
-    Model, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    parse_deployed_contracts_events, parse_registered_model_events, Contract, Manifest, Model,
 };
+use crate::contracts::world::test::deploy_world;
 use crate::manifest::ManifestError;
-
-fn create_example_remote_manifest() -> Manifest {
-    Manifest {
-        world: Contract {
-            abi: None,
-            name: WORLD_CONTRACT_NAME.into(),
-            address: Some(felt!(
-                "0x04e10dcec3ed05fecb289ec2aefd81a0e73ba0dfb66c8e6b01e20593f471c70c"
-            )),
-            class_hash: felt!("0x05c3494b21bc92d40abdc40cdc54af66f22fb92bf876665d982c765a2cc0e06a"),
-        },
-        executor: Contract {
-            abi: None,
-            address: Some(felt!(
-                "0x05c3494b21bc92d40abdc40cdc54af66f22fb92bf876665d982c765a2cc0e06a"
-            )),
-            class_hash: felt!("0x02b35dd4816731188ed1ad16caa73bde76075c9d9cb8cbfa3e447d3ab9b1ab33"),
-            name: EXECUTOR_CONTRACT_NAME.into(),
-        },
-        base: Class {
-            name: BASE_CONTRACT_NAME.into(),
-            class_hash: felt!("0x07aec2b7d7064c1294a339cd90060331ff704ab573e4ee9a1b699be2215c11c9"),
-            abi: None,
-        },
-        contracts: vec![Contract {
-            name: "player_actions".into(),
-            address: Some(felt!(
-                "0x06f359762e26f9d5562284ec8c55c7d4854a8a90fdcdc09795e31a8d78fc6221"
-            )),
-            class_hash: felt!("0x0723e7c7e8748c0a81bf4b426e3c5dee84df728d1630324d75077a21b0271bb4"),
-            abi: None,
-        }],
-        models: vec![
-            Model {
-                name: "Position".into(),
-                class_hash: felt!(
-                    "0x06ffc643cbc4b2fb9c424242b18175a5e142269b45f4463d1cd4dddb7a2e5095"
-                ),
-                ..Default::default()
-            },
-            Model {
-                name: "Moves".into(),
-                class_hash: felt!(
-                    "0x07a3234437ebfadbae8465c1e81660c714e09bb77fa248ccfe66c6f3e6a03698"
-                ),
-                ..Default::default()
-            },
-        ],
-    }
-}
 
 #[tokio::test]
 async fn test_manifest_from_remote_throw_error_on_not_deployed() {
@@ -90,15 +45,14 @@ async fn test_manifest_from_remote_throw_error_on_not_deployed() {
 
 #[test]
 fn test_parse_registered_model_events() {
-    let expected_models = create_example_remote_manifest().models;
+    let expected_models = vec![
+        Model { name: "Model1".into(), class_hash: felt!("0x5555"), ..Default::default() },
+        Model { name: "Model2".into(), class_hash: felt!("0x6666"), ..Default::default() },
+    ];
 
     let events = vec![
         EmittedEvent {
-            data: vec![
-                short_string!("Position"),
-                felt!("0x06ffc643cbc4b2fb9c424242b18175a5e142269b45f4463d1cd4dddb7a2e5095"),
-                felt!("0xbeef"),
-            ],
+            data: vec![short_string!("Model1"), felt!("0x5555"), felt!("0xbeef")],
             keys: vec![],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -106,7 +60,7 @@ fn test_parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![short_string!("Position"), felt!("0xbeef"), felt!("0")],
+            data: vec![short_string!("Model1"), felt!("0xbeef"), felt!("0")],
             keys: vec![],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -114,11 +68,7 @@ fn test_parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![
-                short_string!("Moves"),
-                felt!("0x07a3234437ebfadbae8465c1e81660c714e09bb77fa248ccfe66c6f3e6a03698"),
-                felt!("0"),
-            ],
+            data: vec![short_string!("Model2"), felt!("0x6666"), felt!("0")],
             keys: vec![],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -196,4 +146,24 @@ fn test_parse_deployed_contracts_events() {
     let actual_contracts = parse_deployed_contracts_events(events);
 
     assert_eq!(actual_contracts, expected_contracts);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_fetch_remote_manifest() {
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
+    let account = sequencer.account();
+    let provider = account.provider();
+
+    let (world_address, _) = deploy_world(
+        &sequencer,
+        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap(),
+    )
+    .await;
+
+    let manifest = Manifest::load_from_remote(provider, world_address).await.unwrap();
+
+    assert_eq!(manifest.models.len(), 2);
+    assert_eq!(manifest.contracts.len(), 2);
 }
