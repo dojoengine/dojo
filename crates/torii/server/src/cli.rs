@@ -1,12 +1,12 @@
 mod server;
-
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::Parser;
 use dojo_world::contracts::world::WorldContractReader;
 use server::Server;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -30,9 +30,10 @@ struct Args {
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
     rpc: String,
-    /// Database url
-    #[arg(short, long, default_value = "sqlite::memory:")]
-    database_url: String,
+    /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
+    /// created. Defaults to in-memory database
+    #[arg(short, long, default_value = ":memory:")]
+    database: String,
     /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long, default_value = "0")]
     start_block: u64,
@@ -69,9 +70,14 @@ async fn main() -> anyhow::Result<()> {
         }
     })?;
 
-    let database_url = &args.database_url;
-    #[cfg(feature = "sqlite")]
-    let pool = SqlitePoolOptions::new().max_connections(5).connect(database_url).await?;
+    let database_url = format!("sqlite:{}", &args.database);
+    let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
+    let pool = SqlitePoolOptions::new()
+        .min_connections(1)
+        .max_connections(5)
+        .connect_with(options)
+        .await?;
+
     sqlx::migrate!("../migrations").run(&pool).await?;
 
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc)?)).into();
