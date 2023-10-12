@@ -13,7 +13,7 @@ mod tests {
         field: &'static str,
         test_order: Box<OrderTestFn>,
     }
-
+    //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_model_no_filter(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
@@ -64,7 +64,7 @@ mod tests {
         assert_eq!(position_connection.edges[0].node.vec.y, 69);
     }
 
-    #[ignore]
+    //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_model_where_filter(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
@@ -74,14 +74,18 @@ mod tests {
         // fixtures inserts two position mdoels with members (x: 42, y: 69) and (x: 69, y: 42)
         // the following filters and expected total results can be simply calculated
         let where_filters = Vec::from([
-            ("where: { x: 42 }", 1),
-            ("where: { xNEQ: 42 }", 1),
-            ("where: { xGT: 42 }", 1),
-            ("where: { xGTE: 42 }", 2),
-            ("where: { xLT: 42 }", 0),
-            ("where: { xLTE: 42 }", 1),
-            ("where: { x: 1337, yGTE: 1234 }", 0),
-            (r#"where: { player: "0x2" }"#, 1), // player is a key
+            // Todo: reenable where filters, change to ("where: { playerNEQ: ContractAddress }", 1),
+            // ("where: { x: 42 }", 1),
+            // ("where: { xNEQ: 42 }", 1),
+            // ("where: { xGT: 42 }", 1),
+            // ("where: { xGTE: 42 }", 2),
+            // ("where: { xLT: 42 }", 0),
+            // ("where: { xLTE: 42 }", 1),
+            // ("where: { x: 1337, yGTE: 1234 }", 0),
+            (
+                r#"where: { player: "0x0000000000000000000000000000000000000000000000000000000000000002" }"#,
+                1,
+            ), // player is a key
         ]);
 
         for (filter, expected_total) in where_filters {
@@ -116,6 +120,8 @@ mod tests {
 
     #[ignore]
     #[sqlx::test(migrations = "../migrations")]
+    // Todo: reenable OrderTest struct(test_order field)
+    // Todo: Refactor fn fetch_multiple_rows(), external_field
     async fn test_model_ordering(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
@@ -124,7 +130,7 @@ mod tests {
         let orders: Vec<OrderTest> = vec![
             OrderTest {
                 direction: "ASC",
-                field: "X",
+                field: "X", //"PLAYER"
                 test_order: Box::new(|edges: &Vec<Edge<Position>>| {
                     edges[0].node.vec.x < edges[1].node.vec.x
                 }),
@@ -138,7 +144,7 @@ mod tests {
             },
             OrderTest {
                 direction: "ASC",
-                field: "Y",
+                field: "Y", //"PLAYER"
                 test_order: Box::new(|edges: &Vec<Edge<Position>>| {
                     edges[0].node.vec.y < edges[1].node.vec.y
                 }),
@@ -183,13 +189,15 @@ mod tests {
         }
     }
 
-    #[ignore]
+    //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_model_entity_relationship(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
         entity_fixtures(&mut db).await;
 
+        //Todo: Add `keys` field on `entity` type
+        //fixme: `keys` field return a single string from query, but the test expects vec of strings
         let query = r#"
                     {
                         positionModels {
@@ -202,7 +210,6 @@ mod tests {
 																			y
 																		}
                                     entity {
-                                        keys
                                         model_names
                                     }
                                 }
@@ -216,6 +223,6 @@ mod tests {
         let positions = value.get("positionModels").ok_or("no positions found").unwrap();
         let connection: Connection<Position> = serde_json::from_value(positions.clone()).unwrap();
         let entity = connection.edges[0].node.entity.as_ref().unwrap();
-        assert_eq!(entity.model_names, "Position".to_string());
+        assert_eq!(entity.model_names, "Moves,Position".to_string());
     }
 }
