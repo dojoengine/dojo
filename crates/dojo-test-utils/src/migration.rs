@@ -2,9 +2,14 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use dojo_world::manifest::Manifest;
-use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
-use dojo_world::migration::world::WorldDiff;
+use dojo_world::{
+    manifest::Manifest,
+    migration::{
+        strategy::{prepare_for_migration, MigrationStrategy},
+        world::WorldDiff,
+    },
+};
+
 use starknet::macros::felt;
 
 pub fn prepare_migration(path: PathBuf) -> Result<MigrationStrategy> {
