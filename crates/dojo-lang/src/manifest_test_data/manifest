@@ -51,6 +51,52 @@ test_manifest_file
       },
       {
         "type": "struct",
+        "name": "dojo::database::KeyValueClause",
+        "members": [
+          {
+            "name": "key",
+            "type": "core::felt252"
+          },
+          {
+            "name": "value",
+            "type": "core::felt252"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "dojo::database::KeyValuesClause",
+        "members": [
+          {
+            "name": "key",
+            "type": "core::felt252"
+          },
+          {
+            "name": "values",
+            "type": "core::array::Span::<core::felt252>"
+          }
+        ]
+      },
+      {
+        "type": "enum",
+        "name": "dojo::database::QueryClause",
+        "variants": [
+          {
+            "name": "KeyValue",
+            "type": "dojo::database::KeyValueClause"
+          },
+          {
+            "name": "KeyValues",
+            "type": "dojo::database::KeyValuesClause"
+          },
+          {
+            "name": "All",
+            "type": "()"
+          }
+        ]
+      },
+      {
+        "type": "struct",
         "name": "core::array::Span::<core::array::Span::<core::felt252>>",
         "members": [
           {
@@ -277,12 +323,8 @@ test_manifest_file
                 "type": "core::option::Option::<core::felt252>"
               },
               {
-                "name": "query_key",
-                "type": "core::option::Option::<core::felt252>"
-              },
-              {
-                "name": "query_values",
-                "type": "core::array::Span::<core::felt252>"
+                "name": "query",
+                "type": "dojo::database::QueryClause"
               },
               {
                 "name": "values_length",

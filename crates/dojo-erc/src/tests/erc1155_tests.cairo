@@ -126,7 +126,7 @@ fn test_balance_of_zero() {
 
 
 #[test]
-#[available_gas(30000000)]
+#[available_gas(20000000)]
 fn test_balance_of_batch() {
     let mut state = setup();
 
@@ -698,7 +698,7 @@ fn test__mint_to_zero() {
 //
 
 #[test]
-#[available_gas(30000000)]
+#[available_gas(20000000)]
 fn test__burn() {
     let mut state = setup();
 
