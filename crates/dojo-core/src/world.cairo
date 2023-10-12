@@ -1,6 +1,7 @@
 use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
+use dojo::database::QueryClause;
 
 #[starknet::interface]
 trait IWorld<T> {
@@ -27,8 +28,7 @@ trait IWorld<T> {
         self: @T,
         model: felt252,
         index: Option<felt252>,
-        query_key: Option<felt252>,
-        query_values: Span<felt252>,
+        query: QueryClause,
         values_length: usize,
         values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
@@ -76,7 +76,7 @@ mod world {
     };
 
     use dojo::database;
-    use dojo::database::index::WhereCondition;
+    use dojo::database::QueryClause;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     
@@ -496,7 +496,8 @@ mod world {
             assert_can_write(@self, model, get_caller_address());
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set_with_index(model, key, keys, offset, values, layout);
+            // database::set_with_index(model, key, keys, offset, values, layout);
+            database::set(model, key, offset, values, layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
         }
@@ -573,26 +574,9 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, model: felt252, index: Option<felt252>, query_key: Option<felt252>, query_values: Span<felt252>, values_length: usize, values_layout: Span<u8>
+            self: @ContractState, model: felt252, index: Option<felt252>, query: QueryClause, values_length: usize, values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
-            let class_hash = self.models.read(model);
-            let where_clause = match query_key {
-                Option::Some(query_key) => {
-                    let value = if query_values.len() == 1 {
-                        *query_values.at(0)
-                    } else {
-                        poseidon::poseidon_hash_span(query_values)
-                    };
-
-                    Option::Some(WhereCondition {
-                        key: query_key,
-                        value
-                    })
-                },
-                Option::None => Option::None,
-            };
-
-            database::scan(model, index, where_clause, values_length, values_layout)
+            database::scan(model, index, query, values_length, values_layout)
         }
 
         /// Returns only the entity IDs that contain the model state.
