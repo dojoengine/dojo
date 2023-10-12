@@ -77,7 +77,7 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
                         abi::EventKind::Struct { .. } => {
                             let event_name =
                                 starknet_keccak(e.name.split("::").last().unwrap().as_bytes());
-                            let vec = events.entry(event_name.to_string()).or_insert(Vec::new());
+                            let vec = events.entry(event_name.to_string()).or_default();
                             vec.push(e.clone());
                         }
                         abi::EventKind::Enum { .. } => (),
@@ -91,10 +91,6 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
 
     inner_helper(&mut events_map, &manifest.world.abi);
     inner_helper(&mut events_map, &manifest.executor.abi);
-
-    for system in &manifest.systems {
-        inner_helper(&mut events_map, &system.abi);
-    }
 
     for contract in &manifest.contracts {
         inner_helper(&mut events_map, &contract.abi);

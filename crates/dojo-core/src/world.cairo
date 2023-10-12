@@ -8,7 +8,7 @@ trait IWorld<T> {
     fn set_metadata_uri(ref self: T, resource: felt252, uri: Span<felt252>);
     fn model(self: @T, name: felt252) -> ClassHash;
     fn register_model(ref self: T, class_hash: ClassHash);
-    fn deploy_contract(self: @T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
+    fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
@@ -73,16 +73,27 @@ mod world {
     #[derive(Drop, starknet::Event)]
     enum Event {
         WorldSpawned: WorldSpawned,
+        ContractDeployed: ContractDeployed,
         MetadataUpdate: MetadataUpdate,
         ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
-        StoreDelRecord: StoreDelRecord
+        StoreDelRecord: StoreDelRecord,
+        WriterUpdated: WriterUpdated,
+        OwnerUpdated: OwnerUpdated,
+        ExecutorUpdated: ExecutorUpdated
     }
 
     #[derive(Drop, starknet::Event)]
     struct WorldSpawned {
         address: ContractAddress,
         creator: ContractAddress
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct ContractDeployed {
+        salt: felt252,
+        class_hash: ClassHash,
+        address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -94,7 +105,8 @@ mod world {
     #[derive(Drop, starknet::Event)]
     struct ModelRegistered {
         name: felt252,
-        class_hash: ClassHash
+        class_hash: ClassHash,
+        prev_class_hash: ClassHash
     }
 
     #[derive(Drop, starknet::Event)]
@@ -110,6 +122,27 @@ mod world {
         table: felt252,
         keys: Span<felt252>,
     }
+
+    #[derive(Drop, starknet::Event)]
+    struct WriterUpdated {
+        model: felt252,
+        system: ContractAddress,
+        value: bool
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct OwnerUpdated {
+        address: ContractAddress,
+        resource: felt252,
+        value: bool,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct ExecutorUpdated {
+        address: ContractAddress,
+        prev_address: ContractAddress,
+    }
+
 
     #[storage]
     struct Storage {
@@ -232,7 +265,9 @@ mod world {
         fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
             assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
-            self.owners.write((resource, address), bool::True(()));
+            self.owners.write((resource, address), true);
+
+            EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: true });
         }
 
         /// Revokes owner permission to the system for the model.
@@ -246,6 +281,8 @@ mod world {
             let caller = get_caller_address();
             assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
             self.owners.write((resource, address), bool::False(()));
+
+            EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
         }
 
         /// Checks if the provided system is a writer of the model.
@@ -275,7 +312,9 @@ mod world {
             assert(
                 self.is_owner(caller, model) || self.is_owner(caller, WORLD), 'not owner or writer'
             );
-            self.writers.write((model, system), bool::True(()));
+            self.writers.write((model, system), true);
+
+            EventEmitter::emit(ref self, WriterUpdated { model, system, value: true });
         }
 
         /// Revokes writer permission to the system for the model.
@@ -294,7 +333,9 @@ mod world {
                     || self.is_owner(caller, WORLD),
                 'not owner or writer'
             );
-            self.writers.write((model, system), bool::False(()));
+            self.writers.write((model, system), false);
+
+            EventEmitter::emit(ref self, WriterUpdated { model, system, value: false });
         }
 
         /// Registers a model in the world. If the model is already registered,
@@ -307,16 +348,19 @@ mod world {
             let caller = get_caller_address();
             let calldata = ArrayTrait::new();
             let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, calldata.span())[0];
+            let mut prev_class_hash = starknet::class_hash::ClassHashZeroable::zero();
 
             // If model is already registered, validate permission to update.
-            if self.models.read(name).is_non_zero() {
+            let current_class_hash = self.models.read(name);
+            if current_class_hash.is_non_zero() {
                 assert(self.is_owner(caller, name), 'only owner can update');
+                prev_class_hash = current_class_hash;
             } else {
-                self.owners.write((name, caller), bool::True(()));
+                self.owners.write((name, caller), true);
             };
 
             self.models.write(name, class_hash);
-            EventEmitter::emit(ref self, ModelRegistered { name, class_hash });
+            EventEmitter::emit(ref self, ModelRegistered { name, class_hash, prev_class_hash });
         }
 
         /// Gets the class hash of a registered model.
@@ -343,7 +387,7 @@ mod world {
         ///
         /// * `ClassHash` - The class hash of the model.
         fn deploy_contract(
-            self: @ContractState, salt: felt252, class_hash: ClassHash
+            ref self: ContractState, salt: felt252, class_hash: ClassHash
         ) -> ContractAddress {
             let (contract_address, _) = deploy_syscall(
                 self.contract_base.read(), salt, array![].span(), false
@@ -351,6 +395,11 @@ mod world {
                 .unwrap_syscall();
             let upgradable_dispatcher = IUpgradeableDispatcher { contract_address };
             upgradable_dispatcher.upgrade(class_hash);
+
+            EventEmitter::emit(
+                ref self, ContractDeployed { salt, class_hash, address: contract_address }
+            );
+
             contract_address
         }
 
@@ -481,9 +530,14 @@ mod world {
         fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
             // Only owner can set executor
             assert(self.is_owner(get_caller_address(), WORLD), 'only owner can set executor');
+            let prev_address = self.executor_dispatcher.read().contract_address;
             self
                 .executor_dispatcher
                 .write(IExecutorDispatcher { contract_address: contract_address });
+
+            EventEmitter::emit(
+                ref self, ExecutorUpdated { address: contract_address, prev_address }
+            );
         }
 
         /// Gets the executor contract address.

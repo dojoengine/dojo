@@ -87,7 +87,7 @@ impl ModelStorage {
     }
 
     fn index_entity(&self, model: FieldElement, raw_keys: Vec<FieldElement>) {
-        self.model_index.write().entry(model).or_insert_with(HashSet::new).insert(raw_keys);
+        self.model_index.write().entry(model).or_default().insert(raw_keys);
     }
 }
 

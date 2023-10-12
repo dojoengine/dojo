@@ -17,27 +17,10 @@ pub struct WorldDiff {
     pub base: ClassDiff,
     pub contracts: Vec<ContractDiff>,
     pub models: Vec<ClassDiff>,
-    pub systems: Vec<ClassDiff>,
 }
 
 impl WorldDiff {
     pub fn compute(local: Manifest, remote: Option<Manifest>) -> WorldDiff {
-        let systems = local
-            .systems
-            .iter()
-            .map(|system| {
-                ClassDiff {
-                    // because the name returns by the `name` method of a
-                    // system contract is without the 'System' suffix
-                    name: system.name.strip_suffix("System").unwrap_or(&system.name).to_string(),
-                    local: system.class_hash,
-                    remote: remote.as_ref().and_then(|m| {
-                        m.systems.iter().find(|e| e.name == system.name).map(|s| s.class_hash)
-                    }),
-                }
-            })
-            .collect::<Vec<_>>();
-
         let models = local
             .models
             .iter()
@@ -78,7 +61,7 @@ impl WorldDiff {
             remote: remote.map(|m| m.world.class_hash),
         };
 
-        WorldDiff { world, executor, base, systems, contracts, models }
+        WorldDiff { world, executor, base, contracts, models }
     }
 
     pub fn count_diffs(&self) -> usize {
@@ -92,7 +75,6 @@ impl WorldDiff {
             count += 1;
         }
 
-        count += self.systems.iter().filter(|s| !s.is_same()).count();
         count += self.models.iter().filter(|s| !s.is_same()).count();
         count += self.contracts.iter().filter(|s| !s.is_same()).count();
         count
@@ -106,10 +88,6 @@ impl Display for WorldDiff {
 
         for model in &self.models {
             writeln!(f, "{model}")?;
-        }
-
-        for system in &self.systems {
-            writeln!(f, "{system}")?;
         }
 
         for contract in &self.contracts {
