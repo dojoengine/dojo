@@ -12,6 +12,30 @@ struct Vec2 {
     y: u32
 }
 
+#[derive(Serde, Copy, Drop, Introspect)]
+enum PlainEnum {
+    Left: (),
+    Right: (),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumPrimitive {
+    Left: (u16,),
+    Right: (u16,),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTuple {
+    Left: (u8, u8),
+    Right: (u8, u8),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumCustom {
+    Left: Vec2,
+    Right: Vec2,
+}
+
 #[derive(Model, Copy, Drop, Print, Introspect)]
 struct Position {
     #[key]
@@ -72,6 +96,238 @@ impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2
                             ty: dojo::database::schema::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
+                    )
+                ]
+                    .span()
+            }
+        )
+    }
+}
+
+
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum PlainEnum {
+    Left: (),
+    Right: (),
+}
+
+impl PlainEnumSchemaIntrospection of dojo::database::schema::SchemaIntrospection<PlainEnum> {
+    #[inline(always)]
+    fn size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Enum(
+            dojo::database::schema::Enum {
+                name: 'Direction',
+                attrs: array![].span(),
+                children: array![
+                    (
+                        'Left',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(array![].span())
+                        )
+                    ),
+                    (
+                        'Right',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(array![].span())
+                        )
+                    )
+                ]
+                    .span()
+            }
+        )
+    }
+}
+
+
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumPrimitive {
+    Left: (u16,),
+    Right: (u16,),
+}
+
+impl EnumPrimitiveSchemaIntrospection of dojo::database::schema::SchemaIntrospection<EnumPrimitive> {
+    #[inline(always)]
+    fn size() -> usize {
+        2
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
+        layout.append(16);
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Enum(
+            dojo::database::schema::Enum {
+                name: 'Direction',
+                attrs: array![].span(),
+                children: array![
+                    (
+                        'Left',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(
+                                array![
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::Ty::Primitive('u16')
+                                    )
+                                ]
+                                    .span()
+                            )
+                        )
+                    ),
+                    (
+                        'Right',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(
+                                array![
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::Ty::Primitive('u16')
+                                    )
+                                ]
+                                    .span()
+                            )
+                        )
+                    )
+                ]
+                    .span()
+            }
+        )
+    }
+}
+
+
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTuple {
+    Left: (u8, u8),
+    Right: (u8, u8),
+}
+
+impl EnumTupleSchemaIntrospection of dojo::database::schema::SchemaIntrospection<EnumTuple> {
+    #[inline(always)]
+    fn size() -> usize {
+        3
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
+        layout.append(8);
+        layout.append(8);
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Enum(
+            dojo::database::schema::Enum {
+                name: 'Direction',
+                attrs: array![].span(),
+                children: array![
+                    (
+                        'Left',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(
+                                array![
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::Ty::Primitive('u8')
+                                    ),
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::Ty::Primitive('u8')
+                                    )
+                                ]
+                                    .span()
+                            )
+                        )
+                    ),
+                    (
+                        'Right',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(
+                                array![
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::Ty::Primitive('u8')
+                                    ),
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::Ty::Primitive('u8')
+                                    )
+                                ]
+                                    .span()
+                            )
+                        )
+                    )
+                ]
+                    .span()
+            }
+        )
+    }
+}
+
+
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumCustom {
+    Left: Vec2,
+    Right: Vec2,
+}
+
+impl EnumCustomSchemaIntrospection of dojo::database::schema::SchemaIntrospection<EnumCustom> {
+    #[inline(always)]
+    fn size() -> usize {
+        dojo::database::schema::SchemaIntrospection::<Vec2>::size() + 1
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
+        dojo::database::schema::SchemaIntrospection::<Vec2>::layout(ref layout);
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::schema::Ty {
+        dojo::database::schema::Ty::Enum(
+            dojo::database::schema::Enum {
+                name: 'Direction',
+                attrs: array![].span(),
+                children: array![
+                    (
+                        'Left',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(
+                                array![
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::SchemaIntrospection::<Vec2>::ty()
+                                    )
+                                ]
+                                    .span()
+                            )
+                        )
+                    ),
+                    (
+                        'Right',
+                        dojo::database::schema::serialize_member_type(
+                            @dojo::database::schema::Ty::Tuple(
+                                array![
+                                    dojo::database::schema::serialize_member_type(
+                                        @dojo::database::schema::SchemaIntrospection::<Vec2>::ty()
+                                    )
+                                ]
+                                    .span()
+                            )
+                        )
                     )
                 ]
                     .span()

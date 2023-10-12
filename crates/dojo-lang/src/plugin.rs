@@ -25,7 +25,7 @@ use crate::contract::DojoContract;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
-use crate::introspect::handle_introspect_struct;
+use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::derive_print;
 
@@ -97,7 +97,7 @@ impl CairoPlugin for BuiltinDojoPlugin {
 struct BuiltinDojoPluginInstance;
 impl CairoPluginInstance for BuiltinDojoPluginInstance {
     fn macro_plugins(&self) -> Vec<Arc<dyn MacroPlugin>> {
-        vec![Arc::new(BuiltinDojoPlugin::default())]
+        vec![Arc::new(BuiltinDojoPlugin)]
     }
 
     fn inline_macro_plugins(&self) -> Vec<(String, Arc<dyn InlineMacroExprPlugin>)> {
@@ -113,6 +113,82 @@ impl MacroPlugin for BuiltinDojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
+            ast::Item::Enum(enum_ast) => {
+                let aux_data = DojoAuxData::default();
+                let mut rewrite_nodes = vec![];
+                let mut diagnostics = vec![];
+
+                // Iterate over all the derive attributes of the struct
+                for attr in enum_ast.attributes(db).query_attr(db, "derive") {
+                    let attr = attr.structurize(db);
+
+                    // Check if the derive attribute has arguments
+                    if attr.args.is_empty() {
+                        diagnostics.push(PluginDiagnostic {
+                            stable_ptr: attr.args_stable_ptr.untyped(),
+                            message: "Expected args.".into(),
+                        });
+                        continue;
+                    }
+
+                    // Iterate over all the arguments of the derive attribute
+                    for arg in attr.args {
+                        // Check if the argument is a path then set it to arg
+                        let AttributeArg {
+                            variant:
+                                AttributeArgVariant::Unnamed { value: ast::Expr::Path(path), .. },
+                            ..
+                        } = arg
+                        else {
+                            diagnostics.push(PluginDiagnostic {
+                                stable_ptr: arg.arg_stable_ptr.untyped(),
+                                message: "Expected path.".into(),
+                            });
+                            continue;
+                        };
+
+                        // Check if the path has a single segment
+                        let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] else {
+                            continue;
+                        };
+
+                        // Get the text of the segment and check if it is "Model"
+                        let derived = segment.ident(db).text(db);
+
+                        match derived.as_str() {
+                            "Introspect" => {
+                                rewrite_nodes.push(handle_introspect_enum(
+                                    db,
+                                    &mut diagnostics,
+                                    enum_ast.clone(),
+                                ));
+                            }
+                            _ => continue,
+                        }
+                    }
+                }
+
+                if rewrite_nodes.is_empty() {
+                    return PluginResult { diagnostics, ..PluginResult::default() };
+                }
+
+                let name = enum_ast.name(db).text(db);
+                let mut builder = PatchBuilder::new(db);
+                for node in rewrite_nodes {
+                    builder.add_modified(node);
+                }
+
+                PluginResult {
+                    code: Some(PluginGeneratedFile {
+                        name,
+                        content: builder.code,
+                        aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
+                        diagnostics_mappings: builder.diagnostics_mappings,
+                    }),
+                    diagnostics,
+                    remove_original_item: false,
+                }
+            }
             ast::Item::Struct(struct_ast) => {
                 let mut aux_data = DojoAuxData::default();
                 let mut rewrite_nodes = vec![];

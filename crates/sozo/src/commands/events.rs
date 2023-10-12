@@ -77,7 +77,7 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
                         abi::EventKind::Struct { .. } => {
                             let event_name =
                                 starknet_keccak(e.name.split("::").last().unwrap().as_bytes());
-                            let vec = events.entry(event_name.to_string()).or_insert(Vec::new());
+                            let vec = events.entry(event_name.to_string()).or_default();
                             vec.push(e.clone());
                         }
                         abi::EventKind::Enum { .. } => (),
