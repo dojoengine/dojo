@@ -1,3 +1,5 @@
+use starknet::macros::felt;
+
 use super::*;
 use crate::manifest::{Contract, Manifest, Model};
 
@@ -51,15 +53,39 @@ fn diff_when_local_and_remote_are_different() {
         ..Default::default()
     };
 
-    let models = vec![Model {
-        members: vec![],
-        name: "Model".into(),
-        class_hash: 11_u32.into(),
-        ..Default::default()
-    }];
+    let models = vec![
+        Model {
+            members: vec![],
+            name: "Model".into(),
+            class_hash: felt!("0x11"),
+            ..Default::default()
+        },
+        Model {
+            members: vec![],
+            name: "Model2".into(),
+            class_hash: felt!("0x22"),
+            ..Default::default()
+        },
+    ];
+
+    let contracts = vec![
+        Contract {
+            name: "my_contract".into(),
+            class_hash: felt!("0x1111"),
+            address: Some(felt!("0x2222")),
+            abi: None,
+        },
+        Contract {
+            name: "my_contract_2".into(),
+            class_hash: felt!("0x3333"),
+            address: Some(felt!("4444")),
+            abi: None,
+        },
+    ];
 
     let local = Manifest {
         models,
+        contracts,
         world: world_contract,
         executor: executor_contract,
         ..Default::default()
@@ -68,9 +94,12 @@ fn diff_when_local_and_remote_are_different() {
     let mut remote = local.clone();
     remote.world.class_hash = 44_u32.into();
     remote.executor.class_hash = 55_u32.into();
-    remote.models[0].class_hash = 33_u32.into();
+    remote.models[1].class_hash = 33_u32.into();
+    remote.contracts[0].class_hash = felt!("0x1112");
 
     let diff = WorldDiff::compute(local, Some(remote));
 
-    assert_eq!(diff.count_diffs(), 3);
+    assert_eq!(diff.count_diffs(), 4);
+    assert!(diff.models.iter().any(|m| m.name == "Model2"));
+    assert!(diff.contracts.iter().any(|c| c.name == "my_contract"));
 }
