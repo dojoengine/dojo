@@ -97,9 +97,12 @@ fn parse_nested_type(
 
 fn remove_leading_zeros(value: Value) -> Value {
     if let Value::String(str_val) = &value {
+        if !str_val.starts_with("0x") {
+            return value;
+        }
         let hex_part = str_val.trim_start_matches("0x");
         let trimmed_hex = hex_part.trim_start_matches('0');
-        Value::String(format!("0x{}", trimmed_hex))
+        Value::String(format!("0x{:0>1}", trimmed_hex))
     } else {
         value
     }
