@@ -4,13 +4,13 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use clap::Parser;
+use dojo_world::contracts::world::WorldContractReader;
 use server::Server;
 use sqlx::sqlite::SqlitePoolOptions;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio_util::sync::CancellationToken;
-use torii_client::contract::world::WorldContractReader;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
@@ -93,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
     let (block_sender, block_receiver) = tokio::sync::mpsc::channel(100);
 
     let mut engine = Engine::new(
-        &world,
+        world,
         &mut db,
         &provider,
         processors,

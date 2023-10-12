@@ -135,7 +135,7 @@ async fn migration_from_remote() {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
-    let remote_manifest = Manifest::from_remote(
+    let remote_manifest = Manifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),
         None,

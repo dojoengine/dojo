@@ -1,9 +1,9 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockId, BlockTag, BlockWithTxs, Event, InvokeTransactionReceipt};
+use dojo_world::contracts::world::WorldContractReader;
+use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use torii_client::contract::world::WorldContractReader;
 use tracing::info;
 
 use super::EventProcessor;
@@ -13,16 +13,19 @@ use crate::sql::Sql;
 pub struct RegisterModelProcessor;
 
 #[async_trait]
-impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor {
+impl<P> EventProcessor<P> for RegisterModelProcessor
+where
+    P::Error: 'static,
+    P: Provider + Send + Sync,
+{
     fn event_key(&self) -> String {
         "ModelRegistered".to_string()
     }
 
     async fn process(
         &self,
-        world: &WorldContractReader<'_, P>,
+        world: &WorldContractReader<P>,
         db: &mut Sql,
-        _provider: &P,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         _event_id: &str,
@@ -30,15 +33,12 @@ impl<P: Provider + Sync + 'static> EventProcessor<P> for RegisterModelProcessor 
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
 
-        // TODO: remove BlockId as argument
-        let model = world.model(&name, BlockId::Tag(BlockTag::Latest)).await?;
-        let schema = model.schema(BlockId::Tag(BlockTag::Latest)).await?;
-        let layout = model.layout(BlockId::Tag(BlockTag::Latest)).await?;
+        let model = world.model(&name).await?;
+        let schema = model.schema().await?;
+        let layout = model.layout().await?;
 
-        let unpacked_size: u8 =
-            model.unpacked_size(BlockId::Tag(BlockTag::Latest)).await?.try_into()?;
-        let packed_size: u8 =
-            model.packed_size(BlockId::Tag(BlockTag::Latest)).await?.try_into()?;
+        let unpacked_size: u8 = model.unpacked_size().await?.try_into()?;
+        let packed_size: u8 = model.packed_size().await?.try_into()?;
 
         info!("Registered model: {}", name);
 

@@ -1,8 +1,7 @@
+use dojo_world::contracts::model::ModelError;
 use starknet::core::utils::CairoShortStringToFeltError;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-
-use crate::contract::model::ModelError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

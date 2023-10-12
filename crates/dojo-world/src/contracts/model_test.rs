@@ -5,10 +5,10 @@ use dojo_test_utils::sequencer::{
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::types::FieldElement;
 
-use crate::contract::world::test::deploy_world;
-use crate::contract::world::WorldContractReader;
+use crate::contracts::world::test::deploy_world;
+use crate::contracts::world::WorldContractReader;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_model() {
@@ -18,14 +18,13 @@ async fn test_model() {
     let provider = account.provider();
     let (world_address, _) = deploy_world(
         &sequencer,
-        Utf8PathBuf::from_path_buf("../../../examples/ecs/target/dev".into()).unwrap(),
+        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap(),
     )
     .await;
 
-    let block_id = BlockId::Tag(BlockTag::Latest);
     let world = WorldContractReader::new(world_address, provider);
-    let position = world.model("Position", block_id).await.unwrap();
-    let schema = position.schema(block_id).await.unwrap();
+    let position = world.model("Position").await.unwrap();
+    let schema = position.schema().await.unwrap();
 
     assert_eq!(
         schema,
@@ -68,8 +67,8 @@ async fn test_model() {
         .unwrap()
     );
 
-    let moves = world.model("Moves", block_id).await.unwrap();
-    let schema = moves.schema(block_id).await.unwrap();
+    let moves = world.model("Moves").await.unwrap();
+    let schema = moves.schema().await.unwrap();
 
     assert_eq!(
         schema,
