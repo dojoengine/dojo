@@ -3,13 +3,15 @@ use std::vec;
 use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
-use starknet::core::types::{FieldElement, FunctionCall};
+use starknet::core::types::{FieldElement, FunctionCall, StarknetError};
 use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
     ParseCairoShortStringError,
 };
 use starknet::macros::short_string;
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{
+    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
+};
 use starknet_crypto::poseidon_hash_many;
 
 use crate::contracts::world::{ContractReaderError, WorldContractReader};
@@ -26,6 +28,8 @@ mod model_test;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ModelError<P> {
+    #[error("Model not found.")]
+    ModelNotFound,
     #[error(transparent)]
     ProviderError(#[from] ProviderError<P>),
     #[error(transparent)]
@@ -60,7 +64,8 @@ where
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelReader<'a, P>, ModelError<P::Error>> {
         let name = cairo_short_string_to_felt(name)?;
-        let res = world
+
+        let class_hash = world
             .provider()
             .call(
                 FunctionCall {
@@ -70,9 +75,17 @@ where
                 },
                 world.block_id(),
             )
-            .await?;
+            .await
+            .map(|res| res[0])
+            .map_err(|err| match err {
+                ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                }) => ModelError::ModelNotFound,
+                err => err.into(),
+            })?;
 
-        Ok(Self { world_reader: world, class_hash: res[0], name })
+        Ok(Self { world_reader: world, class_hash, name })
     }
 
     pub fn class_hash(&self) -> FieldElement {
