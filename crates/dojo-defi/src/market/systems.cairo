@@ -8,7 +8,7 @@ trait ITrade<TContractState> {
 }
 
 
-#[system]
+#[dojo::contract]
 mod Trade {
     use dojo_defi::market::models::{Item, Cash, Market};
     use dojo_defi::market::constant_product_market::MarketTrait;
@@ -96,7 +96,7 @@ trait ILiquidity<TContractState> {
 }
 
 
-#[system]
+#[dojo::contract]
 mod Liquidity {
     use cubit::f128::types::fixed::Fixed;
 

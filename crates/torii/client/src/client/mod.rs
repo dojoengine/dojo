@@ -8,8 +8,8 @@ use std::sync::Arc;
 use dojo_types::packing::unpack;
 use dojo_types::schema::{EntityModel, Ty};
 use dojo_types::WorldMetadata;
+use dojo_world::contracts::WorldContractReader;
 use parking_lot::RwLock;
-use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -19,7 +19,6 @@ use self::error::{Error, ParseError};
 use self::storage::ModelStorage;
 use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
 use crate::client::subscription::SubscriptionService;
-use crate::contract::world::WorldContractReader;
 
 // TODO: expose the World interface from the `Client`
 #[allow(unused)]
@@ -136,11 +135,8 @@ impl ClientBuilder {
             // TODO: change this to querying the gRPC endpoint instead
             let subbed_entities = subbed_entities.entities.read().clone();
             for EntityModel { model, keys } in subbed_entities {
-                let model_reader =
-                    world_reader.model(&model, BlockId::Tag(BlockTag::Pending)).await?;
-                let values = model_reader
-                    .entity_storage(keys.clone(), BlockId::Tag(BlockTag::Pending))
-                    .await?;
+                let model_reader = world_reader.model(&model).await?;
+                let values = model_reader.entity_storage(&keys).await?;
 
                 client_storage.set_entity(
                     cairo_short_string_to_felt(&model).unwrap(),

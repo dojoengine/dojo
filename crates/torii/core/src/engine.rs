@@ -1,6 +1,7 @@
-use std::error::Error;
 use std::time::Duration;
 
+use anyhow::Result;
+use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
     BlockId, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
@@ -10,7 +11,6 @@ use starknet::providers::Provider;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
-use torii_client::contract::world::WorldContractReader;
 use tracing::{error, info, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
@@ -40,34 +40,31 @@ impl Default for EngineConfig {
     }
 }
 
-pub struct Engine<'a, P: Provider + Sync>
-where
-    P::Error: 'static,
-{
-    world: &'a WorldContractReader<'a, P>,
-    db: &'a mut Sql,
-    provider: &'a P,
+pub struct Engine<'db, P: Provider + Sync> {
+    world: WorldContractReader<P>,
+    db: &'db mut Sql,
+    provider: Box<P>,
     processors: Processors<P>,
     config: EngineConfig,
     block_sender: Option<BoundedSender<u64>>,
 }
 
-impl<'a, P: Provider + Sync> Engine<'a, P>
+impl<'db, P: Provider + Sync> Engine<'db, P>
 where
     P::Error: 'static,
 {
     pub fn new(
-        world: &'a WorldContractReader<'a, P>,
-        db: &'a mut Sql,
-        provider: &'a P,
+        world: WorldContractReader<P>,
+        db: &'db mut Sql,
+        provider: P,
         processors: Processors<P>,
         config: EngineConfig,
         block_sender: Option<BoundedSender<u64>>,
     ) -> Self {
-        Self { world, db, provider, processors, config, block_sender }
+        Self { world, db, provider: Box::new(provider), processors, config, block_sender }
     }
 
-    pub async fn start(&mut self, cts: CancellationToken) -> Result<(), Box<dyn Error>> {
+    pub async fn start(&mut self, cts: CancellationToken) -> Result<()> {
         let mut head = self.db.head().await?;
         if head == 0 {
             head = self.config.start_block;
@@ -92,7 +89,7 @@ where
         }
     }
 
-    pub async fn sync_to_head(&mut self, from: u64) -> Result<u64, Box<dyn Error>> {
+    pub async fn sync_to_head(&mut self, from: u64) -> Result<u64> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         if from < latest_block_number {
@@ -104,7 +101,7 @@ where
         Ok(latest_block_number)
     }
 
-    pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<(), Box<dyn Error>> {
+    pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<()> {
         // Process all blocks from current to latest.
         while from <= to {
             let block_with_txs = match self.provider.get_block_with_txs(BlockId::Number(from)).await
@@ -131,13 +128,13 @@ where
         Ok(())
     }
 
-    async fn process(&mut self, block: MaybePendingBlockWithTxs) -> Result<(), Box<dyn Error>> {
+    async fn process(&mut self, block: MaybePendingBlockWithTxs) -> Result<()> {
         let block: BlockWithTxs = match block {
             MaybePendingBlockWithTxs::Block(block) => block,
             _ => return Ok(()),
         };
 
-        process_block(self.db, self.provider, &self.processors.block, &block).await?;
+        Self::process_block(self, &block).await?;
 
         for (tx_idx, transaction) in block.clone().transactions.iter().enumerate() {
             let invoke_transaction = match &transaction {
@@ -166,7 +163,7 @@ where
 
             if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
                 for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
-                    if event.from_address != self.world.address {
+                    if event.from_address != self.world.address() {
                         continue;
                     }
 
@@ -174,80 +171,53 @@ where
                         "0x{:064x}:0x{:04x}:0x{:04x}",
                         block.block_number, tx_idx, event_idx
                     );
-                    process_event(
-                        self.world,
-                        self.db,
-                        self.provider,
-                        &self.processors.event,
-                        &block,
-                        &invoke_receipt,
-                        &event_id,
-                        event,
-                    )
-                    .await?;
+
+                    Self::process_event(self, &block, &invoke_receipt, &event_id, event).await?;
                 }
             }
 
-            process_transaction(
-                self.db,
-                self.provider,
-                &self.processors.transaction,
-                &block,
-                &receipt.clone(),
-            )
-            .await?;
+            Self::process_transaction(self, &block, &receipt).await?;
         }
 
         info!("processed block: {}", block.block_number);
 
         Ok(())
     }
-}
 
-async fn process_block<P: Provider + Sync>(
-    db: &mut Sql,
-    provider: &P,
-    processors: &[Box<dyn BlockProcessor<P>>],
-    block: &BlockWithTxs,
-) -> Result<(), Box<dyn Error>> {
-    for processor in processors {
-        processor.process(db, provider, block).await?;
-    }
-    Ok(())
-}
-
-async fn process_transaction<P: Provider + Sync>(
-    db: &mut Sql,
-    provider: &P,
-    processors: &[Box<dyn TransactionProcessor<P>>],
-    block: &BlockWithTxs,
-    receipt: &TransactionReceipt,
-) -> Result<(), Box<dyn Error>> {
-    for processor in processors {
-        processor.process(db, provider, block, receipt).await?
-    }
-
-    Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-async fn process_event<P: Provider + Sync>(
-    world: &WorldContractReader<'_, P>,
-    db: &mut Sql,
-    provider: &P,
-    processors: &[Box<dyn EventProcessor<P>>],
-    block: &BlockWithTxs,
-    invoke_receipt: &InvokeTransactionReceipt,
-    event_id: &str,
-    event: &Event,
-) -> Result<(), Box<dyn Error>> {
-    db.store_event(event_id, event, invoke_receipt.transaction_hash);
-
-    for processor in processors {
-        if get_selector_from_name(&processor.event_key())? == event.keys[0] {
-            processor.process(world, db, provider, block, invoke_receipt, event_id, event).await?;
+    async fn process_block(&mut self, block: &BlockWithTxs) -> Result<()> {
+        for processor in &self.processors.block {
+            processor.process(self.db, self.provider.as_ref(), block).await?;
         }
+        Ok(())
     }
 
-    Ok(())
+    async fn process_transaction(
+        &mut self,
+        block: &BlockWithTxs,
+        receipt: &TransactionReceipt,
+    ) -> Result<()> {
+        for processor in &self.processors.transaction {
+            processor.process(self.db, self.provider.as_ref(), block, receipt).await?
+        }
+
+        Ok(())
+    }
+
+    async fn process_event(
+        &mut self,
+        block: &BlockWithTxs,
+        invoke_receipt: &InvokeTransactionReceipt,
+        event_id: &str,
+        event: &Event,
+    ) -> Result<()> {
+        self.db.store_event(event_id, event, invoke_receipt.transaction_hash);
+        for processor in &self.processors.event {
+            if get_selector_from_name(&processor.event_key())? == event.keys[0] {
+                processor
+                    .process(&self.world, self.db, block, invoke_receipt, event_id, event)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
 }

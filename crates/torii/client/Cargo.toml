@@ -10,9 +10,9 @@ anyhow.workspace = true
 async-trait.workspace = true
 crypto-bigint = "0.5.3"
 dojo-types = { path = "../../dojo-types" }
+dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 futures-util = "0.3.28"
 futures.workspace = true
-http = "0.2.9"
 parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true

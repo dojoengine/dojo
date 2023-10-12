@@ -1,7 +1,7 @@
 use anyhow::Result;
+use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, BlockTag};
-use torii_client::contract::world::WorldContractReader;
 
 use crate::commands::model::ModelCommands;
 
@@ -11,8 +11,10 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
-            let world = WorldContractReader::new(world_address, &provider);
-            let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let world = WorldContractReader::new(world_address, &provider)
+                .with_block(BlockId::Tag(BlockTag::Pending));
+
+            let model = world.model(&name).await?;
 
             println!("{:#x}", model.class_hash());
         }
@@ -21,10 +23,11 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
-            let world = WorldContractReader::new(world_address, &provider);
-            let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let world = WorldContractReader::new(world_address, &provider)
+                .with_block(BlockId::Tag(BlockTag::Pending));
 
-            let schema = model.schema(BlockId::Tag(BlockTag::Pending)).await?;
+            let model = world.model(&name).await?;
+            let schema = model.schema().await?;
 
             if to_json {
                 println!("{}", serde_json::to_string_pretty(&schema)?)
@@ -37,10 +40,11 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
-            let world = WorldContractReader::new(world_address, &provider);
-            let model = world.model(&name, BlockId::Tag(BlockTag::Pending)).await?;
+            let world = WorldContractReader::new(world_address, &provider)
+                .with_block(BlockId::Tag(BlockTag::Pending));
 
-            let entity = model.entity(keys, BlockId::Tag(BlockTag::Pending)).await?;
+            let model = world.model(&name).await?;
+            let entity = model.entity(&keys).await?;
 
             println!("{entity}")
         }

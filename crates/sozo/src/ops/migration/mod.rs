@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -18,7 +19,6 @@ use starknet::core::types::{
 };
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet::providers::jsonrpc::HttpTransport;
-use torii_client::contract::world::WorldContract;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
@@ -218,7 +218,7 @@ where
         ui.print_sub(format!("Found remote World: {world_address:#x}"));
         ui.print_sub("Fetching remote state");
 
-        Manifest::from_remote(account.provider(), world_address, Some(local_manifest.clone()))
+        Manifest::load_from_remote(account.provider(), world_address, Some(local_manifest.clone()))
             .await
             .map(Some)
             .map_err(|e| match e {
