@@ -7,6 +7,7 @@ use super::ObjectTrait;
 use crate::query::order::Order;
 use crate::query::value_mapping_from_row;
 use crate::types::{GraphqlType, TypeData, TypeMapping, ValueMapping};
+use crate::utils::parse_argument::ParseArgument;
 
 pub mod cursor;
 pub mod edge;
@@ -14,10 +15,12 @@ pub mod page_info;
 
 #[derive(Debug)]
 pub struct ConnectionArguments {
-    pub first: Option<i64>,
-    pub last: Option<i64>,
+    pub first: Option<u64>,
+    pub last: Option<u64>,
     pub after: Option<String>,
     pub before: Option<String>,
+    pub offset: Option<u64>,
+    pub limit: Option<u64>,
 }
 
 pub struct ConnectionObject {
@@ -59,11 +62,12 @@ impl ObjectTrait for ConnectionObject {
 }
 
 pub fn parse_connection_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments, Error> {
-    let first = ctx.args.try_get("first").and_then(|first| first.i64()).ok();
-    let last = ctx.args.try_get("last").and_then(|last| last.i64()).ok();
-    let after = ctx.args.try_get("after").and_then(|after| Ok(after.string()?.to_string())).ok();
-    let before =
-        ctx.args.try_get("before").and_then(|before| Ok(before.string()?.to_string())).ok();
+    let first: Option<u64> = ParseArgument::parse(ctx, "first").ok();
+    let last: Option<u64> = ParseArgument::parse(ctx, "last").ok();
+    let after: Option<String> = ParseArgument::parse(ctx, "after").ok();
+    let before: Option<String> = ParseArgument::parse(ctx, "before").ok();
+    let offset: Option<u64> = ParseArgument::parse(ctx, "offset").ok();
+    let limit: Option<u64> = ParseArgument::parse(ctx, "limit").ok();
 
     if first.is_some() && last.is_some() {
         return Err(
@@ -77,19 +81,15 @@ pub fn parse_connection_arguments(ctx: &ResolverContext<'_>) -> Result<Connectio
         );
     }
 
-    if let Some(first) = first {
-        if first < 0 {
-            return Err("`first` on a connection cannot be less than zero.".into());
-        }
+    if (offset.is_some() || limit.is_some())
+        && (first.is_some() || last.is_some() || before.is_some() || after.is_some())
+    {
+        return Err("Pass either `offset`/`limit` OR `first`/`last`/`after`/`before` to paginate \
+                    a connection."
+            .into());
     }
 
-    if let Some(last) = last {
-        if last < 0 {
-            return Err("`last` on a connection cannot be less than zero.".into());
-        }
-    }
-
-    Ok(ConnectionArguments { first, last, after, before })
+    Ok(ConnectionArguments { first, last, after, before, offset, limit })
 }
 
 pub fn connection_arguments(field: Field) -> Field {
@@ -98,6 +98,8 @@ pub fn connection_arguments(field: Field) -> Field {
         .argument(InputValue::new("last", TypeRef::named(TypeRef::INT)))
         .argument(InputValue::new("before", TypeRef::named(GraphqlType::Cursor.to_string())))
         .argument(InputValue::new("after", TypeRef::named(GraphqlType::Cursor.to_string())))
+        .argument(InputValue::new("offset", TypeRef::named(TypeRef::INT)))
+        .argument(InputValue::new("limit", TypeRef::named(TypeRef::INT)))
 }
 
 pub fn connection_output(
