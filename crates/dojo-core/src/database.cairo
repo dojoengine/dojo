@@ -50,6 +50,12 @@ fn del(table: felt252, key: felt252) {
 fn scan(
     model: felt252, where: Option<WhereCondition>, values_length: usize, values_layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
+    let all_ids = scan_ids(model, where);
+    (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
+}
+
+/// Analogous to `scan`, but returns only the IDs of the entities.
+fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
     match where {
         Option::Some(clause) => {
             let mut serialized = ArrayTrait::new();
@@ -57,13 +63,11 @@ fn scan(
             clause.key.serialize(ref serialized);
             let index = poseidon_hash_span(serialized.span());
 
-            let all_ids = index::get_by_key(0, index, clause.value);
-            (all_ids.span(), get_by_ids(index, all_ids.span(), values_length, values_layout))
+            index::get_by_key(0, index, clause.value).span()
         },
         // If no `where` clause is defined, we return all values.
         Option::None(_) => {
-            let all_ids = index::query(0, model, Option::None);
-            (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
+            index::query(0, model, Option::None)
         }
     }
 }
