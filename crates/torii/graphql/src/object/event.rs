@@ -7,7 +7,7 @@ use crate::mapping::{EVENT_TYPE_MAPPING, SYSTEM_CALL_TYPE_MAPPING};
 use crate::query::constants::EVENT_TABLE;
 use crate::query::data::fetch_single_row;
 use crate::query::value_mapping_from_row;
-use crate::utils::extract_value::extract;
+use crate::utils::extract;
 
 pub struct EventObject;
 
@@ -37,7 +37,7 @@ impl ObjectTrait for EventObject {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-                let syscall_id = extract::<i64>(event_values, "system_call_id")?;
+                let syscall_id = extract::<u64>(event_values, "system_call_id")?;
                 let data =
                     fetch_single_row(&mut conn, "system_calls", "id", &syscall_id.to_string())
                         .await?;

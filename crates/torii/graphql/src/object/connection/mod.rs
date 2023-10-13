@@ -7,7 +7,7 @@ use super::ObjectTrait;
 use crate::query::order::Order;
 use crate::query::value_mapping_from_row;
 use crate::types::{GraphqlType, TypeData, TypeMapping, ValueMapping};
-use crate::utils::parse_argument::ParseArgument;
+use crate::utils::extract;
 
 pub mod cursor;
 pub mod edge;
@@ -62,12 +62,12 @@ impl ObjectTrait for ConnectionObject {
 }
 
 pub fn parse_connection_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments, Error> {
-    let first: Option<u64> = ParseArgument::parse(ctx, "first").ok();
-    let last: Option<u64> = ParseArgument::parse(ctx, "last").ok();
-    let after: Option<String> = ParseArgument::parse(ctx, "after").ok();
-    let before: Option<String> = ParseArgument::parse(ctx, "before").ok();
-    let offset: Option<u64> = ParseArgument::parse(ctx, "offset").ok();
-    let limit: Option<u64> = ParseArgument::parse(ctx, "limit").ok();
+    let first = extract::<u64>(ctx.args.as_index_map(), "first").ok();
+    let last = extract::<u64>(ctx.args.as_index_map(), "last").ok();
+    let after = extract::<String>(ctx.args.as_index_map(), "after").ok();
+    let before = extract::<String>(ctx.args.as_index_map(), "before").ok();
+    let offset = extract::<u64>(ctx.args.as_index_map(), "offset").ok();
+    let limit = extract::<u64>(ctx.args.as_index_map(), "limit").ok();
 
     if first.is_some() && last.is_some() {
         return Err(

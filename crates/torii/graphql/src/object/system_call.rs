@@ -7,7 +7,7 @@ use crate::mapping::{SYSTEM_CALL_TYPE_MAPPING, SYSTEM_TYPE_MAPPING};
 use crate::query::constants::SYSTEM_CALL_TABLE;
 use crate::query::data::fetch_single_row;
 use crate::query::value_mapping_from_row;
-use crate::utils::extract_value::extract;
+use crate::utils::extract;
 
 pub struct SystemCallObject;
 

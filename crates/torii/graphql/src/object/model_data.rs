@@ -13,7 +13,7 @@ use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
-use crate::utils::extract_value::extract;
+use crate::utils::extract;
 
 #[derive(FromRow, Deserialize, PartialEq, Eq)]
 pub struct ModelMember {
