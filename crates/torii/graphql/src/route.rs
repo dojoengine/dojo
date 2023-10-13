@@ -21,11 +21,11 @@ pub async fn filter(
             Ok::<_, Infallible>(warp::reply::json(&response))
         });
 
-    let graphiql_filter = warp::path("graphql").map(|| {
+    let playground_filter = warp::path("graphql").map(|| {
         warp::reply::html(playground_source(
-            GraphQLPlaygroundConfig::new("/graphql").subscription_endpoint("/graphql/ws"),
+            GraphQLPlaygroundConfig::new("").subscription_endpoint("ws"),
         ))
     });
 
-    graphql_subscription(schema).or(graphql_post).or(graphiql_filter)
+    graphql_subscription(schema).or(graphql_post).or(playground_filter)
 }
