@@ -162,20 +162,19 @@ fn evaluate_class_to_migrate(
     class: &ClassDiff,
     artifact_paths: &HashMap<String, PathBuf>,
     world_contract_will_migrate: bool,
-    prefix: &str
+    prefix: &str,
 ) -> Result<Option<ClassMigration>> {
     match class.remote {
         Some(remote) if remote == class.local && !world_contract_will_migrate => Ok(None),
         _ => {
             let path = find_artifact_path(
-                format!("{}-{}",prefix, class.name.to_case(Case::Snake)).as_str(),
+                format!("{}-{}", prefix, class.name.to_case(Case::Snake)).as_str(),
                 artifact_paths,
             )?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
 }
-
 
 fn evaluate_contracts_to_migrate(
     contracts: &[ContractDiff],
