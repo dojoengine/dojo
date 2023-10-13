@@ -130,6 +130,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 0,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -139,6 +140,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 1,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -148,6 +150,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 1,
                 type_enum: "Struct".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position$Vec2".into(),
@@ -157,6 +160,7 @@ mod tests {
                 model_idx: 1,
                 member_idx: 0,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position$Vec2".into(),
@@ -166,6 +170,7 @@ mod tests {
                 model_idx: 1,
                 member_idx: 1,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
         ];
 
