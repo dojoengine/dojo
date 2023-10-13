@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::PathBuf;
 
@@ -72,6 +73,8 @@ pub struct WorldMetadata {
     pub description: Option<String>,
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,
+    pub website: Option<Url>,
+    pub socials: HashMap<String, String>,
 }
 
 #[derive(Default, Deserialize, Clone, Debug)]
