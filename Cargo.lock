@@ -4796,6 +4796,7 @@ dependencies = [
  "console",
  "katana-core",
  "katana-rpc",
+ "serde_json",
  "starknet_api",
  "tokio",
  "tracing",
