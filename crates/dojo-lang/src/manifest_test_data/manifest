@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0xfd35fc17c6a9334c70e38da27aeed6a13297d9faa697547edac8a477e64448",
+    "class_hash": "0x2611f073498530f0faa0fda87956a405ae8cbd85cc6a28f4d8961d66cc51e4b",
     "abi": [
       {
         "type": "impl",
@@ -272,6 +272,22 @@ test_manifest_file
             "outputs": [
               {
                 "type": "(core::array::Span::<core::felt252>, core::array::Span::<core::array::Span::<core::felt252>>)"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "entity_ids",
+            "inputs": [
+              {
+                "name": "model",
+                "type": "core::felt252"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::array::Span::<core::felt252>"
               }
             ],
             "state_mutability": "view"
