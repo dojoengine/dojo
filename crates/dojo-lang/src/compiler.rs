@@ -102,7 +102,18 @@ impl Compiler for DojoCompiler {
         for (decl, class) in zip(contracts, classes) {
             let target_name = &unit.target().name;
             let contract_name = decl.submodule_id.name(db.upcast_mut());
-            let file_name = format!("{target_name}-{contract_name}.json");
+            let contract_name_snake = contract_name.to_case(Case::Snake);
+
+            let is_model = match class.abi.clone() {
+                Some(abii) => abii.items.iter().any(|i| match i {
+                    abi::Item::Struct(s) => s.name == "dojo::database::schema::Struct",
+                    _ => false,
+                }),
+                None => false,
+            };
+
+            let separator = if is_model { "model" } else { "contract" };
+            let file_name = format!("{target_name}-{separator}-{contract_name_snake}.json");
 
             let mut file = target_dir.open_rw(file_name.clone(), "output file", ws.config())?;
             serde_json::to_writer_pretty(file.deref_mut(), &class)

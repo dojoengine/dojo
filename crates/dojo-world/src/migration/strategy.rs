@@ -99,8 +99,9 @@ where
             continue;
         }
 
-        let name = file_name_str.split('-').last().unwrap().trim_end_matches(".json").to_string();
-
+        let mut splitted_name = file_name_str.split('-').map(|i| i.to_string()).collect::<Vec<_>>();
+        splitted_name.remove(0);
+        let name = splitted_name.join("-").as_str().trim_end_matches(".json").to_string();
         artifact_paths.insert(name, entry.path());
     }
 
@@ -112,7 +113,7 @@ where
     let mut world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
     let mut executor =
         evaluate_contract_to_migrate(&diff.executor, &artifact_paths, world.is_some())?;
-    let base = evaluate_class_to_migrate(&diff.base, &artifact_paths, world.is_some())?;
+    let base = evaluate_class_to_migrate(&diff.base, &artifact_paths, world.is_some(), "contract")?;
     let contracts =
         evaluate_contracts_to_migrate(&diff.contracts, &artifact_paths, world.is_some())?;
     let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
@@ -144,48 +145,54 @@ fn evaluate_models_to_migrate(
     artifact_paths: &HashMap<String, PathBuf>,
     world_contract_will_migrate: bool,
 ) -> Result<Vec<ClassMigration>> {
-    let mut comps_to_migrate = vec![];
+    let mut models_to_migrate = vec![];
 
     for c in models {
         if let Ok(Some(c)) =
-            evaluate_class_to_migrate(c, artifact_paths, world_contract_will_migrate)
+            evaluate_class_to_migrate(c, artifact_paths, world_contract_will_migrate, "model")
         {
-            comps_to_migrate.push(c);
+            models_to_migrate.push(c);
         }
     }
 
-    Ok(comps_to_migrate)
+    Ok(models_to_migrate)
 }
 
 fn evaluate_class_to_migrate(
     class: &ClassDiff,
     artifact_paths: &HashMap<String, PathBuf>,
     world_contract_will_migrate: bool,
+    prefix: &str
 ) -> Result<Option<ClassMigration>> {
     match class.remote {
         Some(remote) if remote == class.local && !world_contract_will_migrate => Ok(None),
         _ => {
-            let path =
-                find_artifact_path(class.name.to_case(Case::Snake).as_str(), artifact_paths)?;
+            let path = find_artifact_path(
+                format!("{}-{}",prefix, class.name.to_case(Case::Snake)).as_str(),
+                artifact_paths,
+            )?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
 }
+
 
 fn evaluate_contracts_to_migrate(
     contracts: &[ContractDiff],
     artifact_paths: &HashMap<String, PathBuf>,
     world_contract_will_migrate: bool,
 ) -> Result<Vec<ContractMigration>> {
-    let mut comps_to_migrate = vec![];
+    let mut contracts_to_migrate = vec![];
 
     for c in contracts {
         match c.remote {
             Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
             _ => {
-                let path =
-                    find_artifact_path(c.name.to_case(Case::Snake).as_str(), artifact_paths)?;
-                comps_to_migrate.push(ContractMigration {
+                let path = find_artifact_path(
+                    format!("contract-{}", c.name.to_case(Case::Snake)).as_str(),
+                    artifact_paths,
+                )?;
+                contracts_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
                     salt: generate_salt(&c.name),
@@ -195,7 +202,7 @@ fn evaluate_contracts_to_migrate(
         }
     }
 
-    Ok(comps_to_migrate)
+    Ok(contracts_to_migrate)
 }
 
 fn evaluate_contract_to_migrate(
@@ -207,7 +214,10 @@ fn evaluate_contract_to_migrate(
         || contract.remote.is_none()
         || matches!(contract.remote, Some(remote_hash) if remote_hash != contract.local)
     {
-        let path = find_artifact_path(&contract.name, artifact_paths)?;
+        let path = find_artifact_path(
+            format!("contract-{}", contract.name.to_case(Case::Snake)).as_str(),
+            artifact_paths,
+        )?;
 
         Ok(Some(ContractMigration {
             diff: contract.clone(),
