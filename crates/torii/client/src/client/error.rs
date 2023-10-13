@@ -5,6 +5,8 @@ use starknet::providers::{JsonRpcClient, Provider};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Subscription service uninitialized")]
+    SubscriptionUninitialized,
     #[error("Unknown model: {0}")]
     UnknownModel(String),
     #[error(

@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::future::Future;
 use std::str::FromStr;
@@ -9,7 +10,7 @@ use dojo_types::schema::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
 use torii_grpc::protos;
@@ -20,10 +21,9 @@ use super::error::{Error, ParseError};
 use super::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SubscriptionEvent {
-    SubscribeEntity(EntityModel),
-    UnsubscribeEntity(EntityModel),
+    UpdateSubsciptionStream(tonic::Streaming<SubscribeEntitiesResponse>),
 }
 
 pub struct SubscribedEntities {
@@ -34,7 +34,7 @@ pub struct SubscribedEntities {
 }
 
 impl SubscribedEntities {
-    pub fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
+    pub(crate) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
         Self {
             metadata,
             entities: Default::default(),
@@ -104,13 +104,26 @@ impl SubscribedEntities {
 }
 
 #[derive(Debug)]
-pub(crate) struct SubscriptionClientHandle(Sender<SubscriptionEvent>);
+pub(crate) struct SubscriptionClientHandle(Mutex<Sender<SubscriptionEvent>>);
+
+impl SubscriptionClientHandle {
+    fn new(sender: Sender<SubscriptionEvent>) -> Self {
+        Self(Mutex::new(sender))
+    }
+
+    pub(crate) fn update_subscription_stream(
+        &self,
+        stream: tonic::Streaming<SubscribeEntitiesResponse>,
+    ) {
+        let _ = self.0.lock().try_send(SubscriptionEvent::UpdateSubsciptionStream(stream));
+    }
+}
 
 #[must_use = "SubscriptionClient does nothing unless polled"]
 pub struct SubscriptionService {
     req_rcv: Receiver<SubscriptionEvent>,
     /// The stream returned by the subscription server to receive the response
-    sub_res_stream: tonic::Streaming<SubscribeEntitiesResponse>,
+    sub_res_stream: RefCell<Option<tonic::Streaming<SubscribeEntitiesResponse>>>,
     /// Callback to be called on error
     err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
 
@@ -128,7 +141,9 @@ impl SubscriptionService {
         sub_res_stream: tonic::Streaming<SubscribeEntitiesResponse>,
     ) -> (Self, SubscriptionClientHandle) {
         let (req_sender, req_rcv) = mpsc::channel(128);
-        let handle = SubscriptionClientHandle(req_sender);
+
+        let handle = SubscriptionClientHandle::new(req_sender);
+        let sub_res_stream = RefCell::new(Some(sub_res_stream));
 
         let client = Self {
             req_rcv,
@@ -145,13 +160,11 @@ impl SubscriptionService {
     // TODO: handle the subscription events properly
     fn handle_event(&self, event: SubscriptionEvent) -> Result<(), Error> {
         match event {
-            SubscriptionEvent::SubscribeEntity(entity) => {
-                self.subscribed_entities.add_entities(vec![entity])
-            }
-            SubscriptionEvent::UnsubscribeEntity(entity) => {
-                self.subscribed_entities.remove_entities(vec![entity])
+            SubscriptionEvent::UpdateSubsciptionStream(stream) => {
+                self.sub_res_stream.replace(Some(stream));
             }
         }
+        Ok(())
     }
 
     // handle the response from the subscription stream
@@ -222,11 +235,12 @@ impl Future for SubscriptionService {
                 let _ = pin.handle_event(req);
             }
 
-            match pin.sub_res_stream.poll_next_unpin(cx) {
-                Poll::Ready(Some(res)) => pin.handle_response(res),
-
-                Poll::Ready(None) => return Poll::Ready(()),
-                Poll::Pending => return Poll::Pending,
+            if let Some(stream) = pin.sub_res_stream.get_mut() {
+                match stream.poll_next_unpin(cx) {
+                    Poll::Ready(Some(res)) => pin.handle_response(res),
+                    Poll::Ready(None) => return Poll::Ready(()),
+                    Poll::Pending => return Poll::Pending,
+                }
             }
         }
     }
