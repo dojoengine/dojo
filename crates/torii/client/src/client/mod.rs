@@ -94,6 +94,7 @@ impl Client {
     /// NOTE: This will establish a new subscription stream with the server.
     pub async fn add_entities_to_sync(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         self.subscribed_entities.add_entities(entities)?;
+
         let updated_entities = self.synced_entities();
         let sub_res_stream = self.initiate_subscription(updated_entities).await?;
 
@@ -109,6 +110,7 @@ impl Client {
     /// NOTE: This will establish a new subscription stream with the server.
     pub async fn remove_entities_to_sync(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         self.subscribed_entities.remove_entities(entities)?;
+
         let updated_entities = self.synced_entities();
         let sub_res_stream = self.initiate_subscription(updated_entities).await?;
 

@@ -36,10 +36,14 @@ mod player_actions {
             let world = self.world_dispatcher.read();
             let player = get_caller_address();
             let position = get!(world, player, (Position));
+            let moves = get!(world, player, (Moves));
+
             set!(
                 world,
                 (
-                    Moves { player, remaining: 10, last_direction: Direction::None(()) },
+                    Moves {
+                        player, remaining: moves.remaining + 1, last_direction: Direction::None(())
+                    },
                     Position {
                         player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 }
                     },

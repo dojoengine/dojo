@@ -94,12 +94,13 @@ impl DojoWorld {
 
     async fn model_schema(&self, model: &str) -> Result<dojo_types::schema::Ty, Error> {
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
-            "SELECT id, model_idx, member_idx, name, type, type_enum, key FROM model_members \
-             WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
+            "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
+             model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
         )
         .bind(model)
         .fetch_all(&self.pool)
         .await?;
+
         Ok(parse_sql_model_members(model, &model_members))
     }
 
