@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let accounts = sequencer.backend.accounts.iter();
 
         if config.json_log {
-            println!(
+            info!(
                 "{}",
                 serde_json::json!({
                     "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),
