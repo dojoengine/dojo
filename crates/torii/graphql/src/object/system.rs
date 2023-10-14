@@ -7,7 +7,7 @@ use crate::mapping::{SYSTEM_CALL_TYPE_MAPPING, SYSTEM_TYPE_MAPPING};
 use crate::query::constants::{SYSTEM_CALL_TABLE, SYSTEM_TABLE};
 use crate::query::data::fetch_single_row;
 use crate::query::value_mapping_from_row;
-use crate::utils::extract_value::extract;
+use crate::utils::extract;
 
 pub struct SystemObject;
 
@@ -33,7 +33,7 @@ impl ObjectTrait for SystemObject {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-                let syscall_id = extract::<i64>(event_values, "system_call_id")?;
+                let syscall_id = extract::<u64>(event_values, "system_call_id")?;
                 let data =
                     fetch_single_row(&mut conn, SYSTEM_CALL_TABLE, "id", &syscall_id.to_string())
                         .await?;

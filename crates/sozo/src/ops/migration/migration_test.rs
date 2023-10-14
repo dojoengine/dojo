@@ -138,7 +138,6 @@ async fn migration_from_remote() {
     let remote_manifest = Manifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),
-        None,
     )
     .await
     .unwrap();

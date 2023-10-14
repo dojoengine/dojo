@@ -2,7 +2,7 @@
 cairo-version = "2.2.0"
 description = "Implementations of ERC standards for the Dojo framework"
 name = "dojo_erc"
-version = "0.3.0-rc7"
+version = "0.3.0-rc9"
 
 [cairo]
 sierra-replace-ids = true

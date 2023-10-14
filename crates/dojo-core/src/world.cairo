@@ -30,6 +30,7 @@ trait IWorld<T> {
         values_length: usize,
         values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
+    fn entity_ids(self: @T, model: felt252) -> Span<felt252>;
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
@@ -445,8 +446,7 @@ mod world {
             assert_can_write(@self, model, get_caller_address());
 
             let key = poseidon::poseidon_hash_span(keys);
-            let model_class_hash = self.models.read(model);
-            database::set_with_index(model_class_hash, model, key, offset, values, layout);
+            database::set(model, key, offset, values, layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
         }
@@ -463,8 +463,7 @@ mod world {
             assert_can_write(@self, model, system);
 
             let key = poseidon::poseidon_hash_span(keys);
-            let model_class_hash = self.models.read(model);
-            database::del(model_class_hash, model, key);
+            database::del(model, key);
 
             EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
         }
@@ -490,9 +489,8 @@ mod world {
             length: usize,
             layout: Span<u8>
         ) -> Span<felt252> {
-            let class_hash = self.models.read(model);
             let key = poseidon::poseidon_hash_span(keys);
-            database::get(class_hash, model, key, offset, length, layout)
+            database::get(model, key, offset, length, layout)
         }
 
         /// Returns entity IDs and entities that contain the model state.
@@ -516,10 +514,25 @@ mod world {
             values_length: usize,
             values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
-            let class_hash = self.models.read(model);
-
             assert(values.len() == 0, 'Queries by values not impl');
-            database::scan(class_hash, model, Option::None(()), values_length, values_layout)
+            database::scan(model, Option::None(()), values_length, values_layout)
+        }
+
+        /// Returns only the entity IDs that contain the model state.
+        /// # Arguments
+        /// * `model` - The name of the model to be retrieved.
+        /// * `index` - The index to be retrieved.
+        /// * `values` - The query to be used to find the entity.
+        /// * `length` - The length of the model values.
+        ///
+        /// # Returns
+        /// * `Span<felt252>` - The entity IDs.
+        /// * `Span<Span<felt252>>` - The entities.
+        fn entity_ids(
+            self: @ContractState,
+            model: felt252
+        ) -> Span<felt252> {
+            database::scan_ids(model, Option::None(()))
         }
 
         /// Sets the executor contract address.

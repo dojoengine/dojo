@@ -1,4 +1,4 @@
-pub const DEFAULT_LIMIT: i64 = 10;
+pub const DEFAULT_LIMIT: u64 = 10;
 pub const BOOLEAN_TRUE: i64 = 1;
 
 pub const ENTITY_TABLE: &str = "entities";

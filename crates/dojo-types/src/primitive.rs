@@ -79,9 +79,9 @@ impl Primitive {
                     let mut buffer = [0u8; 32];
                     let value0_bytes = value[0].to_bytes_be();
                     let value1_bytes = value[1].to_bytes_be();
-                    buffer[..16].copy_from_slice(&value0_bytes);
-                    buffer[16..].copy_from_slice(&value1_bytes);
-                    Ok(format!("'{}'", hex::encode(buffer)))
+                    buffer[16..].copy_from_slice(&value0_bytes[16..]);
+                    buffer[..16].copy_from_slice(&value1_bytes[16..]);
+                    Ok(format!("'0x{}'", hex::encode(buffer)))
                 }
             }
         }
@@ -131,8 +131,8 @@ impl Primitive {
                 let value0_bytes = value0.to_bytes_be();
                 let value1_bytes = value1.to_bytes_be();
                 let mut bytes = [0u8; 32];
-                bytes[..16].copy_from_slice(&value0_bytes);
-                bytes[16..].copy_from_slice(&value1_bytes);
+                bytes[16..].copy_from_slice(&value0_bytes[16..]);
+                bytes[..16].copy_from_slice(&value1_bytes[16..]);
                 *value = Some(U256::from_be_bytes(bytes));
                 Ok(())
             }
@@ -177,8 +177,8 @@ impl Primitive {
             Primitive::U256(value) => value
                 .map(|v| {
                     let bytes: [u8; 32] = v.to_be_bytes();
-                    let value0_slice = &bytes[..16];
-                    let value1_slice = &bytes[16..];
+                    let value0_slice = &bytes[16..];
+                    let value1_slice = &bytes[..16];
                     let mut value0_array = [0u8; 32];
                     let mut value1_array = [0u8; 32];
                     value0_array[16..].copy_from_slice(value0_slice);
@@ -198,5 +198,40 @@ impl Primitive {
                 value.map(|v| Ok(vec![v])).unwrap_or(Err(PrimitiveError::MissingFieldElement))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crypto_bigint::U256;
+    use starknet::core::types::FieldElement;
+
+    use super::Primitive;
+
+    #[test]
+    fn test_u256() {
+        let primitive = Primitive::U256(Some(U256::from_be_hex(
+            "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd",
+        )));
+        let sql_value = primitive.to_sql_value().unwrap();
+        let serialized = primitive.serialize().unwrap();
+
+        let mut deserialized = primitive;
+        deserialized.deserialize(&mut serialized.clone()).unwrap();
+
+        assert_eq!(
+            sql_value,
+            "'0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd'"
+        );
+        assert_eq!(
+            serialized,
+            vec![
+                FieldElement::from_str("0xccccccccccccccccdddddddddddddddd").unwrap(),
+                FieldElement::from_str("0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb").unwrap()
+            ]
+        );
+        assert_eq!(deserialized, primitive)
     }
 }

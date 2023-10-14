@@ -1,7 +1,7 @@
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use dojo_types::primitive::Primitive;
-use indexmap::IndexMap;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 

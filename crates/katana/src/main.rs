@@ -39,22 +39,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let NodeHandle { addr, handle, .. } = spawn(katana_api, starknet_api, server_config).await?;
 
     if !config.silent {
-        let accounts = sequencer
-            .backend
-            .accounts
-            .iter()
-            .map(|a| format!("{a}"))
-            .collect::<Vec<_>>()
-            .join("\n");
+        let accounts = sequencer.backend.accounts.iter();
 
-        print_intro(
-            accounts,
-            config.starknet.seed.clone(),
-            format!(
-                "🚀 JSON-RPC server started: {}",
-                Style::new().red().apply_to(format!("http://{addr}"))
-            ),
-        );
+        if config.json_log {
+            info!(
+                "{}",
+                serde_json::json!({
+                    "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),
+                    "seed": format!("{}", config.starknet.seed),
+                    "address": format!("{addr}"),
+                })
+            )
+        } else {
+            let accounts = accounts.map(|a| format!("{a}")).collect::<Vec<_>>().join("\n");
+            print_intro(
+                accounts,
+                config.starknet.seed.clone(),
+                format!(
+                    "🚀 JSON-RPC server started: {}",
+                    Style::new().red().apply_to(format!("http://{addr}"))
+                ),
+            );
+        }
     }
 
     // Wait until Ctrl + C is pressed, then shutdown

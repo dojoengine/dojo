@@ -93,7 +93,7 @@ pub async fn deploy_world(
     for contract in strategy.contracts {
         let declare_res = contract.declare(&account, Default::default()).await.unwrap();
         contract
-            .deploy(declare_res.class_hash, vec![], &account, Default::default())
+            .world_deploy(world_address, declare_res.class_hash, &account, Default::default())
             .await
             .unwrap();
     }

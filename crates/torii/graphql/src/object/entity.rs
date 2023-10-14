@@ -1,9 +1,9 @@
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
 use async_recursion::async_recursion;
-use indexmap::IndexMap;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
@@ -17,7 +17,7 @@ use crate::query::constants::ENTITY_TABLE;
 use crate::query::data::{count_rows, fetch_multiple_rows};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
-use crate::utils::extract_value::extract;
+use crate::utils::extract;
 
 pub struct EntityObject;
 
@@ -71,15 +71,7 @@ impl ObjectTrait for EntityObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
-                    let keys = ctx.args.try_get("keys").ok().and_then(|keys| {
-                        keys.list().ok().map(|key_list| {
-                            key_list
-                                    .iter()
-                                    .map(|val| val.string().unwrap().to_string()) // safe unwrap
-                                    .collect()
-                        })
-                    });
-
+                    let keys = extract::<Vec<String>>(ctx.args.as_index_map(), "keys").ok();
                     let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
                     let data = fetch_multiple_rows(
                         &mut conn,
@@ -153,7 +145,8 @@ fn model_union_field() -> Field {
                     for name in model_names {
                         let type_mapping = type_mapping_query(&mut conn, &name).await?;
                         let mut path_array = vec![name.clone()];
-                        let state = model_data_recursive_query(
+
+                        let data = model_data_recursive_query(
                             &mut conn,
                             &mut path_array,
                             &entity_id,
@@ -161,7 +154,7 @@ fn model_union_field() -> Field {
                         )
                         .await?;
 
-                        results.push(FieldValue::with_type(FieldValue::owned_any(state), name));
+                        results.push(FieldValue::with_type(FieldValue::owned_any(data), name));
                     }
 
                     Ok(Some(FieldValue::list(results)))

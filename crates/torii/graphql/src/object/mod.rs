@@ -22,6 +22,7 @@ use crate::query::constants::ID_COLUMN;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
+use crate::utils::extract;
 
 pub trait ObjectTrait: Send + Sync {
     // Name of the graphql object, singular and plural (eg "player" and "players")
@@ -70,10 +71,9 @@ pub trait ObjectTrait: Send + Sync {
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = ctx.args.try_get(ID_COLUMN)?.string()?.to_string();
+                    let id = extract::<String>(ctx.args.as_index_map(), ID_COLUMN)?;
                     let data = fetch_single_row(&mut conn, &table_name, ID_COLUMN, &id).await?;
                     let model = value_mapping_from_row(&data, &type_mapping, false)?;
-
                     Ok(Some(Value::Object(model)))
                 })
             })

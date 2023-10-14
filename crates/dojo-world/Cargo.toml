@@ -41,6 +41,6 @@ toml.workspace = true
 
 [features]
 contracts = [ "dep:dojo-types", "dep:http" ]
-manifest = [ "dep:dojo-types" ]
+manifest = [ "contracts", "dep:dojo-types", "dep:url" ]
 metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
 migration = [ "dep:tokio" ]

@@ -17,9 +17,7 @@ mod utils_test;
 
 use index::WhereCondition;
 
-fn get(
-    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, length: usize, layout: Span<u8>
-) -> Span<felt252> {
+fn get(table: felt252, key: felt252, offset: u8, length: usize, layout: Span<u8>) -> Span<felt252> {
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
@@ -27,9 +25,7 @@ fn get(
     storage::get_many(0, keys.span(), offset, length, layout)
 }
 
-fn set(
-    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>
-) {
+fn set(table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>) {
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
@@ -37,14 +33,14 @@ fn set(
     storage::set_many(0, keys.span(), offset, value, layout);
 }
 
-fn set_with_index( 
-    class_hash: starknet::ClassHash, table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>
+fn set_with_index(
+    table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: Span<u8>
 ) {
-    set(class_hash, table, key, offset, value, layout);
+    set(table, key, offset, value, layout);
     index::create(0, table, key);
 }
 
-fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
+fn del(table: felt252, key: felt252) {
     index::delete(0, table, key);
 }
 
@@ -52,8 +48,14 @@ fn del(class_hash: starknet::ClassHash, table: felt252, key: felt252) {
 // Returns a tuple of spans, first contains the entity IDs,
 // second the deserialized entities themselves.
 fn scan(
-    class_hash: starknet::ClassHash, model: felt252, where: Option<WhereCondition>, values_length: usize, values_layout: Span<u8>
+    model: felt252, where: Option<WhereCondition>, values_length: usize, values_layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
+    let all_ids = scan_ids(model, where);
+    (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
+}
+
+/// Analogous to `scan`, but returns only the IDs of the entities.
+fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
     match where {
         Option::Some(clause) => {
             let mut serialized = ArrayTrait::new();
@@ -61,14 +63,11 @@ fn scan(
             clause.key.serialize(ref serialized);
             let index = poseidon_hash_span(serialized.span());
 
-            let all_ids = index::get_by_key(0, index, clause.value);
-            (all_ids.span(), get_by_ids(class_hash, index, all_ids.span(), values_length, values_layout))
+            index::get_by_key(0, index, clause.value).span()
         },
-
         // If no `where` clause is defined, we return all values.
         Option::None(_) => {
-            let all_ids = index::query(0, model, Option::None);
-            (all_ids, get_by_ids(class_hash, model, all_ids, values_length, values_layout))
+            index::query(0, model, Option::None)
         }
     }
 }
@@ -79,7 +78,9 @@ fn scan(
 /// * `table` - The table to get the entries from.
 /// * `all_ids` - The ids of the entries to get.
 /// * `length` - The length of the entries.
-fn get_by_ids(class_hash: starknet::ClassHash, table: felt252, all_ids: Span<felt252>, length: u32, layout: Span<u8>) -> Span<Span<felt252>> {
+fn get_by_ids(
+    table: felt252, all_ids: Span<felt252>, length: u32, layout: Span<u8>
+) -> Span<Span<felt252>> {
     let mut entities: Array<Span<felt252>> = ArrayTrait::new();
     let mut ids = all_ids;
     loop {

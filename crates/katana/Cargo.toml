@@ -12,6 +12,7 @@ clap_complete.workspace = true
 console.workspace = true
 katana-core = { path = "core" }
 katana-rpc = { path = "rpc" }
+serde_json.workspace = true
 starknet_api.workspace = true
 tokio.workspace = true
 tracing-subscriber.workspace = true
