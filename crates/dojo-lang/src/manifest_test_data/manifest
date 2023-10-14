@@ -806,7 +806,7 @@ test_manifest_file
     {
       "name": "player_actions",
       "address": null,
-      "class_hash": "0x53ce2324af80c9c879e2ccefd0feaef0c3461b6ddfb2e0d35a0e78d5ba76a08",
+      "class_hash": "0x473f9dbf12f5dae40e26219f7ff6c9156a7ace830a211be372e9b88136505c7",
       "abi": [
         {
           "type": "impl",

@@ -336,7 +336,7 @@ impl Sql {
         if let Ty::Struct(s) = model {
             for (member_idx, member) in s.children.iter().enumerate() {
                 let name = member.name.clone();
-                let mut options = None;
+                let mut options = None; // TEMP: doesnt support complex enums yet
 
                 if let Ok(cairo_type) = Primitive::from_str(&member.ty.name()) {
                     query.push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
