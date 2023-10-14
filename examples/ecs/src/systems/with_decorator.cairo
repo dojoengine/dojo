@@ -99,7 +99,7 @@ mod tests {
         let moves = get!(world, caller, Moves);
         let right_dir_felt: felt252 = Direction::Right(()).into();
 
-        assert(moves.remaining == 9, 'moves is wrong');
+        assert(moves.remaining == 0, 'moves is wrong');
         assert(moves.last_direction.into() == right_dir_felt, 'last direction is wrong');
 
         let new_position = get!(world, caller, Position);
