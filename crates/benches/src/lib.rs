@@ -2,8 +2,8 @@
 mod tests {
     use std::process::Command;
     // use clap_builder::Parser;
-    use starknet_core::types::{FieldElement, TransactionReceipt};
-    use starknet_providers::jsonrpc::JsonRpcResponse;
+    use starknet::core::types::{FieldElement, TransactionReceipt};
+    use starknet::providers::jsonrpc::JsonRpcResponse;
 
     const KATANA_ENDPOINT: &str = "http://localhost:5050";
     const WORLD: &str = "0x223b959926c92e10a5de78a76871fa40cefafbdce789137843df7c7b30e3e0";
@@ -57,10 +57,7 @@ mod tests {
         // looks like it doesn't work at the moment, so using installed version of sozo
         // sozo::cli_main(SozoArgs::parse_from(args)).expect("Execution error");
 
-        let output = Command::new("/home/mateo/.cargo/bin/sozo")
-            .args(args)
-            .output()
-            .expect("failed to execute process");
+        let output = Command::new("sozo").args(args).output().expect("failed to execute process");
         assert!(
             output.status.success(),
             "Execution failed at: {}",
@@ -76,7 +73,6 @@ mod tests {
         tx
     }
 
-    // #[tokio::test]
     #[test]
     fn basic_contract_call() {
         let tx = execute("spawn", None);
