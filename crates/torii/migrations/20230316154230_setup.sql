@@ -43,6 +43,7 @@ CREATE TABLE model_members(
     type_enum TEXT DEFAULT 'Primitive' CHECK(
         type_enum IN ('Primitive', 'Struct', 'Enum', 'Tuple')
     ) NOT NULL,
+    enum_options TEXT NULL,  -- TEMP: Remove once enum support is properly added
     key BOOLEAN NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id, member_idx) FOREIGN KEY (model_id) REFERENCES models(id)

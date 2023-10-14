@@ -37,6 +37,17 @@ async function run_wasm() {
 					],
 				},
 			});
+
+			// Get the entity values from the sync worker
+			clientWorker.postMessage({
+				type: "getModelValue",
+				data: {
+					model: "Moves",
+					keys: [
+						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+					],
+				},
+			});
 		}, 2000);
 	}, 1000);
 }

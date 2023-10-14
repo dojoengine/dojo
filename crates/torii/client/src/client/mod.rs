@@ -14,6 +14,8 @@ use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
+use tokio::sync::RwLock as AsyncRwLock;
+use torii_grpc::protos::world::SubscribeEntitiesResponse;
 
 use self::error::{Error, ParseError};
 use self::storage::ModelStorage;
@@ -26,7 +28,7 @@ pub struct Client {
     /// Metadata of the World that the client is connected to.
     metadata: Arc<RwLock<WorldMetadata>>,
     /// The grpc client.
-    inner: torii_grpc::client::WorldClient,
+    inner: AsyncRwLock<torii_grpc::client::WorldClient>,
     /// Entity storage
     storage: Arc<ModelStorage>,
     /// Entities the client are subscribed to.
@@ -72,8 +74,9 @@ impl Client {
 
     /// Initiate the entity subscriptions and returns a [SubscriptionService] which when await'ed
     /// will execute the subscription service and starts the syncing process.
-    pub async fn start_subscription(&mut self) -> Result<SubscriptionService, Error> {
-        let sub_res_stream = self.inner.subscribe_entities(self.synced_entities()).await?;
+    pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
+        let entities = self.synced_entities();
+        let sub_res_stream = self.initiate_subscription(entities).await?;
 
         let (service, handle) = SubscriptionService::new(
             Arc::clone(&self.storage),
@@ -84,6 +87,47 @@ impl Client {
 
         self.sub_client_handle.set(handle).unwrap();
         Ok(service)
+    }
+
+    /// Adds entities to the list of entities to be synced.
+    ///
+    /// NOTE: This will establish a new subscription stream with the server.
+    pub async fn add_entities_to_sync(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+        self.subscribed_entities.add_entities(entities)?;
+
+        let updated_entities = self.synced_entities();
+        let sub_res_stream = self.initiate_subscription(updated_entities).await?;
+
+        match self.sub_client_handle.get() {
+            Some(handle) => handle.update_subscription_stream(sub_res_stream),
+            None => return Err(Error::SubscriptionUninitialized),
+        }
+        Ok(())
+    }
+
+    /// Removes entities from the list of entities to be synced.
+    ///
+    /// NOTE: This will establish a new subscription stream with the server.
+    pub async fn remove_entities_to_sync(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+        self.subscribed_entities.remove_entities(entities)?;
+
+        let updated_entities = self.synced_entities();
+        let sub_res_stream = self.initiate_subscription(updated_entities).await?;
+
+        match self.sub_client_handle.get() {
+            Some(handle) => handle.update_subscription_stream(sub_res_stream),
+            None => return Err(Error::SubscriptionUninitialized),
+        }
+        Ok(())
+    }
+
+    async fn initiate_subscription(
+        &self,
+        entities: Vec<EntityModel>,
+    ) -> Result<tonic::Streaming<SubscribeEntitiesResponse>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_entities(entities).await?;
+        Ok(stream)
     }
 }
 
@@ -147,10 +191,10 @@ impl ClientBuilder {
         }
 
         Ok(Client {
-            inner: grpc_client,
             storage: client_storage,
             metadata: shared_metadata,
             sub_client_handle: OnceCell::new(),
+            inner: AsyncRwLock::new(grpc_client),
             subscribed_entities: subbed_entities,
         })
     }
