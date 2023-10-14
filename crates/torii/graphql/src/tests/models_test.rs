@@ -73,15 +73,31 @@ mod tests {
 
         // fixtures inserts two position mdoels with members (x: 42, y: 69) and (x: 69, y: 42)
         // the following filters and expected total results can be simply calculated
-        // Todo: reenable where filters, change to ("where: { playerNEQ: ContractAddress }", 1),
         let where_filters = Vec::from([
-            // ("where: { x: 42 }", 1),
-            // ("where: { xNEQ: 42 }", 1),
-            // ("where: { xGT: 42 }", 1),
-            // ("where: { xGTE: 42 }", 2),
-            // ("where: { xLT: 42 }", 0),
-            // ("where: { xLTE: 42 }", 1),
-            // ("where: { x: 1337, yGTE: 1234 }", 0),
+            (
+                r#"where: { playerNEQ: "0x0000000000000000000000000000000000000000000000000000000000000002" }"#,
+                1,
+            ),
+            (
+                r#"where: { playerGT: "0x0000000000000000000000000000000000000000000000000000000000000002" }"#,
+                1,
+            ),
+            (
+                r#"where: { playerGTE: "0x0000000000000000000000000000000000000000000000000000000000000002" }"#,
+                2,
+            ),
+            (
+                r#"where: { playerLT: "0x0000000000000000000000000000000000000000000000000000000000000002" }"#,
+                0,
+            ),
+            (
+                r#"where: { playerLTE: "0x0000000000000000000000000000000000000000000000000000000000000002" }"#,
+                1,
+            ),
+            (
+                r#"where: { player: "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973" }"#,
+                0,
+            ),
             (
                 r#"where: { player: "0x0000000000000000000000000000000000000000000000000000000000000002" }"#,
                 1,

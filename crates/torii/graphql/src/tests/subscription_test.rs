@@ -171,16 +171,11 @@ mod tests {
     //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_model_subscription(pool: SqlitePool) {
-        // Sleep in order to run this test at the end in a single thread
-        tokio::time::sleep(Duration::from_secs(2)).await;
-
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let name = "Moves".to_string();
         let model_id = name.clone();
         let class_hash = FieldElement::TWO;
-        // let hex_class_hash = format!("{:#x}", class_hash);
-        // ToDo: Query class_hash from db
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":name }
         });
@@ -233,8 +228,6 @@ mod tests {
         let name = "Test".to_string();
         let model_id = name.clone();
         let class_hash = FieldElement::TWO;
-        // let hex_class_hash = format!("{:#x}", class_hash);
-        // ToDo: Query class_hash from db
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":name }
         });
