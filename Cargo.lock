@@ -714,8 +714,7 @@ dependencies = [
  "proptest",
  "reqwest",
  "sozo",
- "starknet-core",
- "starknet-providers",
+ "starknet",
  "tokio",
 ]
 
