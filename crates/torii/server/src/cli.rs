@@ -48,6 +48,10 @@ struct Args {
     #[arg(long, default_value = "*")]
     #[arg(value_delimiter = ',')]
     allowed_origins: Vec<String>,
+    /// The external url of the server, used for configuring the GraphQL Playground in a hosted
+    /// environment
+    #[arg(long)]
+    external_url: Option<Url>,
 }
 
 #[tokio::main]
@@ -116,6 +120,7 @@ async fn main() -> anyhow::Result<()> {
         args.world_address,
         Arc::clone(&provider),
         args.allowed_origins,
+        args.external_url,
     );
 
     tokio::select! {
