@@ -19,8 +19,6 @@ pub enum Error {
     #[error(transparent)]
     GrpcClient(#[from] torii_grpc::client::Error),
     #[error(transparent)]
-    Other(#[from] anyhow::Error),
-    #[error(transparent)]
     Model(#[from] ModelError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
 }
 
