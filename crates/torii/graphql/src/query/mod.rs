@@ -3,10 +3,11 @@ use std::str::FromStr;
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use constants::BOOLEAN_TRUE;
-use dojo_types::primitive::Primitive;
+use dojo_types::primitive::{Primitive, SqlType};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, Sqlite};
+use torii_core::sql::FELT_DELIMITER;
 
 use crate::object::model_data::ModelMember;
 use crate::types::{TypeData, TypeMapping, ValueMapping};
@@ -117,48 +118,50 @@ pub fn value_mapping_from_row(
         .iter()
         .filter(|(_, type_data)| type_data.is_simple())
         .map(|(field_name, type_data)| {
-            let column_name = if is_external {
-                format!("external_{}", field_name)
-            } else {
-                field_name.to_string()
-            };
+            let mut value =
+                fetch_value(row, field_name, &type_data.type_ref().to_string(), is_external)?;
 
-            let field_type = type_data.type_ref().to_string();
-            let value = fetch_value(row, &column_name, &field_type)?;
-            let value = match Primitive::from_str(&field_type) {
-                Ok(primitive) => match primitive {
-                    Primitive::U128(_)
-                    | Primitive::U256(_)
-                    | Primitive::ContractAddress(_)
-                    | Primitive::ClassHash(_)
-                    | Primitive::Felt252(_) => remove_hex_leading_zeros(value),
-                    _ => value,
-                },
-                Err(_) => value,
-            };
+            // handles felt arrays stored as string (ex: keys)
+            if let (TypeRef::List(_), Value::String(s)) = (&type_data.type_ref(), &value) {
+                let mut felts: Vec<_> = s.split(FELT_DELIMITER).map(Value::from).collect();
+                felts.pop(); // removes empty item
+                value = Value::List(felts);
+            }
 
-            Ok((Name::new(field_name.clone()), value))
+            Ok((Name::new(field_name), value))
         })
         .collect::<sqlx::Result<ValueMapping>>()?;
 
-    if let Ok(entity_id) = fetch_value(row, "entity_id", TypeRef::STRING) {
-        value_mapping.insert(Name::new("entity_id"), entity_id);
+    // entity_id is not part of a model's type_mapping but needed to relate to parent entity
+    if let Ok(entity_id) = row.try_get::<String, &str>("entity_id") {
+        value_mapping.insert(Name::new("entity_id"), Value::from(entity_id));
     }
 
     Ok(value_mapping)
 }
 
-fn fetch_value(row: &SqliteRow, column_name: &str, field_type: &str) -> sqlx::Result<Value> {
-    match Primitive::from_str(field_type) {
+fn fetch_value(
+    row: &SqliteRow,
+    field_name: &str,
+    type_name: &str,
+    is_external: bool,
+) -> sqlx::Result<Value> {
+    let column_name =
+        if is_external { format!("external_{}", field_name) } else { field_name.to_string() };
+
+    match Primitive::from_str(type_name) {
         // fetch boolean
         Ok(Primitive::Bool(_)) => {
-            Ok(Value::from(matches!(row.try_get::<i64, &str>(column_name)?, BOOLEAN_TRUE)))
+            Ok(Value::from(matches!(row.try_get::<i64, &str>(&column_name)?, BOOLEAN_TRUE)))
         }
-        // fetch integer
-        Ok(ty) if ty.to_sql_type() == "INTEGER" => {
-            row.try_get::<i64, &str>(column_name).map(Value::from)
-        }
-        // fetch string
-        _ => row.try_get::<String, &str>(column_name).map(Value::from),
+        // fetch integer/string base on sql type
+        Ok(ty) => match ty.to_sql_type() {
+            SqlType::Integer => row.try_get::<i64, &str>(&column_name).map(Value::from),
+            SqlType::Text => Ok(remove_hex_leading_zeros(
+                row.try_get::<String, &str>(&column_name).map(Value::from)?,
+            )),
+        },
+        // fetch everything else as non-formated string
+        _ => Ok(row.try_get::<String, &str>(&column_name).map(Value::from)?),
     }
 }

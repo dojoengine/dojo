@@ -9,7 +9,7 @@ use crate::types::{GraphqlType, TypeData, TypeMapping};
 lazy_static! {
     pub static ref ENTITY_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-        (Name::new("keys"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
         (Name::new("model_names"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("event_id"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
@@ -23,8 +23,8 @@ lazy_static! {
     ]);
     pub static ref EVENT_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-        (Name::new("keys"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("data"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
+        (Name::new("data"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
         (
             Name::new("created_at"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),

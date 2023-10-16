@@ -35,20 +35,27 @@ pub enum PrimitiveError {
     ValueOutOfRange(#[from] ValueOutOfRangeError),
 }
 
+#[derive(AsRefStr, Debug, Display, EnumString, PartialEq)]
+#[strum(serialize_all = "UPPERCASE")]
+pub enum SqlType {
+    Integer,
+    Text,
+}
+
 impl Primitive {
-    pub fn to_sql_type(&self) -> String {
+    pub fn to_sql_type(&self) -> SqlType {
         match self {
             Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::U64(_)
             | Primitive::USize(_)
-            | Primitive::Bool(_) => "INTEGER".to_string(),
+            | Primitive::Bool(_) => SqlType::Integer,
             Primitive::U128(_)
             | Primitive::U256(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
-            | Primitive::Felt252(_) => "TEXT".to_string(),
+            | Primitive::Felt252(_) => SqlType::Text,
         }
     }
 

@@ -14,6 +14,8 @@ use super::World;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{Entity, Model as ModelType};
 
+pub const FELT_DELIMITER: &str = "/";
+
 #[cfg(test)]
 #[path = "sql_test.rs"]
 mod test;
@@ -401,5 +403,6 @@ impl Sql {
 }
 
 fn felts_sql_string(felts: &[FieldElement]) -> String {
-    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join("/") + "/"
+    felts.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(FELT_DELIMITER)
+        + FELT_DELIMITER
 }
