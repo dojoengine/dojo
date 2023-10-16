@@ -5,7 +5,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::task::Poll;
 
-use anyhow::{anyhow, Result};
 use dojo_types::schema::EntityModel;
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
@@ -44,60 +43,70 @@ impl SubscribedEntities {
 
     pub fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
-            if !self.entities.write().insert(entity.clone()) {
-                continue;
-            }
-
-            let model_packed_size = self
-                .metadata
-                .read()
-                .models
-                .get(&entity.model)
-                .map(|c| c.packed_size)
-                .ok_or(Error::UnknownModel(entity.model.clone()))?;
-
-            let storage_addresses = compute_all_storage_addresses(
-                cairo_short_string_to_felt(&entity.model)
-                    .map_err(ParseError::CairoShortStringToFelt)?,
-                &entity.keys,
-                model_packed_size,
-            );
-
-            let storage_lock = &mut self.subscribed_storage_addresses.write();
-            storage_addresses.into_iter().for_each(|address| {
-                storage_lock.insert(address);
-            });
+            Self::add_entity(self, entity)?;
         }
-
         Ok(())
     }
 
     pub fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
-            if !self.entities.write().remove(&entity) {
-                continue;
-            }
-
-            let model_packed_size = self
-                .metadata
-                .read()
-                .models
-                .get(&entity.model)
-                .map(|c| c.packed_size)
-                .ok_or(anyhow!("unknown component {}", entity.model))?;
-
-            let storage_addresses = compute_all_storage_addresses(
-                cairo_short_string_to_felt(&entity.model)
-                    .map_err(ParseError::CairoShortStringToFelt)?,
-                &entity.keys,
-                model_packed_size,
-            );
-
-            let storage_lock = &mut self.subscribed_storage_addresses.write();
-            storage_addresses.iter().for_each(|address| {
-                storage_lock.remove(address);
-            });
+            Self::remove_entity(self, entity)?;
         }
+        Ok(())
+    }
+
+    pub(crate) fn add_entity(&self, entity: EntityModel) -> Result<(), Error> {
+        if !self.entities.write().insert(entity.clone()) {
+            return Ok(());
+        }
+
+        let model_packed_size = self
+            .metadata
+            .read()
+            .models
+            .get(&entity.model)
+            .map(|c| c.packed_size)
+            .ok_or(Error::UnknownModel(entity.model.clone()))?;
+
+        let storage_addresses = compute_all_storage_addresses(
+            cairo_short_string_to_felt(&entity.model)
+                .map_err(ParseError::CairoShortStringToFelt)?,
+            &entity.keys,
+            model_packed_size,
+        );
+
+        let storage_lock = &mut self.subscribed_storage_addresses.write();
+        storage_addresses.into_iter().for_each(|address| {
+            storage_lock.insert(address);
+        });
+
+        Ok(())
+    }
+
+    pub(crate) fn remove_entity(&self, entity: EntityModel) -> Result<(), Error> {
+        if !self.entities.write().remove(&entity) {
+            return Ok(());
+        }
+
+        let model_packed_size = self
+            .metadata
+            .read()
+            .models
+            .get(&entity.model)
+            .map(|c| c.packed_size)
+            .ok_or(Error::UnknownModel(entity.model.clone()))?;
+
+        let storage_addresses = compute_all_storage_addresses(
+            cairo_short_string_to_felt(&entity.model)
+                .map_err(ParseError::CairoShortStringToFelt)?,
+            &entity.keys,
+            model_packed_size,
+        );
+
+        let storage_lock = &mut self.subscribed_storage_addresses.write();
+        storage_addresses.iter().for_each(|address| {
+            storage_lock.remove(address);
+        });
 
         Ok(())
     }

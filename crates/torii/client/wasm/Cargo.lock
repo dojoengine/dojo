@@ -3982,7 +3982,6 @@ dependencies = [
 name = "torii-client"
 version = "0.3.0-rc9"
 dependencies = [
- "anyhow",
  "async-trait",
  "crypto-bigint",
  "dojo-types",
