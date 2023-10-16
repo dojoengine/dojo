@@ -32,7 +32,7 @@ trait IWorld<T> {
         values_length: usize,
         values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
-    fn entity_ids(self: @T, model: felt252) -> Span<felt252>;
+    fn entity_ids(self: @T, model: felt252, index: Option<felt252>) -> Span<felt252>;
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
@@ -583,14 +583,15 @@ mod world {
         /// # Arguments
         /// * `model` - The name of the model to be retrieved.
         /// * `index` - The index to be retrieved.
-        /// * `values` - The query to be used to find the entity.
-        /// * `length` - The length of the model values.
         ///
         /// # Returns
         /// * `Span<felt252>` - The entity IDs.
-        /// * `Span<Span<felt252>>` - The entities.
-        fn entity_ids(self: @ContractState, model: felt252) -> Span<felt252> {
-            database::scan_ids(model, Option::None(()))
+        fn entity_ids(
+            self: @ContractState,
+            model: felt252,
+            index: Option<felt252>
+        ) -> Span<felt252> {
+            database::scan_ids(model, index, QueryClause::All)
         }
 
         /// Sets the executor contract address.
