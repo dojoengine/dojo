@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use url::Url;
+
 use super::WorldMetadata;
 use crate::metadata::{Metadata, Uri};
 
@@ -18,6 +22,8 @@ name = "example"
 description = "example world"
 cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
+website = "https://dojoengine.org"
+socials.twitter = "https://x.com/dojostarknet"
         "#,
     )
     .unwrap();
@@ -48,6 +54,8 @@ icon_uri = "file://example_icon.png"
     assert_eq!(world.description(), Some("example world"));
     assert_eq!(world.cover_uri, Some(Uri::File("example_cover.png".into())));
     assert_eq!(world.icon_uri, Some(Uri::File("example_icon.png".into())));
+    assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
+    assert_eq!(world.socials.get("twitter"), Some(&"https://x.com/dojostarknet".to_string()));
 }
 
 #[tokio::test]
@@ -57,6 +65,8 @@ async fn world_metadata_hash_and_upload() {
         description: Some("A world used for testing".to_string()),
         cover_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
         icon_uri: None,
+        website: Some(Url::parse("https://dojoengine.org").unwrap()),
+        socials: HashMap::from([("twitter".to_string(), "https://x.com/dojostarknet".to_string())]),
     };
 
     let _ = meta.upload().await.unwrap();

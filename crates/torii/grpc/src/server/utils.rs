@@ -9,6 +9,7 @@ pub struct SqlModelMember {
     name: String,
     r#type: String,
     type_enum: String,
+    enum_options: Option<String>,
     key: bool,
 }
 
@@ -40,9 +41,15 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                     key: child.key,
                     name: child.name.to_owned(),
                     ty: Ty::Enum(Enum {
-                        name: child.r#type.to_owned(),
-                        options: vec![],
                         option: None,
+                        name: child.r#type.to_owned(),
+                        options: child
+                            .enum_options
+                            .as_ref()
+                            .expect("qed; enum_options should exist")
+                            .split(',')
+                            .map(|s| (s.to_owned(), Ty::Tuple(vec![])))
+                            .collect::<Vec<_>>(),
                     }),
                 },
 
@@ -63,7 +70,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 
 #[cfg(test)]
 mod tests {
-    use dojo_types::schema::{Member, Struct, Ty};
+    use dojo_types::schema::{Enum, Member, Struct, Ty};
 
     use super::SqlModelMember;
     use crate::server::utils::parse_sql_model_members;
@@ -79,6 +86,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 0,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -88,6 +96,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 1,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
         ];
 
@@ -121,6 +130,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 0,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -130,6 +140,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 1,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position".into(),
@@ -139,6 +150,7 @@ mod tests {
                 model_idx: 0,
                 member_idx: 1,
                 type_enum: "Struct".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position$Vec2".into(),
@@ -148,6 +160,7 @@ mod tests {
                 model_idx: 1,
                 member_idx: 0,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
             SqlModelMember {
                 id: "Position$Vec2".into(),
@@ -157,6 +170,7 @@ mod tests {
                 model_idx: 1,
                 member_idx: 1,
                 type_enum: "Primitive".into(),
+                enum_options: None,
             },
         ];
 
@@ -196,5 +210,39 @@ mod tests {
         });
 
         assert_eq!(parse_sql_model_members("Position", &model_members), expected_ty);
+    }
+
+    #[test]
+    fn parse_model_members_with_enum_to_ty() {
+        let model_members = vec![SqlModelMember {
+            id: "Moves".into(),
+            name: "direction".into(),
+            r#type: "Direction".into(),
+            key: false,
+            model_idx: 0,
+            member_idx: 0,
+            type_enum: "Enum".into(),
+            enum_options: Some("Up,Down,Left,Right".into()),
+        }];
+
+        let expected_ty = Ty::Struct(Struct {
+            name: "Moves".into(),
+            children: vec![dojo_types::schema::Member {
+                name: "direction".into(),
+                key: false,
+                ty: Ty::Enum(Enum {
+                    name: "Direction".into(),
+                    option: None,
+                    options: vec![
+                        ("Up".into(), Ty::Tuple(vec![])),
+                        ("Down".into(), Ty::Tuple(vec![])),
+                        ("Left".into(), Ty::Tuple(vec![])),
+                        ("Right".into(), Ty::Tuple(vec![])),
+                    ],
+                }),
+            }],
+        });
+
+        assert_eq!(parse_sql_model_members("Moves", &model_members), expected_ty);
     }
 }

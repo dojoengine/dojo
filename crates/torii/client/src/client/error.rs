@@ -5,6 +5,8 @@ use starknet::providers::{JsonRpcClient, Provider};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Subscription service uninitialized")]
+    SubscriptionUninitialized,
     #[error("Unknown model: {0}")]
     UnknownModel(String),
     #[error(
@@ -16,8 +18,6 @@ pub enum Error {
     Parse(#[from] ParseError),
     #[error(transparent)]
     GrpcClient(#[from] torii_grpc::client::Error),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
     #[error(transparent)]
     Model(#[from] ModelError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
 }

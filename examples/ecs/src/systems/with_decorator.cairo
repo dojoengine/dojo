@@ -36,10 +36,14 @@ mod player_actions {
             let world = self.world_dispatcher.read();
             let player = get_caller_address();
             let position = get!(world, player, (Position));
+            let moves = get!(world, player, (Moves));
+
             set!(
                 world,
                 (
-                    Moves { player, remaining: 10, last_direction: Direction::None(()) },
+                    Moves {
+                        player, remaining: moves.remaining + 1, last_direction: Direction::None(())
+                    },
                     Position {
                         player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 }
                     },
@@ -95,7 +99,7 @@ mod tests {
         let moves = get!(world, caller, Moves);
         let right_dir_felt: felt252 = Direction::Right(()).into();
 
-        assert(moves.remaining == 9, 'moves is wrong');
+        assert(moves.remaining == 0, 'moves is wrong');
         assert(moves.last_direction.into() == right_dir_felt, 'last direction is wrong');
 
         let new_position = get!(world, caller, Position);

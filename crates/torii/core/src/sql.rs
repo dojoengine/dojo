@@ -316,7 +316,6 @@ impl Sql {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(child.1.name());
-                    // self.build_entity_query(path_clone.clone(), id, &child.1);
                     self.build_set_entity_queries_recursive(
                         path_clone, event_id, entity_id, &child.1,
                     );
@@ -337,27 +336,36 @@ impl Sql {
         if let Ty::Struct(s) = model {
             for (member_idx, member) in s.children.iter().enumerate() {
                 let name = member.name.clone();
+                let mut options = None; // TEMP: doesnt support complex enums yet
+
                 if let Ok(cairo_type) = Primitive::from_str(&member.ty.name()) {
                     query.push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
                 } else if let Ty::Enum(e) = &member.ty {
-                    let options = e
+                    let all_options = e
                         .options
                         .iter()
                         .map(|c| format!("'{}'", c.0))
                         .collect::<Vec<_>>()
                         .join(", ");
+
                     query.push_str(&format!(
-                        "external_{name} TEXT CHECK(external_{name} IN ({options})) NOT NULL, ",
+                        "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
+                    ));
+
+                    options = Some(format!(
+                        r#""{}""#,
+                        e.options.iter().map(|c| c.0.clone()).collect::<Vec<_>>().join(",")
                     ));
                 }
 
                 self.query_queue.push(format!(
                     "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-                     name, type, type_enum, key) VALUES ('{table_id}', '{}', '{model_idx}', \
-                     '{member_idx}', '{name}', '{}', '{}', {})",
+                     name, type, type_enum, enum_options, key) VALUES ('{table_id}', '{}', \
+                     '{model_idx}', '{member_idx}', '{name}', '{}', '{}', {}, {})",
                     path[0],
                     member.ty.name(),
                     member.ty.as_ref(),
+                    options.unwrap_or("NULL".into()),
                     member.key,
                 ));
             }

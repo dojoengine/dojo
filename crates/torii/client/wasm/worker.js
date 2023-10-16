@@ -15,9 +15,9 @@ async function setup() {
 
 	try {
 		const client = await spawn_client(
-			"http://localhost:8080/grpc",
-			"http://localhost:5050",
-			"0x4cf3f4fa5ffd94a2af92946e13fe7faafb8045fb9446cec6ba97ca34e78bc05",
+			"http://0.0.0.0:8080/grpc",
+			"http://0.0.0.0:5050",
+			"0x3fa481f41522b90b3684ecfab7650c259a76387fab9c380b7a959e3d4ac69f",
 			[
 				{
 					model: "Position",
@@ -27,6 +27,17 @@ async function setup() {
 				},
 			]
 		);
+
+		setTimeout(() => {
+			client.addEntitiesToSync([
+				{
+					model: "Moves",
+					keys: [
+						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+					],
+				},
+			]);
+		}, 10000);
 
 		// setup the message handler for the worker
 		self.onmessage = function (e) {
