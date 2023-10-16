@@ -124,7 +124,7 @@ fn del(table: felt252, key: felt252) {
 fn scan(
     model: felt252, index: Option<felt252>, where: QueryClause, values_length: usize, values_layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
-    let all_ids = scan_ids(model, where);
+    let all_ids = scan_ids(model, index, where);
     (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
 }
 
@@ -137,15 +137,13 @@ fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
             clause.key.serialize(ref serialized);
             let table = poseidon_hash_span(serialized.span());
 
-            let ids = match index {
+            match index {
                 Option::Some(index) => match index::get_at(0, table, clause.value, index) {
                     Option::Some(id) => array![id],
                     Option::None => array![],
                 }.span(),
                 Option::None => index::get(0, table, clause.value)
-            };
-
-            (ids, get_by_ids(model, ids, values_length, values_layout))
+            }
         },
 
         QueryClause::KeyValues(clause) => {
@@ -156,20 +154,17 @@ fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
 
             let value = poseidon_hash_span(clause.values);
 
-            let ids = match index {
+            match index {
                 Option::Some(index) => match index::get_at(0, table, value, index) {
                     Option::Some(id) => array![id],
                     Option::None => array![],
                 }.span(),
                 Option::None => index::get(0, table, value)
-            };
-
-            (ids, get_by_ids(model, ids, values_length, values_layout))
+            }
         },
 
         QueryClause::All => {
-            let all_ids = index::get(0, model, 0);
-            (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
+            index::get(0, model, 0)
         },
     }
 }

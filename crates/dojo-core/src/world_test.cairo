@@ -314,6 +314,45 @@ fn test_set_metadata_uri_reverts_for_not_owner() {
 
 #[test]
 #[available_gas(6000000)]
+fn test_owner() {
+    let world = deploy_world();
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    let bob = starknet::contract_address_const::<0x1338>();
+
+    assert(!world.is_owner(alice, 0), 'should not be owner');
+    assert(!world.is_owner(bob, 42), 'should not be owner');
+
+    world.grant_owner(alice, 0);
+    assert(world.is_owner(alice, 0), 'should be owner');
+
+    world.grant_owner(bob, 42);
+    assert(world.is_owner(bob, 42), 'should be owner');
+
+    world.revoke_owner(alice, 0);
+    assert(!world.is_owner(alice, 0), 'should not be owner');
+
+    world.revoke_owner(bob, 42);
+    assert(!world.is_owner(bob, 42), 'should not be owner');
+}
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic]
+fn test_set_owner_fails_for_non_owner() {
+    let world = deploy_world();
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+
+    world.revoke_owner(alice, 0);
+    assert(!world.is_owner(alice, 0), 'should not be owner');
+
+    world.grant_owner(alice, 0);
+}
+
+#[test]
+#[available_gas(6000000)]
 fn test_writer() {
     let world = deploy_world();
 
