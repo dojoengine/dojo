@@ -47,7 +47,7 @@ where
 
     // Setup account for migration and fetch world address if it exists.
 
-    let (world_address, account) = setup_env(ws, account, starknet, world, name.as_ref()).await?;
+    let (_, account) = setup_env(ws, account, starknet, world, name.as_ref()).await?;
 
     // Load local and remote World manifests.
 
@@ -69,7 +69,7 @@ where
             &target_dir,
             diff,
             name,
-            world_address,
+            local_manifest.world.address,
             &account,
             Some(args.transaction),
         )
@@ -212,27 +212,22 @@ where
 
     let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
-    let remote_manifest = if let Some(world_address) = local_manifest.world.address {
-        ui.print_sub(format!("Found remote World: {world_address:#x}"));
-        ui.print_sub("Fetching remote state");
-
-        Manifest::load_from_remote(account.provider(), world_address)
-            .await
-            .map(Some)
-            .map_err(|e| match e {
-                ManifestError::RemoteWorldNotFound => {
-                    anyhow!(
-                        "Unable to find remote World at address {world_address:#x}. Make sure the \
-                         World address is correct and that it is already deployed!"
-                    )
-                }
-                _ => anyhow!(e),
-            })
-            .with_context(|| "Failed to build remote World state.")?
+    let remote_manifest = if let Some(address) = local_manifest.world.address {
+        match Manifest::load_from_remote(account.provider(), address).await {
+            Ok(manifest) => {
+                ui.print_sub(format!("Found remote World: {address:#x}"));
+                Some(manifest)
+            }
+            Err(ManifestError::RemoteWorldNotFound) => None,
+            Err(e) => return Err(anyhow!("Failed to build remote World state: {e}")),
+        }
     } else {
-        ui.print_sub("No remote World found");
         None
     };
+
+    if remote_manifest.is_none() {
+        ui.print_sub("No remote World found");
+    }
 
     Ok((local_manifest, remote_manifest))
 }
