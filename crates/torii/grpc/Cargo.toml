@@ -6,7 +6,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
 bytes = "1.0"
 dojo-types = { path = "../../dojo-types" }
 futures.workspace = true
@@ -23,7 +22,6 @@ strum_macros.workspace = true
 hex.workspace = true
 hyper = "0.14.27"
 serde_json.workspace = true
-tonic-web.workspace = true
 tower = "0.4.13"
 tracing.workspace = true
 
@@ -40,7 +38,6 @@ tokio-stream = "0.1.14"
 tokio.workspace = true
 tonic.workspace = true
 url.workspace = true
-warp.workspace = true
 
 [build-dependencies]
 tonic-build.workspace = true

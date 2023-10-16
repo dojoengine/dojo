@@ -32,6 +32,5 @@ wasm-tonic.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
-dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples" ] }
 dojo-world = { path = "../../dojo-world" }
 tokio.workspace = true

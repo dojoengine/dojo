@@ -11,7 +11,6 @@ testing = [  ]
 
 [dependencies]
 anyhow.workspace = true
-assert_fs = "1.0.9"
 cairo-lang-compiler.workspace = true
 cairo-lang-debug.workspace = true
 cairo-lang-defs.workspace = true
@@ -34,7 +33,6 @@ indoc.workspace = true
 itertools.workspace = true
 once_cell.workspace = true
 salsa.workspace = true
-sanitizer = "0.1.6"
 scarb.workspace = true
 semver.workspace = true
 serde.workspace = true
