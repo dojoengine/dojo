@@ -349,6 +349,10 @@ test_manifest_file
               {
                 "name": "model",
                 "type": "core::felt252"
+              },
+              {
+                "name": "index",
+                "type": "core::option::Option::<core::felt252>"
               }
             ],
             "outputs": [
