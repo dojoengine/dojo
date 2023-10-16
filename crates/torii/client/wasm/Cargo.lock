@@ -3982,7 +3982,6 @@ dependencies = [
 name = "torii-client"
 version = "0.3.0-rc9"
 dependencies = [
- "anyhow",
  "async-trait",
  "crypto-bigint",
  "dojo-types",
@@ -3997,6 +3996,7 @@ dependencies = [
  "starknet",
  "starknet-crypto",
  "thiserror",
+ "tokio",
  "tonic 0.10.1",
  "tonic 0.9.2",
  "torii-grpc",

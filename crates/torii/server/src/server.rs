@@ -22,6 +22,7 @@ use torii_core::types::Model;
 use torii_grpc::protos;
 use torii_grpc::server::DojoWorld;
 use tracing::info;
+use url::Url;
 use warp::filters::cors::Builder;
 use warp::Filter;
 
@@ -32,6 +33,7 @@ pub struct Server {
     pool: Pool<Sqlite>,
     world: DojoWorld,
     allowed_origins: Vec<String>,
+    external_url: Option<Url>,
 }
 
 impl Server {
@@ -42,11 +44,12 @@ impl Server {
         world_address: FieldElement,
         provider: Arc<JsonRpcClient<HttpTransport>>,
         allowed_origins: Vec<String>,
+        external_url: Option<Url>,
     ) -> Self {
         let world =
             torii_grpc::server::DojoWorld::new(pool.clone(), block_rx, world_address, provider);
 
-        Self { addr, pool, world, allowed_origins }
+        Self { addr, pool, world, allowed_origins, external_url }
     }
 
     pub async fn start(&self) -> anyhow::Result<()> {
@@ -64,6 +67,7 @@ impl Server {
                 self.world.clone(),
                 notify_restart.clone(),
                 self.allowed_origins.clone(),
+                self.external_url.clone(),
             ));
 
             match server_handle.await {
@@ -93,11 +97,12 @@ async fn spawn(
     dojo_world: DojoWorld,
     notify_restart: Arc<Notify>,
     allowed_origins: Vec<String>,
+    external_url: Option<Url>,
 ) -> anyhow::Result<()> {
     let base_route = warp::path::end()
         .and(warp::get())
         .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(&pool)
+    let routes = torii_graphql::route::filter(&pool, external_url)
         .await
         .or(base_route)
         .with(configure_cors(&allowed_origins));

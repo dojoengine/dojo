@@ -58,6 +58,48 @@ impl Client {
         let entities = self.0.synced_entities();
         serde_wasm_bindgen::to_value(&entities).map_err(|e| e.into())
     }
+
+    #[wasm_bindgen(js_name = addEntitiesToSync)]
+    pub async fn add_entities_to_sync(
+        &mut self,
+        entities: Vec<JsEntityComponent>,
+    ) -> Result<(), JsValue> {
+        log("adding entities to sync...");
+
+        #[cfg(feature = "console-error-panic")]
+        console_error_panic_hook::set_once();
+
+        let entities = entities
+            .into_iter()
+            .map(serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.0
+            .add_entities_to_sync(entities)
+            .await
+            .map_err(|err| JsValue::from_str(&err.to_string()))
+    }
+
+    #[wasm_bindgen(js_name = removeEntitiesToSync)]
+    pub async fn remove_entities_to_sync(
+        &self,
+        entities: Vec<JsEntityComponent>,
+    ) -> Result<(), JsValue> {
+        log("removing entities to sync...");
+
+        #[cfg(feature = "console-error-panic")]
+        console_error_panic_hook::set_once();
+
+        let entities = entities
+            .into_iter()
+            .map(serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.0
+            .remove_entities_to_sync(entities)
+            .await
+            .map_err(|err| JsValue::from_str(&err.to_string()))
+    }
 }
 
 /// Spawns the client along with the subscription service.
@@ -80,7 +122,7 @@ pub async fn spawn_client(
         JsValue::from_str(format!("failed to parse world address: {err}").as_str())
     })?;
 
-    let mut client = torii_client::client::ClientBuilder::new()
+    let client = torii_client::client::ClientBuilder::new()
         .set_entities_to_sync(entities)
         .build(torii_url.into(), rpc_url.into(), world_address)
         .await

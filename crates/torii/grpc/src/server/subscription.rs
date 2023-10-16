@@ -16,6 +16,7 @@ use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tonic::Status;
+use tracing::error;
 
 use crate::protos::{self};
 
@@ -107,7 +108,7 @@ pub struct EntitySubscriptionService<P: Provider> {
 
     publish_update_fut: Option<PublishStateUpdateFuture>,
 
-    block_num_queue: Vec<u64>,
+    block_num_queue: VecDeque<u64>,
     /// Receive subscribers from gRPC server.
     /// This receives streams of (sender channel, list of entities to subscribe) tuple
     subscriber_recv:
@@ -236,51 +237,53 @@ where
             // we still need to drain the stream, even if there are no subscribers. But dont have to
             // queue for the block number
             if !pin.subscriber_manager.subscribers.is_empty() {
-                pin.block_num_queue.push(block_num);
+                pin.block_num_queue.push_back(block_num);
             }
         }
 
         // if there are any queued block numbers, then fetch the corresponding state updates
-        while let Some(block_num) = pin.block_num_queue.pop() {
+        while let Some(block_num) = pin.block_num_queue.pop_front() {
             let fut = Box::pin(Self::do_get_state_update(Arc::clone(&pin.provider), block_num));
             pin.state_update_req_futs.push_back((block_num, fut));
         }
 
         // handle incoming new subscribers
         while let Poll::Ready(Some(request)) = pin.subscriber_recv.poll_recv(cx) {
-            println!("received new subscriber");
             pin.subscriber_manager.add_subscriber(request);
         }
 
-        // check if there's ongoing publish future, if yes, poll it and if its still not ready
-        // then return pending,
-        // dont request for state update, since we are still waiting for the previous state update
-        // to be published
-        if let Some(mut fut) = pin.publish_update_fut.take() {
-            if fut.poll_unpin(cx).is_pending() {
-                pin.publish_update_fut = Some(fut);
-                return Poll::Pending;
-            }
-        }
-
-        // poll ongoing state update requests
-        if let Some((block_num, mut fut)) = pin.state_update_req_futs.pop_front() {
-            match fut.poll_unpin(cx) {
-                Poll::Ready(Ok(state_update)) => {
-                    let subscribers = pin.subscriber_manager.subscribers.clone();
-                    pin.publish_update_fut = Some(Box::pin(
-                        Self::publish_state_updates_to_subscribers(subscribers, state_update),
-                    ));
+        loop {
+            // check if there's ongoing publish future, if yes, poll it and if its still not ready
+            // then return pending,
+            // dont request for state update, since we are still waiting for the previous state
+            // update to be published
+            if let Some(mut fut) = pin.publish_update_fut.take() {
+                if fut.poll_unpin(cx).is_pending() {
+                    pin.publish_update_fut = Some(fut);
+                    return Poll::Pending;
                 }
-
-                Poll::Ready(Err(e)) => {
-                    println!("error fetching state update for block {block_num}: {:?}", e)
-                }
-
-                Poll::Pending => pin.state_update_req_futs.push_back((block_num, fut)),
             }
-        }
 
-        Poll::Pending
+            // poll ongoing state update requests
+            if let Some((block_num, mut fut)) = pin.state_update_req_futs.pop_front() {
+                match fut.poll_unpin(cx) {
+                    Poll::Ready(Ok(state_update)) => {
+                        let subscribers = pin.subscriber_manager.subscribers.clone();
+                        pin.publish_update_fut = Some(Box::pin(
+                            Self::publish_state_updates_to_subscribers(subscribers, state_update),
+                        ));
+                        continue;
+                    }
+
+                    Poll::Ready(Err(e)) => {
+                        error!("error fetching state update for block {block_num}: {e}");
+                    }
+
+                    Poll::Pending => pin.state_update_req_futs.push_back((block_num, fut)),
+                }
+            }
+
+            return Poll::Pending;
+        }
     }
 }

@@ -8,17 +8,15 @@ service World {
     // Retrieves metadata about the World including all the registered components and systems.
     rpc WorldMetadata (MetadataRequest) returns (MetadataResponse);
    
-    /* 
-     * Subscribes to entity updates.
-     * Bidirectional streaming as we want to allow user to change the list of entities to subscribe to without closing the connection.
-     */
+     
+    // Subscribes to entity updates.
     rpc SubscribeEntities (SubscribeEntitiesRequest) returns (stream SubscribeEntitiesResponse);
 }
 
 
 // A request to retrieve metadata for a specific world ID.
 message MetadataRequest {
-   
+
 }
 
 // The metadata response contains addresses and class hashes for the world.
