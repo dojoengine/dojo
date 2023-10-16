@@ -10,7 +10,6 @@ pub fn parse_ty_as_json_str(ty: &Ty) -> String {
             Ty::Struct(struct_ty) => struct_ty
                 .children
                 .iter()
-                .filter(|child| !child.key)
                 .map(|child| (child.name.to_owned(), parse_ty_as_json_str_impl(&child.ty)))
                 .collect::<serde_json::Map<String, Value>>()
                 .into(),
