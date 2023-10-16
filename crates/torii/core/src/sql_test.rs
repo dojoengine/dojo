@@ -31,7 +31,7 @@ where
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let config = build_test_config("../../../examples/ecs/Scarb.toml").unwrap();
+    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
@@ -58,7 +58,8 @@ async fn test_load_from_remote() {
     let pool =
         SqlitePoolOptions::new().max_connections(5).connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-    let migration = prepare_migration("../../../examples/ecs/target/dev".into()).unwrap();
+    let migration =
+        prepare_migration("../../../examples/spawn-and-move/target/dev".into()).unwrap();
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));

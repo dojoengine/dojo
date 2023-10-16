@@ -820,14 +820,14 @@ test_manifest_file
   },
   "contracts": [
     {
-      "name": "player_actions",
+      "name": "actions",
       "address": null,
-      "class_hash": "0x473f9dbf12f5dae40e26219f7ff6c9156a7ace830a211be372e9b88136505c7",
+      "class_hash": "0x4b3a8688b75ebacf254b07671f3dacaada9f23bac37c61f9561bbe4ead1c112",
       "abi": [
         {
           "type": "impl",
-          "name": "PlayerActionsImpl",
-          "interface_name": "dojo_examples::systems::with_decorator::IPlayerActions"
+          "name": "ActionsImpl",
+          "interface_name": "dojo_examples::actions::IActions"
         },
         {
           "type": "enum",
@@ -857,7 +857,7 @@ test_manifest_file
         },
         {
           "type": "interface",
-          "name": "dojo_examples::systems::with_decorator::IPlayerActions",
+          "name": "dojo_examples::actions::IActions",
           "items": [
             {
               "type": "function",
@@ -893,7 +893,7 @@ test_manifest_file
         },
         {
           "type": "event",
-          "name": "dojo_examples::systems::with_decorator::player_actions::Moved",
+          "name": "dojo_examples::actions::actions::Moved",
           "kind": "struct",
           "members": [
             {
@@ -910,104 +910,12 @@ test_manifest_file
         },
         {
           "type": "event",
-          "name": "dojo_examples::systems::with_decorator::player_actions::Event",
+          "name": "dojo_examples::actions::actions::Event",
           "kind": "enum",
           "variants": [
             {
               "name": "Moved",
-              "type": "dojo_examples::systems::with_decorator::player_actions::Moved",
-              "kind": "nested"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "player_actions_external",
-      "address": null,
-      "class_hash": "0x1a80dbade1b3429f121303b3443a30d6412b85691f7733abe1ec5250509f081",
-      "abi": [
-        {
-          "type": "impl",
-          "name": "PlayerActionsImpl",
-          "interface_name": "dojo_examples::systems::raw_contract::IPlayerActions"
-        },
-        {
-          "type": "enum",
-          "name": "dojo_examples::models::Direction",
-          "variants": [
-            {
-              "name": "None",
-              "type": "()"
-            },
-            {
-              "name": "Left",
-              "type": "()"
-            },
-            {
-              "name": "Right",
-              "type": "()"
-            },
-            {
-              "name": "Up",
-              "type": "()"
-            },
-            {
-              "name": "Down",
-              "type": "()"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo_examples::systems::raw_contract::IPlayerActions",
-          "items": [
-            {
-              "type": "function",
-              "name": "spawn",
-              "inputs": [],
-              "outputs": [],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "move",
-              "inputs": [
-                {
-                  "name": "direction",
-                  "type": "dojo_examples::models::Direction"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::systems::raw_contract::player_actions_external::Moved",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "player",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "data"
-            },
-            {
-              "name": "direction",
-              "type": "dojo_examples::models::Direction",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::systems::raw_contract::player_actions_external::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Moved",
-              "type": "dojo_examples::systems::raw_contract::player_actions_external::Moved",
+              "type": "dojo_examples::actions::actions::Moved",
               "kind": "nested"
             }
           ]

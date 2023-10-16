@@ -21,11 +21,11 @@ use crate::ops::migration::execute_strategy;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
-    let config = build_test_config("../../examples/ecs/Scarb.toml").unwrap();
+    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let migration = prepare_migration("../../examples/ecs/target/dev".into()).unwrap();
+    let migration = prepare_migration("../../examples/spawn-and-move/target/dev".into()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -40,11 +40,11 @@ async fn migrate_with_auto_mine() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_block_time() {
-    let config = build_test_config("../../examples/ecs/Scarb.toml").unwrap();
+    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let migration = prepare_migration("../../examples/ecs/target/dev".into()).unwrap();
+    let migration = prepare_migration("../../examples/spawn-and-move/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
         SequencerConfig { block_time: Some(1000), ..Default::default() },
@@ -61,11 +61,11 @@ async fn migrate_with_block_time() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_small_fee_multiplier_will_fail() {
-    let config = build_test_config("../../examples/ecs/Scarb.toml").unwrap();
+    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let migration = prepare_migration("../../examples/ecs/target/dev".into()).unwrap();
+    let migration = prepare_migration("../../examples/spawn-and-move/target/dev".into()).unwrap();
 
     let sequencer = TestSequencer::start(
         Default::default(),
@@ -98,7 +98,8 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
 #[test]
 fn migrate_world_without_seed_will_fail() {
-    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
+    let target_dir =
+        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
     let res = prepare_for_migration(None, None, target_dir, world);
@@ -108,10 +109,11 @@ fn migrate_world_without_seed_will_fail() {
 #[ignore]
 #[tokio::test]
 async fn migration_from_remote() {
-    let config = build_test_config("../../examples/ecs/Scarb.toml").unwrap();
+    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let target_dir = Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap();
+    let target_dir =
+        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;

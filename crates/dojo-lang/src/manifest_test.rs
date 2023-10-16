@@ -18,8 +18,7 @@ pub fn test_manifest_file(
     _inputs: &OrderedHashMap<String, String>,
     _args: &OrderedHashMap<String, String>,
 ) -> Result<OrderedHashMap<String, String>, String> {
-    let config =
-        build_test_config("./src/manifest_test_data/example_ecs_crate/Scarb.toml").unwrap();
+    let config = build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
 
     let packages = ws.members().map(|p| p.id).collect();

@@ -10,7 +10,8 @@ fn main() {
     use scarb::ops;
     use scarb_ui::Verbosity;
 
-    let target_path = Utf8PathBuf::from_path_buf("../../examples/ecs/target".into()).unwrap();
+    let target_path =
+        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target".into()).unwrap();
     if target_path.exists() {
         return;
     }
@@ -23,7 +24,8 @@ fn main() {
     let cache_dir = assert_fs::TempDir::new().unwrap();
     let config_dir = assert_fs::TempDir::new().unwrap();
 
-    let path = Utf8PathBuf::from_path_buf("../../examples/ecs/Scarb.toml".into()).unwrap();
+    let path =
+        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/Scarb.toml".into()).unwrap();
     let config = Config::builder(path.canonicalize_utf8().unwrap())
         .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
         .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))

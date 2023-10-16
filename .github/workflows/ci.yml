@@ -86,8 +86,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
       - run: cargo run --bin sozo -- --manifest-path crates/dojo-defi/Scarb.toml test
-
-  dojo-ecs-example-test:
+  
+  dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -96,7 +96,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
-      - run: cargo run --bin sozo -- --manifest-path examples/ecs/Scarb.toml test
+      - run: cargo run --bin sozo -- --manifest-path examples/spawn-and-move/Scarb.toml test
 
   clippy:
     runs-on: ubuntu-latest

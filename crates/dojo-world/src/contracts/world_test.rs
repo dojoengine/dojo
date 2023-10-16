@@ -21,7 +21,7 @@ async fn test_world_contract_reader() {
     let provider = account.provider();
     let (world_address, executor_address) = deploy_world(
         &sequencer,
-        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap(),
+        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
     )
     .await;
 

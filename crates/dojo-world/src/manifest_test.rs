@@ -158,12 +158,12 @@ async fn test_fetch_remote_manifest() {
 
     let (world_address, _) = deploy_world(
         &sequencer,
-        Utf8PathBuf::from_path_buf("../../examples/ecs/target/dev".into()).unwrap(),
+        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
     )
     .await;
 
     let manifest = Manifest::load_from_remote(provider, world_address).await.unwrap();
 
     assert_eq!(manifest.models.len(), 2);
-    assert_eq!(manifest.contracts.len(), 2);
+    assert_eq!(manifest.contracts.len(), 1);
 }
