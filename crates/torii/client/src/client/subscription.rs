@@ -43,14 +43,14 @@ impl SubscribedEntities {
 
     pub fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
-            Self::add_entity(&self, entity)?;
+            Self::add_entity(self, entity)?;
         }
         Ok(())
     }
 
     pub fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
-            Self::remove_entity(&self, entity)?;
+            Self::remove_entity(self, entity)?;
         }
         Ok(())
     }
