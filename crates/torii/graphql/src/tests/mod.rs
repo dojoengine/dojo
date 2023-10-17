@@ -1,10 +1,31 @@
+use std::str::FromStr;
+
+use anyhow::Result;
+use async_graphql::dynamic::Schema;
+use dojo_test_utils::compiler::build_test_config;
+use dojo_test_utils::migration::prepare_migration;
+use dojo_test_utils::sequencer::{
+    get_default_test_starknet_config, SequencerConfig, TestSequencer,
+};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, Member, Struct, Ty};
+use dojo_world::contracts::WorldContractReader;
+use dojo_world::utils::TransactionWaiter;
+use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;
+use sozo::ops::migration::execute_strategy;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
-use starknet::core::types::FieldElement;
+use starknet::accounts::{Account, Call};
+use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionResult};
+use starknet::macros::selector;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use tokio_stream::StreamExt;
+use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::register_model::RegisterModelProcessor;
+use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
 mod entities_test;
@@ -13,19 +34,19 @@ mod subscription_test;
 
 use crate::schema::build_schema;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Edge<T> {
     pub node: T,
     pub cursor: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Entity {
     pub model_names: String,
     pub keys: Option<Vec<String>>,
@@ -53,13 +74,63 @@ pub struct Position {
     pub entity: Option<Entity>,
 }
 
-pub enum Paginate {
-    Forward,
-    Backward,
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct Record {
+    pub __typename: String,
+    pub record_id: u32,
+    pub type_u8: u8,
+    pub type_u16: u16,
+    pub type_u32: u32,
+    pub type_u64: u64,
+    pub type_u128: String,
+    pub type_u256: String,
+    pub type_bool: bool,
+    pub type_felt: String,
+    pub type_class_hash: String,
+    pub type_contract_address: String,
+    pub random_u8: u8,
+    pub random_u128: String,
+    pub type_nested: Option<Nested>,
+    pub entity: Option<Entity>,
 }
 
-pub async fn run_graphql_query(pool: &SqlitePool, query: &str) -> Value {
-    let schema = build_schema(pool).await.unwrap();
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct Nested {
+    pub __typename: String,
+    pub depth: u8,
+    pub type_number: u8,
+    pub type_string: String,
+    pub type_nested_more: NestedMore,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct NestedMore {
+    pub __typename: String,
+    pub depth: u8,
+    pub type_number: u8,
+    pub type_string: String,
+    pub type_nested_more_more: NestedMoreMore,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct NestedMoreMore {
+    pub __typename: String,
+    pub depth: u8,
+    pub type_number: u8,
+    pub type_string: String,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct Subrecord {
+    pub __typename: String,
+    pub record_id: u32,
+    pub subrecord_id: u32,
+    pub type_u8: u8,
+    pub random_u8: u8,
+    pub entity: Option<Entity>,
+}
+
+pub async fn run_graphql_query(schema: &Schema, query: &str) -> Value {
     let res = schema.execute(query).await;
 
     assert!(res.errors.is_empty(), "GraphQL query returned errors: {:?}", res.errors);
@@ -75,154 +146,6 @@ pub async fn run_graphql_subscription(
     let schema = build_schema(pool).await.unwrap();
     schema.execute_stream(subscription).next().await.unwrap().into_result().unwrap().data
     // fn subscribe() is called from inside dynamic subscription
-}
-
-pub async fn entity_fixtures(db: &mut Sql) {
-    model_fixtures(db).await;
-    db.set_entity(
-        Ty::Struct(Struct {
-            name: "Moves".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
-                },
-                Member {
-                    name: "remaining".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U8(Some(10))),
-                },
-                Member {
-                    name: "last_direction".to_string(),
-                    key: false,
-                    ty: Ty::Enum(Enum {
-                        name: "Direction".to_string(),
-                        option: Some(1),
-                        options: vec![
-                            ("None".to_string(), Ty::Tuple(vec![])),
-                            ("Left".to_string(), Ty::Tuple(vec![])),
-                            ("Right".to_string(), Ty::Tuple(vec![])),
-                            ("Up".to_string(), Ty::Tuple(vec![])),
-                            ("Down".to_string(), Ty::Tuple(vec![])),
-                        ],
-                    }),
-                },
-            ],
-        }),
-        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
-    )
-    .await
-    .unwrap();
-
-    db.set_entity(
-        Ty::Struct(Struct {
-            name: "Position".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::TWO))),
-                },
-                Member {
-                    name: "vec".to_string(),
-                    key: false,
-                    ty: Ty::Struct(Struct {
-                        name: "Vec2".to_string(),
-                        children: vec![
-                            Member {
-                                name: "x".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(Some(42))),
-                            },
-                            Member {
-                                name: "y".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(Some(69))),
-                            },
-                        ],
-                    }),
-                },
-            ],
-        }),
-        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 1),
-    )
-    .await
-    .unwrap();
-
-    // Set an entity with both moves and position models
-    db.set_entity(
-        Ty::Struct(Struct {
-            name: "Moves".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
-                },
-                Member {
-                    name: "remaining".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U8(Some(10))),
-                },
-                Member {
-                    name: "last_direction".to_string(),
-                    key: false,
-                    ty: Ty::Enum(Enum {
-                        name: "Direction".to_string(),
-                        option: Some(2),
-                        options: vec![
-                            ("None".to_string(), Ty::Tuple(vec![])),
-                            ("Left".to_string(), Ty::Tuple(vec![])),
-                            ("Right".to_string(), Ty::Tuple(vec![])),
-                            ("Up".to_string(), Ty::Tuple(vec![])),
-                            ("Down".to_string(), Ty::Tuple(vec![])),
-                        ],
-                    }),
-                },
-            ],
-        }),
-        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 2),
-    )
-    .await
-    .unwrap();
-
-    db.set_entity(
-        Ty::Struct(Struct {
-            name: "Position".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::THREE))),
-                },
-                Member {
-                    name: "vec".to_string(),
-                    key: false,
-                    ty: Ty::Struct(Struct {
-                        name: "Vec2".to_string(),
-                        children: vec![
-                            Member {
-                                name: "x".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(Some(42))),
-                            },
-                            Member {
-                                name: "y".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(Some(69))),
-                            },
-                        ],
-                    }),
-                },
-            ],
-        }),
-        &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 3),
-    )
-    .await
-    .unwrap();
-
-    db.execute().await.unwrap();
 }
 
 pub async fn model_fixtures(db: &mut Sql) {
@@ -304,59 +227,56 @@ pub async fn model_fixtures(db: &mut Sql) {
     .unwrap();
 }
 
-pub async fn cursor_paginate(
-    pool: &SqlitePool,
-    cursor: Option<String>,
-    direction: Paginate,
-    page_size: usize,
-) -> Connection<Entity> {
-    let (first_last, before_after) = match direction {
-        Paginate::Forward => ("first", "after"),
-        Paginate::Backward => ("last", "before"),
-    };
+pub async fn spinup_types_test() -> Result<SqlitePool> {
+    // change sqlite::memory: to sqlite:~/.test.db to dump database to disk
+    let options = SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true);
+    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    let cursor = cursor.map_or(String::new(), |c| format!(", {before_after}: \"{c}\""));
-    let query = format!(
-        "
-        {{
-            entities ({first_last}: {page_size} {cursor}) 
-            {{
-                total_count
-                edges {{
-                    cursor
-                    node {{
-                        model_names
-                    }}
-                }}
-            }}
-        }}
-        "
+    let migration = prepare_migration("./src/tests/types-test/target/dev".into()).unwrap();
+    let config = build_test_config("./src/tests/types-test/Scarb.toml").unwrap();
+    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+
+    let mut account = sequencer.account();
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+    let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
+    let ws = ops::read_workspace(config.manifest_path(), &config)
+        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+
+    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+
+    //  Execute `create` and insert 10 records into storage
+    let records_contract = "0x1f04153fabe135513a5ef65f45089ababccfee01b001f8b29d95639d4cfaa0c";
+    let InvokeTransactionResult { transaction_hash } = account
+        .execute(vec![Call {
+            calldata: vec![FieldElement::from_str("0xa").unwrap()],
+            to: FieldElement::from_str(records_contract).unwrap(),
+            selector: selector!("create"),
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(transaction_hash, &provider).await?;
+
+    let mut engine = Engine::new(
+        world,
+        &mut db,
+        &provider,
+        Processors {
+            event: vec![Box::new(RegisterModelProcessor), Box::new(StoreSetRecordProcessor)],
+            ..Processors::default()
+        },
+        EngineConfig::default(),
+        None,
     );
 
-    let value = run_graphql_query(pool, &query).await;
-    let entities = value.get("entities").ok_or("entities not found").unwrap();
-    serde_json::from_value(entities.clone()).unwrap()
-}
+    let _ = engine.sync_to_head(0).await?;
 
-pub async fn offset_paginate(pool: &SqlitePool, offset: u64, limit: u64) -> Connection<Entity> {
-    let query = format!(
-        "
-        {{
-            entities (offset: {offset}, limit: {limit}) 
-            {{
-                total_count
-                edges {{
-                    cursor
-                    node {{
-                        model_names
-                    }}
-                }}
-            }}
-        }}
-        "
-    );
-
-    let value = run_graphql_query(pool, &query).await;
-    let entities = value.get("entities").ok_or("entities not found").unwrap();
-    serde_json::from_value(entities.clone()).unwrap()
+    Ok(pool)
 }
