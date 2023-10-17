@@ -47,11 +47,12 @@ where
 
     // Setup account for migration and fetch world address if it exists.
 
-    let (_, account) = setup_env(ws, account, starknet, world, name.as_ref()).await?;
+    let (world_address, account) = setup_env(ws, account, starknet, world, name.as_ref()).await?;
 
     // Load local and remote World manifests.
 
-    let (local_manifest, remote_manifest) = load_world_manifests(&target_dir, &account, ui).await?;
+    let (local_manifest, remote_manifest) =
+        load_world_manifests(&target_dir, &account, world_address, ui).await?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -69,7 +70,7 @@ where
             &target_dir,
             diff,
             name,
-            local_manifest.world.address,
+            world_address,
             &account,
             Some(args.transaction),
         )
@@ -201,6 +202,7 @@ pub(crate) async fn setup_env(
 async fn load_world_manifests<U, P, S>(
     target_dir: U,
     account: &SingleOwnerAccount<P, S>,
+    world_address: Option<FieldElement>,
     ui: &Ui,
 ) -> Result<(Manifest, Option<Manifest>)>
 where
@@ -212,7 +214,7 @@ where
 
     let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
-    let remote_manifest = if let Some(address) = local_manifest.world.address {
+    let remote_manifest = if let Some(address) = world_address {
         match Manifest::load_from_remote(account.provider(), address).await {
             Ok(manifest) => {
                 ui.print_sub(format!("Found remote World: {address:#x}"));
@@ -232,16 +234,13 @@ where
     Ok((local_manifest, remote_manifest))
 }
 
-fn prepare_migration<U>(
-    target_dir: U,
+fn prepare_migration(
+    target_dir: impl AsRef<Path>,
     diff: WorldDiff,
     name: Option<String>,
     world_address: Option<FieldElement>,
     ui: &Ui,
-) -> Result<MigrationStrategy>
-where
-    U: AsRef<Path>,
-{
+) -> Result<MigrationStrategy> {
     ui.print_step(3, "📦", "Preparing for migration...");
 
     if name.is_none() && !diff.world.is_same() {
@@ -504,7 +503,7 @@ where
             .await
         {
             Ok(output) => {
-                if let Some(declare) = output.clone().declare {
+                if let Some(ref declare) = output.declare {
                     ui.print_hidden_sub(format!(
                         "Declare transaction: {:#x}",
                         declare.transaction_hash
