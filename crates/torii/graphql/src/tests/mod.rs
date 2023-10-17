@@ -8,8 +8,8 @@ use tokio_stream::StreamExt;
 use torii_core::sql::Sql;
 
 mod entities_test;
-// mod models_test;
-// mod subscription_test;
+mod models_test;
+mod subscription_test;
 
 use crate::schema::build_schema;
 
@@ -78,83 +78,7 @@ pub async fn run_graphql_subscription(
 }
 
 pub async fn entity_fixtures(db: &mut Sql) {
-    db.register_model(
-        Ty::Struct(Struct {
-            name: "Moves".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "remaining".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U8(None)),
-                },
-                Member {
-                    name: "last_direction".to_string(),
-                    key: false,
-                    ty: Ty::Enum(Enum {
-                        name: "Direction".to_string(),
-                        option: None,
-                        options: vec![
-                            ("None".to_string(), Ty::Tuple(vec![])),
-                            ("Left".to_string(), Ty::Tuple(vec![])),
-                            ("Right".to_string(), Ty::Tuple(vec![])),
-                            ("Up".to_string(), Ty::Tuple(vec![])),
-                            ("Down".to_string(), Ty::Tuple(vec![])),
-                        ],
-                    }),
-                },
-            ],
-        }),
-        vec![],
-        FieldElement::ONE,
-        0,
-        0,
-    )
-    .await
-    .unwrap();
-
-    db.register_model(
-        Ty::Struct(Struct {
-            name: "Position".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "vec".to_string(),
-                    key: false,
-                    ty: Ty::Struct(Struct {
-                        name: "Vec2".to_string(),
-                        children: vec![
-                            Member {
-                                name: "x".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                            Member {
-                                name: "y".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                        ],
-                    }),
-                },
-            ],
-        }),
-        vec![],
-        FieldElement::TWO,
-        0,
-        0,
-    )
-    .await
-    .unwrap();
-
+    model_fixtures(db).await;
     db.set_entity(
         Ty::Struct(Struct {
             name: "Moves".to_string(),
@@ -299,6 +223,85 @@ pub async fn entity_fixtures(db: &mut Sql) {
     .unwrap();
 
     db.execute().await.unwrap();
+}
+
+pub async fn model_fixtures(db: &mut Sql) {
+    db.register_model(
+        Ty::Struct(Struct {
+            name: "Moves".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                },
+                Member {
+                    name: "remaining".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U8(None)),
+                },
+                Member {
+                    name: "last_direction".to_string(),
+                    key: false,
+                    ty: Ty::Enum(Enum {
+                        name: "Direction".to_string(),
+                        option: None,
+                        options: vec![
+                            ("None".to_string(), Ty::Tuple(vec![])),
+                            ("Left".to_string(), Ty::Tuple(vec![])),
+                            ("Right".to_string(), Ty::Tuple(vec![])),
+                            ("Up".to_string(), Ty::Tuple(vec![])),
+                            ("Down".to_string(), Ty::Tuple(vec![])),
+                        ],
+                    }),
+                },
+            ],
+        }),
+        vec![],
+        FieldElement::ONE,
+        0,
+        0,
+    )
+    .await
+    .unwrap();
+
+    db.register_model(
+        Ty::Struct(Struct {
+            name: "Position".to_string(),
+            children: vec![
+                Member {
+                    name: "player".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                },
+                Member {
+                    name: "vec".to_string(),
+                    key: false,
+                    ty: Ty::Struct(Struct {
+                        name: "Vec2".to_string(),
+                        children: vec![
+                            Member {
+                                name: "x".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(None)),
+                            },
+                            Member {
+                                name: "y".to_string(),
+                                key: false,
+                                ty: Ty::Primitive(Primitive::U32(None)),
+                            },
+                        ],
+                    }),
+                },
+            ],
+        }),
+        vec![],
+        FieldElement::TWO,
+        0,
+        0,
+    )
+    .await
+    .unwrap();
 }
 
 pub async fn cursor_paginate(
