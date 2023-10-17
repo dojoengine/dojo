@@ -62,7 +62,7 @@ impl DojoContract {
                     #[external(v0)]
                     impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
                         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
-                            let caller = get_caller_address();
+                            let caller = starknet::get_caller_address();
                             assert(
                                 self.world_dispatcher.read().contract_address == caller, 'only \
                  World can upgrade'
