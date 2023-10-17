@@ -428,6 +428,8 @@ mod world {
         fn upgrade_contract(
             ref self: ContractState, address: ContractAddress, class_hash: ClassHash
         ) -> ClassHash {
+            // Only owner can upgrade contract
+            assert(self.is_owner(get_caller_address(), WORLD), 'only owner can upgrade contract');
             IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
             EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
             class_hash
