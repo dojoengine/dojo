@@ -2,6 +2,7 @@ use async_graphql::dynamic::{Enum, InputObject};
 
 use super::TypeMapping;
 
+pub mod keys_input;
 pub mod order_input;
 pub mod where_input;
 

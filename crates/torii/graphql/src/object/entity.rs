@@ -11,9 +11,10 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Entity;
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
+use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::mapping::ENTITY_TYPE_MAPPING;
-use crate::query::constants::ENTITY_TABLE;
+use crate::query::constants::{ENTITY_TABLE, EVENT_ID_COLUMN};
 use crate::query::data::{count_rows, fetch_multiple_rows};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
@@ -71,12 +72,12 @@ impl ObjectTrait for EntityObject {
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
-                    let keys = extract::<Vec<String>>(ctx.args.as_index_map(), "keys").ok();
+                    let keys = parse_keys_argument(&ctx)?;
                     let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
                     let data = fetch_multiple_rows(
                         &mut conn,
                         ENTITY_TABLE,
-                        "event_id",
+                        EVENT_ID_COLUMN,
                         &keys,
                         &None,
                         &None,
@@ -87,7 +88,7 @@ impl ObjectTrait for EntityObject {
                         &data,
                         &ENTITY_TYPE_MAPPING,
                         &None,
-                        "event_id",
+                        EVENT_ID_COLUMN,
                         total_count,
                         false,
                     )?;
@@ -95,10 +96,10 @@ impl ObjectTrait for EntityObject {
                     Ok(Some(Value::Object(results)))
                 })
             },
-        )
-        .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)));
+        );
 
         field = connection_arguments(field);
+        field = keys_argument(field);
 
         Some(field)
     }
