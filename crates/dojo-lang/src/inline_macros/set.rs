@@ -1,16 +1,58 @@
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
+    DynGeneratedFileAuxData, InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic,
+    PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::ast::{FunctionWithBody, ItemModule};
+use cairo_lang_syntax::node::kind::SyntaxKind;
+use cairo_lang_syntax::node::{ast, SyntaxNode, TypedSyntaxNode};
 
 use super::unsupported_arg_diagnostic;
+use crate::plugin::DojoAuxData;
+
+type ModuleName = String;
+type FunctionName = String;
+
+lazy_static::lazy_static! {
+    pub static ref WRITERS: Mutex<HashMap<ModuleName, HashMap<FunctionName, Vec<SyntaxNode>>>> = Default::default();
+}
 
 #[derive(Debug)]
 pub struct SetMacro;
 impl SetMacro {
     pub const NAME: &'static str = "set";
+    pub fn get_parent_block(
+        db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
+        target: &SyntaxNode,
+        kind: SyntaxKind,
+    ) -> Option<SyntaxNode> {
+        // Parents of set!()
+        // -----------------
+        // StatementExpr
+        // StatementList
+        // ExprBlock
+        // FunctionWithBody
+        // ImplItemList
+        // ImplBody
+        // ItemImpl
+        // ItemList
+        // ModuleBody
+        // ItemModule
+        // ItemList
+        // SyntaxFile
+        let mut new_target = target.clone();
+        while let Some(parent) = new_target.parent() {
+            if kind == parent.kind(db) {
+                return Some(parent);
+            }
+            new_target = parent;
+        }
+        return None;
+    }
 }
 impl InlineMacroExprPlugin for SetMacro {
     fn generate_code(
@@ -46,12 +88,19 @@ impl InlineMacroExprPlugin for SetMacro {
 
         match models.value(db) {
             ast::Expr::Parenthesized(parens) => {
-                bundle.push(parens.expr(db).as_syntax_node().get_text(db))
+                let syntax_node = parens.expr(db).as_syntax_node();
+                bundle.push((syntax_node.get_text(db), syntax_node));
             }
-            ast::Expr::Tuple(list) => list.expressions(db).elements(db).iter().for_each(|expr| {
-                bundle.push(expr.as_syntax_node().get_text(db));
-            }),
-            ast::Expr::StructCtorCall(ctor) => bundle.push(ctor.as_syntax_node().get_text(db)),
+            ast::Expr::Tuple(list) => {
+                list.expressions(db).elements(db).into_iter().for_each(|expr| {
+                    let syntax_node = expr.as_syntax_node();
+                    bundle.push((syntax_node.get_text(db), syntax_node));
+                })
+            }
+            ast::Expr::StructCtorCall(ctor) => {
+                let syntax_node = ctor.as_syntax_node();
+                bundle.push((syntax_node.get_text(db), syntax_node));
+            }
             _ => {
                 return InlinePluginResult {
                     code: None,
@@ -73,7 +122,36 @@ impl InlineMacroExprPlugin for SetMacro {
             };
         }
 
-        for entity in bundle {
+        let mut module_name = "".to_string();
+        let module_syntax_node =
+            SetMacro::get_parent_block(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
+        if let Some(module_syntax_node) = &module_syntax_node {
+            let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
+            module_name = mod_ast.name(db).as_syntax_node().get_text_without_trivia(db);
+        }
+
+        let mut fn_name = "".to_string();
+        let fn_syntax_node =
+            SetMacro::get_parent_block(db, &syntax.as_syntax_node(), SyntaxKind::FunctionWithBody);
+        if let Some(fn_syntax_node) = &fn_syntax_node {
+            let fn_ast = FunctionWithBody::from_syntax_node(db, fn_syntax_node.clone());
+            fn_name = fn_ast.declaration(db).name(db).as_syntax_node().get_text_without_trivia(db);
+        }
+        for (entity, syntax_node) in bundle {
+            // db.lookup_intern_file(key0);
+            if module_name.len() > 0 && fn_name.len() > 0 {
+                let mut writers = WRITERS.lock().unwrap();
+                // fn_syntax_node
+                if writers.get(&module_name).is_none() {
+                    writers.insert(module_name.clone(), HashMap::new());
+                }
+                let fns = writers.get_mut(&module_name).unwrap();
+                if fns.get(&fn_name).is_none() {
+                    fns.insert(fn_name.clone(), vec![]);
+                }
+                fns.get_mut(&fn_name).unwrap().push(syntax_node);
+            }
+
             builder.add_str(&format!(
                 "
                 let __set_macro_value__ = {};
@@ -92,7 +170,11 @@ impl InlineMacroExprPlugin for SetMacro {
                 name: "set_inline_macro".into(),
                 content: builder.code,
                 diagnostics_mappings: builder.diagnostics_mappings,
-                aux_data: None,
+                // aux_data: None,
+                aux_data: Some(DynGeneratedFileAuxData::new(DojoAuxData {
+                    models: vec![crate::plugin::Model { name: "Poipoi".into(), members: vec![] }],
+                    ..DojoAuxData::default()
+                })),
             }),
             diagnostics: vec![],
         }

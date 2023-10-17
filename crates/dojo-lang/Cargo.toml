@@ -31,6 +31,7 @@ dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world", features = [ "manifest" ] }
 indoc.workspace = true
 itertools.workspace = true
+lazy_static.workspace = true
 once_cell.workspace = true
 salsa.workspace = true
 scarb.workspace = true

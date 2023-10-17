@@ -27,7 +27,7 @@ pub fn test_semantics(
     let (expr, diagnostics, expr_formatter) = semantics_test_setup(inputs, &mut db);
 
     if inputs.get("no_diagnostics").is_some() && "" != diagnostics.as_str() {
-        return Err("Expanded get!() shouldn't have diagnostic issues.".into());
+        return Err(format!("Expanded get!() shouldn't have diagnostic issues.\n{}", diagnostics));
     }
 
     if let Some(dojo_semantic) = inputs.get("dojo_semantic") {

@@ -104,6 +104,7 @@ pub struct Contract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub abi: Option<abi::Contract>,
+    pub deps: Vec<String>,
 }
 
 #[serde_as]
