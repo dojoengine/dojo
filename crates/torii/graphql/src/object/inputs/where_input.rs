@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, TypeRef};
 use async_graphql::Name;
-use dojo_types::primitive::Primitive;
+use dojo_types::primitive::{Primitive, SqlType};
 use strum::IntoEnumIterator;
 
 use super::InputObjectTrait;
@@ -79,13 +79,12 @@ pub fn parse_where_argument(
         .filter_map(|(type_name, type_data)| {
             input_object.get(type_name).map(|input_filter| {
                 let filter_value = match Primitive::from_str(&type_data.type_ref().to_string()) {
-                    Ok(primitive) => {
-                        if primitive.to_sql_type().as_str() == "INTEGER" {
-                            FilterValue::Int(input_filter.i64().ok()?)
-                        } else {
+                    Ok(primitive) => match primitive.to_sql_type() {
+                        SqlType::Integer => FilterValue::Int(input_filter.i64().ok()?),
+                        SqlType::Text => {
                             FilterValue::String(input_filter.string().ok()?.to_string())
                         }
-                    }
+                    },
                     _ => FilterValue::String(input_filter.string().ok()?.to_string()),
                 };
 
