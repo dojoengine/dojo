@@ -37,6 +37,8 @@ mod spawn {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use dojo::upgradable::{IUpgradeable, UpgradeableTrait};
+    use starknet::ClassHash;
 
     #[storage]
     struct Storage {
@@ -46,6 +48,18 @@ mod spawn {
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'spawn'
+    }
+
+    #[external(v0)]
+    impl Upgradeable of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            let caller = get_caller_address();
+            assert(
+                self.world_dispatcher.read().contract_address == caller, 
+                'only World can upgrade'
+            );
+            UpgradeableTrait::upgrade(new_class_hash);
+        }
     }
 
     use traits::Into;
@@ -63,6 +77,8 @@ mod proxy {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use dojo::upgradable::{IUpgradeable, UpgradeableTrait};
+    use starknet::ClassHash;
 
     #[storage]
     struct Storage {
@@ -72,6 +88,18 @@ mod proxy {
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'proxy'
+    }
+
+    #[external(v0)]
+    impl Upgradeable of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            let caller = get_caller_address();
+            assert(
+                self.world_dispatcher.read().contract_address == caller, 
+                'only World can upgrade'
+            );
+            UpgradeableTrait::upgrade(new_class_hash);
+        }
     }
 
 
@@ -87,6 +115,8 @@ mod ctxnamed {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
+    use dojo::upgradable::{IUpgradeable, UpgradeableTrait};
+    use starknet::ClassHash;
 
     #[storage]
     struct Storage {
@@ -96,6 +126,18 @@ mod ctxnamed {
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'ctxnamed'
+    }
+
+    #[external(v0)]
+    impl Upgradeable of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            let caller = get_caller_address();
+            assert(
+                self.world_dispatcher.read().contract_address == caller, 
+                'only World can upgrade'
+            );
+            UpgradeableTrait::upgrade(new_class_hash);
+        }
     }
 
     use traits::Into;
