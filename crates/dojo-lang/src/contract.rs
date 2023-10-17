@@ -48,8 +48,6 @@ impl DojoContract {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
-                    use dojo::upgradable::{IUpgradeable, UpgradeableTrait};
-                    use starknet::ClassHash;
 
                     #[storage]
                     struct Storage {
@@ -62,14 +60,14 @@ impl DojoContract {
                     }
 
                     #[external(v0)]
-                    impl Upgradeable of IUpgradeable<ContractState> {
-                        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
                             let caller = get_caller_address();
                             assert(
                                 self.world_dispatcher.read().contract_address == caller, 'only \
                  World can upgrade'
                             );
-                            UpgradeableTrait::upgrade(new_class_hash);
+                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
                         }
                     }
 
