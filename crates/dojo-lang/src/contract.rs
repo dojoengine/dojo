@@ -59,6 +59,18 @@ impl DojoContract {
                         '$name$'
                     }
 
+                    #[external(v0)]
+                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+                            let caller = get_caller_address();
+                            assert(
+                                self.world_dispatcher.read().contract_address == caller, 'only \
+                 World can upgrade'
+                            );
+                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                        }
+                    }
+
                     $body$
                 }
                 ",

@@ -9,6 +9,7 @@ trait IWorld<T> {
     fn model(self: @T, name: felt252) -> ClassHash;
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
+    fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
@@ -46,11 +47,14 @@ trait IWorld<T> {
 
 #[starknet::contract]
 mod world {
+    use core::traits::TryInto;
     use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use option::OptionTrait;
     use box::BoxTrait;
     use serde::Serde;
+    use core::hash::{HashStateExTrait, HashStateTrait};
+    use pedersen::{PedersenTrait, HashStateImpl, PedersenImpl};
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
@@ -75,6 +79,7 @@ mod world {
     enum Event {
         WorldSpawned: WorldSpawned,
         ContractDeployed: ContractDeployed,
+        ContractUpgraded: ContractUpgraded,
         MetadataUpdate: MetadataUpdate,
         ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
@@ -93,6 +98,12 @@ mod world {
     #[derive(Drop, starknet::Event)]
     struct ContractDeployed {
         salt: felt252,
+        class_hash: ClassHash,
+        address: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct ContractUpgraded {
         class_hash: ClassHash,
         address: ContractAddress,
     }
@@ -386,7 +397,7 @@ mod world {
         ///
         /// # Returns
         ///
-        /// * `ClassHash` - The class hash of the model.
+        /// * `ContractAddress` - The address of the newly deployed contract.
         fn deploy_contract(
             ref self: ContractState, salt: felt252, class_hash: ClassHash
         ) -> ContractAddress {
@@ -397,11 +408,33 @@ mod world {
             let upgradable_dispatcher = IUpgradeableDispatcher { contract_address };
             upgradable_dispatcher.upgrade(class_hash);
 
+            self.owners.write((contract_address.into(), get_caller_address()), true);
+
             EventEmitter::emit(
                 ref self, ContractDeployed { salt, class_hash, address: contract_address }
             );
 
             contract_address
+        }
+
+        /// Upgrade an already deployed contract associated with the world.
+        ///
+        /// # Arguments
+        ///
+        /// * `name` - The name of the contract.
+        /// * `class_hash` - The class_hash of the contract.
+        ///
+        /// # Returns
+        ///
+        /// * `ClassHash` - The new class hash of the contract.
+        fn upgrade_contract(
+            ref self: ContractState, address: ContractAddress, class_hash: ClassHash
+        ) -> ClassHash {
+            // Only owner can upgrade contract
+            assert_can_write(@self, address.into(), get_caller_address());
+            IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
+            EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
+            class_hash
         }
 
         /// Issues an autoincremented id to the caller.
@@ -528,10 +561,7 @@ mod world {
         /// # Returns
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
-        fn entity_ids(
-            self: @ContractState,
-            model: felt252
-        ) -> Span<felt252> {
+        fn entity_ids(self: @ContractState, model: felt252) -> Span<felt252> {
             database::scan_ids(model, Option::None(()))
         }
 
@@ -576,12 +606,12 @@ mod world {
     ///
     /// # Arguments
     ///
-    /// * `model` - The name of the model being written to.
+    /// * `resource` - The name of the resource being written to.
     /// * `caller` - The name of the caller writing.
-    fn assert_can_write(self: @ContractState, model: felt252, caller: ContractAddress) {
+    fn assert_can_write(self: @ContractState, resource: felt252, caller: ContractAddress) {
         assert(
-            IWorld::is_writer(self, model, caller)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, model)
+            IWorld::is_writer(self, resource, caller)
+                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, resource)
                 || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
             'not writer'
         );

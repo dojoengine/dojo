@@ -1,5 +1,3 @@
-use starknet::{ClassHash, SyscallResult, SyscallResultTrait};
-
 use dojo::world::IWorldDispatcher;
 
 #[starknet::interface]
