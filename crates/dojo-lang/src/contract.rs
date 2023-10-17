@@ -66,8 +66,8 @@ impl DojoContract {
                         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
                             let caller = get_caller_address();
                             assert(
-                                self.world_dispatcher.read().contract_address == caller, 
-                                'only World can upgrade'
+                                self.world_dispatcher.read().contract_address == caller, 'only \
+                 World can upgrade'
                             );
                             UpgradeableTrait::upgrade(new_class_hash);
                         }
