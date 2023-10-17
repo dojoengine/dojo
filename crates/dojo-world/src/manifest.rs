@@ -178,8 +178,7 @@ impl Manifest {
                 err => err.into(),
             })?;
 
-        let models = get_remote_world_registered_models(world_address, &provider).await.unwrap();
-        let contracts = get_remote_world_deployed_contracts(world_address, provider).await.unwrap();
+        let (models, contracts) = get_remote_models_and_contracts(world_address, provider).await?;
 
         Ok(Manifest {
             models,
@@ -205,30 +204,59 @@ impl Manifest {
     }
 }
 
-pub(self) static MODEL_REGISTERED_EVENT_NAME: &str = "ModelRegistered";
-pub(self) static CONTRACT_DEPLOYED_EVENT_NAME: &str = "ContractDeployed";
-
-async fn get_remote_world_deployed_contracts<P>(
+async fn get_remote_models_and_contracts<P: Provider>(
     world: FieldElement,
     provider: P,
-) -> Result<Vec<Contract>, ManifestError<<P as Provider>::Error>>
+) -> Result<(Vec<Model>, Vec<Contract>), ManifestError<<P as Provider>::Error>>
 where
     P::Error: 'static,
     P: Provider + Send + Sync,
 {
-    let event_key = vec![starknet_keccak(CONTRACT_DEPLOYED_EVENT_NAME.as_bytes())];
+    let registered_models_event_name = starknet_keccak("ModelRegistered".as_bytes());
+    let contract_deployed_event_name = starknet_keccak("ContractDeployed".as_bytes());
+    let contract_upgraded_event_name = starknet_keccak("ContractUpgraded".as_bytes());
 
-    let mut contracts =
-        parse_contract_events(&provider, world, vec![event_key], parse_deployed_contracts_events)
-            .await?;
+    let events = get_events(
+        &provider,
+        world,
+        vec![vec![
+            registered_models_event_name,
+            contract_deployed_event_name,
+            contract_upgraded_event_name,
+        ]],
+    )
+    .await?;
 
-    for (address, contract) in &mut contracts {
+    let mut registered_models_events = vec![];
+    let mut contract_deployed_events = vec![];
+    let mut contract_upgraded_events = vec![];
+
+    for event in events {
+        match event.keys.first() {
+            Some(event_name) if *event_name == registered_models_event_name => {
+                registered_models_events.push(event)
+            }
+            Some(event_name) if *event_name == contract_deployed_event_name => {
+                contract_deployed_events.push(event)
+            }
+            Some(event_name) if *event_name == contract_upgraded_event_name => {
+                contract_upgraded_events.push(event)
+            }
+            _ => {}
+        }
+    }
+
+    let models = parse_models_events(registered_models_events);
+    let mut contracts = parse_contracts_events(contract_deployed_events, contract_upgraded_events);
+
+    // fetch contracts name
+    for contract in &mut contracts {
         let name = match provider
             .call(
                 FunctionCall {
                     calldata: vec![],
-                    contract_address: *address,
                     entry_point_selector: selector!("name"),
+                    contract_address: contract.address.expect("qed; missing address"),
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
@@ -247,25 +275,14 @@ where
         contract.name = name;
     }
 
-    Ok(contracts.into_values().collect())
+    Ok((models, contracts))
 }
 
-async fn get_remote_world_registered_models<P: Provider>(
-    world: FieldElement,
-    provider: P,
-) -> Result<Vec<Model>, ManifestError<<P as Provider>::Error>> {
-    let event_key = vec![starknet_keccak(MODEL_REGISTERED_EVENT_NAME.as_bytes())];
-    parse_contract_events(provider, world, vec![event_key], parse_registered_model_events)
-        .await
-        .map_err(|e| e.into())
-}
-
-async fn parse_contract_events<P: Provider, T>(
+async fn get_events<P: Provider>(
     provider: P,
     world: FieldElement,
     keys: Vec<Vec<FieldElement>>,
-    f: impl FnOnce(Vec<EmittedEvent>) -> T,
-) -> Result<T, ProviderError<<P as Provider>::Error>> {
+) -> Result<Vec<EmittedEvent>, ProviderError<<P as Provider>::Error>> {
     const DEFAULT_CHUNK_SIZE: u64 = 100;
 
     let mut events: Vec<EmittedEvent> = vec![];
@@ -286,25 +303,61 @@ async fn parse_contract_events<P: Provider, T>(
         }
     }
 
-    Ok(f(events))
+    Ok(events)
 }
 
-fn parse_deployed_contracts_events(events: Vec<EmittedEvent>) -> HashMap<FieldElement, Contract> {
-    events
+fn parse_contracts_events(
+    deployed: Vec<EmittedEvent>,
+    upgraded: Vec<EmittedEvent>,
+) -> Vec<Contract> {
+    fn retain_only_latest_upgrade_events(
+        events: Vec<EmittedEvent>,
+    ) -> HashMap<FieldElement, FieldElement> {
+        // addr -> (block_num, class_hash)
+        let mut upgrades: HashMap<FieldElement, (u64, FieldElement)> = HashMap::new();
+
+        events.into_iter().for_each(|event| {
+            let mut data = event.data.into_iter();
+
+            let block_num = event.block_number;
+            let class_hash = data.next().expect("qed; missing class hash");
+            let address = data.next().expect("qed; missing address");
+
+            upgrades
+                .entry(address)
+                .and_modify(|(current_block, current_class_hash)| {
+                    if *current_block < block_num {
+                        *current_block = block_num;
+                        *current_class_hash = class_hash;
+                    }
+                })
+                .or_insert((block_num, class_hash));
+        });
+
+        upgrades.into_iter().map(|(addr, (_, class_hash))| (addr, class_hash)).collect()
+    }
+
+    let upgradeds = retain_only_latest_upgrade_events(upgraded);
+
+    deployed
         .into_iter()
         .map(|event| {
             let mut data = event.data.into_iter();
 
             let _ = data.next().expect("salt is missing from event");
-            let class_hash = data.next().expect("class hash is missing from event");
+            let mut class_hash = data.next().expect("class hash is missing from event");
             let address = data.next().expect("addresss is missing from event");
 
-            (address, Contract { address: Some(address), class_hash, ..Default::default() })
+            if let Some(upgrade) = upgradeds.get(&address) {
+                class_hash = *upgrade;
+            }
+
+            Contract { address: Some(address), class_hash, ..Default::default() }
         })
         .collect()
 }
 
-fn parse_registered_model_events(events: Vec<EmittedEvent>) -> Vec<Model> {
+fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Model> {
     let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
 
     for event in events {
