@@ -53,8 +53,7 @@ mod spawn {
         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
             let caller = get_caller_address();
             assert(
-                self.world_dispatcher.read().contract_address == caller, 'only \
- World can upgrade'
+                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
             );
             dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
         }
@@ -75,8 +74,6 @@ mod proxy {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use dojo::upgradable::{IUpgradeable, UpgradeableTrait};
-    use starknet::ClassHash;
 
     #[storage]
     struct Storage {
@@ -93,8 +90,7 @@ mod proxy {
         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
             let caller = get_caller_address();
             assert(
-                self.world_dispatcher.read().contract_address == caller, 'only \
- World can upgrade'
+                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
             );
             dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
         }
@@ -113,8 +109,6 @@ mod ctxnamed {
     use dojo::world;
     use dojo::world::IWorldDispatcher;
     use dojo::world::IWorldDispatcherTrait;
-    use dojo::upgradable::{IUpgradeable, UpgradeableTrait};
-    use starknet::ClassHash;
 
     #[storage]
     struct Storage {
@@ -131,8 +125,7 @@ mod ctxnamed {
         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
             let caller = get_caller_address();
             assert(
-                self.world_dispatcher.read().contract_address == caller, 'only \
- World can upgrade'
+                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
             );
             dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
         }
