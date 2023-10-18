@@ -24,11 +24,11 @@ pub struct Client(torii_client::client::Client);
 #[wasm_bindgen]
 impl Client {
     #[wasm_bindgen(js_name = getModelValue)]
-    pub async fn get_model_value(
+    pub fn get_model_value(
         &self,
         model: &str,
         keys: Vec<JsFieldElement>,
-    ) -> Result<Option<JsValue>, JsValue> {
+    ) -> Result<JsValue, JsValue> {
         #[cfg(feature = "console-error-panic")]
         console_error_panic_hook::set_once();
 
@@ -41,11 +41,8 @@ impl Client {
             })?;
 
         match self.0.entity(model, &keys) {
-            Some(ty) => {
-                let json = parse_ty_as_json_str(&ty);
-                Ok(Some(serde_wasm_bindgen::to_value(&json)?))
-            }
-            None => Ok(None),
+            Some(ty) => Ok(serde_wasm_bindgen::to_value(&parse_ty_as_json_str(&ty))?),
+            None => Ok(JsValue::NULL),
         }
     }
 
