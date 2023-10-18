@@ -40,6 +40,7 @@ fn get_many(address_domain: u32, keys: Span<felt252>, offset: u8, length: usize,
     unpacked.span()
 }
 
+
 fn set(address_domain: u32, keys: Span<felt252>, value: felt252) {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     starknet::storage_write_syscall(

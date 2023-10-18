@@ -1,1 +1,1 @@
-test dojo::benchmarks::bench_database ... ok (gas usage est.: 605148)
+strg_m: 0x40524
