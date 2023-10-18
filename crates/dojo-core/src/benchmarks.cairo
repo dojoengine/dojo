@@ -36,20 +36,24 @@ fn end(start: u128, name: felt252) {
     (used_gas + name).print();
 }
 
-
 #[test]
-#[available_gas(3000000)]
+#[available_gas(100000000)]
 fn bench_storage_single() {
     let keys = array!['database_test', '42'].span();
 
+    let time = start();
     storage::set(0, keys, 420);
+    end(time, 'storage set');
 
+    let time = start();
     let res = storage::get(0, keys);
+    end(time, 'storage get');
+
     assert(res == 420, 'values differ');
 }
 
 #[test]
-#[available_gas(10000000)]
+#[available_gas(100000000)]
 fn bench_storage_many() {
     let keys = array![0x1337].span();
     let values = array![1, 2].span();
@@ -57,9 +61,12 @@ fn bench_storage_many() {
 
     let time = start();
     storage::set_many(0, keys, 0, values, layout);
-    end(time, 'storage many');
+    end(time, 'storage set mny');
 
+    let time = start();
     let res = storage::get_many(0, keys, 0, 2, layout);
+    end(time, 'storage get mny');
+
     assert(res.len() == 2, 'wrong number of values');
     assert(*res.at(0) == *values.at(0), 'value not set');
     assert(*res.at(1) == *values.at(1), 'value not set');

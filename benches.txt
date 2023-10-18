@@ -1,1 +1,4 @@
-   storage many: 263344
+    storage get: 16010
+storage get mny: 268944
+    storage set: 16010
+storage set mny: 263344
