@@ -6,7 +6,7 @@ use cairo_lang_debug::debug::DebugWithDb; // use cairo_lang_syntax::node::db::Sy
 use cairo_lang_defs::db::DefsGroup;
 use cairo_lang_defs::ids::{FunctionWithBodyId, ModuleFileId, ModuleId, ModuleItemId};
 use cairo_lang_filesystem::db::FilesGroup;
-use cairo_lang_filesystem::ids::CrateId;
+use cairo_lang_filesystem::ids::{CrateId, FileId};
 use cairo_lang_semantic as semantic;
 use cairo_lang_starknet::abi;
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
@@ -125,8 +125,9 @@ impl Manifest {
                         continue;
                     };
                     let aux_data = aux_data.0.as_any();
-
-                    if let Some(dojo_aux_data) = aux_data.downcast_ref() {
+                    if let Some(contracts) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
+                        manifest.find_contracts(db, module_id, contracts, &compiled_classes);
+                    } else if let Some(dojo_aux_data) = aux_data.downcast_ref() {
                         manifest.find_models(db, dojo_aux_data, *module_id, &compiled_classes);
                     }
                     if let Some(contracts) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
@@ -224,6 +225,7 @@ impl Manifest {
         &self,
         db: &RootDatabase,
         module_id: &ModuleId,
+        module_file_id: FileId,
         module_writers: &HashMap<String, Vec<SyntaxNode>>,
         fn_id: FunctionWithBodyId,
         components: &mut HashMap<String, bool>,
@@ -236,10 +238,7 @@ impl Manifest {
         if let Some(module_fn_writers) = module_writers.get(&fn_name) {
             // This functions has writers
             // Do stuff with the writers
-            println!("Writes found: {}", module_fn_writers.len());
-            println!("\nFunction {fn_name}: \n{:#?}\n\n", fn_expr);
-            let expr_formatter = ExprFormatter { db, function_id: fn_id };
-            println!("{:#?}", fn_expr.debug(&expr_formatter));
+            println!("({fn_name}) Writes found: {}, {module_file_id:?}", module_fn_writers.len());
 
             for node in module_fn_writers.iter() {
                 match node.kind(db) {
@@ -255,17 +254,17 @@ impl Manifest {
                         let crate_id = module_id.owning_crate(db);
                         // let module_file = ModuleFileId
 
-                        // let mut diagnostics = SemanticDiagnostics::new(module_id);
+                        let mut diagnostics = SemanticDiagnostics::new(module_id);
 
-                        // let ctx = ComputationContext::new(
-                        //     db,
-                        //     diagnostics,
-                        //     Some(fn_body),
-                        //     Resolver::new(db, module_file_id, inference_id),
-                        //     signature,
-                        //     environment,
-                        // );
-                        // maybe_compute_expr_semantic(ctx, syntax);
+                        let ctx = ComputationContext::new(
+                            db,
+                            diagnostics,
+                            Some(fn_body),
+                            Resolver::new(db, module_file_id, inference_id),
+                            signature,
+                            environment,
+                        );
+                        maybe_compute_expr_semantic(ctx, syntax);
 
                         // println!("{:?} {:?}", expr_semantic, diagnostic);
 
@@ -310,29 +309,37 @@ impl Manifest {
         let mut components: HashMap<String, bool> = HashMap::new();
         // Does the module have writers?
         if let Some(module_writers) = module_writers {
-            // Get module fn ids. And generate lookup hashmap
-            if let Ok(module_fns) = db.module_free_functions_ids(*module_id) {
-                for fn_id in module_fns.iter() {
-                    self.find_function_writes(
-                        db,
-                        module_id,
-                        module_writers,
-                        FunctionWithBodyId::Free(*fn_id),
-                        &mut components,
-                    );
+            if let Ok(module_file_id) = db.module_files(*module_id) {
+                let module_file_id = module_file_id[0];
+
+                println!("{module_file_id:?}");
+
+                // Get module fn ids. And generate lookup hashmap
+                if let Ok(module_fns) = db.module_free_functions_ids(*module_id) {
+                    for fn_id in module_fns.iter() {
+                        self.find_function_writes(
+                            db,
+                            module_id,
+                            module_file_id,
+                            module_writers,
+                            FunctionWithBodyId::Free(*fn_id),
+                            &mut components,
+                        );
+                    }
                 }
-            }
-            if let Ok(module_impls) = db.module_impls_ids(*module_id) {
-                for module_impl_id in module_impls.iter() {
-                    if let Ok(module_fns) = db.impl_functions(*module_impl_id) {
-                        for (_, fn_id) in module_fns.iter() {
-                            self.find_function_writes(
-                                db,
-                                module_id,
-                                module_writers,
-                                FunctionWithBodyId::Impl(*fn_id),
-                                &mut components,
-                            );
+                if let Ok(module_impls) = db.module_impls_ids(*module_id) {
+                    for module_impl_id in module_impls.iter() {
+                        if let Ok(module_fns) = db.impl_functions(*module_impl_id) {
+                            for (_, fn_id) in module_fns.iter() {
+                                self.find_function_writes(
+                                    db,
+                                    module_id,
+                                    module_file_id,
+                                    module_writers,
+                                    FunctionWithBodyId::Impl(*fn_id),
+                                    &mut components,
+                                );
+                            }
                         }
                     }
                 }
