@@ -1,3 +1,12 @@
+    bench empty: 0
+ idx create 1st: 80050
+   idx dlt last: 112070
+  idx dlt !last: 112070
+      idx empty: 40460
+ idx exists chk: 16010
+  idx query 2nd: 80050
+  idx query one: 80920
+  idx query two: 121380
     storage get: 16010
 storage get mny: 268944
     storage set: 16010
