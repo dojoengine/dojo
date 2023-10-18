@@ -4,8 +4,8 @@ use array::SpanTrait;
 use debug::PrintTrait;
 use option::OptionTrait;
 
-use dojo::database::storage;
-use dojo::database::index;
+use dojo::database;
+use dojo::database::{storage, index};
 use dojo::packing::{shl, shr};
 
 const GAS_OFFSET: felt252 = 0x1_000000_000000_000000_000000_000000; // 15 bajtów
@@ -41,8 +41,8 @@ fn end(start: u128, name: felt252) {
 #[test]
 #[available_gas(1000000000)]
 fn bench_reference_offset() {
-    let time = start();
-    end(time, 'bench empty');
+    let gas = start();
+    end(gas, 'bench empty');
 }
 
 #[test]
@@ -50,13 +50,13 @@ fn bench_reference_offset() {
 fn bench_storage_single() {
     let keys = array!['database_test', '42'].span();
 
-    let time = start();
+    let gas = start();
     storage::set(0, keys, 420);
-    end(time, 'storage set');
+    end(gas, 'storage set');
 
-    let time = start();
+    let gas = start();
     let res = storage::get(0, keys);
-    end(time, 'storage get');
+    end(gas, 'storage get');
 
     assert(res == 420, 'values differ');
 }
@@ -68,13 +68,13 @@ fn bench_storage_many() {
     let values = array![1, 2].span();
     let layout = array![251, 251].span();
 
-    let time = start();
+    let gas = start();
     storage::set_many(0, keys, 0, values, layout);
-    end(time, 'storage set mny');
+    end(gas, 'storage set mny');
 
-    let time = start();
+    let gas = start();
     let res = storage::get_many(0, keys, 0, 2, layout);
-    end(time, 'storage get mny');
+    end(gas, 'storage get mny');
 
     assert(res.len() == 2, 'wrong number of values');
     assert(*res.at(0) == *values.at(0), 'value not set');
@@ -84,44 +84,106 @@ fn bench_storage_many() {
 #[test]
 #[available_gas(1000000000)]
 fn bench_index() {
-    let time = start();
+    let gas = start();
     let no_query = index::query(0, 69, Option::None(()));
-    end(time, 'idx empty');
+    end(gas, 'idx empty');
     assert(no_query.len() == 0, 'entity indexed');
 
-    let time = start();
+    let gas = start();
     index::create(0, 69, 420);
-    end(time, 'idx create 1st');
+    end(gas, 'idx create 1st');
 
-    let time = start();
+    let gas = start();
     let query = index::query(0, 69, Option::None(()));
-    end(time, 'idx query one');
+    end(gas, 'idx query one');
     assert(query.len() == 1, 'entity not indexed');
     assert(*query.at(0) == 420, 'entity value incorrect');
     
-    let time = start();
+    let gas = start();
     index::create(0, 69, 1337);
-    end(time, 'idx query 2nd');
+    end(gas, 'idx query 2nd');
 
-    let time = start();
+    let gas = start();
     let two_query = index::query(0, 69, Option::None(()));
-    end(time, 'idx query two');
+    end(gas, 'idx query two');
     assert(two_query.len() == 2, 'index should have two query');
     assert(*two_query.at(1) == 1337, 'entity value incorrect');
 
-    let time = start();
+    let gas = start();
     index::exists(0, 69, 420);
-    end(time, 'idx exists chk');
+    end(gas, 'idx exists chk');
 
-    let time = start();
+    let gas = start();
     index::delete(0, 69, 420);
-    end(time, 'idx dlt !last');
+    end(gas, 'idx dlt !last');
 
     assert(!index::exists(0, 69, 420), 'entity should not exist');
 
-    let time = start();
+    let gas = start();
     index::delete(0, 69, 1337);
-    end(time, 'idx dlt last');
+    end(gas, 'idx dlt last');
 
     assert(!index::exists(0, 69, 1337), 'entity should not exist');
+}
+
+#[test]
+#[available_gas(1000000000)]
+fn bench_database_array() {
+    let value = array![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].span();
+    let layout = array![251, 251, 251, 251, 251, 251, 251, 251, 251, 251].span();
+    let half_layout = array![251, 251, 251, 251, 251].span();
+    let len = value.len();
+
+    let gas = start();
+    database::set('table', 'key', 0, value, layout);
+    end(gas, 'db set arr');
+
+    let gas = start();
+    let res = database::get('table', 'key', 0, len, layout);
+    end(gas, 'db get arr');
+
+    assert(res.len() == len, 'wrong number of values');
+    assert(*res.at(0) == *value.at(0), 'value not set');
+    assert(*res.at(1) == *value.at(1), 'value not set');
+
+    let gas = start();
+    let second_res = database::get('table', 'key', 3, 8, array![251, 251, 251, 251, 251].span());
+    end(gas, 'db get half arr');
+
+    assert(second_res.len() == 5, 'wrong number of values');
+    assert(*second_res.at(0) == *value.at(3), 'value not set');
+
+    let gas = start();
+    database::del('table', 'key');
+    end(gas, 'db del arr');
+}
+
+#[test]
+#[available_gas(1000000000)]
+fn bench_indexed_database_array() {
+    let even = array![2, 4].span();
+    let odd = array![1, 3].span();
+    let layout = array![251, 251].span();
+
+    let gas = start();
+    database::set_with_index('table', 'even', 0, even, layout);
+    end(gas, 'dbi set arr 1st');
+
+    let gas = start();
+    let (keys, values) = database::scan('table', Option::None(()), 2, layout);
+    end(gas, 'dbi scan arr 1');
+
+    let gas = start();
+    database::set_with_index('table', 'odd', 0, odd, layout);
+    end(gas, 'dbi set arr 2nd');
+
+    let gas = start();
+    let (keys, values) = database::scan('table', Option::None(()), 2, layout);
+    end(gas, 'dbi scan arr 2');
+
+    assert(keys.len() == 2, 'Wrong number of keys!');
+    assert(values.len() == 2, 'Wrong number of values!');
+    assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
+    assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
+    assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
 }
