@@ -1,30 +1,56 @@
 use core::result::ResultTrait;
 use array::ArrayTrait;
-use option::OptionTrait;
-use serde::Serde;
 use array::SpanTrait;
-use traits::{Into, TryInto};
+use debug::PrintTrait;
 
-use starknet::syscalls::deploy_syscall;
-use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
-use dojo::world::{IWorldDispatcher};
-use dojo::executor::executor;
-use dojo::database::{get, set, set_with_index, del, scan};
-use dojo::database::index::WhereCondition;
+use dojo::database::storage;
+
+
+fn start() -> u128 {
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    gas
+}
+
+fn end(start: u128, name: felt252) {
+    // assert(name < 16777216 * 16777216, "name would not fit"); 
+    let gas_after = testing::get_available_gas();
+    let used_gas: felt252 = (start - gas_after).into();
+    let used_gas = used_gas * 16777216 * 16777216 * 256;
+    let delimiter = 'tt' * 16777216 * 16777216;
+    
+    (used_gas + delimiter + name).print();
+}
+
 
 #[test]
 #[available_gas(2000000)]
-fn bench_database() {
-    let mut values = ArrayTrait::new();
-    values.append('database_test');
-    values.append('42');
+fn bench_storage_single() {
+    let keys = array!['database_test', '42'].span();
 
-    set('table', 'key', 0, values.span(), array![251, 251].span());
-    set('table', 'key', 0, values.span(), array![251, 251].span());
-    set('table', 'key', 0, values.span(), array![251, 251].span());
-    let res = get('table', 'key', 0, values.len(), array![251, 251].span());
+    storage::set(0, keys, 420);
 
-    assert(res.at(0) == values.at(0), 'Value at 0 not equal!');
-    assert(res.at(1) == values.at(1), 'Value at 0 not equal!');
-    assert(res.len() == values.len(), 'Lengths not equal');
+    let res = storage::get(0, keys);
+    assert(res == 420, 'values differ');
+}
+
+#[test]
+#[available_gas(2000000)]
+fn bench_storage_many() {
+    let keys = array![0x1337].span();
+    let values = array![1, 2].span();
+    let layout = array![251, 251].span();
+
+
+
+    let time = start();
+
+    storage::set_many(0, keys, 0, values, layout);
+
+    end(time, 'strg_m');
+
+    let res = storage::get_many(0, keys, 0, 2, layout);
+    assert(res.len() == 2, 'wrong number of values');
+    assert(*res.at(0) == *values.at(0), 'value not set');
+    assert(*res.at(1) == *values.at(1), 'value not set');
 }

@@ -5,8 +5,21 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
+function run()
+{
+    source scripts/cairo_test.sh -f bench_ | grep "DEBUG"  | awk 'match($0, /0x[0-9a-fA-F]+/) {
+        hex = substr($0, RSTART, RLENGTH);
+        for (i = - 11; i < 1; i += 2) {
+            printf "%c", strtonum("0x" substr(hex, length(hex) + i, 2));
+        }
+        print ": " substr(hex, 1, length(hex) - 14);
+    }'
+}
+
+run
+
 if [ $1 = "set" ]; then
-    source scripts/cairo_test.sh -f bench_ | grep "gas usage est.:" | sort | tee benches.txt
+    run | sort | tee benches.txt
 elif [ $1 = "diff" ]; then
-    source scripts/cairo_test.sh -f bench_ | grep "gas usage est.:" | sort | diff benches.txt -
+    run | sort | diff benches.txt -
 fi
