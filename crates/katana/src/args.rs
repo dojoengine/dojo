@@ -8,6 +8,7 @@ use katana_core::constants::{
 };
 use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
+use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -42,6 +43,9 @@ pub struct KatanaArgs {
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC provider to fork the network from.")]
     pub rpc_url: Option<Url>,
+
+    #[arg(long)]
+    pub dev: bool,
 
     #[arg(long)]
     #[arg(help = "Output logs in JSON format.")]
@@ -170,7 +174,14 @@ impl KatanaArgs {
     }
 
     pub fn server_config(&self) -> ServerConfig {
+        let mut apis = vec![ApiKind::Starknet];
+        // only enable `katana` API in dev mode
+        if self.dev {
+            apis.push(ApiKind::Katana);
+        }
+
         ServerConfig {
+            apis,
             port: self.server.port,
             host: self.server.host.clone().unwrap_or("0.0.0.0".into()),
         }

@@ -5,7 +5,7 @@ use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
 use katana_core::sequencer::KatanaSequencer;
-use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
+use katana_rpc::{spawn, NodeHandle};
 use tokio::signal::ctrl_c;
 use tracing::{error, info};
 
@@ -33,10 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let starknet_config = config.starknet_config();
 
     let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await);
-    let starknet_api = StarknetApi::new(sequencer.clone());
-    let katana_api = KatanaApi::new(sequencer.clone());
-
-    let NodeHandle { addr, handle, .. } = spawn(katana_api, starknet_api, server_config).await?;
+    let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
 
     if !config.silent {
         let accounts = sequencer.backend.accounts.iter();
