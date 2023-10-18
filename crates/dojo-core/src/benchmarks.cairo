@@ -5,6 +5,7 @@ use debug::PrintTrait;
 
 use dojo::database::storage;
 
+const GAS_OFFSET: felt252 = 0x1_000000_000000_000000_000000_000000; // 15 bajtów
 
 fn start() -> u128 {
     let gas = testing::get_available_gas();
@@ -13,13 +14,11 @@ fn start() -> u128 {
 }
 
 fn end(start: u128, name: felt252) {
-    // assert(name < 16777216 * 16777216, "name would not fit"); 
     let gas_after = testing::get_available_gas();
-    let used_gas: felt252 = (start - gas_after).into();
-    let used_gas = used_gas * 16777216 * 16777216 * 256;
-    let delimiter = 'tt' * 16777216 * 16777216;
+    let used_gas = (start - gas_after).into() * GAS_OFFSET;
+    // let name = name % GAS_OFFSET;
     
-    (used_gas + delimiter + name).print();
+    (used_gas + name).print();
 }
 
 
@@ -47,7 +46,7 @@ fn bench_storage_many() {
 
     storage::set_many(0, keys, 0, values, layout);
 
-    end(time, 'strg_m');
+    end(time, 'storage many');
 
     let res = storage::get_many(0, keys, 0, 2, layout);
     assert(res.len() == 2, 'wrong number of values');

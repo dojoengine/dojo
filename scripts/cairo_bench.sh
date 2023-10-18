@@ -7,16 +7,14 @@ fi
 
 function run()
 {
-    source scripts/cairo_test.sh -f bench_ | grep "DEBUG"  | awk 'match($0, /0x[0-9a-fA-F]+/) {
+    source scripts/cairo_test.sh -f bench_ | grep "DEBUG" | awk 'match($0, /0x[0-9a-fA-F]+/) {
         hex = substr($0, RSTART, RLENGTH);
-        for (i = - 11; i < 1; i += 2) {
+        for (i = - 29; i < 1; i += 2) {
             printf "%c", strtonum("0x" substr(hex, length(hex) + i, 2));
         }
-        print ": " substr(hex, 1, length(hex) - 14);
+        print ": " strtonum(substr(hex, 1, length(hex) - 30));
     }'
 }
-
-run
 
 if [ $1 = "set" ]; then
     run | sort | tee benches.txt
