@@ -1,40 +1,61 @@
 #[cfg(test)]
 mod tests {
     use std::process::Command;
+    use std::sync::Once;
+    use std::thread;
+    use std::time::Duration;
     // use clap_builder::Parser;
+    use anyhow::{anyhow, Context, Result};
     use starknet::core::types::{FieldElement, TransactionReceipt};
     use starknet::providers::jsonrpc::JsonRpcResponse;
+
+    use proptest::prelude::*;
 
     const KATANA_ENDPOINT: &str = "http://localhost:5050";
     const WORLD: &str = "0x223b959926c92e10a5de78a76871fa40cefafbdce789137843df7c7b30e3e0";
 
-    fn paid_fee(tx: &str) -> FieldElement {
+    fn paid_fee(tx: &str) -> Result<FieldElement> {
         let client = reqwest::blocking::Client::new();
+        let body = format!(
+            "{{\"jsonrpc\": \"2.0\",\"method\": \"starknet_getTransactionReceipt\",\"params\": [\"{}\"],\"id\": 1}}",
+            tx,
+        );
 
-        let res = client
-            .post(KATANA_ENDPOINT)
-            .body(format!(
-                "{{\"jsonrpc\": \"2.0\",\"method\": \"starknet_getTransactionReceipt\",\"params\": [\"{}\"],\"id\": 1}}",
-                tx,
-            ))
-            .header("Content-Type", "application/json")
-            .send()
-            .expect("Failed to send request");
+        let mut retries = 0;
+        let receipt = loop {
+            let res = client
+                .post(KATANA_ENDPOINT)
+                .body(body.clone())
+                .header("Content-Type", "application/json")
+                .send()
+                .context("Failed to send request")?;
 
-        assert_eq!(res.status(), 200, "Couldn't fetch fee");
+            if res.status() != 200 {
+                return Err(anyhow!("Failed to fetch receipt"));
+            }
 
-        let receipt: JsonRpcResponse<TransactionReceipt> =
-            res.json().expect("Failed to parse response");
+            let receipt: JsonRpcResponse<TransactionReceipt> =
+                res.json().context("Failed to parse response")?;
 
-        let receipt = match match receipt {
-            JsonRpcResponse::Success { result, .. } => result,
-            JsonRpcResponse::Error { error, .. } => panic!("Katana parsing error: {:?}", error),
-        } {
-            TransactionReceipt::Invoke(receipt) => receipt,
-            _ => panic!("Not an invoke transaction"),
+            match receipt {
+                JsonRpcResponse::Success { result, .. } => break result,
+                JsonRpcResponse::Error { error, .. } => {
+                    if retries > 10 {
+                        return Err(anyhow!("Transaction {} failed with: {}", tx, error));
+                    } else {
+                        retries += 1;
+                    }
+                }
+            }
+
+            thread::sleep(Duration::from_millis(50));
         };
 
-        receipt.actual_fee
+        if let TransactionReceipt::Invoke(receipt) = receipt {
+            Ok(receipt.actual_fee)
+        } else {
+            return Err(anyhow!("Not an invoke transaction"));
+        }
     }
 
     fn execute(entrypoint: &str, calldata: Option<String>) -> String {
@@ -73,12 +94,24 @@ mod tests {
         tx
     }
 
+    // does not need proptest, as it doesn't use any input
     #[test]
-    fn basic_contract_call() {
+    fn bench_spawn() {
         let tx = execute("spawn", None);
 
-        let fee = paid_fee(&tx);
+        let fee = paid_fee(&tx).unwrap();
         assert!(fee > FieldElement::ONE);
         println!("Tx: {}, fee: {}", tx, fee);
+    }
+
+    proptest! {
+        #[test]
+        fn bench_move(c in "0x[0-3]") {
+            let tx = execute("move", Some(c));
+
+            let fee = paid_fee(&tx).expect("Failed to fetch fee");
+            assert!(fee > FieldElement::ONE);
+            println!("Tx: {}, fee: {}", tx, fee);
+        }
     }
 }

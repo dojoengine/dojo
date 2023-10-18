@@ -637,6 +637,7 @@ dependencies = [
 name = "benches"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap_builder",
  "proptest",
  "reqwest",
