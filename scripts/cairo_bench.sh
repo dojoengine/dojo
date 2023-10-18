@@ -5,7 +5,6 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
-function run()
 {
     source scripts/cairo_test.sh -f bench_ | grep "DEBUG" | awk 'match($0, /0x[0-9a-fA-F]+/) {
         hex = substr($0, RSTART, RLENGTH);
