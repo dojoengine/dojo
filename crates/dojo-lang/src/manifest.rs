@@ -2,33 +2,25 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_debug::debug::DebugWithDb; // use cairo_lang_syntax::node::db::SyntaxGroup;
+// use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::{FunctionWithBodyId, ModuleFileId, ModuleId, ModuleItemId};
-use cairo_lang_filesystem::db::FilesGroup;
-use cairo_lang_filesystem::ids::{CrateId, FileId};
+use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
+use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_semantic as semantic;
 use cairo_lang_starknet::abi;
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
-use cairo_lang_syntax::node::ast::{Expr, ExprPath, ExprStructCtorCall, StatementExpr};
-use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::{SyntaxNode, TypedSyntaxNode};
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
     Class, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
 use semantic::db::SemanticGroup;
-use semantic::expr::compute::{maybe_compute_expr_semantic, ComputationContext};
-use semantic::expr::fmt::ExprFormatter;
-use semantic::items::function_with_body::SemanticExprLookup;
-use semantic::resolve::Resolver;
-use semantic::types::resolve_type;
 use serde::Serialize;
 use smol_str::SmolStr;
 use starknet::core::types::FieldElement;
 
-use crate::inline_macros::set::WRITERS;
+use crate::inline_macros::utils::WRITERS;
 use crate::plugin::DojoAuxData;
+use crate::semantics::utils::find_module_writes;
 
 #[derive(Default, Debug, Serialize)]
 pub(crate) struct Manifest(dojo_world::manifest::Manifest);
@@ -125,12 +117,11 @@ impl Manifest {
                         continue;
                     };
                     let aux_data = aux_data.0.as_any();
-                    if let Some(contracts) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
-                        manifest.find_contracts(db, module_id, contracts, &compiled_classes);
-                    } else if let Some(dojo_aux_data) = aux_data.downcast_ref() {
+                    if let Some(dojo_aux_data) = aux_data.downcast_ref() {
                         manifest.find_models(db, dojo_aux_data, *module_id, &compiled_classes);
-                    }
-                    if let Some(contracts) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
+                    } else if let Some(contracts) =
+                        aux_data.downcast_ref::<StarkNetContractAuxData>()
+                    {
                         manifest.find_contracts(db, module_id, contracts, &compiled_classes);
                     }
                 }
@@ -204,12 +195,8 @@ impl Manifest {
 
             let module_name = module_id.full_path(db);
             let module_last_name = module_name.split("::").last().unwrap();
-            println!("--------------------\n{module_name}");
-
             let writers = WRITERS.lock().unwrap();
-            let deps = self.find_module_writes(db, module_id, writers.get(module_last_name));
-
-            println!("Components: {:?}", deps);
+            let deps = find_module_writes(db, module_id, writers.get(module_last_name));
 
             self.0.contracts.push(Contract {
                 name: name.clone(),
@@ -219,134 +206,6 @@ impl Manifest {
                 deps,
             });
         }
-    }
-
-    fn find_function_writes(
-        &self,
-        db: &RootDatabase,
-        module_id: &ModuleId,
-        module_file_id: FileId,
-        module_writers: &HashMap<String, Vec<SyntaxNode>>,
-        fn_id: FunctionWithBodyId,
-        components: &mut HashMap<String, bool>,
-    ) {
-        let fn_body = db.function_body(fn_id).unwrap();
-        let fn_name: String = fn_id.name(db).into();
-        let fn_expr = db.expr_semantic(fn_id, fn_body.body_expr);
-        // println!("Parsing ..::{}()", fn_name);
-        // module_fn_map.insert(fn_name, *fn_id);
-        if let Some(module_fn_writers) = module_writers.get(&fn_name) {
-            // This functions has writers
-            // Do stuff with the writers
-            println!("({fn_name}) Writes found: {}, {module_file_id:?}", module_fn_writers.len());
-
-            for node in module_fn_writers.iter() {
-                match node.kind(db) {
-                    SyntaxKind::ExprPath => {
-                        let expr = Expr::Path(ExprPath::from_syntax_node(db, node.clone()));
-                        // let ptr = expr.stable_ptr();
-                        // db.lookup_intern_free_function();
-                        // db.lookup_expr_by_ptr(function_id, ptr.into());
-                        // let fn_expr = db.function_body_expr(fn_id).unwrap();
-                        // let diagnostics = db.function_body_diagnostics(fn_id);
-                        let expr_semantic = db.lookup_expr_by_ptr(fn_id, expr.stable_ptr());
-                        // resolve_type(db, diagnostics, resolver, ty_syntax);
-                        let crate_id = module_id.owning_crate(db);
-                        // let module_file = ModuleFileId
-
-                        let mut diagnostics = SemanticDiagnostics::new(module_id);
-
-                        let ctx = ComputationContext::new(
-                            db,
-                            diagnostics,
-                            Some(fn_body),
-                            Resolver::new(db, module_file_id, inference_id),
-                            signature,
-                            environment,
-                        );
-                        maybe_compute_expr_semantic(ctx, syntax);
-
-                        // println!("{:?} {:?}", expr_semantic, diagnostic);
-
-                        let component = expr.as_syntax_node().get_text_without_trivia(db);
-                        components.insert(component, true);
-                    }
-                    SyntaxKind::StatementExpr => {
-                        let expr = StatementExpr::from_syntax_node(db, node.clone());
-                        // let ptr = expr.stable_ptr();
-                        // db.lookup_intern_free_function();
-                        // db.lookup_expr_by_ptr(function_id, ptr.into());
-                        // let fn_expr = db.function_body_expr(fn_id).unwrap();
-                        let diagnostic = db.function_body_diagnostics(fn_id);
-                        // let expr_semantic = db.lookup_expr_by_ptr(fn_id, expr.stable_ptr());
-
-                        println!("StatementExpr{{:?}}:\n{}", node.get_text(db));
-
-                        let component = expr.as_syntax_node().get_text_without_trivia(db);
-                        components.insert(component, true);
-                    }
-                    SyntaxKind::ExprStructCtorCall => {
-                        let expr = ExprStructCtorCall::from_syntax_node(db, node.clone());
-                        let component = expr.path(db).as_syntax_node().get_text_without_trivia(db);
-                        components.insert(component, true);
-                    }
-                    _ => eprintln!(
-                        "Unsupport component value type {} for semantic writer analysis",
-                        node.kind(db)
-                    ),
-                }
-            }
-            println!("");
-        }
-    }
-
-    fn find_module_writes(
-        &self,
-        db: &RootDatabase,
-        module_id: &ModuleId,
-        module_writers: Option<&HashMap<String, Vec<SyntaxNode>>>,
-    ) -> Vec<String> {
-        let mut components: HashMap<String, bool> = HashMap::new();
-        // Does the module have writers?
-        if let Some(module_writers) = module_writers {
-            if let Ok(module_file_id) = db.module_files(*module_id) {
-                let module_file_id = module_file_id[0];
-
-                println!("{module_file_id:?}");
-
-                // Get module fn ids. And generate lookup hashmap
-                if let Ok(module_fns) = db.module_free_functions_ids(*module_id) {
-                    for fn_id in module_fns.iter() {
-                        self.find_function_writes(
-                            db,
-                            module_id,
-                            module_file_id,
-                            module_writers,
-                            FunctionWithBodyId::Free(*fn_id),
-                            &mut components,
-                        );
-                    }
-                }
-                if let Ok(module_impls) = db.module_impls_ids(*module_id) {
-                    for module_impl_id in module_impls.iter() {
-                        if let Ok(module_fns) = db.impl_functions(*module_impl_id) {
-                            for (_, fn_id) in module_fns.iter() {
-                                self.find_function_writes(
-                                    db,
-                                    module_id,
-                                    module_file_id,
-                                    module_writers,
-                                    FunctionWithBodyId::Impl(*fn_id),
-                                    &mut components,
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        components.into_iter().map(|(component, _)| component).collect()
     }
 }
 

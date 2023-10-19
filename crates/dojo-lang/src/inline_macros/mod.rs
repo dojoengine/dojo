@@ -6,6 +6,7 @@ use smol_str::SmolStr;
 pub mod emit;
 pub mod get;
 pub mod set;
+pub mod utils;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;
 
@@ -71,6 +72,7 @@ pub fn extract_models(
 
     Ok(models)
 }
+
 pub fn unsupported_arg_diagnostic(
     db: &dyn SyntaxGroup,
     macro_ast: &ast::ExprInlineMacro,

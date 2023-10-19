@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
 
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
@@ -7,52 +6,34 @@ use cairo_lang_defs::plugin::{
     PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
-use cairo_lang_syntax::node::ast::{FunctionWithBody, ItemModule};
+use cairo_lang_syntax::node::ast::{
+    ExprBlock, ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule,
+};
 use cairo_lang_syntax::node::kind::SyntaxKind;
-use cairo_lang_syntax::node::{ast, SyntaxNode, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use super::unsupported_arg_diagnostic;
+use super::utils::{get_parent_block, WriterLookupDetails, WRITERS};
 use crate::plugin::DojoAuxData;
-
-type ModuleName = String;
-type FunctionName = String;
-
-lazy_static::lazy_static! {
-    pub static ref WRITERS: Mutex<HashMap<ModuleName, HashMap<FunctionName, Vec<SyntaxNode>>>> = Default::default();
-}
 
 #[derive(Debug)]
 pub struct SetMacro;
 impl SetMacro {
     pub const NAME: &'static str = "set";
-    pub fn get_parent_block(
-        db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
-        target: &SyntaxNode,
-        kind: SyntaxKind,
-    ) -> Option<SyntaxNode> {
-        // Parents of set!()
-        // -----------------
-        // StatementExpr
-        // StatementList
-        // ExprBlock
-        // FunctionWithBody
-        // ImplItemList
-        // ImplBody
-        // ItemImpl
-        // ItemList
-        // ModuleBody
-        // ItemModule
-        // ItemList
-        // SyntaxFile
-        let mut new_target = target.clone();
-        while let Some(parent) = new_target.parent() {
-            if kind == parent.kind(db) {
-                return Some(parent);
-            }
-            new_target = parent;
-        }
-        return None;
-    }
+    // Parents of set!()
+    // -----------------
+    // StatementExpr
+    // StatementList
+    // ExprBlock
+    // FunctionWithBody
+    // ImplItemList
+    // ImplBody
+    // ItemImpl
+    // ItemList
+    // ModuleBody
+    // ItemModule
+    // ItemList
+    // SyntaxFile
 }
 impl InlineMacroExprPlugin for SetMacro {
     fn generate_code(
@@ -124,7 +105,7 @@ impl InlineMacroExprPlugin for SetMacro {
 
         let mut module_name = "".to_string();
         let module_syntax_node =
-            SetMacro::get_parent_block(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
+            get_parent_block(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
         if let Some(module_syntax_node) = &module_syntax_node {
             let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
             module_name = mod_ast.name(db).as_syntax_node().get_text_without_trivia(db);
@@ -132,11 +113,12 @@ impl InlineMacroExprPlugin for SetMacro {
 
         let mut fn_name = "".to_string();
         let fn_syntax_node =
-            SetMacro::get_parent_block(db, &syntax.as_syntax_node(), SyntaxKind::FunctionWithBody);
+            get_parent_block(db, &syntax.as_syntax_node(), SyntaxKind::FunctionWithBody);
         if let Some(fn_syntax_node) = &fn_syntax_node {
             let fn_ast = FunctionWithBody::from_syntax_node(db, fn_syntax_node.clone());
             fn_name = fn_ast.declaration(db).name(db).as_syntax_node().get_text_without_trivia(db);
         }
+
         for (entity, syntax_node) in bundle {
             // db.lookup_intern_file(key0);
             if module_name.len() > 0 && fn_name.len() > 0 {
@@ -149,7 +131,29 @@ impl InlineMacroExprPlugin for SetMacro {
                 if fns.get(&fn_name).is_none() {
                     fns.insert(fn_name.clone(), vec![]);
                 }
-                fns.get_mut(&fn_name).unwrap().push(syntax_node);
+                match syntax_node.kind(db) {
+                    SyntaxKind::ExprPath => {
+                        let parent_block =
+                            get_parent_block(db, &syntax.as_syntax_node(), SyntaxKind::ExprBlock)
+                                .unwrap();
+                        fns.get_mut(&fn_name).unwrap().push(WriterLookupDetails::Path(
+                            ExprPath::from_syntax_node(db, syntax_node),
+                            ExprBlock::from_syntax_node(db, parent_block),
+                        ));
+                    }
+                    // SyntaxKind::StatementExpr => {
+                    //     todo!()
+                    // }
+                    SyntaxKind::ExprStructCtorCall => {
+                        fns.get_mut(&fn_name).unwrap().push(WriterLookupDetails::StructCtor(
+                            ExprStructCtorCall::from_syntax_node(db, syntax_node.clone()),
+                        ));
+                    }
+                    _ => eprintln!(
+                        "Unsupport component value type {} for semantic writer analysis",
+                        syntax_node.kind(db)
+                    ),
+                }
             }
 
             builder.add_str(&format!(
