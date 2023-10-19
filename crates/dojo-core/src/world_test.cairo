@@ -11,6 +11,7 @@ use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::database::schema::SchemaIntrospection;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
+use dojo::benchmarks::{start, end};
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -390,12 +391,31 @@ fn test_execute_multiple_worlds() {
     bar1_contract.set_foo(1337, 1337);
     bar2_contract.set_foo(7331, 7331);
 
-    let mut keys = ArrayTrait::new();
-    keys.append(0);
-
     let data1 = get!(world1, alice, Foo);
     let data2 = get!(world2, alice, Foo);
     assert(data1.a == 1337, 'data1 not stored');
     assert(data2.a == 7331, 'data2 not stored');
+}
+
+#[test]
+#[available_gas(60000000)]
+fn bench_execute() {
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let bar_contract = IbarDispatcher {
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
+    };
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+
+    let gas = start();
+    bar_contract.set_foo(1337, 1337);
+    end(gas, 'foo set call');
+
+    let gas = start();
+    let data = get!(world, alice, Foo);
+    end(gas, 'foo get macro');
+
+    assert(data.a == 1337, 'data not stored');
 }
 

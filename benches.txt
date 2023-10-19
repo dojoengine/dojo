@@ -1,4 +1,17 @@
     bench empty: 0
+     db del arr: 16010
+     db get arr: 995548
+db get half arr: 545758
+ dbi scan arr 1: 405824
+ dbi scan arr 2: 746678
+dbi set arr 1st: 350334
+dbi set arr 2nd: 350334
+     db set arr: 832428
+  foo get macro: 974544
+       foo init: 0
+  foo serialize: 0
+   foo set call: 817974
+     foo values: 0
  idx create 1st: 80050
    idx dlt last: 112070
   idx dlt !last: 112070
@@ -10,4 +23,5 @@
     storage get: 16010
 storage get mny: 268944
     storage set: 16010
+   storage set2: 16010
 storage set mny: 263344

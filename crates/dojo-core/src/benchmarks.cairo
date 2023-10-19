@@ -7,6 +7,8 @@ use option::OptionTrait;
 use dojo::database;
 use dojo::database::{storage, index};
 use dojo::packing::{shl, shr};
+use dojo::model::Model;
+use dojo::world_test::Foo;
 
 const GAS_OFFSET: felt252 = 0x1_000000_000000_000000_000000_000000; // 15 bajtów
 
@@ -186,4 +188,36 @@ fn bench_indexed_database_array() {
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
     assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
+}
+
+
+#[test]
+#[available_gas(1000000000)]
+fn bench_simple_struct() {
+    let caller = starknet::contract_address_const::<0x42>();
+
+    let gas = start();
+    let mut foo = Foo {
+        caller,
+        a: 0x123456789abcdef,
+        b: 0x123456789abcdef,
+    };
+    end(gas, 'foo init');
+
+    let gas = start();
+    let mut serialized = ArrayTrait::new();
+    serde::Serde::serialize(@foo.caller, ref serialized);
+    serde::Serde::serialize(@foo.a, ref serialized);
+    serde::Serde::serialize(@foo.b, ref serialized);
+    let serialized = array::ArrayTrait::span(@serialized);
+    end(gas, 'foo serialize');
+
+    let gas = start();
+    let values = foo.values();
+    end(gas, 'foo values');
+
+    let gas = start();
+    let keys = array!['database_test', '42'].span();
+    storage::set(0, keys, 420);
+    end(gas, 'storage set2');
 }
