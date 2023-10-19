@@ -83,8 +83,8 @@ impl<'a, P> TransactionWaiter<'a, P>
 where
     P: Provider + Send,
 {
-    const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
-    const DEFAULT_INTERVAL: Duration = Duration::from_millis(250);
+    const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
+    const DEFAULT_INTERVAL: Duration = Duration::from_millis(2500);
 
     pub fn new(tx: FieldElement, provider: &'a P) -> Self {
         Self {
