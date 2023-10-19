@@ -3,6 +3,8 @@ use array::ArrayTrait;
 use array::SpanTrait;
 use debug::PrintTrait;
 use option::OptionTrait;
+use poseidon::poseidon_hash_span;
+use starknet::SyscallResultTrait;
 
 use dojo::database;
 use dojo::database::{storage, index};
@@ -39,6 +41,7 @@ fn end(start: u128, name: felt252) {
     let used_gas = (start - gas_after).into() * GAS_OFFSET;
     (used_gas + name).print();
 }
+
 
 #[test]
 #[available_gas(1000000000)]
@@ -81,6 +84,46 @@ fn bench_storage_many() {
     assert(res.len() == 2, 'wrong number of values');
     assert(*res.at(0) == *values.at(0), 'value not set');
     assert(*res.at(1) == *values.at(1), 'value not set');
+}
+
+#[test]
+#[available_gas(1000000000)]
+fn bench_native_storage() {
+    let gas = start();
+    let keys = array![0x1337].span();
+    let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
+    let address = starknet::storage_address_from_base(base);
+    end(gas, 'native prep');
+
+    let gas = start();
+    starknet::storage_write_syscall(0, address, 42);
+    end(gas, 'native write');
+
+    let gas = start();
+    let value = starknet::storage_read_syscall(0, address).unwrap_syscall();
+    end(gas, 'native read');
+
+    assert(value == 42, 'read invalid');
+}
+
+#[test]
+#[available_gas(1000000000)]
+fn bench_native_storage_offset() {
+    let gas = start();
+    let keys = array![0x1337].span();
+    let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
+    let address = starknet::storage_address_from_base_and_offset(base, 42);
+    end(gas, 'native prep of');
+
+    let gas = start();
+    starknet::storage_write_syscall(0, address, 42);
+    end(gas, 'native writ of');
+
+    let gas = start();
+    let value = starknet::storage_read_syscall(0, address).unwrap_syscall();
+    end(gas, 'native read of');
+
+    assert(value == 42, 'read invalid');
 }
 
 #[test]

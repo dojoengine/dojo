@@ -20,6 +20,12 @@ dbi set arr 2nd: 350334
   idx query 2nd: 80050
   idx query one: 80920
   idx query two: 121380
+    native prep: 4070
+ native prep of: 4070
+    native read: 5000
+ native read of: 5000
+   native write: 5000
+ native writ of: 5000
     storage get: 16010
 storage get mny: 268944
     storage set: 16010
