@@ -4,8 +4,9 @@ use jsonrpsee::core::Error;
 pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::KatanaSequencer;
 pub use katana_core::sequencer::SequencerConfig;
+use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
-use katana_rpc::{spawn, KatanaApi, NodeHandle, StarknetApi};
+use katana_rpc::{spawn, NodeHandle};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
@@ -31,13 +32,16 @@ impl TestSequencer {
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
         let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config).await);
 
-        let starknet_api = StarknetApi::new(sequencer.clone());
-        let katana_api = KatanaApi::new(sequencer.clone());
-
-        let handle =
-            spawn(katana_api, starknet_api, ServerConfig { port: 0, host: "localhost".into() })
-                .await
-                .expect("Unable to spawn server");
+        let handle = spawn(
+            Arc::clone(&sequencer),
+            ServerConfig {
+                port: 0,
+                host: "0.0.0.0".into(),
+                apis: vec![ApiKind::Starknet, ApiKind::Katana],
+            },
+        )
+        .await
+        .expect("Unable to spawn server");
 
         let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 

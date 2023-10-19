@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x2611f073498530f0faa0fda87956a405ae8cbd85cc6a28f4d8961d66cc51e4b",
+    "class_hash": "0x5179c281a8d3cca6cfb820201fa7a81150b56f9db492405a29e9564222370b8",
     "abi": [
       {
         "type": "impl",
@@ -153,6 +153,26 @@ test_manifest_file
             "outputs": [
               {
                 "type": "core::starknet::contract_address::ContractAddress"
+              }
+            ],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "upgrade_contract",
+            "inputs": [
+              {
+                "name": "address",
+                "type": "core::starknet::contract_address::ContractAddress"
+              },
+              {
+                "name": "class_hash",
+                "type": "core::starknet::class_hash::ClassHash"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::starknet::class_hash::ClassHash"
               }
             ],
             "state_mutability": "external"
@@ -503,6 +523,23 @@ test_manifest_file
       },
       {
         "type": "event",
+        "name": "dojo::world::world::ContractUpgraded",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          },
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world::MetadataUpdate",
         "kind": "struct",
         "members": [
@@ -658,6 +695,11 @@ test_manifest_file
           {
             "name": "ContractDeployed",
             "type": "dojo::world::world::ContractDeployed",
+            "kind": "nested"
+          },
+          {
+            "name": "ContractUpgraded",
+            "type": "dojo::world::world::ContractUpgraded",
             "kind": "nested"
           },
           {
@@ -822,8 +864,31 @@ test_manifest_file
     {
       "name": "actions",
       "address": null,
-      "class_hash": "0x4b3a8688b75ebacf254b07671f3dacaada9f23bac37c61f9561bbe4ead1c112",
+      "class_hash": "0x879e001074687da51991333bd4c3f8121bfa77547dd6daa4ff9330d1cfcd7e",
       "abi": [
+        {
+          "type": "impl",
+          "name": "Upgradeable",
+          "interface_name": "dojo::upgradable::IUpgradeable"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::upgradable::IUpgradeable",
+          "items": [
+            {
+              "type": "function",
+              "name": "upgrade",
+              "inputs": [
+                {
+                  "name": "new_class_hash",
+                  "type": "core::starknet::class_hash::ClassHash"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            }
+          ]
+        },
         {
           "type": "impl",
           "name": "ActionsImpl",

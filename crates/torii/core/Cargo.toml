@@ -10,7 +10,6 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-stream = "0.3.0"
 async-trait.workspace = true
 chrono.workspace = true
 dojo-types = { path = "../../dojo-types" }
@@ -32,7 +31,6 @@ thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
-torii-client = { path = "../client" }
 tracing.workspace = true
 
 [dev-dependencies]

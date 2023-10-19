@@ -176,25 +176,34 @@ pub trait Deployable: Declarable + Sync {
         let contract_address =
             get_contract_address(self.salt(), base_class_hash[0], &[], world_address);
 
-        match account
+        let call = match account
             .provider()
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
         {
+            Ok(current_class_hash) if current_class_hash != class_hash => Call {
+                calldata: vec![contract_address, class_hash],
+                selector: selector!("upgrade_contract"),
+                to: world_address,
+            },
+
             Err(ProviderError::StarknetError(StarknetErrorWithMessage {
                 code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
                 ..
-            })) => {}
+            })) => Call {
+                calldata: vec![self.salt(), class_hash],
+                selector: selector!("deploy_contract"),
+                to: world_address,
+            },
 
-            Ok(_) => return Err(MigrationError::ContractAlreadyDeployed(contract_address)),
+            Ok(_) => {
+                return Err(MigrationError::ContractAlreadyDeployed(contract_address));
+            }
+
             Err(e) => return Err(MigrationError::Provider(e)),
-        }
+        };
 
-        let mut txn = account.execute(vec![Call {
-            calldata: vec![self.salt(), class_hash],
-            selector: selector!("deploy_contract"),
-            to: world_address,
-        }]);
+        let mut txn = account.execute(vec![call]);
 
         if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);

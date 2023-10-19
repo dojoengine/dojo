@@ -96,11 +96,14 @@ impl KatanaSequencer {
         }
     }
 
-    async fn verify_contract_exists(&self, contract_address: &ContractAddress) -> bool {
-        self.backend
-            .state
-            .write()
+    async fn verify_contract_exists(
+        &self,
+        block_id: &BlockId,
+        contract_address: &ContractAddress,
+    ) -> bool {
+        self.state(block_id)
             .await
+            .unwrap()
             .get_class_hash_at(*contract_address)
             .is_ok_and(|c| c != ClassHash::default())
     }
@@ -181,7 +184,7 @@ impl KatanaSequencer {
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<ClassHash> {
-        if !self.verify_contract_exists(&contract_address).await {
+        if !self.verify_contract_exists(&block_id, &contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
@@ -214,7 +217,7 @@ impl KatanaSequencer {
         storage_key: StorageKey,
         block_id: BlockId,
     ) -> SequencerResult<StarkFelt> {
-        if !self.verify_contract_exists(&contract_address).await {
+        if !self.verify_contract_exists(&block_id, &contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
@@ -282,7 +285,7 @@ impl KatanaSequencer {
         block_id: BlockId,
         contract_address: ContractAddress,
     ) -> SequencerResult<Nonce> {
-        if !self.verify_contract_exists(&contract_address).await {
+        if !self.verify_contract_exists(&block_id, &contract_address).await {
             return Err(SequencerError::ContractNotFound(contract_address));
         }
 
@@ -295,7 +298,7 @@ impl KatanaSequencer {
         block_id: BlockId,
         function_call: ExternalFunctionCall,
     ) -> SequencerResult<Vec<StarkFelt>> {
-        if !self.verify_contract_exists(&function_call.contract_address).await {
+        if !self.verify_contract_exists(&block_id, &function_call.contract_address).await {
             return Err(SequencerError::ContractNotFound(function_call.contract_address));
         }
 

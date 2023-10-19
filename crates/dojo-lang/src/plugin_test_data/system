@@ -48,6 +48,17 @@ mod spawn {
         'spawn'
     }
 
+    #[external(v0)]
+    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+            let caller = starknet::get_caller_address();
+            assert(
+                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
+            );
+            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+        }
+    }
+
     use traits::Into;
     use dojo::world::Context;
 
@@ -74,6 +85,17 @@ mod proxy {
         'proxy'
     }
 
+    #[external(v0)]
+    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+            let caller = starknet::get_caller_address();
+            assert(
+                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
+            );
+            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+        }
+    }
+
 
     #[external(v0)]
     fn execute(self: @ContractState, value: felt252) -> felt252 {
@@ -96,6 +118,17 @@ mod ctxnamed {
     #[external(v0)]
     fn name(self: @ContractState) -> felt252 {
         'ctxnamed'
+    }
+
+    #[external(v0)]
+    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+            let caller = starknet::get_caller_address();
+            assert(
+                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
+            );
+            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+        }
     }
 
     use traits::Into;
