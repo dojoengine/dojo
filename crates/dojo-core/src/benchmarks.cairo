@@ -249,7 +249,6 @@ fn bench_simple_struct() {
 
     let gas = start();
     let mut serialized = ArrayTrait::new();
-    serde::Serde::serialize(@foo.caller, ref serialized);
     serde::Serde::serialize(@foo.a, ref serialized);
     serde::Serde::serialize(@foo.b, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
@@ -259,8 +258,8 @@ fn bench_simple_struct() {
     let values = foo.values();
     end(gas, 'foo values');
 
-    let gas = start();
-    let keys = array!['database_test', '42'].span();
-    storage::set(0, keys, 420);
-    end(gas, 'storage set2');
+    assert(serialized.len() == 2, 'serialized wrong length');
+    assert(values.len() == 2, 'value wrong length');
+    assert(serialized.at(0) == values.at(0), 'serialized differ at 0');
+    assert(serialized.at(1) == values.at(1), 'serialized differ at 1');
 }
