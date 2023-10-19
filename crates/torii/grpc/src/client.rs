@@ -1,7 +1,9 @@
 //! Client implementation for the gRPC service.
 
+use futures_util::stream::MapOk;
+use futures_util::{Stream, StreamExt, TryStreamExt};
 use protos::world::{world_client, SubscribeEntitiesRequest};
-use starknet::core::types::FromStrError;
+use starknet::core::types::{FromStrError, MaybePendingStateUpdate};
 use starknet_crypto::FieldElement;
 
 use crate::protos::world::{MetadataRequest, SubscribeEntitiesResponse};
@@ -66,8 +68,9 @@ impl WorldClient {
     pub async fn subscribe_entities(
         &mut self,
         entities: Vec<dojo_types::schema::EntityModel>,
-    ) -> Result<tonic::Streaming<SubscribeEntitiesResponse>, Error> {
-        self.inner
+    ) -> Result<EntityUpdateStreaming, Error> {
+        let stream = self
+            .inner
             .subscribe_entities(SubscribeEntitiesRequest {
                 entities: entities
                     .into_iter()
@@ -80,6 +83,32 @@ impl WorldClient {
             })
             .await
             .map_err(Error::Grpc)
-            .map(|res| res.into_inner())
+            .map(|res| res.into_inner())?;
+
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
+            let update = res.entity_update.expect("qed; state update must exist");
+            TryInto::<MaybePendingStateUpdate>::try_into(update).expect("must able to serialize")
+        }))))
+    }
+}
+
+pub struct EntityUpdateStreaming(
+    MapOk<
+        tonic::Streaming<SubscribeEntitiesResponse>,
+        Box<dyn Fn(SubscribeEntitiesResponse) -> MaybePendingStateUpdate>,
+    >,
+);
+
+impl Stream for EntityUpdateStreaming {
+    type Item = <MapOk<
+        tonic::Streaming<SubscribeEntitiesResponse>,
+        Box<dyn Fn(SubscribeEntitiesResponse) -> MaybePendingStateUpdate>,
+    > as Stream>::Item;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
     }
 }

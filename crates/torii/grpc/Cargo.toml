@@ -8,6 +8,7 @@ version.workspace = true
 [dependencies]
 bytes = "1.0"
 dojo-types = { path = "../../dojo-types" }
+futures-util = "0.3.28"
 futures.workspace = true
 parking_lot.workspace = true
 rayon.workspace = true
@@ -31,7 +32,6 @@ wasm-prost.workspace = true
 wasm-tonic.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-futures-util = "0.3.28"
 prost.workspace = true
 sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "sqlite", "uuid" ] }
 tokio-stream = "0.1.14"

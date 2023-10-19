@@ -15,7 +15,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::protos::world::SubscribeEntitiesResponse;
+use torii_grpc::client::EntityUpdateStreaming;
 
 use self::error::{Error, ParseError};
 use self::storage::ModelStorage;
@@ -140,7 +140,7 @@ impl Client {
     async fn initiate_subscription(
         &self,
         entities: Vec<EntityModel>,
-    ) -> Result<tonic::Streaming<SubscribeEntitiesResponse>, Error> {
+    ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_entities(entities).await?;
         Ok(stream)
