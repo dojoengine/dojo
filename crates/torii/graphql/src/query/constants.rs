@@ -9,3 +9,6 @@ pub const SYSTEM_TABLE: &str = "systems";
 pub const METADATA_TABLE: &str = "metadata";
 
 pub const ID_COLUMN: &str = "id";
+pub const ENTITY_ID_COLUMN: &str = "entity_id";
+
+pub const INTERNAL_ENTITY_ID_KEY: &str = "$entity_id$";
