@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use dojo_types::schema::Ty;
-use starknet::core::types::FromStrError;
+use starknet::core::types::{
+    ContractStorageDiffItem, FromStrError, MaybePendingStateUpdate, PendingStateUpdate, StateDiff,
+    StateUpdate, StorageEntry,
+};
 use starknet_crypto::FieldElement;
 
 use crate::protos;
@@ -47,6 +50,86 @@ impl From<dojo_types::schema::EntityModel> for protos::types::EntityModel {
         Self {
             model: value.model,
             keys: value.keys.into_iter().map(|key| format!("{key:#}")).collect(),
+        }
+    }
+}
+
+impl TryFrom<protos::types::StorageEntry> for StorageEntry {
+    type Error = FromStrError;
+    fn try_from(value: protos::types::StorageEntry) -> Result<Self, Self::Error> {
+        Ok(Self {
+            key: FieldElement::from_str(&value.key)?,
+            value: FieldElement::from_str(&value.value)?,
+        })
+    }
+}
+
+impl TryFrom<protos::types::StorageDiff> for ContractStorageDiffItem {
+    type Error = FromStrError;
+    fn try_from(value: protos::types::StorageDiff) -> Result<Self, Self::Error> {
+        Ok(Self {
+            address: FieldElement::from_str(&value.address)?,
+            storage_entries: value
+                .storage_entries
+                .into_iter()
+                .map(|entry| entry.try_into())
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
+impl TryFrom<protos::types::EntityDiff> for StateDiff {
+    type Error = FromStrError;
+    fn try_from(value: protos::types::EntityDiff) -> Result<Self, Self::Error> {
+        Ok(Self {
+            nonces: vec![],
+            declared_classes: vec![],
+            replaced_classes: vec![],
+            deployed_contracts: vec![],
+            deprecated_declared_classes: vec![],
+            storage_diffs: value
+                .storage_diffs
+                .into_iter()
+                .map(|diff| diff.try_into())
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
+impl TryFrom<protos::types::EntityUpdate> for StateUpdate {
+    type Error = FromStrError;
+    fn try_from(value: protos::types::EntityUpdate) -> Result<Self, Self::Error> {
+        Ok(Self {
+            new_root: FieldElement::ZERO,
+            old_root: FieldElement::ZERO,
+            block_hash: FieldElement::from_str(&value.block_hash)?,
+            state_diff: value.entity_diff.expect("must have").try_into()?,
+        })
+    }
+}
+
+impl TryFrom<protos::types::PendingEntityUpdate> for PendingStateUpdate {
+    type Error = FromStrError;
+    fn try_from(value: protos::types::PendingEntityUpdate) -> Result<Self, Self::Error> {
+        Ok(Self {
+            old_root: FieldElement::ZERO,
+            state_diff: value.entity_diff.expect("must have").try_into()?,
+        })
+    }
+}
+
+impl TryFrom<protos::types::MaybePendingEntityUpdate> for MaybePendingStateUpdate {
+    type Error = FromStrError;
+    fn try_from(value: protos::types::MaybePendingEntityUpdate) -> Result<Self, Self::Error> {
+        let update = value.update.expect("must have");
+
+        match update {
+            protos::types::maybe_pending_entity_update::Update::EntityUpdate(entity_update) => {
+                Ok(Self::Update(entity_update.try_into()?))
+            }
+            protos::types::maybe_pending_entity_update::Update::PendingEntityUpdate(
+                pending_entity_update,
+            ) => Ok(Self::PendingUpdate(pending_entity_update.try_into()?)),
         }
     }
 }
