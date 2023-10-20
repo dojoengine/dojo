@@ -3,7 +3,7 @@
 [package]
 edition = "2021"
 name = "torii-client-wasm"
-version = "0.3.0"
+version = "0.3.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
