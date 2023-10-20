@@ -1,33 +1,32 @@
     bench empty: 0
-     db del arr: 16010
-     db get arr: 995548
-db get half arr: 545758
- dbi scan arr 1: 405824
- dbi scan arr 2: 746678
-dbi set arr 1st: 350334
-dbi set arr 2nd: 350334
-     db set arr: 832428
-  foo get macro: 974544
-       foo init: 0
-  foo serialize: 0
-   foo set call: 817974
-     foo values: 0
- idx create 1st: 80050
-   idx dlt last: 112070
-  idx dlt !last: 112070
-      idx empty: 40460
- idx exists chk: 16010
-  idx query 2nd: 80050
-  idx query one: 80920
-  idx query two: 121380
-    native prep: 4070
- native prep of: 4070
-    native read: 5000
- native read of: 5000
-   native write: 5000
- native writ of: 5000
-    storage get: 16010
-storage get mny: 268944
-    storage set: 16010
-   storage set2: 16010
-storage set mny: 263344
+     db del arr: 14240
+     db get arr: 1027288
+db get half arr: 726058
+ dbi scan arr 1: 452874
+ dbi scan arr 2: 805378
+dbi set arr 1st: 482814
+dbi set arr 2nd: 482634
+     db set arr: 855808
+  foo get macro: 972774
+       foo init: 770
+  foo serialize: 3620
+   foo set call: 816204
+     foo values: 13560
+ idx create 1st: 78280
+   idx dlt last: 284480
+  idx dlt !last: 285040
+      idx empty: 185890
+ idx exists chk: 40520
+  idx query 2nd: 187780
+  idx query one: 119120
+  idx query two: 159580
+    native prep: 11600
+ native prep of: 11600
+    native read: 17880
+ native read of: 17880
+   native write: 17260
+ native writ of: 17260
+    storage get: 36860
+storage get mny: 297424
+    storage set: 36600
+storage set mny: 284284
