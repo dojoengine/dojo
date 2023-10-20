@@ -17,7 +17,7 @@ async function setup() {
 		const client = await spawn_client(
 			"http://0.0.0.0:8080/grpc",
 			"http://0.0.0.0:5050",
-			"0x3fa481f41522b90b3684ecfab7650c259a76387fab9c380b7a959e3d4ac69f",
+			"0x1af130f7b9027f3748c1e3b10ca4a82ac836a30ac4f2f84025e83a99a922a0c",
 			[
 				{
 					model: "Position",
@@ -25,33 +25,51 @@ async function setup() {
 						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
 					],
 				},
-			]
-		);
-
-		setTimeout(() => {
-			client.addEntitiesToSync([
 				{
 					model: "Moves",
 					keys: [
 						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
 					],
 				},
-			]);
-		}, 10000);
+			]
+		);
 
-		// setup the message handler for the worker
-		self.onmessage = function (e) {
-			const event = e.data.type;
-			const data = e.data.data;
+		client.onEntityChange({
+			model: "Moves",
+			keys: ["0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"],
+		});
 
-			if (event === "getModelValue") {
-				getModelValueHandler(client, data);
-			} else if (event === "addEntityToSync") {
-				addEntityToSyncHandler(client, data);
-			} else {
-				console.log("Sync Worker: Unknown event type", event);
-			}
-		};
+		client.onEntityChange({
+			model: "Position",
+			keys: ["0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"],
+		});
+
+		console.log("registered listeners");
+
+		// setTimeout(() => {
+		// 	client.addEntitiesToSync([
+		// 		{
+		// 			model: "Moves",
+		// 			keys: [
+		// 				"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+		// 			],
+		// 		},
+		// 	]);
+		// }, 10000);
+
+		// // setup the message handler for the worker
+		// self.onmessage = function (e) {
+		// 	const event = e.data.type;
+		// 	const data = e.data.data;
+
+		// 	if (event === "getModelValue") {
+		// 		getModelValueHandler(client, data);
+		// 	} else if (event === "addEntityToSync") {
+		// 		addEntityToSyncHandler(client, data);
+		// 	} else {
+		// 		console.log("Sync Worker: Unknown event type", event);
+		// 	}
+		// };
 
 		console.log("Torii client initialized 🔥");
 	} catch (e) {

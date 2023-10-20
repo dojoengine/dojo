@@ -1,5 +1,5 @@
 use dojo_world::contracts::model::ModelError;
-use starknet::core::utils::CairoShortStringToFeltError;
+use starknet::core::utils::{CairoShortStringToFeltError, ParseCairoShortStringError};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 
@@ -30,4 +30,6 @@ pub enum ParseError {
     FeltFromStr(#[from] starknet::core::types::FromStrError),
     #[error(transparent)]
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
+    #[error(transparent)]
+    ParseCairoShortString(#[from] ParseCairoShortStringError),
 }

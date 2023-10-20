@@ -59,7 +59,7 @@ impl Client {
         let mut schema = self.metadata.read().model(model).map(|m| m.schema.clone())?;
 
         let Ok(Some(raw_values)) =
-            self.storage.get_entity(cairo_short_string_to_felt(model).ok()?, keys)
+            self.storage.get_entity_storage(cairo_short_string_to_felt(model).ok()?, keys)
         else {
             return Some(schema);
         };
@@ -137,6 +137,10 @@ impl Client {
         Ok(())
     }
 
+    pub fn storage(&self) -> Arc<ModelStorage> {
+        Arc::clone(&self.storage)
+    }
+
     async fn initiate_subscription(
         &self,
         entities: Vec<EntityModel>,
@@ -149,7 +153,7 @@ impl Client {
     async fn initiate_entity(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
         let model_reader = self.world_reader.model(model).await?;
         let values = model_reader.entity_storage(&keys).await?;
-        self.storage.set_entity(
+        self.storage.set_entity_storage(
             cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,
             keys,
             values,
@@ -207,7 +211,7 @@ impl ClientBuilder {
                 let model_reader = world_reader.model(&model).await?;
                 let values = model_reader.entity_storage(&keys).await?;
 
-                client_storage.set_entity(
+                client_storage.set_entity_storage(
                     cairo_short_string_to_felt(&model).unwrap(),
                     keys,
                     values,

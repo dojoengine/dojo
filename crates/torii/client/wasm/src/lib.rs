@@ -2,7 +2,9 @@
 
 use std::str::FromStr;
 
+use futures::StreamExt;
 use starknet::core::types::FieldElement;
+use starknet::core::utils::cairo_short_string_to_felt;
 use wasm_bindgen::prelude::*;
 
 mod utils;
@@ -10,7 +12,7 @@ mod utils;
 use utils::parse_ty_as_json_str;
 
 type JsFieldElement = JsValue;
-type JsEntityComponent = JsValue;
+type JsEntityModel = JsValue;
 
 #[wasm_bindgen]
 extern "C" {
@@ -19,7 +21,9 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub struct Client(torii_client::client::Client);
+pub struct Client {
+    inner: torii_client::client::Client,
+}
 
 #[wasm_bindgen]
 impl Client {
@@ -40,7 +44,7 @@ impl Client {
                 JsValue::from_str(format!("failed to parse entity keys: {err}").as_str())
             })?;
 
-        match self.0.entity(model, &keys) {
+        match self.inner.entity(model, &keys) {
             Some(ty) => Ok(serde_wasm_bindgen::to_value(&parse_ty_as_json_str(&ty))?),
             None => Ok(JsValue::NULL),
         }
@@ -52,14 +56,14 @@ impl Client {
         #[cfg(feature = "console-error-panic")]
         console_error_panic_hook::set_once();
 
-        let entities = self.0.synced_entities();
+        let entities = self.inner.synced_entities();
         serde_wasm_bindgen::to_value(&entities).map_err(|e| e.into())
     }
 
     #[wasm_bindgen(js_name = addEntitiesToSync)]
     pub async fn add_entities_to_sync(
         &mut self,
-        entities: Vec<JsEntityComponent>,
+        entities: Vec<JsEntityModel>,
     ) -> Result<(), JsValue> {
         log("adding entities to sync...");
 
@@ -71,7 +75,7 @@ impl Client {
             .map(serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>)
             .collect::<Result<Vec<_>, _>>()?;
 
-        self.0
+        self.inner
             .add_entities_to_sync(entities)
             .await
             .map_err(|err| JsValue::from_str(&err.to_string()))
@@ -80,7 +84,7 @@ impl Client {
     #[wasm_bindgen(js_name = removeEntitiesToSync)]
     pub async fn remove_entities_to_sync(
         &self,
-        entities: Vec<JsEntityComponent>,
+        entities: Vec<JsEntityModel>,
     ) -> Result<(), JsValue> {
         log("removing entities to sync...");
 
@@ -92,10 +96,27 @@ impl Client {
             .map(serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>)
             .collect::<Result<Vec<_>, _>>()?;
 
-        self.0
+        self.inner
             .remove_entities_to_sync(entities)
             .await
             .map_err(|err| JsValue::from_str(&err.to_string()))
+    }
+
+    #[wasm_bindgen(js_name = onEntityChange)]
+    pub fn on_entity_change(&self, entity: JsEntityModel) -> Result<(), JsValue> {
+        let entity = serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>(entity)?;
+        let model = cairo_short_string_to_felt(&entity.model).expect("invalid model name");
+        let mut rcv = self.inner.storage().add_listener(model, &entity.keys).unwrap();
+
+        log(&format!("listening to {}", entity.model));
+
+        wasm_bindgen_futures::spawn_local(async move {
+            while let Some(event) = rcv.next().await {
+                log(&format!("received event for {}: {:?}", entity.model, event));
+            }
+        });
+
+        Ok(())
     }
 }
 
@@ -105,7 +126,7 @@ pub async fn spawn_client(
     torii_url: &str,
     rpc_url: &str,
     world_address: &str,
-    initial_entities_to_sync: Vec<JsEntityComponent>,
+    initial_entities_to_sync: Vec<JsEntityModel>,
 ) -> Result<Client, JsValue> {
     #[cfg(feature = "console-error-panic")]
     console_error_panic_hook::set_once();
@@ -131,5 +152,5 @@ pub async fn spawn_client(
         )
     })?);
 
-    Ok(Client(client))
+    Ok(Client { inner: client })
 }

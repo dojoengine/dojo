@@ -172,7 +172,7 @@ impl SubscriptionService {
     }
 
     // handle the response from the subscription stream
-    fn handle_response(&self, response: Result<MaybePendingStateUpdate, tonic::Status>) {
+    fn handle_response(&mut self, response: Result<MaybePendingStateUpdate, tonic::Status>) {
         match response {
             Ok(update) => {
                 let entity_diff = match update {
@@ -191,7 +191,7 @@ impl SubscriptionService {
         }
     }
 
-    fn process_entity_diff(&self, diff: StateDiff) {
+    fn process_entity_diff(&mut self, diff: StateDiff) {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
@@ -202,13 +202,16 @@ impl SubscriptionService {
             return;
         };
 
-        entries.into_iter().for_each(|entry| {
-            if self.subscribed_entities.subscribed_storage_addresses.read().contains(&entry.key) {
-                self.storage.storage.write().insert(entry.key, entry.value);
-            } else {
-                eprintln!("unknown storage address");
-            }
-        })
+        let entries: Vec<(FieldElement, FieldElement)> = {
+            let subscribed_entities = self.subscribed_entities.subscribed_storage_addresses.read();
+            entries
+                .into_iter()
+                .filter(|entry| subscribed_entities.contains(&entry.key))
+                .map(|entry| (entry.key, entry.value))
+                .collect()
+        };
+
+        self.storage.set_storages_at(entries);
     }
 }
 
