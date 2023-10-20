@@ -181,7 +181,7 @@ mod tests {
         let first_record = connection.edges.first().unwrap();
         let last_record = connection.edges.last().unwrap();
         assert_eq!(connection.total_count, 10);
-        assert!(first_record.node.type_u8 > last_record.node.type_u8);
+        assert!(first_record.node.random_u8 >= last_record.node.random_u8);
 
         // order on random u128 ASC (string)
         let records =
@@ -190,7 +190,7 @@ mod tests {
         let first_record = connection.edges.first().unwrap();
         let last_record = connection.edges.last().unwrap();
         assert_eq!(connection.total_count, 10);
-        assert!(first_record.node.type_class_hash < last_record.node.type_class_hash);
+        assert!(first_record.node.random_u128 <= last_record.node.random_u128);
 
         // *** ORDER + WHERE FILTER TESTING ***
 
