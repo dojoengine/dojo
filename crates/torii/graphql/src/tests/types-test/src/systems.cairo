@@ -12,12 +12,25 @@ mod records {
     use types_test::{seed, random};
     use super::IRecords;
 
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        RecordLogged: RecordLogged
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct RecordLogged {
+        record_id: u32,
+        type_u8: u8,
+        type_felt: felt252,
+    }
+
     #[external(v0)]
     impl RecordsImpl of IRecords<ContractState> {
         fn create(self: @ContractState, num_records: u8) {
             let world = self.world_dispatcher.read();
             let mut record_idx = 0;
-            
+
             loop {
                 if record_idx == num_records {
                     break ();
@@ -80,6 +93,8 @@ mod records {
                 );
 
                 record_idx += 1;
+
+                emit!(world, RecordLogged { record_id, type_u8: record_idx.into(), type_felt });
             };
             return ();
         }
