@@ -1,4 +1,4 @@
 [package]
 cairo-version = "1.2.0"
 name = "sozo_test"
-version = "0.3.0-rc7"
+version = "0.3.1-rc7"

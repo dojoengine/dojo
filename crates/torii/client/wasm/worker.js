@@ -5,7 +5,7 @@ importScripts("./pkg/torii_client_wasm.js");
 
 // In the worker, we have a different struct that we want to use as in
 // `index.js`.
-const { spawn_client } = wasm_bindgen;
+const { createClient } = wasm_bindgen;
 
 async function setup() {
 	console.log("Initializing torii client worker 🚧");
@@ -14,10 +14,7 @@ async function setup() {
 	await wasm_bindgen("./pkg/torii_client_wasm_bg.wasm");
 
 	try {
-		const client = await spawn_client(
-			"http://0.0.0.0:8080/grpc",
-			"http://0.0.0.0:5050",
-			"0x3fa481f41522b90b3684ecfab7650c259a76387fab9c380b7a959e3d4ac69f",
+		const client = await createClient(
 			[
 				{
 					model: "Position",
@@ -25,33 +22,75 @@ async function setup() {
 						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
 					],
 				},
-			]
-		);
-
-		setTimeout(() => {
-			client.addEntitiesToSync([
 				{
 					model: "Moves",
 					keys: [
 						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
 					],
 				},
-			]);
-		}, 10000);
-
-		// setup the message handler for the worker
-		self.onmessage = function (e) {
-			const event = e.data.type;
-			const data = e.data.data;
-
-			if (event === "getModelValue") {
-				getModelValueHandler(client, data);
-			} else if (event === "addEntityToSync") {
-				addEntityToSyncHandler(client, data);
-			} else {
-				console.log("Sync Worker: Unknown event type", event);
+			],
+			{
+				rpcUrl: "http://0.0.0.0:5050",
+				toriiUrl: "http://0.0.0.0:8080/grpc",
+				worldAddress:
+					"0x1af130f7b9027f3748c1e3b10ca4a82ac836a30ac4f2f84025e83a99a922a0c",
 			}
-		};
+		);
+
+		client.onEntityChange(
+			{
+				model: "Position",
+				keys: [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				],
+			},
+			() => {
+				const values = client.getModelValue("Position", [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				]);
+				console.log("Position changed", values);
+			}
+		);
+
+		client.onEntityChange(
+			{
+				model: "Moves",
+				keys: [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				],
+			},
+			() => {
+				const values = client.getModelValue("Moves", [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				]);
+				console.log("Moves changed", values);
+			}
+		);
+
+		// setTimeout(() => {
+		// 	client.addEntitiesToSync([
+		// 		{
+		// 			model: "Moves",
+		// 			keys: [
+		// 				"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+		// 			],
+		// 		},
+		// 	]);
+		// }, 10000);
+
+		// // setup the message handler for the worker
+		// self.onmessage = function (e) {
+		// 	const event = e.data.type;
+		// 	const data = e.data.data;
+
+		// 	if (event === "getModelValue") {
+		// 		getModelValueHandler(client, data);
+		// 	} else if (event === "addEntityToSync") {
+		// 		addEntityToSyncHandler(client, data);
+		// 	} else {
+		// 		console.log("Sync Worker: Unknown event type", event);
+		// 	}
+		// };
 
 		console.log("Torii client initialized 🔥");
 	} catch (e) {
@@ -70,7 +109,7 @@ async function getModelValueHandler(client, data) {
 	const model = data.model;
 	const keys = data.keys;
 
-	const values = await client.getModelValue(model, keys);
+	const values = client.getModelValue(model, keys);
 
 	console.log("Sync Worker | Got model value | values: ", values);
 

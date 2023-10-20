@@ -1,12 +1,14 @@
-mod api;
+pub mod api;
 pub mod config;
-mod katana;
-mod starknet;
+pub mod katana;
+pub mod starknet;
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
+use api::ApiKind;
 use config::ServerConfig;
 use hyper::Method;
 use jsonrpsee::server::logger::{Logger, MethodKind, TransportProtocol};
@@ -15,22 +17,28 @@ use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
+use katana_core::sequencer::KatanaSequencer;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::api::katana::KatanaApiServer;
 use crate::api::starknet::StarknetApiServer;
-pub use crate::katana::KatanaApi;
-pub use crate::starknet::StarknetApi;
+use crate::katana::KatanaApi;
+use crate::starknet::StarknetApi;
 
-pub async fn spawn(
-    katana_api: KatanaApi,
-    starknet_api: StarknetApi,
-    config: ServerConfig,
-) -> Result<NodeHandle> {
+pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Result<NodeHandle> {
     let mut methods = RpcModule::new(());
-    methods.merge(starknet_api.into_rpc())?;
-    methods.merge(katana_api.into_rpc())?;
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
+
+    for api in &config.apis {
+        match api {
+            ApiKind::Starknet => {
+                methods.merge(StarknetApi::new(sequencer.clone()).into_rpc())?;
+            }
+            ApiKind::Katana => {
+                methods.merge(KatanaApi::new(sequencer.clone()).into_rpc())?;
+            }
+        }
+    }
 
     let cors = CorsLayer::new()
             // Allow `POST` when accessing the resource

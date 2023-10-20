@@ -14,25 +14,7 @@ pub async fn count_rows(
     filters: &Option<Vec<Filter>>,
 ) -> Result<i64> {
     let mut query = format!("SELECT COUNT(*) FROM {}", table_name);
-    let mut conditions = Vec::new();
-
-    if let Some(keys) = keys {
-        let keys_str = keys.join("/");
-        conditions.push(format!("keys LIKE '{}/%'", keys_str));
-    }
-
-    if let Some(filters) = filters {
-        for filter in filters {
-            let condition = match filter.value {
-                FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
-                FilterValue::String(ref s) => {
-                    format!("{} {} '{}'", filter.field, filter.comparator, s)
-                }
-            };
-
-            conditions.push(condition);
-        }
-    }
+    let conditions = build_conditions(keys, filters);
 
     if !conditions.is_empty() {
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
@@ -61,12 +43,7 @@ pub async fn fetch_multiple_rows(
     filters: &Option<Vec<Filter>>,
     connection: &ConnectionArguments,
 ) -> Result<Vec<SqliteRow>> {
-    let mut conditions = Vec::new();
-
-    if let Some(keys) = &keys {
-        let keys_str = keys.join("/");
-        conditions.push(format!("keys LIKE '{}/%'", keys_str));
-    }
+    let mut conditions = build_conditions(keys, filters);
 
     if let Some(after_cursor) = &connection.after {
         conditions.push(handle_cursor(after_cursor, order, CursorDirection::After, id_column)?);
@@ -74,10 +51,6 @@ pub async fn fetch_multiple_rows(
 
     if let Some(before_cursor) = &connection.before {
         conditions.push(handle_cursor(before_cursor, order, CursorDirection::Before, id_column)?);
-    }
-
-    if let Some(filters) = filters {
-        conditions.extend(filters.iter().map(handle_filter));
     }
 
     let mut query = format!("SELECT * FROM {}", table_name);
@@ -147,9 +120,20 @@ fn handle_cursor(
     }
 }
 
-fn handle_filter(filter: &Filter) -> String {
-    match &filter.value {
-        FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
-        FilterValue::String(s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
+fn build_conditions(keys: &Option<Vec<String>>, filters: &Option<Vec<Filter>>) -> Vec<String> {
+    let mut conditions = Vec::new();
+
+    if let Some(keys) = &keys {
+        let keys_str = keys.join("/").replace('*', "%");
+        conditions.push(format!("keys LIKE '{}/%'", keys_str));
     }
+
+    if let Some(filters) = filters {
+        conditions.extend(filters.iter().map(|filter| match &filter.value {
+            FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
+            FilterValue::String(s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
+        }));
+    }
+
+    conditions
 }

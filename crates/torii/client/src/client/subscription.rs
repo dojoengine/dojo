@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::future::Future;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::task::Poll;
 
@@ -10,19 +9,17 @@ use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::{Mutex, RwLock};
+use starknet::core::types::{MaybePendingStateUpdate, StateDiff};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
-use torii_grpc::protos;
-use torii_grpc::protos::types::EntityDiff;
-use torii_grpc::protos::world::SubscribeEntitiesResponse;
+use torii_grpc::client::EntityUpdateStreaming;
 
 use super::error::{Error, ParseError};
 use super::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
-#[derive(Debug)]
 pub enum SubscriptionEvent {
-    UpdateSubsciptionStream(tonic::Streaming<SubscribeEntitiesResponse>),
+    UpdateSubsciptionStream(EntityUpdateStreaming),
 }
 
 pub struct SubscribedEntities {
@@ -33,7 +30,7 @@ pub struct SubscribedEntities {
 }
 
 impl SubscribedEntities {
-    pub(crate) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
+    pub(super) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
         Self {
             metadata,
             entities: Default::default(),
@@ -41,21 +38,21 @@ impl SubscribedEntities {
         }
     }
 
-    pub fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub(super) fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
             Self::add_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub(super) fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
             Self::remove_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub(crate) fn add_entity(&self, entity: EntityModel) -> Result<(), Error> {
+    pub(super) fn add_entity(&self, entity: EntityModel) -> Result<(), Error> {
         if !self.entities.write().insert(entity.clone()) {
             return Ok(());
         }
@@ -83,7 +80,7 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub(crate) fn remove_entity(&self, entity: EntityModel) -> Result<(), Error> {
+    pub(super) fn remove_entity(&self, entity: EntityModel) -> Result<(), Error> {
         if !self.entities.write().remove(&entity) {
             return Ok(());
         }
@@ -120,10 +117,7 @@ impl SubscriptionClientHandle {
         Self(Mutex::new(sender))
     }
 
-    pub(crate) fn update_subscription_stream(
-        &self,
-        stream: tonic::Streaming<SubscribeEntitiesResponse>,
-    ) {
+    pub(crate) fn update_subscription_stream(&self, stream: EntityUpdateStreaming) {
         let _ = self.0.lock().try_send(SubscriptionEvent::UpdateSubsciptionStream(stream));
     }
 }
@@ -132,7 +126,8 @@ impl SubscriptionClientHandle {
 pub struct SubscriptionService {
     req_rcv: Receiver<SubscriptionEvent>,
     /// The stream returned by the subscription server to receive the response
-    sub_res_stream: RefCell<Option<tonic::Streaming<SubscribeEntitiesResponse>>>,
+    sub_res_stream: RefCell<Option<EntityUpdateStreaming>>,
+
     /// Callback to be called on error
     err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
 
@@ -147,7 +142,7 @@ impl SubscriptionService {
         storage: Arc<ModelStorage>,
         world_metadata: Arc<RwLock<WorldMetadata>>,
         subscribed_entities: Arc<SubscribedEntities>,
-        sub_res_stream: tonic::Streaming<SubscribeEntitiesResponse>,
+        sub_res_stream: EntityUpdateStreaming,
     ) -> (Self, SubscriptionClientHandle) {
         let (req_sender, req_rcv) = mpsc::channel(128);
 
@@ -177,21 +172,13 @@ impl SubscriptionService {
     }
 
     // handle the response from the subscription stream
-    fn handle_response(&self, response: Result<SubscribeEntitiesResponse, tonic::Status>) {
+    fn handle_response(&mut self, response: Result<MaybePendingStateUpdate, tonic::Status>) {
         match response {
-            Ok(res) => {
-                let entity_diff = res
-                    .entity_update
-                    .and_then(|e| e.update)
-                    .and_then(|update| match update {
-                        protos::types::maybe_pending_entity_update::Update::EntityUpdate(
-                            update,
-                        ) => update.entity_diff,
-                        protos::types::maybe_pending_entity_update::Update::PendingEntityUpdate(
-                            update,
-                        ) => update.entity_diff,
-                    })
-                    .expect("have entity update");
+            Ok(update) => {
+                let entity_diff = match update {
+                    MaybePendingStateUpdate::Update(update) => update.state_diff,
+                    MaybePendingStateUpdate::PendingUpdate(update) => update.state_diff,
+                };
 
                 self.process_entity_diff(entity_diff);
             }
@@ -204,10 +191,10 @@ impl SubscriptionService {
         }
     }
 
-    fn process_entity_diff(&self, diff: EntityDiff) {
+    fn process_entity_diff(&mut self, diff: StateDiff) {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
-            let current = FieldElement::from_str(&d.address).expect("valid FieldElement value");
+            let current = d.address;
             if current == expected { Some(d.storage_entries) } else { None }
         });
 
@@ -215,18 +202,16 @@ impl SubscriptionService {
             return;
         };
 
-        entries.into_iter().enumerate().for_each(|(i, entry)| {
-            let key = FieldElement::from_str(&entry.key).expect("valid FieldElement value");
-            let value = FieldElement::from_str(&entry.value).expect("valid FieldElement value");
+        let entries: Vec<(FieldElement, FieldElement)> = {
+            let subscribed_entities = self.subscribed_entities.subscribed_storage_addresses.read();
+            entries
+                .into_iter()
+                .filter(|entry| subscribed_entities.contains(&entry.key))
+                .map(|entry| (entry.key, entry.value))
+                .collect()
+        };
 
-            println!("[{i}] key: {key:#x} value: {value:#x}", key = key, value = value);
-
-            if self.subscribed_entities.subscribed_storage_addresses.read().contains(&key) {
-                self.storage.storage.write().insert(key, value);
-            } else {
-                panic!("unknown storage address");
-            }
-        })
+        self.storage.set_storages_at(entries);
     }
 }
 

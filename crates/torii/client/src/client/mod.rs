@@ -3,26 +3,26 @@ pub mod storage;
 pub mod subscription;
 
 use std::cell::OnceCell;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use dojo_types::packing::unpack;
 use dojo_types::schema::{EntityModel, Ty};
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::protos::world::SubscribeEntitiesResponse;
+use torii_grpc::client::EntityUpdateStreaming;
 
 use self::error::{Error, ParseError};
 use self::storage::ModelStorage;
 use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
 use crate::client::subscription::SubscriptionService;
 
-// TODO: expose the World interface from the `Client`
 // TODO: remove reliance on RPC
 #[allow(unused)]
 pub struct Client {
@@ -46,9 +46,13 @@ impl Client {
         ClientBuilder::new()
     }
 
-    /// Returns the metadata of the world that the client is connected to.
-    pub fn metadata(&self) -> WorldMetadata {
-        self.metadata.read().clone()
+    /// Returns a read lock on the World metadata that the client is connected to.
+    pub fn metadata(&self) -> RwLockReadGuard<'_, WorldMetadata> {
+        self.metadata.read()
+    }
+
+    pub fn subscribed_entities(&self) -> RwLockReadGuard<'_, HashSet<EntityModel>> {
+        self.subscribed_entities.entities.read()
     }
 
     /// Returns the model value of an entity.
@@ -59,7 +63,7 @@ impl Client {
         let mut schema = self.metadata.read().model(model).map(|m| m.schema.clone())?;
 
         let Ok(Some(raw_values)) =
-            self.storage.get_entity(cairo_short_string_to_felt(model).ok()?, keys)
+            self.storage.get_entity_storage(cairo_short_string_to_felt(model).ok()?, keys)
         else {
             return Some(schema);
         };
@@ -79,15 +83,10 @@ impl Client {
         Some(schema)
     }
 
-    /// Returns the list of entities that the client is subscribed to.
-    pub fn synced_entities(&self) -> Vec<EntityModel> {
-        self.subscribed_entities.entities.read().clone().into_iter().collect()
-    }
-
     /// Initiate the entity subscriptions and returns a [SubscriptionService] which when await'ed
     /// will execute the subscription service and starts the syncing process.
     pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
-        let entities = self.synced_entities();
+        let entities = self.subscribed_entities.entities.read().clone().into_iter().collect();
         let sub_res_stream = self.initiate_subscription(entities).await?;
 
         let (service, handle) = SubscriptionService::new(
@@ -111,7 +110,8 @@ impl Client {
 
         self.subscribed_entities.add_entities(entities)?;
 
-        let updated_entities = self.synced_entities();
+        let updated_entities =
+            self.subscribed_entities.entities.read().clone().into_iter().collect();
         let sub_res_stream = self.initiate_subscription(updated_entities).await?;
 
         match self.sub_client_handle.get() {
@@ -127,7 +127,8 @@ impl Client {
     pub async fn remove_entities_to_sync(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         self.subscribed_entities.remove_entities(entities)?;
 
-        let updated_entities = self.synced_entities();
+        let updated_entities =
+            self.subscribed_entities.entities.read().clone().into_iter().collect();
         let sub_res_stream = self.initiate_subscription(updated_entities).await?;
 
         match self.sub_client_handle.get() {
@@ -137,10 +138,14 @@ impl Client {
         Ok(())
     }
 
+    pub fn storage(&self) -> Arc<ModelStorage> {
+        Arc::clone(&self.storage)
+    }
+
     async fn initiate_subscription(
         &self,
         entities: Vec<EntityModel>,
-    ) -> Result<tonic::Streaming<SubscribeEntitiesResponse>, Error> {
+    ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_entities(entities).await?;
         Ok(stream)
@@ -149,7 +154,7 @@ impl Client {
     async fn initiate_entity(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
         let model_reader = self.world_reader.model(model).await?;
         let values = model_reader.entity_storage(&keys).await?;
-        self.storage.set_entity(
+        self.storage.set_entity_storage(
             cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,
             keys,
             values,
@@ -207,7 +212,7 @@ impl ClientBuilder {
                 let model_reader = world_reader.model(&model).await?;
                 let values = model_reader.entity_storage(&keys).await?;
 
-                client_storage.set_entity(
+                client_storage.set_entity_storage(
                     cairo_short_string_to_felt(&model).unwrap(),
                     keys,
                     values,

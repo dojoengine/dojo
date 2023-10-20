@@ -1,9 +1,6 @@
 use array::ArrayTrait;
 use core::debug::PrintTrait;
 use starknet::ContractAddress;
-use dojo::database::schema::{
-    Enum, Member, Ty, Struct, SchemaIntrospection, serialize_member, serialize_member_type
-};
 
 #[derive(Serde, Copy, Drop, Introspect)]
 enum Direction {
@@ -12,18 +9,6 @@ enum Direction {
     Right: (),
     Up: (),
     Down: (),
-}
-
-impl DirectionPrintImpl of PrintTrait<Direction> {
-    fn print(self: Direction) {
-        match self {
-            Direction::None(()) => 0.print(),
-            Direction::Left(()) => 1.print(),
-            Direction::Right(()) => 2.print(),
-            Direction::Up(()) => 3.print(),
-            Direction::Down(()) => 4.print(),
-        }
-    }
 }
 
 impl DirectionIntoFelt252 of Into<Direction, felt252> {

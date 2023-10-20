@@ -10,6 +10,7 @@ use super::inputs::where_input::{parse_where_argument, where_argument, WhereInpu
 use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::mapping::ENTITY_TYPE_MAPPING;
+use crate::query::constants::{ENTITY_ID_COLUMN, ENTITY_TABLE, ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
@@ -170,13 +171,14 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
                         return match ctx.parent_value.try_to_value()? {
                             Value::Object(indexmap) => {
                                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                                let entity_id = extract::<String>(indexmap, "entity_id")?;
+                                let entity_id =
+                                    extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
 
                                 // TODO: remove subqueries and use JOIN in parent query
                                 let data = fetch_single_row(
                                     &mut conn,
                                     &table_name,
-                                    "entity_id",
+                                    ENTITY_ID_COLUMN,
                                     &entity_id,
                                 )
                                 .await?;
@@ -219,8 +221,9 @@ fn entity_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let entity_id = extract::<String>(indexmap, "entity_id")?;
-                    let data = fetch_single_row(&mut conn, "entities", "id", &entity_id).await?;
+                    let entity_id = extract::<String>(indexmap, INTERNAL_ENTITY_ID_KEY)?;
+                    let data =
+                        fetch_single_row(&mut conn, ENTITY_TABLE, ID_COLUMN, &entity_id).await?;
                     let entity = value_mapping_from_row(&data, &ENTITY_TYPE_MAPPING, false)?;
 
                     Ok(Some(Value::Object(entity)))
