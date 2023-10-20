@@ -58,10 +58,7 @@ impl Client {
 
     /// Register new entities to be synced.
     #[wasm_bindgen(js_name = addEntitiesToSync)]
-    pub async fn add_entities_to_sync(
-        &mut self,
-        entities: Vec<JsEntityModel>,
-    ) -> Result<(), JsValue> {
+    pub async fn add_entities_to_sync(&self, entities: Vec<JsEntityModel>) -> Result<(), JsValue> {
         log("adding entities to sync...");
 
         #[cfg(feature = "console-error-panic")]
