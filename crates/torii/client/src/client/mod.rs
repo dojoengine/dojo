@@ -22,7 +22,6 @@ use self::storage::ModelStorage;
 use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
 use crate::client::subscription::SubscriptionService;
 
-// TODO: expose the World interface from the `Client`
 // TODO: remove reliance on RPC
 #[allow(unused)]
 pub struct Client {

@@ -113,7 +113,7 @@ impl Client {
         let mut rcv = self.inner.storage().add_listener(model, &entity.keys).unwrap();
 
         wasm_bindgen_futures::spawn_local(async move {
-            while let Some(_) = rcv.next().await {
+            while rcv.next().await.is_some() {
                 let _ = callback.call0(&JsValue::null());
             }
         });
