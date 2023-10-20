@@ -2,8 +2,6 @@ use serde::Serde;
 use poseidon::poseidon_hash_span;
 use dojo_primitives::commit_reveal::{Commitment, CommitmentTrait};
 
-use debug::PrintTrait;
-
 #[test]
 #[available_gas(1000000)]
 fn test_commit_reveal() {
