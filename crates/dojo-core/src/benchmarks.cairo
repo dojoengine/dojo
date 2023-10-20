@@ -5,6 +5,7 @@ use debug::PrintTrait;
 use option::OptionTrait;
 use poseidon::poseidon_hash_span;
 use starknet::SyscallResultTrait;
+use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 
 use dojo::database;
 use dojo::database::{storage, index};
@@ -288,4 +289,113 @@ fn bench_simple_struct() {
     assert(values.len() == 2, 'value wrong length');
     assert(serialized.at(0) == values.at(0), 'serialized differ at 0');
     assert(serialized.at(1) == values.at(1), 'serialized differ at 1');
+}
+
+
+#[derive(Model, Copy, Drop, Serde)]
+struct Character {
+    #[key]
+    caller: ContractAddress,
+    heigth: felt252,
+    abilities: Abilities,
+    stats: Stats,
+    weapon: Sword,
+    gold: u32,
+}
+
+#[derive(Model, Copy, Drop, Serde)]
+struct Abilities {
+    #[key]
+    strength: u8,
+    dexterity: u8,
+    constitution: u8,
+    intelligence: u8,
+    wisdom: u8,
+    charisma: u8,
+}
+
+#[derive(Model, Copy, Drop, Serde)]
+struct Stats {
+    #[key]
+    kills: u128,
+    deaths: u16,
+    rests: u32,
+    hits: u64,
+    blocks: u32,
+    walked: felt252,
+    runned: felt252,
+    finished: bool,
+    romances: u16,
+}
+
+#[derive(Model, Copy, Drop, Serde)]
+struct Sword {
+    #[key]
+    weigh: u16,
+    damage: u32,
+}
+
+
+#[test]
+#[available_gas(1000000000)]
+fn bench_complex_struct() {
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+
+    let char = Character {
+        caller: starknet::contract_address_const::<0x42>(),
+        heigth: 0x123456789abcdef,
+        abilities: Abilities {
+            strength: 0x12,
+            dexterity: 0x34,
+            constitution: 0x56,
+            intelligence: 0x78,
+            wisdom: 0x9a,
+            charisma: 0xbc,
+        },
+        stats: Stats {
+            kills: 0x123456789abcdef,
+            deaths: 0x1234,
+            rests: 0x12345678,
+            hits: 0x123456789abcdef,
+            blocks: 0x12345678,
+            walked: 0x123456789abcdef,
+            runned: 0x123456789abcdef,
+            finished: true,
+            romances: 0x1234,
+        },
+        weapon: Sword {
+            weigh: 0x1234,
+            damage: 0x12345678,
+        },
+        gold: 0x12345678,
+    };
+    end(gas, 'chars init');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let mut serialized = ArrayTrait::new();
+    serde::Serde::serialize(@char.heigth, ref serialized);
+    serde::Serde::serialize(@char.abilities, ref serialized);
+    serde::Serde::serialize(@char.stats, ref serialized);
+    serde::Serde::serialize(@char.weapon, ref serialized);
+    serde::Serde::serialize(@char.gold, ref serialized);
+    let serialized = array::ArrayTrait::span(@serialized);
+    end(gas, 'chars serialize');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let values: Span<felt252> = char.values();
+    end(gas, 'chars values');
+
+    assert(serialized.len() == values.len(), 'serialized not equal');
+
+    let mut idx = 0;
+    loop {
+        if idx == serialized.len() {
+            break;
+        }
+        assert(serialized.at(idx) == values.at(idx), 'serialized differ');
+        idx += 1;
+    };
 }

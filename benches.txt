@@ -1,4 +1,7 @@
     bench empty: 0
+     chars init: 860
+chars serialize: 32350
+   chars values: 34840
      db del arr: 14240
      db get arr: 1027288
 db get half arr: 726058
@@ -7,10 +10,10 @@ db get half arr: 726058
 dbi set arr 1st: 482814
 dbi set arr 2nd: 482634
      db set arr: 855808
-  foo get macro: 972774
+  foo get macro: 1039434
        foo init: 770
   foo serialize: 3620
-   foo set call: 816204
+   foo set call: 835314
      foo values: 13560
  idx create 1st: 78280
    idx dlt last: 284480

@@ -11,7 +11,7 @@ use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::database::schema::SchemaIntrospection;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
-use dojo::benchmarks::{start, end};
+use dojo::benchmarks::end;
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -408,14 +408,21 @@ fn bench_execute() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
 
-    let gas = start();
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
     bar_contract.set_foo(1337, 1337);
     end(gas, 'foo set call');
 
-    let gas = start();
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
     let data = get!(world, alice, Foo);
     end(gas, 'foo get macro');
 
     assert(data.a == 1337, 'data not stored');
 }
 
+#[test]
+#[available_gas(60000000)]
+fn bench_execute_complex() {
+
+}
