@@ -30,7 +30,7 @@ pub struct SubscribedEntities {
 }
 
 impl SubscribedEntities {
-    pub(crate) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
+    pub(super) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
         Self {
             metadata,
             entities: Default::default(),
@@ -38,21 +38,21 @@ impl SubscribedEntities {
         }
     }
 
-    pub fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub(super) fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
             Self::add_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub(super) fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
         for entity in entities {
             Self::remove_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub(crate) fn add_entity(&self, entity: EntityModel) -> Result<(), Error> {
+    pub(super) fn add_entity(&self, entity: EntityModel) -> Result<(), Error> {
         if !self.entities.write().insert(entity.clone()) {
             return Ok(());
         }
@@ -80,7 +80,7 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub(crate) fn remove_entity(&self, entity: EntityModel) -> Result<(), Error> {
+    pub(super) fn remove_entity(&self, entity: EntityModel) -> Result<(), Error> {
         if !self.entities.write().remove(&entity) {
             return Ok(());
         }

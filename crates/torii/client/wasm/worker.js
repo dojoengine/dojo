@@ -5,7 +5,7 @@ importScripts("./pkg/torii_client_wasm.js");
 
 // In the worker, we have a different struct that we want to use as in
 // `index.js`.
-const { spawn_client } = wasm_bindgen;
+const { createClient } = wasm_bindgen;
 
 async function setup() {
 	console.log("Initializing torii client worker 🚧");
@@ -14,10 +14,7 @@ async function setup() {
 	await wasm_bindgen("./pkg/torii_client_wasm_bg.wasm");
 
 	try {
-		const client = await spawn_client(
-			"http://0.0.0.0:8080/grpc",
-			"http://0.0.0.0:5050",
-			"0x1af130f7b9027f3748c1e3b10ca4a82ac836a30ac4f2f84025e83a99a922a0c",
+		const client = await createClient(
 			[
 				{
 					model: "Position",
@@ -31,7 +28,13 @@ async function setup() {
 						"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
 					],
 				},
-			]
+			],
+			{
+				rpcUrl: "http://0.0.0.0:5050",
+				toriiUrl: "http://0.0.0.0:8080/grpc",
+				worldAddress:
+					"0x1af130f7b9027f3748c1e3b10ca4a82ac836a30ac4f2f84025e83a99a922a0c",
+			}
 		);
 
 		client.onEntityChange(
@@ -49,10 +52,20 @@ async function setup() {
 			}
 		);
 
-		// client.onEntityChange({
-		// 	model: "Moves",
-		// 	keys: ["0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"],
-		// });
+		client.onEntityChange(
+			{
+				model: "Moves",
+				keys: [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				],
+			},
+			() => {
+				const values = client.getModelValue("Moves", [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				]);
+				console.log("Moves changed", values);
+			}
+		);
 
 		// setTimeout(() => {
 		// 	client.addEntitiesToSync([

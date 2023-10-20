@@ -37,6 +37,7 @@ web-sys = { version = "0.3.4", features = [ 'MessageEvent', 'Window', 'Worker', 
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
+tsify = "0.4.5"
 
 # Compiler optimization when running test to prevent ‘locals exceed maximum’ error, 
 # where a function is using more that the maximum allowed local variables.
