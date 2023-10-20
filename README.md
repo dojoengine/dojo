@@ -59,9 +59,9 @@ If you encounter issues or have questions, you can [submit an issue on GitHub](h
 
 We welcome contributions of all kinds from anyone. See our [Contribution Guide](/CONTRIBUTING.md) for more information on how to get involved.
 
-## ✏️ Enviroment
+## ✏️ Environment
 
-See our [Enviroment setup](https://book.dojoengine.org/getting-started/setup.html) for more information.
+See our [Environment setup](https://book.dojoengine.org/getting-started/setup.html) for more information.
 
 ## ⛩️ Built with Dojo
 
