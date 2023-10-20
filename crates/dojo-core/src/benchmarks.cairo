@@ -297,9 +297,9 @@ struct Character {
     #[key]
     caller: ContractAddress,
     heigth: felt252,
-    abilities: Abilities,
-    stats: Stats,
-    weapon: Sword,
+    // abilities: Abilities,
+    // stats: Stats,
+    // weapon: Sword,
     gold: u32,
 }
 
@@ -345,29 +345,29 @@ fn bench_complex_struct() {
     let char = Character {
         caller: starknet::contract_address_const::<0x42>(),
         heigth: 0x123456789abcdef,
-        abilities: Abilities {
-            strength: 0x12,
-            dexterity: 0x34,
-            constitution: 0x56,
-            intelligence: 0x78,
-            wisdom: 0x9a,
-            charisma: 0xbc,
-        },
-        stats: Stats {
-            kills: 0x123456789abcdef,
-            deaths: 0x1234,
-            rests: 0x12345678,
-            hits: 0x123456789abcdef,
-            blocks: 0x12345678,
-            walked: 0x123456789abcdef,
-            runned: 0x123456789abcdef,
-            finished: true,
-            romances: 0x1234,
-        },
-        weapon: Sword {
-            weigh: 0x1234,
-            damage: 0x12345678,
-        },
+        // abilities: Abilities {
+        //     strength: 0x12,
+        //     dexterity: 0x34,
+        //     constitution: 0x56,
+        //     intelligence: 0x78,
+        //     wisdom: 0x9a,
+        //     charisma: 0xbc,
+        // },
+        // stats: Stats {
+        //     kills: 0x123456789abcdef,
+        //     deaths: 0x1234,
+        //     rests: 0x12345678,
+        //     hits: 0x123456789abcdef,
+        //     blocks: 0x12345678,
+        //     walked: 0x123456789abcdef,
+        //     runned: 0x123456789abcdef,
+        //     finished: true,
+        //     romances: 0x1234,
+        // },
+        // weapon: Sword {
+        //     weigh: 0x1234,
+        //     damage: 0x12345678,
+        // },
         gold: 0x12345678,
     };
     end(gas, 'chars init');
@@ -376,9 +376,9 @@ fn bench_complex_struct() {
     gas::withdraw_gas().unwrap();
     let mut serialized = ArrayTrait::new();
     serde::Serde::serialize(@char.heigth, ref serialized);
-    serde::Serde::serialize(@char.abilities, ref serialized);
-    serde::Serde::serialize(@char.stats, ref serialized);
-    serde::Serde::serialize(@char.weapon, ref serialized);
+    // serde::Serde::serialize(@char.abilities, ref serialized);
+    // serde::Serde::serialize(@char.stats, ref serialized);
+    // serde::Serde::serialize(@char.weapon, ref serialized);
     serde::Serde::serialize(@char.gold, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
     end(gas, 'chars serialize');

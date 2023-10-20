@@ -1,7 +1,8 @@
     bench empty: 0
+  char set call: 840264
      chars init: 860
-chars serialize: 32350
-   chars values: 34840
+chars serialize: 3620
+   chars values: 5940
      db del arr: 14240
      db get arr: 1027288
 db get half arr: 726058
