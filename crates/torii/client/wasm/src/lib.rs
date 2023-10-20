@@ -146,7 +146,7 @@ pub async fn create_client(
 
     let client = torii_client::client::ClientBuilder::new()
         .set_entities_to_sync(entities)
-        .build(torii_url.into(), rpc_url.into(), world_address)
+        .build(torii_url, rpc_url, world_address)
         .await
         .map_err(|err| JsValue::from_str(format!("failed to build client: {err}").as_str()))?;
 
