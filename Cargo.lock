@@ -2298,6 +2298,7 @@ dependencies = [
  "cairo-lang-plugins",
  "cairo-lang-semantic",
  "cairo-lang-starknet",
+ "cairo-lang-test-runner",
  "cairo-lang-utils",
  "clap",
  "dojo-lang",
