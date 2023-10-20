@@ -103,16 +103,18 @@ impl Client {
     }
 
     #[wasm_bindgen(js_name = onEntityChange)]
-    pub fn on_entity_change(&self, entity: JsEntityModel) -> Result<(), JsValue> {
+    pub fn on_entity_change(
+        &self,
+        entity: JsEntityModel,
+        callback: js_sys::Function,
+    ) -> Result<(), JsValue> {
         let entity = serde_wasm_bindgen::from_value::<dojo_types::schema::EntityModel>(entity)?;
         let model = cairo_short_string_to_felt(&entity.model).expect("invalid model name");
         let mut rcv = self.inner.storage().add_listener(model, &entity.keys).unwrap();
 
-        log(&format!("listening to {}", entity.model));
-
         wasm_bindgen_futures::spawn_local(async move {
-            while let Some(event) = rcv.next().await {
-                log(&format!("received event for {}: {:?}", entity.model, event));
+            while let Some(_) = rcv.next().await {
+                let _ = callback.call0(&JsValue::null());
             }
         });
 

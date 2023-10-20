@@ -120,7 +120,7 @@ impl ModelStorage {
         let mut senders: HashSet<u8> = Default::default();
 
         for (key, _) in &storage_entries {
-            if let Some(lists) = self.listeners.lock().get(&key) {
+            if let Some(lists) = self.listeners.lock().get(key) {
                 for id in lists {
                     senders.insert(*id);
                 }

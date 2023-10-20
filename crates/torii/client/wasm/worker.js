@@ -34,17 +34,25 @@ async function setup() {
 			]
 		);
 
-		client.onEntityChange({
-			model: "Moves",
-			keys: ["0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"],
-		});
+		client.onEntityChange(
+			{
+				model: "Position",
+				keys: [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				],
+			},
+			() => {
+				const values = client.getModelValue("Position", [
+					"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+				]);
+				console.log("Position changed", values);
+			}
+		);
 
-		client.onEntityChange({
-			model: "Position",
-			keys: ["0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"],
-		});
-
-		console.log("registered listeners");
+		// client.onEntityChange({
+		// 	model: "Moves",
+		// 	keys: ["0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"],
+		// });
 
 		// setTimeout(() => {
 		// 	client.addEntitiesToSync([
@@ -88,7 +96,7 @@ async function getModelValueHandler(client, data) {
 	const model = data.model;
 	const keys = data.keys;
 
-	const values = await client.getModelValue(model, keys);
+	const values = client.getModelValue(model, keys);
 
 	console.log("Sync Worker | Got model value | values: ", values);
 
