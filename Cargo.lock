@@ -2137,7 +2137,7 @@ checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
 name = "diffy"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e616e59155c92257e84970156f506287853355f58cd4a6eb167385722c32b790"
 dependencies = [
@@ -2244,7 +2244,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-lang"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2289,7 +2289,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-languge-server"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2311,7 +2311,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-signers"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "starknet",
@@ -2319,7 +2319,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2350,7 +2350,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -2365,7 +2365,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4303,7 +4303,7 @@ dependencies = [
 
 [[package]]
 name = "impl-rlp"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f28220f89297a075ddc7245cd538076ee98b01f2a9c23a53a4f1105d5a322808"
 dependencies = [
@@ -4694,7 +4694,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "assert_matches",
  "clap",
@@ -4712,7 +4712,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -4743,7 +4743,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5167,7 +5167,7 @@ dependencies = [
 
 [[package]]
 name = "normalize-line-endings"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61807f77802ff30975e01f4f071c8ba10c022052f98b3294119f3e615d13e5be"
 
@@ -5192,7 +5192,7 @@ dependencies = [
 
 [[package]]
 name = "notify-debouncer-mini"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e55ee272914f4563a2f8b8553eb6811f3c0caea81c756346bad15b7e3ef969f0"
 dependencies = [
@@ -5357,7 +5357,7 @@ checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
 
 [[package]]
 name = "opaque-debug"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
@@ -7031,7 +7031,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -7288,7 +7288,7 @@ dependencies = [
  "rfc6979",
  "sha2",
  "starknet-crypto-codegen",
- "starknet-curve 0.3.0",
+ "starknet-curve 0.3.1",
  "starknet-ff",
  "zeroize",
 ]
@@ -7326,7 +7326,7 @@ dependencies = [
 
 [[package]]
 name = "starknet-curve"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "252610baff59e4c4332ce3569f7469c5d3f9b415a2240d698fb238b2b4fc0942"
 dependencies = [
@@ -7505,7 +7505,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "svm-rs"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "597e3a746727984cb7ea2487b6a40726cad0dbe86628e7d429aa6b8c4c153db4"
 dependencies = [
@@ -8012,7 +8012,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "async-trait",
  "camino",
@@ -8038,7 +8038,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8071,7 +8071,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -8104,7 +8104,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "bytes",
  "dojo-types",
@@ -8137,7 +8137,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8707,7 +8707,7 @@ checksum = "ca6ad05a4870b2bf5fe995117d3728437bd27d7cd5f06f13c17443ef369775a1"
 
 [[package]]
 name = "wasm-streams"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4609d447824375f43e1ffbc051b50ad8f4b3ae8219680c94452ea05eb240ac7"
 dependencies = [

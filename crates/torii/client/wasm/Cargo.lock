@@ -1173,7 +1173,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -1188,7 +1188,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1810,7 +1810,7 @@ dependencies = [
 
 [[package]]
 name = "impl-rlp"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f28220f89297a075ddc7245cd538076ee98b01f2a9c23a53a4f1105d5a322808"
 dependencies = [
@@ -3903,7 +3903,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "async-trait",
  "crypto-bigint",
@@ -3928,7 +3928,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client-wasm"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "async-std",
  "async-trait",
@@ -3955,7 +3955,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "bytes",
  "dojo-types",
@@ -4300,7 +4300,7 @@ dependencies = [
 
 [[package]]
 name = "wasm-streams"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4609d447824375f43e1ffbc051b50ad8f4b3ae8219680c94452ea05eb240ac7"
 dependencies = [

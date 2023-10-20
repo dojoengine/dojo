@@ -3,7 +3,7 @@
 [package]
 edition = "2021"
 name = "torii-client-wasm"
-version = "0.3.0"
+version = "0.3.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -46,7 +46,7 @@ incremental = true
 opt-level = 1
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.0"
+wasm-bindgen-test = "0.3.1"
 
 [features]
 console-error-panic = [ "dep:console_error_panic_hook" ]
