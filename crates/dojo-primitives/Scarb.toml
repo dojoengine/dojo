@@ -1,0 +1,12 @@
+[package]
+cairo-version = "2.2.0"
+description = "Implementations of common primitives for the Dojo games"
+name = "dojo_primitives"
+version = "0.3.0"
+
+[lib]
+
+[dependencies]
+dojo = { path = "../dojo-core" }
+
+[[target.dojo]]
