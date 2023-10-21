@@ -138,11 +138,7 @@ fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
         },
 
         QueryClause::KeyValues(clause) => {
-            let mut serialized = ArrayTrait::new();
-            model.serialize(ref serialized);
-            clause.key.serialize(ref serialized);
-            let table = poseidon_hash_span(serialized.span());
-
+            let table = poseidon_hash_span(array![model, clause.key].span());
             let value = poseidon_hash_span(clause.values);
 
             match index {
