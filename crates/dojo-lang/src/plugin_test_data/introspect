@@ -6,7 +6,7 @@ test_expand_plugin
 //! > cairo_code
 use serde::Serde;
 
-#[derive(Copy, Drop, Serde, Print, Introspect)]
+#[derive(Copy, Drop, Serde, Introspect)]
 struct Vec2 {
     x: u32,
     y: u32
@@ -36,7 +36,7 @@ enum EnumCustom {
     Right: Vec2,
 }
 
-#[derive(Model, Copy, Drop, Print, Introspect)]
+#[derive(Model, Copy, Drop, Introspect)]
 struct Position {
     #[key]
     player: ContractAddress,
@@ -49,21 +49,12 @@ struct Position {
 use serde::Serde;
 
 
-#[derive(Copy, Drop, Serde, Print, Introspect)]
+#[derive(Copy, Drop, Serde, Introspect)]
 struct Vec2 {
     x: u32,
     y: u32
 }
 
-#[cfg(test)]
-impl Vec2PrintImpl of debug::PrintTrait<Vec2> {
-    fn print(self: Vec2) {
-        debug::PrintTrait::print('x');
-        debug::PrintTrait::print(self.x);
-        debug::PrintTrait::print('y');
-        debug::PrintTrait::print(self.y);
-    }
-}
 impl Vec2SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec2> {
     #[inline(always)]
     fn size() -> usize {
@@ -338,7 +329,7 @@ impl EnumCustomSchemaIntrospection of dojo::database::schema::SchemaIntrospectio
 
 
 
-#[derive(Model, Copy, Drop, Print, Introspect)]
+#[derive(Model, Copy, Drop, Introspect)]
 struct Position {
     #[key]
     player: ContractAddress,
@@ -481,19 +472,7 @@ mod position {
         dojo::database::schema::SchemaIntrospection::<Position>::ty()
     }
 }
-#[cfg(test)]
-impl PositionPrintImpl of debug::PrintTrait<Position> {
-    fn print(self: Position) {
-        debug::PrintTrait::print('player');
-        debug::PrintTrait::print(self.player);
-        debug::PrintTrait::print('before');
-        debug::PrintTrait::print(self.before);
-        debug::PrintTrait::print('vec');
-        debug::PrintTrait::print(self.vec);
-        debug::PrintTrait::print('after');
-        debug::PrintTrait::print(self.after);
-    }
-}
+
 impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
     #[inline(always)]
     fn size() -> usize {
