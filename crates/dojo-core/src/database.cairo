@@ -82,7 +82,7 @@ fn set_with_index(
         if idx == keys.len() {
             break;
         }
-        let index = poseidon_hash_span(array![table, idx].span());
+        let index = poseidon_hash_span(array![table, idx.into()].span());
 
         index::create(0, index, id, *keys.at(idx)); // create a record for each of the keys
         
