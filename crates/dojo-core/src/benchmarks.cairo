@@ -293,19 +293,77 @@ fn bench_simple_struct() {
 
 
 #[derive(Model, Copy, Drop, Serde)]
+struct Sword {
+    #[key]
+    swordsmith: ContractAddress,
+    damage: u32,
+}
+
+#[derive(Model, Copy, Drop, Serde)]
+struct Case {
+    #[key]
+    owner: ContractAddress,
+    sword: Sword,
+}
+
+#[test]
+#[available_gas(1000000000)]
+fn bench_nested_struct() {
+    let caller = starknet::contract_address_const::<0x42>();
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+
+    let mut case = Case {
+        owner: caller,
+        sword: Sword {
+            swordsmith: caller,
+            damage: 0x12345678,
+        },
+    };
+    end(gas, 'case init');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let mut serialized = ArrayTrait::new();
+    serde::Serde::serialize(@case.sword.swordsmith, ref serialized);
+    serde::Serde::serialize(@case.sword.damage, ref serialized);
+    let serialized = array::ArrayTrait::span(@serialized);
+    end(gas, 'case serialize');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let values: Span<felt252> = case.values();
+    end(gas, 'case values');
+
+    assert(serialized.len() == values.len(), 'serialized not equal');
+    let mut idx = 0;
+    loop {
+        if idx == serialized.len() {
+            break;
+        }
+        assert(serialized.at(idx) == values.at(idx), 'serialized differ');
+        idx += 1;
+    };
+
+    assert(case.layout().len() == values.len(), 'layout inconsintent with values');
+}
+
+
+#[derive(Model, Copy, Drop, Serde)]
 struct Character {
     #[key]
     caller: ContractAddress,
     heigth: felt252,
-    // abilities: Abilities,
-    // stats: Stats,
-    // weapon: Sword,
+    abilities: Abilities,
+    stats: Stats,
+    weapon: Sword,
     gold: u32,
 }
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Abilities {
     #[key]
+    caller: ContractAddress,
     strength: u8,
     dexterity: u8,
     constitution: u8,
@@ -317,6 +375,7 @@ struct Abilities {
 #[derive(Model, Copy, Drop, Serde)]
 struct Stats {
     #[key]
+    caller: ContractAddress,
     kills: u128,
     deaths: u16,
     rests: u32,
@@ -328,12 +387,6 @@ struct Stats {
     romances: u16,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
-struct Sword {
-    #[key]
-    weigh: u16,
-    damage: u32,
-}
 
 
 #[test]
@@ -345,29 +398,31 @@ fn bench_complex_struct() {
     let char = Character {
         caller: starknet::contract_address_const::<0x42>(),
         heigth: 0x123456789abcdef,
-        // abilities: Abilities {
-        //     strength: 0x12,
-        //     dexterity: 0x34,
-        //     constitution: 0x56,
-        //     intelligence: 0x78,
-        //     wisdom: 0x9a,
-        //     charisma: 0xbc,
-        // },
-        // stats: Stats {
-        //     kills: 0x123456789abcdef,
-        //     deaths: 0x1234,
-        //     rests: 0x12345678,
-        //     hits: 0x123456789abcdef,
-        //     blocks: 0x12345678,
-        //     walked: 0x123456789abcdef,
-        //     runned: 0x123456789abcdef,
-        //     finished: true,
-        //     romances: 0x1234,
-        // },
-        // weapon: Sword {
-        //     weigh: 0x1234,
-        //     damage: 0x12345678,
-        // },
+        abilities: Abilities {
+            caller: starknet::contract_address_const::<0x42>(),
+            strength: 0x12,
+            dexterity: 0x34,
+            constitution: 0x56,
+            intelligence: 0x78,
+            wisdom: 0x9a,
+            charisma: 0xbc,
+        },
+        stats: Stats {
+            caller: starknet::contract_address_const::<0x42>(),
+            kills: 0x123456789abcdef,
+            deaths: 0x1234,
+            rests: 0x12345678,
+            hits: 0x123456789abcdef,
+            blocks: 0x12345678,
+            walked: 0x123456789abcdef,
+            runned: 0x123456789abcdef,
+            finished: true,
+            romances: 0x1234,
+        },
+        weapon: Sword {
+            swordsmith: starknet::contract_address_const::<0x69>(),
+            damage: 0x12345678,
+        },
         gold: 0x12345678,
     };
     end(gas, 'chars init');
@@ -376,9 +431,25 @@ fn bench_complex_struct() {
     gas::withdraw_gas().unwrap();
     let mut serialized = ArrayTrait::new();
     serde::Serde::serialize(@char.heigth, ref serialized);
-    // serde::Serde::serialize(@char.abilities, ref serialized);
-    // serde::Serde::serialize(@char.stats, ref serialized);
-    // serde::Serde::serialize(@char.weapon, ref serialized);
+    serde::Serde::serialize(@char.abilities.caller, ref serialized);
+    serde::Serde::serialize(@char.abilities.strength, ref serialized);
+    serde::Serde::serialize(@char.abilities.dexterity, ref serialized);
+    serde::Serde::serialize(@char.abilities.constitution, ref serialized);
+    serde::Serde::serialize(@char.abilities.intelligence, ref serialized);
+    serde::Serde::serialize(@char.abilities.wisdom, ref serialized);
+    serde::Serde::serialize(@char.abilities.charisma, ref serialized);
+    serde::Serde::serialize(@char.stats.caller, ref serialized);
+    serde::Serde::serialize(@char.stats.kills, ref serialized);
+    serde::Serde::serialize(@char.stats.deaths, ref serialized);
+    serde::Serde::serialize(@char.stats.rests, ref serialized);
+    serde::Serde::serialize(@char.stats.hits, ref serialized);
+    serde::Serde::serialize(@char.stats.blocks, ref serialized);
+    serde::Serde::serialize(@char.stats.walked, ref serialized);
+    serde::Serde::serialize(@char.stats.runned, ref serialized);
+    serde::Serde::serialize(@char.stats.finished, ref serialized);
+    serde::Serde::serialize(@char.stats.romances, ref serialized);
+    serde::Serde::serialize(@char.weapon.swordsmith, ref serialized);
+    serde::Serde::serialize(@char.weapon.damage, ref serialized);
     serde::Serde::serialize(@char.gold, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
     end(gas, 'chars serialize');
@@ -388,6 +459,9 @@ fn bench_complex_struct() {
     let values: Span<felt252> = char.values();
     end(gas, 'chars values');
 
+
+    serialized.len().print();
+    values.len().print();
     assert(serialized.len() == values.len(), 'serialized not equal');
 
     let mut idx = 0;
