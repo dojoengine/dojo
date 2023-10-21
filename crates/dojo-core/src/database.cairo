@@ -125,7 +125,7 @@ fn scan(
 }
 
 /// Analogous to `scan`, but returns only the IDs of the entities.
-fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
+fn scan_ids(model: felt252, index: Option<felt252>, where: QueryClause) -> Span<felt252> {
     match where {
         QueryClause::KeyValue(clause) => {
             let table = poseidon_hash_span(array![model, clause.key].span());
