@@ -67,7 +67,7 @@ fn test_entity_delete_basic() {
 
     assert(index::exists(0, 69, 420), 'entity should exist');
 
-    index::delete(0, 69, 420, array![].span());
+    index::delete(0, 69, 420);
 
     assert(!index::exists(0, 69, 420), 'entity should not exist');
     let no_get = index::get(0, 69, 1);
@@ -113,53 +113,4 @@ fn test_entity_delete_right_value() {
     assert(*entities.at(0) == 30, 'idx 0 not 30');
     
     assert(index::get(0, table, 1).len() == 1, 'wrong size');
-}
-
-#[test]
-#[available_gas(20000000)]
-fn test_with_keys_deletion() {
-    let keys = array!['animal', 'barks'].span();
-    let other_keys = array!['animal', 'meows'].span();
-    let keys_layout = array![251, 251].span();
-
-    index::create_with_keys(0, 69, 420, keys, keys_layout);
-    index::create_with_keys(0, 69, 421, other_keys, keys_layout);
-
-    let (ids, keys) = index::get_with_keys(0, 69, keys_layout);
-    assert(ids.len() == 2, 'Not enough entities indexed');
-    assert(keys.len() == 2, 'Lengths of keys inconsistent');
-    assert(*ids.at(0) == 420, 'Identity value incorrect');
-    assert(*ids.at(1) == 421, 'Identity value incorrect');
-
-    assert(*(*keys.at(0)).at(1) == 'barks', 'Key at position 0 incorrect');
-    assert(*(*keys.at(1)).at(1) == 'meows', 'Key at position 1 incorrect');
-
-    // TODO: fix this
-    // index::delete(0, 69, 420);
-
-    // let (ids, keys) = index::get_with_keys(0, 69, keys.len());
-    // assert(ids.len() == 1, 'Not enough entities indexed');
-    // assert(keys.len() == 1, 'Lengths of keys inconsistent');
-    // assert(*ids.at(0) == 421, 'Identity value incorrect');
-    // assert(*(*keys.at(0)).at(1) == 'meows', 'Key at position 1 incorrect');
-}
-
-#[test]
-#[available_gas(20000000)]
-fn test_get_by_keys() {
-    let keys = array!['animal', 'barks'].span();
-    let other_keys = array!['animal', 'meows'].span();
-    let keys_layout = array![251, 251].span();
-
-    index::create_with_keys(0, 69, 420, keys, keys_layout);
-    index::create_with_keys(0, 69, 421, other_keys, keys_layout);
-
-    let ids = index::get_by_key(0, 69, 'animal');
-    assert(ids.len() == 2, 'Incorrect number of entities');
-    assert(*ids.at(0) == 420, 'Identity value incorrect at 0');
-    assert(*ids.at(1) == 421, 'Identity value incorrect at 1');
-
-    let ids = index::get_by_key(0, 69, 'barks');
-    assert(ids.len() == 1, 'Incorrect number of entities');
-    assert(*ids.at(0) == 420, 'Identity value incorrect at 0');
 }
