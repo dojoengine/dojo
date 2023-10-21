@@ -59,6 +59,39 @@ impl Ty {
         TyIter { stack: vec![self] }
     }
 
+    /// If the `Ty` is a primitive, returns the associated [`Primitive`]. Returns `None`
+    /// otherwise.
+    pub fn as_primitive(&self) -> Option<&Primitive> {
+        match self {
+            Ty::Primitive(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    /// If the `Ty` is a struct, returns the associated [`Struct`]. Returns `None` otherwise.
+    pub fn as_struct(&self) -> Option<&Struct> {
+        match self {
+            Ty::Struct(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// If the `Ty` is an enum, returns the associated [`Enum`]. Returns `None` otherwise.
+    pub fn as_enum(&self) -> Option<&Enum> {
+        match self {
+            Ty::Enum(e) => Some(e),
+            _ => None,
+        }
+    }
+
+    /// If the `Ty` is a tuple, returns the associated [`Vec<Ty>`]. Returns `None` otherwise.
+    pub fn as_tuple(&self) -> Option<&Vec<Ty>> {
+        match self {
+            Ty::Tuple(tys) => Some(tys),
+            _ => None,
+        }
+    }
+
     pub fn serialize(&self) -> Result<Vec<FieldElement>, PrimitiveError> {
         let mut felts = vec![];
 
@@ -194,6 +227,11 @@ pub struct Struct {
 }
 
 impl Struct {
+    /// Returns the struct member with the given name. Returns `None` if no such member exists.
+    pub fn get(&self, field: &str) -> Option<&Ty> {
+        self.children.iter().find(|m| m.name == field).map(|m| &m.ty)
+    }
+
     pub fn keys(&self) -> Vec<Member> {
         self.children.iter().filter(|m| m.key).cloned().collect()
     }
