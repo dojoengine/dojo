@@ -80,10 +80,7 @@ fn set_with_index(
         if idx == keys.len() {
             break;
         }
-        let mut serialized = ArrayTrait::new();
-        table.serialize(ref serialized);
-        idx.serialize(ref serialized);
-        let index = poseidon_hash_span(serialized.span());
+        let index = poseidon_hash_span(array![table, idx].span());
 
         index::create(0, index, id, *keys.at(idx)); // create a record for each of the keys
         
@@ -105,10 +102,7 @@ fn del(table: felt252, key: felt252) {
         if idx == len {
             break;
         }
-        let mut serialized = ArrayTrait::new();
-        table.serialize(ref serialized);
-        idx.serialize(ref serialized);
-        let index = poseidon_hash_span(serialized.span());
+        let index = poseidon_hash_span(array![table, idx].span());
 
         index::delete(0, index, key);
         
@@ -132,10 +126,7 @@ fn scan(
 fn scan_ids(model: felt252, where: Option<WhereCondition>) -> Span<felt252> {
     match where {
         QueryClause::KeyValue(clause) => {
-            let mut serialized = ArrayTrait::new();
-            model.serialize(ref serialized);
-            clause.key.serialize(ref serialized);
-            let table = poseidon_hash_span(serialized.span());
+            let table = poseidon_hash_span(array![model, clause.key].span());
 
             match index {
                 Option::Some(index) => match index::get_at(0, table, clause.value, index) {
