@@ -10,5 +10,5 @@ trait Model<T> {
 trait IModel<T> {
     fn name(self: @T) -> felt252;
     fn layout(self: @T) -> Span<felt252>;
-    fn schema(self: @T) -> Span<dojo::database::schema::Member>;
+    fn schema(self: @T) -> Span<dojo::database::introspect::Member>;
 }

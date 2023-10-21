@@ -10,7 +10,7 @@ use starknet::syscalls::deploy_syscall;
 use dojo::benchmarks;
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
-use dojo::database::schema::SchemaIntrospection;
+use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
 
@@ -38,7 +38,7 @@ trait Ibar<TContractState> {
 
 #[starknet::contract]
 mod bar {
-    use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait, SchemaIntrospection};
+    use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait, Introspect};
     use super::benchmarks::{Character, Abilities, Stats, Weapon, Sword};
     use traits::Into;
     use starknet::{get_caller_address, ContractAddress};
@@ -60,7 +60,7 @@ mod bar {
 
         fn delete_foo(self: @ContractState) {
             let mut layout = array![];
-            SchemaIntrospection::<Foo>::layout(ref layout);
+            Introspect::<Foo>::layout(ref layout);
             self
                 .world
                 .read()

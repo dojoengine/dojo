@@ -5,7 +5,7 @@ use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
 use traits::{Into, TryInto};
-use dojo::database::schema::SchemaIntrospection;
+use dojo::database::introspect::Introspect;
 
 #[test]
 #[available_gas(9000000)]

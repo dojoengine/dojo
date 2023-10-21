@@ -199,7 +199,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: test::HealthSchemaIntrospection::layout,
+                            function: test::HealthIntrospect::layout,
                             args: [
                                 Reference(
                                     LocalVarId(test::__Health_layout__),
