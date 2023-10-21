@@ -67,19 +67,6 @@ pub fn handle_model_struct(
     let serialized_values: Vec<_> =
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
-    let keys_layout: Vec<_> = keys
-        .iter()
-        .filter_map(|m| {
-            if m.key == false {
-                return None;
-            }
-            Some(RewriteNode::Text(format!(
-                "dojo::database::schema::SchemaIntrospection::<{}>::layout(ref layout);",
-                m.ty
-            )))
-        })
-        .collect::<_>();
-
     let name = struct_ast.name(db).text(db);
     aux_data.models.push(Model { name: name.to_string(), members: members.to_vec() });
 
@@ -97,13 +84,6 @@ pub fn handle_model_struct(
                     let mut serialized = core::array::ArrayTrait::new();
                     $serialized_keys$
                     core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn keys_layout(self: @$type_name$) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
-                    $keys_layout$
-                    array::ArrayTrait::span(@layout)
                 }
 
                 #[inline(always)]
@@ -181,7 +161,6 @@ pub fn handle_model_struct(
                 ("schema_introspection".to_string(), handle_introspect_struct(db, struct_ast)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
-                ("keys_layout".to_string(), RewriteNode::new_modified(keys_layout)),
             ]),
         ),
         diagnostics,

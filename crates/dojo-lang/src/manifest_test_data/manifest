@@ -351,6 +351,10 @@ test_manifest_file
                 "type": "core::felt252"
               },
               {
+                "name": "index",
+                "type": "core::option::Option::<core::felt252>"
+              },
+              {
                 "name": "query",
                 "type": "dojo::database::QueryClause"
               }
