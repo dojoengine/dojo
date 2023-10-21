@@ -8,7 +8,8 @@ use starknet::SyscallResultTrait;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 
 use dojo::database;
-use dojo::database::{storage, index};
+use dojo::database::{storage, index, QueryClause};
+use dojo::packing::{shl, shr};
 use dojo::model::Model;
 use dojo::world_test::Foo;
 use dojo::test_utils::end;
