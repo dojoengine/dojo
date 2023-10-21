@@ -20,7 +20,6 @@ trait IWorld<T> {
         ref self: T,
         model: felt252,
         keys: Span<felt252>,
-        keys_layout: Span<u8>,
         offset: u8,
         values: Span<felt252>,
         layout: Span<u8>
@@ -33,7 +32,7 @@ trait IWorld<T> {
         values_length: usize,
         values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
-    fn entity_ids(self: @T, model: felt252, query: QueryClause) -> Span<felt252>;
+    fn entity_ids(self: @T, model: felt252, index: Option<felt252>, query: QueryClause) -> Span<felt252>;
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
@@ -475,7 +474,6 @@ mod world {
             ref self: ContractState,
             model: felt252,
             keys: Span<felt252>,
-            keys_layout: Span<u8>,
             offset: u8,
             values: Span<felt252>,
             layout: Span<u8>
@@ -496,6 +494,7 @@ mod world {
         /// * `model` - The name of the model to be deleted.
         /// * `query` - The query to be used to find the entity.
         fn delete_entity(ref self: ContractState, model: felt252, keys: Span<felt252>) {
+            let system = get_caller_address();
             assert(system.is_non_zero(), 'must be called thru system');
             assert_can_write(@self, model, system);
 
@@ -550,6 +549,7 @@ mod world {
         /// Returns only the entity IDs that contain the model state.
         /// # Arguments
         /// * `model` - The name of the model to be retrieved.
+        /// * `index` - The position in the index which to be retrieved.
         /// * `query` - The query to be used to find the entity.
         ///
         /// # Returns
@@ -557,9 +557,10 @@ mod world {
         fn entity_ids(
             self: @ContractState,
             model: felt252,
-            index: Option<felt252>
+            index: Option<felt252>,
+            query: QueryClause
         ) -> Span<felt252> {
-            database::scan_ids(model, index, QueryClause::All)
+            database::scan_ids(model, index, query)
         }
 
         /// Sets the executor contract address.
