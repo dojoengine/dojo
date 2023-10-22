@@ -1,136 +1,200 @@
 #[cfg(test)]
 mod tests {
 
-    use sqlx::SqlitePool;
+    use anyhow::Result;
+    use async_graphql::dynamic::Schema;
+    use serde_json::Value;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
-    use torii_core::sql::Sql;
 
+    use crate::schema::build_schema;
     use crate::tests::{
-        cursor_paginate, entity_fixtures, offset_paginate, run_graphql_query, Entity, Moves,
-        Paginate, Position,
+        run_graphql_query, spinup_types_test, Connection, Entity, Record, Subrecord,
     };
 
-    #[sqlx::test(migrations = "../migrations")]
-    async fn test_entity(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-
-        entity_fixtures(&mut db).await;
-
-        let entity_id = poseidon_hash_many(&[FieldElement::ONE]);
-        println!("{:#x}", entity_id);
+    async fn entities_query(schema: &Schema, arg: &str) -> Value {
         let query = format!(
             r#"
-            {{
-                entity(id: "{:#x}") {{
-                    model_names
+          {{
+            entities {} {{
+              total_count
+              edges {{
+                cursor
+                node {{
+                  keys
+                  model_names
                 }}
+              }}
             }}
+          }}
         "#,
-            entity_id
+            arg,
         );
-        let value = run_graphql_query(&pool, &query).await;
 
-        let entity = value.get("entity").ok_or("no entity found").unwrap();
-        let entity: Entity = serde_json::from_value(entity.clone()).unwrap();
-        assert_eq!(entity.model_names, "Moves".to_string());
+        let result = run_graphql_query(schema, &query).await;
+        result.get("entities").ok_or("entities not found").unwrap().clone()
     }
 
-    #[sqlx::test(migrations = "../migrations")]
-    async fn test_entity_models(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        entity_fixtures(&mut db).await;
-
-        let entity_id = poseidon_hash_many(&[FieldElement::THREE]);
+    async fn entity_model_query(schema: &Schema, id: &FieldElement) -> Value {
         let query = format!(
             r#"
-                {{
-                    entity (id: "{:#x}") {{
-                        models {{
-                            __typename
-                            ... on Moves {{
-                                remaining
-                                last_direction
-                            }}
-                            ... on Position {{
-                                vec {{
-                                    x
-                                    y
-                                }}
-                            }}
-                        }}
-                    }}
+          {{
+            entity (id: "{:#x}") {{
+              keys
+              model_names
+              models {{
+                ... on Record {{
+                  __typename
+                  record_id
+                  type_u8
+                  type_u16
+                  type_u32
+                  type_u64
+                  type_u128
+                  type_u256
+                  type_bool
+                  type_felt
+                  type_class_hash
+                  type_contract_address
+                  random_u8
+                  random_u128
                 }}
-            "#,
-            entity_id
+                ... on Subrecord {{
+                  __typename
+                  record_id
+                  subrecord_id
+                  type_u8
+                  random_u8
+                }}
+              }}
+            }}
+          }}
+        "#,
+            id
         );
-        let value = run_graphql_query(&pool, &query).await;
 
-        let entity = value.get("entity").ok_or("no entity found").unwrap();
+        let result = run_graphql_query(schema, &query).await;
+        result.get("entity").ok_or("entity not found").unwrap().clone()
+    }
+
+    // End to end test spins up a test sequencer and deploys types-test project, this takes a while
+    // to run so combine all related tests into one
+    #[tokio::test(flavor = "multi_thread")]
+    async fn entities_test() -> Result<()> {
+        let pool = spinup_types_test().await?;
+        let schema = build_schema(&pool).await.unwrap();
+
+        // default without params
+        let entities = entities_query(&schema, "").await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        let first_entity = connection.edges.first().unwrap();
+        let last_entity = connection.edges.last().unwrap();
+        assert_eq!(connection.edges.len(), 10);
+        assert_eq!(connection.total_count, 20);
+        assert_eq!(&first_entity.node.model_names, "Subrecord");
+        assert_eq!(&last_entity.node.model_names, "Record");
+
+        // first key param - returns all entities with `0x0` as first key
+        let entities = entities_query(&schema, "(keys: [\"0x0\"])").await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        let first_entity = connection.edges.first().unwrap();
+        let last_entity = connection.edges.last().unwrap();
+        assert_eq!(connection.edges.len(), 2);
+        assert_eq!(connection.total_count, 2);
+        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x0", "0x1"]);
+        assert_eq!(last_entity.node.keys.clone().unwrap(), vec!["0x0"]);
+
+        // double key param - returns all entities with `0x0` as first key and `0x1` as second key
+        let entities = entities_query(&schema, "(keys: [\"0x0\", \"0x1\"])").await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        let first_entity = connection.edges.first().unwrap();
+        assert_eq!(connection.edges.len(), 1);
+        assert_eq!(connection.total_count, 1);
+        assert_eq!(first_entity.node.keys.clone().unwrap(), vec!["0x0", "0x1"]);
+
+        // pagination testing
+        let entities = entities_query(&schema, "(first: 20)").await;
+        let all_entities_connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        let one = all_entities_connection.edges.get(0).unwrap();
+        let two = all_entities_connection.edges.get(1).unwrap();
+        let three = all_entities_connection.edges.get(2).unwrap();
+        let four = all_entities_connection.edges.get(3).unwrap();
+        let five = all_entities_connection.edges.get(4).unwrap();
+        let six = all_entities_connection.edges.get(5).unwrap();
+        let seven = all_entities_connection.edges.get(6).unwrap();
+
+        // cursor based forward pagination
+        let entities =
+            entities_query(&schema, &format!("(first: 2, after: \"{}\")", two.cursor)).await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        assert_eq!(connection.edges.len(), 2);
+        assert_eq!(connection.edges.first().unwrap(), three);
+        assert_eq!(connection.edges.last().unwrap(), four);
+
+        let entities =
+            entities_query(&schema, &format!("(first: 3, after: \"{}\")", three.cursor)).await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        assert_eq!(connection.edges.len(), 3);
+        assert_eq!(connection.edges.first().unwrap(), four);
+        assert_eq!(connection.edges.last().unwrap(), six);
+
+        // cursor based backward pagination
+        let entities =
+            entities_query(&schema, &format!("(last: 2, before: \"{}\")", seven.cursor)).await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        assert_eq!(connection.edges.len(), 2);
+        assert_eq!(connection.edges.first().unwrap(), six);
+        assert_eq!(connection.edges.last().unwrap(), five);
+
+        let entities =
+            entities_query(&schema, &format!("(last: 3, before: \"{}\")", six.cursor)).await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        assert_eq!(connection.edges.len(), 3);
+        assert_eq!(connection.edges.first().unwrap(), five);
+        assert_eq!(connection.edges.last().unwrap(), three);
+
+        let empty_entities = entities_query(
+            &schema,
+            &format!(
+                "(first: 1, after: \"{}\")",
+                all_entities_connection.edges.last().unwrap().cursor
+            ),
+        )
+        .await;
+        let connection: Connection<Entity> = serde_json::from_value(empty_entities).unwrap();
+        assert_eq!(connection.edges.len(), 0);
+
+        // offset/limit based pagination
+        let entities = entities_query(&schema, "(limit: 2)").await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        assert_eq!(connection.edges.len(), 2);
+        assert_eq!(connection.edges.first().unwrap(), one);
+        assert_eq!(connection.edges.last().unwrap(), two);
+
+        let entities = entities_query(&schema, "(limit: 3, offset: 2)").await;
+        let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
+        assert_eq!(connection.edges.len(), 3);
+        assert_eq!(connection.edges.first().unwrap(), three);
+        assert_eq!(connection.edges.last().unwrap(), five);
+
+        let empty_entities = entities_query(&schema, "(limit: 1, offset: 20)").await;
+        let connection: Connection<Entity> = serde_json::from_value(empty_entities).unwrap();
+        assert_eq!(connection.edges.len(), 0);
+
+        // entity model union
+        let id = poseidon_hash_many(&[FieldElement::ZERO]);
+        let entity = entity_model_query(&schema, &id).await;
         let models = entity.get("models").ok_or("no models found").unwrap();
-        let model_moves: Moves = serde_json::from_value(models[0].clone()).unwrap();
-        let model_position: Position = serde_json::from_value(models[1].clone()).unwrap();
+        let record: Record = serde_json::from_value(models[0].clone()).unwrap();
+        assert_eq!(&record.__typename, "Record");
+        assert_eq!(record.record_id, 0);
 
-        assert_eq!(model_moves.__typename, "Moves");
-        assert_eq!(model_moves.remaining, 10);
-        assert_eq!(model_position.__typename, "Position");
-        assert_eq!(model_position.vec.x, 42);
-        assert_eq!(model_position.vec.y, 69);
-    }
+        let id = poseidon_hash_many(&[FieldElement::ZERO, FieldElement::ONE]);
+        let entity = entity_model_query(&schema, &id).await;
+        let models = entity.get("models").ok_or("no models found").unwrap();
+        let subrecord: Subrecord = serde_json::from_value(models[0].clone()).unwrap();
+        assert_eq!(&subrecord.__typename, "Subrecord");
+        assert_eq!(subrecord.subrecord_id, 1);
 
-    #[sqlx::test(migrations = "../migrations")]
-    async fn test_entities_cursor_pagination(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        entity_fixtures(&mut db).await;
-
-        let page_size = 2;
-
-        // Forward pagination
-        let entities_connection = cursor_paginate(&pool, None, Paginate::Forward, page_size).await;
-        assert_eq!(entities_connection.total_count, 3);
-        assert_eq!(entities_connection.edges.len(), page_size);
-
-        let cursor: String = entities_connection.edges[0].cursor.clone();
-        let next_cursor: String = entities_connection.edges[1].cursor.clone();
-        let entities_connection =
-            cursor_paginate(&pool, Some(cursor), Paginate::Forward, page_size).await;
-        assert_eq!(entities_connection.total_count, 3);
-        assert_eq!(entities_connection.edges.len(), page_size);
-        assert_eq!(entities_connection.edges[0].cursor, next_cursor);
-
-        // Backward pagination
-        let entities_connection = cursor_paginate(&pool, None, Paginate::Backward, page_size).await;
-        assert_eq!(entities_connection.total_count, 3);
-        assert_eq!(entities_connection.edges.len(), page_size);
-
-        let cursor: String = entities_connection.edges[0].cursor.clone();
-        let next_cursor: String = entities_connection.edges[1].cursor.clone();
-        let entities_connection =
-            cursor_paginate(&pool, Some(cursor), Paginate::Backward, page_size).await;
-        assert_eq!(entities_connection.total_count, 3);
-        assert_eq!(entities_connection.edges.len(), page_size);
-        assert_eq!(entities_connection.edges[0].cursor, next_cursor);
-    }
-
-    #[sqlx::test(migrations = "../migrations")]
-    async fn test_entities_offset_pagination(pool: SqlitePool) {
-        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-        entity_fixtures(&mut db).await;
-
-        let limit = 3;
-        let mut offset = 0;
-        let entities_connection = offset_paginate(&pool, offset, limit).await;
-        let offset_plus_one = entities_connection.edges[1].node.model_names.clone();
-        let offset_plus_two = entities_connection.edges[2].node.model_names.clone();
-        assert_eq!(entities_connection.edges.len(), 3);
-
-        offset = 1;
-        let entities_connection = offset_paginate(&pool, offset, limit).await;
-        assert_eq!(entities_connection.edges[0].node.model_names, offset_plus_one);
-        assert_eq!(entities_connection.edges.len(), 2);
-
-        offset = 2;
-        let entities_connection = offset_paginate(&pool, offset, limit).await;
-        assert_eq!(entities_connection.edges[0].node.model_names, offset_plus_two);
-        assert_eq!(entities_connection.edges.len(), 1);
+        Ok(())
     }
 }
