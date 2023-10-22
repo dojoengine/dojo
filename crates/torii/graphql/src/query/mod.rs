@@ -23,6 +23,7 @@ pub async fn type_mapping_query(
     model_id: &str,
 ) -> sqlx::Result<TypeMapping> {
     let model_members = fetch_model_members(conn, model_id).await?;
+    //println!("model_members: {:?}", model_members[0].name);
 
     let (root_members, nested_members): (Vec<&ModelMember>, Vec<&ModelMember>) =
         model_members.iter().partition(|member| member.model_idx == 0);
@@ -61,6 +62,7 @@ fn build_type_mapping(
         .iter()
         .map(|&member| {
             let type_data = member_to_type_data(member, nested_members);
+            println!("type_data: {:?}", type_data);
             Ok((Name::new(&member.name), type_data))
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
@@ -93,7 +95,10 @@ fn parse_nested_type(
             }
         })
         .collect();
-
+    println!("target_id: {:?}", target_id);
+    println!("target_type: {:?}", target_type);
+    println!("nested_mapping: {:?}", nested_mapping);
+    let target_type = format!("{}_{}", target_id, target_type);
     TypeData::Nested((TypeRef::named(target_type), nested_mapping))
 }
 
