@@ -49,7 +49,7 @@ impl ObjectTrait for EntityObject {
     }
 
     fn type_name(&self) -> &str {
-        "Entity"
+        "World__Entity"
     }
 
     fn type_mapping(&self) -> &TypeMapping {

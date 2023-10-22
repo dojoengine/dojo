@@ -11,7 +11,7 @@ impl ObjectTrait for PageInfoObject {
     }
 
     fn type_name(&self) -> &str {
-        "PageInfo"
+        "World__PageInfo"
     }
 
     fn type_mapping(&self) -> &TypeMapping {

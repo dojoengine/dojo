@@ -19,7 +19,7 @@ impl ObjectTrait for EventObject {
     }
 
     fn type_name(&self) -> &str {
-        "Event"
+        "World__Event"
     }
 
     fn type_mapping(&self) -> &TypeMapping {
@@ -75,7 +75,7 @@ impl ObjectTrait for EventObject {
     }
 
     fn related_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("systemCall", TypeRef::named_nn("SystemCall"), |ctx| {
+        Some(vec![Field::new("systemCall", TypeRef::named_nn("World__SystemCall"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;

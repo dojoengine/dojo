@@ -17,7 +17,7 @@ impl ObjectTrait for SystemCallObject {
     }
 
     fn type_name(&self) -> &str {
-        "SystemCall"
+        "World__SystemCall"
     }
 
     fn type_mapping(&self) -> &TypeMapping {
@@ -29,7 +29,7 @@ impl ObjectTrait for SystemCallObject {
     }
 
     fn related_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("system", TypeRef::named_nn("System"), |ctx| {
+        Some(vec![Field::new("system", TypeRef::named_nn("World__System"), |ctx| {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let syscall_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;

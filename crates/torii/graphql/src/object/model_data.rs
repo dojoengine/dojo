@@ -216,7 +216,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
 }
 
 fn entity_field() -> Field {
-    Field::new("entity", TypeRef::named("Entity"), |ctx| {
+    Field::new("entity", TypeRef::named("World__Entity"), |ctx| {
         FieldFuture::new(async move {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {

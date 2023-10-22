@@ -17,7 +17,7 @@ impl ObjectTrait for SystemObject {
     }
 
     fn type_name(&self) -> &str {
-        "System"
+        "World__System"
     }
 
     fn type_mapping(&self) -> &TypeMapping {
@@ -29,18 +29,27 @@ impl ObjectTrait for SystemObject {
     }
 
     fn related_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("systemCalls", TypeRef::named_nn_list_nn("SystemCall"), |ctx| {
-            FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-                let syscall_id = extract::<u64>(event_values, "system_call_id")?;
-                let data =
-                    fetch_single_row(&mut conn, SYSTEM_CALL_TABLE, "id", &syscall_id.to_string())
-                        .await?;
-                let system_call = value_mapping_from_row(&data, &SYSTEM_CALL_TYPE_MAPPING, false)?;
+        Some(vec![Field::new(
+            "systemCalls",
+            TypeRef::named_nn_list_nn("World__SystemCall"),
+            |ctx| {
+                FieldFuture::new(async move {
+                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
+                    let syscall_id = extract::<u64>(event_values, "system_call_id")?;
+                    let data = fetch_single_row(
+                        &mut conn,
+                        SYSTEM_CALL_TABLE,
+                        "id",
+                        &syscall_id.to_string(),
+                    )
+                    .await?;
+                    let system_call =
+                        value_mapping_from_row(&data, &SYSTEM_CALL_TYPE_MAPPING, false)?;
 
-                Ok(Some(Value::Object(system_call)))
-            })
-        })])
+                    Ok(Some(Value::Object(system_call)))
+                })
+            },
+        )])
     }
 }
