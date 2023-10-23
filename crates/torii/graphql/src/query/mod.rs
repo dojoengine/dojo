@@ -23,8 +23,6 @@ pub async fn type_mapping_query(
     model_id: &str,
 ) -> sqlx::Result<TypeMapping> {
     let model_members = fetch_model_members(conn, model_id).await?;
-    //println!("model_members: {:?}", model_members[0].name);
-
     let (root_members, nested_members): (Vec<&ModelMember>, Vec<&ModelMember>) =
         model_members.iter().partition(|member| member.model_idx == 0);
 

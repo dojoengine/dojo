@@ -46,26 +46,28 @@ impl ObjectTrait for ModelObject {
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         let name = format!("{}Registered", self.name().0);
-        Some(vec![SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
-            {
-                SubscriptionFieldFuture::new(async move {
-                    let id = match ctx.args.get("id") {
-                        Some(id) => Some(id.string()?.to_string()),
-                        None => None,
-                    };
-                    // if id is None, then subscribe to all models
-                    // if id is Some, then subscribe to only the model with that id
-                    Ok(SimpleBroker::<Model>::subscribe().filter_map(move |model: Model| {
-                        if id.is_none() || id == Some(model.id.clone()) {
-                            Some(Ok(Value::Object(ModelObject::value_mapping(model))))
-                        } else {
-                            // id != model.id, so don't send anything, still listening
-                            None
-                        }
-                    }))
-                })
-            }
-        })
-        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
+        Some(vec![
+            SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
+                {
+                    SubscriptionFieldFuture::new(async move {
+                        let id = match ctx.args.get("id") {
+                            Some(id) => Some(id.string()?.to_string()),
+                            None => None,
+                        };
+                        // if id is None, then subscribe to all models
+                        // if id is Some, then subscribe to only the model with that id
+                        Ok(SimpleBroker::<Model>::subscribe().filter_map(move |model: Model| {
+                            if id.is_none() || id == Some(model.id.clone()) {
+                                Some(Ok(Value::Object(ModelObject::value_mapping(model))))
+                            } else {
+                                // id != model.id, so don't send anything, still listening
+                                None
+                            }
+                        }))
+                    })
+                }
+            })
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }

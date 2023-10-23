@@ -106,25 +106,27 @@ impl ObjectTrait for EntityObject {
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         let name = format!("{}Updated", self.name().0);
-        Some(vec![SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
-            SubscriptionFieldFuture::new(async move {
-                let id = match ctx.args.get("id") {
-                    Some(id) => Some(id.string()?.to_string()),
-                    None => None,
-                };
-                // if id is None, then subscribe to all entities
-                // if id is Some, then subscribe to only the entity with that id
-                Ok(SimpleBroker::<Entity>::subscribe().filter_map(move |entity: Entity| {
-                    if id.is_none() || id == Some(entity.id.clone()) {
-                        Some(Ok(Value::Object(EntityObject::value_mapping(entity))))
-                    } else {
-                        // id != entity.id , then don't send anything, still listening
-                        None
-                    }
-                }))
+        Some(vec![
+            SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
+                SubscriptionFieldFuture::new(async move {
+                    let id = match ctx.args.get("id") {
+                        Some(id) => Some(id.string()?.to_string()),
+                        None => None,
+                    };
+                    // if id is None, then subscribe to all entities
+                    // if id is Some, then subscribe to only the entity with that id
+                    Ok(SimpleBroker::<Entity>::subscribe().filter_map(move |entity: Entity| {
+                        if id.is_none() || id == Some(entity.id.clone()) {
+                            Some(Ok(Value::Object(EntityObject::value_mapping(entity))))
+                        } else {
+                            // id != entity.id , then don't send anything, still listening
+                            None
+                        }
+                    }))
+                })
             })
-        })
-        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
+            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
     }
 }
 
