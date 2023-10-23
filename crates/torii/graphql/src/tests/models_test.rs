@@ -67,7 +67,7 @@ mod tests {
     // End to end test spins up a test sequencer and deploys types-test project, this takes a while
     // to run so combine all related tests into one
     #[tokio::test(flavor = "multi_thread")]
-    #[ignore]
+    //#[ignore]
     async fn models_test() -> Result<()> {
         let pool = spinup_types_test().await?;
         let schema = build_schema(&pool).await.unwrap();
