@@ -6,7 +6,9 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 #[derive(
     AsRefStr, Display, EnumIter, EnumString, Copy, Clone, Debug, Serialize, Deserialize, PartialEq,
 )]
+#[serde(tag = "scalar_type", content = "value")]
 #[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum Primitive {
     U8(Option<u8>),
     U16(Option<u16>),
