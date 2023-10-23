@@ -123,20 +123,20 @@ fn deserialize_ty_from_json() {
                           "name": "PositionKind",
                           "option": 1,
                           "options": [
-                            [
-                                "Kind1",
-                                {
+                             {
+                                "name": "Kind1",
+                                "ty": {
                                     "type": "tuple",
                                     "content": []
                                 }
-                              ],
-                              [
-                                "Kind2",
-                                {
+                            },
+                            {
+                                "name": "Kind2",
+                                "ty": {
                                     "type": "tuple",
                                     "content": []
                                 }
-                              ]
+                            },
                           ]
                         }
                     },
