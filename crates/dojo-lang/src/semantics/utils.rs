@@ -6,7 +6,7 @@ use cairo_lang_defs::ids::{FunctionWithBodyId, LookupItemId, ModuleId, ModuleIte
 use cairo_lang_filesystem::ids::FileId;
 use cairo_lang_lowering::db::LoweringGroup;
 use cairo_lang_lowering::ids::{self as low, SemanticFunctionWithBodyIdEx};
-use cairo_lang_lowering::Statement;
+use cairo_lang_lowering::{Statement, StatementCall};
 use cairo_lang_semantic as semantic;
 use cairo_lang_syntax::node::ast::{self, Expr};
 use cairo_lang_syntax::node::{SyntaxNode, TypedSyntaxNode};
@@ -16,6 +16,7 @@ use semantic::expr::compute::{ComputationContext, Environment};
 use semantic::expr::inference::InferenceId;
 use semantic::items::function_with_body::SemanticExprLookup;
 use semantic::resolve::Resolver;
+use semantic::FunctionId;
 
 use crate::inline_macros::utils::WriterLookupDetails;
 
@@ -101,31 +102,56 @@ pub fn find_function_writes(
 
                     let flat_lowered = db.function_with_body_lowering(fn_id_low).unwrap();
                     for (_, flat_block) in flat_lowered.blocks.iter() {
+                        let mut last_layout_fn_semantic: Option<FunctionId> = None;
+
                         for statement in flat_block.statements.iter() {
                             if let Statement::Call(statement_call) = statement {
-                                match db.lookup_intern_lowering_function(statement_call.function) {
-                                    low::FunctionLongId::Semantic(fn_id) => {
-                                        if let Ok(Some(conc_body_fn)) =
-                                            fn_id.get_concrete(db).body(db)
-                                        {
-                                            println!(
-                                                "\nfn {}()\n",
-                                                conc_body_fn.function_with_body_id(db).name(db)
-                                            )
-                                            // if "set_entity"
-                                            //     == conc_body_fn.function_with_body_id(db).
-                                            // name(db)
-                                            // {
-                                            //     let input = statement.inputs()[3];
-                                            // }
+                                if let low::FunctionLongId::Semantic(fn_id) =
+                                    db.lookup_intern_lowering_function(statement_call.function)
+                                {
+                                    if let Ok(Some(conc_body_fn)) = fn_id.get_concrete(db).body(db)
+                                    {
+                                        let fn_body_id = conc_body_fn.function_with_body_id(db);
+                                        let fn_name = fn_body_id.name(db);
+                                        if fn_name == "set_entity" {
+                                            if let Some(layout_fn) = last_layout_fn_semantic {
+                                                match db.concrete_function_signature(layout_fn) {
+                                                    Ok(signature) => {
+                                                        if let Some(params) =
+                                                            signature.params.get(0)
+                                                        {
+                                                            // looks like
+                                                            // "@dojo_examples::models::Position"
+                                                            let component = params.ty.format(db);
+                                                            let component_segments =
+                                                                component.split("::");
+                                                            let component =
+                                                                component_segments.last().expect(
+                                                                    "layout signature params not \
+                                                                     found",
+                                                                );
+                                                            components
+                                                                .insert(component.into(), true);
+                                                        }
+                                                    }
+                                                    Err(_) => {
+                                                        eprintln!(
+                                                            "error: could't get entity model(s)"
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                eprintln!(
+                                                    "type reference not found for set_entity"
+                                                );
+                                            }
+                                        } else if fn_name == "layout" {
+                                            last_layout_fn_semantic = Some(fn_id);
                                         }
-                                    }
-                                    low::FunctionLongId::Generated(_) => {
-                                        println!("Ignored generated function");
                                     }
                                 }
                             } else {
-                                println!("{:#?} {:?}", statement, statement.outputs());
+                                // println!("{:#?} {:?}", statement, statement.outputs());
                             }
                         }
                     }
