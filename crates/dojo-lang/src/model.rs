@@ -152,7 +152,7 @@ pub fn handle_model_struct(
                 }
             }
         ",
-            UnorderedHashMap::from([
+            &UnorderedHashMap::from([
                 ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
                 (
                     "type_name".to_string(),

@@ -272,7 +272,7 @@ fn handle_introspect_internal(
             }
         }
         ",
-        UnorderedHashMap::from([
+        &UnorderedHashMap::from([
             ("name".to_string(), RewriteNode::Text(name)),
             ("size".to_string(), RewriteNode::Text(size.join(" + "))),
             ("layout".to_string(), RewriteNode::new_modified(layout)),

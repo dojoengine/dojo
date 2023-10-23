@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::Args;
-use scarb::core::Config;
+use scarb::core::{Config, TargetKind};
+use scarb::ops::CompileOpts;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -49,7 +50,11 @@ impl MigrateArgs {
 
         if !target_dir.join("manifest.json").exists() {
             let packages = ws.members().map(|p| p.id).collect();
-            scarb::ops::compile(packages, &ws)?;
+            scarb::ops::compile(
+                packages,
+                CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+                &ws,
+            )?;
         }
 
         // TODO: Check the updated scarb way to read profile specific values

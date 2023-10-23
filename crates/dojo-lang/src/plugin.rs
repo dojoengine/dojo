@@ -12,14 +12,14 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
+use camino::Utf8Path;
 use dojo_types::system::Dependency;
 use dojo_world::manifest::Member;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
-use scarb::core::{PackageId, PackageName, SourceId};
+use scarb::core::{DependencyVersionReq, ManifestDependency, PackageId, PackageName, SourceId};
 use semver::Version;
 use smol_str::SmolStr;
-use url::Url;
 
 use crate::contract::DojoContract;
 use crate::inline_macros::emit::EmitMacro;
@@ -64,6 +64,8 @@ impl GeneratedFileAuxData for DojoAuxData {
 #[path = "plugin_test.rs"]
 mod test;
 
+pub const PACKAGE_NAME: &str = "dojo_plugin";
+
 #[derive(Debug, Default)]
 pub struct BuiltinDojoPlugin;
 
@@ -75,17 +77,39 @@ impl BuiltinDojoPlugin {
 
         PluginResult::default()
     }
+
+    pub fn manifest_dependency() -> ManifestDependency {
+        let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+        let version_req = DependencyVersionReq::exact(&version);
+        ManifestDependency::builder()
+            .name(PackageName::new(PACKAGE_NAME))
+            .source_id(
+                SourceId::for_path(
+                    &Utf8Path::new(env!("CARGO_MANIFEST_DIR"))
+                        .join("Scarb.toml")
+                        .canonicalize_utf8()
+                        .unwrap(),
+                )
+                .unwrap(),
+            )
+            .version_req(version_req)
+            .build()
+    }
 }
 
 impl CairoPlugin for BuiltinDojoPlugin {
     fn id(&self) -> PackageId {
-        let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
         let version = env!("CARGO_PKG_VERSION");
         PackageId::new(
-            PackageName::new("dojo_plugin"),
+            PackageName::new(PACKAGE_NAME),
             Version::parse(version).unwrap(),
-            SourceId::for_git(&url, &scarb::core::GitReference::Tag(format!("v{version}").into()))
-                .unwrap(),
+            SourceId::for_path(
+                &Utf8Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("Scarb.toml")
+                    .canonicalize_utf8()
+                    .unwrap(),
+            )
+            .unwrap(),
         )
     }
 
@@ -273,6 +297,10 @@ impl MacroPlugin for BuiltinDojoPlugin {
             }
             _ => PluginResult::default(),
         }
+    }
+
+    fn declared_attributes(&self) -> Vec<String> {
+        vec!["dojo::contract".to_string(), "key".to_string()]
     }
 }
 

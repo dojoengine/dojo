@@ -4,10 +4,10 @@ fn main() {
 
     use camino::{Utf8Path, Utf8PathBuf};
     use dojo_lang::compiler::DojoCompiler;
-    use dojo_lang::plugin::CairoPluginRepository;
+    use dojo_lang::plugin::{BuiltinDojoPlugin, CairoPluginRepository};
     use scarb::compiler::CompilerRepository;
-    use scarb::core::Config;
-    use scarb::ops;
+    use scarb::core::{Config, TargetKind};
+    use scarb::ops::{self, CompileOpts};
     use scarb_ui::Verbosity;
 
     let project_paths =
@@ -37,12 +37,18 @@ fn main() {
             .log_filter_directive(env::var_os("SCARB_LOG"))
             .compilers(compilers)
             .cairo_plugins(cairo_plugins.into())
+            .custom_source_patches(vec![BuiltinDojoPlugin::manifest_dependency()])
             .build()
             .unwrap();
 
         let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
         let packages = ws.members().map(|p| p.id).collect();
-        ops::compile(packages, &ws).unwrap();
+        ops::compile(
+            packages,
+            CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+            &ws,
+        )
+        .unwrap();
     }
 }
 
