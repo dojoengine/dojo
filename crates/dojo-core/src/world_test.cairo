@@ -12,7 +12,7 @@ use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::database::schema::SchemaIntrospection;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
-use dojo::benchmarks::end;
+use dojo::benchmarks::{Character, end};
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -480,10 +480,10 @@ fn bench_execute_complex() {
     bar_contract.set_char(1337, 1337);
     end(gas, 'char set call');
 
-    // let gas = testing::get_available_gas();
-    // gas::withdraw_gas().unwrap();
-    // let data = get!(world, alice, Foo);
-    // end(gas, 'foo get macro');
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let data = get!(world, alice, Character);
+    end(gas, 'char get macro');
 
-    // assert(data.a == 1337, 'data not stored');
+    assert(data.heigth == 1337, 'data not stored');
 }

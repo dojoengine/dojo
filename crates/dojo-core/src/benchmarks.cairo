@@ -189,6 +189,49 @@ fn bench_index() {
 
 #[test]
 #[available_gas(1000000000)]
+fn bench_big_index() {
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let mut i = 0;
+    loop {
+        if i == 1000 {
+            break;
+        }
+        index::create(0, 69, i);
+        i += 1;
+    };
+    end(gas, 'idx create 1000');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let query = index::query(0, 69, Option::None(()));
+    end(gas, 'idx query 1000');
+    assert(query.len() == 1000, 'entity not indexed');
+    assert(*query.at(420) == 420, 'entity value incorrect');
+    
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    index::exists(0, 69, 999);
+    end(gas, 'idx exists 1000');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    index::delete(0, 69, 999);
+    end(gas, 'idx dlt 1000');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    index::delete(0, 69, 420);
+    end(gas, 'idx dlt !1000 >');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    index::delete(0, 69, 420);
+    end(gas, 'idx dlt !1000 0');
+}
+
+#[test]
+#[available_gas(1000000000)]
 fn bench_database_array() {
     let value = array![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].span();
     let layout = array![251, 251, 251, 251, 251, 251, 251, 251, 251, 251].span();
@@ -350,9 +393,16 @@ fn bench_nested_struct() {
         idx += 1;
     };
 
-    assert(case.layout().len() == values.len(), 'layout inconsintent with values');
-}
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    database::set('cases', '42', 0, case.values(), case.layout());
+    end(gas, 'case db set');
 
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    database::get('cases', '42', 0, case.packed_size(), case.layout());
+    end(gas, 'case db get');
+}
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Character {
@@ -462,4 +512,15 @@ fn bench_complex_struct() {
         assert(serialized.at(idx) == values.at(idx), 'serialized differ');
         idx += 1;
     };
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    database::set('chars', '42', 0, char.values(), char.layout());
+    end(gas, 'chars db set');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    database::get('chars', '42', 0, char.packed_size(), char.layout());
+    end(gas, 'chars db get');
+
 }
