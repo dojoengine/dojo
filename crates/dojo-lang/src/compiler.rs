@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::iter::zip;
 use std::ops::{Deref, DerefMut};
 
@@ -259,8 +259,8 @@ fn update_manifest(
         Class { name: BASE_CONTRACT_NAME.into(), abi: abi.clone(), class_hash: *hash }
     };
 
-    let mut models = HashMap::new();
-    let mut contracts = HashMap::new();
+    let mut models = BTreeMap::new();
+    let mut contracts = BTreeMap::new();
 
     for crate_id in crate_ids {
         for module_id in db.crate_modules(*crate_id).as_ref() {
@@ -355,8 +355,8 @@ fn do_update_manifest(
     world: dojo_world::manifest::Contract,
     executor: dojo_world::manifest::Contract,
     base: dojo_world::manifest::Class,
-    models: HashMap<String, dojo_world::manifest::Model>,
-    contracts: HashMap<SmolStr, dojo_world::manifest::Contract>,
+    models: BTreeMap<String, dojo_world::manifest::Model>,
+    contracts: BTreeMap<SmolStr, dojo_world::manifest::Contract>,
 ) -> anyhow::Result<()> {
     if manifest.world.class_hash != world.class_hash {
         manifest.world = world;
