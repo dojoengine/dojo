@@ -1,5 +1,5 @@
 [package]
-cairo-version = "2.2.0"
+cairo-version = "2.3.0"
 name = "dojo_examples"
 version = "0.3.1"
 
@@ -8,7 +8,6 @@ sierra-replace-ids = true
 
 [dependencies]
 dojo = { path = "../../crates/dojo-core" }
-# dojo_erc = { path = "../../crates/dojo-erc" }
 
 [[target.dojo]]
 build-external-contracts = []

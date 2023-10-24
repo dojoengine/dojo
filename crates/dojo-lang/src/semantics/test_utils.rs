@@ -23,7 +23,7 @@ use cairo_lang_syntax::node::db::{SyntaxDatabase, SyntaxGroup};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::{extract_matches, OptionFrom, Upcast};
 use camino::Utf8PathBuf;
-use dojo_test_utils::compiler::get_test_corelib;
+use dojo_test_utils::compiler::corelib;
 use once_cell::sync::Lazy;
 
 use crate::inline_macros::emit::EmitMacro;
@@ -59,7 +59,7 @@ impl DojoSemanticDatabase {
 
         db.set_inline_macro_plugins(inline_plugins.into());
 
-        init_dev_corelib(&mut db, get_test_corelib());
+        init_dev_corelib(&mut db, corelib());
         let dojo_path = Utf8PathBuf::from_path_buf("../../crates/dojo-core/src".into()).unwrap();
         let dojo_path: PathBuf = dojo_path.canonicalize_utf8().unwrap().into();
         let core_crate = db.intern_crate(CrateLongId::Real("dojo".into()));

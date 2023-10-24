@@ -74,7 +74,7 @@ impl DojoContract {
                     $body$
                 }
                 ",
-                UnorderedHashMap::from([
+                &UnorderedHashMap::from([
                     ("name".to_string(), RewriteNode::Text(name.to_string())),
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ]),
@@ -143,7 +143,7 @@ impl DojoContract {
                 #[external(v0)]
                 fn execute(self: @ContractState, $params$) $ret_clause$ $body$
             ",
-            UnorderedHashMap::from([
+            &UnorderedHashMap::from([
                 ("params".to_string(), RewriteNode::Text(params)),
                 (
                     "body".to_string(),

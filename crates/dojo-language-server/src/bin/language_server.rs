@@ -5,7 +5,7 @@ use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_language_server::Backend;
 use cairo_lang_starknet::inline_macros::selector::SelectorMacro;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
-use cairo_lang_test_runner::plugin::TestPlugin;
+use cairo_lang_test_plugin::TestPlugin;
 use cairo_lang_utils::logging::init_logging;
 use clap::Parser;
 use dojo_lang::inline_macros::emit::EmitMacro;
@@ -34,9 +34,9 @@ async fn main() {
 
     let db = RootDatabase::builder()
         .with_cfg(CfgSet::from_iter([Cfg::name("test")]))
-        .with_macro_plugin(Arc::new(TestPlugin::default()))
         .with_macro_plugin(Arc::new(BuiltinDojoPlugin))
         .with_macro_plugin(Arc::new(StarkNetPlugin::default()))
+        .with_macro_plugin(Arc::new(TestPlugin::default()))
         .with_inline_macro_plugin(EmitMacro::NAME, Arc::new(EmitMacro))
         .with_inline_macro_plugin(GetMacro::NAME, Arc::new(GetMacro))
         .with_inline_macro_plugin(SetMacro::NAME, Arc::new(SetMacro))
