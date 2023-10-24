@@ -63,7 +63,6 @@ mod bar {
                     caller: get_caller_address(),
                     heigth: a,
                     abilities: Abilities {
-                        caller: get_caller_address(),
                         strength: 0x12,
                         dexterity: 0x34,
                         constitution: 0x56,
@@ -72,7 +71,6 @@ mod bar {
                         charisma: 0xbc,
                     },
                     stats: Stats {
-                        caller: get_caller_address(),
                         kills: 0x123456789abcdef,
                         deaths: 0x1234,
                         rests: 0x12345678,

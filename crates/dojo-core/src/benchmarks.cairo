@@ -292,9 +292,8 @@ fn bench_simple_struct() {
 }
 
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
 struct Sword {
-    #[key]
     swordsmith: ContractAddress,
     damage: u32,
 }
@@ -360,10 +359,8 @@ struct Character {
     gold: u32,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
 struct Abilities {
-    #[key]
-    caller: ContractAddress,
     strength: u8,
     dexterity: u8,
     constitution: u8,
@@ -372,10 +369,8 @@ struct Abilities {
     charisma: u8,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
 struct Stats {
-    #[key]
-    caller: ContractAddress,
     kills: u128,
     deaths: u16,
     rests: u32,
@@ -399,7 +394,6 @@ fn bench_complex_struct() {
         caller: starknet::contract_address_const::<0x42>(),
         heigth: 0x123456789abcdef,
         abilities: Abilities {
-            caller: starknet::contract_address_const::<0x42>(),
             strength: 0x12,
             dexterity: 0x34,
             constitution: 0x56,
@@ -408,7 +402,6 @@ fn bench_complex_struct() {
             charisma: 0xbc,
         },
         stats: Stats {
-            caller: starknet::contract_address_const::<0x42>(),
             kills: 0x123456789abcdef,
             deaths: 0x1234,
             rests: 0x12345678,
@@ -431,25 +424,9 @@ fn bench_complex_struct() {
     gas::withdraw_gas().unwrap();
     let mut serialized = ArrayTrait::new();
     serde::Serde::serialize(@char.heigth, ref serialized);
-    serde::Serde::serialize(@char.abilities.caller, ref serialized);
-    serde::Serde::serialize(@char.abilities.strength, ref serialized);
-    serde::Serde::serialize(@char.abilities.dexterity, ref serialized);
-    serde::Serde::serialize(@char.abilities.constitution, ref serialized);
-    serde::Serde::serialize(@char.abilities.intelligence, ref serialized);
-    serde::Serde::serialize(@char.abilities.wisdom, ref serialized);
-    serde::Serde::serialize(@char.abilities.charisma, ref serialized);
-    serde::Serde::serialize(@char.stats.caller, ref serialized);
-    serde::Serde::serialize(@char.stats.kills, ref serialized);
-    serde::Serde::serialize(@char.stats.deaths, ref serialized);
-    serde::Serde::serialize(@char.stats.rests, ref serialized);
-    serde::Serde::serialize(@char.stats.hits, ref serialized);
-    serde::Serde::serialize(@char.stats.blocks, ref serialized);
-    serde::Serde::serialize(@char.stats.walked, ref serialized);
-    serde::Serde::serialize(@char.stats.runned, ref serialized);
-    serde::Serde::serialize(@char.stats.finished, ref serialized);
-    serde::Serde::serialize(@char.stats.romances, ref serialized);
-    serde::Serde::serialize(@char.weapon.swordsmith, ref serialized);
-    serde::Serde::serialize(@char.weapon.damage, ref serialized);
+    serde::Serde::serialize(@char.abilities, ref serialized);
+    serde::Serde::serialize(@char.stats, ref serialized);
+    serde::Serde::serialize(@char.weapon, ref serialized);
     serde::Serde::serialize(@char.gold, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
     end(gas, 'chars serialize');
