@@ -697,7 +697,8 @@ test_manifest_file
           }
         ]
       }
-    ]
+    ],
+    "deps": []
   },
   "executor": {
     "name": "executor",
@@ -755,7 +756,8 @@ test_manifest_file
         "kind": "enum",
         "variants": []
       }
-    ]
+    ],
+    "deps": []
   },
   "base": {
     "name": "base",
@@ -822,7 +824,7 @@ test_manifest_file
     {
       "name": "actions",
       "address": null,
-      "class_hash": "0x4b3a8688b75ebacf254b07671f3dacaada9f23bac37c61f9561bbe4ead1c112",
+      "class_hash": "0x3532a5efc1665800e05feb06256ceac921407c78c91a7896eae815c8ced4896",
       "abi": [
         {
           "type": "impl",
@@ -859,13 +861,6 @@ test_manifest_file
           "type": "interface",
           "name": "dojo_examples::actions::IActions",
           "items": [
-            {
-              "type": "function",
-              "name": "spawn",
-              "inputs": [],
-              "outputs": [],
-              "state_mutability": "view"
-            },
             {
               "type": "function",
               "name": "move",
@@ -920,6 +915,9 @@ test_manifest_file
             }
           ]
         }
+      ],
+      "deps": [
+        "Position"
       ]
     }
   ],
