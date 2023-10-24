@@ -174,7 +174,9 @@ pub async fn model_data_recursive_query(
     entity_id: &str,
     type_mapping: &TypeMapping,
 ) -> sqlx::Result<ValueMapping> {
+	println!("model_data_recursive_query: path_array: {:?}", path_array);
     let table_name = path_array.join("$");
+		println!("model_data_recursive_query: table_name: {:?}", table_name);
     let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", &table_name, entity_id);
     let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
     let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
