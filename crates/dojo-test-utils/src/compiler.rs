@@ -20,7 +20,6 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
     let config_dir = TempDir::new().unwrap();
 
     let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
-    println!("{path:?}");
     Config::builder(path.canonicalize_utf8().unwrap())
         .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
         .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))
@@ -32,7 +31,8 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
 }
 
 pub fn get_test_corelib() -> PathBuf {
-    let config = build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml").unwrap();
+    let config =
+        build_test_config("./src/manifest_test_data/example_ecs_crate/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
     let compilation_units = ops::generate_compilation_units(&resolve, &ws).unwrap();
