@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 [set|diff]"
+  echo "Usage: $0 [set|diff|assert]"
   exit 1
 fi
 
@@ -20,4 +20,9 @@ if [ $1 = "set" ]; then
     run | sort | tee benches.txt
 elif [ $1 = "diff" ]; then
     run | sort | diff benches.txt -
+elif [ $1 = "assert" ]; then
+    run | sort | cmp benches.txt -
+else
+    echo "Usage: $0 [set|diff|assert]"
+    exit 1
 fi
