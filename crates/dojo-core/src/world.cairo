@@ -165,6 +165,7 @@ mod world {
         models: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
+        reserved_events: LegacyMap::<felt252, bool>,
     }
 
     #[constructor]
@@ -173,6 +174,17 @@ mod world {
         self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
+
+        self.reserved_events.write(selector!("WorldSpawned"), true);
+        self.reserved_events.write(selector!("ContractDeployed"), true);
+        self.reserved_events.write(selector!("ContractUpgraded"), true);
+        self.reserved_events.write(selector!("MetadataUpdate"), true);
+        self.reserved_events.write(selector!("ModelRegistered"), true);
+        self.reserved_events.write(selector!("StoreSetRecord"), true);
+        self.reserved_events.write(selector!("StoreDelRecord"), true);
+        self.reserved_events.write(selector!("WriterUpdated"), true);
+        self.reserved_events.write(selector!("OwnerUpdated"), true);
+        self.reserved_events.write(selector!("ExecutorUpdated"), true);
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -455,6 +467,7 @@ mod world {
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
         fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
+            assert(keys.len() > 0 && !self.reserved_events.read(*keys.at(0)), 'reserved event name');
             let system = get_caller_address();
             system.serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();

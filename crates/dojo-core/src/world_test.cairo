@@ -399,3 +399,90 @@ fn test_execute_multiple_worlds() {
     assert(data2.a == 7331, 'data2 not stored');
 }
 
+
+
+#[starknet::interface]
+trait IMalicious<TContractState> {
+    fn emit_worldspawned(self: @TContractState);
+    fn emit_modelregistered(self: @TContractState);
+}
+
+#[dojo::contract]
+mod malicious {
+    use starknet::get_caller_address;
+    use super::ContractAddress;
+    use super::ClassHash;
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        WorldSpawned: WorldSpawned,
+        ModelRegistered: ModelRegistered,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct WorldSpawned {
+        address: ContractAddress,
+        creator: ContractAddress
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct ModelRegistered {
+        name: felt252,
+        class_hash: ClassHash,
+        prev_class_hash: ClassHash
+    }
+
+
+    #[external(v0)]
+    impl IMaliciousImpl of super::IMalicious<ContractState> {
+        fn emit_worldspawned(self: @ContractState) {
+            let address = get_caller_address();
+            emit!(self.world_dispatcher.read(), WorldSpawned {
+                address: address,
+                creator: address,
+            })
+        }
+
+        fn emit_modelregistered(self: @ContractState) {
+            let address = get_caller_address();
+            emit!(self.world_dispatcher.read(), ModelRegistered {
+                name: 'Malicious',
+                class_hash: 0.try_into().unwrap(),
+                prev_class_hash: 0.try_into().unwrap(),
+            });
+        }
+    }
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected:('reserved event name','ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+fn test_reserved_event_worldspawned() {
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let malicious_contract = IMaliciousDispatcher {
+        contract_address: world.deploy_contract('peper', malicious::TEST_CLASS_HASH.try_into().unwrap())
+    };
+    malicious_contract.emit_worldspawned();
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected:('reserved event name','ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+fn test_reserved_event_modelregistered() {
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let malicious_contract = IMaliciousDispatcher {
+        contract_address: world.deploy_contract('tree', malicious::TEST_CLASS_HASH.try_into().unwrap())
+    };
+    malicious_contract.emit_modelregistered();
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected:('reserved event name','ENTRYPOINT_FAILED'))]
+fn test_reserved_event_storesetrecord() {
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let mut keys = array![selector!("StoreSetRecord")];
+    let mut values =  array![];
+    world.emit(keys, values.span());
+}
