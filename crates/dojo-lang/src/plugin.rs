@@ -33,7 +33,7 @@ use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
-use crate::print::derive_print;
+use crate::print::handle_print_struct;
 
 const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 
@@ -63,7 +63,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 
@@ -303,6 +307,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                                     enum_ast.clone(),
                                 ));
                             }
+                            "Print" => rewrite_nodes.push(handle_print_enum(db, enum_ast.clone())),
                             _ => continue,
                         }
                     }
@@ -379,7 +384,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                                 diagnostics.extend(model_diagnostics);
                             }
                             "Print" => {
-                                rewrite_nodes.push(derive_print(db, struct_ast.clone()));
+                                rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
                             }
                             "Introspect" => {
                                 rewrite_nodes
