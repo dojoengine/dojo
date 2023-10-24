@@ -4,7 +4,7 @@ mod tests {
 
     use async_graphql::value;
     use dojo_types::primitive::Primitive;
-    use dojo_types::schema::{Enum, Member, Struct, Ty};
+    use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use sqlx::SqlitePool;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
@@ -57,11 +57,11 @@ mod tests {
                                 name: "Direction".to_string(),
                                 option: Some(1),
                                 options: vec![
-                                    ("None".to_string(), Ty::Tuple(vec![])),
-                                    ("Left".to_string(), Ty::Tuple(vec![])),
-                                    ("Right".to_string(), Ty::Tuple(vec![])),
-                                    ("Up".to_string(), Ty::Tuple(vec![])),
-                                    ("Down".to_string(), Ty::Tuple(vec![])),
+                                    EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
                                 ],
                             }),
                         },
@@ -132,11 +132,11 @@ mod tests {
                                 name: "Direction".to_string(),
                                 option: Some(1),
                                 options: vec![
-                                    ("None".to_string(), Ty::Tuple(vec![])),
-                                    ("Left".to_string(), Ty::Tuple(vec![])),
-                                    ("Right".to_string(), Ty::Tuple(vec![])),
-                                    ("Up".to_string(), Ty::Tuple(vec![])),
-                                    ("Down".to_string(), Ty::Tuple(vec![])),
+                                    EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
                                 ],
                             }),
                         },
