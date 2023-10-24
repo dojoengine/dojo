@@ -1,16 +1,22 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::iter::zip;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
+use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_starknet::abi;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
+use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_utils::UpcastMut;
+use convert_case::{Case, Casing};
+use dojo_world::manifest::{
+    Class, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+};
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CompilationUnit, Compiler};
@@ -21,9 +27,13 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use tracing::{debug, trace, trace_span};
 
-use crate::manifest::Manifest;
+use crate::plugin::DojoAuxData;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
+
+#[cfg(test)]
+#[path = "compiler_test.rs"]
+mod test;
 
 pub struct DojoCompiler;
 
@@ -104,10 +114,16 @@ impl Compiler for DojoCompiler {
             compiled_classes.insert(contract_name, (class_hash, class.abi));
         }
 
-        let mut file = target_dir.open_rw("manifest.json", "output file", ws.config())?;
-        let manifest = Manifest::new(db, &main_crate_ids, compiled_classes);
-        serde_json::to_writer_pretty(file.deref_mut(), &manifest)
-            .with_context(|| "failed to serialize manifest")?;
+        let mut manifest = target_dir
+            .open_ro("manifest.json", "output file", ws.config())
+            .map(|file| dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default())
+            .unwrap_or(dojo_world::manifest::Manifest::default());
+
+        update_manifest(&mut manifest, db, &main_crate_ids, compiled_classes)?;
+
+        manifest.write_to_path(
+            target_dir.open_rw("manifest.json", "output file", ws.config())?.path(),
+        )?;
 
         Ok(())
     }
@@ -184,20 +200,177 @@ pub fn collect_external_crate_ids(
         .collect::<Vec<_>>()
 }
 
-#[test]
-fn test_compiler() {
-    use dojo_test_utils::compiler::build_test_config;
-    use scarb::ops;
-    use scarb::ops::CompileOpts;
+fn update_manifest(
+    manifest: &mut dojo_world::manifest::Manifest,
+    db: &dyn SemanticGroup,
+    crate_ids: &[CrateId],
+    compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+) -> anyhow::Result<()> {
+    fn get_compiled_artifact_from_map<'a>(
+        artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+        artifact_name: &str,
+    ) -> anyhow::Result<&'a (FieldElement, Option<abi::Contract>)> {
+        artifacts.get(artifact_name).context(format!(
+            "Contract `{artifact_name}` not found. Did you include `dojo` as a dependency?",
+        ))
+    }
 
-    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
-    let ws = ops::read_workspace(config.manifest_path(), &config)
-        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let packages = ws.members().map(|p| p.id).collect();
-    ops::compile(
-        packages,
-        CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-        &ws,
-    )
-    .unwrap_or_else(|op| panic!("Error compiling: {op:?}"))
+    let world = {
+        let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
+        Contract {
+            name: WORLD_CONTRACT_NAME.into(),
+            abi: abi.clone(),
+            class_hash: *hash,
+            ..Default::default()
+        }
+    };
+
+    let executor = {
+        let (hash, abi) =
+            get_compiled_artifact_from_map(&compiled_artifacts, EXECUTOR_CONTRACT_NAME)?;
+        Contract {
+            name: EXECUTOR_CONTRACT_NAME.into(),
+            abi: abi.clone(),
+            class_hash: *hash,
+            ..Default::default()
+        }
+    };
+
+    let base = {
+        let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
+        Class { name: BASE_CONTRACT_NAME.into(), abi: abi.clone(), class_hash: *hash }
+    };
+
+    let mut models = BTreeMap::new();
+    let mut contracts = BTreeMap::new();
+
+    for crate_id in crate_ids {
+        for module_id in db.crate_modules(*crate_id).as_ref() {
+            let file_infos = db.module_generated_file_infos(*module_id).unwrap_or_default();
+            for aux_data in file_infos
+                .iter()
+                .skip(1)
+                .filter_map(|info| info.as_ref().map(|i| &i.aux_data))
+                .filter_map(|aux_data| aux_data.as_ref().map(|aux_data| aux_data.0.as_any()))
+            {
+                if let Some(aux_data) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
+                    contracts.extend(get_dojo_contract_artifacts(aux_data, &compiled_artifacts)?);
+                }
+
+                if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
+                    models.extend(get_dojo_model_artifacts(
+                        db,
+                        dojo_aux_data,
+                        *module_id,
+                        &compiled_artifacts,
+                    )?);
+                }
+            }
+        }
+    }
+
+    for model in &models {
+        contracts.remove(model.0.to_case(Case::Snake).as_str());
+    }
+
+    do_update_manifest(manifest, world, executor, base, models, contracts)?;
+
+    Ok(())
+}
+
+/// Finds the inline modules annotated as models in the given crate_ids and
+/// returns the corresponding Models.
+fn get_dojo_model_artifacts(
+    db: &dyn SemanticGroup,
+    aux_data: &DojoAuxData,
+    module_id: ModuleId,
+    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+) -> anyhow::Result<HashMap<String, dojo_world::manifest::Model>> {
+    let mut models = HashMap::with_capacity(aux_data.models.len());
+
+    for model in &aux_data.models {
+        if let Ok(Some(ModuleItemId::Struct(_))) =
+            db.module_item_by_name(module_id, model.name.clone().into())
+        {
+            let model_contract_name = model.name.to_case(Case::Snake);
+
+            let (class_hash, abi) = compiled_classes
+                .get(model_contract_name.as_str())
+                .cloned()
+                .ok_or(anyhow!("Model {} not found in target.", model.name))?;
+
+            models.insert(
+                model.name.clone(),
+                dojo_world::manifest::Model {
+                    abi,
+                    class_hash,
+                    name: model.name.clone(),
+                    members: model.members.clone(),
+                },
+            );
+        }
+    }
+
+    Ok(models)
+}
+
+fn get_dojo_contract_artifacts(
+    aux_data: &StarkNetContractAuxData,
+    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+) -> anyhow::Result<HashMap<SmolStr, Contract>> {
+    aux_data
+        .contracts
+        .iter()
+        .filter(|name| !matches!(name.as_ref(), "world" | "executor" | "base"))
+        .map(|name| {
+            let (class_hash, abi) = compiled_classes
+                .get(name)
+                .cloned()
+                .ok_or(anyhow!("Contract {name} not found in target."))?;
+            Ok((name.clone(), Contract { name: name.clone(), class_hash, abi, address: None }))
+        })
+        .collect::<anyhow::Result<_>>()
+}
+
+fn do_update_manifest(
+    manifest: &mut dojo_world::manifest::Manifest,
+    world: dojo_world::manifest::Contract,
+    executor: dojo_world::manifest::Contract,
+    base: dojo_world::manifest::Class,
+    models: BTreeMap<String, dojo_world::manifest::Model>,
+    contracts: BTreeMap<SmolStr, dojo_world::manifest::Contract>,
+) -> anyhow::Result<()> {
+    if manifest.world.class_hash != world.class_hash {
+        manifest.world = world;
+    }
+
+    if manifest.executor.class_hash != executor.class_hash {
+        manifest.executor = executor;
+    }
+
+    if manifest.base.class_hash != base.class_hash {
+        manifest.base = base;
+    }
+
+    for (name, model) in models {
+        if let Some(mm) = manifest.models.iter_mut().find(|m| m.name == name) {
+            if mm.class_hash != model.class_hash {
+                *mm = model;
+            }
+        } else {
+            manifest.models.push(model);
+        }
+    }
+
+    for (name, contract) in contracts {
+        if let Some(mc) = manifest.contracts.iter_mut().find(|c| c.name == name) {
+            if mc.class_hash != contract.class_hash {
+                *mc = contract;
+            }
+        } else {
+            manifest.contracts.push(contract);
+        }
+    }
+
+    Ok(())
 }

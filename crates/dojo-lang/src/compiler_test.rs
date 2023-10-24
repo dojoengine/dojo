@@ -7,6 +7,22 @@ use dojo_test_utils::compiler::build_test_config;
 use scarb::core::TargetKind;
 use scarb::ops::{self, CompileOpts};
 
+#[test]
+fn test_compiler() {
+    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
+    let packages = ws.members().map(|p| p.id).collect();
+    assert!(
+        ops::compile(
+            packages,
+            CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+            &ws
+        )
+        .is_ok(),
+        "compilation failed"
+    );
+}
+
 cairo_lang_test_utils::test_file_test!(
     manifest_file,
     "src/manifest_test_data/",
