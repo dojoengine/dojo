@@ -9,7 +9,6 @@ use starknet::syscalls::deploy_syscall;
 
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
-use dojo::database::schema::SchemaIntrospection;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 
 #[derive(Model, Copy, Drop, Serde)]

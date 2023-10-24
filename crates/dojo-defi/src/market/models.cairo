@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use dojo::database::schema::{Struct, Ty, SchemaIntrospection, Member, serialize_member};
+use dojo::database::schema::{Struct, Ty, SchemaIntrospection, Member};
 
 // Cubit fixed point math library
 use cubit::f128::types::fixed::Fixed;
@@ -25,12 +25,8 @@ impl SchemaIntrospectionFixed of SchemaIntrospection<Fixed> {
                 name: 'Fixed',
                 attrs: array![].span(),
                 children: array![
-                    serialize_member(
-                        @Member { name: 'mag', ty: Ty::Primitive('u128'), attrs: array![].span() }
-                    ),
-                    serialize_member(
-                        @Member { name: 'sign', ty: Ty::Primitive('bool'), attrs: array![].span() }
-                    )
+                    Member { name: 'mag', ty: Ty::Primitive('u128'), attrs: array![].span() },
+                    Member { name: 'sign', ty: Ty::Primitive('bool'), attrs: array![].span() }
                 ]
                     .span()
             }

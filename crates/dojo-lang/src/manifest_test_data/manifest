@@ -1008,7 +1008,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x2a20de0f38504e870c0ea88a2ac39e7d4e123ed1e024929638cf037a3e47396",
+      "class_hash": "0x52b57bf1090fc2de0266c7db9a2d7821ab12cc2b61811111edf0d62ed4ef43a",
       "abi": [
         {
           "type": "function",
@@ -1076,11 +1076,29 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "name": "dojo::database::schema::Member",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "ty",
+              "type": "dojo::database::schema::Ty"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<dojo::database::schema::Member>",
           "members": [
             {
               "name": "snapshot",
-              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+              "type": "@core::array::Array::<dojo::database::schema::Member>"
             }
           ]
         },
@@ -1098,17 +1116,17 @@ test_manifest_file
             },
             {
               "name": "children",
-              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              "type": "core::array::Span::<dojo::database::schema::Member>"
             }
           ]
         },
         {
           "type": "struct",
-          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "name": "core::array::Span::<(core::felt252, dojo::database::schema::Ty)>",
           "members": [
             {
               "name": "snapshot",
-              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+              "type": "@core::array::Array::<(core::felt252, dojo::database::schema::Ty)>"
             }
           ]
         },
@@ -1126,7 +1144,17 @@ test_manifest_file
             },
             {
               "name": "children",
-              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+              "type": "core::array::Span::<(core::felt252, dojo::database::schema::Ty)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<dojo::database::schema::Ty>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<dojo::database::schema::Ty>"
             }
           ]
         },
@@ -1148,7 +1176,7 @@ test_manifest_file
             },
             {
               "name": "Tuple",
-              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              "type": "core::array::Span::<dojo::database::schema::Ty>"
             }
           ]
         },
@@ -1185,7 +1213,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x6f8b85d1f68eab7612e3f4ea178c6386cedb30a6925c9f662a251c640b86d96",
+      "class_hash": "0x7faeead59256f49901ec8571b74d239c62d6cefa92d398ac81a09daee3a6274",
       "abi": [
         {
           "type": "function",
@@ -1253,11 +1281,29 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "name": "dojo::database::schema::Member",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "ty",
+              "type": "dojo::database::schema::Ty"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<dojo::database::schema::Member>",
           "members": [
             {
               "name": "snapshot",
-              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+              "type": "@core::array::Array::<dojo::database::schema::Member>"
             }
           ]
         },
@@ -1275,17 +1321,17 @@ test_manifest_file
             },
             {
               "name": "children",
-              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              "type": "core::array::Span::<dojo::database::schema::Member>"
             }
           ]
         },
         {
           "type": "struct",
-          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "name": "core::array::Span::<(core::felt252, dojo::database::schema::Ty)>",
           "members": [
             {
               "name": "snapshot",
-              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+              "type": "@core::array::Array::<(core::felt252, dojo::database::schema::Ty)>"
             }
           ]
         },
@@ -1303,7 +1349,17 @@ test_manifest_file
             },
             {
               "name": "children",
-              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+              "type": "core::array::Span::<(core::felt252, dojo::database::schema::Ty)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<dojo::database::schema::Ty>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<dojo::database::schema::Ty>"
             }
           ]
         },
@@ -1325,7 +1381,7 @@ test_manifest_file
             },
             {
               "name": "Tuple",
-              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+              "type": "core::array::Span::<dojo::database::schema::Ty>"
             }
           ]
         },

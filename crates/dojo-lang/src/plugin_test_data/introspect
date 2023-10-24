@@ -641,18 +641,18 @@ layout.append(32);
             name: 'Vec2',
             attrs: array![].span(),
             children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'x',
                         ty: dojo::database::schema::Ty::Primitive('u32'),
                         attrs: array![].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'y',
                         ty: dojo::database::schema::Ty::Primitive('u32'),
                         attrs: array![].span()
-                    })
+                    }
 ].span()
         })
             }
@@ -700,14 +700,12 @@ impl PlainEnumDrop of Drop::<PlainEnum>;
                 
             (
                 'Left',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![].span()))
+                dojo::database::schema::Ty::Tuple(array![].span())
             ),
 
             (
                 'Right',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![].span()))
+                dojo::database::schema::Ty::Tuple(array![].span())
             )
                 ].span()
             }
@@ -758,18 +756,12 @@ layout.append(16);
                 
             (
                 'Left',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![dojo::database::schema::serialize_member_type(
-                            @dojo::database::schema::Ty::Primitive('u16')
-                        )].span()))
+                dojo::database::schema::Ty::Tuple(array![dojo::database::schema::Ty::Primitive('u16')].span())
             ),
 
             (
                 'Right',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![dojo::database::schema::serialize_member_type(
-                            @dojo::database::schema::Ty::Primitive('u16')
-                        )].span()))
+                dojo::database::schema::Ty::Tuple(array![dojo::database::schema::Ty::Primitive('u16')].span())
             )
                 ].span()
             }
@@ -821,24 +813,14 @@ layout.append(8);
                 
             (
                 'Left',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![dojo::database::schema::serialize_member_type(
-                            @dojo::database::schema::Ty::Primitive('u8')
-                        ),
-dojo::database::schema::serialize_member_type(
-                            @dojo::database::schema::Ty::Primitive('u8')
-                        )].span()))
+                dojo::database::schema::Ty::Tuple(array![dojo::database::schema::Ty::Primitive('u8'),
+dojo::database::schema::Ty::Primitive('u8')].span())
             ),
 
             (
                 'Right',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![dojo::database::schema::serialize_member_type(
-                            @dojo::database::schema::Ty::Primitive('u8')
-                        ),
-dojo::database::schema::serialize_member_type(
-                            @dojo::database::schema::Ty::Primitive('u8')
-                        )].span()))
+                dojo::database::schema::Ty::Tuple(array![dojo::database::schema::Ty::Primitive('u8'),
+dojo::database::schema::Ty::Primitive('u8')].span())
             )
                 ].span()
             }
@@ -889,18 +871,12 @@ dojo::database::schema::SchemaIntrospection::<Vec2>::layout(ref layout);
                 
             (
                 'Left',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![dojo::database::schema::serialize_member_type(
-                        @dojo::database::schema::SchemaIntrospection::<Vec2>::ty()
-                    )].span()))
+                dojo::database::schema::Ty::Tuple(array![dojo::database::schema::SchemaIntrospection::<Vec2>::ty()].span())
             ),
 
             (
                 'Right',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![dojo::database::schema::serialize_member_type(
-                        @dojo::database::schema::SchemaIntrospection::<Vec2>::ty()
-                    )].span()))
+                dojo::database::schema::Ty::Tuple(array![dojo::database::schema::SchemaIntrospection::<Vec2>::ty()].span())
             )
                 ].span()
             }
@@ -967,32 +943,32 @@ layout.append(16);
             name: 'Position',
             attrs: array![].span(),
             children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'player',
                         ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                         attrs: array!['key'].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'before',
                         ty: dojo::database::schema::Ty::Primitive('u8'),
                         attrs: array![].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'vec',
                         ty: dojo::database::schema::SchemaIntrospection::<Vec2>::ty(),
                         attrs: array![].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'after',
                         ty: dojo::database::schema::Ty::Primitive('u16'),
                         attrs: array![].span()
-                    })
+                    }
 ].span()
         })
             }
@@ -1064,32 +1040,32 @@ layout.append(16);
             name: 'Position',
             attrs: array![].span(),
             children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'player',
                         ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                         attrs: array!['key'].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'before',
                         ty: dojo::database::schema::Ty::Primitive('u8'),
                         attrs: array![].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'vec',
                         ty: dojo::database::schema::SchemaIntrospection::<Vec2>::ty(),
                         attrs: array![].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'after',
                         ty: dojo::database::schema::Ty::Primitive('u16'),
                         attrs: array![].span()
-                    })
+                    }
 ].span()
         })
             }

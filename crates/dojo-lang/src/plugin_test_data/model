@@ -720,25 +720,25 @@ layout.append(8);
             name: 'Vec3',
             attrs: array![].span(),
             children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'x',
                         ty: dojo::database::schema::Ty::Primitive('u32'),
                         attrs: array![].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'y',
                         ty: dojo::database::schema::Ty::Primitive('u32'),
                         attrs: array![].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'z',
                         ty: dojo::database::schema::Ty::Primitive('u8'),
                         attrs: array![].span()
-                    })
+                    }
 ].span()
         })
             }
@@ -813,18 +813,18 @@ impl PositionSerde of Serde::<Position> {
             name: 'Position',
             attrs: array![].span(),
             children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'id',
                         ty: dojo::database::schema::Ty::Primitive('felt252'),
                         attrs: array!['key'].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'v',
                         ty: dojo::database::schema::SchemaIntrospection::<Vec3>::ty(),
                         attrs: array![].span()
-                    })
+                    }
 ].span()
         })
             }
@@ -939,11 +939,11 @@ impl RolesSerde of Serde::<Roles> {
             name: 'Roles',
             attrs: array![].span(),
             children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'role_ids',
                         ty: dojo::database::schema::SchemaIntrospection::<Array<u8>>::ty(),
                         attrs: array![].span()
-                    })
+                    }
 ].span()
         })
             }
@@ -1064,25 +1064,25 @@ impl PlayerSerde of Serde::<Player> {
             name: 'Player',
             attrs: array![].span(),
             children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'game',
                         ty: dojo::database::schema::Ty::Primitive('felt252'),
                         attrs: array!['key'].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'player',
                         ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
                         attrs: array!['key'].span()
-                    })
+                    }
 ,
 
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
+                    dojo::database::schema::Member {
                         name: 'name',
                         ty: dojo::database::schema::Ty::Primitive('felt252'),
                         attrs: array![].span()
-                    })
+                    }
 ].span()
         })
             }
