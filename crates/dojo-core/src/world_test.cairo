@@ -7,7 +7,7 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 
-use dojo::benchmarks::{Character, Abilities, Stats, Sword};
+use dojo::benchmarks;
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::database::schema::SchemaIntrospection;
@@ -37,7 +37,8 @@ trait Ibar<TContractState> {
 
 #[starknet::contract]
 mod bar {
-    use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait, Character, Abilities, Stats, Sword};
+    use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait};
+    use super::benchmarks::{Character, Abilities, Stats, Weapon, Sword};
     use traits::Into;
     use starknet::{get_caller_address, ContractAddress};
 
@@ -81,10 +82,16 @@ mod bar {
                         finished: true,
                         romances: 0x1234,
                     },
-                    weapon: Sword {
-                        swordsmith: get_caller_address(),
-                        damage: 0x12345678,
-                    },
+                    weapon: Weapon::DualWield((
+                        Sword {
+                            swordsmith: get_caller_address(),
+                            damage: 0x12345678,
+                        },
+                        Sword {
+                            swordsmith: get_caller_address(),
+                            damage: 0x12345678,
+                        }
+                    )),
                     gold: b,
                 }
             );

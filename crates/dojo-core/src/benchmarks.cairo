@@ -303,7 +303,9 @@ struct Case {
     #[key]
     owner: ContractAddress,
     sword: Sword,
+    material: felt252,
 }
+
 
 #[test]
 #[available_gas(1000000000)]
@@ -318,14 +320,18 @@ fn bench_nested_struct() {
             swordsmith: caller,
             damage: 0x12345678,
         },
+        material: 'wooden',
     };
     end(gas, 'case init');
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
     let mut serialized = ArrayTrait::new();
-    serde::Serde::serialize(@case.sword.swordsmith, ref serialized);
-    serde::Serde::serialize(@case.sword.damage, ref serialized);
+    serde::Serde::serialize(@case.sword, ref serialized);
+    serde::Serde::serialize(@case.material, ref serialized);
     let serialized = array::ArrayTrait::span(@serialized);
     end(gas, 'case serialize');
 
@@ -355,7 +361,7 @@ struct Character {
     heigth: felt252,
     abilities: Abilities,
     stats: Stats,
-    weapon: Sword,
+    weapon: Weapon,
     gold: u32,
 }
 
@@ -382,7 +388,11 @@ struct Stats {
     romances: u16,
 }
 
-
+#[derive(Introspect, Copy, Drop, Serde)]
+enum Weapon {
+    DualWield: (Sword, Sword),
+    Fists: (Sword, Sword), // Introspect requires same arms
+}
 
 #[test]
 #[available_gas(1000000000)]
@@ -412,10 +422,16 @@ fn bench_complex_struct() {
             finished: true,
             romances: 0x1234,
         },
-        weapon: Sword {
-            swordsmith: starknet::contract_address_const::<0x69>(),
-            damage: 0x12345678,
-        },
+        weapon: Weapon::DualWield((
+            Sword {
+                swordsmith: starknet::contract_address_const::<0x69>(),
+                damage: 0x12345678,
+            },
+            Sword {
+                swordsmith: starknet::contract_address_const::<0x69>(),
+                damage: 0x12345678,
+            }
+        )),
         gold: 0x12345678,
     };
     end(gas, 'chars init');
@@ -436,9 +452,6 @@ fn bench_complex_struct() {
     let values: Span<felt252> = char.values();
     end(gas, 'chars values');
 
-
-    serialized.len().print();
-    values.len().print();
     assert(serialized.len() == values.len(), 'serialized not equal');
 
     let mut idx = 0;
