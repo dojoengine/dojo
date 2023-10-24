@@ -207,16 +207,14 @@ impl Manifest {
 impl TryFrom<std::fs::File> for Manifest {
     type Error = serde_json::Error;
     fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
-        let buffer = std::io::BufReader::new(&file);
-        serde_json::from_reader(buffer)
+        serde_json::from_reader(std::io::BufReader::new(file))
     }
 }
 
 impl TryFrom<&std::fs::File> for Manifest {
     type Error = serde_json::Error;
     fn try_from(file: &std::fs::File) -> Result<Self, Self::Error> {
-        let buffer = std::io::BufReader::new(file);
-        serde_json::from_reader(buffer)
+        serde_json::from_reader(std::io::BufReader::new(file))
     }
 }
 

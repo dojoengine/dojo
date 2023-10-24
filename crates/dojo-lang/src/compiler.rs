@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::iter::zip;
 use std::ops::{Deref, DerefMut};
-use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
@@ -28,7 +27,6 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use tracing::{debug, trace, trace_span};
 
-use crate::manifest::Manifest;
 use crate::plugin::DojoAuxData;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
@@ -116,12 +114,10 @@ impl Compiler for DojoCompiler {
             compiled_classes.insert(contract_name, (class_hash, class.abi));
         }
 
-        let mut manifest =
-            if let Ok(file) = target_dir.open_ro("manifest.json", "output file", ws.config()) {
-                dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default()
-            } else {
-                dojo_world::manifest::Manifest::default()
-            };
+        let mut manifest = target_dir
+            .open_ro("manifest.json", "output file", ws.config())
+            .map(|file| dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default())
+            .unwrap_or(dojo_world::manifest::Manifest::default());
 
         update_manifest(&mut manifest, db, &main_crate_ids, compiled_classes)?;
 
@@ -340,17 +336,10 @@ fn get_dojo_contract_artifacts(
     aux_data: &StarkNetContractAuxData,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<SmolStr, Contract>> {
-    let not_internal_contract = |name: &&SmolStr| -> bool {
-        match name.as_ref() {
-            "world" | "executor" | "base" => false,
-            _ => true,
-        }
-    };
-
     aux_data
         .contracts
         .iter()
-        .filter(not_internal_contract)
+        .filter(|name| !matches!(name.as_ref(), "world" | "executor" | "base"))
         .map(|name| {
             let (class_hash, abi) = compiled_classes
                 .get(name)
