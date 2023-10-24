@@ -128,7 +128,7 @@ impl Manifest {
     /// Load the manifest from a file at the given path.
     pub fn load_from_path(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
         let file = fs::File::open(path)?;
-        Ok(serde_json::from_reader(file)?)
+        Ok(Self::try_from(file)?)
     }
 
     /// Writes the manifest into a file at the given path. Will return error if the file doesn't
@@ -201,6 +201,22 @@ impl Manifest {
                 ..Default::default()
             },
         })
+    }
+}
+
+impl TryFrom<std::fs::File> for Manifest {
+    type Error = serde_json::Error;
+    fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
+        let buffer = std::io::BufReader::new(&file);
+        serde_json::from_reader(buffer)
+    }
+}
+
+impl TryFrom<&std::fs::File> for Manifest {
+    type Error = serde_json::Error;
+    fn try_from(file: &std::fs::File) -> Result<Self, Self::Error> {
+        let buffer = std::io::BufReader::new(file);
+        serde_json::from_reader(buffer)
     }
 }
 
