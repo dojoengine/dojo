@@ -279,10 +279,9 @@ impl Sql {
     ) {
         match entity {
             Ty::Struct(s) => {
-                // Todo: Namespace - Refactor table_id
-								println!("recursive path: {:?}", path);
+                println!("recursive path: {:?}", path);
                 let table_id = path.join("$");
-								println!("recursive table_id: {}", table_id);
+                println!("recursive table_id: {}", table_id);
                 let mut columns = vec!["entity_id".to_string(), "event_id".to_string()];
                 let mut values = vec![format!("'{entity_id}', '{event_id}'")];
 
@@ -331,12 +330,7 @@ impl Sql {
     }
 
     fn build_model_query(&mut self, path: Vec<String>, model: &Ty, model_idx: usize) {
-        // let mut path = path;
-        // if path.len() > 1 {
-        // 		let add = format!("{}_{}", path[0].clone(), path[1].clone());
-        // 		path[1] = add;
-        // }
-				println!("query path: {:?}", path);
+        println!("query path: {:?}", path);
         let table_id = path.join("$");
         println!("query table_id: {}", table_id);
 
@@ -387,9 +381,9 @@ impl Sql {
 
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
-					println!("2nd query path: {:?}", path);
+            println!("2nd query path: {:?}", path);
             let parent_table_id = path[..path.len() - 1].join("$");
-						println!("2nd query parent_table_id: {}", parent_table_id);
+            println!("2nd query parent_table_id: {}", parent_table_id);
             query.push_str(&format!(
                 "FOREIGN KEY (entity_id) REFERENCES {parent_table_id} (entity_id), "
             ));

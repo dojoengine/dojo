@@ -60,7 +60,6 @@ fn build_type_mapping(
         .iter()
         .map(|&member| {
             let type_data = member_to_type_data(member, nested_members);
-            //println!("type_data: {:?}", type_data);
             Ok((Name::new(&member.name), type_data))
         })
         .collect::<sqlx::Result<TypeMapping>>()?;
