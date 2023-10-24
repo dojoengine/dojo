@@ -158,7 +158,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
 
     for (field_name, type_data) in type_mapping.clone() {
         let mut table_name = path_array[0].clone();
-        // For nested types, we need to remove remove prefix in path array
+        // For nested types, we need to remove prefix in path array
         if path_array.len() > 1 {
             let pattern = format!("{}_", table_name);
             let name = path_array.join("$");

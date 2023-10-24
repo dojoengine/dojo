@@ -13,7 +13,6 @@ mod tests {
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
 
-    //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entity_subscription(pool: SqlitePool) {
         // Sleep in order to run this test in a single thread
@@ -93,7 +92,6 @@ mod tests {
         rx.recv().await.unwrap();
     }
 
-    //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
         // Sleep in order to run this test in a single thread
@@ -168,7 +166,6 @@ mod tests {
         rx.recv().await.unwrap();
     }
 
-    //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_model_subscription(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
@@ -217,7 +214,6 @@ mod tests {
         rx.recv().await.unwrap();
     }
 
-    //#[ignore]
     #[sqlx::test(migrations = "../migrations")]
     async fn test_model_subscription_with_id(pool: SqlitePool) {
         // Sleep in order to run this test at the end in a single thread

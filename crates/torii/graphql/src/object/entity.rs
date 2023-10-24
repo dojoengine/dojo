@@ -176,7 +176,7 @@ pub async fn model_data_recursive_query(
 ) -> sqlx::Result<ValueMapping> {
     println!("model_data_recursive_query: path_array: {:?}", path_array);
     let mut table_name = path_array[0].clone();
-    // For nested types, we need to remove remove prefix in path array
+    // For nested types, we need to remove prefix in path array
     if path_array.len() > 1 {
         let pattern = format!("{}_", table_name);
         let name = path_array.join("$");
