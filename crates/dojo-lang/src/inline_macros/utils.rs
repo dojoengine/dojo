@@ -28,5 +28,5 @@ pub fn get_parent_block(
         }
         new_target = parent;
     }
-    return None;
+    None
 }

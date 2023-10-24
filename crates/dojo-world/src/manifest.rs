@@ -206,8 +206,8 @@ impl Manifest {
     }
 }
 
-pub(self) static MODEL_REGISTERED_EVENT_NAME: &str = "ModelRegistered";
-pub(self) static CONTRACT_DEPLOYED_EVENT_NAME: &str = "ContractDeployed";
+ static MODEL_REGISTERED_EVENT_NAME: &str = "ModelRegistered";
+ static CONTRACT_DEPLOYED_EVENT_NAME: &str = "ContractDeployed";
 
 async fn get_remote_world_deployed_contracts<P>(
     world: FieldElement,

@@ -6,7 +6,7 @@ use cairo_lang_defs::ids::{FunctionWithBodyId, LookupItemId, ModuleId, ModuleIte
 use cairo_lang_filesystem::ids::FileId;
 use cairo_lang_lowering::db::LoweringGroup;
 use cairo_lang_lowering::ids::{self as low, SemanticFunctionWithBodyIdEx};
-use cairo_lang_lowering::{Statement, StatementCall};
+use cairo_lang_lowering::{Statement};
 use cairo_lang_semantic as semantic;
 use cairo_lang_syntax::node::ast::{self, Expr};
 use cairo_lang_syntax::node::{SyntaxNode, TypedSyntaxNode};
@@ -64,7 +64,7 @@ pub fn find_module_writes(
         }
     }
 
-    components.into_iter().map(|(component, _)| component).collect()
+    components.into_keys().collect()
 }
 
 pub fn find_function_writes(
@@ -94,7 +94,7 @@ pub fn find_function_writes(
                     components.insert(component, true);
                 }
                 WriterLookupDetails::Path(expr_path, _expr_block) => {
-                    let expr = Expr::Path(expr_path.clone());
+                    let _expr = Expr::Path(expr_path.clone());
                     // let expr_sem =
                     //     nearest_semantic_expr(db, expr_path.as_syntax_node(), fn_id).unwrap();
 

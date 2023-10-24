@@ -121,7 +121,7 @@ impl InlineMacroExprPlugin for SetMacro {
 
         for (entity, syntax_node) in bundle {
             // db.lookup_intern_file(key0);
-            if module_name.len() > 0 && fn_name.len() > 0 {
+            if !module_name.is_empty() && !fn_name.is_empty() {
                 let mut writers = WRITERS.lock().unwrap();
                 // fn_syntax_node
                 if writers.get(&module_name).is_none() {
