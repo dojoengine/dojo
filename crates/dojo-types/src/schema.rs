@@ -9,6 +9,7 @@ use crate::primitive::{Primitive, PrimitiveError};
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Member {
     pub name: String,
+    #[serde(rename = "member_type")]
     pub ty: Ty,
     pub key: bool,
 }
@@ -38,6 +39,8 @@ pub struct ModelMetadata {
 
 /// Represents all possible types in Cairo
 #[derive(AsRefStr, Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type", content = "content")]
+#[serde(rename_all = "lowercase")]
 pub enum Ty {
     Primitive(Primitive),
     Struct(Struct),
@@ -112,8 +115,8 @@ impl Ty {
                         .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
                     felts.extend(option);
 
-                    for (_, child) in &e.options {
-                        serialize_inner(child, felts)?;
+                    for EnumOption { ty, .. } in &e.options {
+                        serialize_inner(ty, felts)?;
                     }
                 }
                 Ty::Tuple(tys) => {
@@ -143,8 +146,8 @@ impl Ty {
             Ty::Enum(e) => {
                 e.option =
                     Some(felts.remove(0).try_into().map_err(PrimitiveError::ValueOutOfRange)?);
-                for (_, child) in &mut e.options {
-                    child.deserialize(felts)?;
+                for EnumOption { ty, .. } in &mut e.options {
+                    ty.deserialize(felts)?;
                 }
             }
             Ty::Tuple(tys) => {
@@ -174,7 +177,7 @@ impl<'a> Iterator for TyIter<'a> {
             }
             Ty::Enum(e) => {
                 for child in &e.options {
-                    self.stack.push(&child.1);
+                    self.stack.push(&child.ty);
                 }
             }
             _ => {}
@@ -200,7 +203,7 @@ impl std::fmt::Display for Ty {
                 Ty::Enum(e) => {
                     let mut enum_str = format!("enum {} {{\n", e.name);
                     for child in &e.options {
-                        enum_str.push_str(&format!("  {}\n", child.0));
+                        enum_str.push_str(&format!("  {}\n", child.name));
                     }
                     enum_str.push('}');
                     Some(enum_str)
@@ -249,7 +252,13 @@ pub enum EnumError {
 pub struct Enum {
     pub name: String,
     pub option: Option<u8>,
-    pub options: Vec<(String, Ty)>,
+    pub options: Vec<EnumOption>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct EnumOption {
+    pub name: String,
+    pub ty: Ty,
 }
 
 impl Enum {
@@ -264,7 +273,7 @@ impl Enum {
             return Err(EnumError::OptionInvalid);
         }
 
-        Ok(self.options[option].0.clone())
+        Ok(self.options[option].name.clone())
     }
 
     pub fn to_sql_value(&self) -> Result<String, EnumError> {

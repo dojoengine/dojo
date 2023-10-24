@@ -3,7 +3,7 @@ use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, Member, Struct, Ty};
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
 
@@ -91,11 +91,11 @@ async fn test_model() {
                         name: "Direction".to_string(),
                         option: None,
                         options: vec![
-                            ("None".to_string(), Ty::Tuple(vec![])),
-                            ("Left".to_string(), Ty::Tuple(vec![])),
-                            ("Right".to_string(), Ty::Tuple(vec![])),
-                            ("Up".to_string(), Ty::Tuple(vec![])),
-                            ("Down".to_string(), Ty::Tuple(vec![]))
+                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
                         ]
                     }),
                     key: false
