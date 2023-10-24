@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x5179c281a8d3cca6cfb820201fa7a81150b56f9db492405a29e9564222370b8",
+    "class_hash": "0x83ec4c151ba2dc7c4debc96430272afc6f36f2f750b83e072cd1da88ed19cb",
     "abi": [
       {
         "type": "impl",
