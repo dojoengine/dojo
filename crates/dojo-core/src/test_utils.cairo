@@ -6,10 +6,11 @@ use array::{ArrayTrait, SpanTrait};
 use traits::TryInto;
 use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
-
+use debug::PrintTrait;
 
 use dojo::executor::executor;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
+use dojo::packing::{shl, shr};
 
 /// Deploy classhash with calldata for constructor
 ///
@@ -67,4 +68,36 @@ fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
     };
 
     world
+}
+
+
+const GAS_OFFSET: felt252 = 0x1_000000_000000_000000_000000_000000; // 15 bajtów
+
+/// Measures gas used after previous measurement and prints it
+///
+/// # Arguments
+///
+/// * `start` - gas before measurement
+/// * `name` - name of test, at most 15 bytes, will be padded with spaces
+fn end(start: u128, name: felt252) {
+    let gas_after = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let mut name: u256 = name.into();
+
+    // overwriting zeros with spaces
+    let mut char = 0;
+    loop {
+        if char == 15 {
+            break;
+        }
+        // if given byte is zero
+        if shl(0xff, 8 * char) & name == 0 {
+            name = name | shl(0x20, 8 * char); // set space
+        }
+        char += 1;
+    };
+
+    let name: felt252 = (name % GAS_OFFSET.into()).try_into().unwrap();
+    let used_gas = (start - gas_after - 1770).into() * GAS_OFFSET;
+    (used_gas + name).print();
 }

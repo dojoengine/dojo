@@ -9,35 +9,9 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 
 use dojo::database;
 use dojo::database::{storage, index};
-use dojo::packing::{shl, shr};
 use dojo::model::Model;
 use dojo::world_test::Foo;
-
-const GAS_OFFSET: felt252 = 0x1_000000_000000_000000_000000_000000; // 15 bajtów
-
-
-fn end(start: u128, name: felt252) {
-    let gas_after = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let mut name: u256 = name.into();
-
-    // overwriting zeros with spaces
-    let mut char = 0;
-    loop {
-        if char == 15 {
-            break;
-        }
-        // if given byte is zero
-        if shl(0xff, 8 * char) & name == 0 {
-            name = name | shl(0x20, 8 * char); // set space
-        }
-        char += 1;
-    };
-
-    let name: felt252 = (name % GAS_OFFSET.into()).try_into().unwrap();
-    let used_gas = (start - gas_after - 1770).into() * GAS_OFFSET;
-    (used_gas + name).print();
-}
+use dojo::test_utils::end;
 
 
 #[test]
@@ -334,6 +308,76 @@ fn bench_simple_struct() {
     assert(serialized.at(1) == values.at(1), 'serialized differ at 1');
 }
 
+#[derive(Model, Copy, Drop, Serde)]
+struct PositionWithQuaterions {
+    #[key]
+    id: felt252,
+    x: felt252,
+    y: felt252,
+    z: felt252,
+    a: felt252,
+    b: felt252,
+    c: felt252,
+    d: felt252,
+}
+
+#[test]
+#[available_gas(1000000000)]
+fn test_struct_with_many_fields() {
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+
+    let mut pos = PositionWithQuaterions {
+        id: 0x123456789abcdef,
+        x: 0x123456789abcdef,
+        y: 0x123456789abcdef,
+        z: 0x123456789abcdef,
+        a: 0x123456789abcdef,
+        b: 0x123456789abcdef,
+        c: 0x123456789abcdef,
+        d: 0x123456789abcdef,
+    };
+    end(gas, 'pos init');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let mut serialized = ArrayTrait::new();
+    serde::Serde::serialize(@pos.x, ref serialized);
+    serde::Serde::serialize(@pos.y, ref serialized);
+    serde::Serde::serialize(@pos.z, ref serialized);
+    serde::Serde::serialize(@pos.a, ref serialized);
+    serde::Serde::serialize(@pos.b, ref serialized);
+    serde::Serde::serialize(@pos.c, ref serialized);
+    serde::Serde::serialize(@pos.d, ref serialized);
+    let serialized = array::ArrayTrait::span(@serialized);
+    end(gas, 'pos serialize');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let values: Span<felt252> = pos.values();
+    end(gas, 'pos values');
+
+    assert(serialized.len() == values.len(), 'serialized not equal');
+    let mut idx = 0;
+    loop {
+        if idx == serialized.len() {
+            break;
+        }
+        assert(serialized.at(idx) == values.at(idx), 'serialized differ');
+        idx += 1;
+    };
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    database::set('positions', '42', 0, pos.values(), pos.layout());
+    end(gas, 'pos db set');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    database::get('positions', '42', 0, pos.packed_size(), pos.layout());
+    end(gas, 'pos db get');
+}
+
 
 #[derive(Introspect, Copy, Drop, Serde)]
 struct Sword {
@@ -522,5 +566,4 @@ fn bench_complex_struct() {
     gas::withdraw_gas().unwrap();
     database::get('chars', '42', 0, char.packed_size(), char.layout());
     end(gas, 'chars db get');
-
 }
