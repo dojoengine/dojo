@@ -10,8 +10,8 @@ version.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 blockifier.workspace = true
-cairo-lang-casm = "2.2.0"
-cairo-lang-starknet = "2.2.0"
+cairo-lang-casm = "2.3.0"
+cairo-lang-starknet = "2.3.0"
 cairo-vm.workspace = true
 convert_case.workspace = true
 ethers = { version = "2.0.8", optional = true }

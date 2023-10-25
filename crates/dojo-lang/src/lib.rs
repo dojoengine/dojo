@@ -7,7 +7,6 @@ pub mod compiler;
 pub mod contract;
 pub mod inline_macros;
 pub mod introspect;
-mod manifest;
 pub mod model;
 pub mod plugin;
 pub mod print;

@@ -19,4 +19,5 @@ mod upgradable;
 #[cfg(test)]
 mod test_utils;
 
+#[cfg(test)]
 mod benchmarks;

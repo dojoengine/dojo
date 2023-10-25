@@ -1,5 +1,5 @@
 [package]
-cairo-version = "2.2.0"
+cairo-version = "2.3.0"
 name = "test_crate"
 version = "0.3.1"
 
