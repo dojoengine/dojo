@@ -329,6 +329,7 @@ impl Sql {
 
     fn build_model_query(&mut self, path: Vec<String>, model: &Ty, model_idx: usize) {
         let table_id = path.join("$");
+        let mut indices = Vec::new();
 
         let mut query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
@@ -342,6 +343,9 @@ impl Sql {
 
                 if let Ok(cairo_type) = Primitive::from_str(&member.ty.name()) {
                     query.push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
+                    indices.push(format!(
+                        "CREATE INDEX idx_{table_id}_{name} ON [{table_id}] (external_{name});"
+                    ));
                 } else if let Ty::Enum(e) = &member.ty {
                     let all_options = e
                         .options
@@ -352,6 +356,10 @@ impl Sql {
 
                     query.push_str(&format!(
                         "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
+                    ));
+
+                    indices.push(format!(
+                        "CREATE INDEX idx_{table_id}_{name} ON [{table_id}] (external_{name});"
                     ));
 
                     options = Some(format!(
@@ -385,6 +393,7 @@ impl Sql {
 
         query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
         self.query_queue.push(query);
+        self.query_queue.extend(indices);
     }
 
     pub async fn execute(&mut self) -> Result<()> {
