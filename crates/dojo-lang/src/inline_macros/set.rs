@@ -1,16 +1,35 @@
+use std::collections::HashMap;
+
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
+use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule};
+use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use super::unsupported_arg_diagnostic;
+use super::utils::{get_parent_of_kind, SystemRWOpRecord, SYSTEM_WRITES};
 
 #[derive(Debug)]
 pub struct SetMacro;
 impl SetMacro {
     pub const NAME: &'static str = "set";
+    // Parents of set!()
+    // -----------------
+    // StatementExpr
+    // StatementList
+    // ExprBlock
+    // FunctionWithBody
+    // ImplItemList
+    // ImplBody
+    // ItemImpl
+    // ItemList
+    // ModuleBody
+    // ItemModule
+    // ItemList
+    // SyntaxFile
 }
 impl InlineMacroExprPlugin for SetMacro {
     fn generate_code(
@@ -46,12 +65,19 @@ impl InlineMacroExprPlugin for SetMacro {
 
         match models.value(db) {
             ast::Expr::Parenthesized(parens) => {
-                bundle.push(parens.expr(db).as_syntax_node().get_text(db))
+                let syntax_node = parens.expr(db).as_syntax_node();
+                bundle.push((syntax_node.get_text(db), syntax_node));
             }
-            ast::Expr::Tuple(list) => list.expressions(db).elements(db).iter().for_each(|expr| {
-                bundle.push(expr.as_syntax_node().get_text(db));
-            }),
-            ast::Expr::StructCtorCall(ctor) => bundle.push(ctor.as_syntax_node().get_text(db)),
+            ast::Expr::Tuple(list) => {
+                list.expressions(db).elements(db).into_iter().for_each(|expr| {
+                    let syntax_node = expr.as_syntax_node();
+                    bundle.push((syntax_node.get_text(db), syntax_node));
+                })
+            }
+            ast::Expr::StructCtorCall(ctor) => {
+                let syntax_node = ctor.as_syntax_node();
+                bundle.push((syntax_node.get_text(db), syntax_node));
+            }
             _ => {
                 return InlinePluginResult {
                     code: None,
@@ -73,7 +99,56 @@ impl InlineMacroExprPlugin for SetMacro {
             };
         }
 
-        for entity in bundle {
+        let mut module_name = "".to_string();
+        let module_syntax_node =
+            get_parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
+        if let Some(module_syntax_node) = &module_syntax_node {
+            let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
+            module_name = mod_ast.name(db).as_syntax_node().get_text_without_trivia(db);
+        }
+
+        let mut fn_name = "".to_string();
+        let fn_syntax_node =
+            get_parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::FunctionWithBody);
+        if let Some(fn_syntax_node) = &fn_syntax_node {
+            let fn_ast = FunctionWithBody::from_syntax_node(db, fn_syntax_node.clone());
+            fn_name = fn_ast.declaration(db).name(db).as_syntax_node().get_text_without_trivia(db);
+        }
+
+        for (entity, syntax_node) in bundle {
+            // db.lookup_intern_file(key0);
+            if !module_name.is_empty() && !fn_name.is_empty() {
+                let mut system_writes = SYSTEM_WRITES.lock().unwrap();
+                // fn_syntax_node
+                if system_writes.get(&module_name).is_none() {
+                    system_writes.insert(module_name.clone(), HashMap::new());
+                }
+                let fns = system_writes.get_mut(&module_name).unwrap();
+                if fns.get(&fn_name).is_none() {
+                    fns.insert(fn_name.clone(), vec![]);
+                }
+
+                match syntax_node.kind(db) {
+                    SyntaxKind::ExprPath => {
+                        fns.get_mut(&fn_name).unwrap().push(SystemRWOpRecord::Path(
+                            ExprPath::from_syntax_node(db, syntax_node),
+                        ));
+                    }
+                    // SyntaxKind::StatementExpr => {
+                    //     todo!()
+                    // }
+                    SyntaxKind::ExprStructCtorCall => {
+                        fns.get_mut(&fn_name).unwrap().push(SystemRWOpRecord::StructCtor(
+                            ExprStructCtorCall::from_syntax_node(db, syntax_node.clone()),
+                        ));
+                    }
+                    _ => eprintln!(
+                        "Unsupport component value type {} for semantic writer analysis",
+                        syntax_node.kind(db)
+                    ),
+                }
+            }
+
             builder.add_str(&format!(
                 "
                 let __set_macro_value__ = {};

@@ -3,10 +3,12 @@ use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
-use cairo_lang_syntax::node::ast::Expr;
+use cairo_lang_syntax::node::ast::{Expr, ItemModule};
+use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use itertools::Itertools;
 
+use super::utils::{get_parent_of_kind, SYSTEM_READS};
 use super::{extract_models, unsupported_arg_diagnostic, CAIRO_ERR_MSG_LEN};
 
 #[derive(Debug)]
@@ -78,7 +80,23 @@ impl InlineMacroExprPlugin for GetMacro {
             let __get_macro_keys__ = array::ArrayTrait::span(@__get_macro_keys__);\n"
         ));
 
+        let mut system_reads = SYSTEM_READS.lock().unwrap();
+        let mut module_name = "".to_string();
+        let module_syntax_node =
+            get_parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
+        if let Some(module_syntax_node) = &module_syntax_node {
+            let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
+            module_name = mod_ast.name(db).as_syntax_node().get_text_without_trivia(db);
+        }
+
         for model in &models {
+            if !module_name.is_empty() {
+                if system_reads.get(&module_name).is_none() {
+                    system_reads.insert(module_name.clone(), vec![model.to_string()]);
+                } else {
+                    system_reads.get_mut(&module_name).unwrap().push(model.to_string());
+                }
+            }
             let mut lookup_err_msg = format!("{} not found", model.to_string());
             lookup_err_msg.truncate(CAIRO_ERR_MSG_LEN);
             let mut deser_err_msg = format!("{} failed to deserialize", model.to_string());
