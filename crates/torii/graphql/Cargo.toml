@@ -14,7 +14,7 @@ async-graphql = { version = "6.0.7", features = [ "chrono", "dynamic-schema" ] }
 async-graphql-warp = "6.0.7"
 async-recursion = "1.0.5"
 async-trait.workspace = true
-base64 = "0.21.2"
+base64.workspace = true
 chrono.workspace = true
 dojo-types = { path = "../../dojo-types" }
 lazy_static.workspace = true
