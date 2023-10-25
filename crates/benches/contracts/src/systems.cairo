@@ -30,6 +30,28 @@ mod spawn {
     }
 }
 
+
+#[system]
+mod bench_emit {
+    use dojo::world::Context;
+
+    use dojo_examples::components::Position;
+    use dojo_examples::components::Moves;
+    use dojo_examples::constants::OFFSET;
+
+    #[event]
+    use dojo_examples::events::{Event, Moved};
+
+
+    // so we don't go negative
+
+    fn execute(ctx: Context) {
+        emit!(ctx.world, Moved { player: ctx.origin, x: 0, y: 0, });
+
+        return ();
+    }
+}
+
 #[system]
 mod move {
     use dojo::world::Context;
@@ -61,7 +83,7 @@ mod move {
 
     fn execute(ctx: Context, direction: Direction) {
         let (mut position, mut moves) = get!(ctx.world, ctx.origin, (Position, Moves));
-        moves.remaining -= 1;
+        // moves.remaining -= 1;
         let next = next_position(position, direction);
         set!(ctx.world, (moves, next));
         emit!(ctx.world, Moved { player: ctx.origin, x: next.x, y: next.y, });

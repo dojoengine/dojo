@@ -14,3 +14,4 @@ sozo = { path = "../sozo" }
 tokio.workspace = true
 starknet.workspace = true
 anyhow.workspace = true
+hex.workspace = true

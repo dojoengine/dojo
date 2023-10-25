@@ -6,6 +6,7 @@ mod tests {
     use std::time::Duration;
     // use clap_builder::Parser;
     use anyhow::{anyhow, Context, Result};
+    use hex::ToHex;
     use starknet::core::types::{FieldElement, TransactionReceipt};
     use starknet::providers::jsonrpc::JsonRpcResponse;
 
@@ -107,11 +108,26 @@ mod tests {
     proptest! {
         #[test]
         fn bench_move(c in "0x[0-3]") {
-            let tx = execute("move", Some(c));
+            let tx = execute("move", Some(c.clone()));
 
             let fee = paid_fee(&tx).expect("Failed to fetch fee");
             assert!(fee > FieldElement::ONE);
-            println!("Tx: {}, fee: {}", tx, fee);
+            println!("Data: {} in tx: {}, with fee: {}", c, tx, fee);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn bench_emit(s in "[A-Za-z0-9]{1,31}") {
+            let s_hex = s.as_bytes().encode_hex::<String>();
+
+            println!("Dddd {}", "0x".to_owned() + &s_hex);
+
+            let tx = execute("bench_emit", Some("0x".to_owned() + &s_hex));
+
+            let fee = paid_fee(&tx).expect("Failed to fetch fee");
+            assert!(fee > FieldElement::ONE);
+            println!("Data: {} in tx: {}, with fee: {}", s_hex, tx, fee);
         }
     }
 }
