@@ -160,12 +160,9 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
         let mut table_name = path_array[0].clone();
         // For nested types, we need to remove prefix in path array
         if path_array.len() > 1 {
-            let pattern = format!("{}_", table_name);
-            let name = path_array.join("$");
-            table_name = name.replace(&pattern, "");
+            let namespace = format!("{}_", path_array[0]);
+            table_name = path_array.join("$").replace(&namespace, "");
         }
-        println!("object: path_array: {:?}", path_array);
-        println!("object: table_name: {:?}", table_name);
         let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
             let field_name = field_name.clone();
             let type_data = type_data.clone();

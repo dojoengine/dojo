@@ -92,11 +92,8 @@ fn parse_nested_type(
             }
         })
         .collect();
-    println!("target_id: {:?}", target_id);
-    println!("target_type: {:?}", target_type);
-    println!("nested_mapping: {:?}", nested_mapping);
-    let target_type = format!("{}_{}", target_id, target_type);
-    TypeData::Nested((TypeRef::named(target_type), nested_mapping))
+    let namespaced = format!("{}_{}", target_id, target_type);
+    TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 
 fn remove_hex_leading_zeros(value: Value) -> Value {
