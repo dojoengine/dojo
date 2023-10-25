@@ -640,6 +640,7 @@ dependencies = [
  "anyhow",
  "clap_builder",
  "hex",
+ "lazy_static",
  "proptest",
  "reqwest",
  "sozo",

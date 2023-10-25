@@ -15,3 +15,4 @@ tokio.workspace = true
 starknet.workspace = true
 anyhow.workspace = true
 hex.workspace = true
+lazy_static.workspace = true

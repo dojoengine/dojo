@@ -1,18 +1,47 @@
 #[cfg(test)]
+#[macro_use]
+extern crate lazy_static;
+
+#[cfg(test)]
 mod tests {
     use std::process::Command;
+    use std::sync::Once;
     use std::thread;
     use std::time::Duration;
     // use clap_builder::Parser;
     use anyhow::{anyhow, Context, Result};
     use hex::ToHex;
+    use lazy_static::lazy_static;
     use starknet::core::types::{FieldElement, TransactionReceipt};
     use starknet::providers::jsonrpc::JsonRpcResponse;
+    use starknet::signers::SigningKey;
 
     use proptest::prelude::*;
 
     const KATANA_ENDPOINT: &str = "http://localhost:5050";
     const WORLD: &str = "0x223b959926c92e10a5de78a76871fa40cefafbdce789137843df7c7b30e3e0";
+
+    lazy_static! {
+        // load output from katana launched with `katana --accounts 255 > prefunded.txt`
+        // this allows for up to 255 concurrent accounts without the need to fund them
+        static ref PAIRS: Vec<(String, String)> = {
+            // load from file
+            let file_contents =
+                std::fs::read_to_string("prefunded.txt").expect("Failed to read prefunded.txt");
+
+            // parse just the hexadecimal values
+            let hexes = file_contents
+                .lines()
+                .filter(|l| l.contains('|'))
+                .map(|l| l.split('|').skip(2).next().unwrap().trim().to_owned())
+                .collect::<Vec<_>>();
+
+            // convert to pairs of address and private key
+            hexes.chunks(3)
+                .map(|chunk| (chunk[0].to_owned(), chunk[1].to_owned())) // Address, private key
+                .collect::<Vec<_>>()
+        };
+    }
 
     fn paid_fee(tx: &str) -> Result<FieldElement> {
         let client = reqwest::blocking::Client::new();
@@ -59,12 +88,24 @@ mod tests {
     }
 
     fn execute(entrypoint: &str, calldata: Option<String>) -> String {
+        let signer = SigningKey::from_random();
+        let private = signer.secret_scalar().to_bytes_be().encode_hex::<String>();
+        let address = signer.verifying_key().scalar().to_bytes_be().encode_hex::<String>();
+
+        let private = String::from("0x") + &private;
+        let address = String::from("0x") + &address;
+
+        println!("Address: {}", address);
+        println!("Private: {}", private);
+
         let mut args = vec![
             "execute",
             "--account-address",
-            "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+            // "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
+            &address,
             "--private-key",
-            "0x1800000000300000180000000000030000000000003006001800006600",
+            // "0x1800000000300000180000000000030000000000003006001800006600",
+            &private,
             "--rpc-url",
             "http://localhost:5050",
             "--world",
@@ -92,6 +133,11 @@ mod tests {
             .to_owned();
         assert_eq!(&tx[0..2], "0x", "Invalid tx hash");
         tx
+    }
+
+    #[test]
+    fn prepare_test() {
+        assert_eq!(PAIRS[0].0, "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973");
     }
 
     // does not need proptest, as it doesn't use any input
