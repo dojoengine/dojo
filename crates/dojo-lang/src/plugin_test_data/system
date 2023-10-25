@@ -141,3 +141,187 @@ mod ctxnamed {
 }
 
 //! > expected_diagnostics
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:2:17
+                #[starknet::contract]
+                ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:2:17
+                #[starknet::contract]
+                ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:2:17
+                #[starknet::contract]
+                ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:8:21
+                    #[storage]
+                    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:13:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:18:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:32:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:8:21
+                    #[storage]
+                    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:13:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:18:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:30:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:8:21
+                    #[storage]
+                    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:13:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:18:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:32:17
+                #[external(v0)]
+                ^*************^
+
+//! > expanded_cairo_code
+#[starknet::contract]
+                mod spawn {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+
+                    #[storage]
+                    struct Storage {
+                        world_dispatcher: IWorldDispatcher,
+                    }
+
+                    #[external(v0)]
+                    fn name(self: @ContractState) -> felt252 {
+                        'spawn'
+                    }
+
+                    #[external(v0)]
+                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+                            let caller = starknet::get_caller_address();
+                            assert(
+                                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
+                            );
+                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                        }
+                    }
+
+                        use traits::Into;
+    use dojo::world::Context;
+
+                #[external(v0)]
+                fn execute(self: @ContractState, ctx: Context, name: felt252)  {
+        return ();
+    }
+            
+                }
+
+                #[starknet::contract]
+                mod proxy {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+
+                    #[storage]
+                    struct Storage {
+                        world_dispatcher: IWorldDispatcher,
+                    }
+
+                    #[external(v0)]
+                    fn name(self: @ContractState) -> felt252 {
+                        'proxy'
+                    }
+
+                    #[external(v0)]
+                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+                            let caller = starknet::get_caller_address();
+                            assert(
+                                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
+                            );
+                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                        }
+                    }
+
+                    
+                #[external(v0)]
+                fn execute(self: @ContractState, value: felt252) -> felt252 {
+        value
+    }
+            
+                }
+
+                #[starknet::contract]
+                mod ctxnamed {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+
+                    #[storage]
+                    struct Storage {
+                        world_dispatcher: IWorldDispatcher,
+                    }
+
+                    #[external(v0)]
+                    fn name(self: @ContractState) -> felt252 {
+                        'ctxnamed'
+                    }
+
+                    #[external(v0)]
+                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
+                            let caller = starknet::get_caller_address();
+                            assert(
+                                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
+                            );
+                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                        }
+                    }
+
+                        use traits::Into;
+    use dojo::world::Context;
+
+                #[external(v0)]
+                fn execute(self: @ContractState, ctx2: Context, name: felt252)  {
+        return ();
+    }
+            
+                }

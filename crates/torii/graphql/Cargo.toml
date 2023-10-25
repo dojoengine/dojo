@@ -35,6 +35,9 @@ warp.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
+dojo-test-utils = { path = "../../dojo-test-utils" }
 dojo-world = { path = "../../dojo-world" }
 starknet-crypto.workspace = true
 starknet.workspace = true
+scarb.workspace = true
+sozo = { path = "../../sozo" }

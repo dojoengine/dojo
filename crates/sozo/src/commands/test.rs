@@ -10,8 +10,8 @@ use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_starknet::inline_macros::selector::SelectorMacro;
 use cairo_lang_starknet::plugin::StarkNetPlugin;
-use cairo_lang_test_runner::plugin::TestPlugin;
-use cairo_lang_test_runner::TestRunner;
+use cairo_lang_test_plugin::TestPlugin;
+use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig};
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::inline_macros::emit::EmitMacro;
@@ -68,15 +68,14 @@ impl TestArgs {
                 bail!("failed to compile");
             }
 
-            let runner = TestRunner {
-                db,
-                main_crate_ids,
-                test_crate_ids,
+            let config = TestRunConfig {
                 filter: self.filter.clone(),
-                include_ignored: self.include_ignored,
                 ignored: self.ignored,
-                starknet: true,
+                include_ignored: self.include_ignored,
             };
+
+            let compiler = TestCompiler { db, main_crate_ids, test_crate_ids, starknet: true };
+            let runner = CompiledTestRunner { compiled: compiler.build()?, config };
             runner.run()?;
 
             println!();

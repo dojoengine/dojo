@@ -8,7 +8,7 @@ use starknet::core::utils::{
 };
 
 use crate::primitive::Primitive;
-use crate::schema::{self, Ty};
+use crate::schema::{self, EnumOption, Ty};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
@@ -162,7 +162,7 @@ fn parse_enum(data: &[FieldElement]) -> Result<Ty, ParseError> {
         let len = len + 1; // Account for Ty enum index
 
         let slice_end = slice_start + len as usize;
-        values.push((name, parse_ty(&data[slice_start..slice_end])?));
+        values.push(EnumOption { name, ty: parse_ty(&data[slice_start..slice_end])? });
         offset += len as usize + 2;
     }
 

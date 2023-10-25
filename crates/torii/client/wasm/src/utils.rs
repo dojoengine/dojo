@@ -17,7 +17,7 @@ pub fn parse_ty_as_json_str(ty: &Ty) -> String {
             Ty::Enum(enum_ty) => {
                 if let Some(option) = enum_ty.option {
                     let option = &enum_ty.options[option as usize];
-                    Value::String(option.0.to_owned())
+                    Value::String(option.name.to_owned())
                 } else {
                     Value::Null
                 }
@@ -50,7 +50,7 @@ fn primitive_value_json(primitive: Primitive) -> Value {
 #[cfg(test)]
 mod test {
 
-    use dojo_types::schema::{Enum, Member, Struct};
+    use dojo_types::schema::{Enum, EnumOption, Member, Struct};
     use serde_json::json;
     use starknet::macros::felt;
     use wasm_bindgen_test::*;
@@ -84,8 +84,8 @@ mod test {
                         name: "PlayerKind".into(),
                         option: Some(1),
                         options: vec![
-                            ("Good".into(), Ty::Tuple(vec![])),
-                            ("Bad".into(), Ty::Tuple(vec![])),
+                            EnumOption { name: "Good".into(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Bad".into(), ty: Ty::Tuple(vec![]) },
                         ],
                     }),
                 },
@@ -146,8 +146,8 @@ mod test {
                         name: "PlayerKind".into(),
                         option: Some(1),
                         options: vec![
-                            ("Good".into(), Ty::Tuple(vec![])),
-                            ("Bad".into(), Ty::Tuple(vec![])),
+                            EnumOption { name: "Good".into(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Bad".into(), ty: Ty::Tuple(vec![]) },
                         ],
                     }),
                 },

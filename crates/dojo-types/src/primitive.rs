@@ -6,7 +6,9 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 #[derive(
     AsRefStr, Display, EnumIter, EnumString, Copy, Clone, Debug, Serialize, Deserialize, PartialEq,
 )]
+#[serde(tag = "scalar_type", content = "value")]
 #[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum Primitive {
     U8(Option<u8>),
     U16(Option<u16>),
@@ -43,6 +45,97 @@ pub enum SqlType {
 }
 
 impl Primitive {
+    /// If the `Primitive` is a u8, returns the associated [`u8`]. Returns `None` otherwise.
+    pub fn as_u8(&self) -> Option<u8> {
+        match self {
+            Primitive::U8(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a u16, returns the associated [`u16`]. Returns `None` otherwise.
+    pub fn as_u16(&self) -> Option<u16> {
+        match self {
+            Primitive::U16(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a u32, returns the associated [`u32`]. Returns `None` otherwise.
+    pub fn as_u32(&self) -> Option<u32> {
+        match self {
+            Primitive::U32(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a u64, returns the associated [`u64`]. Returns `None` otherwise.
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Primitive::U64(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a u128, returns the associated [`u128`]. Returns `None` otherwise.
+    pub fn as_u128(&self) -> Option<u128> {
+        match self {
+            Primitive::U128(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a u256, returns the associated [`U256`]. Returns `None` otherwise.
+    pub fn as_u256(&self) -> Option<U256> {
+        match self {
+            Primitive::U256(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a felt252, returns the associated [`FieldElement`]. Returns `None`
+    /// otherwise.
+    pub fn as_felt252(&self) -> Option<FieldElement> {
+        match self {
+            Primitive::Felt252(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a ClassHash, returns the associated [`FieldElement`]. Returns `None`
+    /// otherwise.
+    pub fn as_class_hash(&self) -> Option<FieldElement> {
+        match self {
+            Primitive::ClassHash(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a ContractAddress, returns the associated [`FieldElement`]. Returns
+    /// `None` otherwise.
+    pub fn as_contract_address(&self) -> Option<FieldElement> {
+        match self {
+            Primitive::ContractAddress(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a usize, returns the associated [`u32`]. Returns `None` otherwise.
+    pub fn as_usize(&self) -> Option<u32> {
+        match self {
+            Primitive::USize(value) => *value,
+            _ => None,
+        }
+    }
+
+    /// If the `Primitive` is a bool, returns the associated [`bool`]. Returns `None` otherwise.
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Primitive::Bool(value) => *value,
+            _ => None,
+        }
+    }
+
     pub fn to_sql_type(&self) -> SqlType {
         match self {
             Primitive::U8(_)
@@ -240,5 +333,31 @@ mod tests {
             ]
         );
         assert_eq!(deserialized, primitive)
+    }
+
+    #[test]
+    fn as_inner_value() {
+        let primitive = Primitive::U8(Some(1u8));
+        assert_eq!(primitive.as_u8(), Some(1u8));
+        let primitive = Primitive::U16(Some(1u16));
+        assert_eq!(primitive.as_u16(), Some(1u16));
+        let primitive = Primitive::U32(Some(1u32));
+        assert_eq!(primitive.as_u32(), Some(1u32));
+        let primitive = Primitive::U64(Some(1u64));
+        assert_eq!(primitive.as_u64(), Some(1u64));
+        let primitive = Primitive::U128(Some(1u128));
+        assert_eq!(primitive.as_u128(), Some(1u128));
+        let primitive = Primitive::U256(Some(U256::from(1u128)));
+        assert_eq!(primitive.as_u256(), Some(U256::from(1u128)));
+        let primitive = Primitive::USize(Some(1u32));
+        assert_eq!(primitive.as_usize(), Some(1u32));
+        let primitive = Primitive::Bool(Some(true));
+        assert_eq!(primitive.as_bool(), Some(true));
+        let primitive = Primitive::Felt252(Some(FieldElement::from(1u128)));
+        assert_eq!(primitive.as_felt252(), Some(FieldElement::from(1u128)));
+        let primitive = Primitive::ClassHash(Some(FieldElement::from(1u128)));
+        assert_eq!(primitive.as_class_hash(), Some(FieldElement::from(1u128)));
+        let primitive = Primitive::ContractAddress(Some(FieldElement::from(1u128)));
+        assert_eq!(primitive.as_contract_address(), Some(FieldElement::from(1u128)));
     }
 }

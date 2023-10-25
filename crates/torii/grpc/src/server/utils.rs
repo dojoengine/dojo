@@ -1,4 +1,4 @@
-use dojo_types::schema::{Enum, Member, Struct, Ty};
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 
 #[allow(unused)]
 #[derive(Debug, sqlx::FromRow)]
@@ -48,7 +48,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                             .as_ref()
                             .expect("qed; enum_options should exist")
                             .split(',')
-                            .map(|s| (s.to_owned(), Ty::Tuple(vec![])))
+                            .map(|s| EnumOption { name: s.to_owned(), ty: Ty::Tuple(vec![]) })
                             .collect::<Vec<_>>(),
                     }),
                 },
@@ -70,7 +70,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 
 #[cfg(test)]
 mod tests {
-    use dojo_types::schema::{Enum, Member, Struct, Ty};
+    use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 
     use super::SqlModelMember;
     use crate::server::utils::parse_sql_model_members;
@@ -234,10 +234,10 @@ mod tests {
                     name: "Direction".into(),
                     option: None,
                     options: vec![
-                        ("Up".into(), Ty::Tuple(vec![])),
-                        ("Down".into(), Ty::Tuple(vec![])),
-                        ("Left".into(), Ty::Tuple(vec![])),
-                        ("Right".into(), Ty::Tuple(vec![])),
+                        EnumOption { name: "Up".into(), ty: Ty::Tuple(vec![]) },
+                        EnumOption { name: "Down".into(), ty: Ty::Tuple(vec![]) },
+                        EnumOption { name: "Left".into(), ty: Ty::Tuple(vec![]) },
+                        EnumOption { name: "Right".into(), ty: Ty::Tuple(vec![]) },
                     ],
                 }),
             }],

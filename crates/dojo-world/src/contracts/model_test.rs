@@ -3,7 +3,7 @@ use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, Member, Struct, Ty};
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
 
@@ -62,7 +62,7 @@ async fn test_model() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x06ffc643cbc4b2fb9c424242b18175a5e142269b45f4463d1cd4dddb7a2e5095"
+            "0x06f8b85d1f68eab7612e3f4ea178c6386cedb30a6925c9f662a251c640b86d96"
         )
         .unwrap()
     );
@@ -91,11 +91,11 @@ async fn test_model() {
                         name: "Direction".to_string(),
                         option: None,
                         options: vec![
-                            ("None".to_string(), Ty::Tuple(vec![])),
-                            ("Left".to_string(), Ty::Tuple(vec![])),
-                            ("Right".to_string(), Ty::Tuple(vec![])),
-                            ("Up".to_string(), Ty::Tuple(vec![])),
-                            ("Down".to_string(), Ty::Tuple(vec![]))
+                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
                         ]
                     }),
                     key: false

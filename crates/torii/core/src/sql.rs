@@ -318,9 +318,9 @@ impl Sql {
             Ty::Enum(e) => {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
-                    path_clone.push(child.1.name());
+                    path_clone.push(child.ty.name());
                     self.build_set_entity_queries_recursive(
-                        path_clone, event_id, entity_id, &child.1,
+                        path_clone, event_id, entity_id, &child.ty,
                     );
                 }
             }
@@ -347,7 +347,7 @@ impl Sql {
                     let all_options = e
                         .options
                         .iter()
-                        .map(|c| format!("'{}'", c.0))
+                        .map(|c| format!("'{}'", c.name))
                         .collect::<Vec<_>>()
                         .join(", ");
 
@@ -357,7 +357,7 @@ impl Sql {
 
                     options = Some(format!(
                         r#""{}""#,
-                        e.options.iter().map(|c| c.0.clone()).collect::<Vec<_>>().join(",")
+                        e.options.iter().map(|c| c.name.clone()).collect::<Vec<_>>().join(",")
                     ));
                 }
 
