@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use std::process::Command;
-    use std::sync::Once;
     use std::thread;
     use std::time::Duration;
     // use clap_builder::Parser;
@@ -121,13 +120,38 @@ mod tests {
         fn bench_emit(s in "[A-Za-z0-9]{1,31}") {
             let s_hex = s.as_bytes().encode_hex::<String>();
 
-            println!("Dddd {}", "0x".to_owned() + &s_hex);
-
             let tx = execute("bench_emit", Some("0x".to_owned() + &s_hex));
 
             let fee = paid_fee(&tx).expect("Failed to fetch fee");
             assert!(fee > FieldElement::ONE);
-            println!("Data: {} in tx: {}, with fee: {}", s_hex, tx, fee);
+            println!("tx: {}\tfee: {}\tcalldata: {}", tx, fee, s);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn bench_set(s in "[A-Za-z0-9]{1,31}") {
+            let s_hex = s.as_bytes().encode_hex::<String>();
+
+            let tx = execute("bench_set", Some("0x".to_owned() + &s_hex));
+
+            let fee = paid_fee(&tx).expect("Failed to fetch fee");
+            assert!(fee > FieldElement::ONE);
+            println!("tx: {}\tfee: {}\tcalldata: {}", tx, fee, s);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn bench_get(s in "[A-Za-z0-9]{1,31}") {
+            let s_hex = s.as_bytes().encode_hex::<String>();
+
+            execute("bench_set", Some("0x".to_owned() + &s_hex));
+            let tx = execute("bench_get", None);
+
+            let fee = paid_fee(&tx).expect("Failed to fetch fee");
+            assert!(fee > FieldElement::ONE);
+            println!("tx: {}\tfee: {}\tcalldata: {}", tx, fee, s);
         }
     }
 }

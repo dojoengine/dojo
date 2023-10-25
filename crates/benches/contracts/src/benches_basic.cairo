@@ -23,3 +23,45 @@ mod bench_emit {
         return ();
     }
 }
+
+
+#[system]
+mod bench_set {
+    use starknet::ContractAddress;
+
+    use dojo::world::Context;
+
+    #[derive(Component, Copy, Drop, Serde, SerdeLen)]
+    struct Alias {
+        #[key]
+        player: ContractAddress,
+        name: felt252,
+    }
+
+    fn execute(ctx: Context, name: felt252) {
+        set!(ctx.world, Alias { player: ctx.origin, name: name, });
+
+        return ();
+    }
+}
+
+
+#[system]
+mod bench_get {
+    use starknet::ContractAddress;
+
+    use dojo::world::Context;
+
+    #[derive(Component, Copy, Drop, Serde, SerdeLen)]
+    struct Alias {
+        #[key]
+        player: ContractAddress,
+        name: felt252,
+    }
+
+    fn execute(ctx: Context) {
+        get!(ctx.world, ctx.origin, Alias,);
+
+        return ();
+    }
+}
