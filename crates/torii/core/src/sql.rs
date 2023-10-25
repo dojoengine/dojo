@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use sqlx::pool::PoolConnection;
+use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
 use starknet::core::types::{Event, FieldElement};
 use starknet_crypto::poseidon_hash_many;
@@ -90,31 +91,24 @@ impl Sql {
             .iter()
             .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
             .collect::<Vec<u8>>();
-        self.query_queue.push(format!(
+        let insert_models = format!(
             "INSERT INTO models (id, name, class_hash, layout, packed_size, unpacked_size) VALUES \
              ('{id}', '{name}', '{class_hash:#x}', '{layout}', '{packed_size}', \
              '{unpacked_size}') ON CONFLICT(id) DO UPDATE SET class_hash='{class_hash:#x}', \
-             layout='{layout}', packed_size='{packed_size}', unpacked_size='{unpacked_size}'",
+             layout='{layout}', packed_size='{packed_size}', unpacked_size='{unpacked_size}' \
+             RETURNING created_at",
             id = model.name(),
             name = model.name(),
             layout = hex::encode(&layout_blob)
-        ));
+        );
+        // execute first to get created_at
+        let query_result: SqliteRow = sqlx::query(&insert_models).fetch_one(&self.pool).await?;
 
         let mut model_idx = 0_usize;
         self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
-
         self.execute().await?;
 
-        // Since previous query has not been executed, we have to make sure created_at exists
-        let created_at: DateTime<Utc> =
-            match sqlx::query("SELECT created_at FROM models WHERE id = ?")
-                .bind(model.name())
-                .fetch_one(&self.pool)
-                .await
-            {
-                Ok(query_result) => query_result.try_get("created_at")?,
-                Err(_) => Utc::now(),
-            };
+        let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
 
         SimpleBroker::publish(ModelType {
             id: model.name(),
@@ -153,24 +147,20 @@ impl Sql {
         };
 
         let keys_str = felts_sql_string(&keys);
-        self.query_queue.push(format!(
+        let insert_entities = format!(
             "INSERT INTO entities (id, keys, model_names, event_id) VALUES ('{}', '{}', '{}', \
              '{}') ON CONFLICT(id) DO UPDATE SET model_names=excluded.model_names, \
-             updated_at=CURRENT_TIMESTAMP, event_id=excluded.event_id",
+             updated_at=CURRENT_TIMESTAMP, event_id=excluded.event_id RETURNING created_at",
             entity_id, keys_str, model_names, event_id
-        ));
+        );
+        // execute first to get created_at
+        let query_result: SqliteRow = sqlx::query(&insert_entities).fetch_one(&self.pool).await?;
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
-
         self.execute().await?;
 
-        let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
-            .bind(entity_id.clone())
-            .fetch_one(&self.pool)
-            .await?;
         let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
-
         SimpleBroker::publish(Entity {
             id: entity_id.clone(),
             keys: keys_str,
