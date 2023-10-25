@@ -21,6 +21,18 @@ where
         "MetadataUpdate".to_string()
     }
 
+    fn validate(&self, event: &Event) -> bool {
+        if event.keys.len() > 1 {
+            info!(
+                "invalid keys for event {}: {}",
+                <MetadataUpdateProcessor as EventProcessor<P>>::event_key(self),
+                <MetadataUpdateProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+            );
+            return false;
+        }
+        true
+    }
+
     async fn process(
         &self,
         _world: &WorldContractReader<P>,

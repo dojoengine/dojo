@@ -18,6 +18,12 @@ where
 {
     fn event_key(&self) -> String;
 
+    fn event_keys_as_string(&self, event: &Event) -> String {
+        event.keys.iter().map(|i| format!("{:#064x}", i)).collect::<Vec<_>>().join(",")
+    }
+
+    fn validate(&self, event: &Event) -> bool;
+
     #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,
