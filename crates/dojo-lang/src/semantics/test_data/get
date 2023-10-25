@@ -90,7 +90,7 @@ get!(world)
 true
 
 //! > dojo_semantic
-get_success
+get_tail
 
 //! > test_runner_name
 test_semantics

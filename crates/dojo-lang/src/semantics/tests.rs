@@ -27,10 +27,31 @@ pub fn test_semantics(
     let mut db = DojoSemanticDatabase::default();
     let (expr, diagnostics, expr_formatter) = semantics_test_setup(inputs, &mut db);
 
-    TestRunnerResult::success(OrderedHashMap::from([
-        ("expected".into(), format!("{:#?}", expr.debug(&expr_formatter))),
-        ("semantic_diagnostics".into(), diagnostics),
-    ]))
+    let mut error = None;
+
+    if inputs.get("no_diagnostics").is_some() && "" != diagnostics.as_str() {
+        error = Some(format!("Expansion shouldn't have diagnostic issues.\n{}", diagnostics));
+    }
+
+    if let Some(dojo_semantic) = inputs.get("dojo_semantic") {
+        if dojo_semantic.as_str() == "get_tail" {
+            if let Expr::Block(blk) = &expr {
+                if blk.tail.is_none() {
+                    error = Some(format!("Expanded get!() should be a block.\n{:#?}", expr));
+                }
+            } else {
+                error = Some(format!("Expanded get!() should be a block.\n{:#?}", expr));
+            }
+        }
+    }
+
+    TestRunnerResult {
+        outputs: OrderedHashMap::from([
+            ("expected".into(), format!("{:#?}", expr.debug(&expr_formatter))),
+            ("semantic_diagnostics".into(), diagnostics),
+        ]),
+        error,
+    }
 }
 
 pub fn semantics_test_setup<'a>(
