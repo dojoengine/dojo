@@ -8,7 +8,7 @@ use dojo_types::schema::Ty;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
-use starknet::core::types::{Event, FieldElement};
+use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -200,20 +200,21 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    pub fn store_system_call(
-        &mut self,
-        system: String,
-        transaction_hash: FieldElement,
-        calldata: &[FieldElement],
-    ) {
-        let query = format!(
-            "INSERT OR IGNORE INTO system_calls (data, transaction_hash, system_id) VALUES ('{}', \
-             '{:#x}', '{}')",
-            calldata.iter().map(|c| format!("{:#x}", c)).collect::<Vec<String>>().join(","),
-            transaction_hash,
-            system
+    pub fn store_transaction(&mut self, transaction: &InvokeTransactionV1, transaction_id: &str) {
+        let txn_query = format!(
+            "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
+             max_fee, signature, nonce) VALUES
+            ('{}', '{:#x}', '{}', '{}', '{:#x}', '{}', '{:#x}')",
+            transaction_id,
+            transaction.transaction_hash,
+            transaction.sender_address,
+            felts_sql_string(&transaction.calldata),
+            transaction.max_fee,
+            felts_sql_string(&transaction.signature),
+            transaction.nonce
         );
-        self.query_queue.push(query);
+
+        self.query_queue.push(txn_query);
     }
 
     pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {

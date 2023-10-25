@@ -4,12 +4,10 @@ use sqlx::{Pool, Sqlite};
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
-use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::mapping::{EVENT_TYPE_MAPPING, SYSTEM_CALL_TYPE_MAPPING};
+use super::{ObjectTrait, TypeMapping};
+use crate::mapping::EVENT_TYPE_MAPPING;
 use crate::query::constants::{EVENT_TABLE, ID_COLUMN};
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
-use crate::query::value_mapping_from_row;
-use crate::utils::extract;
+use crate::query::data::{count_rows, fetch_multiple_rows};
 
 pub struct EventObject;
 
@@ -72,21 +70,5 @@ impl ObjectTrait for EventObject {
         field = keys_argument(field);
 
         Some(field)
-    }
-
-    fn related_fields(&self) -> Option<Vec<Field>> {
-        Some(vec![Field::new("systemCall", TypeRef::named_nn("SystemCall"), |ctx| {
-            FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let event_values = ctx.parent_value.try_downcast_ref::<ValueMapping>()?;
-                let syscall_id = extract::<u64>(event_values, "system_call_id")?;
-                let data =
-                    fetch_single_row(&mut conn, "system_calls", "id", &syscall_id.to_string())
-                        .await?;
-                let system_call = value_mapping_from_row(&data, &SYSTEM_CALL_TYPE_MAPPING, false)?;
-
-                Ok(Some(Value::Object(system_call)))
-            })
-        })])
     }
 }

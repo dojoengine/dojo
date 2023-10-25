@@ -9,12 +9,11 @@ use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
-use super::object::system::SystemObject;
-use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
+use crate::object::transaction::TransactionObject;
 use crate::query::type_mapping_query;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
@@ -107,12 +106,11 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, 
     // predefined objects
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
         Box::new(EntityObject),
+        Box::new(EventObject),
         Box::new(MetadataObject),
         Box::new(ModelObject),
-        Box::new(SystemObject),
-        Box::new(EventObject),
-        Box::new(SystemCallObject),
         Box::new(PageInfoObject),
+        Box::new(TransactionObject),
     ];
 
     // model union object
