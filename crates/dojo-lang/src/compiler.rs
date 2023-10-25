@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::iter::zip;
 use std::ops::{Deref, DerefMut};
 
@@ -120,7 +120,7 @@ impl Compiler for DojoCompiler {
         let mut manifest = target_dir
             .open_ro("manifest.json", "output file", ws.config())
             .map(|file| dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default())
-            .unwrap_or(dojo_world::manifest::Manifest::default());
+            .unwrap_or_default();
 
         update_manifest(&mut manifest, db, &main_crate_ids, compiled_classes)?;
 
@@ -205,7 +205,7 @@ pub fn collect_external_crate_ids(
 
 fn update_manifest(
     manifest: &mut dojo_world::manifest::Manifest,
-    db: &mut RootDatabase,
+    db: &RootDatabase,
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<()> {
@@ -338,13 +338,16 @@ fn get_dojo_contract_artifacts(
 
             let reads = match SYSTEM_READS.lock().unwrap().get(module_last_name) {
                 Some(models) => {
-                    models.clone().into_iter().collect::<HashSet<_>>().into_iter().collect()
+                    models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect()
                 }
                 None => vec![],
             };
 
             let write_entries = SYSTEM_WRITES.lock().unwrap();
-            let writes = find_module_rw(db, module_id, write_entries.get(module_last_name));
+            let writes = match write_entries.get(module_last_name) {
+                Some(write_ops) => find_module_rw(db, module_id, write_ops),
+                None => vec![],
+            };
 
             let (class_hash, abi) = compiled_classes
                 .get(name)

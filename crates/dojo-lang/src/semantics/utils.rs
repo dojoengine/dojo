@@ -1,9 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_defs::db::DefsGroup;
 use cairo_lang_defs::ids::{FunctionWithBodyId, LookupItemId, ModuleId, ModuleItemId};
-use cairo_lang_filesystem::ids::FileId;
 use cairo_lang_lowering::db::LoweringGroup;
 use cairo_lang_lowering::ids::{self as low, SemanticFunctionWithBodyIdEx};
 use cairo_lang_lowering::Statement;
@@ -22,42 +21,31 @@ use crate::inline_macros::utils::SystemRWOpRecord;
 pub fn find_module_rw(
     db: &RootDatabase,
     module_id: &ModuleId,
-    module_writers: Option<&HashMap<String, Vec<SystemRWOpRecord>>>,
+    module_writes: &HashMap<String, Vec<SystemRWOpRecord>>,
 ) -> Vec<String> {
-    let mut models: HashSet<String> = HashSet::new();
-    // Does the module have writers?
-    if let Some(module_writers) = module_writers {
-        if let Ok(file_ids) = db.module_files(*module_id) {
-            let file_id = *file_ids.iter().last().unwrap();
-            // let file_id = *file_ids.iter().next().unwrap();
-
-            // Get module fn ids. And generate lookup hashmap
-            if let Ok(module_fns) = db.module_free_functions_ids(*module_id) {
-                for fn_id in module_fns.iter() {
+    let mut models: BTreeSet<String> = BTreeSet::new();
+    if let Ok(module_fns) = db.module_free_functions_ids(*module_id) {
+        for fn_id in module_fns.iter() {
+            find_function_rw(
+                db,
+                module_id,
+                module_writes,
+                FunctionWithBodyId::Free(*fn_id),
+                &mut models,
+            );
+        }
+    }
+    if let Ok(module_impls) = db.module_impls_ids(*module_id) {
+        for module_impl_id in module_impls.iter() {
+            if let Ok(module_fns) = db.impl_functions(*module_impl_id) {
+                for (_, fn_id) in module_fns.iter() {
                     find_function_rw(
                         db,
                         module_id,
-                        file_id,
-                        module_writers,
-                        FunctionWithBodyId::Free(*fn_id),
+                        module_writes,
+                        FunctionWithBodyId::Impl(*fn_id),
                         &mut models,
                     );
-                }
-            }
-            if let Ok(module_impls) = db.module_impls_ids(*module_id) {
-                for module_impl_id in module_impls.iter() {
-                    if let Ok(module_fns) = db.impl_functions(*module_impl_id) {
-                        for (_, fn_id) in module_fns.iter() {
-                            find_function_rw(
-                                db,
-                                module_id,
-                                file_id,
-                                module_writers,
-                                FunctionWithBodyId::Impl(*fn_id),
-                                &mut models,
-                            );
-                        }
-                    }
                 }
             }
         }
@@ -69,18 +57,14 @@ pub fn find_module_rw(
 pub fn find_function_rw(
     db: &RootDatabase,
     _module_id: &ModuleId,
-    file_id: FileId,
-    module_writers: &HashMap<String, Vec<SystemRWOpRecord>>,
+    module_writes: &HashMap<String, Vec<SystemRWOpRecord>>,
     fn_id: FunctionWithBodyId,
-    models: &mut HashSet<String>,
+    models: &mut BTreeSet<String>,
 ) {
     let fn_name: String = fn_id.name(db).into();
-    // let fn_expr = db.expr_semantic(fn_id, fn_body.body_expr);
-    if let Some(module_fn_writers) = module_writers.get(&fn_name) {
-        // This functions has writers
-        // Do stuff with the writers
-
-        for writer_lookup in module_fn_writers.iter() {
+    if let Some(module_fn_writes) = module_writes.get(&fn_name) {
+        // This functions has write ops, find models access
+        for writer_lookup in module_fn_writes.iter() {
             match writer_lookup {
                 SystemRWOpRecord::StructCtor(expr) => {
                     let component = expr.path(db).as_syntax_node().get_text_without_trivia(db);
@@ -138,8 +122,6 @@ pub fn find_function_rw(
                                         }
                                     }
                                 }
-                            } else {
-                                // println!("{:#?} {:?}", statement, statement.outputs());
                             }
                         }
                     }
@@ -149,7 +131,7 @@ pub fn find_function_rw(
     }
 }
 
-pub fn function_resolver(db: &RootDatabase, fn_id: FunctionWithBodyId) -> Resolver {
+pub fn function_resolver(db: &RootDatabase, fn_id: FunctionWithBodyId) -> Resolver<'_> {
     let resolver_data = match fn_id {
         FunctionWithBodyId::Free(fn_id) => {
             let interference = InferenceId::LookupItemDefinition(LookupItemId::ModuleItem(
@@ -160,7 +142,6 @@ pub fn function_resolver(db: &RootDatabase, fn_id: FunctionWithBodyId) -> Resolv
                 .clone_with_inference_id(db, interference)
         }
         FunctionWithBodyId::Impl(fn_id) => {
-            // let fn_ast = db.lookup_intern_impl_function(fn_id).1.lookup(db);
             let interference = InferenceId::LookupItemDefinition(LookupItemId::ImplFunction(fn_id));
             db.impl_function_body_resolver_data(fn_id)
                 .unwrap()
@@ -194,8 +175,5 @@ pub fn semantic_computation_ctx<'a>(
     resolver: Resolver<'a>,
     diagnostics: &'a mut SemanticDiagnostics,
 ) -> ComputationContext<'a> {
-    // db.function_resolver;
-
     ComputationContext::new(db, diagnostics, Some(fn_id), resolver, None, Environment::default())
-    // maybe_compute_expr_semantic(ctx, syntax);
 }

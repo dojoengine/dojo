@@ -10,7 +10,7 @@ use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use super::unsupported_arg_diagnostic;
-use super::utils::{get_parent_of_kind, SystemRWOpRecord, SYSTEM_WRITES};
+use super::utils::{parent_of_kind, SystemRWOpRecord, SYSTEM_WRITES};
 
 #[derive(Debug)]
 pub struct SetMacro;
@@ -101,19 +101,22 @@ impl InlineMacroExprPlugin for SetMacro {
 
         let mut module_name = "".to_string();
         let module_syntax_node =
-            get_parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
+            parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
         if let Some(module_syntax_node) = &module_syntax_node {
             let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
             module_name = mod_ast.name(db).as_syntax_node().get_text_without_trivia(db);
         }
 
-        let mut fn_name = "".to_string();
         let fn_syntax_node =
-            get_parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::FunctionWithBody);
-        if let Some(fn_syntax_node) = &fn_syntax_node {
+            parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::FunctionWithBody);
+        let fn_name = if let Some(fn_syntax_node) = &fn_syntax_node {
             let fn_ast = FunctionWithBody::from_syntax_node(db, fn_syntax_node.clone());
-            fn_name = fn_ast.declaration(db).name(db).as_syntax_node().get_text_without_trivia(db);
-        }
+            fn_ast.declaration(db).name(db).as_syntax_node().get_text_without_trivia(db)
+        } else {
+            // Unlikely to get here, but if we do.
+            eprintln!("Error: Couldn't get the function name.");
+            "".into()
+        };
 
         for (entity, syntax_node) in bundle {
             // db.lookup_intern_file(key0);

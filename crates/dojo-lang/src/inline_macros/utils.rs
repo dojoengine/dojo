@@ -17,7 +17,7 @@ pub enum SystemRWOpRecord {
     Path(ExprPath),
 }
 
-pub fn get_parent_of_kind(
+pub fn parent_of_kind(
     db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
     target: &SyntaxNode,
     kind: SyntaxKind,

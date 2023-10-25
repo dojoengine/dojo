@@ -8,7 +8,7 @@ use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use itertools::Itertools;
 
-use super::utils::{get_parent_of_kind, SYSTEM_READS};
+use super::utils::{parent_of_kind, SYSTEM_READS};
 use super::{extract_models, unsupported_arg_diagnostic, CAIRO_ERR_MSG_LEN};
 
 #[derive(Debug)]
@@ -83,7 +83,7 @@ impl InlineMacroExprPlugin for GetMacro {
         let mut system_reads = SYSTEM_READS.lock().unwrap();
         let mut module_name = "".to_string();
         let module_syntax_node =
-            get_parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
+            parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
         if let Some(module_syntax_node) = &module_syntax_node {
             let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
             module_name = mod_ast.name(db).as_syntax_node().get_text_without_trivia(db);
