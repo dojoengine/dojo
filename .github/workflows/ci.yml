@@ -32,15 +32,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
       - name: "Ensure `torii-client` crate is WASM-able"
         run: |
           cargo build -r --target wasm32-unknown-unknown -p torii-client
-      - name: "Ensure `torii-client-wasm` crate is WASM-able"
-        run: |
-          cargo build -r --target wasm32-unknown-unknown --manifest-path crates/torii/client/wasm/Cargo.toml
 
   # cairofmt:
   #   runs-on: ubuntu-latest
