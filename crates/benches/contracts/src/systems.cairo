@@ -14,8 +14,8 @@ mod spawn {
         set!(
             ctx.world,
             (
-                Moves { player: ctx.origin, remaining: offset },
                 Position { player: ctx.origin, x: offset, y: offset },
+                Moves { player: ctx.origin, remaining: offset },
             )
         );
 
