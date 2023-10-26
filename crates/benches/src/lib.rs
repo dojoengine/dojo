@@ -7,12 +7,23 @@ mod tests {
     use anyhow::{anyhow, Context, Result};
     use hex::ToHex;
     use lazy_static::lazy_static;
-    use starknet::core::types::{FieldElement, TransactionReceipt};
-    use starknet::providers::jsonrpc::JsonRpcResponse;
+    use reqwest::Url;
+    use starknet::accounts::{
+        Account, Call, ExecutionEncoding, PreparedExecution, SingleOwnerAccount,
+    };
+    use starknet::core::chain_id;
+    use starknet::core::types::{BlockId, BlockTag, FieldElement, TransactionReceipt};
+    use starknet::core::utils::get_selector_from_name;
+    use starknet::providers::{
+        jsonrpc::{HttpTransport, JsonRpcResponse},
+        JsonRpcClient, Provider,
+    };
+    use starknet::signers::{LocalWallet, SigningKey};
     use std::process::Command;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::thread;
     use std::time::Duration;
+    use tokio::time::sleep;
 
     use proptest::prelude::*;
 
@@ -228,5 +239,60 @@ mod tests {
             assert!(fee > FieldElement::ONE);
             println!("tx: {}\tfee: {}\tcalldata: {}", tx, fee, s);
         }
+    }
+
+    #[tokio::test]
+    async fn test_nonce() {
+        let url = Url::parse(KATANA_ENDPOINT).unwrap();
+
+        let provider = JsonRpcClient::new(HttpTransport::new(url));
+
+        let id = provider.chain_id().await.unwrap();
+        assert_ne!(id, FieldElement::from_dec_str("0").unwrap());
+
+        let private = FieldElement::from_hex_be(
+            "0x319c161623eeb7bb65d443eaf6d3a5954173961922a5d6bf0b100c87503b68f",
+        )
+        .unwrap();
+        let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private));
+        let address = FieldElement::from_hex_be(
+            "0x68597f52edc17608661ded82f0dcb69118278541717fba08511b4e58c54e48a",
+        )
+        .unwrap();
+
+        let chain_id = provider.chain_id().await.unwrap();
+
+        let mut account =
+            SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::Legacy);
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        let contract_address = FieldElement::from_hex_be(
+            "0x1c24cd47ab41ad1140f624ed133db38411bfa44d7f34e41551af819da9a78eb",
+        )
+        .unwrap();
+        let result = account
+            .execute(vec![Call {
+                to: contract_address,
+                selector: get_selector_from_name("spawn").unwrap(),
+                calldata: vec![],
+            }])
+            .send()
+            .await
+            .unwrap();
+
+        // let nonce =
+        //     provider.get_nonce(BlockId::Tag(BlockTag::Latest), contract_address).await.unwrap();
+        // assert_eq!(nonce, FieldElement::from_dec_str("0").unwrap());
+
+        // let tx = execute("spawn", None).unwrap().tx();
+        // let tx = execute("spawn", None).unwrap().tx();
+        // let tx = execute("spawn", None).unwrap().tx();
+        // let tx = execute("spawn", None).unwrap().tx();
+
+        // sleep(Duration::from_secs(10)).await;
+
+        // let nonce =
+        //     provider.get_nonce(BlockId::Tag(BlockTag::Pending), contract_address).await.unwrap();
+        // assert_eq!(nonce, FieldElement::from_dec_str("1").unwrap());
     }
 }
