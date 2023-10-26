@@ -23,7 +23,7 @@ description = "example world"
 cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
-socials.twitter = "https://x.com/dojostarknet"
+socials.x = "https://x.com/dojostarknet"
         "#,
     )
     .unwrap();
@@ -55,7 +55,7 @@ socials.twitter = "https://x.com/dojostarknet"
     assert_eq!(world.cover_uri, Some(Uri::File("example_cover.png".into())));
     assert_eq!(world.icon_uri, Some(Uri::File("example_icon.png".into())));
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
-    assert_eq!(world.socials.get("twitter"), Some(&"https://x.com/dojostarknet".to_string()));
+    assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
 }
 
 #[tokio::test]
@@ -66,8 +66,34 @@ async fn world_metadata_hash_and_upload() {
         cover_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
         icon_uri: None,
         website: Some(Url::parse("https://dojoengine.org").unwrap()),
-        socials: HashMap::from([("twitter".to_string(), "https://x.com/dojostarknet".to_string())]),
+        socials: Some(HashMap::from([("x".to_string(), "https://x.com/dojostarknet".to_string())])),
     };
 
     let _ = meta.upload().await.unwrap();
+}
+
+#[tokio::test]
+async fn parse_world_metadata_without_socials() {
+    let metadata: Metadata = toml::from_str(
+        r#"
+[env]
+rpc_url = "http://localhost:5050/"
+account_address = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
+private_key = "0x1800000000300000180000000000030000000000003006001800006600"
+keystore_path = "test/"
+keystore_password = "dojo"
+world_address = "0x0248cacaeac64c45be0c19ee8727e0bb86623ca7fa3f0d431a6c55e200697e5a"
+
+[world]
+name = "example"
+description = "example world"
+cover_uri = "file://example_cover.png"
+icon_uri = "file://example_icon.png"
+website = "https://dojoengine.org"
+# socials.x = "https://x.com/dojostarknet"
+        "#,
+    )
+    .unwrap();
+
+    assert!(metadata.world.is_some());
 }
