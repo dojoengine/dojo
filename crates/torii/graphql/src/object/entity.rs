@@ -174,6 +174,7 @@ pub async fn model_data_recursive_query(
     entity_id: &str,
     type_mapping: &TypeMapping,
 ) -> sqlx::Result<ValueMapping> {
+    // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
     let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", table_name, entity_id);
