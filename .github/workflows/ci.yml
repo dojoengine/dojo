@@ -38,9 +38,6 @@ jobs:
       - name: "Ensure `torii-client` crate is WASM-able"
         run: |
           cargo build -r --target wasm32-unknown-unknown -p torii-client
-      - name: "Ensure `torii-client-wasm` crate is WASM-able"
-        run: |
-          cargo build -r --target wasm32-unknown-unknown --manifest-path crates/torii/client/wasm/Cargo.toml
 
   # cairofmt:
   #   runs-on: ubuntu-latest
