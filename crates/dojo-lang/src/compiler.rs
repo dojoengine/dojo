@@ -104,18 +104,20 @@ impl Compiler for DojoCompiler {
             let contract_name = decl.submodule_id.name(db.upcast_mut());
             let contract_name_snake = contract_name.to_case(Case::Snake);
 
-            let is_model = match class.abi.clone() {
-                Some(abii) => abii.items.iter().any(|i| match i {
+            let is_model = match &class.abi {
+                Some(abi) => abi.items.iter().any(|i| match i {
                     abi::Item::Struct(s) => s.name == "dojo::database::schema::Struct",
                     _ => false,
                 }),
+
                 None => false,
             };
 
             let separator = if is_model { "model" } else { "contract" };
             let file_name = format!("{target_name}-{separator}-{contract_name_snake}.json");
 
-            let mut file = target_dir.open_rw(file_name.clone(), "output file", ws.config())?;
+            let mut file =
+                target_dir.open_rw(contract_name_snake.clone(), "output file", ws.config())?;
             serde_json::to_writer_pretty(file.deref_mut(), &class)
                 .with_context(|| format!("failed to serialize contract: {contract_name}"))?;
 
