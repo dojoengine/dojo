@@ -31,7 +31,7 @@ pub fn derive_print(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode
                     $print$
                 }
             }",
-        UnorderedHashMap::from([
+        &UnorderedHashMap::from([
             (
                 "type_name".to_string(),
                 RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),

@@ -3,6 +3,7 @@ use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::expr::fmt::ExprFormatter;
 use cairo_lang_semantic::test_utils::setup_test_expr;
 use cairo_lang_semantic::Expr;
+use cairo_lang_test_utils::parse_test_file::TestRunnerResult;
 use cairo_lang_test_utils::test_file_test;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 
@@ -22,25 +23,11 @@ test_file_test!(
 pub fn test_semantics(
     inputs: &OrderedHashMap<String, String>,
     _args: &OrderedHashMap<String, String>,
-) -> Result<OrderedHashMap<String, String>, String> {
+) -> TestRunnerResult {
     let mut db = DojoSemanticDatabase::default();
     let (expr, diagnostics, expr_formatter) = semantics_test_setup(inputs, &mut db);
 
-    if inputs.get("no_diagnostics").is_some() && "" != diagnostics.as_str() {
-        return Err("Expanded get!() shouldn't have diagnostic issues.".into());
-    }
-
-    if let Some(dojo_semantic) = inputs.get("dojo_semantic") {
-        if dojo_semantic.as_str() == "get_success" {
-            if let Expr::Block(blk) = &expr {
-                blk.tail.expect("Expanded get!() should have a tail");
-            } else {
-                return Err("Expression should be block".into());
-            }
-        }
-    }
-
-    Ok(OrderedHashMap::from([
+    TestRunnerResult::success(OrderedHashMap::from([
         ("expected".into(), format!("{:#?}", expr.debug(&expr_formatter))),
         ("semantic_diagnostics".into(), diagnostics),
     ]))

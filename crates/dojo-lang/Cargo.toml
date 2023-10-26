@@ -27,10 +27,12 @@ cairo-lang-syntax.workspace = true
 cairo-lang-utils.workspace = true
 camino.workspace = true
 convert_case.workspace = true
+directories = "5"
 dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world", features = [ "manifest" ] }
 indoc.workspace = true
 itertools.workspace = true
+lazy_static.workspace = true
 once_cell.workspace = true
 salsa.workspace = true
 scarb.workspace = true

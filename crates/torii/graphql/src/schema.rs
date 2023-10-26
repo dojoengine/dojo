@@ -9,12 +9,11 @@ use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
-use super::object::system::SystemObject;
-use super::object::system_call::SystemCallObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
+use crate::object::transaction::TransactionObject;
 use crate::query::type_mapping_query;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
@@ -22,29 +21,8 @@ use crate::query::type_mapping_query;
 // events, their schema is known but we generate them dynamically as well because async-graphql
 // does not allow mixing of static and dynamic schemas.
 pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
-    let mut schema_builder = Schema::build("Query", None, Some("Subscription"));
-    // predefined objects
-    let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
-        Box::new(EntityObject),
-        Box::new(MetadataObject),
-        Box::new(ModelObject),
-        Box::new(SystemObject),
-        Box::new(EventObject),
-        Box::new(SystemCallObject),
-        Box::new(PageInfoObject),
-    ];
-
-    // build model data gql objects
-    let (data_objects, data_union) = build_data_objects(pool).await?;
-    objects.extend(data_objects);
-
-    // register model data unions
-    schema_builder = schema_builder.register(data_union);
-
-    // register default scalars
-    for scalar_type in ScalarType::all().iter() {
-        schema_builder = schema_builder.register(Scalar::new(scalar_type));
-    }
+    // build world gql objects
+    let (objects, union) = build_objects(pool).await?;
 
     // collect resolvers for single and plural queries
     let queries: Vec<Field> = objects
@@ -56,6 +34,16 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     let mut query_root = Object::new("Query");
     for query in queries {
         query_root = query_root.field(query);
+    }
+
+    let mut schema_builder = Schema::build("Query", None, Some("Subscription"));
+
+    // register model data unions
+    schema_builder = schema_builder.register(union);
+
+    // register default scalars
+    for scalar_type in ScalarType::all().iter() {
+        schema_builder = schema_builder.register(Scalar::new(scalar_type));
     }
 
     for object in &objects {
@@ -111,16 +99,24 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         .map_err(|e| e.into())
 }
 
-async fn build_data_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
+async fn build_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
     let mut conn = pool.acquire().await?;
-    let mut objects: Vec<Box<dyn ObjectTrait>> = Vec::new();
-
     let models: Vec<Model> = sqlx::query_as("SELECT * FROM models").fetch_all(&mut conn).await?;
+
+    // predefined objects
+    let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
+        Box::new(EntityObject),
+        Box::new(EventObject),
+        Box::new(MetadataObject),
+        Box::new(ModelObject),
+        Box::new(PageInfoObject),
+        Box::new(TransactionObject),
+    ];
 
     // model union object
     let mut union = Union::new("ModelUnion");
 
-    // model state objects
+    // model data objects
     for model in models {
         let type_mapping = type_mapping_query(&mut conn, &model.id).await?;
 

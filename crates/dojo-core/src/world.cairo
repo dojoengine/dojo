@@ -52,6 +52,7 @@ mod world {
     use traits::Into;
     use option::OptionTrait;
     use box::BoxTrait;
+    use starknet::event::EventEmitter;
     use serde::Serde;
     use core::hash::{HashStateExTrait, HashStateTrait};
     use pedersen::{PedersenTrait, HashStateImpl, PedersenImpl};
