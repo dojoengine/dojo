@@ -81,13 +81,16 @@ impl InlineMacroExprPlugin for GetMacro {
         ));
 
         let mut system_reads = SYSTEM_READS.lock().unwrap();
-        let mut module_name = "".to_string();
+
         let module_syntax_node =
             parent_of_kind(db, &syntax.as_syntax_node(), SyntaxKind::ItemModule);
-        if let Some(module_syntax_node) = &module_syntax_node {
+        let module_name = if let Some(module_syntax_node) = &module_syntax_node {
             let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
-            module_name = mod_ast.name(db).as_syntax_node().get_text_without_trivia(db);
-        }
+            mod_ast.name(db).as_syntax_node().get_text_without_trivia(db)
+        } else {
+            eprintln!("Error: Couldn't get the module name.");
+            "".into()
+        };
 
         for model in &models {
             if !module_name.is_empty() {
