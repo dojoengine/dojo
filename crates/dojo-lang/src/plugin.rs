@@ -1,3 +1,6 @@
+use std::fs;
+use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -12,9 +15,11 @@ use cairo_lang_syntax::attribute::structured::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal};
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
+use directories::ProjectDirs;
 use dojo_types::system::Dependency;
 use dojo_world::manifest::Member;
+use lazy_static::lazy_static;
 use scarb::compiler::plugin::builtin::BuiltinStarkNetPlugin;
 use scarb::compiler::plugin::{CairoPlugin, CairoPluginInstance};
 use scarb::core::{DependencyVersionReq, ManifestDependency, PackageId, PackageName, SourceId};
@@ -69,6 +74,27 @@ pub const PACKAGE_NAME: &str = "dojo_plugin";
 #[derive(Debug, Default)]
 pub struct BuiltinDojoPlugin;
 
+lazy_static! {
+    static ref MANIFEST_VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).expect("Manifest version not defined");
+    static ref MANIFEST_PATH: Utf8PathBuf = {
+        let pd = ProjectDirs::from("com", "dojoengine", "sozo")
+            .expect("no valid home directory path could be retrieved from the operating system");
+
+        let content = include_str!("../Scarb.toml");
+        let path = pd.cache_dir().join(MANIFEST_VERSION.to_string()).join("Scarb.toml");
+
+        // Create the directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("Failed to create directory");
+        }
+
+        let mut file = File::create(&path).expect("unable to create file");
+        write!(file, "{}", content).expect("unable to write to file");
+
+        Utf8Path::from_path(&path).expect("invalid UTF-8 path").to_path_buf()
+    };
+}
+
 impl BuiltinDojoPlugin {
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
@@ -79,19 +105,10 @@ impl BuiltinDojoPlugin {
     }
 
     pub fn manifest_dependency() -> ManifestDependency {
-        let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
-        let version_req = DependencyVersionReq::exact(&version);
+        let version_req = DependencyVersionReq::exact(&MANIFEST_VERSION);
         ManifestDependency::builder()
             .name(PackageName::new(PACKAGE_NAME))
-            .source_id(
-                SourceId::for_path(
-                    &Utf8Path::new(env!("CARGO_MANIFEST_DIR"))
-                        .join("Scarb.toml")
-                        .canonicalize_utf8()
-                        .unwrap(),
-                )
-                .unwrap(),
-            )
+            .source_id(SourceId::for_path(MANIFEST_PATH.as_path()).unwrap())
             .version_req(version_req)
             .build()
     }
@@ -99,17 +116,10 @@ impl BuiltinDojoPlugin {
 
 impl CairoPlugin for BuiltinDojoPlugin {
     fn id(&self) -> PackageId {
-        let version = env!("CARGO_PKG_VERSION");
         PackageId::new(
             PackageName::new(PACKAGE_NAME),
-            Version::parse(version).unwrap(),
-            SourceId::for_path(
-                &Utf8Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .join("Scarb.toml")
-                    .canonicalize_utf8()
-                    .unwrap(),
-            )
-            .unwrap(),
+            MANIFEST_VERSION.to_owned(),
+            SourceId::for_path(MANIFEST_PATH.as_path()).unwrap(),
         )
     }
 

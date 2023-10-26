@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt, TransactionReceipt};
+use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt, InvokeTransactionV1};
 use starknet::providers::Provider;
 
 use crate::sql::Sql;
@@ -9,6 +9,7 @@ use crate::sql::Sql;
 pub mod metadata_update;
 pub mod register_model;
 pub mod store_set_record;
+pub mod store_transaction;
 
 #[async_trait]
 pub trait EventProcessor<P>
@@ -42,6 +43,8 @@ pub trait TransactionProcessor<P: Provider + Sync> {
         db: &mut Sql,
         provider: &P,
         block: &BlockWithTxs,
-        transaction_receipt: &TransactionReceipt,
+        invoke_receipt: &InvokeTransactionReceipt,
+        transaction: &InvokeTransactionV1,
+        transaction_id: &str,
     ) -> Result<(), Error>;
 }

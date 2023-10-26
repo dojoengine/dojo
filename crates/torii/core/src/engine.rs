@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt,
+    BlockId, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt, InvokeTransactionV1,
     MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
@@ -147,36 +147,48 @@ where
                 _ => continue,
             };
 
-            let receipt = match self
+            let receipt = self
                 .provider
                 .get_transaction_receipt(invoke_transaction.transaction_hash)
                 .await
-            {
-                Ok(receipt) => receipt,
+                .ok()
+                .and_then(|receipt| match receipt {
+                    MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(
+                        receipt,
+                    )) => Some(receipt),
+                    _ => None,
+                });
+
+            let invoke_receipt = match receipt {
+                Some(receipt) => receipt,
                 _ => continue,
             };
 
-            let receipt = match receipt {
-                MaybePendingTransactionReceipt::Receipt(receipt) => receipt,
-                _ => continue,
-            };
-
-            if let TransactionReceipt::Invoke(invoke_receipt) = receipt.clone() {
-                for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
-                    if event.from_address != self.world.address() {
-                        continue;
-                    }
-
-                    let event_id = format!(
-                        "0x{:064x}:0x{:04x}:0x{:04x}",
-                        block.block_number, tx_idx, event_idx
-                    );
-
-                    Self::process_event(self, &block, &invoke_receipt, &event_id, event).await?;
+            let mut world_event = false;
+            for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
+                if event.from_address != self.world.address() {
+                    continue;
                 }
+
+                world_event = true;
+                let event_id =
+                    format!("0x{:064x}:0x{:04x}:0x{:04x}", block.block_number, tx_idx, event_idx);
+
+                Self::process_event(self, &block, &invoke_receipt, &event_id, event).await?;
             }
 
-            Self::process_transaction(self, &block, &receipt).await?;
+            if world_event {
+                let transaction_id = format!("0x{:064x}:0x{:04x}", block.block_number, tx_idx);
+
+                Self::process_transaction(
+                    self,
+                    &block,
+                    &invoke_receipt,
+                    &transaction_id,
+                    invoke_transaction,
+                )
+                .await?;
+            }
         }
 
         info!("processed block: {}", block.block_number);
@@ -194,10 +206,21 @@ where
     async fn process_transaction(
         &mut self,
         block: &BlockWithTxs,
-        receipt: &TransactionReceipt,
+        invoke_receipt: &InvokeTransactionReceipt,
+        transaction_id: &str,
+        transaction: &InvokeTransactionV1,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
-            processor.process(self.db, self.provider.as_ref(), block, receipt).await?
+            processor
+                .process(
+                    self.db,
+                    self.provider.as_ref(),
+                    block,
+                    invoke_receipt,
+                    transaction,
+                    transaction_id,
+                )
+                .await?
         }
 
         Ok(())

@@ -5,8 +5,7 @@ pub mod inputs;
 pub mod metadata;
 pub mod model;
 pub mod model_data;
-pub mod system;
-pub mod system_call;
+pub mod transaction;
 
 use async_graphql::dynamic::{
     Enum, Field, FieldFuture, InputObject, InputValue, Object, SubscriptionField, TypeRef,

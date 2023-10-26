@@ -6,8 +6,9 @@ use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use sqlx::pool::PoolConnection;
+use sqlx::sqlite::SqliteRow;
 use sqlx::{Executor, Pool, Row, Sqlite};
-use starknet::core::types::{Event, FieldElement};
+use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -90,31 +91,24 @@ impl Sql {
             .iter()
             .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
             .collect::<Vec<u8>>();
-        self.query_queue.push(format!(
+        let insert_models = format!(
             "INSERT INTO models (id, name, class_hash, layout, packed_size, unpacked_size) VALUES \
              ('{id}', '{name}', '{class_hash:#x}', '{layout}', '{packed_size}', \
              '{unpacked_size}') ON CONFLICT(id) DO UPDATE SET class_hash='{class_hash:#x}', \
-             layout='{layout}', packed_size='{packed_size}', unpacked_size='{unpacked_size}'",
+             layout='{layout}', packed_size='{packed_size}', unpacked_size='{unpacked_size}' \
+             RETURNING created_at",
             id = model.name(),
             name = model.name(),
             layout = hex::encode(&layout_blob)
-        ));
+        );
+        // execute first to get created_at
+        let query_result: SqliteRow = sqlx::query(&insert_models).fetch_one(&self.pool).await?;
 
         let mut model_idx = 0_usize;
         self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
-
         self.execute().await?;
 
-        // Since previous query has not been executed, we have to make sure created_at exists
-        let created_at: DateTime<Utc> =
-            match sqlx::query("SELECT created_at FROM models WHERE id = ?")
-                .bind(model.name())
-                .fetch_one(&self.pool)
-                .await
-            {
-                Ok(query_result) => query_result.try_get("created_at")?,
-                Err(_) => Utc::now(),
-            };
+        let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
 
         SimpleBroker::publish(ModelType {
             id: model.name(),
@@ -153,24 +147,20 @@ impl Sql {
         };
 
         let keys_str = felts_sql_string(&keys);
-        self.query_queue.push(format!(
+        let insert_entities = format!(
             "INSERT INTO entities (id, keys, model_names, event_id) VALUES ('{}', '{}', '{}', \
              '{}') ON CONFLICT(id) DO UPDATE SET model_names=excluded.model_names, \
-             updated_at=CURRENT_TIMESTAMP, event_id=excluded.event_id",
+             updated_at=CURRENT_TIMESTAMP, event_id=excluded.event_id RETURNING created_at",
             entity_id, keys_str, model_names, event_id
-        ));
+        );
+        // execute first to get created_at
+        let query_result: SqliteRow = sqlx::query(&insert_entities).fetch_one(&self.pool).await?;
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
-
         self.execute().await?;
 
-        let query_result = sqlx::query("SELECT created_at FROM entities WHERE id = ?")
-            .bind(entity_id.clone())
-            .fetch_one(&self.pool)
-            .await?;
         let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
-
         SimpleBroker::publish(Entity {
             id: entity_id.clone(),
             keys: keys_str,
@@ -210,20 +200,21 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    pub fn store_system_call(
-        &mut self,
-        system: String,
-        transaction_hash: FieldElement,
-        calldata: &[FieldElement],
-    ) {
-        let query = format!(
-            "INSERT OR IGNORE INTO system_calls (data, transaction_hash, system_id) VALUES ('{}', \
-             '{:#x}', '{}')",
-            calldata.iter().map(|c| format!("{:#x}", c)).collect::<Vec<String>>().join(","),
-            transaction_hash,
-            system
+    pub fn store_transaction(&mut self, transaction: &InvokeTransactionV1, transaction_id: &str) {
+        let txn_query = format!(
+            "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
+             max_fee, signature, nonce) VALUES
+            ('{}', '{:#x}', '{}', '{}', '{:#x}', '{}', '{:#x}')",
+            transaction_id,
+            transaction.transaction_hash,
+            transaction.sender_address,
+            felts_sql_string(&transaction.calldata),
+            transaction.max_fee,
+            felts_sql_string(&transaction.signature),
+            transaction.nonce
         );
-        self.query_queue.push(query);
+
+        self.query_queue.push(txn_query);
     }
 
     pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {
@@ -329,6 +320,8 @@ impl Sql {
 
     fn build_model_query(&mut self, path: Vec<String>, model: &Ty, model_idx: usize) {
         let table_id = path.join("$");
+        let mut indices = Vec::new();
+
         let mut query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
              event_id, "
@@ -341,6 +334,9 @@ impl Sql {
 
                 if let Ok(cairo_type) = Primitive::from_str(&member.ty.name()) {
                     query.push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
+                    indices.push(format!(
+                        "CREATE INDEX idx_{table_id}_{name} ON [{table_id}] (external_{name});"
+                    ));
                 } else if let Ty::Enum(e) = &member.ty {
                     let all_options = e
                         .options
@@ -351,6 +347,10 @@ impl Sql {
 
                     query.push_str(&format!(
                         "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
+                    ));
+
+                    indices.push(format!(
+                        "CREATE INDEX idx_{table_id}_{name} ON [{table_id}] (external_{name});"
                     ));
 
                     options = Some(format!(
@@ -384,6 +384,7 @@ impl Sql {
 
         query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
         self.query_queue.push(query);
+        self.query_queue.extend(indices);
     }
 
     pub async fn execute(&mut self) -> Result<()> {

@@ -47,26 +47,31 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
-    pub static ref SYSTEM_CALL_TYPE_MAPPING: TypeMapping = IndexMap::from([
+    pub static ref TRANSACTION_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-        (Name::new("transaction_hash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("data"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("system_id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-        (
-            Name::new("created_at"),
-            TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
-        ),
-    ]);
-    pub static ref SYSTEM_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
-        (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (
-            Name::new("class_hash"),
-            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
-        ),
         (
             Name::new("transaction_hash"),
-            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
+            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string()))
+        ),
+        (
+            Name::new("sender_address"),
+            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string()))
+        ),
+        (
+            Name::new("calldata"),
+            TypeData::Simple(TypeRef::named_list(Primitive::Felt252(None).to_string()))
+        ),
+        (
+            Name::new("max_fee"),
+            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string()))
+        ),
+        (
+            Name::new("signature"),
+            TypeData::Simple(TypeRef::named_list(Primitive::Felt252(None).to_string()))
+        ),
+        (
+            Name::new("nonce"),
+            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string()))
         ),
         (
             Name::new("created_at"),
