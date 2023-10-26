@@ -72,15 +72,25 @@ where
             warn!("start block ignored, stored head exists and will be used instead");
         }
 
+        let mut backoff_delay = Duration::from_secs(1);
+        let max_backoff_delay = Duration::from_secs(60);
+
         loop {
             if cts.is_cancelled() {
                 break Ok(());
             }
 
             match self.sync_to_head(head).await {
-                Ok(latest_block_number) => head = latest_block_number,
+                Ok(latest_block_number) => {
+                    head = latest_block_number;
+                    backoff_delay = Duration::from_secs(1);
+                }
                 Err(e) => {
                     error!("getting  block: {}", e);
+                    sleep(backoff_delay).await;
+                    if backoff_delay < max_backoff_delay {
+                        backoff_delay *= 2;
+                    }
                     continue;
                 }
             };

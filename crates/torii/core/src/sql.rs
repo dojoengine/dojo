@@ -6,8 +6,7 @@ use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use sqlx::pool::PoolConnection;
-use sqlx::sqlite::SqliteRow;
-use sqlx::{Executor, Pool, Row, Sqlite};
+use sqlx::{Executor, Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
 
@@ -102,20 +101,18 @@ impl Sql {
             layout = hex::encode(&layout_blob)
         );
         // execute first to get created_at
-        let query_result: SqliteRow = sqlx::query(&insert_models).fetch_one(&self.pool).await?;
-
+        let query_result: (DateTime<Utc>,) =
+            sqlx::query_as(&insert_models).fetch_one(&self.pool).await?;
         let mut model_idx = 0_usize;
         self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
         self.execute().await?;
-
-        let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
 
         SimpleBroker::publish(ModelType {
             id: model.name(),
             name: model.name(),
             class_hash: format!("{:#x}", class_hash),
             transaction_hash: "0x0".to_string(),
-            created_at,
+            created_at: query_result.0,
         });
         Ok(())
     }
@@ -154,19 +151,19 @@ impl Sql {
             entity_id, keys_str, model_names, event_id
         );
         // execute first to get created_at
-        let query_result: SqliteRow = sqlx::query(&insert_entities).fetch_one(&self.pool).await?;
+        let query_result: (DateTime<Utc>,) =
+            sqlx::query_as(&insert_entities).fetch_one(&self.pool).await?;
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
         self.execute().await?;
 
-        let created_at: DateTime<Utc> = query_result.try_get("created_at")?;
         SimpleBroker::publish(Entity {
             id: entity_id.clone(),
             keys: keys_str,
             model_names,
             event_id: event_id.to_string(),
-            created_at,
+            created_at: query_result.0,
             updated_at: Utc::now(),
         });
         Ok(())

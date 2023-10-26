@@ -1,6 +1,6 @@
 [package]
 name = "projectile"
-version = "0.3.1"
+version = "0.3.2"
 
 [dependencies]
 cubit = { git = "https://github.com/influenceth/cubit" }
