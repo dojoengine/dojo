@@ -4,49 +4,22 @@ mod spawn {
 
     use dojo_examples::components::Position;
     use dojo_examples::components::Moves;
-    use dojo_examples::constants::OFFSET;
 
     #[event]
     use dojo_examples::events::{Event, Moved};
 
 
-    // so we don't go negative
-
     fn execute(ctx: Context) {
-        // cast the offset to a u32
-        let offset: u32 = OFFSET.try_into().unwrap();
-
+        let offset = 100_000;
         set!(
             ctx.world,
             (
-                Moves { player: ctx.origin, remaining: 10000 },
+                Moves { player: ctx.origin, remaining: offset },
                 Position { player: ctx.origin, x: offset, y: offset },
             )
         );
 
         emit!(ctx.world, Moved { player: ctx.origin, x: offset, y: offset, });
-
-        return ();
-    }
-}
-
-
-#[system]
-mod bench_emit {
-    use dojo::world::Context;
-
-    use dojo_examples::components::Position;
-    use dojo_examples::components::Moves;
-    use dojo_examples::constants::OFFSET;
-
-    #[event]
-    use dojo_examples::events::{Event, Moved};
-
-
-    // so we don't go negative
-
-    fn execute(ctx: Context) {
-        emit!(ctx.world, Moved { player: ctx.origin, x: 0, y: 0, });
 
         return ();
     }

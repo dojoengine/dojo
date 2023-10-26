@@ -1,7 +1,16 @@
+use starknet::ContractAddress;
+
+#[derive(Component, Copy, Drop, Serde, SerdeLen)]
+struct Alias {
+    #[key]
+    player: ContractAddress,
+    name: felt252,
+}
+
+
 #[system]
 mod bench_emit {
     use starknet::ContractAddress;
-
     use dojo::world::Context;
 
     #[event]
@@ -16,7 +25,6 @@ mod bench_emit {
         name: felt252,
     }
 
-
     fn execute(ctx: Context, name: felt252) {
         emit!(ctx.world, Alias { player: ctx.origin, name: name, });
 
@@ -28,15 +36,8 @@ mod bench_emit {
 #[system]
 mod bench_set {
     use starknet::ContractAddress;
-
     use dojo::world::Context;
-
-    #[derive(Component, Copy, Drop, Serde, SerdeLen)]
-    struct Alias {
-        #[key]
-        player: ContractAddress,
-        name: felt252,
-    }
+    use super::Alias;
 
     fn execute(ctx: Context, name: felt252) {
         set!(ctx.world, Alias { player: ctx.origin, name: name, });
@@ -49,15 +50,8 @@ mod bench_set {
 #[system]
 mod bench_get {
     use starknet::ContractAddress;
-
     use dojo::world::Context;
-
-    #[derive(Component, Copy, Drop, Serde, SerdeLen)]
-    struct Alias {
-        #[key]
-        player: ContractAddress,
-        name: felt252,
-    }
+    use super::Alias;
 
     fn execute(ctx: Context) {
         get!(ctx.world, ctx.origin, Alias,);
