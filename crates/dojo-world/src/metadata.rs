@@ -74,7 +74,7 @@ pub struct WorldMetadata {
     pub cover_uri: Option<Uri>,
     pub icon_uri: Option<Uri>,
     pub website: Option<Url>,
-    pub socials: HashMap<String, String>,
+    pub socials: Option<HashMap<String, String>>,
 }
 
 #[derive(Default, Deserialize, Clone, Debug)]
