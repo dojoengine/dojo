@@ -101,6 +101,11 @@ pub struct ServerOptions {
     #[arg(long)]
     #[arg(help = "The IP address the server will listen on.")]
     pub host: Option<String>,
+
+    #[arg(long)]
+    #[arg(default_value = "100")]
+    #[arg(help = "Maximum number of concurrent connections allowed.")]
+    pub max_connections: u32,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -184,6 +189,7 @@ impl KatanaArgs {
             apis,
             port: self.server.port,
             host: self.server.host.clone().unwrap_or("0.0.0.0".into()),
+            max_connections: self.server.max_connections,
         }
     }
 

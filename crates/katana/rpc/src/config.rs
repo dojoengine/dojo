@@ -4,6 +4,7 @@ use crate::api::ApiKind;
 pub struct ServerConfig {
     pub port: u16,
     pub host: String,
+    pub max_connections: u32,
     pub apis: Vec<ApiKind>,
 }
 

@@ -37,6 +37,7 @@ impl TestSequencer {
             ServerConfig {
                 port: 0,
                 host: "0.0.0.0".into(),
+                max_connections: 100,
                 apis: vec![ApiKind::Starknet, ApiKind::Katana],
             },
         )
