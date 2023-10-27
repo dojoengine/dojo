@@ -276,8 +276,7 @@ pub trait MaybeAsCachedDb {
     fn maybe_as_cached_db(&self) -> Option<AsCachedDb>;
 }
 
-/// A wrapper type for [CachedState](blockifier::state::cached_state::CachedState) which
-/// also allow storing the Sierra classes.
+/// A wrapper type for [CachedState] which also allow storing the Sierra classes.
 ///
 /// The inner fields are wrapped in [Arc] and an async [RwLock](tokio::sync::RwLock) as to allow for
 /// asynchronous access to the state.
