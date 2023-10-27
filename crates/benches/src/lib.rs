@@ -9,10 +9,11 @@ mod tests {
     use lazy_static::lazy_static;
     use reqwest::Url;
     use starknet::accounts::{
-        Account, Call, ExecutionEncoding, PreparedExecution, SingleOwnerAccount,
+        Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount,
     };
-    use starknet::core::chain_id;
-    use starknet::core::types::{BlockId, BlockTag, FieldElement, TransactionReceipt};
+    use starknet::core::types::{
+        BlockId, BlockTag, FieldElement, InvokeTransactionResult, TransactionReceipt,
+    };
     use starknet::core::utils::get_selector_from_name;
     use starknet::providers::{
         jsonrpc::{HttpTransport, JsonRpcResponse},
@@ -267,10 +268,10 @@ mod tests {
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         let contract_address = FieldElement::from_hex_be(
-            "0x1c24cd47ab41ad1140f624ed133db38411bfa44d7f34e41551af819da9a78eb",
+            "0x5d69ccf0644b87204e143d2953b86c6e3aaf01a1ae923fc0ea0b5212048f5dd",
         )
         .unwrap();
-        let result = account
+        let tx = account
             .execute(vec![Call {
                 to: contract_address,
                 selector: get_selector_from_name("spawn").unwrap(),
@@ -278,21 +279,10 @@ mod tests {
             }])
             .send()
             .await
-            .unwrap();
+            .unwrap()
+            .transaction_hash;
 
-        // let nonce =
-        //     provider.get_nonce(BlockId::Tag(BlockTag::Latest), contract_address).await.unwrap();
-        // assert_eq!(nonce, FieldElement::from_dec_str("0").unwrap());
-
-        // let tx = execute("spawn", None).unwrap().tx();
-        // let tx = execute("spawn", None).unwrap().tx();
-        // let tx = execute("spawn", None).unwrap().tx();
-        // let tx = execute("spawn", None).unwrap().tx();
-
-        // sleep(Duration::from_secs(10)).await;
-
-        // let nonce =
-        //     provider.get_nonce(BlockId::Tag(BlockTag::Pending), contract_address).await.unwrap();
-        // assert_eq!(nonce, FieldElement::from_dec_str("1").unwrap());
+        let nonce = account.get_nonce().await.unwrap();
+        assert_ne!(nonce, 0u8.into());
     }
 }
