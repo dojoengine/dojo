@@ -73,13 +73,13 @@ fn diff_when_local_and_remote_are_different() {
             name: "my_contract".into(),
             class_hash: felt!("0x1111"),
             address: Some(felt!("0x2222")),
-            abi: None,
+            ..Contract::default()
         },
         Contract {
             name: "my_contract_2".into(),
             class_hash: felt!("0x3333"),
             address: Some(felt!("4444")),
-            abi: None,
+            ..Contract::default()
         },
     ];
 

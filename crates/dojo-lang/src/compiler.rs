@@ -1,9 +1,10 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::iter::zip;
 use std::ops::{Deref, DerefMut};
 
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
+use cairo_lang_defs::db::DefsGroup;
 use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
@@ -27,7 +28,9 @@ use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use tracing::{debug, trace, trace_span};
 
+use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
 use crate::plugin::DojoAuxData;
+use crate::semantics::utils::find_module_rw;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
 
@@ -202,7 +205,7 @@ pub fn collect_external_crate_ids(
 
 fn update_manifest(
     manifest: &mut dojo_world::manifest::Manifest,
-    db: &dyn SemanticGroup,
+    db: &RootDatabase,
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<()> {
@@ -254,7 +257,12 @@ fn update_manifest(
                 .filter_map(|aux_data| aux_data.as_ref().map(|aux_data| aux_data.0.as_any()))
             {
                 if let Some(aux_data) = aux_data.downcast_ref::<StarkNetContractAuxData>() {
-                    contracts.extend(get_dojo_contract_artifacts(aux_data, &compiled_artifacts)?);
+                    contracts.extend(get_dojo_contract_artifacts(
+                        db,
+                        module_id,
+                        aux_data,
+                        &compiled_artifacts,
+                    )?);
                 }
 
                 if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
@@ -315,6 +323,8 @@ fn get_dojo_model_artifacts(
 }
 
 fn get_dojo_contract_artifacts(
+    db: &RootDatabase,
+    module_id: &ModuleId,
     aux_data: &StarkNetContractAuxData,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<SmolStr, Contract>> {
@@ -323,11 +333,38 @@ fn get_dojo_contract_artifacts(
         .iter()
         .filter(|name| !matches!(name.as_ref(), "world" | "executor" | "base"))
         .map(|name| {
+            let module_name = module_id.full_path(db);
+            let module_last_name = module_name.split("::").last().unwrap();
+
+            let reads = match SYSTEM_READS.lock().unwrap().get(module_last_name) {
+                Some(models) => {
+                    models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect()
+                }
+                None => vec![],
+            };
+
+            let write_entries = SYSTEM_WRITES.lock().unwrap();
+            let writes = match write_entries.get(module_last_name) {
+                Some(write_ops) => find_module_rw(db, module_id, write_ops),
+                None => vec![],
+            };
+
             let (class_hash, abi) = compiled_classes
                 .get(name)
                 .cloned()
                 .ok_or(anyhow!("Contract {name} not found in target."))?;
-            Ok((name.clone(), Contract { name: name.clone(), class_hash, abi, address: None }))
+
+            Ok((
+                name.clone(),
+                Contract {
+                    name: name.clone(),
+                    class_hash,
+                    abi,
+                    writes,
+                    reads,
+                    ..Default::default()
+                },
+            ))
         })
         .collect::<anyhow::Result<_>>()
 }
