@@ -56,6 +56,7 @@ pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Res
         .set_logger(RpcLogger)
         .set_host_filtering(AllowHosts::Any)
         .set_middleware(middleware)
+        .max_connections(config.max_connections)
         .build(config.addr())
         .await?;
 
