@@ -117,7 +117,7 @@ impl Compiler for DojoCompiler {
         let mut manifest = target_dir
             .open_ro("manifest.json", "output file", ws.config())
             .map(|file| dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default())
-            .unwrap_or(dojo_world::manifest::Manifest::default());
+            .unwrap_or_default();
 
         update_manifest(&mut manifest, db, &main_crate_ids, compiled_classes)?;
 

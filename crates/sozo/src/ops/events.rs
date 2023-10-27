@@ -69,7 +69,7 @@ fn parse_event(
 ) -> Option<String> {
     let keys = event.keys;
     let event_hash = keys[0].to_string();
-    let Some(events) = events_map.get(&event_hash) else { return None };
+    let events = events_map.get(&event_hash)?;
 
     'outer: for e in events {
         let mut ret = format!("Event name: {}\n", e.name);

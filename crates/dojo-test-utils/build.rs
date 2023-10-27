@@ -10,8 +10,7 @@ fn main() {
     use scarb::ops::{self, CompileOpts};
     use scarb_ui::Verbosity;
 
-    let project_paths =
-        vec!["../../examples/spawn-and-move", "../torii/graphql/src/tests/types-test"];
+    let project_paths = ["../../examples/spawn-and-move", "../torii/graphql/src/tests/types-test"];
 
     project_paths.iter().for_each(|path| compile(path));
 
