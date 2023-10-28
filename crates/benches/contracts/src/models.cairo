@@ -42,6 +42,13 @@ struct Position {
     vec: Vec2,
 }
 
+#[derive(Model, Copy, Drop, Serde)]
+struct Alias {
+    #[key]
+    player: ContractAddress,
+    name: felt252,
+}
+
 trait Vec2Trait {
     fn is_zero(self: Vec2) -> bool;
     fn is_equal(self: Vec2, b: Vec2) -> bool;

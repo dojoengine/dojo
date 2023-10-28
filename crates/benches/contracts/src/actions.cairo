@@ -5,29 +5,38 @@ use dojo_examples::models::{Direction};
 trait IActions<TContractState> {
     fn spawn(self: @TContractState);
     fn move(self: @TContractState, direction: Direction);
+    fn bench_emit(self: @TContractState, name: felt252);
+    fn bench_set(self: @TContractState, name: felt252);
+    fn bench_get(self: @TContractState);
 }
 
 // dojo decorator
 #[dojo::contract]
 mod actions {
     use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::models::{Position, Moves, Direction, Vec2};
+    use dojo_examples::models::{Position, Moves, Direction, Vec2, Alias};
     use dojo_examples::utils::next_position;
     use super::IActions;
 
-    // declaring custom event struct
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         Moved: Moved,
+        Aliased: Aliased,
     }
 
-    // declaring custom event struct
     #[derive(Drop, starknet::Event)]
     struct Moved {
         player: ContractAddress,
         direction: Direction
     }
+
+    #[derive(Drop, starknet::Event)]
+    struct Aliased {
+        player: ContractAddress,
+        name: felt252,
+    }
+
 
     // impl: implement functions specified in trait
     #[external(v0)]
@@ -87,6 +96,27 @@ mod actions {
 
             // Emit an event to the world to notify about the player's move.
             emit!(world, Moved { player, direction });
+        }
+
+        fn bench_emit(self: @ContractState, name: felt252) {
+            let world = self.world_dispatcher.read();
+            let player = get_caller_address();
+
+            emit!(world, Aliased { player, name: name });
+        }
+
+        fn bench_set(self: @ContractState, name: felt252) {
+            let world = self.world_dispatcher.read();
+            let player = get_caller_address();
+
+            set!(world, Alias { player, name: name });
+        }
+
+        fn bench_get(self: @ContractState) {
+            let world = self.world_dispatcher.read();
+            let player = get_caller_address();
+
+            get!(world, player, Alias);
         }
     }
 }

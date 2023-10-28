@@ -11,8 +11,9 @@ reqwest = { version="0.11.18", features=["blocking", "json"] }
 clap_builder = "4.4.6"
 
 sozo = { path = "../sozo" }
-tokio.workspace = true
 starknet.workspace = true
 anyhow.workspace = true
 hex.workspace = true
 lazy_static.workspace = true
+futures.workspace = true
+tokio.workspace = true

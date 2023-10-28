@@ -4,9 +4,4 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
-cc 7d32c076cfe1475f92abf0208ef88580160e00710214703aae4adf4d8babfa03 # shrinks to c = "0x0"
-cc 1bc968efe4edd6b20f8d92281b0f0eafe27c60f668d6f8f82372fb8d0e67b310 # shrinks to c = "0x2"
-cc 40a207e5a4d0b7a3eb5ce6f54c3afbbfbc33bae8a16b8acff51f068fb655fd1b # shrinks to c = "0x2"
-cc fde5188b8d2909a3f49b7ebfd60c683e9b836002d5e4af6bf0c3cabb6667759a # shrinks to c = "0x0"
-cc 0f76189d94103dfde9a968b4972e8e3c740355838795a2a1b5a0b461383a0af7 # shrinks to c = "0x2"
-cc 36815e7d58cac3fa8646a3887170dc8d52be914360bb044f2d2aad5277deac47 # shrinks to c = "0x2"
+cc 00225c32687018eaa80a4625a354790efbf09bbaa203a5fdca4c778a5a0885ff # shrinks to c = "0x0"

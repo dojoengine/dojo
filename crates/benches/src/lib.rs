@@ -4,128 +4,63 @@ extern crate lazy_static;
 
 #[cfg(test)]
 mod tests {
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result};
+    use futures::executor::block_on;
     use hex::ToHex;
     use lazy_static::lazy_static;
     use reqwest::Url;
-    use starknet::accounts::{Call, Execution, ExecutionEncoding, SingleOwnerAccount};
-    use starknet::core::types::{BlockId, BlockTag, FieldElement, TransactionReceipt};
+    use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
+    use starknet::core::types::{BlockId, BlockTag, FieldElement};
     use starknet::core::utils::get_selector_from_name;
-    use starknet::providers::{
-        jsonrpc::{HttpTransport, JsonRpcResponse},
-        JsonRpcClient, Provider,
-    };
+    use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider};
     use starknet::signers::{LocalWallet, SigningKey};
-    use std::process::Command;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::thread;
-    use std::time::Duration;
+    use tokio::runtime::Runtime;
 
     use proptest::prelude::*;
+    use tokio::sync::OnceCell;
 
     const KATANA_ENDPOINT: &str = "http://localhost:5050";
-    const WORLD: &str = "0x223b959926c92e10a5de78a76871fa40cefafbdce789137843df7c7b30e3e0";
-    const EXECUTABLE: &str = "sozo"; // using system installed version of sozo
+    const CONTRACT_ADDRESS: &str =
+        "0x5d69ccf0644b87204e143d2953b86c6e3aaf01a1ae923fc0ea0b5212048f5dd";
 
-    #[derive(Clone, Debug)]
-    struct Keypair(String, String);
+    const ACCOUNT_ADDRESS: &str =
+        "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973";
+    const PRIVATE_KEY: &str = "0x1800000000300000180000000000030000000000003006001800006600";
 
-    #[derive(Clone, Debug)]
-    struct TransactionSequence(String, Keypair);
-
-    fn execute(entrypoint: &str, calldata: Option<String>) -> Result<TransactionSequence> {
-        static COUNTER: AtomicUsize = AtomicUsize::new(0);
-        let result = COUNTER.fetch_add(1, Ordering::Relaxed);
-
-        let keypair = KEY_PAIRS[result % KEY_PAIRS.len()].clone();
-
-        TransactionSequence::execute_on(keypair, entrypoint, calldata)
-    }
-
-    impl TransactionSequence {
-        fn then(self, entrypoint: &str, calldata: Option<String>) -> Result<TransactionSequence> {
-            Self::execute_on(self.1, entrypoint, calldata)
-        }
-
-        fn tx(self) -> String {
-            self.0
-        }
-
-        fn execute_on(
-            keypair: Keypair,
-            entrypoint: &str,
-            calldata: Option<String>,
-        ) -> Result<TransactionSequence> {
-            let Keypair(address, private) = &keypair;
-
-            let mut args = vec![
-                "execute",
-                "--account-address",
-                &address,
-                "--private-key",
-                &private,
-                "--rpc-url",
-                "http://localhost:5050",
-                "--world",
-                WORLD,
-                entrypoint,
-            ];
-            if let Some(ref calldata) = calldata {
-                args.extend(["--calldata", calldata]);
-            }
-
-            // looks like it doesn't work at the moment, so using installed version of sozo
-            // sozo::cli_main(SozoArgs::parse_from(args)).expect("Execution error");
-
-            let output = Command::new(EXECUTABLE)
-                .args(args)
-                .output()
-                .context("failed to execute process")?;
-
-            if !output.status.success() {
-                return Err(anyhow!("Execution failed"));
-            }
-
-            let tx = String::from_utf8(output.stdout)
-                .context("Failed to parse output")?
-                .strip_prefix("Transaction: ")
-                .context("Invalid output")?
-                .trim()
-                .to_owned();
-
-            if &tx[0..2] != "0x" {
-                return Err(anyhow!("Invalid tx hash"));
-            }
-
-            Ok(TransactionSequence(tx, keypair))
-        }
-    }
+    type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
     lazy_static! {
-        // load output from katana launched with `katana --accounts 255 > prefunded.txt`
-        // this allows for up to 255 concurrent accounts without the need to fund them
-        static ref KEY_PAIRS: Vec<Keypair> = {
-            // load from file
-            let file_contents =
-                std::fs::read_to_string("prefunded.txt").expect("Failed to read prefunded.txt");
+        static ref CONTRACT: FieldElement = FieldElement::from_hex_be(CONTRACT_ADDRESS).unwrap();
+        static ref RUNTIME: Runtime = Runtime::new().unwrap();
+    }
 
-            // parse just the hexadecimal values
-            let hexes = file_contents
-                .lines()
-                .filter(|l| l.contains('|'))
-                .map(|l| l.split('|').skip(2).next().unwrap().trim().to_owned())
-                .collect::<Vec<_>>();
+    async fn chain_id() -> FieldElement {
+        // cache the chain_id
+        static CHAIN_ID: OnceCell<FieldElement> = OnceCell::const_new();
 
-            // convert to pairs of address and private key
-            hexes.chunks(3)
-                .map(|chunk| Keypair(chunk[0].to_owned(), chunk[1].to_owned())) // Address, private key
-                .collect::<Vec<_>>()
-        };
+        *CHAIN_ID
+            .get_or_init(|| async {
+                let provider = provider();
+                provider.chain_id().await.unwrap()
+            })
+            .await
+    }
 
-        static ref CONTRACT: FieldElement = FieldElement::from_hex_be(
-            "0x5d69ccf0644b87204e143d2953b86c6e3aaf01a1ae923fc0ea0b5212048f5dd",
-        )
-        .unwrap();
+    async fn account() -> OwnerAccount {
+        let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            FieldElement::from_hex_be(PRIVATE_KEY).unwrap(),
+        ));
+        let address = FieldElement::from_hex_be(ACCOUNT_ADDRESS).unwrap();
+        let mut account = SingleOwnerAccount::new(
+            provider(),
+            signer,
+            address,
+            chain_id().await,
+            ExecutionEncoding::Legacy,
+        );
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        account
     }
 
     fn provider() -> JsonRpcClient<HttpTransport> {
@@ -133,149 +68,90 @@ mod tests {
         JsonRpcClient::new(HttpTransport::new(url))
     }
 
-    fn paid_fee(tx: &str) -> Result<FieldElement> {
-        let client = reqwest::blocking::Client::new();
-        let body = format!(
-            "{{\"jsonrpc\": \"2.0\",\"method\": \"starknet_getTransactionReceipt\",\"params\": [\"{}\"],\"id\": 1}}",
-            tx,
-        );
+    fn execute(entrypoints_and_calldata: Vec<(&str, Vec<FieldElement>)>) -> Result<u64> {
+        let calls = entrypoints_and_calldata
+            .into_iter()
+            .map(|(name, calldata)| Call {
+                to: *CONTRACT,
+                selector: get_selector_from_name(name).context("Failed to get selector").unwrap(),
+                calldata,
+            })
+            .collect();
 
-        let mut retries = 0;
-        let receipt = loop {
-            let res = client
-                .post(KATANA_ENDPOINT)
-                .body(body.clone())
-                .header("Content-Type", "application/json")
-                .send()
-                .context("Failed to send request")?;
+        let provider = provider();
 
-            if res.status() != 200 {
-                return Err(anyhow!("Failed to fetch receipt"));
-            }
+        let _rt = RUNTIME.enter();
+        let chain_id =
+            block_on(async move { provider.chain_id().await.expect("Couldn't fetch chain_id") });
 
-            let receipt: JsonRpcResponse<TransactionReceipt> =
-                res.json().context("Failed to parse response")?;
+        let fee = block_on(async move {
+            let fee = account()
+                .await
+                .execute(calls)
+                .estimate_fee()
+                .await
+                .context("Failed to estimate fee")
+                .unwrap();
 
-            match receipt {
-                JsonRpcResponse::Success { result, .. } => break result,
-                JsonRpcResponse::Error { error, .. } => {
-                    if retries > 10 {
-                        return Err(anyhow!("Transaction {} failed with: {}", tx, error));
-                    } else {
-                        retries += 1;
-                    }
-                }
-            }
+            fee
+        });
 
-            thread::sleep(Duration::from_millis(50));
-        };
-
-        if let TransactionReceipt::Invoke(receipt) = receipt {
-            Ok(receipt.actual_fee)
-        } else {
-            return Err(anyhow!("Not an invoke transaction"));
-        }
-    }
-
-    #[test]
-    fn prepare_test() {
-        assert_eq!(
-            KEY_PAIRS[0].0, "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973",
-            "Katana prefunded accounts are not loaded"
-        );
+        Ok(fee.gas_consumed)
     }
 
     // does not need proptest, as it doesn't use any input
     #[test]
     fn bench_spawn() {
-        let tx = execute("spawn", None).unwrap().0;
+        let fee = execute(vec![("spawn", vec![])]).unwrap();
 
-        let fee = paid_fee(&tx).unwrap();
-        assert!(fee > FieldElement::ONE);
-        println!("Tx: {}, fee: {}", tx, fee);
+        assert!(fee > 1);
     }
 
     proptest! {
         #[test]
-        fn bench_move(c in "0x[0-3]") {
-            let tx = execute("spawn", None).unwrap()
-                .then("move", Some(c.clone())).unwrap().tx();
+        fn bench_move(c in "0x[0-4]") {
+            let calls = vec![("spawn", vec![]), ("move", vec![FieldElement::from_hex_be(&c).unwrap()])];
+            let fee = execute(calls).unwrap();
 
-            let fee = paid_fee(&tx).expect("Failed to fetch fee");
-            assert!(fee > FieldElement::ONE);
-            println!("Data: {} in tx: {}, with fee: {}", c, tx, fee);
+            assert!(fee > 1);
+            println!("Data: {} , with fee: {}", c, fee);
         }
     }
 
     proptest! {
         #[test]
         fn bench_emit(s in "[A-Za-z0-9]{1,31}") {
-            let s_hex = s.as_bytes().encode_hex::<String>();
+            let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
-            let tx = execute("bench_emit", Some("0x".to_owned() + &s_hex)).unwrap().tx();
+            let fee = execute(vec![("bench_emit", vec![s_hex])]).unwrap();
 
-            let fee = paid_fee(&tx).expect("Failed to fetch fee");
-            assert!(fee > FieldElement::ONE);
-            println!("tx: {}\tfee: {}\tcalldata: {}", tx, fee, s);
+            assert!(fee > 1);
+            println!("fee: {}\tcalldata: {}", fee, s);
         }
     }
 
     proptest! {
         #[test]
         fn bench_set(s in "[A-Za-z0-9]{1,31}") {
-            let s_hex = s.as_bytes().encode_hex::<String>();
+            let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
-            let tx = execute("bench_set", Some("0x".to_owned() + &s_hex)).unwrap().tx();
+            let fee = execute(vec![("bench_set", vec![s_hex])]).unwrap();
 
-            let fee = paid_fee(&tx).expect("Failed to fetch fee");
-            assert!(fee > FieldElement::ONE);
-            println!("tx: {}\tfee: {}\tcalldata: {}", tx, fee, s);
+            assert!(fee > 1);
+            println!("Fee: {}\tcalldata: {}", fee, s);
         }
     }
 
     proptest! {
         #[test]
         fn bench_get(s in "[A-Za-z0-9]{1,31}") {
-            let s_hex = s.as_bytes().encode_hex::<String>();
+            let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
+            let calls = vec![("bench_set", vec![s_hex]), ("bench_get", vec![])];
 
-            let tx = execute("bench_set", Some("0x".to_owned() + &s_hex)).unwrap()
-                .then("bench_get", None).unwrap().tx();
+            let fee = execute(calls).unwrap();
 
-            let fee = paid_fee(&tx).expect("Failed to fetch fee");
-            assert!(fee > FieldElement::ONE);
-            println!("tx: {}\tfee: {}\tcalldata: {}", tx, fee, s);
+            assert!(fee > 1);
+            println!("Fee: {}\tcalldata: {}", fee, s);
         }
-    }
-
-    #[tokio::test]
-    async fn test_nonce() {
-        let private = FieldElement::from_hex_be(
-            "0x319c161623eeb7bb65d443eaf6d3a5954173961922a5d6bf0b100c87503b68f",
-        )
-        .unwrap();
-        let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private));
-        let address = FieldElement::from_hex_be(
-            "0x68597f52edc17608661ded82f0dcb69118278541717fba08511b4e58c54e48a",
-        )
-        .unwrap();
-
-        let provider = provider();
-        let chain_id = provider.chain_id().await.unwrap();
-
-        let mut account =
-            SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::Legacy);
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-        let calls = vec![Call {
-            to: *CONTRACT,
-            selector: get_selector_from_name("spawn").unwrap(),
-            calldata: vec![],
-        }];
-
-        let execution = Execution::new(calls, &account);
-        let fee = execution.estimate_fee().await.unwrap();
-
-        let gas = fee.gas_consumed;
-        assert!(gas > 0);
     }
 }
