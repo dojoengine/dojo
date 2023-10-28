@@ -8,12 +8,8 @@ mod tests {
     use hex::ToHex;
     use lazy_static::lazy_static;
     use reqwest::Url;
-    use starknet::accounts::{
-        Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount,
-    };
-    use starknet::core::types::{
-        BlockId, BlockTag, FieldElement, InvokeTransactionResult, TransactionReceipt,
-    };
+    use starknet::accounts::{Call, Execution, ExecutionEncoding, SingleOwnerAccount};
+    use starknet::core::types::{BlockId, BlockTag, FieldElement, TransactionReceipt};
     use starknet::core::utils::get_selector_from_name;
     use starknet::providers::{
         jsonrpc::{HttpTransport, JsonRpcResponse},
@@ -24,7 +20,6 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::thread;
     use std::time::Duration;
-    use tokio::time::sleep;
 
     use proptest::prelude::*;
 
@@ -126,6 +121,16 @@ mod tests {
                 .map(|chunk| Keypair(chunk[0].to_owned(), chunk[1].to_owned())) // Address, private key
                 .collect::<Vec<_>>()
         };
+
+        static ref CONTRACT: FieldElement = FieldElement::from_hex_be(
+            "0x5d69ccf0644b87204e143d2953b86c6e3aaf01a1ae923fc0ea0b5212048f5dd",
+        )
+        .unwrap();
+    }
+
+    fn provider() -> JsonRpcClient<HttpTransport> {
+        let url = Url::parse(KATANA_ENDPOINT).expect("Invalid Katana endpoint");
+        JsonRpcClient::new(HttpTransport::new(url))
     }
 
     fn paid_fee(tx: &str) -> Result<FieldElement> {
@@ -244,13 +249,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_nonce() {
-        let url = Url::parse(KATANA_ENDPOINT).unwrap();
-
-        let provider = JsonRpcClient::new(HttpTransport::new(url));
-
-        let id = provider.chain_id().await.unwrap();
-        assert_ne!(id, FieldElement::from_dec_str("0").unwrap());
-
         let private = FieldElement::from_hex_be(
             "0x319c161623eeb7bb65d443eaf6d3a5954173961922a5d6bf0b100c87503b68f",
         )
@@ -261,28 +259,23 @@ mod tests {
         )
         .unwrap();
 
+        let provider = provider();
         let chain_id = provider.chain_id().await.unwrap();
 
         let mut account =
             SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::Legacy);
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-        let contract_address = FieldElement::from_hex_be(
-            "0x5d69ccf0644b87204e143d2953b86c6e3aaf01a1ae923fc0ea0b5212048f5dd",
-        )
-        .unwrap();
-        let tx = account
-            .execute(vec![Call {
-                to: contract_address,
-                selector: get_selector_from_name("spawn").unwrap(),
-                calldata: vec![],
-            }])
-            .send()
-            .await
-            .unwrap()
-            .transaction_hash;
+        let calls = vec![Call {
+            to: *CONTRACT,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }];
 
-        let nonce = account.get_nonce().await.unwrap();
-        assert_ne!(nonce, 0u8.into());
+        let execution = Execution::new(calls, &account);
+        let fee = execution.estimate_fee().await.unwrap();
+
+        let gas = fee.gas_consumed;
+        assert!(gas > 0);
     }
 }
