@@ -30,6 +30,10 @@ pub struct SubscribedEntities {
 }
 
 impl SubscribedEntities {
+    pub(super) fn is_synced(&self, entity: &EntityModel) -> bool {
+        self.entities.read().contains(entity)
+    }
+
     pub(super) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
         Self {
             metadata,

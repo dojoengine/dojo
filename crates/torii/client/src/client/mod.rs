@@ -42,7 +42,7 @@ pub struct Client {
 
 impl Client {
     /// Returns a [ClientBuilder] for building a [Client].
-    pub fn build() -> ClientBuilder {
+    pub fn builder() -> ClientBuilder {
         ClientBuilder::new()
     }
 
@@ -59,28 +59,41 @@ impl Client {
     ///
     /// This function will only return `None`, if `model` doesn't exist. If there is no entity with
     /// the specified `keys`, it will return a [`Ty`] with the default values.
-    pub fn entity(&self, model: &str, keys: &[FieldElement]) -> Option<Ty> {
-        let mut schema = self.metadata.read().model(model).map(|m| m.schema.clone())?;
-
-        let Ok(Some(raw_values)) =
-            self.storage.get_entity_storage(cairo_short_string_to_felt(model).ok()?, keys)
+    ///
+    /// If the requested entity is not among the synced entities, it will attempt to fetch it from
+    /// the RPC.
+    pub async fn entity(&self, entity: &EntityModel) -> Result<Option<Ty>, Error> {
+        let Some(mut schema) = self.metadata.read().model(&entity.model).map(|m| m.schema.clone())
         else {
-            return Some(schema);
+            return Ok(None);
+        };
+
+        if !self.subscribed_entities.is_synced(entity) {
+            let model = self.world_reader.model(&entity.model).await?;
+            return Ok(Some(model.entity(&entity.keys).await?));
+        }
+
+        let Ok(Some(raw_values)) = self.storage.get_entity_storage(
+            cairo_short_string_to_felt(&entity.model)
+                .map_err(ParseError::CairoShortStringToFelt)?,
+            &entity.keys,
+        ) else {
+            return Ok(Some(schema));
         };
 
         let layout = self
             .metadata
             .read()
-            .model(model)
+            .model(&entity.model)
             .map(|m| m.layout.clone())
             .expect("qed; layout should exist");
 
         let unpacked = unpack(raw_values, layout).unwrap();
-        let mut keys_and_unpacked = [keys.to_vec(), unpacked].concat();
+        let mut keys_and_unpacked = [entity.keys.to_vec(), unpacked].concat();
 
         schema.deserialize(&mut keys_and_unpacked).unwrap();
 
-        Some(schema)
+        Ok(Some(schema))
     }
 
     /// Initiate the entity subscriptions and returns a [SubscriptionService] which when await'ed
