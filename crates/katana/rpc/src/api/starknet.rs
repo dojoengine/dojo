@@ -31,7 +31,7 @@ pub enum StarknetApiError {
     #[error("Block not found")]
     BlockNotFound = 24,
     #[error("Transaction hash not found")]
-    TxnHashNotFound = 25,
+    TxnHashNotFound = 29,
     #[error("Invalid transaction index in a block")]
     InvalidTxnIndex = 27,
     #[error("Class hash not found")]
