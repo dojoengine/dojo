@@ -15,10 +15,10 @@ build-external-contracts = []
 [tool.dojo.world]
 name = "types-test"
 description = "Graphql types testing"
-icon_uri = "file://assets/icon.png"
-cover_uri = "file://assets/cover.png"
-website = "https://dojoengine.org"
-socials.x = "https://twitter.com/dojostarknet"
+# icon_uri = "file://assets/icon.png"
+# cover_uri = "file://assets/cover.png"
+# website = "https://dojoengine.org"
+# socials.x = "https://twitter.com/dojostarknet"
 
 [tool.dojo.env]
 rpc_url = "http://localhost:5050/"
