@@ -124,8 +124,8 @@ mod world {
 
     #[derive(Drop, starknet::Event)]
     struct StoreSetRecord {
-        table: felt252,
         keys: Span<felt252>,
+        table: felt252,
         offset: u8,
         values: Span<felt252>,
     }
@@ -247,9 +247,7 @@ mod world {
                         self.metadata_uri.write(i, *item);
                         i += 1;
                     },
-                    Option::None(_) => {
-                        break;
-                    }
+                    Option::None(_) => { break; }
                 };
             };
         }
@@ -482,7 +480,7 @@ mod world {
             let key = poseidon::poseidon_hash_span(keys);
             database::set(model, key, offset, values, layout);
 
-            EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
+            EventEmitter::emit(ref self, StoreSetRecord { keys, table: model, offset, values });
         }
 
         /// Deletes a model from an entity.
