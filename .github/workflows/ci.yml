@@ -22,8 +22,10 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install nextest test runner
+        uses: taiki-e/install-action@nextest
       - run: |
-          cargo test --all-features
+          cargo nextest run --all-features
 
   ensure-wasm:
     runs-on: ubuntu-latest
