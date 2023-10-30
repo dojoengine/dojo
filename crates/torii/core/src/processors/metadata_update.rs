@@ -58,8 +58,7 @@ where
         db.set_metadata(resource, &uri_str);
 
         let db = db.clone();
-        let resource = resource.clone();
-
+        let resource = *resource;
         tokio::spawn(async move {
             try_retrieve(db, resource, uri_str).await;
         });
