@@ -69,8 +69,8 @@ where
 
 async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
     match metadata(uri_str.clone()).await {
-        Ok((metadata, icon_data, cover_data)) => {
-            db.update_metadata(&resource, &uri_str, &metadata, &icon_data, &cover_data)
+        Ok((metadata, icon_img, cover_img)) => {
+            db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
                 .await
                 .unwrap();
             info!("Updated resource {resource:#x} metadata from ipfs");
@@ -88,10 +88,10 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
     let bytes = fetch_content(cid, MAX_RETRY).await?;
     let metadata: WorldMetadata = serde_json::from_str(std::str::from_utf8(&bytes)?)?;
 
-    let icon_data = fetch_image(&metadata.icon_uri).await;
-    let cover_data = fetch_image(&metadata.cover_uri).await;
+    let icon_img = fetch_image(&metadata.icon_uri).await;
+    let cover_img = fetch_image(&metadata.cover_uri).await;
 
-    Ok((metadata, icon_data, cover_data))
+    Ok((metadata, icon_img, cover_img))
 }
 
 async fn fetch_image(image_uri: &Option<Uri>) -> Option<String> {

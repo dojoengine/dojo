@@ -93,5 +93,16 @@ lazy_static! {
     pub static ref METADATA_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("uri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("json"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("icon_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("cover_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (
+            Name::new("created_at"),
+            TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
+        ),
+        (
+            Name::new("updated_at"),
+            TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
+        ),
     ]);
 }

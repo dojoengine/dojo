@@ -189,23 +189,23 @@ impl Sql {
         resource: &FieldElement,
         uri: &str,
         metadata: &WorldMetadata,
-        icon_data: &Option<String>,
-        cover_data: &Option<String>,
+        icon_img: &Option<String>,
+        cover_img: &Option<String>,
     ) -> Result<()> {
         let mut image_columns = String::new();
         let mut image_values = String::new();
         let mut image_updated = String::new();
 
-        if let Some(icon) = icon_data {
-            image_columns = ", icon_data".to_string();
+        if let Some(icon) = icon_img {
+            image_columns = ", icon_img".to_string();
             image_values = format!(", '{}'", icon);
-            image_updated = ", icon_data=excluded.icon_data".to_string();
+            image_updated = ", icon_img=excluded.icon_img".to_string();
         }
 
-        if let Some(cover) = cover_data {
-            image_columns = format!("{}, cover_data", image_columns);
+        if let Some(cover) = cover_img {
+            image_columns = format!("{}, cover_img", image_columns);
             image_values = format!("{}, '{}'", image_values, cover);
-            image_updated = format!("{}, cover_data=excluded.cover_data", image_updated);
+            image_updated = format!("{}, cover_img=excluded.cover_img", image_updated);
         }
 
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
