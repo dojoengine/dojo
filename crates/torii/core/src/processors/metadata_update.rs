@@ -57,32 +57,36 @@ where
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
         db.set_metadata(resource, &uri_str);
 
-        spawn_retrieve(db.clone(), *resource, uri_str);
+        let db = db.clone();
+        let resource = resource.clone();
+
+        tokio::spawn(async move {
+            try_retrieve(db, resource, uri_str).await;
+        });
+
         Ok(())
     }
 }
 
-fn spawn_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
-    tokio::spawn(async move {
-        match metadata(uri_str.clone()).await {
-            Ok((metadata, icon_data, cover_data)) => {
-                db.update_metadata(&resource, &uri_str, &metadata, &icon_data, &cover_data)
-                    .await
-                    .unwrap();
-                info!("Updated resource {resource:#x} metadata from ipfs");
-            }
-            Err(e) => {
-                error!("{}", e)
-            }
+async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
+    match metadata(uri_str.clone()).await {
+        Ok((metadata, icon_data, cover_data)) => {
+            db.update_metadata(&resource, &uri_str, &metadata, &icon_data, &cover_data)
+                .await
+                .unwrap();
+            info!("Updated resource {resource:#x} metadata from ipfs");
         }
-    });
+        Err(e) => {
+            error!("{}", e)
+        }
+    }
 }
 
 async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Option<String>)> {
     let uri = Uri::Ipfs(uri_str);
     let cid = uri.cid().ok_or("Uri is malformed").map_err(Error::msg)?;
 
-    let bytes = fetch_cid(cid, MAX_RETRY).await?;
+    let bytes = fetch_content(cid, MAX_RETRY).await?;
     let metadata: WorldMetadata = serde_json::from_str(std::str::from_utf8(&bytes)?)?;
 
     let icon_data = fetch_image(&metadata.icon_uri).await;
@@ -93,7 +97,7 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
 
 async fn fetch_image(image_uri: &Option<Uri>) -> Option<String> {
     if let Some(uri) = image_uri {
-        let data = fetch_cid(uri.cid()?, MAX_RETRY).await.ok()?;
+        let data = fetch_content(uri.cid()?, MAX_RETRY).await.ok()?;
         let encoded = general_purpose::STANDARD.encode(data);
         return Some(encoded);
     }
@@ -101,7 +105,7 @@ async fn fetch_image(image_uri: &Option<Uri>) -> Option<String> {
     None
 }
 
-async fn fetch_cid(cid: &str, mut retries: u8) -> Result<Bytes> {
+async fn fetch_content(cid: &str, mut retries: u8) -> Result<Bytes> {
     while retries > 0 {
         let response = Client::new().get(format!("{IPFS_URL}{}", cid)).send().await;
 
