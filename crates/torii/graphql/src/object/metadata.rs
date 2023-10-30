@@ -12,7 +12,7 @@ impl ObjectTrait for MetadataObject {
     }
 
     fn type_name(&self) -> &str {
-        "Metadata"
+        "World__Metadata"
     }
 
     fn type_mapping(&self) -> &TypeMapping {

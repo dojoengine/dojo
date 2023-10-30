@@ -27,7 +27,7 @@ pub trait ObjectTrait: Send + Sync {
     // Name of the graphql object, singular and plural (eg "player" and "players")
     fn name(&self) -> (&str, &str);
 
-    // Type name of the graphql object (eg "Player")
+    // Type name of the graphql object (eg "World__Player")
     fn type_name(&self) -> &str;
 
     // Type mapping defines the fields of the graphql object and their corresponding type

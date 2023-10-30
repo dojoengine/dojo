@@ -157,8 +157,9 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
     let mut object = Object::new(type_name);
 
     for (field_name, type_data) in type_mapping.clone() {
-        let table_name = path_array.join("$");
-
+        // For nested types, we need to remove prefix in path array
+        let namespace = format!("{}_", path_array[0]);
+        let table_name = path_array.join("$").replace(&namespace, "");
         let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
             let field_name = field_name.clone();
             let type_data = type_data.clone();
@@ -216,7 +217,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]
 }
 
 fn entity_field() -> Field {
-    Field::new("entity", TypeRef::named("Entity"), |ctx| {
+    Field::new("entity", TypeRef::named("World__Entity"), |ctx| {
         FieldFuture::new(async move {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {

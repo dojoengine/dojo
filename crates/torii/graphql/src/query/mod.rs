@@ -23,7 +23,6 @@ pub async fn type_mapping_query(
     model_id: &str,
 ) -> sqlx::Result<TypeMapping> {
     let model_members = fetch_model_members(conn, model_id).await?;
-
     let (root_members, nested_members): (Vec<&ModelMember>, Vec<&ModelMember>) =
         model_members.iter().partition(|member| member.model_idx == 0);
 
@@ -93,8 +92,8 @@ fn parse_nested_type(
             }
         })
         .collect();
-
-    TypeData::Nested((TypeRef::named(target_type), nested_mapping))
+    let namespaced = format!("{}_{}", target_id, target_type);
+    TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 
 fn remove_hex_leading_zeros(value: Value) -> Value {

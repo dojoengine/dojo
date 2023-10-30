@@ -33,7 +33,7 @@ impl ObjectTrait for ModelObject {
     }
 
     fn type_name(&self) -> &str {
-        "Model"
+        "World__Model"
     }
 
     fn type_mapping(&self) -> &TypeMapping {

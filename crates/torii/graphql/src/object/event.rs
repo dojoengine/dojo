@@ -17,7 +17,7 @@ impl ObjectTrait for EventObject {
     }
 
     fn type_name(&self) -> &str {
-        "Event"
+        "World__Event"
     }
 
     fn type_mapping(&self) -> &TypeMapping {
