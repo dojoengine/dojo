@@ -17,8 +17,8 @@ use tokio::sync::OnceCell;
 
 type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
-const KATANA_ENDPOINT: &str = "http://localhost:5050";
-const CONTRACT_ADDRESS: &str = "0x5d69ccf0644b87204e143d2953b86c6e3aaf01a1ae923fc0ea0b5212048f5dd";
+const KATANA_ENDPOINT: &str = "http://localhost:6969";
+const CONTRACT_ADDRESS: &str = "0x6c27e3b47f88abca376261ad4f0ffbe3461b9d08477f9e10953829603184e13";
 
 const ACCOUNT_ADDRESS: &str = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973";
 const PRIVATE_KEY: &str = "0x1800000000300000180000000000030000000000003006001800006600";

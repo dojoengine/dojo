@@ -1,4 +1,4 @@
-use dojo_examples::models::{Direction};
+use benches::models::{Direction};
 
 // define the interface
 #[starknet::interface]
@@ -8,14 +8,16 @@ trait IActions<TContractState> {
     fn bench_emit(self: @TContractState, name: felt252);
     fn bench_set(self: @TContractState, name: felt252);
     fn bench_get(self: @TContractState);
+    fn bench_set_complex(self: @TContractState);
 }
 
 // dojo decorator
 #[dojo::contract]
 mod actions {
     use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::models::{Position, Moves, Direction, Vec2, Alias};
-    use dojo_examples::utils::next_position;
+    use benches::models::{Position, Moves, Direction, Vec2, Alias};
+    use benches::utils::next_position;
+    use benches::character::{Character, Abilities, Stats, Weapon, Sword};
     use super::IActions;
 
     #[event]
@@ -118,6 +120,46 @@ mod actions {
 
             get!(world, player, Alias);
         }
+        
+        fn bench_set_complex(self: @ContractState) {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+
+            set!(world, Character {
+                caller,
+                heigth: 0x123456789abcdef,
+                abilities: Abilities {
+                    strength: 0x12,
+                    dexterity: 0x34,
+                    constitution: 0x56,
+                    intelligence: 0x78,
+                    wisdom: 0x9a,
+                    charisma: 0xbc,
+                },
+                stats: Stats {
+                    kills: 0x123456789abcdef,
+                    deaths: 0x1234,
+                    rests: 0x12345678,
+                    hits: 0x123456789abcdef,
+                    blocks: 0x12345678,
+                    walked: 0x123456789abcdef,
+                    runned: 0x123456789abcdef,
+                    finished: true,
+                    romances: 0x1234,
+                },
+                weapon: Weapon::DualWield((
+                    Sword {
+                        swordsmith: starknet::contract_address_const::<0x69>(),
+                        damage: 0x12345678,
+                    },
+                    Sword {
+                        swordsmith: starknet::contract_address_const::<0x69>(),
+                        damage: 0x12345678,
+                    }
+                )),
+                gold: 0x12345678,
+            });
+        }
     }
 }
 
@@ -132,8 +174,8 @@ mod tests {
     use dojo::test_utils::{spawn_test_world, deploy_contract};
 
     // import models
-    use dojo_examples::models::{position, moves};
-    use dojo_examples::models::{Position, Moves, Direction, Vec2};
+    use benches::models::{position, moves};
+    use benches::models::{Position, Moves, Direction, Vec2};
 
     // import actions
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
