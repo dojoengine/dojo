@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x25e33883f34b7b2ce1adc3e3cf0640d389ccfeca742c11d3d3cf55362153b19",
+    "class_hash": "0x6441e7fc96d795ec94fca66634e6d87edf84362e564ef80eb13f459914b8b",
     "abi": [
       {
         "type": "impl",
@@ -746,7 +746,7 @@ test_manifest_file
   "executor": {
     "name": "executor",
     "address": null,
-    "class_hash": "0xc56cfd3556105b87f396de49355cfe57a48b14f79197c680fda568ffb5dfdf",
+    "class_hash": "0x54ee9d99457d82d53e21030920f7e6f43509b98ea62282b5c2520050264a28c",
     "abi": [
       {
         "type": "impl",
@@ -805,7 +805,7 @@ test_manifest_file
   },
   "base": {
     "name": "base",
-    "class_hash": "0x515233234b830aa4c52a3b14acdf6413caa6a96967c5a55bba47337ba3d4406",
+    "class_hash": "0x5a2c567ed06c8059c8d1199684796a0a0ef614f9a2ab628700e804524816b5c",
     "abi": [
       {
         "type": "impl",
@@ -868,7 +868,7 @@ test_manifest_file
     {
       "name": "actions",
       "address": null,
-      "class_hash": "0x3446f6de79c5bd23b1fdd084d9aecf4216fd0efb6cae69cee847ac73530626c",
+      "class_hash": "0x4d0b6f8024d7fc5c51ed8093e3628815cd8da3901d5761505ae79152da4833c",
       "abi": [
         {
           "type": "impl",
@@ -1020,7 +1020,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x2a20de0f38504e870c0ea88a2ac39e7d4e123ed1e024929638cf037a3e47396",
+      "class_hash": "0x2e5174b54aef0b99d4685827ffa51488447e1f5607908293d5c715d6bd22433",
       "abi": [
         {
           "type": "function",
@@ -1197,7 +1197,7 @@ test_manifest_file
           "key": false
         }
       ],
-      "class_hash": "0x6f8b85d1f68eab7612e3f4ea178c6386cedb30a6925c9f662a251c640b86d96",
+      "class_hash": "0x6a11b5b3003a3aa0ae7f8f443e48314cc0bc51eaea7c3ed1c19beb909f5dda3",
       "abi": [
         {
           "type": "function",
