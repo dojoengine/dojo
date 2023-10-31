@@ -3,8 +3,7 @@ use std::str::FromStr;
 
 use dojo_types::schema::Ty;
 use starknet::core::types::{
-    ContractStorageDiffItem, FromStrError, MaybePendingStateUpdate, PendingStateUpdate, StateDiff,
-    StateUpdate, StorageEntry,
+    ContractStorageDiffItem, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
 use starknet_crypto::FieldElement;
 
@@ -105,31 +104,5 @@ impl TryFrom<protos::types::EntityUpdate> for StateUpdate {
             block_hash: FieldElement::from_str(&value.block_hash)?,
             state_diff: value.entity_diff.expect("must have").try_into()?,
         })
-    }
-}
-
-impl TryFrom<protos::types::PendingEntityUpdate> for PendingStateUpdate {
-    type Error = FromStrError;
-    fn try_from(value: protos::types::PendingEntityUpdate) -> Result<Self, Self::Error> {
-        Ok(Self {
-            old_root: FieldElement::ZERO,
-            state_diff: value.entity_diff.expect("must have").try_into()?,
-        })
-    }
-}
-
-impl TryFrom<protos::types::MaybePendingEntityUpdate> for MaybePendingStateUpdate {
-    type Error = FromStrError;
-    fn try_from(value: protos::types::MaybePendingEntityUpdate) -> Result<Self, Self::Error> {
-        let update = value.update.expect("must have");
-
-        match update {
-            protos::types::maybe_pending_entity_update::Update::EntityUpdate(entity_update) => {
-                Ok(Self::Update(entity_update.try_into()?))
-            }
-            protos::types::maybe_pending_entity_update::Update::PendingEntityUpdate(
-                pending_entity_update,
-            ) => Ok(Self::PendingUpdate(pending_entity_update.try_into()?)),
-        }
     }
 }

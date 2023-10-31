@@ -1,69 +1,55 @@
-//! TODO: move the subscription to a separate file
-
-use std::collections::{HashSet, VecDeque};
-use std::pin::Pin;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::future::Future;
 use std::sync::Arc;
-use std::task::{Context, Poll};
+use std::task::Poll;
 
-use futures::Future;
+use futures_util::future::BoxFuture;
 use futures_util::FutureExt;
-use protos::types::maybe_pending_entity_update::Update;
-use protos::world::SubscribeEntitiesResponse;
-use rayon::prelude::*;
-use starknet::core::types::{BlockId, ContractStorageDiffItem, MaybePendingStateUpdate};
+use rand::Rng;
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use starknet::core::types::{
+    BlockId, ContractStorageDiffItem, MaybePendingStateUpdate, StateUpdate, StorageEntry,
+};
 use starknet::macros::short_string;
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::Provider;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
-use tokio::sync::mpsc::{Receiver, Sender};
-use tonic::Status;
-use tracing::error;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::RwLock;
+use tracing::{debug, error, trace};
 
-use crate::protos::{self};
-
-type GetStateUpdateResult<P> =
-    Result<MaybePendingStateUpdate, ProviderError<<P as Provider>::Error>>;
-type StateUpdateFuture<P> = Pin<Box<dyn Future<Output = GetStateUpdateResult<P>> + Send>>;
-type PublishStateUpdateFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
+use super::error::SubscriptionError as Error;
+use crate::protos;
 
 pub struct ModelMetadata {
     pub name: FieldElement,
     pub packed_size: usize,
 }
 
-pub struct Entity {
+pub struct SubscribeRequest {
     pub model: ModelMetadata,
     pub keys: Vec<FieldElement>,
 }
 
-pub struct EntityModelRequest {
-    pub world: FieldElement,
-    pub entities: Vec<Entity>,
-}
-
 pub struct Subscriber {
-    /// The world address that the subscriber is interested in.
-    world: FieldElement,
     /// The storage addresses that the subscriber is interested in.
     storage_addresses: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
-    sender: Sender<Result<SubscribeEntitiesResponse, Status>>,
+    sender: Sender<Result<protos::world::SubscribeEntitiesResponse, tonic::Status>>,
 }
 
+#[derive(Default)]
 pub struct SubscriberManager {
-    /// (set of storage addresses they care about, sender channel to send back the response)
-    pub subscribers: Vec<Arc<Subscriber>>,
+    subscribers: RwLock<HashMap<usize, Subscriber>>,
 }
 
 impl SubscriberManager {
-    pub fn new() -> Self {
-        Self { subscribers: Vec::default() }
-    }
+    pub(super) async fn add_subscriber(
+        &self,
+        entities: Vec<SubscribeRequest>,
+    ) -> Receiver<Result<protos::world::SubscribeEntitiesResponse, tonic::Status>> {
+        let id = rand::thread_rng().gen::<usize>();
 
-    fn add_subscriber(
-        &mut self,
-        request: (EntityModelRequest, Sender<Result<SubscribeEntitiesResponse, Status>>),
-    ) {
-        let (EntityModelRequest { world, entities }, sender) = request;
+        let (sender, receiver) = channel(1);
 
         // convert the list of entites into a list storage addresses
         let storage_addresses = entities
@@ -83,207 +69,186 @@ impl SubscriberManager {
             .flatten()
             .collect::<HashSet<FieldElement>>();
 
-        self.subscribers.push(Arc::new(Subscriber { world, storage_addresses, sender }))
+        self.subscribers.write().await.insert(id, Subscriber { storage_addresses, sender });
+
+        receiver
+    }
+
+    pub(super) async fn remove_subscriber(&self, id: usize) {
+        self.subscribers.write().await.remove(&id);
     }
 }
 
-impl Default for SubscriberManager {
-    fn default() -> Self {
-        Self::new()
-    }
+type PublishStateUpdateResult<P> = Result<(), Error<P>>;
+type RequestStateUpdateResult<P> = Result<MaybePendingStateUpdate, Error<P>>;
+
+#[must_use = "Service does nothing unless polled"]
+pub struct Service<P: Provider> {
+    world_address: FieldElement,
+    idle_provider: Option<P>,
+    block_num_rcv: Receiver<u64>,
+    state_update_queue: VecDeque<u64>,
+    state_update_req_fut: Option<BoxFuture<'static, (P, u64, RequestStateUpdateResult<P>)>>,
+    subs_manager: Arc<SubscriberManager>,
+    publish_fut: Option<BoxFuture<'static, PublishStateUpdateResult<P>>>,
 }
 
-/// a service which handles entity subscription requests. it is an endless future where it awaits
-/// for new blocks, fetch its state update, and publish them to the subscribers.
-pub struct EntitySubscriptionService<P: Provider> {
-    /// A channel to communicate with the indexer engine, in order to receive the block number that
-    /// the indexer engine is processing at any moment. This way, we can sync with the indexer and
-    /// request the state update of the current block that the indexer is currently processing.
-    block_rx: Receiver<u64>,
-    /// The Starknet provider.
-    provider: Arc<P>,
-    /// A list of state update futures, each corresponding to a block number that was received from
-    /// the indexer engine.
-    state_update_req_futs: VecDeque<(u64, StateUpdateFuture<P>)>,
-
-    publish_update_fut: Option<PublishStateUpdateFuture>,
-
-    block_num_queue: VecDeque<u64>,
-    /// Receive subscribers from gRPC server.
-    /// This receives streams of (sender channel, list of entities to subscribe) tuple
-    subscriber_recv:
-        Receiver<(EntityModelRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
-
-    subscriber_manager: SubscriberManager,
-}
-
-impl<P> EntitySubscriptionService<P>
+impl<P> Service<P>
 where
-    P: Provider,
+    P: Provider + Send,
 {
-    pub fn new(
+    pub(super) fn new_with_block_rcv(
+        block_num_rcv: Receiver<u64>,
+        world_address: FieldElement,
         provider: P,
-        subscriber_recv: Receiver<(
-            EntityModelRequest,
-            Sender<Result<SubscribeEntitiesResponse, Status>>,
-        )>,
-        block_rx: Receiver<u64>,
+        subs_manager: Arc<SubscriberManager>,
     ) -> Self {
         Self {
-            block_rx,
-            subscriber_recv,
-            provider: Arc::new(provider),
-            block_num_queue: Default::default(),
-            publish_update_fut: Default::default(),
-            state_update_req_futs: Default::default(),
-            subscriber_manager: SubscriberManager::new(),
+            subs_manager,
+            world_address,
+            block_num_rcv,
+            publish_fut: None,
+            state_update_req_fut: None,
+            idle_provider: Some(provider),
+            state_update_queue: VecDeque::new(),
         }
     }
 
-    /// Process the fetched state update, and publish to the subscribers, the relevant values for
-    /// them.
-    async fn publish_state_updates_to_subscribers(
-        subscribers: Vec<Arc<Subscriber>>,
-        state_update: MaybePendingStateUpdate,
-    ) {
-        let state_diff = match &state_update {
-            MaybePendingStateUpdate::PendingUpdate(update) => &update.state_diff,
-            MaybePendingStateUpdate::Update(update) => &update.state_diff,
+    async fn fetch_state_update(
+        provider: P,
+        block_num: u64,
+    ) -> (P, u64, RequestStateUpdateResult<P>) {
+        let res =
+            provider.get_state_update(BlockId::Number(block_num)).await.map_err(Error::Provider);
+        (provider, block_num, res)
+    }
+
+    async fn publish_updates(
+        subs: Arc<SubscriberManager>,
+        contract_address: FieldElement,
+        state_update: StateUpdate,
+    ) -> PublishStateUpdateResult<P> {
+        let mut closed_stream = Vec::new();
+
+        let Some(ContractStorageDiffItem { storage_entries: diff_entries, .. }) =
+            state_update.state_diff.storage_diffs.iter().find(|d| d.address == contract_address)
+        else {
+            return Ok(());
         };
 
-        // iterate over the list of subscribers, and construct the relevant state diffs for each
-        // subscriber
-        for sub in subscribers {
-            // if there is no state diff for the current world, then skip, otherwise, extract the
-            // state diffs of the world
-            let Some(ContractStorageDiffItem { storage_entries: diff_entries, .. }) =
-                state_diff.storage_diffs.iter().find(|d| d.address == sub.world)
-            else {
-                continue;
-            };
-
+        for (idx, sub) in subs.subscribers.read().await.iter() {
             let relevant_storage_entries = diff_entries
                 .iter()
                 .filter(|entry| sub.storage_addresses.contains(&entry.key))
-                .map(|entry| protos::types::StorageEntry {
-                    key: format!("{:#x}", entry.key),
-                    value: format!("{:#x}", entry.value),
+                .map(|entry| {
+                    let StorageEntry { key, value } = entry;
+                    protos::types::StorageEntry {
+                        key: format!("{key:#x}"),
+                        value: format!("{value:#x}"),
+                    }
                 })
                 .collect::<Vec<protos::types::StorageEntry>>();
 
-            // if there is no state diffs relevant to the current subscriber, then skip
-            if relevant_storage_entries.is_empty() {
-                continue;
-            }
-
-            let response = SubscribeEntitiesResponse {
-                entity_update: Some(protos::types::MaybePendingEntityUpdate {
-                    update: Some(match &state_update {
-                        MaybePendingStateUpdate::PendingUpdate(_) => {
-                            Update::PendingEntityUpdate(protos::types::PendingEntityUpdate {
-                                entity_diff: Some(protos::types::EntityDiff {
-                                    storage_diffs: vec![protos::types::StorageDiff {
-                                        address: format!("{:#x}", sub.world),
-                                        storage_entries: relevant_storage_entries,
-                                    }],
-                                }),
-                            })
-                        }
-
-                        MaybePendingStateUpdate::Update(update) => {
-                            Update::EntityUpdate(protos::types::EntityUpdate {
-                                block_hash: format!("{:#x}", update.block_hash),
-                                entity_diff: Some(protos::types::EntityDiff {
-                                    storage_diffs: vec![protos::types::StorageDiff {
-                                        address: format!("{:#x}", sub.world),
-                                        storage_entries: relevant_storage_entries,
-                                    }],
-                                }),
-                            })
-                        }
-                    }),
+            let entity_update = protos::types::EntityUpdate {
+                block_hash: format!("{:#x}", state_update.block_hash),
+                entity_diff: Some(protos::types::EntityDiff {
+                    storage_diffs: vec![protos::types::StorageDiff {
+                        address: format!("{contract_address:#x}"),
+                        storage_entries: relevant_storage_entries,
+                    }],
                 }),
             };
 
-            match sub.sender.send(Ok(response)).await {
-                Ok(_) => {
-                    println!("state diff sent")
-                }
-                Err(e) => {
-                    println!("stream closed: {e:?}");
-                }
+            let resp =
+                protos::world::SubscribeEntitiesResponse { entity_update: Some(entity_update) };
+
+            if sub.sender.send(Ok(resp)).await.is_err() {
+                closed_stream.push(*idx);
             }
         }
-    }
 
-    async fn do_get_state_update(provider: Arc<P>, block_number: u64) -> GetStateUpdateResult<P> {
-        provider.get_state_update(BlockId::Number(block_number)).await
+        for id in closed_stream {
+            trace!(target = "subscription", "closing stream idx: {id}");
+            subs.remove_subscriber(id).await;
+        }
+
+        Ok(())
     }
 }
 
-// an endless future which will receive the block number from the indexer engine, and will
-// request its corresponding state update.
-impl<P> Future for EntitySubscriptionService<P>
+/// And endless future that will listen to incoming blocks, and request the corresponding state
+/// updates.
+impl<P> Future for Service<P>
 where
-    P: Provider + Send + Sync + Unpin + 'static,
+    P: Provider + Unpin + Send + Sync + 'static,
 {
     type Output = ();
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
         let pin = self.get_mut();
 
-        // drain the stream
-        while let Poll::Ready(Some(block_num)) = pin.block_rx.poll_recv(cx) {
-            // we still need to drain the stream, even if there are no subscribers. But dont have to
-            // queue for the block number
-            if !pin.subscriber_manager.subscribers.is_empty() {
-                pin.block_num_queue.push_back(block_num);
+        while let Poll::Ready(Some(block_num)) = pin.block_num_rcv.poll_recv(cx) {
+            // queue block for requesting state updates
+            pin.state_update_queue.push_back(block_num);
+        }
+
+        if let Some(provider) = pin.idle_provider.take() {
+            if let Some(block_num) = pin.state_update_queue.pop_front() {
+                debug!(target = "subscription", "fetching state update for block {block_num}");
+                pin.state_update_req_fut =
+                    Some(Box::pin(Self::fetch_state_update(provider, block_num)));
+            } else {
+                pin.idle_provider = Some(provider);
             }
         }
 
-        // if there are any queued block numbers, then fetch the corresponding state updates
-        while let Some(block_num) = pin.block_num_queue.pop_front() {
-            let fut = Box::pin(Self::do_get_state_update(Arc::clone(&pin.provider), block_num));
-            pin.state_update_req_futs.push_back((block_num, fut));
-        }
+        if let Some(mut fut) = pin.state_update_req_fut.take() {
+            if let Poll::Ready((provider, block_num, state_update)) = fut.poll_unpin(cx) {
+                pin.idle_provider = Some(provider);
 
-        // handle incoming new subscribers
-        while let Poll::Ready(Some(request)) = pin.subscriber_recv.poll_recv(cx) {
-            pin.subscriber_manager.add_subscriber(request);
-        }
-
-        loop {
-            // check if there's ongoing publish future, if yes, poll it and if its still not ready
-            // then return pending,
-            // dont request for state update, since we are still waiting for the previous state
-            // update to be published
-            if let Some(mut fut) = pin.publish_update_fut.take() {
-                if fut.poll_unpin(cx).is_pending() {
-                    pin.publish_update_fut = Some(fut);
-                    return Poll::Pending;
-                }
-            }
-
-            // poll ongoing state update requests
-            if let Some((block_num, mut fut)) = pin.state_update_req_futs.pop_front() {
-                match fut.poll_unpin(cx) {
-                    Poll::Ready(Ok(state_update)) => {
-                        let subscribers = pin.subscriber_manager.subscribers.clone();
-                        pin.publish_update_fut = Some(Box::pin(
-                            Self::publish_state_updates_to_subscribers(subscribers, state_update),
-                        ));
-                        continue;
+                match state_update {
+                    Ok(MaybePendingStateUpdate::Update(state_update)) => {
+                        pin.publish_fut = Some(Box::pin(Self::publish_updates(
+                            Arc::clone(&pin.subs_manager),
+                            pin.world_address,
+                            state_update,
+                        )));
                     }
 
-                    Poll::Ready(Err(e)) => {
-                        error!("error fetching state update for block {block_num}: {e}");
+                    Ok(MaybePendingStateUpdate::PendingUpdate(_)) => {
+                        debug!(target = "subscription", "ignoring pending state update {block_num}")
                     }
 
-                    Poll::Pending => pin.state_update_req_futs.push_back((block_num, fut)),
+                    Err(e) => {
+                        error!(
+                            target = "subscription",
+                            "failed to fetch state update for block {block_num}: {e}"
+                        );
+                    }
                 }
+            } else {
+                pin.state_update_req_fut = Some(fut);
             }
-
-            return Poll::Pending;
         }
+
+        if let Some(mut fut) = pin.publish_fut.take() {
+            if let Poll::Ready(res) = fut.poll_unpin(cx) {
+                match res {
+                    Ok(_) => {
+                        pin.state_update_queue.pop_front();
+                    }
+                    Err(e) => {
+                        error!(target = "subscription", "error when publishing state update: {e}")
+                    }
+                }
+            } else {
+                pin.publish_fut = Some(fut);
+            }
+        }
+
+        Poll::Pending
     }
 }

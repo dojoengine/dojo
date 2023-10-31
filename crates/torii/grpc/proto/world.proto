@@ -25,13 +25,11 @@ message MetadataResponse {
 }
 
 message SubscribeEntitiesRequest {
-    // The address of the World whose entities to subscribe to.
-    string world = 1;
     // The list of entities to subscribe to.
-    repeated types.EntityModel entities = 2;
+    repeated types.EntityModel entities = 1;
 }
 
 message SubscribeEntitiesResponse {
     // List of entities that have been updated.
-    types.MaybePendingEntityUpdate entity_update = 1;
+    types.EntityUpdate entity_update = 1;
 }

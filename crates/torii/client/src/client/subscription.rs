@@ -9,7 +9,7 @@ use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
 use parking_lot::{Mutex, RwLock};
-use starknet::core::types::{MaybePendingStateUpdate, StateDiff};
+use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
 use torii_grpc::client::EntityUpdateStreaming;
@@ -176,15 +176,10 @@ impl SubscriptionService {
     }
 
     // handle the response from the subscription stream
-    fn handle_response(&mut self, response: Result<MaybePendingStateUpdate, tonic::Status>) {
+    fn handle_response(&mut self, response: Result<StateUpdate, tonic::Status>) {
         match response {
             Ok(update) => {
-                let entity_diff = match update {
-                    MaybePendingStateUpdate::Update(update) => update.state_diff,
-                    MaybePendingStateUpdate::PendingUpdate(update) => update.state_diff,
-                };
-
-                self.process_entity_diff(entity_diff);
+                self.process_entity_diff(update.state_diff);
             }
 
             Err(err) => {
