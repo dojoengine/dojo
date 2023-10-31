@@ -162,7 +162,7 @@ where
             let resp =
                 protos::world::SubscribeEntitiesResponse { entity_update: Some(entity_update) };
 
-            if let Err(_) = sub.sender.send(Ok(resp)).await {
+            if sub.sender.send(Ok(resp)).await.is_err() {
                 closed_stream.push(*idx);
             }
         }
