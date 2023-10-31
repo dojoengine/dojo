@@ -4,6 +4,7 @@ use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
 use cairo_lang_starknet::abi;
+use cairo_lang_utils::bigint::BigUintAsHex;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -104,6 +105,7 @@ pub struct Contract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub abi: Option<abi::Contract>,
+    pub source: Vec<BigUintAsHex>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
 }
@@ -115,6 +117,7 @@ pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub abi: Option<abi::Contract>,
+    pub source: Vec<BigUintAsHex>,
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]

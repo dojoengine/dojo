@@ -2397,6 +2397,7 @@ dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-project",
  "cairo-lang-starknet",
+ "cairo-lang-utils",
  "camino",
  "convert_case 0.6.0",
  "dojo-lang",
