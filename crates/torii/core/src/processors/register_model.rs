@@ -22,6 +22,18 @@ where
         "ModelRegistered".to_string()
     }
 
+    fn validate(&self, event: &Event) -> bool {
+        if event.keys.len() > 1 {
+            info!(
+                "invalid keys for event {}: {}",
+                <RegisterModelProcessor as EventProcessor<P>>::event_key(self),
+                <RegisterModelProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+            );
+            return false;
+        }
+        true
+    }
+
     async fn process(
         &self,
         world: &WorldContractReader<P>,
