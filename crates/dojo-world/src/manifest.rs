@@ -79,6 +79,7 @@ pub struct Model {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub abi: Option<abi::Contract>,
+    pub source: Vec<BigUintAsHex>,
 }
 
 /// System input ABI.
