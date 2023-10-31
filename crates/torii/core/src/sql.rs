@@ -332,7 +332,8 @@ impl Sql {
                 if let Ok(cairo_type) = Primitive::from_str(&member.ty.name()) {
                     query.push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
                     indices.push(format!(
-                        "CREATE INDEX idx_{table_id}_{name} ON [{table_id}] (external_{name});"
+                        "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                         (external_{name});"
                     ));
                 } else if let Ty::Enum(e) = &member.ty {
                     let all_options = e
@@ -347,7 +348,8 @@ impl Sql {
                     ));
 
                     indices.push(format!(
-                        "CREATE INDEX idx_{table_id}_{name} ON [{table_id}] (external_{name});"
+                        "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
+                         (external_{name});"
                     ));
 
                     options = Some(format!(
