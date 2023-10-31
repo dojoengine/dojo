@@ -88,7 +88,7 @@ async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
             info!("Updated resource {resource:#x} metadata from ipfs");
         }
         Err(e) => {
-            error!("{}", e)
+            error!("Error retrieving resource {resource:#x} uri {uri_str}: {e}")
         }
     }
 }
