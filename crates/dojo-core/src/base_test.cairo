@@ -3,7 +3,7 @@ use starknet::ClassHash;
 use traits::TryInto;
 
 use dojo::base::base;
-use dojo::upgradable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use dojo::test_utils::deploy_contract;
 
 #[starknet::contract]
@@ -33,10 +33,10 @@ use contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
 #[available_gas(6000000)]
 fn test_upgrade() {
     let base_address = deploy_contract(base::TEST_CLASS_HASH, array![].span());
-    let upgradable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
+    let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
 
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
-    upgradable_dispatcher.upgrade(new_class_hash);
+    upgradeable_dispatcher.upgrade(new_class_hash);
 
     let quantum_dispatcher = IQuantumLeapDispatcher { contract_address: base_address };
     assert(quantum_dispatcher.plz_more_tps() == 'daddy', 'quantum leap failed');

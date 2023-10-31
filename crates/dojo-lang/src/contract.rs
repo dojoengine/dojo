@@ -48,10 +48,23 @@ impl DojoContract {
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
+                   
+                    use dojo::components::upgradeable::upgradeable as upgradeable_component;
+
+                    component!(path: upgradeable_component, storage: upgradeable, event: \
+                 UpgradeableEvent);
+
+                    #[event]
+                    #[derive(Drop, starknet::Event)]
+                    enum Event {
+                        UpgradeableEvent: upgradeable_component::Event
+                    }
 
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
+                        #[substorage(v0)]
+                        upgradeable: upgradeable_component::Storage,
                     }
 
                     #[external(v0)]
@@ -59,15 +72,19 @@ impl DojoContract {
                         '$name$'
                     }
 
+                    impl UpgradeableInternalImpl = \
+                 upgradeable_component::InternalImpl<ContractState>;
+
                     #[external(v0)]
-                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
+                    impl Upgradeable of dojo::components::upgradeable::IUpgradeable<ContractState> \
+                 {
                         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
                             let caller = starknet::get_caller_address();
                             assert(
                                 self.world_dispatcher.read().contract_address == caller, 'only \
                  World can upgrade'
                             );
-                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                            self.upgradeable.upgrade(new_class_hash);
                         }
                     }
 
