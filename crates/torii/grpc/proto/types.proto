@@ -61,13 +61,3 @@ message EntityUpdate {
     EntityDiff entity_diff = 2;
 }
 
-message PendingEntityUpdate {
-    EntityDiff entity_diff = 1;
-}
-
-message MaybePendingEntityUpdate {
-    oneof update {
-        EntityUpdate entity_update = 1;
-        PendingEntityUpdate pending_entity_update = 2;
-    }
-}

@@ -1,17 +1,11 @@
 use starknet::core::types::FromStrError;
 use starknet::core::utils::CairoShortStringToFeltError;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
-
-type JsonRpcClientError = <JsonRpcClient<HttpTransport> as Provider>::Error;
-type ProviderError = starknet::providers::ProviderError<JsonRpcClientError>;
+use starknet::providers::{Provider, ProviderError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("parsing error: {0}")]
     Parse(#[from] ParseError),
-    #[error(transparent)]
-    Provider(#[from] ProviderError),
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
 }
@@ -22,4 +16,12 @@ pub enum ParseError {
     FromStr(#[from] FromStrError),
     #[error(transparent)]
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SubscriptionError<P: Provider> {
+    #[error(transparent)]
+    Parse(#[from] super::error::ParseError),
+    #[error(transparent)]
+    Provider(ProviderError<<P as Provider>::Error>),
 }

@@ -17,22 +17,20 @@ use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
-use self::error::Error;
-use self::subscription::{EntityModelRequest, EntitySubscriptionService};
+use self::error::{Error, ParseError};
+use self::subscription::SubscribeRequest;
 use self::utils::{parse_sql_model_members, SqlModelMember};
 use crate::protos::{self};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DojoWorld {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
-    /// Sender<(subscription requests, oneshot sender to send back the response)>
-    subscription_req_sender:
-        Sender<(EntityModelRequest, Sender<Result<SubscribeEntitiesResponse, Status>>)>,
+    subscriber_manager: Arc<subscription::SubscriberManager>,
 }
 
 impl DojoWorld {
@@ -42,10 +40,16 @@ impl DojoWorld {
         world_address: FieldElement,
         provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
-        let (subscription_req_sender, rx) = tokio::sync::mpsc::channel(1);
-        // spawn thread for state update service
-        tokio::task::spawn(EntitySubscriptionService::new(provider, rx, block_rx));
-        Self { pool, subscription_req_sender, world_address }
+        let subscriber_manager = Arc::new(subscription::SubscriberManager::default());
+
+        tokio::task::spawn(subscription::Service::new_with_block_rcv(
+            block_rx,
+            world_address,
+            provider,
+            Arc::clone(&subscriber_manager),
+        ));
+
+        Self { pool, world_address, subscriber_manager }
     }
 }
 
@@ -130,6 +134,44 @@ impl DojoWorld {
             schema: serde_json::to_vec(&schema).unwrap(),
         })
     }
+
+    async fn subscribe_entities(
+        &self,
+        raw_entities: Vec<protos::types::EntityModel>,
+    ) -> Result<Receiver<Result<protos::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
+    {
+        let mut entities = Vec::with_capacity(raw_entities.len());
+
+        // in order to be able to compute all the storage address for all the requested entities, we
+        // need to know the size of the entity component. we can get this information from the
+        // sql database by querying the component metadata.
+        for entity in raw_entities {
+            let keys = entity
+                .keys
+                .into_iter()
+                .map(|v| FieldElement::from_str(&v))
+                .collect::<Result<Vec<FieldElement>, FromStrError>>()
+                .map_err(ParseError::FromStr)?;
+
+            let model = cairo_short_string_to_felt(&entity.model)
+                .map_err(ParseError::CairoShortStringToFelt)?;
+
+            let protos::types::ModelMetadata { packed_size, .. } =
+                self.model_metadata(&entity.model).await?;
+
+            entities.push(SubscribeRequest {
+                keys,
+                model: subscription::ModelMetadata {
+                    name: model,
+                    packed_size: packed_size as usize,
+                },
+            })
+        }
+
+        let res = self.subscriber_manager.add_subscriber(entities).await;
+
+        Ok(res)
+    }
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
@@ -156,47 +198,9 @@ impl protos::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { entities: raw_entities, world } = request.into_inner();
-        let (sender, rx) = tokio::sync::mpsc::channel(128);
-
-        let world = FieldElement::from_str(&world)
-            .map_err(|e| Status::internal(format!("Invalid world address: {e}")))?;
-
-        // in order to be able to compute all the storage address for all the requested entities, we
-        // need to know the size of the entity component. we can get this information from the
-        // sql database by querying the component metadata.
-
-        let mut entities = Vec::with_capacity(raw_entities.len());
-        for entity in raw_entities {
-            let keys = entity
-                .keys
-                .into_iter()
-                .map(|v| FieldElement::from_str(&v))
-                .collect::<Result<Vec<FieldElement>, FromStrError>>()
-                .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
-
-            let model = cairo_short_string_to_felt(&entity.model)
-                .map_err(|e| Status::internal(format!("parsing error: {e}")))?;
-
-            let protos::types::ModelMetadata { packed_size, .. } = self
-                .model_metadata(&entity.model)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
-
-            entities.push(self::subscription::Entity {
-                keys,
-                model: self::subscription::ModelMetadata {
-                    name: model,
-                    packed_size: packed_size as usize,
-                },
-            })
-        }
-
-        self.subscription_req_sender
-            .send((EntityModelRequest { world, entities }, sender))
-            .await
-            .expect("should send subscriber request");
-
+        let SubscribeEntitiesRequest { entities } = request.into_inner();
+        let rx =
+            self.subscribe_entities(entities).await.map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
 }
