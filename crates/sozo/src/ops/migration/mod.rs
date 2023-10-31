@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
-use dojo_world::metadata::{dojo_metadata_from_workspace, WorldMetadata, Metadata};
+use dojo_world::metadata::{dojo_metadata_from_workspace, Metadata, WorldMetadata};
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
