@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::metadata::{dojo_metadata_from_workspace, WorldMetadata, Metadata};
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
@@ -271,17 +271,20 @@ fn prepare_migration(
     Ok(migration)
 }
 
-fn merge_with_default_metadata(user_metadata: WorldMetadata) -> WorldMetadata {
-    let default_metadata = WorldMetadata {
-        abi: Some("Valeur par défaut ABI".to_string()),
-        source: Some("Valeur par défaut source".to_string()),
-        ..Default::default()
-    };
-
-    WorldMetadata {
-        abi: user_metadata.abi.or(default_metadata.abi),
-        source: user_metadata.source.or(default_metadata.source),
-        ..user_metadata
+fn merge_with_default_metadata(metadata: Option<Metadata>) -> WorldMetadata {
+    // TODO: get default abi and source from compiler
+    if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
+        WorldMetadata {
+            // abi_uri: Some(Uri::File()),
+            // source_uri: Some(Uri::File()),
+            ..meta.clone()
+        }
+    } else {
+        WorldMetadata {
+            // abi_uri: Some(Uri::File()),
+            // source_uri: Some(Uri::File()),
+            ..Default::default()
+        }
     }
 }
 
@@ -354,20 +357,18 @@ where
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
-            let user_metadata = dojo_metadata_from_workspace(ws).unwrap_or_default();
-            let metadata = merge_with_default_metadata(user_metadata);
-            if let Some(meta) = metadata.world() {
-                let hash = meta.upload().await?;
+            let metadata = dojo_metadata_from_workspace(ws);
+            let world_metadata = merge_with_default_metadata(metadata);
+            let hash = world_metadata.upload().await?;
 
-                let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(world.contract_address, migrator)
-                        .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
-                        .await
-                        .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
+            let InvokeTransactionResult { transaction_hash } =
+                WorldContract::new(world.contract_address, migrator)
+                    .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
+                    .await
+                    .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
 
-                ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
-                ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
-            }
+            ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
+            ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
         }
         None => {}
     };

@@ -24,6 +24,8 @@ cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
+abi_uri = "file://path/abi.json"
+source_uri = "file://path/source.json"
         "#,
     )
     .unwrap();
@@ -56,6 +58,8 @@ socials.x = "https://x.com/dojostarknet"
     assert_eq!(world.icon_uri, Some(Uri::File("example_icon.png".into())));
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
+    assert_eq!(world.abi_uri, Some(Uri::File("path/abi.json".into())));
+    assert_eq!(world.source_uri, Some(Uri::File("path/source.json".into())));
 }
 
 #[tokio::test]
@@ -67,6 +71,8 @@ async fn world_metadata_hash_and_upload() {
         icon_uri: None,
         website: Some(Url::parse("https://dojoengine.org").unwrap()),
         socials: Some(HashMap::from([("x".to_string(), "https://x.com/dojostarknet".to_string())])),
+        abi_uri: None,
+        source_uri: None,
     };
 
     let _ = meta.upload().await.unwrap();
