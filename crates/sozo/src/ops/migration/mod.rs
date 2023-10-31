@@ -271,6 +271,20 @@ fn prepare_migration(
     Ok(migration)
 }
 
+fn merge_with_default_metadata(user_metadata: WorldMetadata) -> WorldMetadata {
+    let default_metadata = WorldMetadata {
+        abi: Some("Valeur par défaut ABI".to_string()),
+        source: Some("Valeur par défaut source".to_string()),
+        ..Default::default()
+    };
+
+    WorldMetadata {
+        abi: user_metadata.abi.or(default_metadata.abi),
+        source: user_metadata.source.or(default_metadata.source),
+        ..user_metadata
+    }
+}
+
 // returns the Some(block number) at which migration world is deployed, returns none if world was
 // not redeployed
 pub async fn execute_strategy<P, S>(
@@ -340,8 +354,9 @@ where
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
-            let metadata = dojo_metadata_from_workspace(ws);
-            if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
+            let user_metadata = dojo_metadata_from_workspace(ws).unwrap_or_default();
+            let metadata = merge_with_default_metadata(user_metadata);
+            if let Some(meta) = metadata.world() {
                 let hash = meta.upload().await?;
 
                 let InvokeTransactionResult { transaction_hash } =
