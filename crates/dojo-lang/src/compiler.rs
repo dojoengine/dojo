@@ -314,7 +314,7 @@ fn get_dojo_model_artifacts(
         {
             let model_contract_name = model.name.to_case(Case::Snake);
 
-            let (class_hash, abi, _) = compiled_classes
+            let (class_hash, abi, source) = compiled_classes
                 .get(model_contract_name.as_str())
                 .cloned()
                 .ok_or(anyhow!("Model {} not found in target.", model.name))?;
@@ -323,6 +323,7 @@ fn get_dojo_model_artifacts(
                 model.name.clone(),
                 dojo_world::manifest::Model {
                     abi,
+                    source,
                     class_hash,
                     name: model.name.clone(),
                     members: model.members.clone(),
