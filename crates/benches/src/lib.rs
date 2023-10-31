@@ -117,6 +117,7 @@ mod tests {
 
     // does not need proptest, as it doesn't use any input
     #[test]
+    #[ignore] // needs a running katana
     fn bench_spawn() {
         let fee = execute(vec![("spawn", vec![])]).unwrap();
 
@@ -125,6 +126,7 @@ mod tests {
 
     proptest! {
         #[test]
+        #[ignore] // needs a running katana
         fn bench_move(c in "0x[0-4]") {
             let calls = vec![("spawn", vec![]), ("move", vec![FieldElement::from_hex_be(&c).unwrap()])];
             let fee = execute(calls).unwrap();
