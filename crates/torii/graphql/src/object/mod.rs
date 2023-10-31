@@ -17,7 +17,7 @@ use self::connection::edge::EdgeObject;
 use self::connection::{
     connection_arguments, connection_output, parse_connection_arguments, ConnectionObject,
 };
-use crate::query::constants::ID_COLUMN;
+use crate::constants::ID_COLUMN;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};

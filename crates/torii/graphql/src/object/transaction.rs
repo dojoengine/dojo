@@ -1,16 +1,16 @@
 use super::{ObjectTrait, TypeMapping};
+use crate::constants::{TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME};
 use crate::mapping::TRANSACTION_MAPPING;
-use crate::query::constants::TRANSACTION_TABLE;
 
 pub struct TransactionObject;
 
 impl ObjectTrait for TransactionObject {
     fn name(&self) -> (&str, &str) {
-        ("transaction", "transactions")
+        TRANSACTION_NAMES
     }
 
     fn type_name(&self) -> &str {
-        "Transaction"
+        TRANSACTION_TYPE_NAME
     }
 
     fn type_mapping(&self) -> &TypeMapping {
