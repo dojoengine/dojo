@@ -145,7 +145,7 @@ impl WorldMetadata {
             let response = client.add(reader).await?;
             meta.cover_uri = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
         };
-        
+
         if let Some(Uri::File(abi)) = &self.abi_uri {
             let abi_data = std::fs::read(abi)?;
             let reader = Cursor::new(abi_data);
@@ -159,7 +159,6 @@ impl WorldMetadata {
             let response = client.add(reader).await?;
             meta.source_uri = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
         };
-
 
         let serialized = json!(meta).to_string();
         let reader = Cursor::new(serialized);
