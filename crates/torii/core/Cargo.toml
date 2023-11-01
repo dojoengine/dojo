@@ -11,6 +11,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+base64.workspace = true
 chrono.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest" ] }
@@ -20,12 +21,12 @@ hex.workspace = true
 lazy_static.workspace = true
 log = "0.4.17"
 once_cell.workspace = true
-reqwest = { version = "0.11.22", features = [ "blocking" ]}
+reqwest = { version = "0.11.22", features = [ "blocking" ] }
 scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 slab = "0.4.2"
-sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "sqlite", "uuid" ] }
+sqlx.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
@@ -33,7 +34,6 @@ tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tracing.workspace = true
-base64.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

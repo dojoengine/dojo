@@ -1,4 +1,80 @@
+use async_trait::async_trait;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+use dojo_world::contracts::model::ModelReader;
+use sqlx::{Pool, Sqlite};
+use starknet::core::types::FieldElement;
+
+use super::error::{self, Error};
+
+pub struct ModelSQLReader {
+    /// The name of the model
+    name: String,
+    /// The class hash of the model
+    class_hash: FieldElement,
+    pool: Pool<Sqlite>,
+    packed_size: FieldElement,
+    unpacked_size: FieldElement,
+    layout: Vec<FieldElement>,
+}
+
+impl ModelSQLReader {
+    pub async fn new(name: &str, pool: Pool<Sqlite>) -> Result<Self, Error> {
+        let (name, class_hash, packed_size, unpacked_size, layout): (
+            String,
+            String,
+            u32,
+            u32,
+            String,
+        ) = sqlx::query_as(
+            "SELECT name, class_hash, packed_size, unpacked_size, layout FROM models WHERE id = ?",
+        )
+        .bind(name)
+        .fetch_one(&pool)
+        .await?;
+
+        let class_hash =
+            FieldElement::from_hex_be(&class_hash).map_err(error::ParseError::FromStr)?;
+        let packed_size = FieldElement::from(packed_size);
+        let unpacked_size = FieldElement::from(unpacked_size);
+
+        let layout = hex::decode(layout).unwrap();
+        let layout = layout.iter().map(|e| FieldElement::from(*e)).collect();
+
+        Ok(Self { name: name.clone(), class_hash, pool, packed_size, unpacked_size, layout })
+    }
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+impl ModelReader<Error> for ModelSQLReader {
+    fn class_hash(&self) -> FieldElement {
+        self.class_hash
+    }
+
+    async fn schema(&self) -> Result<Ty, Error> {
+        let model_members: Vec<SqlModelMember> = sqlx::query_as(
+            "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
+             model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
+        )
+        .bind(self.name.clone())
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(parse_sql_model_members(&self.name, &model_members))
+    }
+
+    async fn packed_size(&self) -> Result<FieldElement, Error> {
+        Ok(self.packed_size)
+    }
+
+    async fn unpacked_size(&self) -> Result<FieldElement, Error> {
+        Ok(self.unpacked_size)
+    }
+
+    async fn layout(&self) -> Result<Vec<FieldElement>, Error> {
+        Ok(self.layout.clone())
+    }
+}
 
 #[allow(unused)]
 #[derive(Debug, sqlx::FromRow)]
@@ -73,7 +149,7 @@ mod tests {
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 
     use super::SqlModelMember;
-    use crate::server::utils::parse_sql_model_members;
+    use crate::model::parse_sql_model_members;
 
     #[test]
     fn parse_simple_model_members_to_ty() {

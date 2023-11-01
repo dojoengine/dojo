@@ -8,6 +8,7 @@ version.workspace = true
 [dependencies]
 bytes = "1.0"
 dojo-types = { path = "../../dojo-types" }
+torii-core = { path = "../core" }
 futures-util = "0.3.28"
 futures.workspace = true
 parking_lot.workspace = true
@@ -22,10 +23,10 @@ strum_macros.workspace = true
 # server
 hex.workspace = true
 hyper = "0.14.27"
+rand = "0.8.5"
 serde_json.workspace = true
 tower = "0.4.13"
 tracing.workspace = true
-rand = "0.8.5"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true
@@ -34,7 +35,7 @@ wasm-tonic.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 prost.workspace = true
-sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "sqlite", "uuid" ] }
+sqlx.workspace = true
 tokio-stream = "0.1.14"
 tokio.workspace = true
 tonic.workspace = true

@@ -8458,6 +8458,7 @@ dependencies = [
  "tonic-build 0.10.2",
  "tonic-build 0.9.2",
  "tonic-web-wasm-client",
+ "torii-core",
  "tower",
  "tracing",
  "url",
