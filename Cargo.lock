@@ -2265,7 +2265,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-lang"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-languge-server"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2335,7 +2335,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-signers"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "starknet",
@@ -2343,7 +2343,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2374,7 +2374,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -2389,7 +2389,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4834,7 +4834,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "assert_matches",
  "clap",
@@ -4852,7 +4852,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -4883,7 +4883,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -7288,7 +7288,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8334,7 +8334,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "async-trait",
  "camino",
@@ -8360,7 +8360,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8395,7 +8395,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -8431,7 +8431,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "bytes",
  "dojo-types",
@@ -8466,7 +8466,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "async-trait",
