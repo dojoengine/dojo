@@ -33,7 +33,7 @@ pub const EXECUTOR_CONTRACT_NAME: &str = "executor";
 pub const BASE_CONTRACT_NAME: &str = "base";
 
 #[derive(Error, Debug)]
-pub enum ManifestError<E> {
+pub enum ManifestError {
     #[error("Remote World not found.")]
     RemoteWorldNotFound,
     #[error("Executor contract not found.")]
@@ -45,11 +45,11 @@ pub enum ManifestError<E> {
     #[error(transparent)]
     ParseCairoShortString(#[from] ParseCairoShortStringError),
     #[error(transparent)]
-    Provider(#[from] ProviderError<E>),
+    Provider(#[from] ProviderError),
     #[error(transparent)]
-    ContractRead(#[from] ContractReaderError<E>),
+    ContractRead(#[from] ContractReaderError),
     #[error(transparent)]
-    Model(#[from] ModelError<E>),
+    Model(#[from] ModelError),
 }
 
 /// Represents a model member.
@@ -148,9 +148,8 @@ impl Manifest {
     pub async fn load_from_remote<P>(
         provider: P,
         world_address: FieldElement,
-    ) -> Result<Self, ManifestError<<P as Provider>::Error>>
+    ) -> Result<Self, ManifestError>
     where
-        P::Error: 'static,
         P: Provider + Send + Sync,
     {
         const BLOCK_ID: BlockId = BlockId::Tag(BlockTag::Pending);
@@ -223,9 +222,8 @@ impl TryFrom<&std::fs::File> for Manifest {
 async fn get_remote_models_and_contracts<P: Provider>(
     world: FieldElement,
     provider: P,
-) -> Result<(Vec<Model>, Vec<Contract>), ManifestError<<P as Provider>::Error>>
+) -> Result<(Vec<Model>, Vec<Contract>), ManifestError>
 where
-    P::Error: 'static,
     P: Provider + Send + Sync,
 {
     let registered_models_event_name = starknet_keccak("ModelRegistered".as_bytes());
@@ -298,7 +296,7 @@ async fn get_events<P: Provider>(
     provider: P,
     world: FieldElement,
     keys: Vec<Vec<FieldElement>>,
-) -> Result<Vec<EmittedEvent>, ProviderError<<P as Provider>::Error>> {
+) -> Result<Vec<EmittedEvent>, ProviderError> {
     const DEFAULT_CHUNK_SIZE: u64 = 100;
 
     let mut events: Vec<EmittedEvent> = vec![];

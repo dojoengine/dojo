@@ -79,8 +79,8 @@ impl SubscriberManager {
     }
 }
 
-type PublishStateUpdateResult<P> = Result<(), Error<P>>;
-type RequestStateUpdateResult<P> = Result<MaybePendingStateUpdate, Error<P>>;
+type PublishStateUpdateResult = Result<(), Error>;
+type RequestStateUpdateResult = Result<MaybePendingStateUpdate, Error>;
 
 #[must_use = "Service does nothing unless polled"]
 pub struct Service<P: Provider> {
@@ -88,9 +88,9 @@ pub struct Service<P: Provider> {
     idle_provider: Option<P>,
     block_num_rcv: Receiver<u64>,
     state_update_queue: VecDeque<u64>,
-    state_update_req_fut: Option<BoxFuture<'static, (P, u64, RequestStateUpdateResult<P>)>>,
+    state_update_req_fut: Option<BoxFuture<'static, (P, u64, RequestStateUpdateResult)>>,
     subs_manager: Arc<SubscriberManager>,
-    publish_fut: Option<BoxFuture<'static, PublishStateUpdateResult<P>>>,
+    publish_fut: Option<BoxFuture<'static, PublishStateUpdateResult>>,
 }
 
 impl<P> Service<P>
@@ -114,10 +114,7 @@ where
         }
     }
 
-    async fn fetch_state_update(
-        provider: P,
-        block_num: u64,
-    ) -> (P, u64, RequestStateUpdateResult<P>) {
+    async fn fetch_state_update(provider: P, block_num: u64) -> (P, u64, RequestStateUpdateResult) {
         let res =
             provider.get_state_update(BlockId::Number(block_num)).await.map_err(Error::Provider);
         (provider, block_num, res)
@@ -127,7 +124,7 @@ where
         subs: Arc<SubscriberManager>,
         contract_address: FieldElement,
         state_update: StateUpdate,
-    ) -> PublishStateUpdateResult<P> {
+    ) -> PublishStateUpdateResult {
         let mut closed_stream = Vec::new();
 
         let Some(ContractStorageDiffItem { storage_entries: diff_entries, .. }) =

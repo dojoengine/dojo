@@ -1,10 +1,10 @@
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::ProviderError;
 use torii_core::error::ParseError;
 
 #[derive(Debug, thiserror::Error)]
-pub enum SubscriptionError<P: Provider> {
+pub enum SubscriptionError {
     #[error(transparent)]
     Parse(#[from] ParseError),
     #[error(transparent)]
-    Provider(ProviderError<<P as Provider>::Error>),
+    Provider(ProviderError),
 }

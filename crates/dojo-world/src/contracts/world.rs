@@ -18,15 +18,15 @@ use super::model::{ModelError, ModelRPCReader};
 pub(crate) mod test;
 
 #[derive(Debug, thiserror::Error)]
-pub enum WorldContractError<S, P> {
+pub enum WorldContractError<S> {
     #[error(transparent)]
-    ProviderError(#[from] ProviderError<P>),
+    ProviderError(#[from] ProviderError),
     #[error(transparent)]
-    AccountError(#[from] AccountError<S, P>),
+    AccountError(#[from] AccountError<S>),
     #[error(transparent)]
     CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
-    ContractReaderError(#[from] ContractReaderError<P>),
+    ContractReaderError(#[from] ContractReaderError),
     #[error("Invalid metadata uri")]
     InvalidMetadataUri(#[from] InvalidUri),
 }
@@ -59,8 +59,7 @@ where
     pub async fn set_executor(
         &self,
         executor: FieldElement,
-    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
-    {
+    ) -> Result<InvokeTransactionResult, AccountError<A::SignError>> {
         self.account
             .execute(vec![Call {
                 to: self.reader.address,
@@ -75,10 +74,7 @@ where
         &self,
         resource: FieldElement,
         metadata_uri: String,
-    ) -> Result<
-        InvokeTransactionResult,
-        WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
-    > {
+    ) -> Result<InvokeTransactionResult, WorldContractError<A::SignError>> {
         let parsed: Uri =
             metadata_uri.try_into().map_err(WorldContractError::InvalidMetadataUri)?;
 
@@ -111,10 +107,7 @@ where
         &self,
         model: &str,
         contract: FieldElement,
-    ) -> Result<
-        InvokeTransactionResult,
-        WorldContractError<A::SignError, <A::Provider as Provider>::Error>,
-    > {
+    ) -> Result<InvokeTransactionResult, WorldContractError<A::SignError>> {
         let model = cairo_short_string_to_felt(model)
             .map_err(WorldContractError::CairoShortStringToFeltError)?;
 
@@ -132,8 +125,7 @@ where
     pub async fn register_models(
         &self,
         models: &[FieldElement],
-    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
-    {
+    ) -> Result<InvokeTransactionResult, AccountError<A::SignError>> {
         let calls = models
             .iter()
             .map(|c| Call {
@@ -150,8 +142,7 @@ where
         &self,
         salt: &FieldElement,
         class_hash: &FieldElement,
-    ) -> Result<InvokeTransactionResult, AccountError<A::SignError, <A::Provider as Provider>::Error>>
-    {
+    ) -> Result<InvokeTransactionResult, AccountError<A::SignError>> {
         self.account
             .execute(vec![Call {
                 to: self.reader.address,
@@ -162,31 +153,26 @@ where
             .await
     }
 
-    pub async fn executor(
-        &self,
-    ) -> Result<FieldElement, ContractReaderError<<A::Provider as Provider>::Error>> {
+    pub async fn executor(&self) -> Result<FieldElement, ContractReaderError> {
         self.reader.executor().await
     }
 
-    pub async fn base(
-        &self,
-    ) -> Result<FieldElement, ContractReaderError<<A::Provider as Provider>::Error>> {
+    pub async fn base(&self) -> Result<FieldElement, ContractReaderError> {
         self.reader.base().await
     }
 
     pub async fn model(
         &'a self,
         name: &str,
-    ) -> Result<ModelRPCReader<'_, &'a A::Provider>, ModelError<<A::Provider as Provider>::Error>>
-    {
+    ) -> Result<ModelRPCReader<'_, &'a A::Provider>, ModelError> {
         self.reader.model(name).await
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ContractReaderError<P> {
+pub enum ContractReaderError {
     #[error(transparent)]
-    ProviderError(#[from] ProviderError<P>),
+    ProviderError(#[from] ProviderError),
     #[error(transparent)]
     CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
 }
@@ -231,7 +217,7 @@ where
         system: &str,
         model: &str,
         execution_role: &str,
-    ) -> Result<bool, ContractReaderError<P::Error>> {
+    ) -> Result<bool, ContractReaderError> {
         let res = self
             .provider
             .call(
@@ -251,7 +237,7 @@ where
         Ok(res[0] == FieldElement::ONE)
     }
 
-    pub async fn is_account_admin(&self) -> Result<bool, ContractReaderError<P::Error>> {
+    pub async fn is_account_admin(&self) -> Result<bool, ContractReaderError> {
         let res = self
             .provider
             .call(
@@ -267,7 +253,7 @@ where
         Ok(res[0] == FieldElement::ONE)
     }
 
-    pub async fn executor(&self) -> Result<FieldElement, ContractReaderError<P::Error>> {
+    pub async fn executor(&self) -> Result<FieldElement, ContractReaderError> {
         let res = self
             .provider
             .call(
@@ -283,7 +269,7 @@ where
         Ok(res[0])
     }
 
-    pub async fn metadata_uri(&self) -> Result<FieldElement, ContractReaderError<P::Error>> {
+    pub async fn metadata_uri(&self) -> Result<FieldElement, ContractReaderError> {
         let res = self
             .provider
             .call(
@@ -299,7 +285,7 @@ where
         Ok(res[0])
     }
 
-    pub async fn base(&self) -> Result<FieldElement, ContractReaderError<P::Error>> {
+    pub async fn base(&self) -> Result<FieldElement, ContractReaderError> {
         let res = self
             .provider
             .call(
@@ -319,7 +305,7 @@ where
         &self,
         class_hash: FieldElement,
         mut calldata: Vec<FieldElement>,
-    ) -> Result<Vec<FieldElement>, ContractReaderError<P::Error>> {
+    ) -> Result<Vec<FieldElement>, ContractReaderError> {
         calldata.insert(0, class_hash);
 
         let res = self
@@ -342,10 +328,7 @@ impl<'a, P> WorldContractReader<P>
 where
     P: Provider + Sync + Send,
 {
-    pub async fn model(
-        &'a self,
-        name: &str,
-    ) -> Result<ModelRPCReader<'a, P>, ModelError<P::Error>> {
+    pub async fn model(&'a self, name: &str) -> Result<ModelRPCReader<'a, P>, ModelError> {
         ModelRPCReader::new(name, self).await
     }
 }

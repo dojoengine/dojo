@@ -28,17 +28,17 @@ const UNPACKED_SIZE_SELECTOR_STR: &str = "unpacked_size";
 mod model_test;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ModelError<P> {
+pub enum ModelError {
     #[error("Model not found.")]
     ModelNotFound,
     #[error(transparent)]
-    ProviderError(#[from] ProviderError<P>),
+    ProviderError(#[from] ProviderError),
     #[error(transparent)]
     ParseCairoShortStringError(#[from] ParseCairoShortStringError),
     #[error(transparent)]
     CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
-    ContractReaderError(#[from] ContractReaderError<P>),
+    ContractReaderError(#[from] ContractReaderError),
     #[error(transparent)]
     CairoTypeError(#[from] PrimitiveError),
     #[error(transparent)]
@@ -73,7 +73,7 @@ where
     pub async fn new(
         name: &str,
         world: &'a WorldContractReader<P>,
-    ) -> Result<ModelRPCReader<'a, P>, ModelError<P::Error>> {
+    ) -> Result<ModelRPCReader<'a, P>, ModelError> {
         let name = cairo_short_string_to_felt(name)?;
 
         let class_hash = world
@@ -102,7 +102,7 @@ where
     pub async fn entity_storage(
         &self,
         keys: &[FieldElement],
-    ) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
+    ) -> Result<Vec<FieldElement>, ModelError> {
         let packed_size: u8 =
             self.packed_size().await?.try_into().map_err(ParseError::ValueOutOfRange)?;
 
@@ -127,7 +127,7 @@ where
         Ok(packed)
     }
 
-    pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
+    pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError> {
         let mut schema = self.schema().await?;
 
         let layout = self.layout().await?;
@@ -144,7 +144,7 @@ where
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-impl<'a, P> ModelReader<ModelError<P::Error>> for ModelRPCReader<'a, P>
+impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
 where
     P: Provider + Sync + Send,
 {
@@ -152,7 +152,7 @@ where
         self.class_hash
     }
 
-    async fn schema(&self) -> Result<Ty, ModelError<P::Error>> {
+    async fn schema(&self) -> Result<Ty, ModelError> {
         let entrypoint = get_selector_from_name(SCHEMA_SELECTOR_STR).unwrap();
 
         let res = self
@@ -163,7 +163,7 @@ where
         Ok(parse_ty(&res[1..])?)
     }
 
-    async fn packed_size(&self) -> Result<FieldElement, ModelError<P::Error>> {
+    async fn packed_size(&self) -> Result<FieldElement, ModelError> {
         let entrypoint = get_selector_from_name(PACKED_SIZE_SELECTOR_STR).unwrap();
 
         let res = self
@@ -174,7 +174,7 @@ where
         Ok(res[1])
     }
 
-    async fn unpacked_size(&self) -> Result<FieldElement, ModelError<P::Error>> {
+    async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
         let entrypoint = get_selector_from_name(UNPACKED_SIZE_SELECTOR_STR).unwrap();
 
         let res = self
@@ -185,7 +185,7 @@ where
         Ok(res[1])
     }
 
-    async fn layout(&self) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
+    async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
         let entrypoint = get_selector_from_name(LAYOUT_SELECTOR_STR).unwrap();
 
         let res = self
