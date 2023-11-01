@@ -26,7 +26,7 @@ pub fn handle_print_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> Rewr
 
     RewriteNode::interpolate_patched(
         "#[cfg(test)]
-            impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
+            impl $type_name$StructPrintImpl of debug::PrintTrait<$type_name$> {
                 fn print(self: $type_name$) {
                     $print$
                 }
@@ -48,16 +48,31 @@ pub fn handle_print_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> Rewr
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNode {
-    let prints: Vec<_> = todo!();
+    let prints: Vec<_> = enum_ast
+        .variants(db)
+        .elements(db)
+        .iter()
+        .map(|m| {
+            format!(
+                "{} => {{ debug::PrintTrait::print('{}'); }}",
+                m.name(db).text(db).to_string(),
+                m.name(db).text(db).to_string()
+            )
+        })
+        .collect();
+
+    dbg!(&prints);
 
     RewriteNode::interpolate_patched(
         "#[cfg(test)]
-            impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
+            impl $type_name$EnumPrintImpl of debug::PrintTrait<$type_name$> {
                 fn print(self: $type_name$) {
-                    $print$
+                    match self {
+                        $print$
+                    }
                 }
             }",
-        UnorderedHashMap::from([
+        &UnorderedHashMap::from([
             ("type_name".to_string(), RewriteNode::new_trimmed(enum_ast.name(db).as_syntax_node())),
             ("print".to_string(), RewriteNode::Text(prints.join("\n"))),
         ]),

@@ -33,7 +33,7 @@ use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
-use crate::print::handle_print_struct;
+use crate::print::{handle_print_enum, handle_print_struct};
 
 const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 
