@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use anyhow::Result;
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
+    use starknet_crypto::FieldElement;
 
     use crate::schema::build_schema;
     use crate::tests::{run_graphql_query, spinup_types_test, Connection, Record};
@@ -187,12 +190,12 @@ mod tests {
         let records =
             records_model_query(&schema, "(order: { field: RANDOM_U128, direction: ASC })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
-        // let first_record = connection.edges.first().unwrap();
-        // let last_record = connection.edges.last().unwrap();
+        let first_record_felt =
+            FieldElement::from_str(&connection.edges.first().unwrap().node.random_u128).unwrap();
+        let last_record_felt =
+            FieldElement::from_str(&connection.edges.last().unwrap().node.random_u128).unwrap();
         assert_eq!(connection.total_count, 10);
-
-        // TODO(broody): Reenable
-        // assert!(first_record.node.random_u128 <= last_record.node.random_u128);
+        assert!(first_record_felt <= last_record_felt);
 
         // *** ORDER + WHERE FILTER TESTING ***
 
