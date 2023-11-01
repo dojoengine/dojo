@@ -8,7 +8,6 @@ version.workspace = true
 [dependencies]
 bytes = "1.0"
 dojo-types = { path = "../../dojo-types" }
-torii-core = { path = "../core" }
 futures-util = "0.3.28"
 futures.workspace = true
 parking_lot.workspace = true
@@ -16,6 +15,7 @@ rayon.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
+torii-core = { path = "../core", optional = true }
 
 serde.workspace = true
 strum_macros.workspace = true
@@ -47,4 +47,4 @@ wasm-tonic-build.workspace = true
 
 [features]
 client = [  ]
-server = [  ] # this feature can't be build on wasm32
+server = [ "dep:torii-core" ] # this feature can't be build on wasm32
