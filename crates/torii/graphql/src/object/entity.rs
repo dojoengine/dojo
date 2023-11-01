@@ -13,13 +13,12 @@ use torii_core::types::Entity;
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::constants::{ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN};
 use crate::mapping::ENTITY_TYPE_MAPPING;
-use crate::query::constants::{ENTITY_TABLE, EVENT_ID_COLUMN};
 use crate::query::data::{count_rows, fetch_multiple_rows};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
 use crate::utils::extract;
-
 pub struct EntityObject;
 
 // TODO: Refactor subscription to not use this
@@ -45,11 +44,11 @@ impl EntityObject {
 
 impl ObjectTrait for EntityObject {
     fn name(&self) -> (&str, &str) {
-        ("entity", "entities")
+        ENTITY_NAMES
     }
 
     fn type_name(&self) -> &str {
-        "World__Entity"
+        ENTITY_TYPE_NAME
     }
 
     fn type_mapping(&self) -> &TypeMapping {

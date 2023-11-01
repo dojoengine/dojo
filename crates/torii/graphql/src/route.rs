@@ -8,7 +8,7 @@ use url::Url;
 use warp::{Filter, Rejection, Reply};
 
 use super::schema::build_schema;
-use crate::query::constants::MODEL_TABLE;
+use crate::constants::MODEL_TABLE;
 use crate::query::data::count_rows;
 
 pub async fn filter(

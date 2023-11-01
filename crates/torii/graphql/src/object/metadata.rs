@@ -1,16 +1,16 @@
 use super::{ObjectTrait, TypeMapping};
+use crate::constants::{METADATA_NAMES, METADATA_TABLE, METADATA_TYPE_NAME};
 use crate::mapping::METADATA_TYPE_MAPPING;
-use crate::query::constants::METADATA_TABLE;
 
 pub struct MetadataObject;
 
 impl ObjectTrait for MetadataObject {
     fn name(&self) -> (&str, &str) {
-        ("metadata", "metadatas")
+        METADATA_NAMES
     }
 
     fn type_name(&self) -> &str {
-        "World__Metadata"
+        METADATA_TYPE_NAME
     }
 
     fn type_mapping(&self) -> &TypeMapping {

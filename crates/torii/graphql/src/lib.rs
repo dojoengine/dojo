@@ -1,5 +1,6 @@
 pub mod object;
 
+mod constants;
 mod error;
 mod mapping;
 mod query;

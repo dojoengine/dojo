@@ -6,8 +6,8 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 
 use super::{ObjectTrait, TypeMapping, ValueMapping};
+use crate::constants::{MODEL_NAMES, MODEL_TABLE, MODEL_TYPE_NAME};
 use crate::mapping::MODEL_TYPE_MAPPING;
-use crate::query::constants::MODEL_TABLE;
 
 pub struct ModelObject;
 
@@ -29,11 +29,11 @@ impl ModelObject {
 
 impl ObjectTrait for ModelObject {
     fn name(&self) -> (&str, &str) {
-        ("model", "models")
+        MODEL_NAMES
     }
 
     fn type_name(&self) -> &str {
-        "World__Model"
+        MODEL_TYPE_NAME
     }
 
     fn type_mapping(&self) -> &TypeMapping {

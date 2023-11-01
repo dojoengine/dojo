@@ -11,6 +11,7 @@ use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
+use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
 use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
 use crate::object::transaction::TransactionObject;
@@ -31,12 +32,12 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         .collect();
 
     // add field resolvers to query root
-    let mut query_root = Object::new("Query");
+    let mut query_root = Object::new(QUERY_TYPE_NAME);
     for query in queries {
         query_root = query_root.field(query);
     }
 
-    let mut schema_builder = Schema::build("Query", None, Some("Subscription"));
+    let mut schema_builder = Schema::build(QUERY_TYPE_NAME, None, Some(SUBSCRIPTION_TYPE_NAME));
 
     // register model data unions
     schema_builder = schema_builder.register(union);
@@ -86,7 +87,7 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     }
 
     // add field resolvers to subscription root
-    let mut subscription_root = Subscription::new("Subscription");
+    let mut subscription_root = Subscription::new(SUBSCRIPTION_TYPE_NAME);
     for field in subscription_fields {
         subscription_root = subscription_root.field(field);
     }

@@ -5,19 +5,19 @@ use sqlx::{Pool, Sqlite};
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{ObjectTrait, TypeMapping};
+use crate::constants::{EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
 use crate::mapping::EVENT_TYPE_MAPPING;
-use crate::query::constants::{EVENT_TABLE, ID_COLUMN};
 use crate::query::data::{count_rows, fetch_multiple_rows};
 
 pub struct EventObject;
 
 impl ObjectTrait for EventObject {
     fn name(&self) -> (&str, &str) {
-        ("event", "events")
+        EVENT_NAMES
     }
 
     fn type_name(&self) -> &str {
-        "World__Event"
+        EVENT_TYPE_NAME
     }
 
     fn type_mapping(&self) -> &TypeMapping {
