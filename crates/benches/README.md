@@ -2,26 +2,38 @@
 
 ## Prerequisites
 
--   cargo - for test case generation and runtime
--   katana - as a local RPC server
--   sozo - for contract compilation and deployment
+-   `cargo` - for test case generation and runtime
+-   `katana` - as a local RPC server
+-   `sozo` - for contract compilation and deployment
 
-## Running benchmarks
+## Requirements for running
 
-While benchmarks are running Katana instance has to be online.
+While benchmarks are running a Katana instance has to be online either remotely or locally...
 
 ```bash
-katana --disable-fee
+katana
 ```
 
-Then contracts have to be built and deployed.
+...contracts have to be built and deployed...
 
 ```bash
 sozo --manifest-path crates/benches/contracts/Scarb.toml build
 sozo --manifest-path crates/benches/contracts/Scarb.toml migrate
 ```
 
-Last command should print a _world address_ that should be pasted into `default_auth.sh` file, and then authorize with `bash crates/benches/contracts/scripts/default_auth.sh`
+...and actions authorized.
+
+```bash
+crates/benches/contracts/scripts/default_auth.sh
+```
+
+Then tests can be run with
+
+```bash
+cargo test bench -- --ignored
+```
+
+Benchmarks are ignored by default because they need a while to complete and need a running Katana. Their names should start with bench.
 
 ## Running with compiled `sozo`
 

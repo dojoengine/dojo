@@ -1,4 +1,5 @@
 use benches::models::{Direction};
+use benches::character::Abilities;
 
 // define the interface
 #[starknet::interface]
@@ -8,7 +9,8 @@ trait IActions<TContractState> {
     fn bench_emit(self: @TContractState, name: felt252);
     fn bench_set(self: @TContractState, name: felt252);
     fn bench_get(self: @TContractState);
-    fn bench_set_complex(self: @TContractState);
+    fn bench_set_complex_default(self: @TContractState);
+    fn bench_set_complex_with_smaller(self: @TContractState, abilities: Abilities);
 }
 
 // dojo decorator
@@ -19,6 +21,7 @@ mod actions {
     use benches::utils::next_position;
     use benches::character::{Character, Abilities, Stats, Weapon, Sword};
     use super::IActions;
+    use debug::PrintTrait;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -121,107 +124,88 @@ mod actions {
             get!(world, player, Alias);
         }
         
-        fn bench_set_complex(self: @ContractState) {
+        fn bench_set_complex_default(self: @ContractState) {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+
+            // let abi = Abilities {
+            //     strength: 1,
+            //     dexterity: 2,
+            //     constitution: 3,
+            //     intelligence: 4,
+            //     wisdom: 5,
+            //     charisma: 6,
+            // };
+            // let s = dojo::model::Model::values(@abi);
+            // (*s.at(0)).print();
+
+            set!(world, Character {
+                caller: get_caller_address(),
+                heigth: 170,
+                abilities: Abilities {
+                    strength: 8,
+                    dexterity: 8,
+                    constitution: 8,
+                    intelligence: 8,
+                    wisdom: 8,
+                    charisma: 8,
+                },
+                stats: Stats {
+                    kills: 0,
+                    deaths: 0,
+                    rests: 0,
+                    hits: 0,
+                    blocks: 0,
+                    walked: 0,
+                    runned: 0,
+                    finished: false,
+                    romances: 0,
+                },
+                weapon: Weapon::Fists((
+                    Sword {
+                        swordsmith: get_caller_address(),
+                        damage: 10,
+                    },
+                    Sword {
+                        swordsmith: get_caller_address(),
+                        damage: 10,
+                    },
+                )),
+                gold: 0,
+            });
+        }
+
+        fn bench_set_complex_with_smaller(self: @ContractState, abilities: Abilities) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
 
             set!(world, Character {
-                caller,
-                heigth: 0x123456789abcdef,
-                abilities: Abilities {
-                    strength: 0x12,
-                    dexterity: 0x34,
-                    constitution: 0x56,
-                    intelligence: 0x78,
-                    wisdom: 0x9a,
-                    charisma: 0xbc,
-                },
+                caller: get_caller_address(),
+                heigth: 170,
+                abilities,
                 stats: Stats {
-                    kills: 0x123456789abcdef,
-                    deaths: 0x1234,
-                    rests: 0x12345678,
-                    hits: 0x123456789abcdef,
-                    blocks: 0x12345678,
-                    walked: 0x123456789abcdef,
-                    runned: 0x123456789abcdef,
-                    finished: true,
-                    romances: 0x1234,
+                    kills: 0,
+                    deaths: 0,
+                    rests: 0,
+                    hits: 0,
+                    blocks: 0,
+                    walked: 0,
+                    runned: 0,
+                    finished: false,
+                    romances: 0,
                 },
-                weapon: Weapon::DualWield((
+                weapon: Weapon::Fists((
                     Sword {
-                        swordsmith: starknet::contract_address_const::<0x69>(),
-                        damage: 0x12345678,
+                        swordsmith: get_caller_address(),
+                        damage: 10,
                     },
                     Sword {
-                        swordsmith: starknet::contract_address_const::<0x69>(),
-                        damage: 0x12345678,
-                    }
+                        swordsmith: get_caller_address(),
+                        damage: 10,
+                    },
                 )),
-                gold: 0x12345678,
+                gold: 0,
             });
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use starknet::class_hash::Felt252TryIntoClassHash;
-
-    // import world dispatcher
-    use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-
-    // import test utils
-    use dojo::test_utils::{spawn_test_world, deploy_contract};
-
-    // import models
-    use benches::models::{position, moves};
-    use benches::models::{Position, Moves, Direction, Vec2};
-
-    // import actions
-    use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
-
-    #[test]
-    #[available_gas(30000000)]
-    fn test_move() {
-        // caller
-        let caller = starknet::contract_address_const::<0x0>();
-
-        // models
-        let mut models = array![position::TEST_CLASS_HASH, moves::TEST_CLASS_HASH];
-
-        // deploy world with models
-        let world = spawn_test_world(models);
-
-        // deploy systems contract
-        let contract_address = world
-            .deploy_contract('salt', actions::TEST_CLASS_HASH.try_into().unwrap());
-        let actions_system = IActionsDispatcher { contract_address };
-
-        // call spawn()
-        actions_system.spawn();
-
-        // call move with direction right
-        actions_system.move(Direction::Right(()));
-
-        // Check world state
-        let moves = get!(world, caller, Moves);
-
-        // casting right direction
-        let right_dir_felt: felt252 = Direction::Right(()).into();
-
-        // check moves
-        assert(moves.remaining == 9, 'moves is wrong');
-
-        // check last direction
-        assert(moves.last_direction.into() == right_dir_felt, 'last direction is wrong');
-
-        // get new_position
-        let new_position = get!(world, caller, Position);
-
-        // check new position x
-        assert(new_position.vec.x == 11, 'position x is wrong');
-
-        // check new position y
-        assert(new_position.vec.y == 10, 'position y is wrong');
     }
 }
