@@ -12,6 +12,14 @@ dojo = { path = "../../../../../dojo-core" }
 [[target.dojo]]
 build-external-contracts = []
 
+[tool.dojo.world]
+name = "types-test"
+description = "Graphql types testing"
+# icon_uri = "file://assets/icon.png"
+# cover_uri = "file://assets/cover.png"
+# website = "https://dojoengine.org"
+# socials.x = "https://twitter.com/dojostarknet"
+
 [tool.dojo.env]
 rpc_url = "http://localhost:5050/"
 account_address = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"

@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
+use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Executor, Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
@@ -20,6 +21,7 @@ pub const FELT_DELIMITER: &str = "/";
 #[path = "sql_test.rs"]
 mod test;
 
+#[derive(Debug, Clone)]
 pub struct Sql {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
@@ -174,12 +176,50 @@ impl Sql {
         self.query_queue.push(query);
     }
 
-    pub fn set_metadata(&mut self, resource: &FieldElement, uri: String) {
+    pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str) {
         self.query_queue.push(format!(
             "INSERT INTO metadata (id, uri) VALUES ('{:#x}', '{}') ON CONFLICT(id) DO UPDATE SET \
              id=excluded.id, updated_at=CURRENT_TIMESTAMP",
             resource, uri
         ));
+    }
+
+    pub async fn update_metadata(
+        &mut self,
+        resource: &FieldElement,
+        uri: &str,
+        metadata: &WorldMetadata,
+        icon_img: &Option<String>,
+        cover_img: &Option<String>,
+    ) -> Result<()> {
+        let mut image_columns = String::new();
+        let mut image_values = String::new();
+        let mut image_updated = String::new();
+
+        if let Some(icon) = icon_img {
+            image_columns = ", icon_img".to_string();
+            image_values = format!(", '{}'", icon);
+            image_updated = ", icon_img=excluded.icon_img".to_string();
+        }
+
+        if let Some(cover) = cover_img {
+            image_columns = format!("{}, cover_img", image_columns);
+            image_values = format!("{}, '{}'", image_values, cover);
+            image_updated = format!("{}, cover_img=excluded.cover_img", image_updated);
+        }
+
+        let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
+
+        let query = format!(
+            "INSERT INTO metadata (id, uri, json {image_columns}) VALUES ('{resource:#x}', \
+             '{uri}', '{json}' {image_values}) ON CONFLICT(id) DO UPDATE SET id=excluded.id, \
+             json=excluded.json, updated_at=CURRENT_TIMESTAMP {image_updated}"
+        );
+
+        self.query_queue.push(query);
+        self.execute().await?;
+
+        Ok(())
     }
 
     pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
