@@ -7,6 +7,7 @@ use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
 
+use crate::contracts::model::ModelReader;
 use crate::contracts::world::test::deploy_world;
 use crate::contracts::world::WorldContractReader;
 
