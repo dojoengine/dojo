@@ -11,6 +11,7 @@ trait IActions<TContractState> {
     fn bench_get(self: @TContractState);
     fn bench_set_complex_default(self: @TContractState);
     fn bench_set_complex_with_smaller(self: @TContractState, abilities: Abilities);
+    fn bench_update_complex_minimal(self: @TContractState, earned: u32);
 }
 
 // dojo decorator
@@ -205,6 +206,22 @@ mod actions {
                     },
                 )),
                 gold: 0,
+            });
+        }
+        
+        fn bench_update_complex_minimal(self: @ContractState, earned: u32) {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+
+            let char = get!(world, caller, Character);
+
+            set!(world, Character {
+                caller: get_caller_address(),
+                heigth: char.heigth,
+                abilities: char.abilities,
+                stats: char.stats,
+                weapon: char.weapon,
+                gold: char.gold + earned,
             });
         }
     }

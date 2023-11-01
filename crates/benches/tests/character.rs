@@ -1,17 +1,6 @@
 use benches::execute;
 use proptest::prelude::*;
-use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-
-#[derive(Serialize, Deserialize)]
-struct Abilities {
-    strength: u8,
-    dexterity: u8,
-    constitution: u8,
-    intelligence: u8,
-    wisdom: u8,
-    charisma: u8,
-}
 
 #[test]
 #[ignore] // needs a running katana
@@ -32,6 +21,18 @@ proptest! {
             .collect();
 
         let fee = execute(vec![("bench_set_complex_with_smaller", points)]).unwrap();
+
+        assert!(fee > 1);
+        println!("fee: {}\tcalldata: {}", fee, s);
+    }
+}
+
+proptest! {
+    #[test]
+    #[ignore] // needs a running katana
+    fn bench_update_complex_minimal(s in "[0-9]{9}") {
+        let calldata = FieldElement::from(u32::from_str_radix(&s, 10).unwrap());
+        let fee = execute(vec![("bench_update_complex_minimal", vec![calldata])]).unwrap();
 
         assert!(fee > 1);
         println!("fee: {}\tcalldata: {}", fee, s);
