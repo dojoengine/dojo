@@ -7,7 +7,7 @@ version = "0.3.3"
 [lib]
 
 [dependencies]
-cubit = { git = "https://github.com/influenceth/cubit" }
+cubit = { git = "https://github.com/ponderingdemocritus/cubit" }
 
 dojo = { path = "../dojo-core" }
 
