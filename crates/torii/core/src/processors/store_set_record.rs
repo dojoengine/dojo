@@ -1,10 +1,10 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
+use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 use tracing::info;
 
 use super::EventProcessor;
@@ -40,7 +40,7 @@ where
 
     async fn process(
         &self,
-        world: &WorldContractReader<P>,
+        _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block: &BlockWithTxs,
         _transaction_receipt: &InvokeTransactionReceipt,
@@ -50,17 +50,22 @@ where
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
         info!("store set record: {}", name);
 
-        let model = world.model(&name).await?;
-        let keys = values_at(&event.data, NUM_KEYS_INDEX)?;
-        let entity = model.entity(&keys).await?;
+        let model = db.model(&name).await?;
+
+        let keys_start = NUM_KEYS_INDEX + 1;
+        let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
+        let keys = event.data[keys_start..keys_end].to_vec();
+
+        let values_start = keys_end + 2;
+        let values_end: usize = values_start + usize::from(u8::try_from(event.data[keys_end + 1])?);
+
+        let values = event.data[values_start..values_end].to_vec();
+        let mut keys_and_unpacked = [keys, values].concat();
+
+        let mut entity = model.schema().await?;
+        entity.deserialize(&mut keys_and_unpacked)?;
+
         db.set_entity(entity, event_id).await?;
         Ok(())
     }
-}
-
-fn values_at(data: &[FieldElement], len_index: usize) -> Result<Vec<FieldElement>, Error> {
-    let len: usize = u8::try_from(data[len_index])?.into();
-    let start = len_index + 1_usize;
-    let end = start + len;
-    Ok(data[start..end].to_vec())
 }
