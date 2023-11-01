@@ -4,6 +4,7 @@ use async_graphql::Name;
 use dojo_types::primitive::Primitive;
 use lazy_static::lazy_static;
 
+use crate::constants::{CONTENT_TYPE_NAME, SOCIAL_TYPE_NAME};
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
 lazy_static! {
@@ -90,10 +91,25 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),
         ),
     ]);
+    pub static ref SOCIAL_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("url"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+    ]);
+    pub static ref CONTENT_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("description"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("website"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("icon_uri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("cover_uri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("socials"), TypeData::Simple(TypeRef::named_list(SOCIAL_TYPE_NAME)))
+    ]);
     pub static ref METADATA_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("uri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("json"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (
+            Name::new("content"),
+            TypeData::Nested((TypeRef::named(CONTENT_TYPE_NAME), IndexMap::new()))
+        ),
         (Name::new("icon_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("cover_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (

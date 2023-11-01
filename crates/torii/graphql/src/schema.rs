@@ -12,6 +12,8 @@ use super::object::model_data::ModelDataObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
+use crate::object::metadata::content::ContentObject;
+use crate::object::metadata::social::SocialObject;
 use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
 use crate::object::transaction::TransactionObject;
@@ -108,6 +110,8 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, 
     let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
         Box::new(EntityObject),
         Box::new(EventObject),
+        Box::new(SocialObject),
+        Box::new(ContentObject),
         Box::new(MetadataObject),
         Box::new(ModelObject),
         Box::new(PageInfoObject),

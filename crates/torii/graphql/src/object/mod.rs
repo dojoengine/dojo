@@ -145,10 +145,6 @@ pub trait ObjectTrait: Send + Sync {
         let mut object = Object::new(self.type_name());
 
         for (field_name, type_data) in self.type_mapping().clone() {
-            if type_data.is_nested() {
-                continue;
-            }
-
             let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
                 let field_name = field_name.clone();
 
