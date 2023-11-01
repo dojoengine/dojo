@@ -1,8 +1,7 @@
-use benches::execute;
+use benches::{execute, log};
 use hex::ToHex;
 use proptest::prelude::*;
 use starknet::core::types::FieldElement;
-use tracing::info;
 
 proptest! {
     #[test]
@@ -12,7 +11,7 @@ proptest! {
 
         let fee = execute(vec![("bench_emit", vec![s_hex])]).unwrap();
 
-        info!(target: "bench_emit", "fee: {}\tcalldata: {}", fee, s);
+        log("bench_emit", fee, &s);
     }
 
     #[test]
@@ -22,7 +21,7 @@ proptest! {
 
         let fee = execute(vec![("bench_set", vec![s_hex])]).unwrap();
 
-        info!(target: "bench_set", "fee: {}\tcalldata: {}", fee, s);
+        log("bench_set", fee, &s);
     }
 
     #[test]
@@ -33,6 +32,6 @@ proptest! {
 
         let fee = execute(calls).unwrap();
 
-        info!(target: "bench_get", "fee: {}\tcalldata: {}", fee, s);
+        log("bench_get", fee, &s);
     }
 }

@@ -40,7 +40,7 @@ fn create_declare_transaction(sender_address: ContractAddress) -> DeclareTransac
             class_hash: ClassHash(stark_felt!("0x1234")),
             nonce: Nonce(1u8.into()),
             sender_address,
-            transaction_hash: TransactionHash(stark_felt!("0x6969")),
+            transaction_hash: TransactionHash(stark_felt!("0x5050")),
             ..Default::default()
         }),
         compiled_class,

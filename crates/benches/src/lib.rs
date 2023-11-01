@@ -1,8 +1,8 @@
-#[cfg(test)]
-#[macro_use]
+#[cfg_attr(test, macro_use)]
 extern crate lazy_static;
 
-use std::sync::Once;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 use anyhow::{Context, Result};
 use futures::executor::block_on;
@@ -15,11 +15,10 @@ use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use tokio::runtime::Runtime;
 use tokio::sync::OnceCell;
-use tracing_subscriber::fmt;
 
 type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
-const KATANA_ENDPOINT: &str = "http://localhost:6969";
+const KATANA_ENDPOINT: &str = "http://localhost:5050";
 const CONTRACT_ADDRESS: &str = "0x6c27e3b47f88abca376261ad4f0ffbe3461b9d08477f9e10953829603184e13";
 
 const ACCOUNT_ADDRESS: &str = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973";
@@ -53,18 +52,6 @@ async fn nonce() -> FieldElement {
         .await
 }
 
-fn logging() {
-    static NONCE: Once = Once::new();
-
-    NONCE.call_once(|| {
-        let subscriber = fmt::Subscriber::builder()
-            .with_max_level(tracing::Level::INFO) // Set the maximum log level
-            .finish();
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("Failed to set the global tracing subscriber");
-    });
-}
-
 async fn account() -> OwnerAccount {
     let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
         FieldElement::from_hex_be(PRIVATE_KEY).unwrap(),
@@ -90,16 +77,27 @@ fn provider() -> JsonRpcClient<HttpTransport> {
 type EntrypointsAndCalldata = Vec<(&'static str, Vec<FieldElement>)>;
 
 pub fn execute(entrypoints_and_calldata: EntrypointsAndCalldata) -> Result<u64> {
-    logging();
     let calls = parse_calls(entrypoints_and_calldata);
     let _rt = RUNTIME.enter();
     block_on(async move { execute_calls(calls).await })
 }
 
 pub async fn execute_async(entrypoints_and_calldata: EntrypointsAndCalldata) -> Result<u64> {
-    logging();
     let calls = parse_calls(entrypoints_and_calldata);
     execute_calls(calls).await
+}
+
+pub fn log(name: &str, gas: u64, calldata: &str) {
+    let mut file =
+        OpenOptions::new().create(true).write(true).append(true).open("gas_usage.txt").unwrap();
+    // let mut file = stdout();
+
+    let mut calldata = String::from(calldata);
+    if calldata != "" {
+        calldata = String::from(",\tcalldata: ") + &calldata
+    }
+
+    writeln!(file, "{}\tfee: {}{calldata}", name, gas).unwrap();
 }
 
 fn parse_calls(entrypoints_and_calldata: EntrypointsAndCalldata) -> Vec<Call> {
@@ -130,7 +128,6 @@ async fn execute_calls(calls: Vec<Call>) -> Result<u64> {
 mod tests {
     use super::*;
     use proptest::prelude::*;
-    use tracing::info;
 
     // does not need proptest, as it doesn't use any input
     #[test]
@@ -138,7 +135,7 @@ mod tests {
     fn bench_spawn() {
         let fee = execute(vec![("spawn", vec![])]).unwrap();
 
-        info!(target: "bench_spawn", "Estimated fee: {fee}")
+        log("bench_spawn", fee, "");
     }
 
     proptest! {
@@ -148,7 +145,7 @@ mod tests {
             let calls = vec![("spawn", vec![]), ("move", vec![FieldElement::from_hex_be(&c).unwrap()])];
             let fee = execute(calls).unwrap();
 
-            info!(target: "bench_move", "Estimated fee: {fee},\tcalldata: {c}");
+            log("bench_move", fee, &c);
         }
     }
 }
