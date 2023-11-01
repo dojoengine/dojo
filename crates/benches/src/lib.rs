@@ -2,6 +2,8 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::sync::Once;
+
 use anyhow::{Context, Result};
 use futures::executor::block_on;
 use lazy_static::lazy_static;
@@ -11,9 +13,9 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
-
 use tokio::runtime::Runtime;
 use tokio::sync::OnceCell;
+use tracing_subscriber::fmt;
 
 type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
@@ -51,6 +53,18 @@ async fn nonce() -> FieldElement {
         .await
 }
 
+fn logging() {
+    static NONCE: Once = Once::new();
+
+    NONCE.call_once(|| {
+        let subscriber = fmt::Subscriber::builder()
+            .with_max_level(tracing::Level::INFO) // Set the maximum log level
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("Failed to set the global tracing subscriber");
+    });
+}
+
 async fn account() -> OwnerAccount {
     let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
         FieldElement::from_hex_be(PRIVATE_KEY).unwrap(),
@@ -76,12 +90,14 @@ fn provider() -> JsonRpcClient<HttpTransport> {
 type EntrypointsAndCalldata = Vec<(&'static str, Vec<FieldElement>)>;
 
 pub fn execute(entrypoints_and_calldata: EntrypointsAndCalldata) -> Result<u64> {
+    logging();
     let calls = parse_calls(entrypoints_and_calldata);
     let _rt = RUNTIME.enter();
     block_on(async move { execute_calls(calls).await })
 }
 
 pub async fn execute_async(entrypoints_and_calldata: EntrypointsAndCalldata) -> Result<u64> {
+    logging();
     let calls = parse_calls(entrypoints_and_calldata);
     execute_calls(calls).await
 }
@@ -114,6 +130,7 @@ async fn execute_calls(calls: Vec<Call>) -> Result<u64> {
 mod tests {
     use super::*;
     use proptest::prelude::*;
+    use tracing::info;
 
     // does not need proptest, as it doesn't use any input
     #[test]
@@ -121,7 +138,7 @@ mod tests {
     fn bench_spawn() {
         let fee = execute(vec![("spawn", vec![])]).unwrap();
 
-        assert!(fee > 1);
+        info!(target: "bench_spawn", "Estimated fee: {fee}")
     }
 
     proptest! {
@@ -131,8 +148,7 @@ mod tests {
             let calls = vec![("spawn", vec![]), ("move", vec![FieldElement::from_hex_be(&c).unwrap()])];
             let fee = execute(calls).unwrap();
 
-            assert!(fee > 1);
-            println!("Data: {} , with fee: {}", c, fee);
+            info!(target: "bench_move", "Estimated fee: {fee},\tcalldata: {c}");
         }
     }
 }

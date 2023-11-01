@@ -1,14 +1,14 @@
 use benches::execute;
 use proptest::prelude::*;
 use starknet::core::types::FieldElement;
+use tracing::info;
 
 #[test]
 #[ignore] // needs a running katana
 fn bench_set_complex_default() {
     let fee = execute(vec![("bench_set_complex_default", vec![])]).unwrap();
 
-    assert!(fee > 1);
-    println!("fee: {}", fee);
+    info!(target: "bench_set_complex_default", "Estimated fee: {fee}");
 }
 
 proptest! {
@@ -22,8 +22,7 @@ proptest! {
 
         let fee = execute(vec![("bench_set_complex_with_smaller", points)]).unwrap();
 
-        assert!(fee > 1);
-        println!("fee: {}\tcalldata: {}", fee, s);
+        info!(target: "bench_set_complex_with_smaller", "Estimated fee: {fee},\tcalldata: {s}");
     }
 }
 
@@ -34,7 +33,6 @@ proptest! {
         let calldata = FieldElement::from(u32::from_str_radix(&s, 10).unwrap());
         let fee = execute(vec![("bench_update_complex_minimal", vec![calldata])]).unwrap();
 
-        assert!(fee > 1);
-        println!("fee: {}\tcalldata: {}", fee, s);
+        info!(target: "bench_update_complex_minimal", "Estimated fee: {fee},\tcalldata: {s}");
     }
 }

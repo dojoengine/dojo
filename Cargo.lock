@@ -647,6 +647,8 @@ dependencies = [
  "sozo",
  "starknet",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
