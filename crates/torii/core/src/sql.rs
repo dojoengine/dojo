@@ -12,6 +12,7 @@ use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
+use crate::model::ModelSQLReader;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{Entity, Model as ModelType};
 
@@ -220,6 +221,11 @@ impl Sql {
         self.execute().await?;
 
         Ok(())
+    }
+
+    pub async fn model(&self, model: &str) -> Result<ModelSQLReader> {
+        let reader = ModelSQLReader::new(model, self.pool.clone()).await?;
+        Ok(reader)
     }
 
     pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
