@@ -11,7 +11,7 @@ use starknet::core::utils::{
 use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
 
-use super::model::{ModelError, ModelReader};
+use super::model::{ModelError, ModelRPCReader};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -177,7 +177,7 @@ where
     pub async fn model(
         &'a self,
         name: &str,
-    ) -> Result<ModelReader<'_, &'a A::Provider>, ModelError<<A::Provider as Provider>::Error>>
+    ) -> Result<ModelRPCReader<'_, &'a A::Provider>, ModelError<<A::Provider as Provider>::Error>>
     {
         self.reader.model(name).await
     }
@@ -340,9 +340,12 @@ where
 
 impl<'a, P> WorldContractReader<P>
 where
-    P: Provider,
+    P: Provider + Sync + Send,
 {
-    pub async fn model(&'a self, name: &str) -> Result<ModelReader<'a, P>, ModelError<P::Error>> {
-        ModelReader::new(name, self).await
+    pub async fn model(
+        &'a self,
+        name: &str,
+    ) -> Result<ModelRPCReader<'a, P>, ModelError<P::Error>> {
+        ModelRPCReader::new(name, self).await
     }
 }

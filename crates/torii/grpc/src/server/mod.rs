@@ -1,7 +1,6 @@
 pub mod error;
 pub mod logger;
 pub mod subscription;
-pub mod utils;
 
 use std::pin::Pin;
 use std::str::FromStr;
@@ -20,10 +19,10 @@ use starknet_crypto::FieldElement;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
+use torii_core::error::{Error, ParseError};
+use torii_core::model::{parse_sql_model_members, SqlModelMember};
 
-use self::error::{Error, ParseError};
 use self::subscription::SubscribeRequest;
-use self::utils::{parse_sql_model_members, SqlModelMember};
 use crate::protos::{self};
 
 #[derive(Clone)]

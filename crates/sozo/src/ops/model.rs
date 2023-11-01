@@ -1,4 +1,5 @@
 use anyhow::Result;
+use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, BlockTag};

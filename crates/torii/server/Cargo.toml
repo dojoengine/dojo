@@ -23,7 +23,7 @@ indexmap = "1.9.3"
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sqlx = { version = "0.6.2", features = [ "chrono", "macros", "offline", "runtime-actix-rustls", "uuid" ] }
+sqlx.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 tokio-stream = "0.1.11"
