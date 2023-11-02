@@ -33,6 +33,8 @@ mod tests {
             .await
             .unwrap();
 
+        db.execute().await.unwrap();
+
         let query = r#"
           {
             metadatas {

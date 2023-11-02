@@ -7,12 +7,13 @@ use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
-use sqlx::{Executor, Pool, Sqlite};
+use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
 use crate::model::ModelSQLReader;
+use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
 use crate::types::{Entity, Model as ModelType};
 
@@ -26,57 +27,49 @@ mod test;
 pub struct Sql {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
-    query_queue: Vec<String>,
+    query_queue: QueryQueue,
 }
 
 impl Sql {
     pub async fn new(pool: Pool<Sqlite>, world_address: FieldElement) -> Result<Self> {
-        let queries = vec![
-            format!(
-                "INSERT OR IGNORE INTO indexers (id, head) VALUES ('{:#x}', '{}')",
-                world_address, 0
-            ),
-            format!(
-                "INSERT OR IGNORE INTO worlds (id, world_address) VALUES ('{:#x}', '{:#x}')",
-                world_address, world_address
-            ),
-        ];
+        let mut query_queue = QueryQueue::new(pool.clone());
 
-        let mut tx = pool.begin().await?;
+        query_queue.enqueue(
+            "INSERT OR IGNORE INTO indexers (id, head) VALUES (?, ?)",
+            vec![Argument::FieldElement(world_address), Argument::Int(0)],
+        );
+        query_queue.enqueue(
+            "INSERT OR IGNORE INTO worlds (id, world_address) VALUES (?, ?)",
+            vec![Argument::FieldElement(world_address), Argument::FieldElement(world_address)],
+        );
 
-        for query in queries {
-            tx.execute(sqlx::query(&query)).await?;
-        }
+        query_queue.execute_all().await?;
 
-        tx.commit().await?;
-
-        Ok(Self { pool, world_address, query_queue: vec![] })
+        Ok(Self { pool, world_address, query_queue })
     }
 
     pub async fn head(&self) -> Result<u64> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer: (i64,) = sqlx::query_as(&format!(
-            "SELECT head FROM indexers WHERE id = '{:#x}'",
-            self.world_address
-        ))
-        .fetch_one(&mut conn)
-        .await?;
-        Ok(indexer.0.try_into().expect("doesnt fit in u64"))
+        let indexer_query = sqlx::query_as::<_, (i64,)>("SELECT head FROM indexers WHERE id = ?")
+            .bind(format!("{:#x}", self.world_address));
+
+        let indexer: (i64,) = indexer_query.fetch_one(&mut conn).await?;
+        Ok(indexer.0.try_into().expect("doesn't fit in u64"))
     }
 
     pub fn set_head(&mut self, head: u64) {
-        self.query_queue.push(format!(
-            "UPDATE indexers SET head = {head} WHERE id = '{:#x}'",
-            self.world_address
-        ));
+        let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
+        let id = Argument::String(format!("{:#x}", self.world_address));
+
+        self.query_queue.enqueue("UPDATE indexers SET head = ? WHERE id = ?", vec![head, id]);
     }
 
     pub async fn world(&self) -> Result<World> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let meta: World =
-            sqlx::query_as(&format!("SELECT * FROM worlds WHERE id = '{:#x}'", self.world_address))
-                .fetch_one(&mut conn)
-                .await?;
+        let meta: World = sqlx::query_as("SELECT * FROM worlds WHERE id = ?")
+            .bind(format!("{:#x}", self.world_address))
+            .fetch_one(&mut conn)
+            .await?;
 
         Ok(meta)
     }
@@ -93,22 +86,25 @@ impl Sql {
             .iter()
             .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
             .collect::<Vec<u8>>();
-        let insert_models = format!(
-            "INSERT INTO models (id, name, class_hash, layout, packed_size, unpacked_size) VALUES \
-             ('{id}', '{name}', '{class_hash:#x}', '{layout}', '{packed_size}', \
-             '{unpacked_size}') ON CONFLICT(id) DO UPDATE SET class_hash='{class_hash:#x}', \
-             layout='{layout}', packed_size='{packed_size}', unpacked_size='{unpacked_size}' \
-             RETURNING created_at",
-            id = model.name(),
-            name = model.name(),
-            layout = hex::encode(&layout_blob)
-        );
-        // execute first to get created_at
-        let query_result: (DateTime<Utc>,) =
-            sqlx::query_as(&insert_models).fetch_one(&self.pool).await?;
-        let mut model_idx = 0_usize;
+
+        let insert_models = "INSERT INTO models (id, name, class_hash, layout, packed_size, \
+                             unpacked_size) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE \
+                             SET class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
+                             packed_size=EXCLUDED.packed_size, \
+                             unpacked_size=EXCLUDED.unpacked_size RETURNING created_at";
+        let query_result: (DateTime<Utc>,) = sqlx::query_as(insert_models)
+            .bind(model.name())
+            .bind(model.name())
+            .bind(format!("{class_hash:#x}"))
+            .bind(hex::encode(&layout_blob))
+            .bind(packed_size)
+            .bind(unpacked_size)
+            .fetch_one(&self.pool)
+            .await?;
+
+        let mut model_idx = 0_i64;
         self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
-        self.execute().await?;
+        self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(ModelType {
             id: model.name(),
@@ -147,19 +143,21 @@ impl Sql {
         };
 
         let keys_str = felts_sql_string(&keys);
-        let insert_entities = format!(
-            "INSERT INTO entities (id, keys, model_names, event_id) VALUES ('{}', '{}', '{}', \
-             '{}') ON CONFLICT(id) DO UPDATE SET model_names=excluded.model_names, \
-             updated_at=CURRENT_TIMESTAMP, event_id=excluded.event_id RETURNING created_at",
-            entity_id, keys_str, model_names, event_id
-        );
-        // execute first to get created_at
-        let query_result: (DateTime<Utc>,) =
-            sqlx::query_as(&insert_entities).fetch_one(&self.pool).await?;
+        let insert_entities = "INSERT INTO entities (id, keys, model_names, event_id) VALUES (?, \
+                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+                               model_names=EXCLUDED.model_names, updated_at=CURRENT_TIMESTAMP, \
+                               event_id=EXCLUDED.event_id RETURNING created_at";
+        let query_result: (DateTime<Utc>,) = sqlx::query_as(insert_entities)
+            .bind(&entity_id)
+            .bind(&keys_str)
+            .bind(&model_names)
+            .bind(event_id)
+            .fetch_one(&self.pool)
+            .await?;
 
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
-        self.execute().await?;
+        self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(Entity {
             id: entity_id.clone(),
@@ -173,16 +171,21 @@ impl Sql {
     }
 
     pub fn delete_entity(&mut self, model: String, key: FieldElement) {
-        let query = format!("DELETE FROM {model} WHERE id = {key}");
-        self.query_queue.push(query);
+        let model = Argument::String(model);
+        let id = Argument::FieldElement(key);
+
+        self.query_queue.enqueue("DELETE FROM ? WHERE id = ?", vec![model, id]);
     }
 
     pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str) {
-        self.query_queue.push(format!(
-            "INSERT INTO metadata (id, uri) VALUES ('{:#x}', '{}') ON CONFLICT(id) DO UPDATE SET \
+        let resource = Argument::FieldElement(*resource);
+        let uri = Argument::String(uri.to_string());
+
+        self.query_queue.enqueue(
+            "INSERT INTO metadata (id, uri) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET \
              id=excluded.id, updated_at=CURRENT_TIMESTAMP",
-            resource, uri
-        ));
+            vec![resource, uri],
+        );
     }
 
     pub async fn update_metadata(
@@ -193,32 +196,38 @@ impl Sql {
         icon_img: &Option<String>,
         cover_img: &Option<String>,
     ) -> Result<()> {
-        let mut image_columns = String::new();
-        let mut image_values = String::new();
-        let mut image_updated = String::new();
+        let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
+
+        let mut columns = vec!["id", "uri", "json"];
+        let mut update =
+            vec!["id=excluded.id", "json=excluded.json", "updated_at=CURRENT_TIMESTAMP"];
+        let mut arguments = vec![
+            Argument::FieldElement(*resource),
+            Argument::String(uri.to_string()),
+            Argument::String(json),
+        ];
 
         if let Some(icon) = icon_img {
-            image_columns = ", icon_img".to_string();
-            image_values = format!(", '{}'", icon);
-            image_updated = ", icon_img=excluded.icon_img".to_string();
+            columns.push("icon_img");
+            arguments.push(Argument::String(icon.clone()));
+            update.push("icon_img=excluded.icon_img");
         }
 
         if let Some(cover) = cover_img {
-            image_columns = format!("{}, cover_img", image_columns);
-            image_values = format!("{}, '{}'", image_values, cover);
-            image_updated = format!("{}, cover_img=excluded.cover_img", image_updated);
+            columns.push("cover_img");
+            arguments.push(Argument::String(cover.clone()));
+            update.push("cover_img=excluded.cover_img");
         }
 
-        let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
-
-        let query = format!(
-            "INSERT INTO metadata (id, uri, json {image_columns}) VALUES ('{resource:#x}', \
-             '{uri}', '{json}' {image_values}) ON CONFLICT(id) DO UPDATE SET id=excluded.id, \
-             json=excluded.json, updated_at=CURRENT_TIMESTAMP {image_updated}"
+        let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
+        let statement = format!(
+            "INSERT INTO metadata ({}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {}",
+            columns.join(","),
+            placeholders.join(","),
+            update.join(",")
         );
 
-        self.query_queue.push(query);
-        self.execute().await?;
+        self.query_queue.enqueue(statement, arguments);
 
         Ok(())
     }
@@ -229,55 +238,55 @@ impl Sql {
     }
 
     pub async fn entity(&self, model: String, key: FieldElement) -> Result<Vec<FieldElement>> {
-        let query = format!("SELECT * FROM {model} WHERE id = {key}");
+        let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ? WHERE id = ?")
+            .bind(model)
+            .bind(format!("{:#x}", key));
+
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let row: (i32, String, String) = sqlx::query_as(&query).fetch_one(&mut conn).await?;
+        let row: (i32, String, String) = query.fetch_one(&mut conn).await?;
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
     pub async fn entities(&self, model: String) -> Result<Vec<Vec<FieldElement>>> {
-        let query = format!("SELECT * FROM {model}");
+        let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ?").bind(model);
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let mut rows =
-            sqlx::query_as::<_, (i32, String, String)>(&query).fetch_all(&mut conn).await?;
+        let mut rows = query.fetch_all(&mut conn).await?;
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
     pub fn store_transaction(&mut self, transaction: &InvokeTransactionV1, transaction_id: &str) {
-        let txn_query = format!(
-            "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce) VALUES
-            ('{}', '{:#x}', '{}', '{}', '{:#x}', '{}', '{:#x}')",
-            transaction_id,
-            transaction.transaction_hash,
-            transaction.sender_address,
-            felts_sql_string(&transaction.calldata),
-            transaction.max_fee,
-            felts_sql_string(&transaction.signature),
-            transaction.nonce
-        );
+        let id = Argument::String(transaction_id.to_string());
+        let transaction_hash = Argument::FieldElement(transaction.transaction_hash);
+        let sender_address = Argument::FieldElement(transaction.sender_address);
+        let calldata = Argument::String(felts_sql_string(&transaction.calldata));
+        let max_fee = Argument::FieldElement(transaction.max_fee);
+        let signature = Argument::String(felts_sql_string(&transaction.signature));
+        let nonce = Argument::FieldElement(transaction.nonce);
 
-        self.query_queue.push(txn_query);
+        self.query_queue.enqueue(
+            "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
+             max_fee, signature, nonce) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            vec![id, transaction_hash, sender_address, calldata, max_fee, signature, nonce],
+        );
     }
 
     pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {
-        let keys_str = felts_sql_string(&event.keys);
-        let data_str = felts_sql_string(&event.data);
+        let id = Argument::String(event_id.to_string());
+        let keys = Argument::String(felts_sql_string(&event.keys));
+        let data = Argument::String(felts_sql_string(&event.data));
+        let transaction_hash = Argument::FieldElement(transaction_hash);
 
-        let query = format!(
-            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES ('{}', '{}', \
-             '{}', '{:#x}')",
-            event_id, keys_str, data_str, transaction_hash
+        self.query_queue.enqueue(
+            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES (?, ?, ?, ?)",
+            vec![id, keys, data, transaction_hash],
         );
-
-        self.query_queue.push(query);
     }
 
     fn build_register_queries_recursive(
         &mut self,
         model: &Ty,
         path: Vec<String>,
-        model_idx: &mut usize,
+        model_idx: &mut i64,
     ) {
         if let Ty::Enum(_) = model {
             // Complex enum values not supported yet.
@@ -315,27 +324,32 @@ impl Sql {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
                 let mut columns = vec!["entity_id".to_string(), "event_id".to_string()];
-                let mut values = vec![format!("'{entity_id}', '{event_id}'")];
+                let mut arguments = vec![
+                    Argument::String(entity_id.to_string()),
+                    Argument::String(event_id.to_string()),
+                ];
 
                 for member in s.children.iter() {
                     match &member.ty {
                         Ty::Primitive(ty) => {
                             columns.push(format!("external_{}", &member.name));
-                            values.push(ty.to_sql_value().unwrap());
+                            arguments.push(Argument::String(ty.to_sql_value().unwrap()));
                         }
                         Ty::Enum(e) => {
                             columns.push(format!("external_{}", &member.name));
-                            values.push(e.to_sql_value().unwrap());
+                            arguments.push(Argument::String(e.to_sql_value().unwrap()));
                         }
                         _ => {}
                     }
                 }
 
-                self.query_queue.push(format!(
+                let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
+                let statement = format!(
                     "INSERT OR REPLACE INTO [{table_id}] ({}) VALUES ({})",
-                    columns.join(", "),
-                    values.join(", ")
-                ));
+                    columns.join(","),
+                    placeholders.join(",")
+                );
+                self.query_queue.enqueue(statement, arguments);
 
                 for member in s.children.iter() {
                     if let Ty::Struct(_) = &member.ty {
@@ -361,11 +375,11 @@ impl Sql {
         }
     }
 
-    fn build_model_query(&mut self, path: Vec<String>, model: &Ty, model_idx: usize) {
+    fn build_model_query(&mut self, path: Vec<String>, model: &Ty, model_idx: i64) {
         let table_id = path.join("$");
         let mut indices = Vec::new();
 
-        let mut query = format!(
+        let mut create_table_query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
              event_id, "
         );
@@ -376,7 +390,8 @@ impl Sql {
                 let mut options = None; // TEMP: doesnt support complex enums yet
 
                 if let Ok(cairo_type) = Primitive::from_str(&member.ty.name()) {
-                    query.push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
+                    create_table_query
+                        .push_str(&format!("external_{name} {}, ", cairo_type.to_sql_type()));
                     indices.push(format!(
                         "CREATE INDEX IF NOT EXISTS idx_{table_id}_{name} ON [{table_id}] \
                          (external_{name});"
@@ -389,7 +404,7 @@ impl Sql {
                         .collect::<Vec<_>>()
                         .join(", ");
 
-                    query.push_str(&format!(
+                    create_table_query.push_str(&format!(
                         "external_{name} TEXT CHECK(external_{name} IN ({all_options})) NOT NULL, ",
                     ));
 
@@ -398,50 +413,51 @@ impl Sql {
                          (external_{name});"
                     ));
 
-                    options = Some(format!(
+                    options = Some(Argument::String(format!(
                         r#""{}""#,
                         e.options.iter().map(|c| c.name.clone()).collect::<Vec<_>>().join(",")
-                    ));
+                    )));
                 }
 
-                self.query_queue.push(format!(
-                    "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, member_idx, \
-                     name, type, type_enum, enum_options, key) VALUES ('{table_id}', '{}', \
-                     '{model_idx}', '{member_idx}', '{name}', '{}', '{}', {}, {})",
-                    path[0],
-                    member.ty.name(),
-                    member.ty.as_ref(),
-                    options.unwrap_or("NULL".into()),
-                    member.key,
-                ));
+                let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
+                                 member_idx, name, type, type_enum, enum_options, key) VALUES (?, \
+                                 ?, ?, ?, ?, ?, ?, ?, ?)";
+                let arguments = vec![
+                    Argument::String(table_id.clone()),
+                    Argument::String(path[0].clone()),
+                    Argument::Int(model_idx),
+                    Argument::Int(member_idx as i64),
+                    Argument::String(name),
+                    Argument::String(member.ty.name()),
+                    Argument::String(member.ty.as_ref().into()),
+                    options.unwrap_or(Argument::Null),
+                    Argument::Bool(member.key),
+                ];
+
+                self.query_queue.enqueue(statement, arguments);
             }
         }
 
-        query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
-            query.push_str(&format!(
+            create_table_query.push_str(&format!(
                 "FOREIGN KEY (entity_id) REFERENCES {parent_table_id} (entity_id), "
             ));
         };
 
-        query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
-        self.query_queue.push(query);
-        self.query_queue.extend(indices);
+        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
+        self.query_queue.enqueue(create_table_query, vec![]);
+
+        indices.iter().for_each(|s| {
+            self.query_queue.enqueue(s, vec![]);
+        });
     }
 
     pub async fn execute(&mut self) -> Result<()> {
-        let queries = self.query_queue.clone();
-        self.query_queue.clear();
-
-        let mut tx = self.pool.begin().await?;
-        for query in queries {
-            tx.execute(sqlx::query(&query)).await?;
-        }
-
-        tx.commit().await?;
+        self.query_queue.execute_all().await?;
 
         Ok(())
     }

@@ -277,7 +277,7 @@ impl Enum {
     }
 
     pub fn to_sql_value(&self) -> Result<String, EnumError> {
-        Ok(format!("'{}'", self.option()?))
+        self.option()
     }
 }
 

@@ -165,12 +165,12 @@ impl Primitive {
             | Primitive::U32(_)
             | Primitive::U64(_)
             | Primitive::USize(_)
-            | Primitive::Bool(_) => Ok(format!("'{}'", value[0])),
+            | Primitive::Bool(_) => Ok(format!("{}", value[0])),
 
             Primitive::U128(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
-            | Primitive::Felt252(_) => Ok(format!("'0x{:064x}'", value[0])),
+            | Primitive::Felt252(_) => Ok(format!("0x{:064x}", value[0])),
 
             Primitive::U256(_) => {
                 if value.len() < 2 {
@@ -181,7 +181,7 @@ impl Primitive {
                     let value1_bytes = value[1].to_bytes_be();
                     buffer[16..].copy_from_slice(&value0_bytes[16..]);
                     buffer[..16].copy_from_slice(&value1_bytes[16..]);
-                    Ok(format!("'0x{}'", hex::encode(buffer)))
+                    Ok(format!("0x{}", hex::encode(buffer)))
                 }
             }
         }
@@ -321,10 +321,7 @@ mod tests {
         let mut deserialized = primitive;
         deserialized.deserialize(&mut serialized.clone()).unwrap();
 
-        assert_eq!(
-            sql_value,
-            "'0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd'"
-        );
+        assert_eq!(sql_value, "0xaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd");
         assert_eq!(
             serialized,
             vec![

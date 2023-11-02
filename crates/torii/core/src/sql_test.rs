@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
@@ -7,7 +9,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::strategy::MigrationStrategy;
 use scarb::ops;
 use sozo::ops::migration::execute_strategy;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -54,8 +56,9 @@ where
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_load_from_remote() {
-    let pool =
-        SqlitePoolOptions::new().max_connections(5).connect("sqlite::memory:").await.unwrap();
+    let options =
+        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
     let migration =
         prepare_migration("../../../examples/spawn-and-move/target/dev".into()).unwrap();
