@@ -40,7 +40,7 @@ impl ModelSQLReader {
         let layout = hex::decode(layout).unwrap();
         let layout = layout.iter().map(|e| FieldElement::from(*e)).collect();
 
-        Ok(Self { name: name.clone(), class_hash, pool, packed_size, unpacked_size, layout })
+        Ok(Self { name, class_hash, pool, packed_size, unpacked_size, layout })
     }
 }
 
