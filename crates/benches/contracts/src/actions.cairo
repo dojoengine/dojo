@@ -6,12 +6,30 @@ use benches::character::Abilities;
 trait IActions<TContractState> {
     fn spawn(self: @TContractState);
     fn move(self: @TContractState, direction: Direction);
+
     fn bench_basic_emit(self: @TContractState, name: felt252);
     fn bench_basic_set(self: @TContractState, name: felt252);
     fn bench_basic_double_set(self: @TContractState, name: felt252);
     fn bench_basic_get(self: @TContractState);
+
+    fn bench_primitive_pass_many(
+        self: @TContractState,
+        first: felt252,
+        second: felt252,
+        third: felt252,
+        fourth: felt252,
+        fifth: felt252,
+        sixth: felt252,
+        seventh: felt252,
+        eighth: felt252,
+        ninth: felt252,
+    );
+    fn bench_primitive_iter(self: @TContractState, n: u32);
+    fn bench_primitive_hash(self: @TContractState, a: felt252, b: felt252, c: felt252);
+
     fn bench_complex_set_default(self: @TContractState);
     fn bench_complex_set_with_smaller(self: @TContractState, abilities: Abilities);
+    fn bench_complex_get(self: @TContractState, earned: u32);
     fn bench_complex_update_minimal(self: @TContractState, earned: u32);
 }
 
@@ -23,7 +41,9 @@ mod actions {
     use benches::utils::next_position;
     use benches::character::{Character, Abilities, Stats, Weapon, Sword};
     use super::IActions;
-    use debug::PrintTrait;
+    use array::ArrayTrait;
+    use array::SpanTrait;
+    use poseidon::poseidon_hash_span;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -133,21 +153,39 @@ mod actions {
 
             get!(world, player, Alias);
         }
+
+        fn bench_primitive_pass_many(self: @ContractState,
+            first: felt252,
+            second: felt252,
+            third: felt252,
+            fourth: felt252,
+            fifth: felt252,
+            sixth: felt252,
+            seventh: felt252,
+            eighth: felt252,
+            ninth: felt252,
+        ) {
+            let sum = first + second + third + fourth + fifth + sixth + seventh + eighth + ninth;
+        }
+
+        fn bench_primitive_iter(self: @ContractState, n: u32) {
+            let mut i = 0;
+            loop {
+                if i == n {
+                    break;
+                }
+                i += 1;
+            }
+        }
+
+        fn bench_primitive_hash(self: @ContractState, a: felt252, b: felt252, c: felt252) { 
+            let hash = poseidon_hash_span(array![a, b, c].span());
+        }
+
         
         fn bench_complex_set_default(self: @ContractState) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
-
-            // let abi = Abilities {
-            //     strength: 1,
-            //     dexterity: 2,
-            //     constitution: 3,
-            //     intelligence: 4,
-            //     wisdom: 5,
-            //     charisma: 6,
-            // };
-            // let s = dojo::model::Model::values(@abi);
-            // (*s.at(0)).print();
 
             set!(world, Character {
                 caller: get_caller_address(),
@@ -218,6 +256,12 @@ mod actions {
             });
         }
         
+        fn bench_complex_get(self: @ContractState, earned: u32) {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+            let char = get!(world, caller, Character);
+        }
+
         fn bench_complex_update_minimal(self: @ContractState, earned: u32) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
