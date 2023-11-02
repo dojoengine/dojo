@@ -5,3 +5,4 @@ name = "origami"
 version = "0.3.2"
 
 [dependencies]
+# dojo.workspace = true  # fails because of dojo_plugin in dojo_core
