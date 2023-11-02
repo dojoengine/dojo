@@ -42,7 +42,7 @@ trait DeckTrait {
     /// * `self` - The Deck.
     /// * `card` - The card to discard.
     fn discard(ref self: Deck, card: u8);
-    /// Withdraw a card from the deck, the card is not drwable anymore.
+    /// Withdraw a card from the deck, the card is not drawable anymore.
     /// # Arguments
     /// * `self` - The Deck.
     /// * `card` - The card to withdraw.
