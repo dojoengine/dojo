@@ -1,11 +1,11 @@
-use benches::{execute, log};
+use benches::{estimate_gas, estimate_gas_multiple, log, BenchCall};
 use proptest::prelude::*;
 use starknet::core::types::FieldElement;
 
 #[test]
 #[ignore] // needs a running katana
 fn bench_complex_set_default() {
-    let fee = execute(vec![("bench_complex_set_default", vec![])]).unwrap();
+    let fee = estimate_gas(BenchCall("bench_complex_set_default", vec![])).unwrap();
 
     log("bench_complex_set_default", fee, "");
 }
@@ -19,9 +19,9 @@ proptest! {
             .map(|p| FieldElement::from(p))
             .collect();
 
-        let fee = execute(vec![
-            ("bench_complex_set_with_smaller", points)
-        ]).unwrap();
+        let fee = estimate_gas(
+            BenchCall("bench_complex_set_with_smaller", points)
+        ).unwrap();
 
         log("bench_complex_set_with_smaller", fee, &s);
     }
@@ -32,9 +32,9 @@ proptest! {
     #[ignore] // needs a running katana
     fn bench_complex_update_minimal(s in "[0-9]{9}") {
         let calldata = FieldElement::from(u32::from_str_radix(&s, 10).unwrap());
-        let fee = execute(vec![
-            ("bench_complex_update_minimal", vec![calldata])
-        ]).unwrap();
+        let fee = estimate_gas(
+            BenchCall("bench_complex_update_minimal", vec![calldata])
+        ).unwrap();
 
         log("bench_complex_update_minimal", fee, &s);
     }
