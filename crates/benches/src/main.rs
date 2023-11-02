@@ -35,8 +35,10 @@ fn main() {
         }
     }
 
-    // Runs should be file wise alphabetical because of the order tests are run
-    for (name, mut runs) in map {
+    let mut pairs = map.into_iter().map(|(name, runs)| (name, runs)).collect::<Vec<_>>();
+    pairs.sort_by_key(|(key, _)| key.clone());
+
+    for (name, mut runs) in pairs {
         runs.sort_by_key(|(gas, _)| *gas);
         let (gas, calldata): (Vec<_>, Vec<_>) = runs.into_iter().unzip();
 

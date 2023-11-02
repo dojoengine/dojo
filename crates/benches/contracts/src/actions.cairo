@@ -6,12 +6,12 @@ use benches::character::Abilities;
 trait IActions<TContractState> {
     fn spawn(self: @TContractState);
     fn move(self: @TContractState, direction: Direction);
-    fn bench_emit(self: @TContractState, name: felt252);
-    fn bench_set(self: @TContractState, name: felt252);
-    fn bench_get(self: @TContractState);
-    fn bench_set_complex_default(self: @TContractState);
-    fn bench_set_complex_with_smaller(self: @TContractState, abilities: Abilities);
-    fn bench_update_complex_minimal(self: @TContractState, earned: u32);
+    fn bench_basic_emit(self: @TContractState, name: felt252);
+    fn bench_basic_set(self: @TContractState, name: felt252);
+    fn bench_basic_get(self: @TContractState);
+    fn bench_complex_set_default(self: @TContractState);
+    fn bench_complex_set_with_smaller(self: @TContractState, abilities: Abilities);
+    fn bench_complex_update_minimal(self: @TContractState, earned: u32);
 }
 
 // dojo decorator
@@ -104,28 +104,28 @@ mod actions {
             emit!(world, Moved { player, direction });
         }
 
-        fn bench_emit(self: @ContractState, name: felt252) {
+        fn bench_basic_emit(self: @ContractState, name: felt252) {
             let world = self.world_dispatcher.read();
             let player = get_caller_address();
 
             emit!(world, Aliased { player, name: name });
         }
 
-        fn bench_set(self: @ContractState, name: felt252) {
+        fn bench_basic_set(self: @ContractState, name: felt252) {
             let world = self.world_dispatcher.read();
             let player = get_caller_address();
 
             set!(world, Alias { player, name: name });
         }
 
-        fn bench_get(self: @ContractState) {
+        fn bench_basic_get(self: @ContractState) {
             let world = self.world_dispatcher.read();
             let player = get_caller_address();
 
             get!(world, player, Alias);
         }
         
-        fn bench_set_complex_default(self: @ContractState) {
+        fn bench_complex_set_default(self: @ContractState) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
 
@@ -176,7 +176,7 @@ mod actions {
             });
         }
 
-        fn bench_set_complex_with_smaller(self: @ContractState, abilities: Abilities) {
+        fn bench_complex_set_with_smaller(self: @ContractState, abilities: Abilities) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
 
@@ -209,7 +209,7 @@ mod actions {
             });
         }
         
-        fn bench_update_complex_minimal(self: @ContractState, earned: u32) {
+        fn bench_complex_update_minimal(self: @ContractState, earned: u32) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
 
