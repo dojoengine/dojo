@@ -8,6 +8,7 @@ trait IActions<TContractState> {
     fn move(self: @TContractState, direction: Direction);
     fn bench_basic_emit(self: @TContractState, name: felt252);
     fn bench_basic_set(self: @TContractState, name: felt252);
+    fn bench_basic_double_set(self: @TContractState, name: felt252);
     fn bench_basic_get(self: @TContractState);
     fn bench_complex_set_default(self: @TContractState);
     fn bench_complex_set_with_smaller(self: @TContractState, abilities: Abilities);
@@ -115,6 +116,14 @@ mod actions {
             let world = self.world_dispatcher.read();
             let player = get_caller_address();
 
+            set!(world, Alias { player, name: name });
+        }
+
+        fn bench_basic_double_set(self: @ContractState, name: felt252) {
+            let world = self.world_dispatcher.read();
+            let player = get_caller_address();
+
+            set!(world, Alias { player, name: name });
             set!(world, Alias { player, name: name });
         }
 
