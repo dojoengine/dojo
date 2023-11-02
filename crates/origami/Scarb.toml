@@ -4,9 +4,4 @@ description = "Implementations of common primitives for the Dojo games"
 name = "origami"
 version = "0.3.2"
 
-[lib]
-
 [dependencies]
-dojo = { path = "../dojo-core" }
-
-[[target.dojo]]

@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "crates/origami",
+]
+name = "dojo"
+version = "0.3.3"
+description = "Community maintained Cairo game-ortiented libraries"
+homepage = "https://github.com/dojoengine/dojo"
+
+[scripts]
+all = "scarb build && scarb test"
