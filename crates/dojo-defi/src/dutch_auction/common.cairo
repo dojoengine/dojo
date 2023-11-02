@@ -12,6 +12,11 @@ fn from_days_fp(x: Fixed) -> Fixed {
 
 #[cfg(test)]
 mod test_common {
+    use cubit::f128::types::fixed::{Fixed, FixedTrait, ONE_u128};
+    use dojo_defi::tests::utils::{assert_approx_equal, TOLERANCE};
+
+    use super::{to_days_fp, from_days_fp};
+
     #[test]
     #[available_gas(20000000)]
     fn test_days_convertions() {
