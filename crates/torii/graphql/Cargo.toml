@@ -29,6 +29,7 @@ tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
 torii-core = { path = "../core" }
+toml.workspace = true
 tracing.workspace = true
 url.workspace = true
 warp.workspace = true

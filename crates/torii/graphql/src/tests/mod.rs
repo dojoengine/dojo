@@ -29,6 +29,7 @@ use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
 mod entities_test;
+mod metadata_test;
 mod models_test;
 mod subscription_test;
 
@@ -128,6 +129,30 @@ pub struct Subrecord {
     pub type_u8: u8,
     pub random_u8: u8,
     pub entity: Option<Entity>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct Social {
+    pub name: String,
+    pub url: String,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct Content {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub website: Option<String>,
+    pub icon_uri: Option<String>,
+    pub cover_uri: Option<String>,
+    pub socials: Option<Vec<Social>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Metadata {
+    pub uri: String,
+    pub icon_img: String,
+    pub cover_img: String,
+    pub content: Content,
 }
 
 pub async fn run_graphql_query(schema: &Schema, query: &str) -> Value {

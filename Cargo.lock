@@ -8405,6 +8405,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "toml 0.7.8",
  "torii-core",
  "tracing",
  "url",
