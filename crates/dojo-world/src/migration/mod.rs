@@ -45,7 +45,7 @@ pub struct RegisterOutput {
 }
 
 #[derive(Debug, Error)]
-pub enum MigrationError<S, P> {
+pub enum MigrationError<S> {
     #[error("Compiling contract.")]
     CompilingContract,
     #[error("Class already declared.")]
@@ -53,13 +53,13 @@ pub enum MigrationError<S, P> {
     #[error("Contract already deployed.")]
     ContractAlreadyDeployed(FieldElement),
     #[error(transparent)]
-    Migrator(#[from] AccountError<S, P>),
+    Migrator(#[from] AccountError<S>),
     #[error(transparent)]
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
-    Provider(#[from] ProviderError<P>),
+    Provider(#[from] ProviderError),
     #[error(transparent)]
-    WaitingError(#[from] TransactionWaitingError<P>),
+    WaitingError(#[from] TransactionWaitingError),
 }
 
 /// Represents the type of migration that should be performed.
@@ -93,10 +93,7 @@ pub trait Declarable {
         &self,
         account: &SingleOwnerAccount<P, S>,
         txn_config: TxConfig,
-    ) -> Result<
-        DeclareOutput,
-        MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
-    >
+    ) -> Result<DeclareOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
         S: Signer + Sync + Send,
@@ -146,10 +143,7 @@ pub trait Deployable: Declarable + Sync {
         class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
         txn_config: TxConfig,
-    ) -> Result<
-        DeployOutput,
-        MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
-    >
+    ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
         S: Signer + Sync + Send,
@@ -223,10 +217,7 @@ pub trait Deployable: Declarable + Sync {
         constructor_calldata: Vec<FieldElement>,
         account: &SingleOwnerAccount<P, S>,
         txn_config: TxConfig,
-    ) -> Result<
-        DeployOutput,
-        MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError, <P as Provider>::Error>,
-    >
+    ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
         S: Signer + Sync + Send,

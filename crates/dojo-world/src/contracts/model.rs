@@ -1,5 +1,6 @@
 use std::vec;
 
+use async_trait::async_trait;
 use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
@@ -27,17 +28,17 @@ const UNPACKED_SIZE_SELECTOR_STR: &str = "unpacked_size";
 mod model_test;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ModelError<P> {
+pub enum ModelError {
     #[error("Model not found.")]
     ModelNotFound,
     #[error(transparent)]
-    ProviderError(#[from] ProviderError<P>),
+    ProviderError(#[from] ProviderError),
     #[error(transparent)]
     ParseCairoShortStringError(#[from] ParseCairoShortStringError),
     #[error(transparent)]
     CairoShortStringToFeltError(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
-    ContractReaderError(#[from] ContractReaderError<P>),
+    ContractReaderError(#[from] ContractReaderError),
     #[error(transparent)]
     CairoTypeError(#[from] PrimitiveError),
     #[error(transparent)]
@@ -46,7 +47,17 @@ pub enum ModelError<P> {
     Packing(#[from] PackingError),
 }
 
-pub struct ModelReader<'a, P> {
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait ModelReader<E> {
+    fn class_hash(&self) -> FieldElement;
+    async fn schema(&self) -> Result<Ty, E>;
+    async fn packed_size(&self) -> Result<FieldElement, E>;
+    async fn unpacked_size(&self) -> Result<FieldElement, E>;
+    async fn layout(&self) -> Result<Vec<FieldElement>, E>;
+}
+
+pub struct ModelRPCReader<'a, P: Sync + Send> {
     /// The name of the model
     name: FieldElement,
     /// The class hash of the model
@@ -55,14 +66,14 @@ pub struct ModelReader<'a, P> {
     world_reader: &'a WorldContractReader<P>,
 }
 
-impl<'a, P> ModelReader<'a, P>
+impl<'a, P> ModelRPCReader<'a, P>
 where
-    P: Provider,
+    P: Provider + Sync + Send,
 {
     pub async fn new(
         name: &str,
         world: &'a WorldContractReader<P>,
-    ) -> Result<ModelReader<'a, P>, ModelError<P::Error>> {
+    ) -> Result<ModelRPCReader<'a, P>, ModelError> {
         let name = cairo_short_string_to_felt(name)?;
 
         let class_hash = world
@@ -88,58 +99,10 @@ where
         Ok(Self { world_reader: world, class_hash, name })
     }
 
-    pub fn class_hash(&self) -> FieldElement {
-        self.class_hash
-    }
-
-    pub async fn schema(&self) -> Result<Ty, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name(SCHEMA_SELECTOR_STR).unwrap();
-
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
-            .await?;
-
-        Ok(parse_ty(&res[1..])?)
-    }
-
-    pub async fn packed_size(&self) -> Result<FieldElement, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name(PACKED_SIZE_SELECTOR_STR).unwrap();
-
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
-            .await?;
-
-        Ok(res[1])
-    }
-
-    pub async fn unpacked_size(&self) -> Result<FieldElement, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name(UNPACKED_SIZE_SELECTOR_STR).unwrap();
-
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
-            .await?;
-
-        Ok(res[1])
-    }
-
-    pub async fn layout(&self) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
-        let entrypoint = get_selector_from_name(LAYOUT_SELECTOR_STR).unwrap();
-
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
-            .await?;
-
-        Ok(res[2..].into())
-    }
-
     pub async fn entity_storage(
         &self,
         keys: &[FieldElement],
-    ) -> Result<Vec<FieldElement>, ModelError<P::Error>> {
+    ) -> Result<Vec<FieldElement>, ModelError> {
         let packed_size: u8 =
             self.packed_size().await?.try_into().map_err(ParseError::ValueOutOfRange)?;
 
@@ -164,7 +127,7 @@ where
         Ok(packed)
     }
 
-    pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError<P::Error>> {
+    pub async fn entity(&self, keys: &[FieldElement]) -> Result<Ty, ModelError> {
         let mut schema = self.schema().await?;
 
         let layout = self.layout().await?;
@@ -176,5 +139,60 @@ where
         schema.deserialize(&mut keys_and_unpacked)?;
 
         Ok(schema)
+    }
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
+where
+    P: Provider + Sync + Send,
+{
+    fn class_hash(&self) -> FieldElement {
+        self.class_hash
+    }
+
+    async fn schema(&self) -> Result<Ty, ModelError> {
+        let entrypoint = get_selector_from_name(SCHEMA_SELECTOR_STR).unwrap();
+
+        let res = self
+            .world_reader
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
+            .await?;
+
+        Ok(parse_ty(&res[1..])?)
+    }
+
+    async fn packed_size(&self) -> Result<FieldElement, ModelError> {
+        let entrypoint = get_selector_from_name(PACKED_SIZE_SELECTOR_STR).unwrap();
+
+        let res = self
+            .world_reader
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
+            .await?;
+
+        Ok(res[1])
+    }
+
+    async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
+        let entrypoint = get_selector_from_name(UNPACKED_SIZE_SELECTOR_STR).unwrap();
+
+        let res = self
+            .world_reader
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
+            .await?;
+
+        Ok(res[1])
+    }
+
+    async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
+        let entrypoint = get_selector_from_name(LAYOUT_SELECTOR_STR).unwrap();
+
+        let res = self
+            .world_reader
+            .executor_call(self.class_hash, vec![entrypoint, FieldElement::ZERO])
+            .await?;
+
+        Ok(res[2..].into())
     }
 }

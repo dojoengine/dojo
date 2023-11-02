@@ -67,6 +67,15 @@ impl<'de> Deserialize<'de> for Uri {
     }
 }
 
+impl Uri {
+    pub fn cid(&self) -> Option<&str> {
+        match self {
+            Uri::Ipfs(value) => value.strip_prefix("ipfs://"),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct WorldMetadata {
     pub name: Option<String>,

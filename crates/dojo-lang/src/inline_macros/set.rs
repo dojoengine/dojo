@@ -105,7 +105,6 @@ impl InlineMacroExprPlugin for SetMacro {
             let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
             mod_ast.name(db).as_syntax_node().get_text_without_trivia(db)
         } else {
-            eprintln!("Error: Couldn't get the module name.");
             "".into()
         };
 
@@ -115,8 +114,6 @@ impl InlineMacroExprPlugin for SetMacro {
             let fn_ast = FunctionWithBody::from_syntax_node(db, fn_syntax_node.clone());
             fn_ast.declaration(db).name(db).as_syntax_node().get_text_without_trivia(db)
         } else {
-            // Unlikely to get here, but if we do.
-            eprintln!("Error: Couldn't get the function name.");
             "".into()
         };
 

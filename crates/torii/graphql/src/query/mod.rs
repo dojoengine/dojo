@@ -2,18 +2,16 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
-use constants::BOOLEAN_TRUE;
 use dojo_types::primitive::{Primitive, SqlType};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, Sqlite};
 use torii_core::sql::FELT_DELIMITER;
 
-use self::constants::{ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
+use crate::constants::{BOOLEAN_TRUE, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
 use crate::object::model_data::ModelMember;
 use crate::types::{TypeData, TypeMapping, ValueMapping};
 
-pub mod constants;
 pub mod data;
 pub mod filter;
 pub mod order;

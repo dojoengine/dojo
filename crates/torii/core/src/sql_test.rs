@@ -25,7 +25,6 @@ pub async fn bootstrap_engine<P>(
     sequencer: TestSequencer,
 ) -> Result<Engine<'_, P>, Box<dyn std::error::Error>>
 where
-    P::Error: 'static,
     P: Provider + Send + Sync,
 {
     let mut account = sequencer.account();

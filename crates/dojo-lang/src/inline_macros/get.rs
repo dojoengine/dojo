@@ -88,7 +88,6 @@ impl InlineMacroExprPlugin for GetMacro {
             let mod_ast = ItemModule::from_syntax_node(db, module_syntax_node.clone());
             mod_ast.name(db).as_syntax_node().get_text_without_trivia(db)
         } else {
-            eprintln!("Error: Couldn't get the module name.");
             "".into()
         };
 

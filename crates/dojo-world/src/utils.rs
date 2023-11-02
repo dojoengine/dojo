@@ -13,17 +13,17 @@ use starknet::providers::{
 };
 use tokio::time::{Instant, Interval};
 
-type GetReceiptResult<E> = Result<MaybePendingTransactionReceipt, ProviderError<E>>;
-type GetReceiptFuture<'a, E> = Pin<Box<dyn Future<Output = GetReceiptResult<E>> + Send + 'a>>;
+type GetReceiptResult = Result<MaybePendingTransactionReceipt, ProviderError>;
+type GetReceiptFuture<'a> = Pin<Box<dyn Future<Output = GetReceiptResult> + Send + 'a>>;
 
 #[derive(Debug, thiserror::Error)]
-pub enum TransactionWaitingError<E> {
+pub enum TransactionWaitingError {
     #[error("request timed out")]
     Timeout,
     #[error("transaction reverted due to failed execution: {0}")]
     TransactionReverted(String),
     #[error(transparent)]
-    Provider(ProviderError<E>),
+    Provider(ProviderError),
 }
 
 /// A type that waits for a transaction to achieve the desired status. The waiter will poll for the
@@ -74,7 +74,7 @@ pub struct TransactionWaiter<'a, P: Provider> {
     /// The provider to use for polling the transaction.
     provider: &'a P,
     /// The future that gets the transaction receipt.
-    receipt_request_fut: Option<GetReceiptFuture<'a, <P as Provider>::Error>>,
+    receipt_request_fut: Option<GetReceiptFuture<'a>>,
     /// The time when the transaction waiter was first polled.
     started_at: Option<Instant>,
 }
@@ -120,7 +120,7 @@ impl<'a, P> Future for TransactionWaiter<'a, P>
 where
     P: Provider + Send,
 {
-    type Output = Result<MaybePendingTransactionReceipt, TransactionWaitingError<P::Error>>;
+    type Output = Result<MaybePendingTransactionReceipt, TransactionWaitingError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();

@@ -1,13 +1,13 @@
 [package]
-cairo-version = "2.3.0"
+cairo-version = "2.3.1"
 description = "Implementations of a defi primitives for the Dojo framework"
 name = "dojo_defi"
-version = "0.3.2"
+version = "0.3.3"
 
 [lib]
 
 [dependencies]
-cubit = { git = "https://github.com/influenceth/cubit" }
+cubit = { git = "https://github.com/ponderingdemocritus/cubit" }
 
 dojo = { path = "../dojo-core" }
 

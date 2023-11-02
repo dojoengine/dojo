@@ -40,7 +40,7 @@ pub enum ForkedBackendError {
     #[error("Compute class hash error: {0}")]
     ComputeClassHashError(String),
     #[error(transparent)]
-    Provider(ProviderError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
+    Provider(ProviderError),
 }
 
 pub enum BackendRequest {

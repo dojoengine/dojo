@@ -49,10 +49,7 @@ pub struct Engine<'db, P: Provider + Sync> {
     block_sender: Option<BoundedSender<u64>>,
 }
 
-impl<'db, P: Provider + Sync> Engine<'db, P>
-where
-    P::Error: 'static,
-{
+impl<'db, P: Provider + Sync> Engine<'db, P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: &'db mut Sql,
@@ -245,7 +242,9 @@ where
     ) -> Result<()> {
         self.db.store_event(event_id, event, invoke_receipt.transaction_hash);
         for processor in &self.processors.event {
-            if get_selector_from_name(&processor.event_key())? == event.keys[0] {
+            if get_selector_from_name(&processor.event_key())? == event.keys[0]
+                && processor.validate(event)
+            {
                 processor
                     .process(&self.world, self.db, block, invoke_receipt, event_id, event)
                     .await?;
