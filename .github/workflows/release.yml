@@ -102,7 +102,7 @@ jobs:
             platform: darwin
             target: x86_64-apple-darwin
             arch: amd64
-          - os: macos-latest
+          - os: macos-13
             platform: darwin
             target: aarch64-apple-darwin
             arch: arm64
