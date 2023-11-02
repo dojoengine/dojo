@@ -76,7 +76,6 @@ pub struct WorldMetadata {
     pub website: Option<Url>,
     pub socials: Option<HashMap<String, String>>,
     pub abi_uri: Option<Uri>,
-    pub source_uri: Option<Uri>,
 }
 
 #[derive(Default, Deserialize, Clone, Debug)]
@@ -151,13 +150,6 @@ impl WorldMetadata {
             let reader = Cursor::new(abi_data);
             let response = client.add(reader).await?;
             meta.abi_uri = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
-        };
-
-        if let Some(Uri::File(source)) = &self.source_uri {
-            let source_data = std::fs::read(source)?;
-            let reader = Cursor::new(source_data);
-            let response = client.add(reader).await?;
-            meta.source_uri = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
         };
 
         let serialized = json!(meta).to_string();

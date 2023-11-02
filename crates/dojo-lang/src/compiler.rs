@@ -13,7 +13,6 @@ use cairo_lang_starknet::abi;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
-use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_lang_utils::UpcastMut;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
@@ -102,13 +101,14 @@ impl Compiler for DojoCompiler {
         // (contract name, class hash)
         let mut compiled_classes: HashMap<
             SmolStr,
-            (FieldElement, Option<abi::Contract>, Vec<BigUintAsHex>),
+            (FieldElement, Option<abi::Contract>),
         > = HashMap::new();
 
         for (decl, class) in zip(contracts, classes) {
             let target_name = &unit.target().name;
             let contract_name = decl.submodule_id.name(db.upcast_mut());
             let file_name = format!("{target_name}-{contract_name}.json");
+            let abi_file_name = format!("{target_name}-{contract_name}_abi.json");
 
             let mut file = target_dir.open_rw(file_name.clone(), "output file", ws.config())?;
             serde_json::to_writer_pretty(file.deref_mut(), &class)
@@ -117,7 +117,13 @@ impl Compiler for DojoCompiler {
             let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
                 format!("problem computing class hash for contract `{contract_name}`")
             })?;
-            compiled_classes.insert(contract_name, (class_hash, class.abi, class.sierra_program));
+
+            // Write abi file
+            let mut abi_file = target_dir.open_rw(&abi_file_name, "output file", ws.config())?;
+            serde_json::to_writer_pretty(abi_file.deref_mut(), &class.abi)
+                .with_context(|| format!("failed to serialize ABI for contract: {}", contract_name))?;
+
+            compiled_classes.insert(contract_name, (class_hash, class.abi));
         }
 
         let mut manifest = target_dir
@@ -210,48 +216,45 @@ fn update_manifest(
     manifest: &mut dojo_world::manifest::Manifest,
     db: &RootDatabase,
     crate_ids: &[CrateId],
-    compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>, Vec<BigUintAsHex>)>,
+    compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<()> {
     fn get_compiled_artifact_from_map<'a>(
-        artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>, Vec<BigUintAsHex>)>,
+        artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
         artifact_name: &str,
-    ) -> anyhow::Result<&'a (FieldElement, Option<abi::Contract>, Vec<BigUintAsHex>)> {
+    ) -> anyhow::Result<&'a (FieldElement, Option<abi::Contract>)> {
         artifacts.get(artifact_name).context(format!(
             "Contract `{artifact_name}` not found. Did you include `dojo` as a dependency?",
         ))
     }
 
     let world = {
-        let (hash, abi, source) =
+        let (hash, abi) =
             get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
         Contract {
             name: WORLD_CONTRACT_NAME.into(),
             abi: abi.clone(),
-            source: source.clone(),
             class_hash: *hash,
             ..Default::default()
         }
     };
 
     let executor = {
-        let (hash, abi, source) =
+        let (hash, abi) =
             get_compiled_artifact_from_map(&compiled_artifacts, EXECUTOR_CONTRACT_NAME)?;
         Contract {
             name: EXECUTOR_CONTRACT_NAME.into(),
             abi: abi.clone(),
-            source: source.clone(),
             class_hash: *hash,
             ..Default::default()
         }
     };
 
     let base = {
-        let (hash, abi, source) =
+        let (hash, abi) =
             get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
         Class {
             name: BASE_CONTRACT_NAME.into(),
             abi: abi.clone(),
-            source: source.clone(),
             class_hash: *hash,
         }
     };
@@ -304,7 +307,7 @@ fn get_dojo_model_artifacts(
     db: &dyn SemanticGroup,
     aux_data: &DojoAuxData,
     module_id: ModuleId,
-    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>, Vec<BigUintAsHex>)>,
+    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<String, dojo_world::manifest::Model>> {
     let mut models = HashMap::with_capacity(aux_data.models.len());
 
@@ -314,7 +317,7 @@ fn get_dojo_model_artifacts(
         {
             let model_contract_name = model.name.to_case(Case::Snake);
 
-            let (class_hash, abi, source) = compiled_classes
+            let (class_hash, abi) = compiled_classes
                 .get(model_contract_name.as_str())
                 .cloned()
                 .ok_or(anyhow!("Model {} not found in target.", model.name))?;
@@ -323,7 +326,6 @@ fn get_dojo_model_artifacts(
                 model.name.clone(),
                 dojo_world::manifest::Model {
                     abi,
-                    source,
                     class_hash,
                     name: model.name.clone(),
                     members: model.members.clone(),
@@ -339,7 +341,7 @@ fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
     aux_data: &StarkNetContractAuxData,
-    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>, Vec<BigUintAsHex>)>,
+    compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<SmolStr, Contract>> {
     aux_data
         .contracts
@@ -362,7 +364,7 @@ fn get_dojo_contract_artifacts(
                 None => vec![],
             };
 
-            let (class_hash, abi, source) = compiled_classes
+            let (class_hash, abi) = compiled_classes
                 .get(name)
                 .cloned()
                 .ok_or(anyhow!("Contract {name} not found in target."))?;
@@ -373,7 +375,6 @@ fn get_dojo_contract_artifacts(
                     name: name.clone(),
                     class_hash,
                     abi,
-                    source,
                     writes,
                     reads,
                     ..Default::default()

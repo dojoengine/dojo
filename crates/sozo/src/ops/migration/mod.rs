@@ -271,23 +271,6 @@ fn prepare_migration(
     Ok(migration)
 }
 
-fn merge_with_default_metadata(metadata: Option<Metadata>) -> WorldMetadata {
-    // TODO: get default abi and source from compiler
-    if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
-        WorldMetadata {
-            // abi_uri: Some(Uri::File()),
-            // source_uri: Some(Uri::File()),
-            ..meta.clone()
-        }
-    } else {
-        WorldMetadata {
-            // abi_uri: Some(Uri::File()),
-            // source_uri: Some(Uri::File()),
-            ..Default::default()
-        }
-    }
-}
-
 // returns the Some(block number) at which migration world is deployed, returns none if world was
 // not redeployed
 pub async fn execute_strategy<P, S>(
@@ -358,17 +341,18 @@ where
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
             let metadata = dojo_metadata_from_workspace(ws);
-            let world_metadata = merge_with_default_metadata(metadata);
-            let hash = world_metadata.upload().await?;
+            if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
+                let hash = meta.upload().await?;
 
-            let InvokeTransactionResult { transaction_hash } =
-                WorldContract::new(world.contract_address, migrator)
-                    .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
-                    .await
-                    .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
+                let InvokeTransactionResult { transaction_hash } =
+                    WorldContract::new(world.contract_address, migrator)
+                        .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
+                        .await
+                        .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
 
-            ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
-            ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+                ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
+                ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+            }
         }
         None => {}
     };
