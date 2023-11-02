@@ -31,6 +31,26 @@ mod ctxnamed {
     }
 }
 
+#[dojo::contract]
+mod withevent {
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        TestEvent: TestEvent,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct TestEvent {
+        address: ContractAddress,
+    }
+
+    #[external(v0)]
+    fn test(value: felt252) -> value {
+        value
+    }
+}
+
 //! > generated_cairo_code
 #[starknet::contract]
 mod spawn {

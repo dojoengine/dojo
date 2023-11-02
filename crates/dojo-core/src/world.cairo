@@ -45,6 +45,12 @@ trait IWorld<T> {
     fn revoke_writer(ref self: T, model: felt252, system: ContractAddress);
 }
 
+#[starknet::interface]
+trait IWorldProvider<T> {
+    fn world(self: @T) -> IWorldDispatcher;
+}
+
+
 #[starknet::contract]
 mod world {
     use core::traits::TryInto;

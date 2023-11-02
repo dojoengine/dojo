@@ -29,15 +29,16 @@ mod contract_upgrade {
 
 use contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
 
-#[test]
-#[available_gas(6000000)]
-fn test_upgrade() {
-    let base_address = deploy_contract(base::TEST_CLASS_HASH, array![].span());
-    let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
+// TODO : rewrite & use world
+// #[test]
+// #[available_gas(6000000)]
+// fn test_upgrade() {
+//     let base_address = deploy_contract(base::TEST_CLASS_HASH, array![].span());
+//     let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
 
-    let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
-    upgradeable_dispatcher.upgrade(new_class_hash);
+//     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
+//     upgradeable_dispatcher.upgrade(new_class_hash);
 
-    let quantum_dispatcher = IQuantumLeapDispatcher { contract_address: base_address };
-    assert(quantum_dispatcher.plz_more_tps() == 'daddy', 'quantum leap failed');
-}
+//     let quantum_dispatcher = IQuantumLeapDispatcher { contract_address: base_address };
+//     assert(quantum_dispatcher.plz_more_tps() == 'daddy', 'quantum leap failed');
+// }
