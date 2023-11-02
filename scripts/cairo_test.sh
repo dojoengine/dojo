@@ -6,4 +6,5 @@ cargo run -r --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test $@
 cargo run -r --bin sozo -- --manifest-path crates/dojo-erc/Scarb.toml test $@
 cargo run -r --bin sozo -- --manifest-path crates/dojo-defi/Scarb.toml test $@
 cargo run -r --bin sozo -- --manifest-path crates/dojo-primitives/Scarb.toml test $@
+cargo run -r --bin sozo -- --manifest-path crates/origami/Scarb.toml test $@
 cargo run -r --bin sozo -- --manifest-path examples/spawn-and-move/Scarb.toml test $@

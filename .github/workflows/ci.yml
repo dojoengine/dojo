@@ -97,6 +97,17 @@ jobs:
       - uses: arduino/setup-protoc@v2
       - run: cargo run --bin sozo -- --manifest-path crates/dojo-primitives/Scarb.toml test
 
+  origami-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v2
+      - run: cargo run --bin sozo -- --manifest-path crates/origami/Scarb.toml test
+
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     steps:

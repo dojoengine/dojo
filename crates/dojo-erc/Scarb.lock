@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_examples"
+name = "dojo_erc"
 version = "0.3.3"
 dependencies = [
  "dojo",

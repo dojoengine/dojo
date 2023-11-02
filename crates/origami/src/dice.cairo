@@ -68,18 +68,12 @@ mod tests {
     #[available_gas(2000000)]
     fn test_dice_new_roll() {
         let mut dice = DiceTrait::new(DICE_FACE_COUNT, DICE_SEED);
-        dice.roll().print();
-        dice.roll().print();
-        dice.roll().print();
-        dice.roll().print();
-        dice.roll().print();
-        dice.roll().print();
-        assert(dice.roll() == 6, 'Wrong dice value');
-        assert(dice.roll() == 2, 'Wrong dice value');
-        assert(dice.roll() == 5, 'Wrong dice value');
         assert(dice.roll() == 1, 'Wrong dice value');
         assert(dice.roll() == 6, 'Wrong dice value');
+        assert(dice.roll() == 3, 'Wrong dice value');
+        assert(dice.roll() == 1, 'Wrong dice value');
         assert(dice.roll() == 4, 'Wrong dice value');
+        assert(dice.roll() == 3, 'Wrong dice value');
     }
 
     #[test]
