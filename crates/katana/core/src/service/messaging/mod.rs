@@ -40,8 +40,7 @@ mod starknet;
 use std::path::Path;
 
 use ::starknet::core::types::{FieldElement, MsgToL1};
-use ::starknet::providers::jsonrpc::HttpTransport;
-use ::starknet::providers::{JsonRpcClient, Provider};
+use ::starknet::providers::ProviderError as StarknetProviderError;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethereum::EthereumMessaging;
@@ -79,7 +78,7 @@ pub enum ProviderError {
     #[error("Ethereum provider error: {0}")]
     Ethereum(EthereumProviderError),
     #[error("Starknet provider error: {0}")]
-    Starknet(<JsonRpcClient<HttpTransport> as Provider>::Error),
+    Starknet(StarknetProviderError),
 }
 
 impl From<EthereumProviderError> for Error {

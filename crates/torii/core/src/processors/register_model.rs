@@ -16,7 +16,6 @@ pub struct RegisterModelProcessor;
 #[async_trait]
 impl<P> EventProcessor<P> for RegisterModelProcessor
 where
-    P::Error: 'static,
     P: Provider + Send + Sync,
 {
     fn event_key(&self) -> String {

@@ -1,7 +1,5 @@
 use dojo_world::contracts::model::ModelError;
 use starknet::core::utils::{CairoShortStringToFeltError, ParseCairoShortStringError};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -19,7 +17,7 @@ pub enum Error {
     #[error(transparent)]
     GrpcClient(#[from] torii_grpc::client::Error),
     #[error(transparent)]
-    Model(#[from] ModelError<<JsonRpcClient<HttpTransport> as Provider>::Error>),
+    Model(#[from] ModelError),
 }
 
 #[derive(Debug, thiserror::Error)]

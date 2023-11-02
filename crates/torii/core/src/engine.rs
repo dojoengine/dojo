@@ -49,10 +49,7 @@ pub struct Engine<'db, P: Provider + Sync> {
     block_sender: Option<BoundedSender<u64>>,
 }
 
-impl<'db, P: Provider + Sync> Engine<'db, P>
-where
-    P::Error: 'static,
-{
+impl<'db, P: Provider + Sync> Engine<'db, P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: &'db mut Sql,

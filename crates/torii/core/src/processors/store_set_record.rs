@@ -19,7 +19,6 @@ const NUM_KEYS_INDEX: usize = 1;
 #[async_trait]
 impl<P> EventProcessor<P> for StoreSetRecordProcessor
 where
-    P::Error: 'static,
     P: Provider + Send + Sync,
 {
     fn event_key(&self) -> String {
