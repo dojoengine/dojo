@@ -94,10 +94,11 @@ pub fn log(name: &str, gas: u64, calldata: &str) {
 
     let mut calldata = String::from(calldata);
     if calldata != "" {
-        calldata = String::from(",\tcalldata: ") + &calldata
+        calldata = String::from("\tcalldata: ") + &calldata
     }
 
     writeln!(file, "{}\tfee: {}{calldata}", name, gas).unwrap();
+    file.flush().unwrap();
 }
 
 fn parse_calls(entrypoints_and_calldata: EntrypointsAndCalldata) -> Vec<Call> {
