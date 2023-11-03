@@ -17,10 +17,13 @@ use starknet_crypto::FieldElement;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::Notify;
 use tokio_stream::StreamExt;
+use tonic_web::GrpcWebLayer;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 use torii_grpc::protos;
 use torii_grpc::server::DojoWorld;
+use tower::ServiceBuilder;
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 use url::Url;
 use warp::filters::cors::Builder;
@@ -109,9 +112,17 @@ async fn spawn(
 
     let warp = warp::service(routes);
 
-    // TODO: apply allowed_origins to tonic grpc
-    let tonic =
-        tonic_web::enable(protos::world::world_server::WorldServer::new(dojo_world.clone()));
+    let cors_layer = CorsLayer::new()
+        .allow_methods(vec![Method::POST, Method::GET, Method::OPTIONS])
+        .allow_origin(Any)
+        .allow_credentials(false);
+
+    let service = ServiceBuilder::new()
+        .layer(cors_layer)
+        .layer(GrpcWebLayer::new())
+        .service(protos::world::world_server::WorldServer::new(dojo_world.clone()));
+
+    let tonic = tonic_web::enable(service);
 
     hyper::Server::bind(&addr)
         .serve(make_service_fn(move |_| {
