@@ -102,27 +102,20 @@ async fn spawn(
     allowed_origins: Vec<String>,
     external_url: Option<Url>,
 ) -> anyhow::Result<()> {
+    let (warp_cors, tonic_cors) = configure_cors(&allowed_origins);
+
     let base_route = warp::path::end()
         .and(warp::get())
         .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(&pool, external_url)
-        .await
-        .or(base_route)
-        .with(configure_cors(&allowed_origins));
+    let routes =
+        torii_graphql::route::filter(&pool, external_url).await.or(base_route).with(warp_cors);
 
     let warp = warp::service(routes);
 
-    let cors_layer = CorsLayer::new()
-        .allow_methods(vec![Method::POST, Method::GET, Method::OPTIONS])
-        .allow_origin(Any)
-        .allow_credentials(false);
-
-    let service = ServiceBuilder::new()
-        .layer(cors_layer)
+    let tonic = ServiceBuilder::new()
+        .layer(tonic_cors)
         .layer(GrpcWebLayer::new())
-        .service(protos::world::world_server::WorldServer::new(dojo_world.clone()));
-
-    let tonic = tonic_web::enable(service);
+        .service(protos::world::world_server::WorldServer::new(dojo_world));
 
     hyper::Server::bind(&addr)
         .serve(make_service_fn(move |_| {
@@ -171,15 +164,29 @@ async fn spawn(
     Ok(())
 }
 
-fn configure_cors(origins: &Vec<String>) -> Builder {
-    if origins.len() == 1 && origins[0] == "*" {
-        warp::cors().allow_any_origin()
+fn configure_cors(origins: &Vec<String>) -> (Builder, CorsLayer) {
+    let (warp_cors, tonic_cors) = if origins.len() == 1 && origins[0] == "*" {
+        (warp::cors().allow_any_origin(), CorsLayer::new().allow_origin(Any))
     } else {
-        let origins_str: Vec<&str> = origins.iter().map(|origin| origin.as_str()).collect();
-        warp::cors().allow_origins(origins_str)
-    }
-    .allow_headers(vec![ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN])
-    .allow_methods(&[Method::POST, Method::GET, Method::OPTIONS])
+        (
+            warp::cors()
+                .allow_origins(origins.iter().map(|origin| origin.as_str()).collect::<Vec<_>>()),
+            CorsLayer::new().allow_origin(
+                origins.iter().map(|o| o.parse().expect("valid origin")).collect::<Vec<_>>(),
+            ),
+        )
+    };
+
+    (
+        warp_cors
+            .allow_headers(vec![ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN])
+            .allow_methods(&[Method::POST, Method::GET, Method::OPTIONS]),
+        tonic_cors.allow_credentials(false).allow_methods(vec![
+            Method::POST,
+            Method::GET,
+            Method::OPTIONS,
+        ]),
+    )
 }
 
 enum EitherBody<A, B> {
