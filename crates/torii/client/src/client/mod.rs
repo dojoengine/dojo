@@ -41,9 +41,51 @@ pub struct Client {
 }
 
 impl Client {
-    /// Returns a [ClientBuilder] for building a [Client].
-    pub fn builder() -> ClientBuilder {
-        ClientBuilder::new()
+    /// Returns a initialized [Client].
+    pub async fn new(
+        torii_url: String,
+        rpc_url: String,
+        world: FieldElement,
+        entities: Option<Vec<EntityModel>>,
+    ) -> Result<Self, Error> {
+        let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
+
+        let metadata = grpc_client.metadata().await?;
+
+        let shared_metadata: Arc<_> = RwLock::new(metadata).into();
+        let client_storage: Arc<_> = ModelStorage::new(shared_metadata.clone()).into();
+        let subbed_entities: Arc<_> = SubscribedEntities::new(shared_metadata.clone()).into();
+
+        // initialize the entities to be synced with the latest values
+        let rpc_url = url::Url::parse(&rpc_url).map_err(ParseError::Url)?;
+        let provider = JsonRpcClient::new(HttpTransport::new(rpc_url));
+        let world_reader = WorldContractReader::new(world, provider);
+
+        if let Some(entities_to_sync) = entities {
+            subbed_entities.add_entities(entities_to_sync)?;
+
+            // TODO: change this to querying the gRPC url instead
+            let subbed_entities = subbed_entities.entities.read().clone();
+            for EntityModel { model, keys } in subbed_entities {
+                let model_reader = world_reader.model(&model).await?;
+                let values = model_reader.entity_storage(&keys).await?;
+
+                client_storage.set_entity_storage(
+                    cairo_short_string_to_felt(&model).unwrap(),
+                    keys,
+                    values,
+                )?;
+            }
+        }
+
+        Ok(Self {
+            world_reader,
+            storage: client_storage,
+            metadata: shared_metadata,
+            sub_client_handle: OnceCell::new(),
+            inner: AsyncRwLock::new(grpc_client),
+            subscribed_entities: subbed_entities,
+        })
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.
@@ -173,79 +215,5 @@ impl Client {
             values,
         )?;
         Ok(())
-    }
-}
-
-pub struct ClientBuilder {
-    initial_entities_to_sync: Option<Vec<EntityModel>>,
-}
-
-impl ClientBuilder {
-    #[must_use]
-    pub fn new() -> Self {
-        Self { initial_entities_to_sync: None }
-    }
-
-    #[must_use]
-    pub fn set_entities_to_sync(mut self, entities: Vec<EntityModel>) -> Self {
-        self.initial_entities_to_sync = Some(entities);
-        self
-    }
-
-    /// Returns an initialized [Client] with the provided configurations.
-    ///
-    /// The subscription service is not immediately started when calling this function, instead it
-    /// must be manually started using `Client::start_subscription`.
-    pub async fn build(
-        self,
-        torii_endpoint: String,
-        // TODO: remove RPC reliant
-        rpc_url: String,
-        world: FieldElement,
-    ) -> Result<Client, Error> {
-        let mut grpc_client = torii_grpc::client::WorldClient::new(torii_endpoint, world).await?;
-
-        let metadata = grpc_client.metadata().await?;
-
-        let shared_metadata: Arc<_> = RwLock::new(metadata).into();
-        let client_storage: Arc<_> = ModelStorage::new(shared_metadata.clone()).into();
-        let subbed_entities: Arc<_> = SubscribedEntities::new(shared_metadata.clone()).into();
-
-        // initialize the entities to be synced with the latest values
-        let rpc_url = url::Url::parse(&rpc_url).map_err(ParseError::Url)?;
-        let provider = JsonRpcClient::new(HttpTransport::new(rpc_url));
-        let world_reader = WorldContractReader::new(world, provider);
-
-        if let Some(entities_to_sync) = self.initial_entities_to_sync.clone() {
-            subbed_entities.add_entities(entities_to_sync)?;
-
-            // TODO: change this to querying the gRPC endpoint instead
-            let subbed_entities = subbed_entities.entities.read().clone();
-            for EntityModel { model, keys } in subbed_entities {
-                let model_reader = world_reader.model(&model).await?;
-                let values = model_reader.entity_storage(&keys).await?;
-
-                client_storage.set_entity_storage(
-                    cairo_short_string_to_felt(&model).unwrap(),
-                    keys,
-                    values,
-                )?;
-            }
-        }
-
-        Ok(Client {
-            world_reader,
-            storage: client_storage,
-            metadata: shared_metadata,
-            sub_client_handle: OnceCell::new(),
-            inner: AsyncRwLock::new(grpc_client),
-            subscribed_entities: subbed_entities,
-        })
-    }
-}
-
-impl Default for ClientBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
