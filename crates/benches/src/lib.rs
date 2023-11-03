@@ -6,15 +6,15 @@ mod helpers;
 use anyhow::Result;
 use futures::executor::block_on;
 use futures::future;
+pub use helpers::log;
+use helpers::*;
 use lazy_static::lazy_static;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
 use tokio::runtime::Runtime;
-
-pub use helpers::log;
-use helpers::*;
 
 type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
@@ -63,8 +63,9 @@ pub async fn estimate_gas_async(calls: Vec<BenchCall>) -> Result<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use proptest::prelude::*;
+
+    use super::*;
 
     // does not need proptest, as it doesn't use any input
     #[test]

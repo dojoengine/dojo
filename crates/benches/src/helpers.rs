@@ -6,7 +6,8 @@ use reqwest::Url;
 use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, FieldElement};
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use tokio::sync::OnceCell;
 
@@ -23,7 +24,8 @@ pub async fn chain_id() -> FieldElement {
         .await
 }
 
-// Because no calls are actually executed in the benchmark, we can use the same nonce for all of them
+// Because no calls are actually executed in the benchmark, we can use the same nonce for all of
+// them
 pub async fn nonce() -> FieldElement {
     static NONCE: OnceCell<FieldElement> = OnceCell::const_new();
 

@@ -8,7 +8,8 @@ fn main() {
     let filename = env::args().nth(1).unwrap_or(DEFAULT_FILENAME.into());
 
     let file = OpenOptions::new().create(false).read(true).open(filename).expect(
-        "Failed to open gas_usage.txt: run tests first with `cargo test bench -- --ignored` and pass correct filename",
+        "Failed to open gas_usage.txt: run tests first with `cargo test bench -- --ignored` and \
+         pass correct filename",
     );
     let reader = BufReader::new(file);
 
