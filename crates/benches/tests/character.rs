@@ -16,7 +16,7 @@ proptest! {
     fn bench_complex_set_with_smaller(s in "[0-7]{6}") {
         let points = s.chars()
             .map(|c| c.to_digit(10).unwrap())
-            .map(|p| FieldElement::from(p))
+            .map(FieldElement::from)
             .collect();
 
         let fee = estimate_gas(
@@ -29,7 +29,7 @@ proptest! {
     #[test]
     #[ignore] // needs a running katana
     fn bench_complex_update_minimal(s in "[0-9]{9}") {
-        let calldata = FieldElement::from(u32::from_str_radix(&s, 10).unwrap());
+        let calldata = FieldElement::from(s.parse::<u32>());
         let fee = estimate_gas_last(vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata])
@@ -55,7 +55,7 @@ proptest! {
     fn bench_complex_get(s in "[0-7]{6}") {
         let calldata = s.chars()
             .map(|c| c.to_digit(10).unwrap())
-            .map(|p| FieldElement::from(p))
+            .map(FieldElement::from)
             .collect();
         let fee = estimate_gas_last(vec![
             BenchCall("bench_complex_set_with_smaller", calldata),
@@ -68,7 +68,7 @@ proptest! {
     #[test]
     #[ignore] // needs a running katana
     fn bench_complex_get_minimal(s in "[0-9]{9}") {
-        let calldata = FieldElement::from(u32::from_str_radix(&s, 10).unwrap());
+        let calldata = FieldElement::from(s.parse::<u32>());
         let fee = estimate_gas_last(vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata]),
@@ -83,7 +83,7 @@ proptest! {
     fn bench_complex_check(s in "[0-7]{6}", a in 0..6, t in 0..20) {
         let abilities = s.chars()
             .map(|c| c.to_digit(10).unwrap())
-            .map(|p| FieldElement::from(p))
+            .map(FieldElement::from)
             .collect();
 
         let ability = FieldElement::from(a as u32);

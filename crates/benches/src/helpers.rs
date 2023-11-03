@@ -64,7 +64,7 @@ pub fn log(name: &str, gas: u64, calldata: &str) {
         OpenOptions::new().create(true).write(true).append(true).open("gas_usage.txt").unwrap();
 
     let mut calldata = String::from(calldata);
-    if calldata != "" {
+    if !calldata.is_empty() {
         calldata = String::from("\tcalldata: ") + &calldata
     }
 

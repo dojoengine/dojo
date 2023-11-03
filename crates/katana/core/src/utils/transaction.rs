@@ -509,6 +509,29 @@ pub fn broadcasted_deploy_account_rpc_to_api_transaction(
     (api_transaction, contract_address)
 }
 
+pub fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {
+    match err {
+        TransactionExecutionError::EntryPointExecutionError(ref eperr)
+        | TransactionExecutionError::ExecutionError(ref eperr) => match eperr {
+            EntryPointExecutionError::ExecutionFailed { error_data } => {
+                let mut reasons: Vec<String> = vec![];
+                error_data.iter().for_each(|felt| {
+                    if let Ok(s) = parse_cairo_short_string(&FieldElement::from(*felt)) {
+                        reasons.push(s);
+                    }
+                });
+
+                tracing::warn!(target: "executor",
+                               "Transaction validation error: {}", reasons.join(" "));
+            }
+            _ => tracing::warn!(target: "executor",
+                                "Transaction validation error: {:?}", err),
+        },
+        _ => tracing::warn!(target: "executor",
+                            "Transaction validation error: {:?}", err),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use starknet::core::chain_id;
@@ -567,28 +590,5 @@ mod tests {
             )
             .unwrap()
         );
-    }
-}
-
-pub fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {
-    match err {
-        TransactionExecutionError::EntryPointExecutionError(ref eperr)
-        | TransactionExecutionError::ExecutionError(ref eperr) => match eperr {
-            EntryPointExecutionError::ExecutionFailed { error_data } => {
-                let mut reasons: Vec<String> = vec![];
-                error_data.iter().for_each(|felt| {
-                    if let Ok(s) = parse_cairo_short_string(&FieldElement::from(*felt)) {
-                        reasons.push(s);
-                    }
-                });
-
-                tracing::warn!(target: "executor",
-                               "Transaction validation error: {}", reasons.join(" "));
-            }
-            _ => tracing::warn!(target: "executor",
-                                "Transaction validation error: {:?}", err),
-        },
-        _ => tracing::warn!(target: "executor",
-                            "Transaction validation error: {:?}", err),
     }
 }

@@ -1,4 +1,4 @@
-#[cfg_attr(test, macro_use)]
+#[cfg_attr(test)]
 extern crate lazy_static;
 
 mod helpers;
