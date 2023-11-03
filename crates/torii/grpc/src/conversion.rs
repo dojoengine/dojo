@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use dojo_types::schema::Ty;
+use dojo_types::schema::{
+    AttributeClause, Clause, CompositeClause, EntityQuery, KeysClause, Ty, Value,
+};
 use starknet::core::types::{
-    ContractStorageDiffItem, FromStrError, StateDiff, StateUpdate, StorageEntry,
+    ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
 use starknet_crypto::FieldElement;
 
@@ -44,11 +46,85 @@ impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
     }
 }
 
-impl From<dojo_types::schema::EntityModel> for protos::types::EntityModel {
-    fn from(value: dojo_types::schema::EntityModel) -> Self {
+impl From<EntityQuery> for protos::types::EntityQuery {
+    fn from(value: EntityQuery) -> Self {
+        Self { model: value.model, clause: Some(value.clause.into()) }
+    }
+}
+
+impl From<Clause> for protos::types::Clause {
+    fn from(value: Clause) -> Self {
+        match value {
+            Clause::Keys(clause) => {
+                Self { clause_type: Some(protos::types::clause::ClauseType::Keys(clause.into())) }
+            }
+            Clause::Attribute(clause) => Self {
+                clause_type: Some(protos::types::clause::ClauseType::Attribute(clause.into())),
+            },
+            Clause::Composite(clause) => Self {
+                clause_type: Some(protos::types::clause::ClauseType::Composite(clause.into())),
+            },
+        }
+    }
+}
+
+impl From<KeysClause> for protos::types::KeysClause {
+    fn from(value: KeysClause) -> Self {
+        Self { keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect() }
+    }
+}
+
+impl TryFrom<protos::types::KeysClause> for KeysClause {
+    type Error = FromByteSliceError;
+
+    fn try_from(value: protos::types::KeysClause) -> Result<Self, Self::Error> {
+        let keys = value
+            .keys
+            .into_iter()
+            .map(|k| FieldElement::from_byte_slice_be(&k))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self { keys })
+    }
+}
+
+impl From<AttributeClause> for protos::types::AttributeClause {
+    fn from(value: AttributeClause) -> Self {
         Self {
-            model: value.model,
-            keys: value.keys.into_iter().map(|key| format!("{key:#}")).collect(),
+            attribute: value.attribute,
+            operator: value.operator as i32,
+            value: Some(value.value.into()),
+        }
+    }
+}
+
+impl From<CompositeClause> for protos::types::CompositeClause {
+    fn from(value: CompositeClause) -> Self {
+        Self {
+            operator: value.operator as i32,
+            clauses: value.clauses.into_iter().map(|clause| clause.into()).collect(),
+        }
+    }
+}
+
+impl From<Value> for protos::types::Value {
+    fn from(value: Value) -> Self {
+        match value {
+            Value::String(val) => {
+                Self { value_type: Some(protos::types::value::ValueType::StringValue(val)) }
+            }
+            Value::Int(val) => {
+                Self { value_type: Some(protos::types::value::ValueType::IntValue(val)) }
+            }
+            Value::UInt(val) => {
+                Self { value_type: Some(protos::types::value::ValueType::UintValue(val)) }
+            }
+            Value::Bool(val) => {
+                Self { value_type: Some(protos::types::value::ValueType::BoolValue(val)) }
+            }
+            Value::Bytes(val) => {
+                Self { value_type: Some(protos::types::value::ValueType::ByteValue(val)) }
+            }
         }
     }
 }

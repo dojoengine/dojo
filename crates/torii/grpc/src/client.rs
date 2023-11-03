@@ -67,18 +67,12 @@ impl WorldClient {
     /// Subscribe to the state diff for a set of entities of a World.
     pub async fn subscribe_entities(
         &mut self,
-        entities: Vec<dojo_types::schema::EntityModel>,
+        queries: Vec<dojo_types::schema::EntityQuery>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let stream = self
             .inner
             .subscribe_entities(SubscribeEntitiesRequest {
-                entities: entities
-                    .into_iter()
-                    .map(|e| protos::types::EntityModel {
-                        model: e.model,
-                        keys: e.keys.into_iter().map(|felt| format!("{felt:#x}")).collect(),
-                    })
-                    .collect(),
+                queries: queries.into_iter().map(|e| e.into()).collect(),
             })
             .await
             .map_err(Error::Grpc)
