@@ -4,7 +4,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::task::Poll;
 
-use dojo_types::schema::EntityModel;
+use dojo_types::schema::{Clause, EntityQuery};
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
@@ -24,13 +24,13 @@ pub enum SubscriptionEvent {
 
 pub struct SubscribedEntities {
     metadata: Arc<RwLock<WorldMetadata>>,
-    pub(super) entities: RwLock<HashSet<EntityModel>>,
+    pub(super) entities: RwLock<HashSet<EntityQuery>>,
     /// All the relevant storage addresses derived from the subscribed entities
     pub(super) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
 }
 
 impl SubscribedEntities {
-    pub(super) fn is_synced(&self, entity: &EntityModel) -> bool {
+    pub(super) fn is_synced(&self, entity: &EntityQuery) -> bool {
         self.entities.read().contains(entity)
     }
 
@@ -42,24 +42,30 @@ impl SubscribedEntities {
         }
     }
 
-    pub(super) fn add_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub(super) fn add_entities(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
         for entity in entities {
             Self::add_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub(super) fn remove_entities(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub(super) fn remove_entities(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
         for entity in entities {
             Self::remove_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub(super) fn add_entity(&self, entity: EntityModel) -> Result<(), Error> {
+    pub(super) fn add_entity(&self, entity: EntityQuery) -> Result<(), Error> {
         if !self.entities.write().insert(entity.clone()) {
             return Ok(());
         }
+
+        let keys = if let Clause::Keys(clause) = entity.clause {
+            clause.keys
+        } else {
+            return Err(Error::UnsupportedQuery);
+        };
 
         let model_packed_size = self
             .metadata
@@ -72,7 +78,7 @@ impl SubscribedEntities {
         let storage_addresses = compute_all_storage_addresses(
             cairo_short_string_to_felt(&entity.model)
                 .map_err(ParseError::CairoShortStringToFelt)?,
-            &entity.keys,
+            &keys,
             model_packed_size,
         );
 
@@ -84,10 +90,16 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub(super) fn remove_entity(&self, entity: EntityModel) -> Result<(), Error> {
+    pub(super) fn remove_entity(&self, entity: EntityQuery) -> Result<(), Error> {
         if !self.entities.write().remove(&entity) {
             return Ok(());
         }
+
+        let keys = if let Clause::Keys(clause) = entity.clause {
+            clause.keys
+        } else {
+            return Err(Error::UnsupportedQuery);
+        };
 
         let model_packed_size = self
             .metadata
@@ -100,7 +112,7 @@ impl SubscribedEntities {
         let storage_addresses = compute_all_storage_addresses(
             cairo_short_string_to_felt(&entity.model)
                 .map_err(ParseError::CairoShortStringToFelt)?,
-            &entity.keys,
+            &keys,
             model_packed_size,
         );
 
@@ -244,7 +256,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::schema::{EntityModel, Ty};
+    use dojo_types::schema::{KeysClause, Ty};
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
@@ -282,7 +294,11 @@ mod tests {
         .into_iter();
 
         let metadata = self::create_dummy_metadata();
-        let entity = EntityModel { model: model_name, keys };
+
+        let entity = dojo_types::schema::EntityQuery {
+            model: model_name,
+            clause: dojo_types::schema::Clause::Keys(KeysClause { keys }),
+        };
 
         let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
         subscribed_entities.add_entities(vec![entity.clone()]).expect("able to add entity");

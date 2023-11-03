@@ -168,7 +168,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::schema::Ty;
+    use dojo_types::schema::{KeysClause, Ty};
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
@@ -201,14 +201,15 @@ mod tests {
     #[test]
     fn err_if_set_values_too_many() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::schema::EntityModel {
+        let keys = vec![felt!("0x12345")];
+        let entity = dojo_types::schema::EntityQuery {
             model: "Position".into(),
-            keys: vec![felt!("0x12345")],
+            clause: dojo_types::schema::Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4"), felt!("5")];
         let model = cairo_short_string_to_felt(&entity.model).unwrap();
-        let result = storage.set_entity_storage(model, entity.keys, values);
+        let result = storage.set_entity_storage(model, keys, values);
 
         assert!(storage.storage.read().is_empty());
         matches!(
@@ -220,14 +221,15 @@ mod tests {
     #[test]
     fn err_if_set_values_too_few() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::schema::EntityModel {
+        let keys = vec![felt!("0x12345")];
+        let entity = dojo_types::schema::EntityQuery {
             model: "Position".into(),
-            keys: vec![felt!("0x12345")],
+            clause: dojo_types::schema::Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         let values = vec![felt!("1"), felt!("2")];
         let model = cairo_short_string_to_felt(&entity.model).unwrap();
-        let result = storage.set_entity_storage(model, entity.keys, values);
+        let result = storage.set_entity_storage(model, keys, values);
 
         assert!(storage.storage.read().is_empty());
         matches!(
@@ -239,9 +241,10 @@ mod tests {
     #[test]
     fn set_and_get_entity_value() {
         let storage = create_dummy_storage();
-        let entity = dojo_types::schema::EntityModel {
+        let keys = vec![felt!("0x12345")];
+        let entity = dojo_types::schema::EntityQuery {
             model: "Position".into(),
-            keys: vec![felt!("0x12345")],
+            clause: dojo_types::schema::Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         assert!(storage.storage.read().is_empty(), "storage must be empty initially");
@@ -250,7 +253,7 @@ mod tests {
 
         let expected_storage_addresses = compute_all_storage_addresses(
             cairo_short_string_to_felt(&model.name).unwrap(),
-            &entity.keys,
+            &keys,
             model.packed_size,
         );
 
@@ -258,11 +261,11 @@ mod tests {
         let model_name_in_felt = cairo_short_string_to_felt(&entity.model).unwrap();
 
         storage
-            .set_entity_storage(model_name_in_felt, entity.keys.clone(), expected_values.clone())
+            .set_entity_storage(model_name_in_felt, keys.clone(), expected_values.clone())
             .expect("set storage values");
 
         let actual_values = storage
-            .get_entity_storage(model_name_in_felt, &entity.keys)
+            .get_entity_storage(model_name_in_felt, &keys)
             .expect("model exist")
             .expect("values are set");
 
@@ -270,11 +273,7 @@ mod tests {
             storage.storage.read().clone().into_keys().collect::<Vec<_>>();
 
         assert!(
-            storage
-                .model_index
-                .read()
-                .get(&model_name_in_felt)
-                .is_some_and(|e| e.contains(&entity.keys)),
+            storage.model_index.read().get(&model_name_in_felt).is_some_and(|e| e.contains(&keys)),
             "entity keys must be indexed"
         );
         assert!(actual_values == expected_values);

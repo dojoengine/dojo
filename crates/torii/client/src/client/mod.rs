@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use dojo_types::packing::unpack;
-use dojo_types::schema::{EntityModel, Ty};
+use dojo_types::schema::{Clause, EntityQuery, Ty};
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
 use parking_lot::{RwLock, RwLockReadGuard};
@@ -46,7 +46,7 @@ impl Client {
         torii_url: String,
         rpc_url: String,
         world: FieldElement,
-        entities: Option<Vec<EntityModel>>,
+        queries: Option<Vec<EntityQuery>>,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
@@ -61,13 +61,18 @@ impl Client {
         let provider = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_reader = WorldContractReader::new(world, provider);
 
-        if let Some(entities_to_sync) = entities {
-            subbed_entities.add_entities(entities_to_sync)?;
+        if let Some(queries) = queries {
+            subbed_entities.add_entities(queries)?;
 
             // TODO: change this to querying the gRPC url instead
             let subbed_entities = subbed_entities.entities.read().clone();
-            for EntityModel { model, keys } in subbed_entities {
+            for EntityQuery { model, clause } in subbed_entities {
                 let model_reader = world_reader.model(&model).await?;
+                let keys = if let Clause::Keys(clause) = clause {
+                    clause.keys
+                } else {
+                    return Err(Error::UnsupportedQuery);
+                };
                 let values = model_reader.entity_storage(&keys).await?;
 
                 client_storage.set_entity_storage(
@@ -93,7 +98,7 @@ impl Client {
         self.metadata.read()
     }
 
-    pub fn subscribed_entities(&self) -> RwLockReadGuard<'_, HashSet<EntityModel>> {
+    pub fn subscribed_entities(&self) -> RwLockReadGuard<'_, HashSet<EntityQuery>> {
         self.subscribed_entities.entities.read()
     }
 
@@ -104,21 +109,27 @@ impl Client {
     ///
     /// If the requested entity is not among the synced entities, it will attempt to fetch it from
     /// the RPC.
-    pub async fn entity(&self, entity: &EntityModel) -> Result<Option<Ty>, Error> {
+    pub async fn entity(&self, entity: &EntityQuery) -> Result<Option<Ty>, Error> {
         let Some(mut schema) = self.metadata.read().model(&entity.model).map(|m| m.schema.clone())
         else {
             return Ok(None);
         };
 
+        let keys = if let Clause::Keys(clause) = entity.clone().clause {
+            clause.keys
+        } else {
+            return Err(Error::UnsupportedQuery);
+        };
+
         if !self.subscribed_entities.is_synced(entity) {
             let model = self.world_reader.model(&entity.model).await?;
-            return Ok(Some(model.entity(&entity.keys).await?));
+            return Ok(Some(model.entity(&keys).await?));
         }
 
         let Ok(Some(raw_values)) = self.storage.get_entity_storage(
             cairo_short_string_to_felt(&entity.model)
                 .map_err(ParseError::CairoShortStringToFelt)?,
-            &entity.keys,
+            &keys,
         ) else {
             return Ok(Some(schema));
         };
@@ -131,7 +142,7 @@ impl Client {
             .expect("qed; layout should exist");
 
         let unpacked = unpack(raw_values, layout).unwrap();
-        let mut keys_and_unpacked = [entity.keys.to_vec(), unpacked].concat();
+        let mut keys_and_unpacked = [keys.to_vec(), unpacked].concat();
 
         schema.deserialize(&mut keys_and_unpacked).unwrap();
 
@@ -158,9 +169,15 @@ impl Client {
     /// Adds entities to the list of entities to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn add_entities_to_sync(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub async fn add_entities_to_sync(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
         for entity in &entities {
-            self.initiate_entity(&entity.model, entity.keys.clone()).await?;
+            let keys = if let Clause::Keys(clause) = entity.clone().clause {
+                clause.keys
+            } else {
+                return Err(Error::UnsupportedQuery);
+            };
+
+            self.initiate_entity(&entity.model, keys.clone()).await?;
         }
 
         self.subscribed_entities.add_entities(entities)?;
@@ -179,7 +196,7 @@ impl Client {
     /// Removes entities from the list of entities to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn remove_entities_to_sync(&self, entities: Vec<EntityModel>) -> Result<(), Error> {
+    pub async fn remove_entities_to_sync(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
         self.subscribed_entities.remove_entities(entities)?;
 
         let updated_entities =
@@ -199,7 +216,7 @@ impl Client {
 
     async fn initiate_subscription(
         &self,
-        entities: Vec<EntityModel>,
+        entities: Vec<EntityQuery>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_entities(entities).await?;

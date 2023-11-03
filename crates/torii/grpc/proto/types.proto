@@ -29,14 +29,6 @@ message ModelMetadata {
     bytes schema = 6;
 }
 
-/// Represents a component for a given entity.
-message EntityModel {
-    /// Model name
-    string model = 1;
-    /// Entity keys
-    repeated string keys = 2;   
-}
-
 message StorageEntry {
     // The key of the changed value
     string key = 1;
@@ -61,3 +53,54 @@ message EntityUpdate {
     EntityDiff entity_diff = 2;
 }
 
+message EntityQuery {
+    string model = 1;
+    Clause clause = 2;
+}
+
+message Clause {
+    oneof clause_type {
+        KeysClause keys = 1;
+        AttributeClause attribute = 2;
+        CompositeClause composite = 3;
+    }
+}
+
+message KeysClause {
+    repeated bytes keys = 1;
+}
+
+message AttributeClause {
+    string attribute = 1;
+    ComparisonOperator operator = 2;
+    Value value = 3;
+}
+
+message CompositeClause {
+    LogicalOperator operator = 1;
+    repeated Clause clauses = 2;
+}
+
+enum LogicalOperator {
+    AND = 0;
+    OR = 1;
+}
+
+enum ComparisonOperator {
+    EQ = 0;
+    NEQ = 1;
+    GT = 2;
+    GTE = 3;
+    LT = 4;
+    LTE = 5;
+}
+
+message Value {
+    oneof value_type {
+        string string_value = 1;
+        int64 int_value = 2;
+        uint64 uint_value = 3;
+        bool bool_value = 4;
+        bytes byte_value = 5;
+    }
+}
