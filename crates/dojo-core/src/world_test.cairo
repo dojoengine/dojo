@@ -7,10 +7,12 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 use starknet::syscalls::deploy_syscall;
 
+use dojo::benchmarks;
 use dojo::executor::executor;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::database::schema::SchemaIntrospection;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
+use dojo::benchmarks::{Character, end};
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -30,11 +32,13 @@ struct Fizz {
 #[starknet::interface]
 trait Ibar<TContractState> {
     fn set_foo(self: @TContractState, a: felt252, b: u128);
+    fn set_char(self: @TContractState, a: felt252, b: u32);
 }
 
 #[starknet::contract]
 mod bar {
     use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait};
+    use super::benchmarks::{Character, Abilities, Stats, Weapon, Sword};
     use traits::Into;
     use starknet::{get_caller_address, ContractAddress};
 
@@ -51,6 +55,46 @@ mod bar {
     impl IbarImpl of super::Ibar<ContractState> {
         fn set_foo(self: @ContractState, a: felt252, b: u128) {
             set!(self.world.read(), Foo { caller: get_caller_address(), a, b });
+        }
+
+        fn set_char(self: @ContractState, a: felt252, b: u32) {
+            set!(
+                self.world.read(),
+                Character {
+                    caller: get_caller_address(),
+                    heigth: a,
+                    abilities: Abilities {
+                        strength: 0x12,
+                        dexterity: 0x34,
+                        constitution: 0x56,
+                        intelligence: 0x78,
+                        wisdom: 0x9a,
+                        charisma: 0xbc,
+                    },
+                    stats: Stats {
+                        kills: 0x123456789abcdef,
+                        deaths: 0x1234,
+                        rests: 0x12345678,
+                        hits: 0x123456789abcdef,
+                        blocks: 0x12345678,
+                        walked: 0x123456789abcdef,
+                        runned: 0x123456789abcdef,
+                        finished: true,
+                        romances: 0x1234,
+                    },
+                    weapon: Weapon::DualWield((
+                        Sword {
+                            swordsmith: get_caller_address(),
+                            damage: 0x12345678,
+                        },
+                        Sword {
+                            swordsmith: get_caller_address(),
+                            damage: 0x12345678,
+                        }
+                    )),
+                    gold: b,
+                }
+            );
         }
     }
 }
@@ -390,12 +434,56 @@ fn test_execute_multiple_worlds() {
     bar1_contract.set_foo(1337, 1337);
     bar2_contract.set_foo(7331, 7331);
 
-    let mut keys = ArrayTrait::new();
-    keys.append(0);
-
     let data1 = get!(world1, alice, Foo);
     let data2 = get!(world2, alice, Foo);
     assert(data1.a == 1337, 'data1 not stored');
     assert(data2.a == 7331, 'data2 not stored');
 }
 
+#[test]
+#[available_gas(60000000)]
+fn bench_execute() {
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let bar_contract = IbarDispatcher {
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
+    };
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    bar_contract.set_foo(1337, 1337);
+    end(gas, 'foo set call');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let data = get!(world, alice, Foo);
+    end(gas, 'foo get macro');
+
+    assert(data.a == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(60000000)]
+fn bench_execute_complex() {
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+    let bar_contract = IbarDispatcher {
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
+    };
+
+    let alice = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(alice);
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    bar_contract.set_char(1337, 1337);
+    end(gas, 'char set call');
+
+    let gas = testing::get_available_gas();
+    gas::withdraw_gas().unwrap();
+    let data = get!(world, alice, Character);
+    end(gas, 'char get macro');
+
+    assert(data.heigth == 1337, 'data not stored');
+}
