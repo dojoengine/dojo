@@ -177,15 +177,12 @@ fn configure_cors(origins: &Vec<String>) -> (Builder, CorsLayer) {
         )
     };
 
+    let headers = [ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN];
+    let methods = [Method::POST, Method::GET, Method::OPTIONS];
+
     (
-        warp_cors
-            .allow_headers(vec![ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN])
-            .allow_methods(&[Method::POST, Method::GET, Method::OPTIONS]),
-        tonic_cors.allow_credentials(false).allow_methods(vec![
-            Method::POST,
-            Method::GET,
-            Method::OPTIONS,
-        ]),
+        warp_cors.allow_headers(headers.clone()).allow_methods(methods.clone()),
+        tonic_cors.allow_headers(headers).allow_methods(methods),
     )
 }
 
