@@ -1,5 +1,12 @@
 # This crate is dedicated for benchmarking purposes
 
+## Quick start
+
+```bash
+katana
+bash scripts/cargo_bench.sh
+```
+
 ## Prerequisites
 
 -   `cargo` - for test case generation and runtime

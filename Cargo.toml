@@ -63,14 +63,17 @@ camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.2", features = [ "derive" ] }
 clap_complete = "4.3"
+colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
+env_logger = "0.10.0"
 flate2 = "1.0.24"
 futures = "0.3.28"
 hex = "0.4.3"
 indoc = "1.0.7"
 itertools = "0.10.3"
 lazy_static = "1.4.0"
+num-bigint = "0.4"
 once_cell = "1.0"
 parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"

@@ -9,6 +9,6 @@ sozo --manifest-path crates/benches/contracts/Scarb.toml migrate --rpc-url http:
 /bin/bash crates/benches/contracts/scripts/default_auth.sh
 
 #run bench and show results
-rm crates/benches/gas_usage.txt
+rm -f crates/benches/gas_usage.txt
 cargo test bench $@ -- --ignored
 cargo run --bin benches crates/benches/gas_usage.txt

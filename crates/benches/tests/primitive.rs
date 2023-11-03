@@ -1,5 +1,4 @@
-use benches::{estimate_gas, estimate_gas_last, log, BenchCall};
-use hex::ToHex;
+use benches::{estimate_gas, log, BenchCall};
 use proptest::prelude::*;
 use starknet::core::types::FieldElement;
 

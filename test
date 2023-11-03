@@ -1,8 +1,0 @@
-Script started on 2023-10-31 13:41:54+00:00 [TERM="xterm-256color" TTY="/dev/pts/8" COLUMNS="85" LINES="16"]
-]0;mateo@visoft-workhorse:~/code/dojo[?2004h[mateo@visoft-workhorse dojo]$ sozo build[K[Kscript[Cscriptoscriptuscriptrscriptcscriptescript script[C[C[C[C[C[Cs/
-cairo_bench.sh      cairo_test.sh       docs.sh             rust_fmt.sh
-cairo_fmt.sh        clippy.sh           prepare_release.sh  
-[mateo@visoft-workhorse dojo]$ source scripts/cairo_bench.sh 
-[?2004lUsage: bash [set|diff]
-
-Script done on 2023-10-31 13:42:05+00:00 [COMMAND_EXIT_CODE="1"]
