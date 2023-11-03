@@ -17,13 +17,16 @@ use starknet_crypto::FieldElement;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::Notify;
 use tokio_stream::StreamExt;
+use tonic_web::GrpcWebLayer;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 use torii_grpc::protos;
 use torii_grpc::server::DojoWorld;
+use tower::ServiceBuilder;
+use tower_http::cors::{Any, CorsLayer as TonicCors};
 use tracing::info;
 use url::Url;
-use warp::filters::cors::Builder;
+use warp::filters::cors::Cors as WarpCors;
 use warp::Filter;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -99,19 +102,20 @@ async fn spawn(
     allowed_origins: Vec<String>,
     external_url: Option<Url>,
 ) -> anyhow::Result<()> {
+    let (warp_cors, tonic_cors) = configure_cors(&allowed_origins);
+
     let base_route = warp::path::end()
         .and(warp::get())
         .map(|| warp::reply::json(&serde_json::json!({ "success": true })));
-    let routes = torii_graphql::route::filter(&pool, external_url)
-        .await
-        .or(base_route)
-        .with(configure_cors(&allowed_origins));
+    let routes =
+        torii_graphql::route::filter(&pool, external_url).await.or(base_route).with(warp_cors);
 
     let warp = warp::service(routes);
 
-    // TODO: apply allowed_origins to tonic grpc
-    let tonic =
-        tonic_web::enable(protos::world::world_server::WorldServer::new(dojo_world.clone()));
+    let tonic = ServiceBuilder::new()
+        .layer(tonic_cors)
+        .layer(GrpcWebLayer::new())
+        .service(protos::world::world_server::WorldServer::new(dojo_world));
 
     hyper::Server::bind(&addr)
         .serve(make_service_fn(move |_| {
@@ -160,15 +164,30 @@ async fn spawn(
     Ok(())
 }
 
-fn configure_cors(origins: &Vec<String>) -> Builder {
-    if origins.len() == 1 && origins[0] == "*" {
-        warp::cors().allow_any_origin()
-    } else {
-        let origins_str: Vec<&str> = origins.iter().map(|origin| origin.as_str()).collect();
-        warp::cors().allow_origins(origins_str)
+/// Build CORS configuration for both `warp` and `tonic` service
+fn configure_cors(origins: &Vec<String>) -> (WarpCors, TonicCors) {
+    let headers = [ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN];
+    let methods = [Method::POST, Method::GET, Method::OPTIONS];
+
+    let mut warp_cors = warp::cors().allow_headers(headers.clone()).allow_methods(methods.clone());
+    let mut tonic_cors = TonicCors::new().allow_headers(headers).allow_methods(methods);
+
+    match origins.as_slice() {
+        [origin] if origin == "*" => {
+            warp_cors = warp_cors.allow_any_origin();
+            tonic_cors = tonic_cors.allow_origin(Any);
+        }
+
+        origins => {
+            warp_cors = warp_cors
+                .allow_origins(origins.iter().map(|origin| origin.as_str()).collect::<Vec<_>>());
+            tonic_cors = tonic_cors.allow_origin(
+                origins.iter().map(|o| o.parse().expect("valid origin")).collect::<Vec<_>>(),
+            );
+        }
     }
-    .allow_headers(vec![ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN])
-    .allow_methods(&[Method::POST, Method::GET, Method::OPTIONS])
+
+    (warp_cors.build(), tonic_cors)
 }
 
 enum EitherBody<A, B> {
