@@ -23,10 +23,10 @@ use torii_core::types::Model;
 use torii_grpc::protos;
 use torii_grpc::server::DojoWorld;
 use tower::ServiceBuilder;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{Any, CorsLayer as TonicCors};
 use tracing::info;
 use url::Url;
-use warp::filters::cors::Builder;
+use warp::filters::cors::Cors as WarpCors;
 use warp::Filter;
 
 type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -164,26 +164,30 @@ async fn spawn(
     Ok(())
 }
 
-fn configure_cors(origins: &Vec<String>) -> (Builder, CorsLayer) {
-    let (warp_cors, tonic_cors) = if origins.len() == 1 && origins[0] == "*" {
-        (warp::cors().allow_any_origin(), CorsLayer::new().allow_origin(Any))
-    } else {
-        (
-            warp::cors()
-                .allow_origins(origins.iter().map(|origin| origin.as_str()).collect::<Vec<_>>()),
-            CorsLayer::new().allow_origin(
-                origins.iter().map(|o| o.parse().expect("valid origin")).collect::<Vec<_>>(),
-            ),
-        )
-    };
-
+/// Build CORS configuration for both `warp` and `tonic` service
+fn configure_cors(origins: &Vec<String>) -> (WarpCors, TonicCors) {
     let headers = [ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN];
     let methods = [Method::POST, Method::GET, Method::OPTIONS];
 
-    (
-        warp_cors.allow_headers(headers.clone()).allow_methods(methods.clone()),
-        tonic_cors.allow_headers(headers).allow_methods(methods),
-    )
+    let mut warp_cors = warp::cors().allow_headers(headers.clone()).allow_methods(methods.clone());
+    let mut tonic_cors = TonicCors::new().allow_headers(headers).allow_methods(methods);
+
+    match origins.as_slice() {
+        [origin] if origin == "*" => {
+            warp_cors = warp_cors.allow_any_origin();
+            tonic_cors = tonic_cors.allow_origin(Any);
+        }
+
+        origins => {
+            warp_cors = warp_cors
+                .allow_origins(origins.iter().map(|origin| origin.as_str()).collect::<Vec<_>>());
+            tonic_cors = tonic_cors.allow_origin(
+                origins.iter().map(|o| o.parse().expect("valid origin")).collect::<Vec<_>>(),
+            );
+        }
+    }
+
+    (warp_cors.build(), tonic_cors)
 }
 
 enum EitherBody<A, B> {
