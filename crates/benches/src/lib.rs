@@ -1,6 +1,3 @@
-#[cfg_attr(test, macro_use)]
-extern crate lazy_static;
-
 mod helpers;
 
 use anyhow::Result;
