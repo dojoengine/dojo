@@ -815,12 +815,44 @@ test_manifest_file
     "abi": [
       {
         "type": "impl",
-        "name": "Upgradeable",
-        "interface_name": "dojo::upgradable::IUpgradeable"
+        "name": "WorldProviderImpl",
+        "interface_name": "dojo::world::IWorldProvider"
+      },
+      {
+        "type": "struct",
+        "name": "dojo::world::IWorldDispatcher",
+        "members": [
+          {
+            "name": "contract_address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ]
       },
       {
         "type": "interface",
-        "name": "dojo::upgradable::IUpgradeable",
+        "name": "dojo::world::IWorldProvider",
+        "items": [
+          {
+            "type": "function",
+            "name": "world",
+            "inputs": [],
+            "outputs": [
+              {
+                "type": "dojo::world::IWorldDispatcher"
+              }
+            ],
+            "state_mutability": "view"
+          }
+        ]
+      },
+      {
+        "type": "impl",
+        "name": "UpgradableImpl",
+        "interface_name": "dojo::components::upgradeable::IUpgradeable"
+      },
+      {
+        "type": "interface",
+        "name": "dojo::components::upgradeable::IUpgradeable",
         "items": [
           {
             "type": "function",
@@ -842,31 +874,22 @@ test_manifest_file
         "inputs": []
       },
       {
-        "type": "struct",
-        "name": "dojo::world::IWorldDispatcher",
-        "members": [
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ]
-      },
-      {
-        "type": "function",
-        "name": "world",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "dojo::world::IWorldDispatcher"
-          }
-        ],
-        "state_mutability": "view"
+        "type": "event",
+        "name": "dojo::components::upgradeable::upgradeable::Event",
+        "kind": "enum",
+        "variants": []
       },
       {
         "type": "event",
         "name": "dojo::base::base::Event",
         "kind": "enum",
-        "variants": []
+        "variants": [
+          {
+            "name": "UpgradeableEvent",
+            "type": "dojo::components::upgradeable::upgradeable::Event",
+            "kind": "nested"
+          }
+        ]
       }
     ]
   },
@@ -878,24 +901,33 @@ test_manifest_file
       "abi": [
         {
           "type": "impl",
-          "name": "Upgradeable",
-          "interface_name": "dojo::upgradable::IUpgradeable"
+          "name": "WorldProviderImpl",
+          "interface_name": "dojo::world::IWorldProvider"
+        },
+        {
+          "type": "struct",
+          "name": "dojo::world::IWorldDispatcher",
+          "members": [
+            {
+              "name": "contract_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ]
         },
         {
           "type": "interface",
-          "name": "dojo::upgradable::IUpgradeable",
+          "name": "dojo::world::IWorldProvider",
           "items": [
             {
               "type": "function",
-              "name": "upgrade",
-              "inputs": [
+              "name": "world",
+              "inputs": [],
+              "outputs": [
                 {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
+                  "type": "dojo::world::IWorldDispatcher"
                 }
               ],
-              "outputs": [],
-              "state_mutability": "external"
+              "state_mutability": "view"
             }
           ]
         },
@@ -952,6 +984,29 @@ test_manifest_file
               ],
               "outputs": [],
               "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "UpgradableImpl",
+          "interface_name": "dojo::components::upgradeable::IUpgradeable"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::components::upgradeable::IUpgradeable",
+          "items": [
+            {
+              "type": "function",
+              "name": "upgrade",
+              "inputs": [
+                {
+                  "name": "new_class_hash",
+                  "type": "core::starknet::class_hash::ClassHash"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1028,6 +1083,12 @@ test_manifest_file
         },
         {
           "type": "event",
+          "name": "dojo::components::upgradeable::upgradeable::Event",
+          "kind": "enum",
+          "variants": []
+        },
+        {
+          "type": "event",
           "name": "dojo_examples::actions::actions::Moved",
           "kind": "struct",
           "members": [
@@ -1048,6 +1109,11 @@ test_manifest_file
           "name": "dojo_examples::actions::actions::Event",
           "kind": "enum",
           "variants": [
+            {
+              "name": "UpgradeableEvent",
+              "type": "dojo::components::upgradeable::upgradeable::Event",
+              "kind": "nested"
+            },
             {
               "name": "Moved",
               "type": "dojo_examples::actions::actions::Moved",
