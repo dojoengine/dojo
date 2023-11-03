@@ -126,7 +126,7 @@ fn update_manifest_correctly() {
         executor.clone(),
         base.clone(),
         new_models.clone(),
-        new_contracts.clone(),
+        new_contracts,
     )
     .unwrap();
 
