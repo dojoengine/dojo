@@ -35,7 +35,7 @@ pub fn estimate_gas_last(calls: Vec<BenchCall>) -> Result<u64> {
     let _rt = RUNTIME.enter();
     block_on(async move {
         let whole_gas = execute_calls(calls.clone()).await;
-        calls.pop().unwrap(); // remove last call
+        calls.pop().expect("Empty calls vector"); // remove last call
         let before_gas = execute_calls(calls).await;
         Ok(whole_gas? - before_gas?)
     })

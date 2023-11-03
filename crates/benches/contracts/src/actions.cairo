@@ -29,8 +29,11 @@ trait IActions<TContractState> {
 
     fn bench_complex_set_default(self: @TContractState);
     fn bench_complex_set_with_smaller(self: @TContractState, abilities: Abilities);
-    fn bench_complex_get(self: @TContractState, earned: u32);
     fn bench_complex_update_minimal(self: @TContractState, earned: u32);
+    fn bench_complex_update_minimal_nested(self: @TContractState, which: u8);
+    fn bench_complex_get(self: @TContractState);
+    fn bench_complex_get_minimal(self: @TContractState) -> u32;
+    fn bench_complex_check(self: @TContractState, ability: felt252, threshold: u8) -> bool;
 }
 
 // dojo decorator
@@ -65,26 +68,15 @@ mod actions {
     }
 
 
-    // impl: implement functions specified in trait
     #[external(v0)]
     impl ActionsImpl of IActions<ContractState> {
-        // ContractState is defined by system decorator expansion
         fn spawn(self: @ContractState) {
-            // Access the world dispatcher for reading.
             let world = self.world_dispatcher.read();
-
-            // Get the address of the current caller, possibly the player's address.
             let player = get_caller_address();
 
-            // Retrieve the player's current position from the world.
             let position = get!(world, player, (Position));
-
-            // Retrieve the player's move data, e.g., how many moves they have left.
             let moves = get!(world, player, (Moves));
 
-            // Update the world state with the new data.
-            // 1. Increase the player's remaining moves by 10.
-            // 2. Move the player's position 10 units in both the x and y direction.
             set!(
                 world,
                 (
@@ -98,30 +90,16 @@ mod actions {
             );
         }
 
-        // Implementation of the move function for the ContractState struct.
         fn move(self: @ContractState, direction: Direction) {
-            // Access the world dispatcher for reading.
             let world = self.world_dispatcher.read();
-
-            // Get the address of the current caller, possibly the player's address.
             let player = get_caller_address();
-
-            // Retrieve the player's current position and moves data from the world.
             let (mut position, mut moves) = get!(world, player, (Position, Moves));
 
-            // Deduct one from the player's remaining moves.
             moves.remaining -= 1;
-
-            // Update the last direction the player moved in.
             moves.last_direction = direction;
-
-            // Calculate the player's next position based on the provided direction.
             let next = next_position(position, direction);
 
-            // Update the world state with the new moves data and position.
             set!(world, (moves, next));
-
-            // Emit an event to the world to notify about the player's move.
             emit!(world, Moved { player, direction });
         }
 
@@ -255,12 +233,6 @@ mod actions {
                 gold: 0,
             });
         }
-        
-        fn bench_complex_get(self: @ContractState, earned: u32) {
-            let world = self.world_dispatcher.read();
-            let caller = get_caller_address();
-            let char = get!(world, caller, Character);
-        }
 
         fn bench_complex_update_minimal(self: @ContractState, earned: u32) {
             let world = self.world_dispatcher.read();
@@ -276,6 +248,82 @@ mod actions {
                 weapon: char.weapon,
                 gold: char.gold + earned,
             });
+        }
+
+        fn bench_complex_update_minimal_nested(self: @ContractState, which: u8) {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+
+            let char = get!(world, caller, Character);
+
+            let stats = Stats {
+                kills: char.stats.kills + if which == 0 { 0 } else { 1 },
+                deaths: char.stats.deaths + if which == 1 { 0 } else { 1 },
+                rests: char.stats.rests + if which == 2 { 0 } else { 1 },
+                hits: char.stats.hits + if which == 3 { 0 } else { 1 },
+                blocks: char.stats.blocks + if which == 4 { 0 } else { 1 },
+                walked: char.stats.walked + if which == 5 { 0 } else { 1 },
+                runned: char.stats.runned + if which == 6 { 0 } else { 1 },
+                finished: char.stats.finished || if which == 7 { false } else { true },
+                romances: char.stats.romances + if which == 8 { 0 } else { 1 },
+            };
+
+            set!(world, Character {
+                caller: get_caller_address(),
+                heigth: char.heigth,
+                abilities: char.abilities,
+                stats: Stats {
+                    kills: char.stats.kills + 1,
+                    deaths: char.stats.deaths,
+                    rests: char.stats.rests,
+                    hits: char.stats.hits,
+                    blocks: char.stats.blocks,
+                    walked: char.stats.walked,
+                    runned: char.stats.runned,
+                    finished: char.stats.finished,
+                    romances: char.stats.romances,
+                },
+                weapon: char.weapon,
+                gold: char.gold,
+            });
+        }
+
+        fn bench_complex_get(self: @ContractState) {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+            let char = get!(world, caller, Character);
+        }
+
+        fn bench_complex_get_minimal(self: @ContractState) -> u32 {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+
+            let char = get!(world, caller, Character);
+            char.gold
+        }
+
+        fn bench_complex_check(self: @ContractState, ability: felt252, threshold: u8) -> bool {
+            let world = self.world_dispatcher.read();
+            let caller = get_caller_address();
+
+            let char = get!(world, caller, Character);
+            let points = if ability == 0 { 
+                char.abilities.strength
+            } else if ability == 1 { 
+                char.abilities.dexterity
+            } else if ability == 2 { 
+                char.abilities.constitution
+            } else if ability == 3 { 
+                char.abilities.intelligence
+            } else if ability == 4 { 
+                char.abilities.wisdom
+            } else if ability == 5 { 
+                char.abilities.charisma
+            } else { 
+                0 
+            };
+            
+            points >= threshold
         }
     }
 }

@@ -33,18 +33,18 @@ proptest! {
         log("bench_primitive_iter", fee, &s);
     }
 
-    // #[test]
-    // #[ignore] // needs a running katana
-    // fn bench_primitive_hash(a in 0..u64::MAX, b in 0..u64::MAX, c in 0..u64::MAX) {
-    //     let a = format!("{}", a);
-    //     let b = format!("{}", b);
-    //     let c = format!("{}", c);
-    //     let args = vec![a.clone(), b.clone(), c.clone()].into_iter().map(|d| FieldElement::from_dec_str(&d).unwrap()).collect::<Vec<_>>();
+    #[test]
+    #[ignore] // needs a running katana
+    fn bench_primitive_hash(a in 0..u64::MAX, b in 0..u64::MAX, c in 0..u64::MAX) {
+        let a = format!("{}", a);
+        let b = format!("{}", b);
+        let c = format!("{}", c);
+        let args = vec![a.clone(), b.clone(), c.clone()].into_iter().map(|d| FieldElement::from_dec_str(&d).unwrap()).collect::<Vec<_>>();
 
-    //     let fee = estimate_gas(
-    //         BenchCall("bench_primitive_hash", args)
-    //     ).unwrap();
+        let fee = estimate_gas(
+            BenchCall("bench_primitive_hash", args)
+        ).unwrap();
 
-    //     log("bench_primitive_hash", fee, &format!("{}:{}:{}", a, b, c));
-    // }
+        log("bench_primitive_hash", fee, &format!("{},{},{}", a, b, c));
+    }
 }
