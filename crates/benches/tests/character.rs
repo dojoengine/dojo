@@ -29,7 +29,7 @@ proptest! {
     #[test]
     #[ignore] // needs a running katana
     fn bench_complex_update_minimal(s in "[0-9]{9}") {
-        let calldata = FieldElement::from(u32::from_str_radix(&s, 10).unwrap());
+        let calldata = FieldElement::from(s.parse::<u32>().unwrap());
         let fee = estimate_gas_last(vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata])
@@ -68,7 +68,7 @@ proptest! {
     #[test]
     #[ignore] // needs a running katana
     fn bench_complex_get_minimal(s in "[0-9]{9}") {
-        let calldata = FieldElement::from(u32::from_str_radix(&s, 10).unwrap());
+        let calldata = FieldElement::from(s.parse::<u32>().unwrap());
         let fee = estimate_gas_last(vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata]),
