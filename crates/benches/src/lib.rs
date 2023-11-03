@@ -5,6 +5,7 @@ mod helpers;
 
 use anyhow::Result;
 use futures::executor::block_on;
+use futures::future;
 use lazy_static::lazy_static;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
@@ -32,12 +33,14 @@ lazy_static! {
 
 pub fn estimate_gas_last(calls: Vec<BenchCall>) -> Result<u64> {
     let mut calls = parse_calls(calls);
+    let all = calls.clone();
+    calls.pop().expect("Empty calls vector"); // remove last call
+
     let _rt = RUNTIME.enter();
     block_on(async move {
-        let whole_gas = execute_calls(calls.clone()).await;
-        calls.pop().expect("Empty calls vector"); // remove last call
-        let before_gas = execute_calls(calls).await;
-        Ok(whole_gas? - before_gas?)
+        let (whole_gas, before_gas) =
+            future::try_join(execute_calls(all), execute_calls(calls)).await?;
+        Ok(whole_gas - before_gas)
     })
 }
 
