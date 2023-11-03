@@ -370,44 +370,37 @@ fn get_dojo_contract_artifacts(
 }
 
 fn do_update_manifest(
-    manifest: &mut dojo_world::manifest::Manifest,
+    current_manifest: &mut dojo_world::manifest::Manifest,
     world: dojo_world::manifest::Contract,
     executor: dojo_world::manifest::Contract,
     base: dojo_world::manifest::Class,
     models: BTreeMap<String, dojo_world::manifest::Model>,
     contracts: BTreeMap<SmolStr, dojo_world::manifest::Contract>,
 ) -> anyhow::Result<()> {
-    if manifest.world.class_hash != world.class_hash {
-        manifest.world = world;
+    if current_manifest.world.class_hash != world.class_hash {
+        current_manifest.world = world;
     }
 
-    if manifest.executor.class_hash != executor.class_hash {
-        manifest.executor = executor;
+    if current_manifest.executor.class_hash != executor.class_hash {
+        current_manifest.executor = executor;
     }
 
-    if manifest.base.class_hash != base.class_hash {
-        manifest.base = base;
+    if current_manifest.base.class_hash != base.class_hash {
+        current_manifest.base = base;
     }
 
-    for (name, model) in models {
-        if let Some(mm) = manifest.models.iter_mut().find(|m| m.name == name) {
-            if mm.class_hash != model.class_hash {
-                *mm = model;
-            }
-        } else {
-            manifest.models.push(model);
+    let mut contracts_to_add = vec![];
+    for (name, mut contract) in contracts {
+        if let Some(existing_contract) =
+            current_manifest.contracts.iter_mut().find(|c| c.name == name)
+        {
+            contract.address = existing_contract.address;
         }
+        contracts_to_add.push(contract);
     }
 
-    for (name, contract) in contracts {
-        if let Some(mc) = manifest.contracts.iter_mut().find(|c| c.name == name) {
-            if mc.class_hash != contract.class_hash {
-                *mc = contract;
-            }
-        } else {
-            manifest.contracts.push(contract);
-        }
-    }
+    current_manifest.contracts = contracts_to_add;
+    current_manifest.models = models.into_values().collect();
 
     Ok(())
 }
