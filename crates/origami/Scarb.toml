@@ -1,8 +1,8 @@
 [package]
 cairo-version = "2.3.0"
-description = "Implementations of common primitives for the Dojo games"
+description = "Community-maintained, game-oriented libraries for Cairo"
 name = "origami"
 version = "0.3.2"
 
 [dependencies]
-# dojo.workspace = true  # fails because of dojo_plugin in dojo_core
+dojo.workspace = true  # fails because of dojo_plugin in dojo_core
