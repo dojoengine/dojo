@@ -103,7 +103,7 @@ fn handle_cursor(
             Some(order) => {
                 let field_name = format!("external_{}", order.field);
                 Ok(format!(
-                    "({} {} '{}' AND {} = '{}') OR {} {} '{}'",
+                    "(({} {} '{}' AND {} = '{}') OR {} {} '{}')",
                     id_column,
                     direction.as_ref(),
                     event_id,
