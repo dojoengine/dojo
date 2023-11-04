@@ -18,7 +18,14 @@ mod upgradeable {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {}
+    enum Event {
+        Upgraded: Upgraded,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct Upgraded {
+        class_hash: ClassHash
+    }
 
     mod Errors {
         const INVALID_CLASS: felt252 = 'class_hash cannot be zero';
@@ -31,12 +38,20 @@ mod upgradeable {
         TContractState, +HasComponent<TContractState>, +IWorldProvider<TContractState>
     > of super::IUpgradeable<ComponentState<TContractState>> {
         fn upgrade(ref self: ComponentState<TContractState>, new_class_hash: ClassHash) {
-            assert(self.get_contract().world().contract_address.is_non_zero(), Errors::INVALID_WORLD_ADDRESS);
+            assert(
+                self.get_contract().world().contract_address.is_non_zero(),
+                Errors::INVALID_WORLD_ADDRESS
+            );
             assert(get_caller_address().is_non_zero(), Errors::INVALID_CALLER);
-            assert(get_caller_address() == self.get_contract().world().contract_address, Errors::INVALID_CALLER);
+            assert(
+                get_caller_address() == self.get_contract().world().contract_address,
+                Errors::INVALID_CALLER
+            );
             assert(new_class_hash.is_non_zero(), Errors::INVALID_CLASS);
-           
+
             replace_class_syscall(new_class_hash).unwrap();
+
+            self.emit(Upgraded { class_hash: new_class_hash });
         }
     }
 }
