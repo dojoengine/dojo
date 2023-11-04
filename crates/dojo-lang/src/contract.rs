@@ -63,6 +63,8 @@ impl DojoContract {
                         upgradeable: upgradeable_component::Storage,
                     }
 
+                    // should use another name xd : dojo_name / contract_name / dojo_contract_name
+                    // it conflicts with erc name
                     #[external(v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         '$name$'

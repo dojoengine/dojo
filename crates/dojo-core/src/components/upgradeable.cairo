@@ -42,7 +42,6 @@ mod upgradeable {
                 self.get_contract().world().contract_address.is_non_zero(),
                 Errors::INVALID_WORLD_ADDRESS
             );
-            assert(get_caller_address().is_non_zero(), Errors::INVALID_CALLER);
             assert(
                 get_caller_address() == self.get_contract().world().contract_address,
                 Errors::INVALID_CALLER
