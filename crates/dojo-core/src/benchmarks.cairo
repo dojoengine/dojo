@@ -114,30 +114,30 @@ fn bench_native_storage_offset() {
 fn bench_index() {
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let no_query = index::query(0, 69, Option::None(()));
+    let no_query = index::get(0, 69, 0);
     end(gas, 'idx empty');
     assert(no_query.len() == 0, 'entity indexed');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    index::create(0, 69, 420);
+    index::create(0, 69, 420, 0);
     end(gas, 'idx create 1st');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69, Option::None(()));
+    let query = index::get(0, 69, 0);
     end(gas, 'idx query one');
     assert(query.len() == 1, 'entity not indexed');
     assert(*query.at(0) == 420, 'entity value incorrect');
     
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    index::create(0, 69, 1337);
+    index::create(0, 69, 1337, 0);
     end(gas, 'idx query 2nd');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let two_query = index::query(0, 69, Option::None(()));
+    let two_query = index::get(0, 69, 0);
     end(gas, 'idx query two');
     assert(two_query.len() == 2, 'index should have two query');
     assert(*two_query.at(1) == 1337, 'entity value incorrect');
@@ -172,14 +172,14 @@ fn bench_big_index() {
         if i == 1000 {
             break;
         }
-        index::create(0, 69, i);
+        index::create(0, 69, i, 0);
         i += 1;
     };
     end(gas, 'idx create 1000');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69, Option::None(()));
+    let query = index::get(0, 69, 0);
     end(gas, 'idx query 1000');
     assert(query.len() == 1000, 'entity not indexed');
     assert(*query.at(420) == 420, 'entity value incorrect');
@@ -250,22 +250,22 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::set_with_index('table', 'even', 0, even, layout);
+    database::set_with_index('table', 'even', array![].span(), 0, even, layout);
     end(gas, 'dbi set arr 1st');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), 2, layout);
+    let (keys, values) = database::scan('table', Option::None(()), QueryClause::All, 2, layout);
     end(gas, 'dbi scan arr 1');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::set_with_index('table', 'odd', 0, odd, layout);
+    database::set_with_index('table', 'odd', array![].span(), 0, odd, layout);
     end(gas, 'dbi set arr 2nd');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), 2, layout);
+    let (keys, values) = database::scan('table', Option::None(()), QueryClause::All, 2, layout);
     end(gas, 'dbi scan arr 2');
 
     assert(keys.len() == 2, 'Wrong number of keys!');
