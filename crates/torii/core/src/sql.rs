@@ -86,8 +86,8 @@ impl Sql {
         model: Ty,
         layout: Vec<FieldElement>,
         class_hash: FieldElement,
-        packed_size: u8,
-        unpacked_size: u8,
+        packed_size: u32,
+        unpacked_size: u32,
     ) -> Result<()> {
         let layout_blob = layout
             .iter()

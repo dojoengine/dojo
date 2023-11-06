@@ -49,8 +49,8 @@ where
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 
-        let unpacked_size: u8 = model.unpacked_size().await?.try_into()?;
-        let packed_size: u8 = model.packed_size().await?.try_into()?;
+        let unpacked_size: u32 = model.unpacked_size().await?.try_into()?;
+        let packed_size: u32 = model.packed_size().await?.try_into()?;
 
         info!("Registered model: {}", name);
 
