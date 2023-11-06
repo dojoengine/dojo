@@ -182,132 +182,132 @@ error: Unsupported attribute.
                 ^*******************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[spawn]:11:21
-                    component!(path: dojo_upgradeable_component, storage: upgradeable, event: UpgradeableEvent);
-                    ^******************************************************************************************^
+ --> test_src/lib.cairo[spawn]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:14:21
+ --> test_src/lib.cairo[spawn]:12:21
                     #[storage]
                     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:17:25
+ --> test_src/lib.cairo[spawn]:15:25
                         #[substorage(v0)]
                         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:21:21
+ --> test_src/lib.cairo[spawn]:19:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:26:21
+ --> test_src/lib.cairo[spawn]:24:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:33:21
+ --> test_src/lib.cairo[spawn]:31:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[proxy]:11:21
-                    component!(path: dojo_upgradeable_component, storage: upgradeable, event: UpgradeableEvent);
-                    ^******************************************************************************************^
+ --> test_src/lib.cairo[proxy]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:14:21
+ --> test_src/lib.cairo[proxy]:12:21
                     #[storage]
                     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:17:25
+ --> test_src/lib.cairo[proxy]:15:25
                         #[substorage(v0)]
                         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:21:21
+ --> test_src/lib.cairo[proxy]:19:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:26:21
+ --> test_src/lib.cairo[proxy]:24:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:33:21
+ --> test_src/lib.cairo[proxy]:31:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[ctxnamed]:11:21
-                    component!(path: dojo_upgradeable_component, storage: upgradeable, event: UpgradeableEvent);
-                    ^******************************************************************************************^
+ --> test_src/lib.cairo[ctxnamed]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:14:21
+ --> test_src/lib.cairo[ctxnamed]:12:21
                     #[storage]
                     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:17:25
+ --> test_src/lib.cairo[ctxnamed]:15:25
                         #[substorage(v0)]
                         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:21:21
+ --> test_src/lib.cairo[ctxnamed]:19:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:26:21
+ --> test_src/lib.cairo[ctxnamed]:24:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:33:21
+ --> test_src/lib.cairo[ctxnamed]:31:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withevent]:11:21
-                    component!(path: dojo_upgradeable_component, storage: upgradeable, event: UpgradeableEvent);
-                    ^******************************************************************************************^
+ --> test_src/lib.cairo[withevent]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:14:21
+ --> test_src/lib.cairo[withevent]:12:21
                     #[storage]
                     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:17:25
+ --> test_src/lib.cairo[withevent]:15:25
                         #[substorage(v0)]
                         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:21:21
+ --> test_src/lib.cairo[withevent]:19:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:26:21
+ --> test_src/lib.cairo[withevent]:24:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:33:21
+ --> test_src/lib.cairo[withevent]:31:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:37:13
+ --> test_src/lib.cairo[withevent]:35:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:49:5
+ --> test_src/lib.cairo[withevent]:47:5
     #[external(v0)]
     ^*************^
 
@@ -318,15 +318,13 @@ error: Unsupported attribute.
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-                   
-                    use dojo::components::upgradeable::upgradeable as dojo_upgradeable_component;
 
                     
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
                         #[substorage(v0)]
-                        upgradeable: dojo_upgradeable_component::Storage,
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
                     }
 
                     #[external(v0)]
@@ -342,7 +340,7 @@ error: Unsupported attribute.
                     }
 
                     #[abi(embed_v0)]
-                    impl UpgradableImpl = dojo_upgradeable_component::UpgradableImpl<ContractState>;
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                         use traits::Into;
     use dojo::world::Context;
@@ -359,15 +357,13 @@ error: Unsupported attribute.
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-                   
-                    use dojo::components::upgradeable::upgradeable as dojo_upgradeable_component;
 
                     
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
                         #[substorage(v0)]
-                        upgradeable: dojo_upgradeable_component::Storage,
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
                     }
 
                     #[external(v0)]
@@ -383,7 +379,7 @@ error: Unsupported attribute.
                     }
 
                     #[abi(embed_v0)]
-                    impl UpgradableImpl = dojo_upgradeable_component::UpgradableImpl<ContractState>;
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                         fn execute(value: felt252) -> felt252 {
         value
@@ -397,15 +393,13 @@ error: Unsupported attribute.
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-                   
-                    use dojo::components::upgradeable::upgradeable as dojo_upgradeable_component;
 
                     
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
                         #[substorage(v0)]
-                        upgradeable: dojo_upgradeable_component::Storage,
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
                     }
 
                     #[external(v0)]
@@ -421,7 +415,7 @@ error: Unsupported attribute.
                     }
 
                     #[abi(embed_v0)]
-                    impl UpgradableImpl = dojo_upgradeable_component::UpgradableImpl<ContractState>;
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                         use traits::Into;
     use dojo::world::Context;
@@ -438,15 +432,13 @@ error: Unsupported attribute.
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-                   
-                    use dojo::components::upgradeable::upgradeable as dojo_upgradeable_component;
 
                     
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
                         #[substorage(v0)]
-                        upgradeable: dojo_upgradeable_component::Storage,
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
                     }
 
                     #[external(v0)]
@@ -462,13 +454,13 @@ error: Unsupported attribute.
                     }
 
                     #[abi(embed_v0)]
-                    impl UpgradableImpl = dojo_upgradeable_component::UpgradableImpl<ContractState>;
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                     
             #[event]
             #[derive(Drop, starknet::Event)]
             enum Event {
-                UpgradeableEvent: dojo_upgradeable_component::Event,
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
                         TestEvent: TestEvent
             }
             
