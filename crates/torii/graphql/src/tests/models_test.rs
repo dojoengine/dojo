@@ -21,6 +21,7 @@ mod tests {
                 node {{
                     __typename
                     record_id
+                    depth
                     type_u8
                     type_u16
                     type_u32
@@ -87,9 +88,10 @@ mod tests {
         assert_eq!(&record.node.__typename, "Record");
         assert_eq!(&entity.model_names, "Record");
         assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
-        assert_eq!(nested.depth, 1);
-        assert_eq!(nested_more.depth, 2);
-        assert_eq!(nested_more_more.depth, 3);
+        assert_eq!(record.node.depth, "Zero");
+        assert_eq!(nested.depth, "One");
+        assert_eq!(nested_more.depth, "Two");
+        assert_eq!(nested_more_more.depth, "Three");
 
         // *** WHERE FILTER TESTING ***
 
