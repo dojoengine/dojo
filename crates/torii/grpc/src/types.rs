@@ -1,15 +1,75 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use dojo_types::schema::{
-    AttributeClause, Clause, CompositeClause, EntityQuery, KeysClause, Ty, Value,
-};
+use dojo_types::schema::Ty;
 use starknet::core::types::{
     ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
 use starknet_crypto::FieldElement;
 
 use crate::protos;
+
+#[derive(Debug, thiserror::Error)]
+pub enum QueryError {
+    #[error("unsupported query")]
+    UnsupportedQuery,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Query {
+    pub model: String,
+    pub clause: Clause,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum Clause {
+    Keys(KeysClause),
+    Attribute(AttributeClause),
+    Composite(CompositeClause),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct KeysClause {
+    pub keys: Vec<FieldElement>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct AttributeClause {
+    pub attribute: String,
+    pub operator: ComparisonOperator,
+    pub value: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct CompositeClause {
+    pub operator: LogicalOperator,
+    pub clauses: Vec<Clause>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum LogicalOperator {
+    And,
+    Or,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum ComparisonOperator {
+    Eq,
+    Neq,
+    Gt,
+    Gte,
+    Lt,
+    Lte,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum Value {
+    String(String),
+    Int(i64),
+    UInt(u64),
+    Bool(bool),
+    Bytes(Vec<u8>),
+}
 
 impl TryFrom<protos::types::ModelMetadata> for dojo_types::schema::ModelMetadata {
     type Error = FromStrError;

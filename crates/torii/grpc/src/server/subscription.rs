@@ -3,6 +3,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::task::Poll;
 
+use dojo_types::schema::EntityQuery;
 use futures_util::future::BoxFuture;
 use futures_util::FutureExt;
 use rand::Rng;
@@ -27,7 +28,22 @@ pub struct ModelMetadata {
 
 pub struct SubscribeRequest {
     pub model: ModelMetadata,
-    pub keys: Vec<FieldElement>,
+    pub query: EntityQuery,
+}
+
+impl SubscribeRequest {
+    pub fn slots(&self) -> Result<Vec<FieldElement>, QueryError> {
+        match self.query.clause {
+            Clause::Keys(KeysClause { keys }) => {
+                let base = poseidon_hash_many(&[
+                    short_string!("dojo_storage"),
+                    req.model.name,
+                    poseidon_hash_many(&keys),
+                ]);
+            }
+            _ => Err(QueryError::UnsupportedQuery),
+        }
+    }
 }
 
 pub struct Subscriber {
@@ -45,23 +61,35 @@ pub struct SubscriberManager {
 impl SubscriberManager {
     pub(super) async fn add_subscriber(
         &self,
-        entities: Vec<SubscribeRequest>,
+        reqs: Vec<SubscribeRequest>,
     ) -> Receiver<Result<protos::world::SubscribeEntitiesResponse, tonic::Status>> {
         let id = rand::thread_rng().gen::<usize>();
 
         let (sender, receiver) = channel(1);
 
         // convert the list of entites into a list storage addresses
-        let storage_addresses = entities
+        let storage_addresses = reqs
             .par_iter()
-            .map(|entity| {
+            .map(|req| {
+                let clause: KeysClause = req
+                    .query
+                    .clause
+                    .ok_or(Error::UnsupportedQuery)
+                    .and_then(|clause| clause.clause_type.ok_or(Error::UnsupportedQuery))
+                    .and_then(|clause_type| match clause_type {
+                        ClauseType::Keys(clause) => Ok(clause),
+                        _ => Err(Error::UnsupportedQuery),
+                    })?
+                    .try_into()
+                    .map_err(ParseError::FromByteSliceError)?;
+
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),
-                    entity.model.name,
-                    poseidon_hash_many(&entity.keys),
+                    req.model.name,
+                    poseidon_hash_many(&clause.keys),
                 ]);
 
-                (0..entity.model.packed_size)
+                (0..req.model.packed_size)
                     .into_par_iter()
                     .map(|i| base + i.into())
                     .collect::<Vec<FieldElement>>()

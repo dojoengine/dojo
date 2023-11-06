@@ -1,5 +1,4 @@
 //! Client implementation for the gRPC service.
-
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use protos::world::{world_client, SubscribeEntitiesRequest};
@@ -67,7 +66,7 @@ impl WorldClient {
     /// Subscribe to the state diff for a set of entities of a World.
     pub async fn subscribe_entities(
         &mut self,
-        queries: Vec<dojo_types::schema::EntityQuery>,
+        queries: Vec<Query>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let stream = self
             .inner

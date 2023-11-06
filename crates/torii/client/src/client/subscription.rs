@@ -4,7 +4,6 @@ use std::future::Future;
 use std::sync::Arc;
 use std::task::Poll;
 
-use dojo_types::schema::{Clause, EntityQuery};
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
@@ -12,7 +11,7 @@ use parking_lot::{Mutex, RwLock};
 use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
-use torii_grpc::client::EntityUpdateStreaming;
+use torii_grpc::client::{Clause, EntityUpdateStreaming, Query};
 
 use super::error::{Error, ParseError};
 use super::ModelStorage;
@@ -24,13 +23,13 @@ pub enum SubscriptionEvent {
 
 pub struct SubscribedEntities {
     metadata: Arc<RwLock<WorldMetadata>>,
-    pub(super) entities: RwLock<HashSet<EntityQuery>>,
+    pub(super) entities: RwLock<HashSet<Query>>,
     /// All the relevant storage addresses derived from the subscribed entities
     pub(super) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
 }
 
 impl SubscribedEntities {
-    pub(super) fn is_synced(&self, entity: &EntityQuery) -> bool {
+    pub(super) fn is_synced(&self, entity: &Query) -> bool {
         self.entities.read().contains(entity)
     }
 
@@ -42,21 +41,21 @@ impl SubscribedEntities {
         }
     }
 
-    pub(super) fn add_entities(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
+    pub(super) fn add_entities(&self, entities: Vec<Query>) -> Result<(), Error> {
         for entity in entities {
             Self::add_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub(super) fn remove_entities(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
+    pub(super) fn remove_entities(&self, entities: Vec<Query>) -> Result<(), Error> {
         for entity in entities {
             Self::remove_entity(self, entity)?;
         }
         Ok(())
     }
 
-    pub(super) fn add_entity(&self, entity: EntityQuery) -> Result<(), Error> {
+    pub(super) fn add_entity(&self, entity: Query) -> Result<(), Error> {
         if !self.entities.write().insert(entity.clone()) {
             return Ok(());
         }
@@ -90,7 +89,7 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub(super) fn remove_entity(&self, entity: EntityQuery) -> Result<(), Error> {
+    pub(super) fn remove_entity(&self, entity: Query) -> Result<(), Error> {
         if !self.entities.write().remove(&entity) {
             return Ok(());
         }
@@ -206,7 +205,11 @@ impl SubscriptionService {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
-            if current == expected { Some(d.storage_entries) } else { None }
+            if current == expected {
+                Some(d.storage_entries)
+            } else {
+                None
+            }
         });
 
         let Some(entries) = storage_entries else {
@@ -256,11 +259,12 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::schema::{KeysClause, Ty};
+    use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
+    use torii_grpc::client::{Clause, KeysClause, Query};
 
     use crate::utils::compute_all_storage_addresses;
 
@@ -295,10 +299,7 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let entity = dojo_types::schema::EntityQuery {
-            model: model_name,
-            clause: dojo_types::schema::Clause::Keys(KeysClause { keys }),
-        };
+        let entity = Query { model: model_name, clause: Clause::Keys(KeysClause { keys }) };
 
         let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
         subscribed_entities.add_entities(vec![entity.clone()]).expect("able to add entity");
