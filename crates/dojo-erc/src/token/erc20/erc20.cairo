@@ -1,5 +1,6 @@
-#[dojo::contract]
+#[starknet::contract]
 mod ERC20 {
+    use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
     use dojo_erc::token::erc20::models::{ERC20Allowance, ERC20Balance, ERC20Meta};
     use dojo_erc::token::erc20::interface::{IERC20, IERC20CamelOnly};
     use integer::BoundedInt;
@@ -7,6 +8,12 @@ mod ERC20 {
     use starknet::{get_caller_address, get_contract_address};
     use zeroable::Zeroable;
     use debug::PrintTrait;
+
+
+    #[storage]
+    struct Storage {
+        _world: ContractAddress,
+    }
 
     #[event]
     #[derive(Copy, Drop, starknet::Event)]
@@ -41,11 +48,13 @@ mod ERC20 {
     #[constructor]
     fn constructor(
         ref self: ContractState,
+        world: ContractAddress,
         name: felt252,
         symbol: felt252,
         initial_supply: u256,
         recipient: ContractAddress
     ) {
+        self._world.write(world);
         self.initializer(name, symbol);
         self._mint(recipient, initial_supply);
     }
@@ -166,6 +175,10 @@ mod ERC20 {
 
     #[generate_trait]
     impl WorldInteractionsImpl of WorldInteractionsTrait {
+        fn world(self: @ContractState) -> IWorldDispatcher {
+            IWorldDispatcher { contract_address: self._world.read() }
+        }
+
         fn get_meta(self: @ContractState) -> ERC20Meta {
             get!(self.world(), get_contract_address(), ERC20Meta)
         }
