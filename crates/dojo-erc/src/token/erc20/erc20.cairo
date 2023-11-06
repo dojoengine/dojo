@@ -65,7 +65,7 @@ mod ERC20 {
 
     #[external(v0)]
     impl ERC20Impl of IERC20<ContractState> {
-        fn temp_name(self: @ContractState) -> felt252 {
+        fn name(self: @ContractState) -> felt252 {
             self.get_meta().name
         }
 

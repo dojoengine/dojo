@@ -50,9 +50,9 @@ impl DojoContract {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
                    
-                    use dojo::components::upgradeable::upgradeable as upgradeable_component;
+                    use dojo::components::upgradeable::upgradeable as dojo_upgradeable_component;
 
-                    component!(path: upgradeable_component, storage: upgradeable, event: \
+                    component!(path: dojo_upgradeable_component, storage: upgradeable, event: \
                  UpgradeableEvent);
 
                     
@@ -60,11 +60,9 @@ impl DojoContract {
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
                         #[substorage(v0)]
-                        upgradeable: upgradeable_component::Storage,
+                        upgradeable: dojo_upgradeable_component::Storage,
                     }
 
-                    // should use another name xd : dojo_name / contract_name / dojo_contract_name
-                    // it conflicts with erc name
                     #[external(v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         '$name$'
@@ -78,7 +76,7 @@ impl DojoContract {
                     }
 
                     #[abi(embed_v0)]
-                    impl UpgradableImpl = upgradeable_component::UpgradableImpl<ContractState>;
+                    impl UpgradableImpl = dojo_upgradeable_component::UpgradableImpl<ContractState>;
 
                     $body$
                 }
@@ -127,7 +125,7 @@ impl DojoContract {
             #[event]
             #[derive(Drop, starknet::Event)]
             enum Event {
-                UpgradeableEvent: upgradeable_component::Event,
+                UpgradeableEvent: dojo_upgradeable_component::Event,
                 $variants$
             }
             ",

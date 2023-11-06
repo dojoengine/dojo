@@ -2,7 +2,7 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait IERC20<TState> {
-    fn temp_name(self: @TState) -> felt252;
+    fn name(self: @TState) -> felt252;
     fn symbol(self: @TState) -> felt252;
     fn decimals(self: @TState) -> u8;
     fn total_supply(self: @TState) -> u256;

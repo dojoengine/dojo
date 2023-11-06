@@ -875,9 +875,27 @@ test_manifest_file
       },
       {
         "type": "event",
+        "name": "dojo::components::upgradeable::upgradeable::Upgraded",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::components::upgradeable::upgradeable::Event",
         "kind": "enum",
-        "variants": []
+        "variants": [
+          {
+            "name": "Upgraded",
+            "type": "dojo::components::upgradeable::upgradeable::Upgraded",
+            "kind": "nested"
+          }
+        ]
       },
       {
         "type": "event",
@@ -1083,9 +1101,27 @@ test_manifest_file
         },
         {
           "type": "event",
+          "name": "dojo::components::upgradeable::upgradeable::Upgraded",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "class_hash",
+              "type": "core::starknet::class_hash::ClassHash",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "type": "event",
           "name": "dojo::components::upgradeable::upgradeable::Event",
           "kind": "enum",
-          "variants": []
+          "variants": [
+            {
+              "name": "Upgraded",
+              "type": "dojo::components::upgradeable::upgradeable::Upgraded",
+              "kind": "nested"
+            }
+          ]
         },
         {
           "type": "event",
