@@ -100,10 +100,11 @@ mod bar {
                     gold: b,
                 }
             );
-    }
-    
-    fn set_fizz(self: @ContractState, a: felt252, b: felt252) {
-        set!(self.world.read(), Fizz { caller: get_caller_address(), a, b });
+        }
+        
+        fn set_fizz(self: @ContractState, a: felt252, b: felt252) {
+            set!(self.world.read(), Fizz { caller: get_caller_address(), a, b });
+        }
     }
 }
 
