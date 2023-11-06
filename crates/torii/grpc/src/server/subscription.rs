@@ -3,6 +3,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::task::Poll;
 
+use dojo_types::schema::EntityQuery;
 use futures_util::future::BoxFuture;
 use futures_util::FutureExt;
 use rand::Rng;
