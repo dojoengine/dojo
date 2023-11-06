@@ -868,7 +868,7 @@ test_manifest_file
     {
       "name": "actions",
       "address": null,
-      "class_hash": "0x4d0b6f8024d7fc5c51ed8093e3628815cd8da3901d5761505ae79152da4833c",
+      "class_hash": "0xba8e2a55038595954fe38abe74f8c1e5237fae4410e662e8085ca38f013f1f",
       "abi": [
         {
           "type": "impl",
@@ -951,7 +951,7 @@ test_manifest_file
         },
         {
           "type": "function",
-          "name": "name",
+          "name": "dojo_resource",
           "inputs": [],
           "outputs": [
             {
