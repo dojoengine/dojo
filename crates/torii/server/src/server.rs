@@ -4,10 +4,11 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::task::Poll;
+use std::time::Duration;
 
 use either::Either;
 use http::header::{ACCEPT, ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE, ORIGIN};
-use http::Method;
+use http::{HeaderName, Method};
 use hyper::service::{make_service_fn, Service};
 use hyper::Uri;
 use sqlx::{Pool, Sqlite};
@@ -23,7 +24,7 @@ use torii_core::types::Model;
 use torii_grpc::protos;
 use torii_grpc::server::DojoWorld;
 use tower::ServiceBuilder;
-use tower_http::cors::{Any, CorsLayer as TonicCors};
+use tower_http::cors::{AllowOrigin, CorsLayer as TonicCors};
 use tracing::info;
 use url::Url;
 use warp::filters::cors::Cors as WarpCors;
@@ -164,18 +165,43 @@ async fn spawn(
     Ok(())
 }
 
+const GRPC_DEFAULT_EXPOSED_HEADERS: [&str; 3] =
+    ["grpc-status", "grpc-message", "grpc-status-details-bin"];
+const GRPC_DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+
 /// Build CORS configuration for both `warp` and `tonic` service
 fn configure_cors(origins: &Vec<String>) -> (WarpCors, TonicCors) {
-    let headers = [ACCEPT, ORIGIN, CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN];
+    let headers = [
+        ACCEPT,
+        ORIGIN,
+        CONTENT_TYPE,
+        ACCESS_CONTROL_ALLOW_ORIGIN,
+        // GRPC defaults from: https://github.com/hyperium/tonic/blob/b3fca19104bf001d3a3dac74221b7c9bede13cf1/tonic-web/src/lib.rs#L117C1-L121C68
+        HeaderName::from_bytes(b"x-grpc-web").unwrap(),
+        HeaderName::from_bytes(b"grpc-timeout").unwrap(),
+        HeaderName::from_bytes(b"x-user-agent").unwrap(),
+    ];
+
     let methods = [Method::POST, Method::GET, Method::OPTIONS];
 
     let mut warp_cors = warp::cors().allow_headers(headers.clone()).allow_methods(methods.clone());
-    let mut tonic_cors = TonicCors::new().allow_headers(headers).allow_methods(methods);
+    let mut tonic_cors = TonicCors::new()
+        .max_age(GRPC_DEFAULT_MAX_AGE)
+        .allow_credentials(true)
+        .allow_headers(headers)
+        .allow_methods(methods)
+        .expose_headers(
+            GRPC_DEFAULT_EXPOSED_HEADERS
+                .iter()
+                .cloned()
+                .map(HeaderName::from_static)
+                .collect::<Vec<HeaderName>>(),
+        );
 
     match origins.as_slice() {
         [origin] if origin == "*" => {
             warp_cors = warp_cors.allow_any_origin();
-            tonic_cors = tonic_cors.allow_origin(Any);
+            tonic_cors = tonic_cors.allow_origin(AllowOrigin::mirror_request());
         }
 
         origins => {
