@@ -37,7 +37,7 @@ mod bar {
 }
 
 const DOJO_RESOURCE_ENTRYPOINT: felt252 =
-    0x0099a4d0ed2dfce68f26fd2ccd22fb86b8215dc58f28638a38220347735906cd;
+    0x038f2d91dabc7079b6f336cc00f874d17cbb7463674c7d3edfd04668fbdb6f6a;
 
 
 #[test]
