@@ -50,8 +50,8 @@ impl TestArgs {
         // version of Scarb.
         let mut compilation_units: Vec<_> =
             ops::generate_compilation_units(&resolve, &ws)?.into_iter().collect();
-        compilation_units.sort_by_key(|unit| unit.main_package_id.clone());
-        compilation_units.dedup_by_key(|unit| unit.main_package_id.clone());
+        compilation_units.sort_by_key(|unit| unit.main_package_id);
+        compilation_units.dedup_by_key(|unit| unit.main_package_id);
 
         for unit in compilation_units {
             let props: Props = unit.target().props()?;
