@@ -46,7 +46,12 @@ impl TestArgs {
         });
 
         let resolve = ops::resolve_workspace(&ws)?;
-        let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
+        // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
+        // version of Scarb.
+        let mut compilation_units: Vec<_> =
+            ops::generate_compilation_units(&resolve, &ws)?.into_iter().collect();
+        compilation_units.sort_by_key(|unit| unit.main_package_id.clone());
+        compilation_units.dedup_by_key(|unit| unit.main_package_id.clone());
 
         for unit in compilation_units {
             let props: Props = unit.target().props()?;
