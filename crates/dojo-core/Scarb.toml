@@ -2,8 +2,8 @@
 cairo-version = "2.3.1"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
-version = "0.3.5"
+version = "0.3.6"
 
 [dependencies]
-dojo_plugin = "0.3.5"
+dojo_plugin = "0.3.6"
 starknet = "2.3.1"
