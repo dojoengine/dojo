@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use dojo_types::schema::{
-    AttributeClause, Clause, CompositeClause, EntityQuery, KeysClause, Ty, Value,
-};
+use dojo_types::schema::Ty;
 use starknet::core::types::{
     ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };

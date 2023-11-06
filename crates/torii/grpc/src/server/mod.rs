@@ -1,5 +1,6 @@
 pub mod error;
 pub mod logger;
+pub mod query;
 pub mod subscription;
 
 use std::future::Future;
@@ -146,17 +147,6 @@ impl DojoWorld {
     {
         let mut subs = Vec::with_capacity(queries.len());
         for query in queries {
-            let clause: KeysClause = query
-                .clause
-                .ok_or(Error::UnsupportedQuery)
-                .and_then(|clause| clause.clause_type.ok_or(Error::UnsupportedQuery))
-                .and_then(|clause_type| match clause_type {
-                    ClauseType::Keys(clause) => Ok(clause),
-                    _ => Err(Error::UnsupportedQuery),
-                })?
-                .try_into()
-                .map_err(ParseError::FromByteSliceError)?;
-
             let model = cairo_short_string_to_felt(&query.model)
                 .map_err(ParseError::CairoShortStringToFelt)?;
 
@@ -164,7 +154,7 @@ impl DojoWorld {
                 self.model_metadata(&query.model).await?;
 
             subs.push(SubscribeRequest {
-                keys: clause.keys,
+                query,
                 model: subscription::ModelMetadata {
                     name: model,
                     packed_size: packed_size as usize,

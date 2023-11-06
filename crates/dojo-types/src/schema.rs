@@ -20,6 +20,12 @@ impl Member {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum QueryError {
+    #[error("unsupported query")]
+    UnsupportedQuery,
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct EntityQuery {
     pub model: String,

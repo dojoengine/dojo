@@ -1,3 +1,4 @@
+use dojo_types::schema::QueryError;
 use starknet::core::types::{FromByteSliceError, FromStrError};
 use starknet::core::utils::CairoShortStringToFeltError;
 
@@ -7,8 +8,8 @@ pub enum Error {
     Parse(#[from] ParseError),
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
-    #[error("unsupported query clause")]
-    UnsupportedQuery,
+    #[error(transparent)]
+    QueryError(#[from] QueryError),
 }
 
 #[derive(Debug, thiserror::Error)]
