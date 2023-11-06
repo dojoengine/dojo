@@ -269,7 +269,7 @@ where
             .call(
                 FunctionCall {
                     calldata: vec![],
-                    entry_point_selector: selector!("name"),
+                    entry_point_selector: selector!("dojo_resource"),
                     contract_address: contract.address.expect("qed; missing address"),
                 },
                 BlockId::Tag(BlockTag::Latest),

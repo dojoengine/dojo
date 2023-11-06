@@ -26,7 +26,7 @@ mod bar {
     struct Storage {}
 
     #[external(v0)]
-    fn name(self: @ContractState) -> felt252 {
+    fn dojo_resource(self: @ContractState) -> felt252 {
         'bar'
     }
 
@@ -36,7 +36,9 @@ mod bar {
     }
 }
 
-const NAME_ENTRYPOINT: felt252 = 0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
+const DOJO_RESOURCE_ENTRYPOINT: felt252 =
+    0x0099a4d0ed2dfce68f26fd2ccd22fb86b8215dc58f28638a38220347735906cd;
+
 
 #[test]
 #[available_gas(40000000)]
@@ -52,7 +54,9 @@ fn test_executor() {
     starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
 
     let res = *executor
-        .call(bar::TEST_CLASS_HASH.try_into().unwrap(), NAME_ENTRYPOINT, array![].span())[0];
+        .call(
+            bar::TEST_CLASS_HASH.try_into().unwrap(), DOJO_RESOURCE_ENTRYPOINT, array![].span()
+        )[0];
 
     assert(res == 'bar', 'executor call incorrect')
 }
