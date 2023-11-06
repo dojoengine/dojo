@@ -413,10 +413,14 @@ impl Sql {
                          (external_{name});"
                     ));
 
-                    options = Some(Argument::String(format!(
-                        r#""{}""#,
-                        e.options.iter().map(|c| c.name.clone()).collect::<Vec<_>>().join(",")
-                    )));
+                    options = Some(Argument::String(
+                        e.options
+                            .iter()
+                            .map(|c| c.name.clone())
+                            .collect::<Vec<_>>()
+                            .join(",")
+                            .to_string(),
+                    ));
                 }
 
                 let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \

@@ -5,6 +5,7 @@ use starknet::{ContractAddress, ClassHash};
 struct Record {
     #[key]
     record_id: u32,
+    depth: Depth,
     type_u8: u8,
     type_u16: u16,
     type_u32: u32,
@@ -22,7 +23,7 @@ struct Record {
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct Nested {
-    depth: u8,
+    depth: Depth,
     type_number: u8,
     type_string: felt252,
     type_nested_more: NestedMore,
@@ -30,7 +31,7 @@ struct Nested {
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct NestedMore {
-    depth: u8,
+    depth: Depth,
     type_number: u8,
     type_string: felt252,
     type_nested_more_more: NestedMoreMore,
@@ -38,7 +39,7 @@ struct NestedMore {
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct NestedMoreMore {
-    depth: u8,
+    depth: Depth,
     type_number: u8,
     type_string: felt252,
 }
@@ -51,6 +52,25 @@ struct Subrecord {
     subrecord_id: u32,
     type_u8: u8,
     random_u8: u8,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum Depth {
+    Zero: (),
+    One: (),
+    Two: (),
+    Three: (),
+}
+
+impl DepthIntoFelt252 of Into<Depth, felt252> {
+    fn into(self: Depth) -> felt252 {
+        match self {
+            Depth::Zero => 0,
+            Depth::One => 1,
+            Depth::Two => 2,
+            Depth::Three => 3,
+        }
+    }
 }
 
 #[derive(Model, Copy, Drop, Serde)]
