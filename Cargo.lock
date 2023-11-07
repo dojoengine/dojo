@@ -5068,6 +5068,7 @@ dependencies = [
 name = "katana-primitives"
 version = "0.3.6"
 dependencies = [
+ "serde",
  "starknet",
 ]
 
