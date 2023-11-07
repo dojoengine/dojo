@@ -1,5 +1,6 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::normalize_address;
 
@@ -16,7 +17,7 @@ pub type CompiledClassHash = FieldElement;
 /// Represents the type for a contract nonce.
 pub type Nonce = FieldElement;
 
-#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
 pub struct ContractAddress(FieldElement);
 
 impl ContractAddress {
