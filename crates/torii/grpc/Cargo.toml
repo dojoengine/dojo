@@ -38,6 +38,8 @@ prost.workspace = true
 sqlx.workspace = true
 tokio-stream = "0.1.14"
 tokio.workspace = true
+tonic-reflection.workspace = true
+tonic-web.workspace = true
 tonic.workspace = true
 url.workspace = true
 

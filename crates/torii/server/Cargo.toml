@@ -19,6 +19,7 @@ either = "1.9.0"
 http = "0.2.9"
 http-body = "0.4.5"
 hyper.workspace = true
+hyper-reverse-proxy = "0.5.1"
 indexmap = "1.9.3"
 scarb.workspace = true
 serde.workspace = true
@@ -29,6 +30,7 @@ starknet.workspace = true
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
+tonic-reflection.workspace = true
 tonic-web.workspace = true
 tonic.workspace = true
 torii-core = { path = "../core" }
@@ -40,6 +42,7 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
 warp.workspace = true
+warp-reverse-proxy = "1"
 
 [dev-dependencies]
 camino.workspace = true

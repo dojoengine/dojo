@@ -22,6 +22,7 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionRe
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
@@ -290,6 +291,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     TransactionWaiter::new(transaction_hash, &provider).await?;
 
+    let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
         &mut db,
@@ -299,6 +301,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
             ..Processors::default()
         },
         EngineConfig::default(),
+        shutdown_tx,
         None,
     );
 

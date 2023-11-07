@@ -13,6 +13,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
@@ -37,6 +38,7 @@ where
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
+    let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
         db,
@@ -46,6 +48,7 @@ where
             ..Processors::default()
         },
         EngineConfig::default(),
+        shutdown_tx,
         None,
     );
 
