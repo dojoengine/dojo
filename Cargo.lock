@@ -4866,6 +4866,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-primitives"
+version = "0.3.6"
+dependencies = [
+ "starknet",
+]
+
+[[package]]
 name = "katana-rpc"
 version = "0.3.14"
 dependencies = [
