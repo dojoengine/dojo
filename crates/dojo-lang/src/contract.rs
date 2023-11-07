@@ -23,22 +23,28 @@ impl DojoContract {
     pub fn from_module(db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         let name = module_ast.name(db).text(db);
         let mut system = DojoContract { diagnostics: vec![], dependencies: HashMap::new() };
+        let mut has_event = false;
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
-            let body_nodes = body
+            let mut body_nodes: Vec<_> = body
                 .items(db)
                 .elements(db)
                 .iter()
                 .flat_map(|el| {
                     if let ast::Item::Enum(enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
-                            return system.handle_event(db, enum_ast.clone());
+                            has_event = true;
+                            return system.merge_event(db, enum_ast.clone());
                         }
                     }
 
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
+
+            if !has_event {
+                body_nodes.append(&mut system.create_event())
+            }
 
             let mut builder = PatchBuilder::new(db);
             builder.add_modified(RewriteNode::interpolate_patched(
@@ -107,7 +113,7 @@ impl DojoContract {
         PluginResult::default()
     }
 
-    pub fn handle_event(
+    pub fn merge_event(
         &mut self,
         db: &dyn SyntaxGroup,
         enum_ast: ast::ItemEnum,
@@ -129,6 +135,21 @@ impl DojoContract {
             }
             ",
             &UnorderedHashMap::from([("variants".to_string(), RewriteNode::Text(variants))]),
+        ));
+        rewrite_nodes
+    }
+
+    pub fn create_event(&mut self) -> Vec<RewriteNode> {
+        let mut rewrite_nodes = vec![];
+        rewrite_nodes.push(RewriteNode::Text(
+            "
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            "
+            .to_string(),
         ));
         rewrite_nodes
     }

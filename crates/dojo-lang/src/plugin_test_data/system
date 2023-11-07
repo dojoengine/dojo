@@ -211,6 +211,11 @@ error: Unsupported attribute.
                     #[abi(embed_v0)]
                     ^**************^
 
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:41:13
+            #[event]
+            ^******^
+
 error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo[proxy]:9:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
@@ -241,6 +246,11 @@ error: Unsupported attribute.
                     #[abi(embed_v0)]
                     ^**************^
 
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:38:13
+            #[event]
+            ^******^
+
 error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo[ctxnamed]:9:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
@@ -270,6 +280,11 @@ error: Unsupported attribute.
  --> test_src/lib.cairo[ctxnamed]:31:21
                     #[abi(embed_v0)]
                     ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:41:13
+            #[event]
+            ^******^
 
 error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo[withevent]:9:21
@@ -349,6 +364,13 @@ error: Unsupported attribute.
         return ();
     }
 
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+impl EventDrop of Drop::<Event>;
+            
                 }
 
                 #[starknet::contract]
@@ -385,6 +407,13 @@ error: Unsupported attribute.
         value
     }
 
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+impl EventDrop of Drop::<Event>;
+            
                 }
 
                 #[starknet::contract]
@@ -424,6 +453,13 @@ error: Unsupported attribute.
         return ();
     }
 
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+impl EventDrop of Drop::<Event>;
+            
                 }
 
                 #[starknet::contract]
