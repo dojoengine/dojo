@@ -140,8 +140,7 @@ impl DojoContract {
     }
 
     pub fn create_event(&mut self) -> Vec<RewriteNode> {
-        let mut rewrite_nodes = vec![];
-        rewrite_nodes.push(RewriteNode::Text(
+        vec![RewriteNode::Text(
             "
             #[event]
             #[derive(Drop, starknet::Event)]
@@ -150,8 +149,7 @@ impl DojoContract {
             }
             "
             .to_string(),
-        ));
-        rewrite_nodes
+        )]
     }
 }
 
