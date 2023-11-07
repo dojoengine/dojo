@@ -4308,13 +4308,13 @@ dependencies = [
 
 [[package]]
 name = "hyper-reverse-proxy"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc1af9b1b483fb9f33bd1cda26b35eacf902f0d116fcf0d56075ea5e5923b935"
+version = "0.5.2-dev"
+source = "git+https://github.com/felipenoris/hyper-reverse-proxy?rev=e73a766#e73a76600ce9e51e962de5266b03be596e6c1d50"
 dependencies = [
  "hyper",
  "lazy_static",
- "unicase",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -8494,6 +8494,7 @@ dependencies = [
  "hyper",
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
+ "lazy_static",
  "scarb",
  "serde",
  "serde_json",

@@ -7,19 +7,27 @@ use std::sync::Arc;
 use clap::Parser;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast;
+use tokio::sync::broadcast::Sender;
+use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
+use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
+use torii_core::types::Model;
+use tracing::info;
 use tracing_subscriber::fmt;
 use url::Url;
+
+use crate::proxy::Proxy;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -112,10 +120,6 @@ async fn main() -> anyhow::Result<()> {
     let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
 
     let shutdown_rx = shutdown_tx.subscribe();
-    let (graphql_addr, graphql_server) =
-        torii_graphql::server::new(shutdown_rx, &pool, args.external_url).await;
-
-    let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(
         shutdown_rx,
         &pool,
@@ -125,8 +129,18 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    let shutdown_rx = shutdown_tx.subscribe();
-    let proxy_server = proxy::new(shutdown_rx, addr, args.allowed_origins, grpc_addr, graphql_addr);
+    let proxy_server = Arc::new(Proxy::new(addr, args.allowed_origins, Some(grpc_addr), None));
+
+    let graphql_server = spawn_rebuilding_graphql_server(
+        shutdown_tx.clone(),
+        pool.into(),
+        args.external_url,
+        proxy_server.clone(),
+    );
+
+    info!("🚀 Torii listening at {}", format!("http://{}", addr));
+    info!("Graphql playground: {}\n", format!("http://{}/graphql", addr));
+    info!("GRPC playground: {}\n", format!("http://{}/grpc", addr));
 
     tokio::select! {
         _ = sigterm.recv() => {
@@ -137,10 +151,34 @@ async fn main() -> anyhow::Result<()> {
         }
 
         _ = engine.start() => {},
-        _ = proxy_server.await => {},
+        _ = proxy_server.start(shutdown_tx.subscribe()) => {},
         _ = graphql_server => {},
         _ = grpc_server => {},
     };
 
     Ok(())
+}
+
+async fn spawn_rebuilding_graphql_server(
+    shutdown_tx: Sender<()>,
+    pool: Arc<SqlitePool>,
+    external_url: Option<Url>,
+    proxy_server: Arc<Proxy>,
+) {
+    let mut broker = SimpleBroker::<Model>::subscribe();
+
+    loop {
+        let shutdown_rx = shutdown_tx.subscribe();
+        let (new_addr, new_server) =
+            torii_graphql::server::new(shutdown_rx, &pool, external_url.clone()).await;
+
+        tokio::spawn(new_server);
+
+        proxy_server.set_graphql_addr(new_addr).await;
+
+        // Break the loop if there are no more events
+        if broker.next().await.is_none() {
+            break;
+        }
+    }
 }
