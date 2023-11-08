@@ -18,7 +18,7 @@ dojo-world = { path = "../../dojo-world" }
 either = "1.9.0"
 http = "0.2.9"
 http-body = "0.4.5"
-hyper-reverse-proxy = { git = "https://github.com/felipenoris/hyper-reverse-proxy", rev = "e73a766" }
+hyper-reverse-proxy = { git = "https://github.com/tarrencev/hyper-reverse-proxy" }
 hyper.workspace = true
 indexmap = "1.9.3"
 lazy_static.workspace = true

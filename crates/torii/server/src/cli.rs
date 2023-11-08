@@ -24,7 +24,7 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::Model;
 use tracing::info;
-use tracing_subscriber::fmt;
+use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 use crate::proxy::Proxy;
@@ -66,9 +66,10 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let subscriber = fmt::Subscriber::builder()
-        .with_max_level(tracing::Level::INFO) // Set the maximum log level
-        .finish();
+    let filter_layer = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
+
+    let subscriber = fmt::Subscriber::builder().with_env_filter(filter_layer).finish();
 
     // Set the global subscriber
     tracing::subscriber::set_global_default(subscriber)
