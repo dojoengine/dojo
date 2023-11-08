@@ -4,7 +4,7 @@ fn main() {
 
     use camino::{Utf8Path, Utf8PathBuf};
     use dojo_lang::compiler::DojoCompiler;
-    use dojo_lang::plugin::{BuiltinDojoPlugin, CairoPluginRepository};
+    use dojo_lang::plugin::CairoPluginRepository;
     use scarb::compiler::CompilerRepository;
     use scarb::core::{Config, TargetKind};
     use scarb::ops::{self, CompileOpts};
@@ -36,7 +36,6 @@ fn main() {
             .log_filter_directive(env::var_os("SCARB_LOG"))
             .compilers(compilers)
             .cairo_plugins(cairo_plugins.into())
-            .custom_source_patches(vec![BuiltinDojoPlugin::manifest_dependency()])
             .build()
             .unwrap();
 
