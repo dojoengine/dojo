@@ -1,0 +1,6 @@
+[workspace]
+members = [ "crates/dojo-core", "creates/dojo-lang" ]
+
+[workspace.package]
+cairo-version = "2.3.1"
+version = "0.3.6"
