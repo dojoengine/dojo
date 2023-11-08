@@ -21,27 +21,6 @@ use crate::types::TypeData;
 use crate::utils::extract;
 pub struct EntityObject;
 
-// TODO: Refactor subscription to not use this
-impl EntityObject {
-    pub fn value_mapping(entity: Entity) -> ValueMapping {
-        let keys: Vec<&str> = entity.keys.split('/').filter(|&k| !k.is_empty()).collect();
-        IndexMap::from([
-            (Name::new("id"), Value::from(entity.id)),
-            (Name::new("keys"), Value::from(keys)),
-            (Name::new("model_names"), Value::from(entity.model_names)),
-            (Name::new("event_id"), Value::from(entity.event_id)),
-            (
-                Name::new("created_at"),
-                Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-            ),
-            (
-                Name::new("updated_at"),
-                Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-            ),
-        ])
-    }
-}
-
 impl ObjectTrait for EntityObject {
     fn name(&self) -> (&str, &str) {
         ENTITY_NAMES
@@ -104,9 +83,8 @@ impl ObjectTrait for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        let name = format!("{}Updated", self.name().0);
         Some(vec![
-            SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
+            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -125,6 +103,26 @@ impl ObjectTrait for EntityObject {
                 })
             })
             .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
+    }
+}
+
+impl EntityObject {
+    pub fn value_mapping(entity: Entity) -> ValueMapping {
+        let keys: Vec<&str> = entity.keys.split('/').filter(|&k| !k.is_empty()).collect();
+        IndexMap::from([
+            (Name::new("id"), Value::from(entity.id)),
+            (Name::new("keys"), Value::from(keys)),
+            (Name::new("model_names"), Value::from(entity.model_names)),
+            (Name::new("event_id"), Value::from(entity.event_id)),
+            (
+                Name::new("created_at"),
+                Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+            ),
+            (
+                Name::new("updated_at"),
+                Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+            ),
         ])
     }
 }

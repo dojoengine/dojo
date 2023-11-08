@@ -39,12 +39,22 @@ pub struct Entity {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(FromRow, Deserialize, Clone)]
+#[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
     pub id: String,
     pub name: String,
     pub class_hash: String,
+    pub transaction_hash: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Event {
+    pub id: String,
+    pub keys: String,
+    pub data: String,
     pub transaction_hash: String,
     pub created_at: DateTime<Utc>,
 }

@@ -1,11 +1,13 @@
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
     use std::time::Duration;
 
     use async_graphql::value;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
     use sqlx::SqlitePool;
+    use starknet::core::types::Event;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
     // use tokio_util::sync::CancellationToken;
@@ -261,6 +263,64 @@ mod tests {
         // 4. The subcription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
+        rx.recv().await.unwrap();
+    }
+
+    #[sqlx::test(migrations = "../migrations")]
+    async fn test_event_emitted(pool: SqlitePool) {
+        let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
+
+        let (tx, mut rx) = mpsc::channel(7);
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            db.store_event(
+                "0x0",
+                &Event {
+                    from_address: FieldElement::ZERO,
+                    keys: vec![
+                        FieldElement::from_str("0xdead").unwrap(),
+                        FieldElement::from_str("0xbeef").unwrap(),
+                    ],
+                    data: vec![
+                        FieldElement::from_str("0xc0de").unwrap(),
+                        FieldElement::from_str("0xface").unwrap(),
+                    ],
+                },
+                FieldElement::ZERO,
+            );
+
+            tx.send(()).await.unwrap();
+        });
+
+        let response_value = run_graphql_subscription(
+            &pool,
+            &format!(
+                r#"
+                    subscription {{
+                        eventEmitted (keys: ["*", "{:#x}"]) {{
+                            keys
+                            data
+                            transaction_hash
+                        }}
+                    }}
+                "#,
+                FieldElement::from_str("0xbeef").unwrap()
+            ),
+        )
+        .await;
+
+        let expected_value: async_graphql::Value = value!({
+         "eventEmitted": { "keys": vec![
+            format!("{:#x}", FieldElement::from_str("0xdead").unwrap()),
+            format!("{:#x}", FieldElement::from_str("0xbeef").unwrap())
+         ], "data": vec![
+            format!("{:#x}", FieldElement::from_str("0xc0de").unwrap()),
+            format!("{:#x}", FieldElement::from_str("0xface").unwrap())
+         ], "transaction_hash": format!("{:#x}", FieldElement::ZERO)}
+        });
+
+        assert_eq!(response_value, expected_value);
         rx.recv().await.unwrap();
     }
 }
