@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, trace};
 
 use super::error::SubscriptionError as Error;
-use crate::protos;
+use crate::proto;
 
 pub struct ModelMetadata {
     pub name: FieldElement,
@@ -34,7 +34,7 @@ pub struct Subscriber {
     /// The storage addresses that the subscriber is interested in.
     storage_addresses: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
-    sender: Sender<Result<protos::world::SubscribeEntitiesResponse, tonic::Status>>,
+    sender: Sender<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>,
 }
 
 #[derive(Default)]
@@ -46,7 +46,7 @@ impl SubscriberManager {
     pub(super) async fn add_subscriber(
         &self,
         entities: Vec<SubscribeRequest>,
-    ) -> Receiver<Result<protos::world::SubscribeEntitiesResponse, tonic::Status>> {
+    ) -> Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>> {
         let id = rand::thread_rng().gen::<usize>();
 
         let (sender, receiver) = channel(1);
@@ -139,17 +139,17 @@ where
                 .filter(|entry| sub.storage_addresses.contains(&entry.key))
                 .map(|entry| {
                     let StorageEntry { key, value } = entry;
-                    protos::types::StorageEntry {
+                    proto::types::StorageEntry {
                         key: format!("{key:#x}"),
                         value: format!("{value:#x}"),
                     }
                 })
-                .collect::<Vec<protos::types::StorageEntry>>();
+                .collect::<Vec<proto::types::StorageEntry>>();
 
-            let entity_update = protos::types::EntityUpdate {
+            let entity_update = proto::types::EntityUpdate {
                 block_hash: format!("{:#x}", state_update.block_hash),
-                entity_diff: Some(protos::types::EntityDiff {
-                    storage_diffs: vec![protos::types::StorageDiff {
+                entity_diff: Some(proto::types::EntityDiff {
+                    storage_diffs: vec![proto::types::StorageDiff {
                         address: format!("{contract_address:#x}"),
                         storage_entries: relevant_storage_entries,
                     }],
@@ -157,7 +157,7 @@ where
             };
 
             let resp =
-                protos::world::SubscribeEntitiesResponse { entity_update: Some(entity_update) };
+                proto::world::SubscribeEntitiesResponse { entity_update: Some(entity_update) };
 
             if sub.sender.send(Ok(resp)).await.is_err() {
                 closed_stream.push(*idx);
