@@ -146,7 +146,7 @@ pub struct Content {
     pub website: Option<String>,
     pub icon_uri: Option<String>,
     pub cover_uri: Option<String>,
-    pub socials: Option<Vec<Social>>,
+    pub socials: Vec<Social>,
 }
 
 #[derive(Deserialize, Debug)]
