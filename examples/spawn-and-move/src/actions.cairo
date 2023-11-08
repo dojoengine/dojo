@@ -27,6 +27,31 @@ mod actions {
         direction: Direction
     }
 
+    #[external(v0)]
+    #[computed]
+    fn tile_terrain(self: @ContractState, vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed(Position)]
+    fn quadrant(self: @ContractState, pos: Position) -> u8 {
+        // 10 is zero
+        if pos.vec.x < 10 {
+            if pos.vec.y < 10 {
+                3 // Quadrant - -
+            } else {
+                4 // Quadrant - +
+            }
+        } else {
+            if pos.vec.y < 10 {
+                2 // Quadrant + -
+            } else {
+                1 // Quadrant + +
+            }
+        }
+    }
+
     // impl: implement functions specified in trait
     #[external(v0)]
     impl ActionsImpl of IActions<ContractState> {

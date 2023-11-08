@@ -16,7 +16,8 @@ use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_utils::UpcastMut;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
-    Class, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME,
+    WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -29,7 +30,7 @@ use starknet::core::types::FieldElement;
 use tracing::{debug, trace, trace_span};
 
 use crate::inline_macros::utils::{SYSTEM_READS, SYSTEM_WRITES};
-use crate::plugin::DojoAuxData;
+use crate::plugin::{ComputedValuesAuxData, DojoAuxData};
 use crate::semantics::utils::find_module_rw;
 
 const CAIRO_PATH_SEPARATOR: &str = "::";
@@ -246,6 +247,7 @@ fn update_manifest(
 
     let mut models = BTreeMap::new();
     let mut contracts = BTreeMap::new();
+    let mut computed = BTreeMap::new();
 
     for crate_id in crate_ids {
         for module_id in db.crate_modules(*crate_id).as_ref() {
@@ -264,6 +266,9 @@ fn update_manifest(
                         &compiled_artifacts,
                     )?);
                 }
+                if let Some(aux_data) = aux_data.downcast_ref::<ComputedValuesAuxData>() {
+                    get_dojo_computed_values(db, module_id, aux_data, &mut computed);
+                }
 
                 if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
                     models.extend(get_dojo_model_artifacts(
@@ -276,6 +281,12 @@ fn update_manifest(
             }
         }
     }
+
+    computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
+        let contract_data =
+            contracts.get_mut(&contract).expect("Error: Computed value contract doesn't exist.");
+        contract_data.computed = computed_value_entrypoint;
+    });
 
     for model in &models {
         contracts.remove(model.0.to_case(Case::Snake).as_str());
@@ -320,6 +331,26 @@ fn get_dojo_model_artifacts(
     }
 
     Ok(models)
+}
+
+fn get_dojo_computed_values(
+    db: &RootDatabase,
+    module_id: &ModuleId,
+    aux_data: &ComputedValuesAuxData,
+    computed_values: &mut BTreeMap<SmolStr, Vec<ComputedValueEntrypoint>>,
+) {
+    if let ModuleId::Submodule(submod_id) = module_id {
+        let contract = submod_id.name(db);
+        if !computed_values.contains_key(&contract) {
+            computed_values.insert(contract.clone(), vec![]);
+        }
+        let computed_vals = computed_values.get_mut(&contract).unwrap();
+        computed_vals.push(ComputedValueEntrypoint {
+            contract,
+            entrypoint: aux_data.entrypoint.clone(),
+            model: aux_data.model.clone(),
+        })
+    }
 }
 
 fn get_dojo_contract_artifacts(
