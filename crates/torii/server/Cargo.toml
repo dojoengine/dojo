@@ -18,8 +18,10 @@ dojo-world = { path = "../../dojo-world" }
 either = "1.9.0"
 http = "0.2.9"
 http-body = "0.4.5"
+hyper-reverse-proxy = { git = "https://github.com/felipenoris/hyper-reverse-proxy", rev = "e73a766" }
 hyper.workspace = true
 indexmap = "1.9.3"
+lazy_static.workspace = true
 scarb.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -29,6 +31,7 @@ starknet.workspace = true
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
+tonic-reflection.workspace = true
 tonic-web.workspace = true
 tonic.workspace = true
 torii-core = { path = "../core" }
@@ -39,6 +42,7 @@ tower-http = "0.4.4"
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
+warp-reverse-proxy = "1"
 warp.workspace = true
 
 [dev-dependencies]

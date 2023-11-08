@@ -8,9 +8,9 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
+use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
-use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
@@ -46,7 +46,8 @@ pub struct Engine<'db, P: Provider + Sync> {
     provider: Box<P>,
     processors: Processors<P>,
     config: EngineConfig,
-    block_sender: Option<BoundedSender<u64>>,
+    shutdown_tx: Sender<()>,
+    block_tx: Option<BoundedSender<u64>>,
 }
 
 impl<'db, P: Provider + Sync> Engine<'db, P> {
@@ -56,12 +57,13 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
         provider: P,
         processors: Processors<P>,
         config: EngineConfig,
-        block_sender: Option<BoundedSender<u64>>,
+        shutdown_tx: Sender<()>,
+        block_tx: Option<BoundedSender<u64>>,
     ) -> Self {
-        Self { world, db, provider: Box::new(provider), processors, config, block_sender }
+        Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx }
     }
 
-    pub async fn start(&mut self, cts: CancellationToken) -> Result<()> {
+    pub async fn start(&mut self) -> Result<()> {
         let mut head = self.db.head().await?;
         if head == 0 {
             head = self.config.start_block;
@@ -72,27 +74,30 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
 
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
+
         loop {
-            if cts.is_cancelled() {
-                break Ok(());
+            tokio::select! {
+                _ = shutdown_rx.recv() => {
+                    break Ok(());
+                }
+                _ = async {
+                    match self.sync_to_head(head).await {
+                        Ok(latest_block_number) => {
+                            head = latest_block_number;
+                            backoff_delay = Duration::from_secs(1);
+                        }
+                        Err(e) => {
+                            error!("getting  block: {}", e);
+                            sleep(backoff_delay).await;
+                            if backoff_delay < max_backoff_delay {
+                                backoff_delay *= 2;
+                            }
+                        }
+                    };
+                    sleep(self.config.block_time).await;
+                } => {}
             }
-
-            match self.sync_to_head(head).await {
-                Ok(latest_block_number) => {
-                    head = latest_block_number;
-                    backoff_delay = Duration::from_secs(1);
-                }
-                Err(e) => {
-                    error!("getting  block: {}", e);
-                    sleep(backoff_delay).await;
-                    if backoff_delay < max_backoff_delay {
-                        backoff_delay *= 2;
-                    }
-                    continue;
-                }
-            };
-
-            sleep(self.config.block_time).await;
         }
     }
 
@@ -121,8 +126,8 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
             };
 
             // send the current block number
-            if let Some(ref block_sender) = self.block_sender {
-                block_sender.send(from).await.expect("failed to send block number to gRPC server");
+            if let Some(ref block_tx) = self.block_tx {
+                block_tx.send(from).await.expect("failed to send block number to gRPC server");
             }
 
             self.process(block_with_txs).await?;

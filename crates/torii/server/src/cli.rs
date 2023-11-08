@@ -1,25 +1,33 @@
-mod server;
+mod proxy;
+
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::Parser;
 use dojo_world::contracts::world::WorldContractReader;
-use server::Server;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tokio_util::sync::CancellationToken;
+use tokio::signal::unix::{signal, SignalKind};
+use tokio::sync::broadcast;
+use tokio::sync::broadcast::Sender;
+use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
+use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
-use tracing::error;
+use torii_core::types::Model;
+use tracing::info;
 use tracing_subscriber::fmt;
 use url::Url;
+
+use crate::proxy::Proxy;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -67,13 +75,9 @@ async fn main() -> anyhow::Result<()> {
         .expect("Failed to set the global tracing subscriber");
 
     // Setup cancellation for graceful shutdown
-    let cts = CancellationToken::new();
-    ctrlc::set_handler({
-        let cts: CancellationToken = cts.clone();
-        move || {
-            cts.cancel();
-        }
-    })?;
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let mut sigterm = signal(SignalKind::terminate())?;
+    let mut sigint = signal(SignalKind::interrupt())?;
 
     let database_url = format!("sqlite:{}", &args.database);
     let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
@@ -101,7 +105,7 @@ async fn main() -> anyhow::Result<()> {
         ..Processors::default()
     };
 
-    let (block_sender, block_receiver) = tokio::sync::mpsc::channel(100);
+    let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
     let mut engine = Engine::new(
         world,
@@ -109,38 +113,72 @@ async fn main() -> anyhow::Result<()> {
         &provider,
         processors,
         EngineConfig { start_block: args.start_block, ..Default::default() },
-        Some(block_sender),
+        shutdown_tx.clone(),
+        Some(block_tx),
     );
 
     let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
 
-    let server = Server::new(
-        addr,
-        pool,
-        block_receiver,
+    let shutdown_rx = shutdown_tx.subscribe();
+    let (grpc_addr, grpc_server) = torii_grpc::server::new(
+        shutdown_rx,
+        &pool,
+        block_rx,
         args.world_address,
         Arc::clone(&provider),
-        args.allowed_origins,
+    )
+    .await?;
+
+    let proxy_server = Arc::new(Proxy::new(addr, args.allowed_origins, Some(grpc_addr), None));
+
+    let graphql_server = spawn_rebuilding_graphql_server(
+        shutdown_tx.clone(),
+        pool.into(),
         args.external_url,
+        proxy_server.clone(),
     );
 
+    info!("🚀 Torii listening at {}", format!("http://{}", addr));
+    info!("Graphql playground: {}\n", format!("http://{}/graphql", addr));
+    info!("GRPC playground: {}\n", format!("http://{}/grpc", addr));
+
     tokio::select! {
-        res = engine.start(cts) => {
-            if let Err(e) = res {
-                error!("Indexer failed with error: {e}");
-            }
+        _ = sigterm.recv() => {
+            let _ = shutdown_tx.send(());
+        }
+        _ = sigint.recv() => {
+            let _ = shutdown_tx.send(());
         }
 
-        res = server.start() => {
-            if let Err(e) = res {
-                error!("Server failed with error: {e}");
-            }
-        }
-
-        _ = tokio::signal::ctrl_c() => {
-            println!("Received Ctrl+C, shutting down");
-        }
-    }
+        _ = engine.start() => {},
+        _ = proxy_server.start(shutdown_tx.subscribe()) => {},
+        _ = graphql_server => {},
+        _ = grpc_server => {},
+    };
 
     Ok(())
+}
+
+async fn spawn_rebuilding_graphql_server(
+    shutdown_tx: Sender<()>,
+    pool: Arc<SqlitePool>,
+    external_url: Option<Url>,
+    proxy_server: Arc<Proxy>,
+) {
+    let mut broker = SimpleBroker::<Model>::subscribe();
+
+    loop {
+        let shutdown_rx = shutdown_tx.subscribe();
+        let (new_addr, new_server) =
+            torii_graphql::server::new(shutdown_rx, &pool, external_url.clone()).await;
+
+        tokio::spawn(new_server);
+
+        proxy_server.set_graphql_addr(new_addr).await;
+
+        // Break the loop if there are no more events
+        if broker.next().await.is_none() {
+            break;
+        }
+    }
 }
