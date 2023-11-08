@@ -12,7 +12,6 @@ base64 = "0.21.2"
 camino.workspace = true
 chrono.workspace = true
 clap.workspace = true
-ctrlc = "3.2.5"
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world" }
 either = "1.9.0"
@@ -31,9 +30,6 @@ starknet.workspace = true
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
-tonic-reflection.workspace = true
-tonic-web.workspace = true
-tonic.workspace = true
 torii-core = { path = "../core" }
 torii-graphql = { path = "../graphql" }
 torii-grpc = { path = "../grpc", features = [ "server" ] }
@@ -42,8 +38,6 @@ tower-http = "0.4.4"
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
-warp-reverse-proxy = "1"
-warp.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
