@@ -94,8 +94,7 @@ fn metadata_connection_output(
             let mut value_mapping = value_mapping_from_row(row, types, false)?;
 
             let json_str = row.try_get::<String, &str>(JSON_COLUMN)?;
-            let serde_value: serde_json::Value =
-                serde_json::from_str(&json_str).map_err(|e| sqlx::Error::Decode(e.into()))?;
+            let serde_value = serde_json::from_str(&json_str).unwrap_or_default();
 
             let content = ValueMapping::from([
                 extract_str_mapping("name", &serde_value),

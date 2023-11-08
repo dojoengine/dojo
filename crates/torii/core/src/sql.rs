@@ -228,6 +228,7 @@ impl Sql {
         );
 
         self.query_queue.enqueue(statement, arguments);
+        self.query_queue.execute_all().await?;
 
         Ok(())
     }
