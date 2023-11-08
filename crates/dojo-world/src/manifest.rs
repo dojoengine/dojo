@@ -97,6 +97,17 @@ pub struct Output {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ComputedValueEntrypoint {
+    // Name of the contract containing the entrypoint
+    pub contract: SmolStr,
+    // Name of entrypoint to get computed value
+    pub entrypoint: SmolStr,
+    // Component to compute for
+    pub model: Option<String>,
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Contract {
     pub name: SmolStr,
     #[serde_as(as = "Option<UfeHex>")]
@@ -106,6 +117,7 @@ pub struct Contract {
     pub abi: Option<abi::Contract>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
+    pub computed: Vec<ComputedValueEntrypoint>,
 }
 
 #[serde_as]

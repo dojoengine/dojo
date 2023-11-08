@@ -741,7 +741,8 @@ test_manifest_file
       }
     ],
     "reads": [],
-    "writes": []
+    "writes": [],
+    "computed": []
   },
   "executor": {
     "name": "executor",
@@ -801,7 +802,8 @@ test_manifest_file
       }
     ],
     "reads": [],
-    "writes": []
+    "writes": [],
+    "computed": []
   },
   "base": {
     "name": "base",
@@ -868,7 +870,7 @@ test_manifest_file
     {
       "name": "actions",
       "address": null,
-      "class_hash": "0xba8e2a55038595954fe38abe74f8c1e5237fae4410e662e8085ca38f013f1f",
+      "class_hash": "0x308ad5fcd288ea5ded168bbc502261d75458c13fa1df552bd41ca3d86347dfe",
       "abi": [
         {
           "type": "impl",
@@ -961,6 +963,66 @@ test_manifest_file
           "state_mutability": "view"
         },
         {
+          "type": "struct",
+          "name": "dojo_examples::models::Vec2",
+          "members": [
+            {
+              "name": "x",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "y",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "tile_terrain",
+          "inputs": [
+            {
+              "name": "vec",
+              "type": "dojo_examples::models::Vec2"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::felt252"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Position",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "vec",
+              "type": "dojo_examples::models::Vec2"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "quadrant",
+          "inputs": [
+            {
+              "name": "pos",
+              "type": "dojo_examples::models::Position"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u8"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
           "type": "event",
           "name": "dojo_examples::actions::actions::Moved",
           "kind": "struct",
@@ -997,6 +1059,18 @@ test_manifest_file
       "writes": [
         "Moves",
         "Position"
+      ],
+      "computed": [
+        {
+          "contract": "actions",
+          "entrypoint": "tile_terrain",
+          "model": null
+        },
+        {
+          "contract": "actions",
+          "entrypoint": "quadrant",
+          "model": "Position"
+        }
       ]
     }
   ],
