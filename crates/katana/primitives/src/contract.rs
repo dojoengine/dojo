@@ -17,6 +17,9 @@ pub type CompiledClassHash = FieldElement;
 /// Represents the type for a contract nonce.
 pub type Nonce = FieldElement;
 
+pub type SierraClass = starknet::core::types::FlattenedSierraClass;
+
+/// Represents a contract address.
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
 pub struct ContractAddress(FieldElement);
 
@@ -42,4 +45,13 @@ impl From<ContractAddress> for FieldElement {
     fn from(value: ContractAddress) -> Self {
         value.0
     }
+}
+
+/// Represents a generic contract instance information.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenericContractInfo {
+    /// The nonce of the contract.
+    pub nonce: Nonce,
+    /// The hash of the contract class.
+    pub class_hash: ClassHash,
 }
