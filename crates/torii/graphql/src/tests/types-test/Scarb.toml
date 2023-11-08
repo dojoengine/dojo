@@ -12,9 +12,9 @@ dojo = { path = "../../../../../dojo-core" }
 [[target.dojo]]
 build-external-contracts = []
 
-[tool.dojo.world]
-name = "types-test"
-description = "Graphql types testing"
+#[tool.dojo.world]
+#name = "types-test"
+#description = "Graphql types testing"
 # icon_uri = "file://assets/icon.png"
 # cover_uri = "file://assets/cover.png"
 # website = "https://dojoengine.org"
