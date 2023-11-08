@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use dojo_types::schema::KeysClause;
 use futures::Stream;
-use protos::world::{
+use proto::world::{
     MetadataRequest, MetadataResponse, SubscribeEntitiesRequest, SubscribeEntitiesResponse,
 };
 use sqlx::{Pool, Sqlite};
@@ -26,9 +26,9 @@ use torii_core::error::{Error, ParseError};
 use torii_core::model::{parse_sql_model_members, SqlModelMember};
 
 use self::subscription::SubscribeRequest;
-use crate::protos::types::clause::ClauseType;
-use crate::protos::world::world_server::WorldServer;
-use crate::protos::{self};
+use crate::proto::types::clause::ClauseType;
+use crate::proto::world::world_server::WorldServer;
+use crate::proto::{self};
 
 #[derive(Clone)]
 pub struct DojoWorld {
@@ -58,7 +58,7 @@ impl DojoWorld {
 }
 
 impl DojoWorld {
-    pub async fn metadata(&self) -> Result<protos::types::WorldMetadata, Error> {
+    pub async fn metadata(&self) -> Result<proto::types::WorldMetadata, Error> {
         let (world_address, world_class_hash, executor_address, executor_class_hash): (
             String,
             String,
@@ -81,7 +81,7 @@ impl DojoWorld {
         let mut models_metadata = Vec::with_capacity(models.len());
         for model in models {
             let schema = self.model_schema(&model.0).await?;
-            models_metadata.push(protos::types::ModelMetadata {
+            models_metadata.push(proto::types::ModelMetadata {
                 name: model.0,
                 class_hash: model.1,
                 packed_size: model.2,
@@ -90,8 +90,9 @@ impl DojoWorld {
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
+        println!("{:?}", world_address);
 
-        Ok(protos::types::WorldMetadata {
+        Ok(proto::types::WorldMetadata {
             world_address,
             world_class_hash,
             executor_address,
@@ -112,7 +113,7 @@ impl DojoWorld {
         Ok(parse_sql_model_members(model, &model_members))
     }
 
-    pub async fn model_metadata(&self, model: &str) -> Result<protos::types::ModelMetadata, Error> {
+    pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
         let (name, class_hash, packed_size, unpacked_size, layout): (
             String,
             String,
@@ -129,7 +130,7 @@ impl DojoWorld {
         let schema = self.model_schema(model).await?;
         let layout = hex::decode(&layout).unwrap();
 
-        Ok(protos::types::ModelMetadata {
+        Ok(proto::types::ModelMetadata {
             name,
             layout,
             class_hash,
@@ -141,8 +142,8 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        queries: Vec<protos::types::EntityQuery>,
-    ) -> Result<Receiver<Result<protos::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
+        queries: Vec<proto::types::EntityQuery>,
+    ) -> Result<Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
     {
         let mut subs = Vec::with_capacity(queries.len());
         for query in queries {
@@ -160,7 +161,7 @@ impl DojoWorld {
             let model = cairo_short_string_to_felt(&query.model)
                 .map_err(ParseError::CairoShortStringToFelt)?;
 
-            let protos::types::ModelMetadata { packed_size, .. } =
+            let proto::types::ModelMetadata { packed_size, .. } =
                 self.model_metadata(&query.model).await?;
 
             subs.push(SubscribeRequest {
@@ -183,7 +184,7 @@ type SubscribeEntitiesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEntitiesResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
-impl protos::world::world_server::World for DojoWorld {
+impl proto::world::world_server::World for DojoWorld {
     async fn world_metadata(
         &self,
         _request: Request<MetadataRequest>,
@@ -222,12 +223,18 @@ pub async fn new(
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let addr = listener.local_addr()?;
 
+    let reflection = tonic_reflection::server::Builder::configure()
+        .register_encoded_file_descriptor_set(proto::world::FILE_DESCRIPTOR_SET)
+        .build()
+        .unwrap();
+
     let world = DojoWorld::new(pool.clone(), block_rx, world_address, provider);
     let server = WorldServer::new(world);
 
     let server_future = Server::builder()
         // GrpcWeb is over http1 so we must enable it.
         .accept_http1(true)
+        .add_service(reflection)
         .add_service(tonic_web::enable(server))
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), async move {
             shutdown_rx.recv().await.map_or((), |_| ())

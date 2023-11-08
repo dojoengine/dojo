@@ -9,11 +9,11 @@ use starknet::core::types::{
 };
 use starknet_crypto::FieldElement;
 
-use crate::protos;
+use crate::proto;
 
-impl TryFrom<protos::types::ModelMetadata> for dojo_types::schema::ModelMetadata {
+impl TryFrom<proto::types::ModelMetadata> for dojo_types::schema::ModelMetadata {
     type Error = FromStrError;
-    fn try_from(value: protos::types::ModelMetadata) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::ModelMetadata) -> Result<Self, Self::Error> {
         let schema: Ty = serde_json::from_slice(&value.schema).unwrap();
         let layout: Vec<FieldElement> = value.layout.into_iter().map(FieldElement::from).collect();
         Ok(Self {
@@ -27,9 +27,9 @@ impl TryFrom<protos::types::ModelMetadata> for dojo_types::schema::ModelMetadata
     }
 }
 
-impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
+impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
     type Error = FromStrError;
-    fn try_from(value: protos::types::WorldMetadata) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::WorldMetadata) -> Result<Self, Self::Error> {
         let models = value
             .models
             .into_iter()
@@ -46,38 +46,38 @@ impl TryFrom<protos::types::WorldMetadata> for dojo_types::WorldMetadata {
     }
 }
 
-impl From<EntityQuery> for protos::types::EntityQuery {
+impl From<EntityQuery> for proto::types::EntityQuery {
     fn from(value: EntityQuery) -> Self {
         Self { model: value.model, clause: Some(value.clause.into()) }
     }
 }
 
-impl From<Clause> for protos::types::Clause {
+impl From<Clause> for proto::types::Clause {
     fn from(value: Clause) -> Self {
         match value {
             Clause::Keys(clause) => {
-                Self { clause_type: Some(protos::types::clause::ClauseType::Keys(clause.into())) }
+                Self { clause_type: Some(proto::types::clause::ClauseType::Keys(clause.into())) }
             }
             Clause::Attribute(clause) => Self {
-                clause_type: Some(protos::types::clause::ClauseType::Attribute(clause.into())),
+                clause_type: Some(proto::types::clause::ClauseType::Attribute(clause.into())),
             },
             Clause::Composite(clause) => Self {
-                clause_type: Some(protos::types::clause::ClauseType::Composite(clause.into())),
+                clause_type: Some(proto::types::clause::ClauseType::Composite(clause.into())),
             },
         }
     }
 }
 
-impl From<KeysClause> for protos::types::KeysClause {
+impl From<KeysClause> for proto::types::KeysClause {
     fn from(value: KeysClause) -> Self {
         Self { keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect() }
     }
 }
 
-impl TryFrom<protos::types::KeysClause> for KeysClause {
+impl TryFrom<proto::types::KeysClause> for KeysClause {
     type Error = FromByteSliceError;
 
-    fn try_from(value: protos::types::KeysClause) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::KeysClause) -> Result<Self, Self::Error> {
         let keys = value
             .keys
             .into_iter()
@@ -88,7 +88,7 @@ impl TryFrom<protos::types::KeysClause> for KeysClause {
     }
 }
 
-impl From<AttributeClause> for protos::types::AttributeClause {
+impl From<AttributeClause> for proto::types::AttributeClause {
     fn from(value: AttributeClause) -> Self {
         Self {
             attribute: value.attribute,
@@ -98,7 +98,7 @@ impl From<AttributeClause> for protos::types::AttributeClause {
     }
 }
 
-impl From<CompositeClause> for protos::types::CompositeClause {
+impl From<CompositeClause> for proto::types::CompositeClause {
     fn from(value: CompositeClause) -> Self {
         Self {
             operator: value.operator as i32,
@@ -107,31 +107,31 @@ impl From<CompositeClause> for protos::types::CompositeClause {
     }
 }
 
-impl From<Value> for protos::types::Value {
+impl From<Value> for proto::types::Value {
     fn from(value: Value) -> Self {
         match value {
             Value::String(val) => {
-                Self { value_type: Some(protos::types::value::ValueType::StringValue(val)) }
+                Self { value_type: Some(proto::types::value::ValueType::StringValue(val)) }
             }
             Value::Int(val) => {
-                Self { value_type: Some(protos::types::value::ValueType::IntValue(val)) }
+                Self { value_type: Some(proto::types::value::ValueType::IntValue(val)) }
             }
             Value::UInt(val) => {
-                Self { value_type: Some(protos::types::value::ValueType::UintValue(val)) }
+                Self { value_type: Some(proto::types::value::ValueType::UintValue(val)) }
             }
             Value::Bool(val) => {
-                Self { value_type: Some(protos::types::value::ValueType::BoolValue(val)) }
+                Self { value_type: Some(proto::types::value::ValueType::BoolValue(val)) }
             }
             Value::Bytes(val) => {
-                Self { value_type: Some(protos::types::value::ValueType::ByteValue(val)) }
+                Self { value_type: Some(proto::types::value::ValueType::ByteValue(val)) }
             }
         }
     }
 }
 
-impl TryFrom<protos::types::StorageEntry> for StorageEntry {
+impl TryFrom<proto::types::StorageEntry> for StorageEntry {
     type Error = FromStrError;
-    fn try_from(value: protos::types::StorageEntry) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::StorageEntry) -> Result<Self, Self::Error> {
         Ok(Self {
             key: FieldElement::from_str(&value.key)?,
             value: FieldElement::from_str(&value.value)?,
@@ -139,9 +139,9 @@ impl TryFrom<protos::types::StorageEntry> for StorageEntry {
     }
 }
 
-impl TryFrom<protos::types::StorageDiff> for ContractStorageDiffItem {
+impl TryFrom<proto::types::StorageDiff> for ContractStorageDiffItem {
     type Error = FromStrError;
-    fn try_from(value: protos::types::StorageDiff) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::StorageDiff) -> Result<Self, Self::Error> {
         Ok(Self {
             address: FieldElement::from_str(&value.address)?,
             storage_entries: value
@@ -153,9 +153,9 @@ impl TryFrom<protos::types::StorageDiff> for ContractStorageDiffItem {
     }
 }
 
-impl TryFrom<protos::types::EntityDiff> for StateDiff {
+impl TryFrom<proto::types::EntityDiff> for StateDiff {
     type Error = FromStrError;
-    fn try_from(value: protos::types::EntityDiff) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::EntityDiff) -> Result<Self, Self::Error> {
         Ok(Self {
             nonces: vec![],
             declared_classes: vec![],
@@ -171,9 +171,9 @@ impl TryFrom<protos::types::EntityDiff> for StateDiff {
     }
 }
 
-impl TryFrom<protos::types::EntityUpdate> for StateUpdate {
+impl TryFrom<proto::types::EntityUpdate> for StateUpdate {
     type Error = FromStrError;
-    fn try_from(value: protos::types::EntityUpdate) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::EntityUpdate) -> Result<Self, Self::Error> {
         Ok(Self {
             new_root: FieldElement::ZERO,
             old_root: FieldElement::ZERO,

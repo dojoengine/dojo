@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use http::header::CONTENT_TYPE;
-use http::{HeaderName, Method};
+use http::{HeaderName, Method, Uri};
 use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::server::conn::AddrStream;
@@ -15,6 +15,7 @@ use serde_json::json;
 use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tracing::error;
 
 const DEFAULT_ALLOW_HEADERS: [&str; 12] = [
     "accept",
@@ -128,15 +129,18 @@ async fn handle(
     graphql_addr: Option<SocketAddr>,
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
-    if req.uri().path().starts_with("/grpc") {
-        if let Some(grpc_addr) = grpc_addr {
-            let grpc_addr = format!("http://{}", grpc_addr);
-            return match PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
+    if req.uri().path().starts_with("/graphql") {
+        if let Some(graphql_addr) = graphql_addr {
+            let graphql_addr = format!("http://{}", graphql_addr);
+            return match PROXY_CLIENT.call(client_ip, &graphql_addr, req).await {
                 Ok(response) => Ok(response),
-                Err(_error) => Ok(Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(Body::empty())
-                    .unwrap()),
+                Err(_error) => {
+                    error!("{:?}", _error);
+                    Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap())
+                }
             };
         } else {
             return Ok(Response::builder()
@@ -146,15 +150,28 @@ async fn handle(
         }
     }
 
-    if req.uri().path().starts_with("/graphql") {
-        if let Some(graphql_addr) = graphql_addr {
-            let graphql_addr = format!("http://{}", graphql_addr);
-            return match PROXY_CLIENT.call(client_ip, &graphql_addr, req).await {
+    if req.uri().path().starts_with("/grpc") {
+        if let Some(grpc_addr) = grpc_addr {
+            let uri = req.uri().clone();
+            let (mut parts, body) = req.into_parts();
+            parts.uri = Uri::builder()
+                .scheme("http")
+                .authority("replace.com")
+                .path_and_query(uri.path().trim_start_matches("/grpc"))
+                .build()
+                .unwrap();
+            let req = Request::from_parts(parts, body);
+
+            let grpc_addr = format!("http://{}", grpc_addr);
+            return match PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
                 Ok(response) => Ok(response),
-                Err(_error) => Ok(Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(Body::empty())
-                    .unwrap()),
+                Err(_error) => {
+                    error!("{:?}", _error);
+                    Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap())
+                }
             };
         } else {
             return Ok(Response::builder()
