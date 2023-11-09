@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
@@ -15,7 +15,7 @@ use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
-use crate::types::{Entity, Model as ModelType};
+use crate::types::{Entity as EntityUpdated, Event as EventEmitted, Model as ModelRegistered};
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -91,8 +91,8 @@ impl Sql {
                              unpacked_size) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE \
                              SET class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
                              packed_size=EXCLUDED.packed_size, \
-                             unpacked_size=EXCLUDED.unpacked_size RETURNING created_at";
-        let query_result: (DateTime<Utc>,) = sqlx::query_as(insert_models)
+                             unpacked_size=EXCLUDED.unpacked_size RETURNING *";
+        let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             .bind(model.name())
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
@@ -102,17 +102,11 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
+        SimpleBroker::publish(model_registered);
+
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
-        self.query_queue.execute_all().await?;
 
-        SimpleBroker::publish(ModelType {
-            id: model.name(),
-            name: model.name(),
-            class_hash: format!("{:#x}", class_hash),
-            transaction_hash: "0x0".to_string(),
-            created_at: query_result.0,
-        });
         Ok(())
     }
 
@@ -146,8 +140,8 @@ impl Sql {
         let insert_entities = "INSERT INTO entities (id, keys, model_names, event_id) VALUES (?, \
                                ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                model_names=EXCLUDED.model_names, updated_at=CURRENT_TIMESTAMP, \
-                               event_id=EXCLUDED.event_id RETURNING created_at";
-        let query_result: (DateTime<Utc>,) = sqlx::query_as(insert_entities)
+                               event_id=EXCLUDED.event_id RETURNING *";
+        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(&model_names)
@@ -155,18 +149,11 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
+        SimpleBroker::publish(entity_updated);
+
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
-        self.query_queue.execute_all().await?;
 
-        SimpleBroker::publish(Entity {
-            id: entity_id.clone(),
-            keys: keys_str,
-            model_names,
-            event_id: event_id.to_string(),
-            created_at: query_result.0,
-            updated_at: Utc::now(),
-        });
         Ok(())
     }
 
@@ -275,12 +262,20 @@ impl Sql {
         let id = Argument::String(event_id.to_string());
         let keys = Argument::String(felts_sql_string(&event.keys));
         let data = Argument::String(felts_sql_string(&event.data));
-        let transaction_hash = Argument::FieldElement(transaction_hash);
+        let hash = Argument::FieldElement(transaction_hash);
 
         self.query_queue.enqueue(
             "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES (?, ?, ?, ?)",
-            vec![id, keys, data, transaction_hash],
+            vec![id, keys, data, hash],
         );
+
+        SimpleBroker::publish(EventEmitted {
+            id: event_id.to_string(),
+            keys: felts_sql_string(&event.keys),
+            data: felts_sql_string(&event.data),
+            transaction_hash: format!("{:#x}", transaction_hash),
+            created_at: Utc::now(),
+        });
     }
 
     fn build_register_queries_recursive(

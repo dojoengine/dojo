@@ -11,22 +11,6 @@ use crate::mapping::MODEL_TYPE_MAPPING;
 
 pub struct ModelObject;
 
-// TODO: Refactor subscription to not use this
-impl ModelObject {
-    pub fn value_mapping(model: Model) -> ValueMapping {
-        IndexMap::from([
-            (Name::new("id"), Value::from(model.id)),
-            (Name::new("name"), Value::from(model.name)),
-            (Name::new("classHash"), Value::from(model.class_hash)),
-            (Name::new("transactionHash"), Value::from(model.transaction_hash)),
-            (
-                Name::new("createdAt"),
-                Value::from(model.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-            ),
-        ])
-    }
-}
-
 impl ObjectTrait for ModelObject {
     fn name(&self) -> (&str, &str) {
         MODEL_NAMES
@@ -45,9 +29,8 @@ impl ObjectTrait for ModelObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        let name = format!("{}Registered", self.name().0);
         Some(vec![
-            SubscriptionField::new(name, TypeRef::named_nn(self.type_name()), |ctx| {
+            SubscriptionField::new("modelRegistered", TypeRef::named_nn(self.type_name()), |ctx| {
                 {
                     SubscriptionFieldFuture::new(async move {
                         let id = match ctx.args.get("id") {
@@ -68,6 +51,21 @@ impl ObjectTrait for ModelObject {
                 }
             })
             .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
+        ])
+    }
+}
+
+impl ModelObject {
+    pub fn value_mapping(model: Model) -> ValueMapping {
+        IndexMap::from([
+            (Name::new("id"), Value::from(model.id)),
+            (Name::new("name"), Value::from(model.name)),
+            (Name::new("class_hash"), Value::from(model.class_hash)),
+            (Name::new("transaction_hash"), Value::from(model.transaction_hash)),
+            (
+                Name::new("created_at"),
+                Value::from(model.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+            ),
         ])
     }
 }

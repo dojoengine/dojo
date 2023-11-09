@@ -20,9 +20,12 @@ mod records {
 
     #[derive(Drop, starknet::Event)]
     struct RecordLogged {
+        #[key]
         record_id: u32,
+        #[key]
         type_u8: u8,
         type_felt: felt252,
+        random_u128: u128,
     }
 
     #[external(v0)]
@@ -95,7 +98,7 @@ mod records {
 
                 record_idx += 1;
 
-                emit!(world, RecordLogged { record_id, type_u8: record_idx.into(), type_felt });
+                emit!(world, RecordLogged { record_id, type_u8: record_idx.into(), type_felt, random_u128 });
             };
             return ();
         }
