@@ -4,7 +4,7 @@ use starknet_api::hash::StarkFelt;
 use starknet_api::stark_felt;
 use starknet_api::state::StorageKey;
 
-use crate::utils::contract::get_contract_class;
+use crate::utils::contract::{get_contract_class, get_v1_contract_class};
 
 pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of wei.
 
@@ -21,7 +21,7 @@ lazy_static! {
 
     // Predefined class hashes
 
-    pub static ref DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH: StarkFelt = stark_felt!("0x04d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f");
+    pub static ref DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH: StarkFelt = stark_felt!("0x00d582780834aefc0a0bf84909d9be00cda0b657d607c7a856a142ce652c23c3");
     pub static ref ERC20_CONTRACT_CLASS_HASH: StarkFelt = stark_felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
     pub static ref UDC_CLASS_HASH: StarkFelt = stark_felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
 
@@ -29,7 +29,7 @@ lazy_static! {
 
     pub static ref ERC20_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/erc20.json"));
     pub static ref UDC_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/universal_deployer.json"));
-    pub static ref DEFAULT_ACCOUNT_CONTRACT: ContractClass = get_contract_class(include_str!("../contracts/compiled/account.json"));
+    pub static ref DEFAULT_ACCOUNT_CONTRACT: ContractClass = get_v1_contract_class(include_str!("../contracts/compiled/openzeppelin_Account.casm.json"));
 
     pub static ref DEFAULT_PREFUNDED_ACCOUNT_BALANCE: StarkFelt = stark_felt!("0x3635c9adc5dea00000"); // 10^21
 

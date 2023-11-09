@@ -23,6 +23,16 @@ pub fn get_contract_class(contract_class_str: &str) -> InnerContractClass {
     InnerContractClass::V0(legacy_contract_class)
 }
 
+pub fn get_v1_contract_class(contract_class_str: &str) -> InnerContractClass {
+    let casm_contract_class: CasmContractClass = serde_json::from_str(contract_class_str)
+        .expect("`json_str` should be deserializable into the CasmContracClass");
+    InnerContractClass::V1(
+        casm_contract_class
+            .try_into()
+            .expect("the CasmContractClass should produce a valid ContractClassV1"),
+    )
+}
+
 pub fn compute_legacy_class_hash(contract_class_str: &str) -> Result<ClassHash> {
     let contract_class: LegacyContractClass = ::serde_json::from_str(contract_class_str)?;
     let seirra_class_hash = contract_class.class_hash()?;
