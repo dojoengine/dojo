@@ -48,20 +48,21 @@ pub fn handle_print_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> Rewr
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNode {
+    let enum_name = enum_ast.name(db).text(db);
     let prints: Vec<_> = enum_ast
         .variants(db)
         .elements(db)
         .iter()
         .map(|m| {
             format!(
-                "{} => {{ debug::PrintTrait::print('{}'); }}",
+                "{}::{}(value) => {{ debug::PrintTrait::print('{}'); \
+                 debug::PrintTrait::print(value); }}",
+                enum_name,
                 m.name(db).text(db).to_string(),
                 m.name(db).text(db).to_string()
             )
         })
         .collect();
-
-    dbg!(&prints);
 
     RewriteNode::interpolate_patched(
         "#[cfg(test)]
