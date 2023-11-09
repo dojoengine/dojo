@@ -11,7 +11,10 @@ use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+#[cfg(target_family = "unix")]
 use tokio::signal::unix::{signal, SignalKind};
+#[cfg(target_family = "windows")]
+use tokio::signal::windows::{ctrl_c, CtrlBreak};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -77,8 +80,16 @@ async fn main() -> anyhow::Result<()> {
 
     // Setup cancellation for graceful shutdown
     let (shutdown_tx, _) = broadcast::channel(1);
+
+    #[cfg(target_family = "unix")]
     let mut sigterm = signal(SignalKind::terminate())?;
+    #[cfg(target_family = "unix")]
     let mut sigint = signal(SignalKind::interrupt())?;
+
+    #[cfg(target_family = "windows")]
+    let mut sigterm = ctrl_c()?;
+    #[cfg(target_family = "windows")]
+    let mut sigint = CtrlBreak::new()?;
 
     let database_url = format!("sqlite:{}", &args.database);
     let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
