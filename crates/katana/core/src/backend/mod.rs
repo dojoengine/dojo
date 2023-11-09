@@ -40,7 +40,10 @@ use self::storage::{Blockchain, InMemoryBlockStates, Storage};
 use crate::accounts::{Account, DevAccountGenerator};
 use crate::backend::in_memory_db::MemDb;
 use crate::backend::storage::transaction::KnownTransaction;
-use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use crate::constants::{
+    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, NO_VALIDATE_ACCOUNT_CONTRACT,
+    NO_VALIDATE_ACCOUNT_CONTRACT_CLASS_HASH,
+};
 use crate::db::cached::CachedStateWrapper;
 use crate::db::serde::state::SerializableState;
 use crate::db::{Database, StateRefDb};
@@ -78,10 +81,21 @@ impl Backend {
         let mut block_context = config.block_context();
         let block_context_generator = config.block_context_generator();
 
-        let accounts = DevAccountGenerator::new(config.total_accounts)
-            .with_seed(config.seed)
-            .with_balance((*DEFAULT_PREFUNDED_ACCOUNT_BALANCE).into())
-            .generate();
+        let accounts = if config.no_validate {
+            DevAccountGenerator::new(config.total_accounts)
+                .with_seed(config.seed)
+                .with_balance((*DEFAULT_PREFUNDED_ACCOUNT_BALANCE).into())
+                .with_class(
+                    (*NO_VALIDATE_ACCOUNT_CONTRACT_CLASS_HASH).into(),
+                    Arc::new((*NO_VALIDATE_ACCOUNT_CONTRACT).clone()),
+                )
+                .generate()
+        } else {
+            DevAccountGenerator::new(config.total_accounts)
+                .with_seed(config.seed)
+                .with_balance((*DEFAULT_PREFUNDED_ACCOUNT_BALANCE).into())
+                .generate()
+        };
 
         let (state, storage): (Arc<AsyncRwLock<dyn Database>>, Arc<RwLock<Storage>>) =
             if let Some(forked_url) = config.fork_rpc_url.clone() {
