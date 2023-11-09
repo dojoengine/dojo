@@ -102,10 +102,11 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        SimpleBroker::publish(model_registered);
-
         let mut model_idx = 0_i64;
         self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
+        self.query_queue.execute_all().await?;
+
+        SimpleBroker::publish(model_registered);
 
         Ok(())
     }
@@ -149,10 +150,11 @@ impl Sql {
             .fetch_one(&self.pool)
             .await?;
 
-        SimpleBroker::publish(entity_updated);
-
         let path = vec![entity.name()];
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
+        self.query_queue.execute_all().await?;
+
+        SimpleBroker::publish(entity_updated);
 
         Ok(())
     }
