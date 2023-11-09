@@ -90,7 +90,6 @@ impl DojoWorld {
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
-        println!("{:?}", world_address);
 
         Ok(proto::types::WorldMetadata {
             world_address,

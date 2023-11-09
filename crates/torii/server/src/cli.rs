@@ -141,7 +141,6 @@ async fn main() -> anyhow::Result<()> {
 
     info!("🚀 Torii listening at {}", format!("http://{}", addr));
     info!("Graphql playground: {}\n", format!("http://{}/graphql", addr));
-    info!("GRPC playground: {}\n", format!("http://{}/grpc", addr));
 
     tokio::select! {
         _ = sigterm.recv() => {
