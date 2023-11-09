@@ -9,7 +9,7 @@ use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::server::conn::AddrStream;
 use hyper::service::make_service_fn;
-use hyper::{Body, Request, Response, Server, StatusCode};
+use hyper::{Body, Client, Request, Response, Server, StatusCode};
 use hyper_reverse_proxy::ReverseProxy;
 use serde_json::json;
 use tokio::sync::RwLock;
@@ -38,7 +38,9 @@ const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 lazy_static::lazy_static! {
     static ref  PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
         ReverseProxy::new(
-            hyper::Client::new(),
+            Client::builder()
+             .http2_only(true)
+             .build_http(),
         )
     };
 }
