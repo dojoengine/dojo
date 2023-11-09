@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use std::sync::Mutex;
     use std::time::Duration;
 
     use async_graphql::value;
     use dojo_types::primitive::Primitive;
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
+    use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
@@ -15,15 +15,9 @@ mod tests {
 
     use crate::tests::{model_fixtures, run_graphql_subscription};
 
-    // NOTE: subscription tests randomly fails if ran parallelized, force sequential
-    lazy_static::lazy_static! {
-        static ref TEST_MUTEX: Mutex<()> = Mutex::new(());
-    }
-
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_entity_subscription(pool: SqlitePool) {
-        let _guard = TEST_MUTEX.lock().unwrap();
-
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
@@ -116,9 +110,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
-        let _guard = TEST_MUTEX.lock().unwrap();
-
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
         model_fixtures(&mut db).await;
@@ -211,9 +204,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_model_subscription(pool: SqlitePool) {
-        let _guard = TEST_MUTEX.lock().unwrap();
-
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let name = "Moves".to_string();
@@ -261,9 +253,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_model_subscription_with_id(pool: SqlitePool) {
-        let _guard = TEST_MUTEX.lock().unwrap();
-
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let name = "Test".to_string();
@@ -310,9 +301,8 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../migrations")]
+    #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
-        let _guard = TEST_MUTEX.lock().unwrap();
-
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
         let (tx, mut rx) = mpsc::channel(7);
