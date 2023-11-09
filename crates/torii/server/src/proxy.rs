@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use http::header::CONTENT_TYPE;
-use http::{HeaderName, Method, Uri};
+use http::{HeaderName, Method};
 use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::server::conn::AddrStream;
@@ -150,34 +150,26 @@ async fn handle(
         }
     }
 
-    if req.uri().path().starts_with("/grpc") {
-        if let Some(grpc_addr) = grpc_addr {
-            let uri = req.uri().clone();
-            let (mut parts, body) = req.into_parts();
-            parts.uri = Uri::builder()
-                .scheme("http")
-                .authority("replace.com")
-                .path_and_query(uri.path().trim_start_matches("/grpc"))
-                .build()
-                .unwrap();
-            let req = Request::from_parts(parts, body);
-
-            let grpc_addr = format!("http://{}", grpc_addr);
-            return match PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
-                Ok(response) => Ok(response),
-                Err(_error) => {
-                    error!("{:?}", _error);
-                    Ok(Response::builder()
-                        .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(Body::empty())
-                        .unwrap())
-                }
-            };
-        } else {
-            return Ok(Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::empty())
-                .unwrap());
+    if let Some(content_type) = req.headers().get(CONTENT_TYPE) {
+        if content_type.to_str().unwrap().starts_with("application/grpc") {
+            if let Some(grpc_addr) = grpc_addr {
+                let grpc_addr = format!("http://{}", grpc_addr);
+                return match PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
+                    Ok(response) => Ok(response),
+                    Err(_error) => {
+                        error!("{:?}", _error);
+                        Ok(Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::empty())
+                            .unwrap())
+                    }
+                };
+            } else {
+                return Ok(Response::builder()
+                    .status(StatusCode::NOT_FOUND)
+                    .body(Body::empty())
+                    .unwrap());
+            }
         }
     }
 
