@@ -32,6 +32,13 @@ struct Player {
     name: felt252, 
 }
 
+#[derive(Print, Copy, Drop, Serde)]
+enum Enemy {
+    Unknown,
+    Bot: felt252,
+    OtherPlayer: ContractAddress,
+}
+
 //! > generated_cairo_code
 use serde::Serde;
 
