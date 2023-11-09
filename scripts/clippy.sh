@@ -7,4 +7,3 @@ run_clippy() {
 }
 
 run_clippy
-
