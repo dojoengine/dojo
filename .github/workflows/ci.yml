@@ -41,6 +41,20 @@ jobs:
         run: |
           cargo build -r --target wasm32-unknown-unknown -p torii-client
 
+  ensure-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          target: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v2
+      - name: "Ensure buildable on windows"
+        run: |
+          cargo build --target x86_64-pc-windows-msvc --bins
+
   # cairofmt:
   #   runs-on: ubuntu-latest
   #   steps:
