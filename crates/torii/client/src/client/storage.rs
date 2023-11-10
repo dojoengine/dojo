@@ -168,11 +168,12 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::schema::{KeysClause, Ty};
+    use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
+    use torii_grpc::types::{Clause, KeysClause, Query};
 
     use crate::client::error::Error;
     use crate::utils::compute_all_storage_addresses;
@@ -202,9 +203,9 @@ mod tests {
     fn err_if_set_values_too_many() {
         let storage = create_dummy_storage();
         let keys = vec![felt!("0x12345")];
-        let entity = dojo_types::schema::EntityQuery {
+        let entity = Query {
             model: "Position".into(),
-            clause: dojo_types::schema::Clause::Keys(KeysClause { keys: keys.clone() }),
+            clause: Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4"), felt!("5")];
@@ -222,9 +223,9 @@ mod tests {
     fn err_if_set_values_too_few() {
         let storage = create_dummy_storage();
         let keys = vec![felt!("0x12345")];
-        let entity = dojo_types::schema::EntityQuery {
+        let entity = Query {
             model: "Position".into(),
-            clause: dojo_types::schema::Clause::Keys(KeysClause { keys: keys.clone() }),
+            clause: Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         let values = vec![felt!("1"), felt!("2")];
@@ -242,9 +243,9 @@ mod tests {
     fn set_and_get_entity_value() {
         let storage = create_dummy_storage();
         let keys = vec![felt!("0x12345")];
-        let entity = dojo_types::schema::EntityQuery {
+        let entity = Query {
             model: "Position".into(),
-            clause: dojo_types::schema::Clause::Keys(KeysClause { keys: keys.clone() }),
+            clause: Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         assert!(storage.storage.read().is_empty(), "storage must be empty initially");

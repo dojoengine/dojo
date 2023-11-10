@@ -1,4 +1,3 @@
-use dojo_types::schema::QueryError;
 use starknet::core::types::{FromByteSliceError, FromStrError};
 use starknet::core::utils::CairoShortStringToFeltError;
 
@@ -20,4 +19,10 @@ pub enum ParseError {
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
     FromByteSliceError(#[from] FromByteSliceError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum QueryError {
+    #[error("unsupported query")]
+    UnsupportedQuery,
 }

@@ -2,12 +2,69 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use dojo_types::schema::Ty;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
 use starknet_crypto::FieldElement;
 
 use crate::proto;
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Query {
+    pub model: String,
+    pub clause: Clause,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum Clause {
+    Keys(KeysClause),
+    Attribute(AttributeClause),
+    Composite(CompositeClause),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct KeysClause {
+    pub keys: Vec<FieldElement>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct AttributeClause {
+    pub attribute: String,
+    pub operator: ComparisonOperator,
+    pub value: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct CompositeClause {
+    pub operator: LogicalOperator,
+    pub clauses: Vec<Clause>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum LogicalOperator {
+    And,
+    Or,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum ComparisonOperator {
+    Eq,
+    Neq,
+    Gt,
+    Gte,
+    Lt,
+    Lte,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum Value {
+    String(String),
+    Int(i64),
+    UInt(u64),
+    Bool(bool),
+    Bytes(Vec<u8>),
+}
 
 impl TryFrom<proto::types::ModelMetadata> for dojo_types::schema::ModelMetadata {
     type Error = FromStrError;
@@ -44,8 +101,8 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
     }
 }
 
-impl From<EntityQuery> for proto::types::EntityQuery {
-    fn from(value: EntityQuery) -> Self {
+impl From<Query> for proto::types::EntityQuery {
+    fn from(value: Query) -> Self {
         Self { model: value.model, clause: Some(value.clause.into()) }
     }
 }

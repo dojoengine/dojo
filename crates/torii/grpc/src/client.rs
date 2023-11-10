@@ -7,6 +7,7 @@ use starknet_crypto::FieldElement;
 
 use crate::proto::world::{MetadataRequest, SubscribeEntitiesResponse};
 use crate::proto::{self};
+use crate::types::Query;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
