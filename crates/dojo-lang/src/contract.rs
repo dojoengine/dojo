@@ -55,7 +55,7 @@ impl DojoContract {
                     }
 
                     #[external(v0)]
-                    fn name(self: @ContractState) -> felt252 {
+                    fn dojo_resource(self: @ContractState) -> felt252 {
                         '$name$'
                     }
 

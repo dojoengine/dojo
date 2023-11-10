@@ -229,7 +229,7 @@ error: Unsupported attribute.
                     }
 
                     #[external(v0)]
-                    fn name(self: @ContractState) -> felt252 {
+                    fn dojo_resource(self: @ContractState) -> felt252 {
                         'spawn'
                     }
 
@@ -266,7 +266,7 @@ error: Unsupported attribute.
                     }
 
                     #[external(v0)]
-                    fn name(self: @ContractState) -> felt252 {
+                    fn dojo_resource(self: @ContractState) -> felt252 {
                         'proxy'
                     }
 
@@ -301,7 +301,7 @@ error: Unsupported attribute.
                     }
 
                     #[external(v0)]
-                    fn name(self: @ContractState) -> felt252 {
+                    fn dojo_resource(self: @ContractState) -> felt252 {
                         'ctxnamed'
                     }
 

@@ -8,7 +8,7 @@ trait IRecords<TContractState> {
 #[dojo::contract]
 mod records {
     use starknet::{ContractAddress, get_caller_address};
-    use types_test::models::{Record, Subrecord, Nested, NestedMore, NestedMoreMore};
+    use types_test::models::{Record, Subrecord, Nested, NestedMore, NestedMoreMore, Depth};
     use types_test::{seed, random};
     use super::IRecords;
 
@@ -20,9 +20,12 @@ mod records {
 
     #[derive(Drop, starknet::Event)]
     struct RecordLogged {
+        #[key]
         record_id: u32,
+        #[key]
         type_u8: u8,
         type_felt: felt252,
+        random_u128: u128,
     }
 
     #[external(v0)]
@@ -54,6 +57,7 @@ mod records {
                     (
                         Record {
                             record_id,
+                            depth: Depth::Zero,
                             type_u8: record_idx.into(),
                             type_u16: record_idx.into(),
                             type_u32: record_idx.into(),
@@ -69,15 +73,15 @@ mod records {
                             type_class_hash: type_felt.try_into().unwrap(),
                             type_contract_address: type_felt.try_into().unwrap(),
                             type_nested: Nested {
-                                depth: 1,
+                                depth: Depth::One,
                                 type_number: record_idx.into(),
                                 type_string: type_felt,
                                 type_nested_more: NestedMore {
-                                    depth: 2,
+                                    depth: Depth::Two,
                                     type_number: record_idx.into(),
                                     type_string: type_felt,
                                     type_nested_more_more: NestedMoreMore {
-                                        depth: 3,
+                                        depth: Depth::Three,
                                         type_number: record_idx.into(),
                                         type_string: type_felt,
                                     }
@@ -94,7 +98,7 @@ mod records {
 
                 record_idx += 1;
 
-                emit!(world, RecordLogged { record_id, type_u8: record_idx.into(), type_felt });
+                emit!(world, RecordLogged { record_id, type_u8: record_idx.into(), type_felt, random_u128 });
             };
             return ();
         }

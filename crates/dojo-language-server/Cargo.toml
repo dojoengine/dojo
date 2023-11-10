@@ -17,7 +17,6 @@ cairo-lang-plugins.workspace = true
 cairo-lang-semantic.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-test-plugin.workspace = true
-cairo-lang-test-runner.workspace = true
 cairo-lang-utils.workspace = true
 clap.workspace = true
 dojo-lang = { path = "../dojo-lang" }

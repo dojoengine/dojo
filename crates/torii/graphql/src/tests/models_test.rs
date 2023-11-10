@@ -21,6 +21,7 @@ mod tests {
                 node {{
                     __typename
                     record_id
+                    depth
                     type_u8
                     type_u16
                     type_u32
@@ -87,9 +88,10 @@ mod tests {
         assert_eq!(&record.node.__typename, "Record");
         assert_eq!(&entity.model_names, "Record");
         assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
-        assert_eq!(nested.depth, 1);
-        assert_eq!(nested_more.depth, 2);
-        assert_eq!(nested_more_more.depth, 3);
+        assert_eq!(record.node.depth, "Zero");
+        assert_eq!(nested.depth, "One");
+        assert_eq!(nested_more.depth, "Two");
+        assert_eq!(nested_more_more.depth, "Three");
 
         // *** WHERE FILTER TESTING ***
 
@@ -258,6 +260,44 @@ mod tests {
         assert_eq!(connection.edges.len(), 2);
         assert_eq!(first_record, three);
         assert_eq!(last_record, four);
+
+        // *** WHERE FILTER + ORDER + PAGINATION TESTING ***
+
+        let records = records_model_query(
+            &schema,
+            "(where: { type_u8GTE: 7 }, order: {field: TYPE_U8, direction: DESC})",
+        )
+        .await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        let one = connection.edges.get(0).unwrap();
+        let two = connection.edges.get(1).unwrap();
+        let three = connection.edges.get(2).unwrap();
+        assert_eq!(connection.edges.len(), 3);
+
+        let records = records_model_query(
+            &schema,
+            &format!(
+                "(where: {{ type_u8GTE: 7 }}, order: {{field: TYPE_U8, direction: DESC}}, after: \
+                 \"{}\")",
+                one.cursor
+            ),
+        )
+        .await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        let first_record = connection.edges.first().unwrap();
+        assert_eq!(first_record, two);
+
+        let records = records_model_query(
+            &schema,
+            &format!(
+                "(where: {{ type_u8GTE: 7 }}, order: {{field: TYPE_U8, direction: DESC}}, after: \
+                 \"{}\")",
+                three.cursor
+            ),
+        )
+        .await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        assert_eq!(connection.edges.len(), 0);
 
         Ok(())
     }

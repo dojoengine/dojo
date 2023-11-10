@@ -21,7 +21,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.3.4"
+version = "0.3.10"
 
 [profile.performance]
 codegen-units = 1
@@ -106,7 +106,8 @@ warp = "0.3"
 # gRPC
 prost = "0.12"
 tonic = "0.10"
-tonic-build = "0.10"
+tonic-build = "0.10.1"
+tonic-reflection = "0.10.1"
 tonic-web = "0.10.1"
 
 # WASM-compatible gRPC deps

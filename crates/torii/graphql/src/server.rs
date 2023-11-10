@@ -1,9 +1,13 @@
+use std::future::Future;
+use std::net::SocketAddr;
+
 use async_graphql::dynamic::Schema;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::Request;
-use async_graphql_warp::{graphql, graphql_subscription};
+use async_graphql_warp::graphql_subscription;
 use serde_json::json;
 use sqlx::{Pool, Sqlite};
+use tokio::sync::broadcast::Receiver;
 use url::Url;
 use warp::{Filter, Rejection, Reply};
 
@@ -11,15 +15,19 @@ use super::schema::build_schema;
 use crate::constants::MODEL_TABLE;
 use crate::query::data::count_rows;
 
-pub async fn filter(
+pub async fn new(
+    mut shutdown_rx: Receiver<()>,
     pool: &Pool<Sqlite>,
     external_url: Option<Url>,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+) -> (SocketAddr, impl Future<Output = ()> + 'static) {
     let schema = build_schema(pool).await.unwrap();
     let mut conn = pool.acquire().await.unwrap();
     let num_models = count_rows(&mut conn, MODEL_TABLE, &None, &None).await.unwrap();
 
-    graphql_filter(schema, external_url, num_models == 0)
+    let routes = graphql_filter(schema, external_url, num_models == 0);
+    warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], 0), async move {
+        shutdown_rx.recv().await.ok();
+    })
 }
 
 fn graphql_filter(
@@ -27,7 +35,7 @@ fn graphql_filter(
     external_url: Option<Url>,
     is_empty: bool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    let graphql_post = warp::path("graphql").and(graphql(schema.clone())).and_then(
+    let graphql_post = async_graphql_warp::graphql(schema.clone()).and_then(
         move |(schema, request): (Schema, Request)| async move {
             if is_empty {
                 return Ok::<_, Rejection>(empty_response());

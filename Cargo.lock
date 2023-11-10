@@ -2265,7 +2265,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-lang"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-languge-server"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2322,7 +2322,6 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-starknet",
  "cairo-lang-test-plugin",
- "cairo-lang-test-runner",
  "cairo-lang-utils",
  "clap",
  "dojo-lang",
@@ -2335,7 +2334,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-signers"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "starknet",
@@ -2343,7 +2342,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2374,7 +2373,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -2389,7 +2388,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4292,6 +4291,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper-reverse-proxy"
+version = "0.5.2-dev"
+source = "git+https://github.com/tarrencev/hyper-reverse-proxy#4bfaf98b7ae61a49c6238ee1bd38ad030e7fa7f6"
+dependencies = [
+ "hyper",
+ "lazy_static",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "hyper-rustls"
 version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4806,7 +4816,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "assert_matches",
  "clap",
@@ -4824,7 +4834,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -4855,7 +4865,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -6991,6 +7001,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "serial_test"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e56dd856803e253c8f298af3f4d7eb0ae5e23a737252cd90bb4f3b435033b2d"
+dependencies = [
+ "dashmap",
+ "futures",
+ "lazy_static",
+ "log",
+ "parking_lot 0.12.1",
+ "serial_test_derive",
+]
+
+[[package]]
+name = "serial_test_derive"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91d129178576168c589c9ec973feedf7d3126c01ac2bf08795109aa35b69fb8f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.38",
+]
+
+[[package]]
 name = "sha-1"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7201,7 +7236,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8174,6 +8209,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tonic-reflection"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fa37c513df1339d197f4ba21d28c918b9ef1ac1768265f11ecb6b7f1cba1b76"
+dependencies = [
+ "prost 0.12.1",
+ "prost-types 0.12.1",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.10.2",
+]
+
+[[package]]
 name = "tonic-web"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8219,7 +8267,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "async-trait",
  "camino",
@@ -8245,7 +8293,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8280,7 +8328,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -8298,6 +8346,7 @@ dependencies = [
  "scarb-ui",
  "serde",
  "serde_json",
+ "serial_test",
  "sozo",
  "sqlx",
  "starknet",
@@ -8317,7 +8366,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "bytes",
  "dojo-types",
@@ -8343,6 +8392,8 @@ dependencies = [
  "tonic 0.9.2",
  "tonic-build 0.10.2",
  "tonic-build 0.9.2",
+ "tonic-reflection",
+ "tonic-web",
  "tonic-web-wasm-client",
  "torii-core",
  "tower",
@@ -8352,7 +8403,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.3.4"
+version = "0.3.10"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8364,10 +8415,13 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "either",
+ "futures",
  "http",
  "http-body",
  "hyper",
+ "hyper-reverse-proxy",
  "indexmap 1.9.3",
+ "lazy_static",
  "scarb",
  "serde",
  "serde_json",
@@ -8377,8 +8431,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "tonic 0.10.2",
- "tonic-web",
  "torii-core",
  "torii-graphql",
  "torii-grpc",
@@ -8387,7 +8439,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "warp",
 ]
 
 [[package]]

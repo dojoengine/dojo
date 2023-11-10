@@ -6,3 +6,7 @@ next_version=$1
 
 find . -type f -name "*.toml" -exec sed -i "" "s/version = \"$prev_version\"/version = \"$next_version\"/g" {} \;
 find . -type f -name "*.toml" -exec sed -i "" "s/dojo_plugin = \"$prev_version\"/dojo_plugin = \"$next_version\"/g" {} \;
+
+scripts/clippy.sh
+
+git commit -am "Prepare v$1"

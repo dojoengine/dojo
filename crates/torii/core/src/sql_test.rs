@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
@@ -7,10 +9,11 @@ use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::strategy::MigrationStrategy;
 use scarb::ops;
 use sozo::ops::migration::execute_strategy;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
@@ -35,6 +38,7 @@ where
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
+    let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
         db,
@@ -44,6 +48,7 @@ where
             ..Processors::default()
         },
         EngineConfig::default(),
+        shutdown_tx,
         None,
     );
 
@@ -54,8 +59,9 @@ where
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_load_from_remote() {
-    let pool =
-        SqlitePoolOptions::new().max_connections(5).connect("sqlite::memory:").await.unwrap();
+    let options =
+        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
     let migration =
         prepare_migration("../../../examples/spawn-and-move/target/dev".into()).unwrap();
