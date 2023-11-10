@@ -24,6 +24,6 @@ test = "sozo test"
 [tool.dojo.env]
 # Katana
 rpc_url = "http://localhost:5050"
-account_address = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
+account_address = "0x295e01fd0ec0e8b5781e0cb0aa9544e4615a3434c95cf1ff4c6b64ca42248ad"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
 world_address = "0x4cb5561a3a2a19d14f67f71a9da59c9194e2bbb44e1774260a111094fbd8f39"
