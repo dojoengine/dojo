@@ -12,9 +12,11 @@ base64 = "0.21.2"
 camino.workspace = true
 chrono.workspace = true
 clap.workspace = true
+ctrlc = { version = "3.4", features = [ "termination" ] }
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world" }
 either = "1.9.0"
+futures.workspace = true
 http = "0.2.9"
 http-body = "0.4.5"
 hyper-reverse-proxy = { git = "https://github.com/tarrencev/hyper-reverse-proxy" }

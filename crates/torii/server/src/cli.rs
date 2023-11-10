@@ -11,9 +11,6 @@ use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tokio::signal::ctrl_c;
-#[cfg(target_family = "unix")]
-use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -80,12 +77,11 @@ async fn main() -> anyhow::Result<()> {
     // Setup cancellation for graceful shutdown
     let (shutdown_tx, _) = broadcast::channel(1);
 
-    let sigint = ctrl_c();
-
-    #[cfg(target_family = "unix")]
-    let mut sigterm = signal(SignalKind::terminate())?;
-    #[cfg(target_family = "windows")]
-    let (_, sigterm) = futures::channel::mpsc::unbounded::<()>();
+    let shutdown_tx_clone = shutdown_tx.clone();
+    ctrlc::set_handler(move || {
+        let _ = shutdown_tx_clone.send(());
+    })
+    .expect("Error setting Ctrl-C handler");
 
     let database_url = format!("sqlite:{}", &args.database);
     let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
@@ -150,13 +146,6 @@ async fn main() -> anyhow::Result<()> {
     info!("Graphql playground: {}\n", format!("http://{}/graphql", addr));
 
     tokio::select! {
-        _ = sigterm.recv() => {
-            let _ = shutdown_tx.send(());
-        }
-        _ = sigint => {
-            let _ = shutdown_tx.send(());
-        }
-
         _ = engine.start() => {},
         _ = proxy_server.start(shutdown_tx.subscribe()) => {},
         _ = graphql_server => {},
