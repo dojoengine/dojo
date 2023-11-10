@@ -59,7 +59,7 @@ impl AccountOptions {
             // be one of the `katana` dev accounts. The dev accounts deployed on `katana` are
             // legacy accounts (Cairo 0).
             // TODO: Make this configurable
-            ExecutionEncoding::Legacy,
+            ExecutionEncoding::New,
         ))
     }
 

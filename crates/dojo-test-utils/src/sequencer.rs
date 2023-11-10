@@ -59,7 +59,7 @@ impl TestSequencer {
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(self.account.private_key)),
             self.account.account_address,
             chain_id::TESTNET,
-            ExecutionEncoding::Legacy,
+            ExecutionEncoding::New,
         )
     }
 
