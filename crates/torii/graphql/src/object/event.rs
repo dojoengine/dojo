@@ -13,7 +13,7 @@ use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{ObjectTrait, TypeMapping};
 use crate::constants::{EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
 use crate::mapping::EVENT_TYPE_MAPPING;
-use crate::query::data::{count_rows, fetch_multiple_rows};
+use crate::query::data::{count_rows, fetch_multiple_rows, fetch_page_info};
 use crate::types::ValueMapping;
 
 pub struct EventObject;
@@ -59,6 +59,16 @@ impl ObjectTrait for EventObject {
                         &connection,
                     )
                     .await?;
+                    let page_info = fetch_page_info(
+                        &mut conn,
+                        EVENT_TABLE,
+                        ID_COLUMN,
+                        &keys,
+                        &None,
+                        &None,
+                        &connection,
+                    )
+                    .await?;
                     let results = connection_output(
                         &data,
                         &EVENT_TYPE_MAPPING,
@@ -66,6 +76,7 @@ impl ObjectTrait for EventObject {
                         ID_COLUMN,
                         total_count,
                         false,
+                        page_info,
                     )?;
 
                     Ok(Some(Value::Object(results)))
@@ -80,15 +91,17 @@ impl ObjectTrait for EventObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("eventEmitted", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "eventEmitted",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let input_keys = parse_keys_argument(&ctx)?;
                     Ok(EventObject::subscription_stream(input_keys))
                 })
-            })
-            .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING))),
-        ])
+            },
+        )
+        .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))])
     }
 }
 

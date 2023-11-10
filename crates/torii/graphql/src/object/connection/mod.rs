@@ -1,7 +1,10 @@
+use async_graphql::connection::PageInfo;
 use async_graphql::dynamic::{Field, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name, Value};
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
+
+use self::page_info::PageInfoObject;
 
 use super::ObjectTrait;
 use crate::query::order::Order;
@@ -109,6 +112,7 @@ pub fn connection_output(
     id_column: &str,
     total_count: i64,
     is_external: bool,
+    page_info: PageInfo,
 ) -> sqlx::Result<ValueMapping> {
     let model_edges = data
         .iter()
@@ -130,9 +134,11 @@ pub fn connection_output(
             Ok(Value::Object(edge))
         })
         .collect::<sqlx::Result<Vec<Value>>>();
+    let page_info = PageInfoObject::value_mapping(page_info);
 
     Ok(ValueMapping::from([
         (Name::new("total_count"), Value::from(total_count)),
         (Name::new("edges"), Value::List(model_edges?)),
+        (Name::new("page_info"), Value::Object(page_info)),
     ]))
 }

@@ -1,3 +1,4 @@
+use async_graphql::connection::PageInfo;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Result, Sqlite};
@@ -90,6 +91,26 @@ pub async fn fetch_multiple_rows(
     }
 
     sqlx::query(&query).fetch_all(conn).await
+}
+
+pub async fn fetch_page_info(
+    conn: &mut PoolConnection<Sqlite>,
+    table_name: &str,
+    id_column: &str,
+    keys: &Option<Vec<String>>,
+    order: &Option<Order>,
+    filters: &Option<Vec<Filter>>,
+    connection: &ConnectionArguments,
+) -> Result<PageInfo> {
+    // TODO: fetch real page info data from sqlx
+    let page_info = PageInfo {
+        has_previous_page: false,
+        has_next_page: false,
+        start_cursor: None,
+        end_cursor: None,
+    };
+
+    Ok(page_info)
 }
 
 fn handle_cursor(

@@ -18,7 +18,7 @@ use self::connection::{
     connection_arguments, connection_output, parse_connection_arguments, ConnectionObject,
 };
 use crate::constants::ID_COLUMN;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
+use crate::query::data::{count_rows, fetch_multiple_rows, fetch_page_info, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
@@ -106,6 +106,16 @@ pub trait ObjectTrait: Send + Sync {
                         &connection,
                     )
                     .await?;
+                    let page_info = fetch_page_info(
+                        &mut conn,
+                        &table_name,
+                        ID_COLUMN,
+                        &None,
+                        &None,
+                        &None,
+                        &connection,
+                    )
+                    .await?;
                     let results = connection_output(
                         &data,
                         &type_mapping,
@@ -113,6 +123,7 @@ pub trait ObjectTrait: Send + Sync {
                         ID_COLUMN,
                         total_count,
                         false,
+                        page_info,
                     )?;
 
                     Ok(Some(Value::Object(results)))

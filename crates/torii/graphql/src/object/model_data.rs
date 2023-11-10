@@ -11,7 +11,7 @@ use super::inputs::InputObjectTrait;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::{ENTITY_ID_COLUMN, ENTITY_TABLE, ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
 use crate::mapping::ENTITY_TYPE_MAPPING;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
+use crate::query::data::{count_rows, fetch_multiple_rows, fetch_page_info, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::TypeData;
 use crate::utils::extract;
@@ -90,6 +90,7 @@ impl ObjectTrait for ModelDataObject {
                 let connection = parse_connection_arguments(&ctx)?;
                 let id_column = "event_id";
 
+                let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
                 let data = fetch_multiple_rows(
                     &mut conn,
                     &type_name,
@@ -101,9 +102,25 @@ impl ObjectTrait for ModelDataObject {
                 )
                 .await?;
 
-                let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
-                let connection =
-                    connection_output(&data, &type_mapping, &order, id_column, total_count, true)?;
+                let page_info = fetch_page_info(
+                    &mut conn,
+                    &type_name,
+                    id_column,
+                    &None,
+                    &order,
+                    &filters,
+                    &connection,
+                )
+                .await?;
+                let connection = connection_output(
+                    &data,
+                    &type_mapping,
+                    &order,
+                    id_column,
+                    total_count,
+                    true,
+                    page_info,
+                )?;
 
                 Ok(Some(Value::Object(connection)))
             })
