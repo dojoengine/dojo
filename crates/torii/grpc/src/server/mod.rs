@@ -8,7 +8,6 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use dojo_types::schema::KeysClause;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, SubscribeEntitiesRequest, SubscribeEntitiesResponse,
@@ -27,7 +26,6 @@ use torii_core::error::{Error, ParseError};
 use torii_core::model::{parse_sql_model_members, SqlModelMember};
 
 use self::subscription::SubscribeRequest;
-use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::{self};
 
@@ -162,9 +160,7 @@ impl DojoWorld {
             });
         }
 
-        let res = self.subscriber_manager.add_subscriber(subs).await;
-
-        Ok(res)
+        self.subscriber_manager.add_subscriber(subs).await
     }
 }
 

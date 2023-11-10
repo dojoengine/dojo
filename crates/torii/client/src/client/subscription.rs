@@ -11,7 +11,8 @@ use parking_lot::{Mutex, RwLock};
 use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
-use torii_grpc::client::{Clause, EntityUpdateStreaming, Query};
+use torii_grpc::client::EntityUpdateStreaming;
+use torii_grpc::server::query::{Query, Clause};
 
 use super::error::{Error, ParseError};
 use super::ModelStorage;
@@ -264,7 +265,7 @@ mod tests {
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
-    use torii_grpc::client::{Clause, KeysClause, Query};
+    use torii_grpc::server::query::{Clause, KeysClause, Query};
 
     use crate::utils::compute_all_storage_addresses;
 

@@ -16,7 +16,8 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::{Clause, EntityUpdateStreaming, Query};
+use torii_grpc::client::EntityUpdateStreaming;
+use torii_grpc::server::query::{Query, Clause};
 
 use self::error::{Error, ParseError};
 use self::storage::ModelStorage;

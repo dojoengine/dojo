@@ -1,12 +1,6 @@
 use serde::{Deserialize, Serialize};
 use starknet_crypto::FieldElement;
 
-#[derive(Debug, thiserror::Error)]
-pub enum QueryError {
-    #[error("unsupported query")]
-    UnsupportedQuery,
-}
-
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub model: String,
