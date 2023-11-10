@@ -1,4 +1,3 @@
-use dojo_types::schema::QueryError;
 use starknet::core::types::{FromByteSliceError, FromStrError};
 use starknet::core::utils::CairoShortStringToFeltError;
 

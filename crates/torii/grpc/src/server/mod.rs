@@ -1,6 +1,5 @@
 pub mod error;
 pub mod logger;
-pub mod query;
 pub mod subscription;
 
 use std::future::Future;

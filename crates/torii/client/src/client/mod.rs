@@ -110,26 +110,25 @@ impl Client {
     ///
     /// If the requested entity is not among the synced entities, it will attempt to fetch it from
     /// the RPC.
-    pub async fn entity(&self, entity: &Query) -> Result<Option<Ty>, Error> {
-        let Some(mut schema) = self.metadata.read().model(&entity.model).map(|m| m.schema.clone())
+    pub async fn entity(&self, query: &Query) -> Result<Option<Ty>, Error> {
+        let Some(mut schema) = self.metadata.read().model(&query.model).map(|m| m.schema.clone())
         else {
             return Ok(None);
         };
 
-        let keys = if let Clause::Keys(clause) = entity.clone().clause {
+        let keys = if let Clause::Keys(clause) = query.clone().clause {
             clause.keys
         } else {
             return Err(Error::UnsupportedQuery);
         };
 
-        if !self.subscribed_entities.is_synced(entity) {
-            let model = self.world_reader.model(&entity.model).await?;
+        if !self.subscribed_entities.is_synced(query) {
+            let model = self.world_reader.model(&query.model).await?;
             return Ok(Some(model.entity(&keys).await?));
         }
 
         let Ok(Some(raw_values)) = self.storage.get_entity_storage(
-            cairo_short_string_to_felt(&entity.model)
-                .map_err(ParseError::CairoShortStringToFelt)?,
+            cairo_short_string_to_felt(&query.model).map_err(ParseError::CairoShortStringToFelt)?,
             &keys,
         ) else {
             return Ok(Some(schema));
@@ -138,7 +137,7 @@ impl Client {
         let layout = self
             .metadata
             .read()
-            .model(&entity.model)
+            .model(&query.model)
             .map(|m| m.layout.clone())
             .expect("qed; layout should exist");
 
@@ -170,18 +169,18 @@ impl Client {
     /// Adds entities to the list of entities to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn add_entities_to_sync(&self, entities: Vec<Query>) -> Result<(), Error> {
-        for entity in &entities {
-            let keys = if let Clause::Keys(clause) = entity.clone().clause {
+    pub async fn add_entities_to_sync(&self, queries: Vec<Query>) -> Result<(), Error> {
+        for query in &queries {
+            let keys = if let Clause::Keys(clause) = query.clone().clause {
                 clause.keys
             } else {
                 return Err(Error::UnsupportedQuery);
             };
 
-            self.initiate_entity(&entity.model, keys.clone()).await?;
+            self.initiate_entity(&query.model, keys.clone()).await?;
         }
 
-        self.subscribed_entities.add_entities(entities)?;
+        self.subscribed_entities.add_entities(queries)?;
 
         let updated_entities =
             self.subscribed_entities.entities.read().clone().into_iter().collect();
@@ -197,8 +196,8 @@ impl Client {
     /// Removes entities from the list of entities to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn remove_entities_to_sync(&self, entities: Vec<Query>) -> Result<(), Error> {
-        self.subscribed_entities.remove_entities(entities)?;
+    pub async fn remove_entities_to_sync(&self, queries: Vec<Query>) -> Result<(), Error> {
+        self.subscribed_entities.remove_entities(queries)?;
 
         let updated_entities =
             self.subscribed_entities.entities.read().clone().into_iter().collect();

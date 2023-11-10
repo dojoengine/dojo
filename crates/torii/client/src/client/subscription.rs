@@ -90,12 +90,12 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub(super) fn remove_entity(&self, entity: Query) -> Result<(), Error> {
-        if !self.entities.write().remove(&entity) {
+    pub(super) fn remove_entity(&self, query: Query) -> Result<(), Error> {
+        if !self.entities.write().remove(&query) {
             return Ok(());
         }
 
-        let keys = if let Clause::Keys(clause) = entity.clause {
+        let keys = if let Clause::Keys(clause) = query.clause {
             clause.keys
         } else {
             return Err(Error::UnsupportedQuery);
@@ -105,13 +105,12 @@ impl SubscribedEntities {
             .metadata
             .read()
             .models
-            .get(&entity.model)
+            .get(&query.model)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(entity.model.clone()))?;
+            .ok_or(Error::UnknownModel(query.model.clone()))?;
 
         let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&entity.model)
-                .map_err(ParseError::CairoShortStringToFelt)?,
+            cairo_short_string_to_felt(&query.model).map_err(ParseError::CairoShortStringToFelt)?,
             &keys,
             model_packed_size,
         );
@@ -206,11 +205,7 @@ impl SubscriptionService {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
-            if current == expected {
-                Some(d.storage_entries)
-            } else {
-                None
-            }
+            if current == expected { Some(d.storage_entries) } else { None }
         });
 
         let Some(entries) = storage_entries else {
@@ -300,26 +295,26 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let entity = Query { model: model_name, clause: Clause::Keys(KeysClause { keys }) };
+        let query = Query { model: model_name, clause: Clause::Keys(KeysClause { keys }) };
 
         let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
-        subscribed_entities.add_entities(vec![entity.clone()]).expect("able to add entity");
+        subscribed_entities.add_entities(vec![query.clone()]).expect("able to add entity");
 
         let actual_storage_addresses_count =
             subscribed_entities.subscribed_storage_addresses.read().len();
         let actual_storage_addresses =
             subscribed_entities.subscribed_storage_addresses.read().clone();
 
-        assert!(subscribed_entities.entities.read().contains(&entity));
+        assert!(subscribed_entities.entities.read().contains(&query));
         assert_eq!(actual_storage_addresses_count, expected_storage_addresses.len());
         assert!(expected_storage_addresses.all(|addr| actual_storage_addresses.contains(&addr)));
 
-        subscribed_entities.remove_entities(vec![entity.clone()]).expect("able to remove entities");
+        subscribed_entities.remove_entities(vec![query.clone()]).expect("able to remove entities");
 
         let actual_storage_addresses_count_after =
             subscribed_entities.subscribed_storage_addresses.read().len();
 
         assert_eq!(actual_storage_addresses_count_after, 0);
-        assert!(!subscribed_entities.entities.read().contains(&entity));
+        assert!(!subscribed_entities.entities.read().contains(&query));
     }
 }

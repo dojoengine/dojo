@@ -203,13 +203,13 @@ mod tests {
     fn err_if_set_values_too_many() {
         let storage = create_dummy_storage();
         let keys = vec![felt!("0x12345")];
-        let entity = Query {
+        let query = Query {
             model: "Position".into(),
             clause: Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4"), felt!("5")];
-        let model = cairo_short_string_to_felt(&entity.model).unwrap();
+        let model = cairo_short_string_to_felt(&query.model).unwrap();
         let result = storage.set_entity_storage(model, keys, values);
 
         assert!(storage.storage.read().is_empty());
@@ -223,13 +223,13 @@ mod tests {
     fn err_if_set_values_too_few() {
         let storage = create_dummy_storage();
         let keys = vec![felt!("0x12345")];
-        let entity = Query {
+        let query = Query {
             model: "Position".into(),
             clause: Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         let values = vec![felt!("1"), felt!("2")];
-        let model = cairo_short_string_to_felt(&entity.model).unwrap();
+        let model = cairo_short_string_to_felt(&query.model).unwrap();
         let result = storage.set_entity_storage(model, keys, values);
 
         assert!(storage.storage.read().is_empty());
@@ -243,14 +243,14 @@ mod tests {
     fn set_and_get_entity_value() {
         let storage = create_dummy_storage();
         let keys = vec![felt!("0x12345")];
-        let entity = Query {
+        let query = Query {
             model: "Position".into(),
             clause: Clause::Keys(KeysClause { keys: keys.clone() }),
         };
 
         assert!(storage.storage.read().is_empty(), "storage must be empty initially");
 
-        let model = storage.metadata.read().model(&entity.model).cloned().unwrap();
+        let model = storage.metadata.read().model(&query.model).cloned().unwrap();
 
         let expected_storage_addresses = compute_all_storage_addresses(
             cairo_short_string_to_felt(&model.name).unwrap(),
@@ -259,7 +259,7 @@ mod tests {
         );
 
         let expected_values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4")];
-        let model_name_in_felt = cairo_short_string_to_felt(&entity.model).unwrap();
+        let model_name_in_felt = cairo_short_string_to_felt(&query.model).unwrap();
 
         storage
             .set_entity_storage(model_name_in_felt, keys.clone(), expected_values.clone())
