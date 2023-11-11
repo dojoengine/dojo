@@ -41,42 +41,40 @@ impl<E: EnvironmentKind> Env<E> {
     /// Opens the database at the specified path with the given `EnvKind`.
     ///
     /// It does not create the tables, for that call [`Env::create_tables`].
-    pub fn open(path: &Path, kind: EnvKind) -> Env<E> {
+    pub fn open(path: &Path, kind: EnvKind) -> Result<Env<E>, DatabaseError> {
         let mode = match kind {
             EnvKind::RO => Mode::ReadOnly,
             EnvKind::RW => Mode::ReadWrite { sync_mode: SyncMode::Durable },
         };
 
-        let mut inner_env = Environment::new();
-        inner_env.set_max_dbs(Tables::ALL.len());
-        inner_env.set_geometry(Geometry {
-            // Maximum database size of 1 terabytes
-            size: Some(0..(1 * TERABYTE)),
-            // We grow the database in increments of 4 gigabytes
-            growth_step: Some(4 * GIGABYTE as isize),
-            // The database never shrinks
-            shrink_threshold: None,
-            page_size: Some(PageSize::Set(utils::default_page_size())),
-        });
-        inner_env.set_flags(EnvironmentFlags {
-            mode,
-            // We disable readahead because it improves performance for linear scans, but
-            // worsens it for random access (which is our access pattern outside of sync)
-            no_rdahead: true,
-            coalesce: true,
-            ..Default::default()
-        });
-        // configure more readers
-        inner_env.set_max_readers(DEFAULT_MAX_READERS);
+        let mut builder = Environment::new();
+        builder
+            .set_max_dbs(Tables::ALL.len())
+            .set_geometry(Geometry {
+                // Maximum database size of 1 terabytes
+                size: Some(0..(1 * TERABYTE)),
+                // We grow the database in increments of 4 gigabytes
+                growth_step: Some(4 * GIGABYTE as isize),
+                // The database never shrinks
+                shrink_threshold: None,
+                page_size: Some(PageSize::Set(utils::default_page_size())),
+            })
+            .set_flags(EnvironmentFlags {
+                mode,
+                // We disable readahead because it improves performance for linear scans, but
+                // worsens it for random access (which is our access pattern outside of sync)
+                no_rdahead: true,
+                coalesce: true,
+                ..Default::default()
+            })
+            .set_max_readers(DEFAULT_MAX_READERS);
 
-        let env = Env(inner_env.open(path).unwrap());
-
-        env
+        Ok(Env(builder.open(path).map_err(DatabaseError::OpenEnv)?))
     }
 
-    /// Creates all the defined tables, if necessary.
+    /// Creates all the defined tables in [`Tables`], if necessary.
     pub fn create_tables(&self) -> Result<(), DatabaseError> {
-        let tx = self.begin_rw_txn().map_err(|e| DatabaseError::CreateTransaction(e.into()))?;
+        let tx = self.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
 
         for table in Tables::ALL {
             let flags = match table.table_type() {
@@ -84,23 +82,24 @@ impl<E: EnvironmentKind> Env<E> {
                 TableType::DupSort => DatabaseFlags::DUP_SORT,
             };
 
-            tx.create_db(Some(table.name()), flags)
-                .map_err(|e| DatabaseError::CreateTable(e.into()))?;
+            tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
         }
 
-        tx.commit().map_err(|e| DatabaseError::Commit(e.into()))?;
+        tx.commit().map_err(DatabaseError::Commit)?;
 
         Ok(())
     }
 }
 
 impl<'env, E: EnvironmentKind> Env<E> {
-    fn tx(&'env self) -> Result<Tx<'env, RO, E>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateTransaction)?))
+    /// Begin a read-only transaction.
+    pub fn tx(&'env self) -> Result<Tx<'env, RO, E>, DatabaseError> {
+        Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
     }
 
-    fn tx_mut(&'env self) -> Result<Tx<'env, RW, E>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateTransaction)?))
+    /// Begin a read-write transaction.
+    pub fn tx_mut(&'env self) -> Result<Tx<'env, RW, E>, DatabaseError> {
+        Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
 }
 
