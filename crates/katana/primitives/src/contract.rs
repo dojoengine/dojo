@@ -1,8 +1,9 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
 use starknet::core::utils::normalize_address;
+
+use crate::FieldElement;
 
 /// Represents the type for a contract storage key.
 pub type StorageKey = FieldElement;
