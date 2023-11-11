@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{Event, FieldElement, MsgToL1};
+use starknet::core::types::{Event, MsgToL1};
 
 use crate::contract::{ClassHash, CompiledClassHash, ContractAddress, Nonce};
+use crate::FieldElement;
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
