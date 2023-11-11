@@ -1,5 +1,8 @@
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseError {
+    #[error("failed to open an environment: {0}")]
+    OpenEnv(libmdbx::Error),
+
     #[error(transparent)]
     Codec(#[from] CodecError),
 
@@ -24,8 +27,11 @@ pub enum DatabaseError {
     #[error("failed to create cursor: {0}")]
     CreateCursor(libmdbx::Error),
 
-    #[error("failed to create transaction: {0}")]
-    CreateTransaction(libmdbx::Error),
+    #[error("failed to create read-only transaction: {0}")]
+    CreateROTx(libmdbx::Error),
+
+    #[error("failed to create a read-write transaction: {0}")]
+    CreateRWTx(libmdbx::Error),
 
     #[error("failed to delete entry: {0}")]
     Delete(libmdbx::Error),

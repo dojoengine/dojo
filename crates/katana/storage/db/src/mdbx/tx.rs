@@ -1,7 +1,6 @@
 //! Transaction wrapper for libmdbx-sys.
 
 use std::str::FromStr;
-use std::sync::Arc;
 
 use libmdbx::ffi::DBI;
 use libmdbx::{EnvironmentKind, Transaction, TransactionKind, WriteFlags, RW};
@@ -19,50 +18,7 @@ pub struct Tx<'env, K: TransactionKind, E: EnvironmentKind> {
     /// Libmdbx-sys transaction.
     pub inner: libmdbx::Transaction<'env, K, E>,
     /// Database table handle cache.
-    pub(crate) db_handles: Arc<RwLock<[Option<DBI>; NUM_TABLES]>>,
-}
-
-impl<K: TransactionKind, E: EnvironmentKind> Tx<'_, K, E> {
-    /// Gets a table database handle if it exists, otherwise creates it.
-    pub fn get_dbi<T: Table>(&self) -> Result<DBI, DatabaseError> {
-        let mut handles = self.db_handles.write();
-        let table = Tables::from_str(T::NAME).expect("Requested table should be part of `Tables`.");
-
-        let dbi_handle = handles.get_mut(table as usize).expect("should exist");
-        if dbi_handle.is_none() {
-            *dbi_handle =
-                Some(self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?.dbi());
-        }
-
-        Ok(dbi_handle.expect("is some; qed"))
-    }
-
-    fn get<T: Table>(&self, key: T::Key) -> Result<Option<<T as Table>::Value>, DatabaseError> {
-        self.inner
-            .get(self.get_dbi::<T>()?, key.encode().as_ref())
-            .map_err(DatabaseError::Read)?
-            .map(decode_one::<T>)
-            .transpose()
-    }
-
-    /// Commits the transaction.
-    fn commit(self) -> Result<bool, DatabaseError> {
-        self.inner.commit().map_err(DatabaseError::Commit)
-    }
-
-    /// Aborts the transaction.
-    fn abort(self) {
-        drop(self.inner)
-    }
-
-    /// Returns number of entries in the table using cheap DB stats invocation.
-    fn entries<T: Table>(&self) -> Result<usize, DatabaseError> {
-        Ok(self
-            .inner
-            .db_stat_with_dbi(self.get_dbi::<T>()?)
-            .map_err(DatabaseError::Stat)?
-            .entries())
-    }
+    pub(crate) db_handles: RwLock<[Option<DBI>; NUM_TABLES]>,
 }
 
 impl<'env, K: TransactionKind, E: EnvironmentKind> Tx<'env, K, E> {
@@ -81,26 +37,59 @@ impl<'env, K: TransactionKind, E: EnvironmentKind> Tx<'env, K, E> {
         Ok(Cursor::new(inner))
     }
 
-    // Iterate over read only values in database.
-    fn cursor_read<T: Table>(&self) -> Result<Cursor<'env, K, T>, DatabaseError> {
+    /// Gets a table database handle if it exists, otherwise creates it.
+    pub fn get_dbi<T: Table>(&self) -> Result<DBI, DatabaseError> {
+        let mut handles = self.db_handles.write();
+        let table = Tables::from_str(T::NAME).expect("Requested table should be part of `Tables`.");
+
+        let dbi_handle = handles.get_mut(table as usize).expect("should exist");
+        if dbi_handle.is_none() {
+            *dbi_handle =
+                Some(self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?.dbi());
+        }
+
+        Ok(dbi_handle.expect("is some; qed"))
+    }
+
+    /// Gets a value from a table using the given key.
+    pub fn get<T: Table>(&self, key: T::Key) -> Result<Option<<T as Table>::Value>, DatabaseError> {
+        let key = Encode::encode(key);
+        self.inner
+            .get(self.get_dbi::<T>()?, key.as_ref())
+            .map_err(DatabaseError::Read)?
+            .map(decode_one::<T>)
+            .transpose()
+    }
+
+    /// Returns number of entries in the table using cheap DB stats invocation.
+    pub fn entries<T: Table>(&self) -> Result<usize, DatabaseError> {
+        Ok(self
+            .inner
+            .db_stat_with_dbi(self.get_dbi::<T>()?)
+            .map_err(DatabaseError::Stat)?
+            .entries())
+    }
+
+    // Creates a cursor to iterate over a table values.
+    pub fn cursor<T: Table>(&self) -> Result<Cursor<'env, K, T>, DatabaseError> {
         self.new_cursor()
     }
 
-    /// Iterate over read only values in database.
-    fn cursor_dup_read<T: DupSort>(&self) -> Result<Cursor<'env, K, T>, DatabaseError> {
+    // Creates a cursor to iterate over a `DUPSORT` table values.
+    pub fn cursor_dup<T: DupSort>(&self) -> Result<Cursor<'env, K, T>, DatabaseError> {
         self.new_cursor()
     }
 }
 
-impl<E: EnvironmentKind> Tx<'_, RW, E> {
-    fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
+impl<'env, E: EnvironmentKind> Tx<'env, RW, E> {
+    pub fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = key.encode();
         let value = value.compress();
         self.inner.put(self.get_dbi::<T>()?, key, value, WriteFlags::UPSERT).unwrap();
         Ok(())
     }
 
-    fn delete<T: Table>(
+    pub fn delete<T: Table>(
         &self,
         key: T::Key,
         value: Option<T::Value>,
@@ -110,17 +99,27 @@ impl<E: EnvironmentKind> Tx<'_, RW, E> {
         self.inner.del(self.get_dbi::<T>()?, key.encode(), value).map_err(DatabaseError::Delete)
     }
 
-    fn clear<T: Table>(&self) -> Result<(), DatabaseError> {
+    pub fn clear<T: Table>(&self) -> Result<(), DatabaseError> {
         self.inner.clear_db(self.get_dbi::<T>()?).map_err(DatabaseError::Clear)
+    }
+
+    /// Commits the transaction.
+    pub fn commit(self) -> Result<bool, DatabaseError> {
+        self.inner.commit().map_err(DatabaseError::Commit)
+    }
+
+    /// Aborts the transaction.
+    pub fn abort(self) {
+        drop(self.inner)
     }
 }
 
-impl<'env, E: EnvironmentKind> Tx<'env, RW, E> {
-    fn cursor_write<T: Table>(&self) -> Result<Cursor<'env, RW, T>, DatabaseError> {
-        self.new_cursor()
-    }
-
-    fn cursor_dup_write<T: DupSort>(&self) -> Result<Cursor<'env, RW, T>, DatabaseError> {
-        self.new_cursor()
+impl<'env, K, E> From<libmdbx::Transaction<'env, K, E>> for Tx<'env, K, E>
+where
+    K: TransactionKind,
+    E: EnvironmentKind,
+{
+    fn from(inner: libmdbx::Transaction<'env, K, E>) -> Self {
+        Tx::new(inner)
     }
 }
