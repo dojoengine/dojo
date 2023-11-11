@@ -4,6 +4,7 @@ use katana_primitives::contract::{
     StorageValue,
 };
 use katana_primitives::transaction::{Receipt, Transaction, TxHash};
+use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};
 
 use super::models::{StoredBlockBodyIndices, TxNumber};
@@ -157,7 +158,10 @@ define_tables_enum! {[
 tables! {
     /// Store canonical block headers
     Headers: (u64) => Header,
-    /// Store block headers
+    /// Stores block hashes according to its block number
+    BlockHashes: (u64) => FieldElement,
+    /// Block number to its body indices which stores the tx number of
+    /// the first tx in the block and the number of txs in the block.
     BlockBodyIndices: (u64) => StoredBlockBodyIndices,
     /// Store canonical transactions
     TxHashNumber: (TxHash) => TxNumber,
