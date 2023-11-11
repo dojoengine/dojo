@@ -185,12 +185,12 @@ impl Backend {
 
         let mut estimations = Vec::with_capacity(transactions.len());
 
-        let results = TransactionExecutor::new(&mut state, &block_context, false)
+        let results = TransactionExecutor::new(&mut state, &block_context, false, transactions)
             .with_error_log()
-            .execute_many(transactions);
+            .execute();
 
         for res in results {
-            let exec_info = res?;
+            let exec_info = res?.execution_info;
 
             if exec_info.revert_error.is_some() {
                 // TEMP: change this once `Reverted` transaction error is no longer `String`.

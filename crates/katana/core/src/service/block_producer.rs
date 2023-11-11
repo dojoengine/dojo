@@ -228,16 +228,15 @@ impl IntervalBlockProducer {
                 &mut state,
                 &self.backend.env.read().block,
                 !self.backend.config.read().disable_fee,
+                transactions.clone(),
             )
             .with_error_log()
             .with_events_log()
             .with_resources_log()
-            .execute_many(transactions.clone())
-            .into_iter()
             .zip(transactions)
             .map(|(res, tx)| match res {
-                Ok(exec_info) => {
-                    let executed_tx = ExecutedTransaction::new(tx, exec_info);
+                Ok(outcome) => {
+                    let executed_tx = ExecutedTransaction::new(tx, outcome.execution_info);
                     MaybeInvalidExecutedTransaction::Valid(Arc::new(executed_tx))
                 }
                 Err(err) => {
@@ -354,16 +353,20 @@ impl InstantBlockProducer {
             &mut state,
             &block_context,
             !backend.config.read().disable_fee,
+            transactions.clone(),
         )
         .with_error_log()
         .with_events_log()
         .with_resources_log()
-        .execute_many(transactions.clone());
+        .execute();
 
         let outcome = backend
             .do_mine_block(create_execution_outcome(
                 &mut state,
-                transactions.into_iter().zip(results).collect(),
+                transactions
+                    .into_iter()
+                    .zip(results.into_iter().map(|res| res.map(|out| out.execution_info)))
+                    .collect(),
             ))
             .await;
 
