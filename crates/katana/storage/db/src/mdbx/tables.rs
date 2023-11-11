@@ -1,10 +1,9 @@
-use katana_primitives::block::{Header, StateUpdate};
+use katana_primitives::block::{BlockHash, BlockNumber, Header, StateUpdate};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
     StorageValue,
 };
 use katana_primitives::transaction::{Receipt, Transaction, TxHash};
-use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};
 
 use super::models::{StoredBlockBodyIndices, TxNumber};
@@ -157,12 +156,12 @@ define_tables_enum! {[
 
 tables! {
     /// Store canonical block headers
-    Headers: (u64) => Header,
+    Headers: (BlockNumber) => Header,
     /// Stores block hashes according to its block number
-    BlockHashes: (u64) => FieldElement,
+    BlockHashes: (BlockNumber) => BlockHash,
     /// Block number to its body indices which stores the tx number of
     /// the first tx in the block and the number of txs in the block.
-    BlockBodyIndices: (u64) => StoredBlockBodyIndices,
+    BlockBodyIndices: (BlockNumber) => StoredBlockBodyIndices,
     /// Store canonical transactions
     TxHashNumber: (TxHash) => TxNumber,
     /// Store canonical transactions
@@ -170,7 +169,7 @@ tables! {
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Store block state updates
-    StateUpdates: (u64) => StateUpdate,
+    StateUpdates: (BlockNumber) => StateUpdate,
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
     /// Store compiled contract classes according to its compiled class hash
