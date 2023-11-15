@@ -7,11 +7,13 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use dojo_types::schema::Ty;
 use futures::Stream;
 use proto::world::{
-    MetadataRequest, MetadataResponse, SubscribeEntitiesRequest, SubscribeEntitiesResponse,
+    MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
+    SubscribeEntitiesRequest, SubscribeEntitiesResponse,
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Row, Sqlite};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -21,10 +23,13 @@ use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
-use torii_core::error::{Error, ParseError};
-use torii_core::model::{parse_sql_model_members, SqlModelMember};
+use torii_core::error::{Error, ParseError, QueryError};
+use torii_core::model::{
+    build_sql_model_query, map_rows_to_tys, parse_sql_model_members, SqlModelMember,
+};
 
 use self::subscription::SubscribeRequest;
+use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::{self};
 
@@ -107,7 +112,42 @@ impl DojoWorld {
         .fetch_all(&self.pool)
         .await?;
 
+        if model_members.is_empty() {
+            return Err(QueryError::ModelNotFound(model.into()).into());
+        }
+
         Ok(parse_sql_model_members(model, &model_members))
+    }
+
+    async fn entities_by_keys(
+        &self,
+        keys: proto::types::KeysClause,
+    ) -> Result<Vec<proto::types::Entity>, Error> {
+        Ok(vec![])
+    }
+
+    async fn entities_by_attribute(
+        &self,
+        attribute: proto::types::AttributeClause,
+    ) -> Result<Vec<proto::types::Entity>, Error> {
+        // TODO: cache model schema and query to avoid rebuilding everytime
+        let ty = self.model_schema(&attribute.model).await?;
+        let schema = ty.as_struct().ok_or(QueryError::UnsupportedQuery)?;
+        let query = build_sql_model_query(schema);
+
+        let results = sqlx::query(&query).fetch_all(&self.pool).await?;
+        let tys = map_rows_to_tys(schema, &results)?;
+
+        println!("{:#?}", tys);
+
+        Ok(vec![])
+    }
+
+    async fn entities_by_composite(
+        &self,
+        composite: proto::types::CompositeClause,
+    ) -> Result<Vec<proto::types::Entity>, Error> {
+        Ok(vec![])
     }
 
     pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
@@ -161,6 +201,25 @@ impl DojoWorld {
 
         self.subscriber_manager.add_subscriber(subs).await
     }
+
+    async fn retrieve_entities(
+        &self,
+        query: proto::types::EntityQuery,
+    ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
+        let clause_type = query
+            .clause
+            .ok_or(QueryError::UnsupportedQuery)?
+            .clause_type
+            .ok_or(QueryError::UnsupportedQuery)?;
+
+        let entities = match clause_type {
+            ClauseType::Keys(keys) => self.entities_by_keys(keys).await?,
+            ClauseType::Attribute(attribute) => self.entities_by_attribute(attribute).await?,
+            ClauseType::Composite(composite) => self.entities_by_composite(composite).await?,
+        };
+
+        Ok(RetrieveEntitiesResponse { entities })
+    }
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
@@ -193,6 +252,21 @@ impl proto::world::world_server::World for DojoWorld {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
+    }
+
+    async fn retrieve_entities(
+        &self,
+        request: Request<RetrieveEntitiesRequest>,
+    ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
+        let query = request
+            .into_inner()
+            .query
+            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let entities =
+            self.retrieve_entities(query).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(entities))
     }
 }
 

@@ -1,10 +1,18 @@
+use std::str::FromStr;
+
 use async_trait::async_trait;
+use crypto_bigint::U256;
+use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::model::ModelReader;
-use sqlx::{Pool, Sqlite};
+use serde_json::Value;
+use sqlx::sqlite::SqliteRow;
+use sqlx::{Pool, QueryBuilder, Row, Sqlite};
 use starknet::core::types::FieldElement;
+use starknet::macros::felt;
 
 use super::error::{self, Error};
+use crate::error::{ParseError, QueryError};
 
 pub struct ModelSQLReader {
     /// The name of the model
@@ -144,11 +152,154 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
     parse_sql_model_members_impl(model, model_members_all)
 }
 
+/// A helper function to build a model query including all nested structs
+pub fn build_sql_model_query(schema: &Struct) -> String {
+    fn build_sql_model_query_impl(
+        path: &str,
+        schema: &Struct,
+        selections: &mut Vec<String>,
+        tables: &mut Vec<String>,
+    ) {
+        for child in &schema.children {
+            match &child.ty {
+                Ty::Struct(s) => {
+                    let table_name = format!("{}${}", path, s.name);
+                    build_sql_model_query_impl(&table_name, &s, selections, tables);
+
+                    tables.push(table_name);
+                }
+                _ => {
+                    // alias selected columns to avoid conflicts in JOIN
+                    selections.push(format!(
+                        "{}.external_{} AS \"{}.{}\"",
+                        path, child.name, path, child.name
+                    ));
+                }
+            }
+        }
+    }
+
+    let model_table = &schema.name;
+    let mut selections = Vec::new();
+    let mut tables = Vec::new();
+
+    build_sql_model_query_impl(model_table, schema, &mut selections, &mut tables);
+    let selections_clause = selections.join(", ");
+    let join_clause = tables
+        .into_iter()
+        .map(|table| {
+            format!("LEFT JOIN {} ON {}.entity_id = {}.entity_id", table, model_table, table)
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    format!(
+        "SELECT {selections_clause} FROM {model_table} {join_clause} ORDER BY \
+         {model_table}.event_id"
+    )
+}
+
+/// Converts SQLite rows into a vector of `Ty` based on a specified schema.
+pub fn map_rows_to_tys(schema: &Struct, rows: &Vec<SqliteRow>) -> Result<Vec<Ty>, Error> {
+    fn populate_struct_from_row(
+        path: &str,
+        struct_ty: &mut Struct,
+        row: &SqliteRow,
+    ) -> Result<(), Error> {
+        for child in struct_ty.children.iter_mut() {
+            let column_name = format!("{}.{}", path, child.name);
+            match &mut child.ty {
+                Ty::Primitive(p) => {
+                    match &p {
+                        Primitive::Bool(_) => {
+                            let value = row.try_get::<i64, &str>(&column_name)?;
+                            p.set_bool(Some(value == 1))?;
+                        }
+                        Primitive::USize(_) => {
+                            let value = row.try_get::<i64, &str>(&column_name)?;
+                            p.set_usize(Some(value as u32))?;
+                        }
+                        Primitive::U8(_) => {
+                            let value = row.try_get::<i64, &str>(&column_name)?;
+                            p.set_u8(Some(value as u8))?;
+                        }
+                        Primitive::U16(_) => {
+                            let value = row.try_get::<i64, &str>(&column_name)?;
+                            p.set_u16(Some(value as u16))?;
+                        }
+                        Primitive::U32(_) => {
+                            let value = row.try_get::<i64, &str>(&column_name)?;
+                            p.set_u32(Some(value as u32))?;
+                        }
+                        Primitive::U64(_) => {
+                            let value = row.try_get::<i64, &str>(&column_name)?;
+                            p.set_u64(Some(value as u64))?;
+                        }
+                        Primitive::U128(_) => {
+                            let value = row.try_get::<String, &str>(&column_name)?;
+                            let hex_str = value.trim_start_matches("0x");
+                            p.set_u128(Some(
+                                u128::from_str_radix(hex_str, 16)
+                                    .map_err(ParseError::ParseIntError)?,
+                            ))?;
+                        }
+                        Primitive::U256(_) => {
+                            let value = row.try_get::<String, &str>(&column_name)?;
+                            let hex_str = value.trim_start_matches("0x");
+                            p.set_u256(Some(U256::from_be_hex(hex_str)))?;
+                        }
+                        Primitive::Felt252(_) => {
+                            let value = row.try_get::<String, &str>(&column_name)?;
+                            p.set_felt252(Some(
+                                FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                            ))?;
+                        }
+                        Primitive::ClassHash(_) => {
+                            let value = row.try_get::<String, &str>(&column_name)?;
+                            p.set_class_hash(Some(
+                                FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                            ))?;
+                        }
+                        Primitive::ContractAddress(_) => {
+                            let value = row.try_get::<String, &str>(&column_name)?;
+                            p.set_contract_address(Some(
+                                FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
+                            ))?;
+                        }
+                    };
+                }
+                Ty::Enum(e) => {
+                    let value = row.try_get::<String, &str>(&column_name)?;
+                    e.set_option(&value)?;
+                }
+                Ty::Struct(nested) => {
+                    let path = [path, &nested.name].join("$");
+                    populate_struct_from_row(&path, nested, row)?;
+                }
+                ty => {
+                    unimplemented!("unimplemented type_enum: {ty}");
+                }
+            };
+        }
+
+        Ok(())
+    }
+
+    rows.iter()
+        .map(|row| {
+            let mut struct_ty = schema.clone();
+            populate_struct_from_row(&schema.name, &mut struct_ty, row)?;
+
+            Ok(Ty::Struct(struct_ty))
+        })
+        .collect::<Result<Vec<Ty>, Error>>()
+}
+
 #[cfg(test)]
 mod tests {
     use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 
-    use super::SqlModelMember;
+    use super::{build_sql_model_query, SqlModelMember};
     use crate::model::parse_sql_model_members;
 
     #[test]
@@ -320,5 +471,53 @@ mod tests {
         });
 
         assert_eq!(parse_sql_model_members("Moves", &model_members), expected_ty);
+    }
+
+    #[test]
+    fn struct_ty_to_query() {
+        let ty = Ty::Struct(Struct {
+            name: "Position".into(),
+            children: vec![
+                dojo_types::schema::Member {
+                    name: "name".into(),
+                    key: false,
+                    ty: Ty::Primitive("felt252".parse().unwrap()),
+                },
+                dojo_types::schema::Member {
+                    name: "age".into(),
+                    key: false,
+                    ty: Ty::Primitive("u8".parse().unwrap()),
+                },
+                dojo_types::schema::Member {
+                    name: "vec".into(),
+                    key: false,
+                    ty: Ty::Struct(Struct {
+                        name: "Vec2".into(),
+                        children: vec![
+                            Member {
+                                name: "x".into(),
+                                key: false,
+                                ty: Ty::Primitive("u256".parse().unwrap()),
+                            },
+                            Member {
+                                name: "y".into(),
+                                key: false,
+                                ty: Ty::Primitive("u256".parse().unwrap()),
+                            },
+                        ],
+                    }),
+                },
+            ],
+        });
+
+        let query = build_sql_model_query(ty.as_struct().unwrap());
+        assert_eq!(
+            query,
+            "SELECT Position.external_name AS \"Position.name\", Position.external_age AS \
+             \"Position.age\", Position$Vec2.external_x AS \"Position$Vec2.x\", \
+             Position$Vec2.external_y AS \"Position$Vec2.y\" FROM Position LEFT JOIN \
+             Position$Vec2 ON Position.entity_id = Position$Vec2.entity_id ORDER BY \
+             Position.event_id"
+        );
     }
 }

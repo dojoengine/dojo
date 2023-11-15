@@ -231,6 +231,10 @@ impl Struct {
     pub fn keys(&self) -> Vec<Member> {
         self.children.iter().filter(|m| m.key).cloned().collect()
     }
+
+    pub fn has_nested(&self) -> bool {
+        self.children.iter().any(|child| matches!(child.ty, Ty::Struct(_)))
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -267,6 +271,16 @@ impl Enum {
         }
 
         Ok(self.options[option].name.clone())
+    }
+
+    pub fn set_option(&mut self, name: &str) -> Result<(), EnumError> {
+        match self.options.iter().position(|option| option.name == name) {
+            Some(index) => {
+                self.option = Some(index as u8);
+                Ok(())
+            }
+            None => Err(EnumError::OptionInvalid),
+        }
     }
 
     pub fn to_sql_value(&self) -> Result<String, EnumError> {

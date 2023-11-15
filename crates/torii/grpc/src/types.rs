@@ -31,7 +31,7 @@ pub struct KeysClause {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct AttributeClause {
     pub model: String,
-    pub attribute: String,
+    pub member: String,
     pub operator: ComparisonOperator,
     pub value: Value,
 }
@@ -152,7 +152,7 @@ impl From<AttributeClause> for proto::types::AttributeClause {
     fn from(value: AttributeClause) -> Self {
         Self {
             model: value.model,
-            attribute: value.attribute,
+            member: value.member,
             operator: value.operator as i32,
             value: Some(value.value.into()),
         }
