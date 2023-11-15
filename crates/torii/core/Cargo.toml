@@ -14,7 +14,7 @@ async-trait.workspace = true
 base64.workspace = true
 chrono.workspace = true
 dojo-types = { path = "../../dojo-types" }
-dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest" ] }
+dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest", "metadata" ] }
 futures-channel = "0.3.0"
 futures-util = "0.3.0"
 hex.workspace = true
