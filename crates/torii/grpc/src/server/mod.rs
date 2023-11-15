@@ -21,12 +21,10 @@ use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
-use torii_core::error::{Error, ParseError, QueryError};
+use torii_core::error::{Error, ParseError};
 use torii_core::model::{parse_sql_model_members, SqlModelMember};
 
 use self::subscription::SubscribeRequest;
-use crate::proto::types::clause::ClauseType;
-use crate::proto::types::KeysClause;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::{self};
 
@@ -141,29 +139,19 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        queries: Vec<proto::types::EntityQuery>,
+        entities_keys: Vec<proto::types::KeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
     {
-        let mut subs = Vec::with_capacity(queries.len());
-        for query in queries {
-            let clause: KeysClause = query
-                .clone()
-                .clause
-                .ok_or(QueryError::UnsupportedQuery)
-                .and_then(|clause| clause.clause_type.ok_or(QueryError::UnsupportedQuery))
-                .and_then(|clause_type| match clause_type {
-                    ClauseType::Keys(clause) => Ok(clause),
-                    _ => Err(QueryError::UnsupportedQuery),
-                })?;
-
-            let model = cairo_short_string_to_felt(&clause.model)
+        let mut subs = Vec::with_capacity(entities_keys.len());
+        for keys in entities_keys {
+            let model = cairo_short_string_to_felt(&keys.model)
                 .map_err(ParseError::CairoShortStringToFelt)?;
 
             let proto::types::ModelMetadata { packed_size, .. } =
-                self.model_metadata(&clause.model).await?;
+                self.model_metadata(&keys.model).await?;
 
             subs.push(SubscribeRequest {
-                query,
+                keys,
                 model: subscription::ModelMetadata {
                     name: model,
                     packed_size: packed_size as usize,
@@ -199,9 +187,11 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { queries } = request.into_inner();
-        let rx =
-            self.subscribe_entities(queries).await.map_err(|e| Status::internal(e.to_string()))?;
+        let SubscribeEntitiesRequest { entities_keys } = request.into_inner();
+        let rx = self
+            .subscribe_entities(entities_keys)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
 }

@@ -7,7 +7,7 @@ use starknet_crypto::FieldElement;
 
 use crate::proto::world::{MetadataRequest, SubscribeEntitiesResponse};
 use crate::proto::{self};
-use crate::types::Query;
+use crate::types::KeysClause;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -67,12 +67,12 @@ impl WorldClient {
     /// Subscribe to the state diff for a set of entities of a World.
     pub async fn subscribe_entities(
         &mut self,
-        queries: Vec<Query>,
+        entities_keys: Vec<KeysClause>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let stream = self
             .inner
             .subscribe_entities(SubscribeEntitiesRequest {
-                queries: queries.into_iter().map(|e| e.into()).collect(),
+                entities_keys: entities_keys.into_iter().map(|e| e.into()).collect(),
             })
             .await
             .map_err(Error::Grpc)

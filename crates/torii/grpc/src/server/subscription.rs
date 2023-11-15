@@ -15,12 +15,11 @@ use starknet::providers::Provider;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
-use torii_core::error::{Error, ParseError, QueryError};
+use torii_core::error::{Error, ParseError};
 use tracing::{debug, error, trace};
 
 use super::error::SubscriptionError;
 use crate::proto;
-use crate::proto::types::EntityQuery;
 use crate::types::KeysClause;
 
 pub struct ModelMetadata {
@@ -30,7 +29,7 @@ pub struct ModelMetadata {
 
 pub struct SubscribeRequest {
     pub model: ModelMetadata,
-    pub query: EntityQuery,
+    pub keys: proto::types::KeysClause,
 }
 
 impl SubscribeRequest {
@@ -74,23 +73,13 @@ impl SubscriberManager {
         let storage_addresses = reqs
             .into_iter()
             .map(|req| {
-                let clause: KeysClause = req
-                    .query
-                    .clause
-                    .ok_or(QueryError::UnsupportedQuery)
-                    .and_then(|clause| clause.clause_type.ok_or(QueryError::UnsupportedQuery))
-                    .and_then(|clause_type| match clause_type {
-                        proto::types::clause::ClauseType::Keys(clause) => Ok(clause),
-                        _ => Err(QueryError::UnsupportedQuery),
-                    })
-                    .map_err(Error::QueryError)?
-                    .try_into()
-                    .map_err(ParseError::FromByteSliceError)?;
+                let keys: KeysClause =
+                    req.keys.try_into().map_err(ParseError::FromByteSliceError)?;
 
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),
                     req.model.name,
-                    poseidon_hash_many(&clause.keys),
+                    poseidon_hash_many(&keys.keys),
                 ]);
 
                 let res = (0..req.model.packed_size)
