@@ -67,18 +67,18 @@ impl Client {
 
             // TODO: change this to querying the gRPC url instead
             let subbed_entities = subbed_entities.entities.read().clone();
-            for Query { model, clause } in subbed_entities {
-                let model_reader = world_reader.model(&model).await?;
-                let keys = if let Clause::Keys(clause) = clause {
-                    clause.keys
+            for Query { clause } in subbed_entities {
+                let clause = if let Clause::Keys(clause) = clause {
+                    clause
                 } else {
                     return Err(Error::UnsupportedQuery);
                 };
-                let values = model_reader.entity_storage(&keys).await?;
+                let model_reader = world_reader.model(&clause.model).await?;
+                let values = model_reader.entity_storage(&clause.keys).await?;
 
                 client_storage.set_entity_storage(
-                    cairo_short_string_to_felt(&model).unwrap(),
-                    keys,
+                    cairo_short_string_to_felt(&clause.model).unwrap(),
+                    clause.keys,
                     values,
                 )?;
             }
@@ -111,25 +111,26 @@ impl Client {
     /// If the requested entity is not among the synced entities, it will attempt to fetch it from
     /// the RPC.
     pub async fn entity(&self, query: &Query) -> Result<Option<Ty>, Error> {
-        let Some(mut schema) = self.metadata.read().model(&query.model).map(|m| m.schema.clone())
-        else {
-            return Ok(None);
-        };
-
-        let keys = if let Clause::Keys(clause) = query.clone().clause {
-            clause.keys
+        let clause = if let Clause::Keys(clause) = query.clone().clause {
+            clause
         } else {
             return Err(Error::UnsupportedQuery);
         };
 
+        let Some(mut schema) = self.metadata.read().model(&clause.model).map(|m| m.schema.clone())
+        else {
+            return Ok(None);
+        };
+
         if !self.subscribed_entities.is_synced(query) {
-            let model = self.world_reader.model(&query.model).await?;
-            return Ok(Some(model.entity(&keys).await?));
+            let model = self.world_reader.model(&clause.model).await?;
+            return Ok(Some(model.entity(&clause.keys).await?));
         }
 
         let Ok(Some(raw_values)) = self.storage.get_entity_storage(
-            cairo_short_string_to_felt(&query.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys,
+            cairo_short_string_to_felt(&clause.model)
+                .map_err(ParseError::CairoShortStringToFelt)?,
+            &clause.keys,
         ) else {
             return Ok(Some(schema));
         };
@@ -137,12 +138,12 @@ impl Client {
         let layout = self
             .metadata
             .read()
-            .model(&query.model)
+            .model(&clause.model)
             .map(|m| m.layout.clone())
             .expect("qed; layout should exist");
 
         let unpacked = unpack(raw_values, layout).unwrap();
-        let mut keys_and_unpacked = [keys.to_vec(), unpacked].concat();
+        let mut keys_and_unpacked = [clause.keys.to_vec(), unpacked].concat();
 
         schema.deserialize(&mut keys_and_unpacked).unwrap();
 
@@ -171,13 +172,13 @@ impl Client {
     /// NOTE: This will establish a new subscription stream with the server.
     pub async fn add_entities_to_sync(&self, queries: Vec<Query>) -> Result<(), Error> {
         for query in &queries {
-            let keys = if let Clause::Keys(clause) = query.clone().clause {
-                clause.keys
+            let clause = if let Clause::Keys(clause) = query.clone().clause {
+                clause
             } else {
                 return Err(Error::UnsupportedQuery);
             };
 
-            self.initiate_entity(&query.model, keys.clone()).await?;
+            self.initiate_entity(&clause.model, clause.keys.clone()).await?;
         }
 
         self.subscribed_entities.add_entities(queries)?;

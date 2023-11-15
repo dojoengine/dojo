@@ -61,8 +61,8 @@ impl SubscribedEntities {
             return Ok(());
         }
 
-        let keys = if let Clause::Keys(clause) = entity.clause {
-            clause.keys
+        let clause = if let Clause::Keys(clause) = entity.clause {
+            clause
         } else {
             return Err(Error::UnsupportedQuery);
         };
@@ -71,14 +71,14 @@ impl SubscribedEntities {
             .metadata
             .read()
             .models
-            .get(&entity.model)
+            .get(&clause.model)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(entity.model.clone()))?;
+            .ok_or(Error::UnknownModel(clause.model.clone()))?;
 
         let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&entity.model)
+            cairo_short_string_to_felt(&clause.model)
                 .map_err(ParseError::CairoShortStringToFelt)?,
-            &keys,
+            &clause.keys,
             model_packed_size,
         );
 
@@ -95,8 +95,8 @@ impl SubscribedEntities {
             return Ok(());
         }
 
-        let keys = if let Clause::Keys(clause) = query.clause {
-            clause.keys
+        let clause = if let Clause::Keys(clause) = query.clause {
+            clause
         } else {
             return Err(Error::UnsupportedQuery);
         };
@@ -105,13 +105,14 @@ impl SubscribedEntities {
             .metadata
             .read()
             .models
-            .get(&query.model)
+            .get(&clause.model)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(query.model.clone()))?;
+            .ok_or(Error::UnknownModel(clause.model.clone()))?;
 
         let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&query.model).map_err(ParseError::CairoShortStringToFelt)?,
-            &keys,
+            cairo_short_string_to_felt(&clause.model)
+                .map_err(ParseError::CairoShortStringToFelt)?,
+            &clause.keys,
             model_packed_size,
         );
 
@@ -295,7 +296,7 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let query = Query { model: model_name, clause: Clause::Keys(KeysClause { keys }) };
+        let query = Query { clause: Clause::Keys(KeysClause { model: model_name, keys }) };
 
         let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
         subscribed_entities.add_entities(vec![query.clone()]).expect("able to add entity");

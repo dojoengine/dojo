@@ -21,10 +21,12 @@ use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
-use torii_core::error::{Error, ParseError};
+use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{parse_sql_model_members, SqlModelMember};
 
 use self::subscription::SubscribeRequest;
+use crate::proto::types::clause::ClauseType;
+use crate::proto::types::KeysClause;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::{self};
 
@@ -144,11 +146,21 @@ impl DojoWorld {
     {
         let mut subs = Vec::with_capacity(queries.len());
         for query in queries {
-            let model = cairo_short_string_to_felt(&query.model)
+            let clause: KeysClause = query
+                .clone()
+                .clause
+                .ok_or(QueryError::UnsupportedQuery)
+                .and_then(|clause| clause.clause_type.ok_or(QueryError::UnsupportedQuery))
+                .and_then(|clause_type| match clause_type {
+                    ClauseType::Keys(clause) => Ok(clause),
+                    _ => Err(QueryError::UnsupportedQuery),
+                })?;
+
+            let model = cairo_short_string_to_felt(&clause.model)
                 .map_err(ParseError::CairoShortStringToFelt)?;
 
             let proto::types::ModelMetadata { packed_size, .. } =
-                self.model_metadata(&query.model).await?;
+                self.model_metadata(&clause.model).await?;
 
             subs.push(SubscribeRequest {
                 query,

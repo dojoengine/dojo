@@ -12,7 +12,6 @@ use crate::proto;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
-    pub model: String,
     pub clause: Clause,
 }
 
@@ -25,11 +24,13 @@ pub enum Clause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct KeysClause {
+    pub model: String,
     pub keys: Vec<FieldElement>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct AttributeClause {
+    pub model: String,
     pub attribute: String,
     pub operator: ComparisonOperator,
     pub value: Value,
@@ -37,6 +38,7 @@ pub struct AttributeClause {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct CompositeClause {
+    pub model: String,
     pub operator: LogicalOperator,
     pub clauses: Vec<Clause>,
 }
@@ -103,7 +105,7 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
 impl From<Query> for proto::types::EntityQuery {
     fn from(value: Query) -> Self {
-        Self { model: value.model, clause: Some(value.clause.into()) }
+        Self { clause: Some(value.clause.into()) }
     }
 }
 
@@ -125,7 +127,10 @@ impl From<Clause> for proto::types::Clause {
 
 impl From<KeysClause> for proto::types::KeysClause {
     fn from(value: KeysClause) -> Self {
-        Self { keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect() }
+        Self {
+            model: value.model,
+            keys: value.keys.iter().map(|k| k.to_bytes_be().into()).collect(),
+        }
     }
 }
 
@@ -139,13 +144,14 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
             .map(|k| FieldElement::from_byte_slice_be(&k))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Self { keys })
+        Ok(Self { model: value.model, keys })
     }
 }
 
 impl From<AttributeClause> for proto::types::AttributeClause {
     fn from(value: AttributeClause) -> Self {
         Self {
+            model: value.model,
             attribute: value.attribute,
             operator: value.operator as i32,
             value: Some(value.value.into()),
@@ -156,6 +162,7 @@ impl From<AttributeClause> for proto::types::AttributeClause {
 impl From<CompositeClause> for proto::types::CompositeClause {
     fn from(value: CompositeClause) -> Self {
         Self {
+            model: value.model,
             operator: value.operator as i32,
             clauses: value.clauses.into_iter().map(|clause| clause.into()).collect(),
         }
