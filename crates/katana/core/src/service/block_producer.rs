@@ -235,8 +235,8 @@ impl IntervalBlockProducer {
             .with_resources_log()
             .zip(transactions)
             .map(|(res, tx)| match res {
-                Ok(outcome) => {
-                    let executed_tx = ExecutedTransaction::new(tx, outcome.execution_info);
+                Ok(execution_info) => {
+                    let executed_tx = ExecutedTransaction::new(tx, execution_info);
                     MaybeInvalidExecutedTransaction::Valid(Arc::new(executed_tx))
                 }
                 Err(err) => {
@@ -363,10 +363,7 @@ impl InstantBlockProducer {
         let outcome = backend
             .do_mine_block(create_execution_outcome(
                 &mut state,
-                transactions
-                    .into_iter()
-                    .zip(results.into_iter().map(|res| res.map(|out| out.execution_info)))
-                    .collect(),
+                transactions.into_iter().zip(results).collect(),
             ))
             .await;
 

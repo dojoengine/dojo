@@ -95,15 +95,8 @@ impl Default for ExecutionOutcome {
     }
 }
 
-/// The outcome of a transaction execution.
-pub struct TransactionExecutionOutcome {
-    /// The execution info of a transaction.
-    pub execution_info: TransactionExecutionInfo,
-    /// The state diffs after a transaction execution.
-    pub state_diff: CommitmentStateDiff,
-}
-
-pub type TxExecutionResult = Result<TransactionExecutionOutcome, TransactionExecutionError>;
+/// The result of a transaction execution.
+pub type TxExecutionResult = Result<TransactionExecutionInfo, TransactionExecutionError>;
 
 /// A transaction executor.
 ///
@@ -213,10 +206,7 @@ impl<'a> Iterator for TransactionExecutor<'a> {
                         trace_events(&events_from_exec_info(&exec_info));
                     }
 
-                    Ok(TransactionExecutionOutcome {
-                        execution_info: exec_info,
-                        state_diff: self.state.to_state_diff(),
-                    })
+                    Ok(exec_info)
                 }
 
                 Err(err) => {

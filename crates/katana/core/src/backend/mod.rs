@@ -190,7 +190,7 @@ impl Backend {
             .execute();
 
         for res in results {
-            let exec_info = res?.execution_info;
+            let exec_info = res?;
 
             if exec_info.revert_error.is_some() {
                 // TEMP: change this once `Reverted` transaction error is no longer `String`.
