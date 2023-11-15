@@ -18,7 +18,7 @@ use self::connection::{
     connection_arguments, connection_output, parse_connection_arguments, ConnectionObject,
 };
 use crate::constants::ID_COLUMN;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_page_info, fetch_single_row};
+use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
@@ -96,17 +96,7 @@ pub trait ObjectTrait: Send + Sync {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
                     let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
-                    let data = fetch_multiple_rows(
-                        &mut conn,
-                        &table_name,
-                        ID_COLUMN,
-                        &None,
-                        &None,
-                        &None,
-                        &connection,
-                    )
-                    .await?;
-                    let page_info = fetch_page_info(
+                    let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
                         &table_name,
                         ID_COLUMN,

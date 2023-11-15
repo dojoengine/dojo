@@ -1,6 +1,7 @@
 use async_graphql::connection::PageInfo;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
+use sqlx::Row;
 use sqlx::{Result, Sqlite};
 
 use super::filter::{Filter, FilterValue};
@@ -43,15 +44,17 @@ pub async fn fetch_multiple_rows(
     order: &Option<Order>,
     filters: &Option<Vec<Filter>>,
     connection: &ConnectionArguments,
-) -> Result<Vec<SqliteRow>> {
+) -> Result<(Vec<SqliteRow>, PageInfo)> {
     let mut conditions = build_conditions(keys, filters);
 
+    let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
         conditions.push(handle_cursor(after_cursor, order, CursorDirection::After, id_column)?);
     }
 
     if let Some(before_cursor) = &connection.before {
         conditions.push(handle_cursor(before_cursor, order, CursorDirection::Before, id_column)?);
+        cursor_param = &connection.before;
     }
 
     let mut query = format!("SELECT * FROM {}", table_name);
@@ -59,7 +62,8 @@ pub async fn fetch_multiple_rows(
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }
 
-    let limit = connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT);
+    let limit =
+        connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT) + 2;
 
     // NOTE: Order is determined by the `order` param if provided, otherwise it's inferred from the
     // `first` or `last` param. Explicit ordering take precedence
@@ -90,27 +94,54 @@ pub async fn fetch_multiple_rows(
         query.push_str(&format!(" OFFSET {}", offset));
     }
 
-    sqlx::query(&query).fetch_all(conn).await
-}
+    let mut data = sqlx::query(&query).fetch_all(conn).await?;
 
-pub async fn fetch_page_info(
-    conn: &mut PoolConnection<Sqlite>,
-    table_name: &str,
-    id_column: &str,
-    keys: &Option<Vec<String>>,
-    order: &Option<Order>,
-    filters: &Option<Vec<Filter>>,
-    connection: &ConnectionArguments,
-) -> Result<PageInfo> {
-    // TODO: fetch real page info data from sqlx
-    let page_info = PageInfo {
+    let mut page_info = PageInfo {
         has_previous_page: false,
         has_next_page: false,
         start_cursor: None,
         end_cursor: None,
     };
 
-    Ok(page_info)
+    // cases
+
+    let order_field = match order {
+        Some(order) => format!("external_{}", order.field),
+        None => id_column.to_string(),
+    };
+    match cursor_param {
+        Some(cursor) => {
+            let start_cursor = cursor::encode(
+                &data[0].try_get::<String, &str>(id_column)?,
+                &data[0].try_get_unchecked::<String, &str>(&order_field)?,
+            );
+
+            if cursor == &start_cursor {
+                data.remove(0);
+
+                page_info.has_previous_page = true;
+                page_info.start_cursor = Some(start_cursor);
+            }
+        }
+        None => {}
+    }
+
+    if data.len() as u64 == limit - 1 {
+        data.pop();
+
+        page_info.has_next_page = true;
+    }
+
+    page_info.start_cursor = Some(cursor::encode(
+        &data[0].try_get::<String, &str>(id_column)?,
+        &data[0].try_get_unchecked::<String, &str>(&order_field)?,
+    ));
+    page_info.end_cursor = Some(cursor::encode(
+        &data[data.len() - 1].try_get::<String, &str>(id_column)?,
+        &data[data.len() - 1].try_get_unchecked::<String, &str>(&order_field)?,
+    ));
+
+    Ok((data, page_info))
 }
 
 fn handle_cursor(

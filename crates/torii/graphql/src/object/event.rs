@@ -13,7 +13,7 @@ use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{ObjectTrait, TypeMapping};
 use crate::constants::{EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
 use crate::mapping::EVENT_TYPE_MAPPING;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_page_info};
+use crate::query::data::{count_rows, fetch_multiple_rows};
 use crate::types::ValueMapping;
 
 pub struct EventObject;
@@ -49,17 +49,7 @@ impl ObjectTrait for EventObject {
                     let connection = parse_connection_arguments(&ctx)?;
                     let keys = parse_keys_argument(&ctx)?;
                     let total_count = count_rows(&mut conn, EVENT_TABLE, &keys, &None).await?;
-                    let data = fetch_multiple_rows(
-                        &mut conn,
-                        EVENT_TABLE,
-                        ID_COLUMN,
-                        &keys,
-                        &None,
-                        &None,
-                        &connection,
-                    )
-                    .await?;
-                    let page_info = fetch_page_info(
+                    let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
                         EVENT_TABLE,
                         ID_COLUMN,

@@ -15,7 +15,7 @@ use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::{ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN};
 use crate::mapping::ENTITY_TYPE_MAPPING;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_page_info};
+use crate::query::data::{count_rows, fetch_multiple_rows};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
 use crate::utils::extract;
@@ -52,17 +52,7 @@ impl ObjectTrait for EntityObject {
                     let connection = parse_connection_arguments(&ctx)?;
                     let keys = parse_keys_argument(&ctx)?;
                     let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
-                    let data = fetch_multiple_rows(
-                        &mut conn,
-                        ENTITY_TABLE,
-                        EVENT_ID_COLUMN,
-                        &keys,
-                        &None,
-                        &None,
-                        &connection,
-                    )
-                    .await?;
-                    let page_info = fetch_page_info(
+                    let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
                         ENTITY_TABLE,
                         EVENT_ID_COLUMN,

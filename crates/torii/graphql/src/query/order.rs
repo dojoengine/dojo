@@ -15,8 +15,8 @@ pub struct Order {
 
 #[derive(AsRefStr, Debug, EnumString)]
 pub enum CursorDirection {
-    #[strum(serialize = "<")]
+    #[strum(serialize = "<=")]
     After,
-    #[strum(serialize = ">")]
+    #[strum(serialize = ">=")]
     Before,
 }

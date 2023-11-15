@@ -54,7 +54,7 @@ impl ObjectTrait for MetadataObject {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
                     let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
-                    let data = fetch_multiple_rows(
+                    let (data, _page_info) = fetch_multiple_rows(
                         &mut conn,
                         &table_name,
                         ID_COLUMN,
