@@ -11,7 +11,7 @@ pub struct StarknetOptions {
     #[arg(long, env = "STARKNET_RPC_URL", default_value = "http://localhost:5050")]
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC endpoint.")]
-    pub rpc_url: Option<Url>,
+    pub rpc_url: Url,
 }
 
 impl StarknetOptions {
@@ -19,16 +19,12 @@ impl StarknetOptions {
         &self,
         env_metadata: Option<&Environment>,
     ) -> Result<JsonRpcClient<HttpTransport>> {
-        let url = if let Some(url) = self.rpc_url.clone() {
-            Some(url)
-        } else if let Some(url) =
-            env_metadata
-                .and_then(|env| env.rpc_url())
-                .or(std::env::var("STARKNET_RPC_URL").ok().as_deref())
-        {
+        let url = if let Some(url) = env_metadata.and_then(|env| env.rpc_url()) {
+            Some(Url::parse(url)?)
+        } else if let Some(url) = std::env::var("STARKNET_RPC_URL").ok().as_deref() {
             Some(Url::parse(url)?)
         } else {
-            None
+            Some(self.rpc_url.clone())
         };
 
         if let Some(url) = url {
