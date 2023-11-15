@@ -5,5 +5,5 @@ name = "dojo"
 version = "0.3.10"
 
 [dependencies]
-dojo_plugin = "0.3.10"
+dojo_plugin = {path = "../dojo-lang"}
 starknet = "2.3.1"
