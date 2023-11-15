@@ -247,9 +247,7 @@ mod world {
                         self.metadata_uri.write(i, *item);
                         i += 1;
                     },
-                    Option::None(_) => {
-                        break;
-                    }
+                    Option::None(_) => { break; }
                 };
             };
         }
@@ -492,11 +490,27 @@ mod world {
         /// * `model` - The name of the model to be deleted.
         /// * `query` - The query to be used to find the entity.
         fn delete_entity(ref self: ContractState, model: felt252, keys: Span<felt252>) {
-            let system = get_caller_address();
-            assert(system.is_non_zero(), 'must be called thru system');
-            assert_can_write(@self, model, system);
+            assert_can_write(@self, model, get_caller_address());
+
+            let model_class_hash = self.models.read(model);
+            let layout = class_call(@self, model_class_hash, selector!("layout"), array![].span());
+
+            let mut empty_values = ArrayTrait::new();
+            let mut u8_layout = ArrayTrait::new();
+            let mut i = 0;
+
+            loop {
+                if (i == layout.len()) {
+                    break;
+                }
+                empty_values.append(0);
+                u8_layout.append((*layout[i]).try_into().unwrap());
+                i += 1;
+            };
 
             let key = poseidon::poseidon_hash_span(keys);
+            database::set(model, key, 0, empty_values.span(), u8_layout.span());
+            // this deletes the index
             database::del(model, key);
 
             EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
