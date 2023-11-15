@@ -118,7 +118,7 @@ impl PlainEnumSchemaIntrospection of dojo::database::schema::SchemaIntrospection
     fn ty() -> dojo::database::schema::Ty {
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'PlainEnum',
                 attrs: array![].span(),
                 children: array![
                     (
@@ -164,7 +164,7 @@ impl EnumPrimitiveSchemaIntrospection of dojo::database::schema::SchemaIntrospec
     fn ty() -> dojo::database::schema::Ty {
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'EnumPrimitive',
                 attrs: array![].span(),
                 children: array![
                     (
@@ -225,7 +225,7 @@ impl EnumTupleSchemaIntrospection of dojo::database::schema::SchemaIntrospection
     fn ty() -> dojo::database::schema::Ty {
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'EnumTuple',
                 attrs: array![].span(),
                 children: array![
                     (
@@ -291,7 +291,7 @@ impl EnumCustomSchemaIntrospection of dojo::database::schema::SchemaIntrospectio
     fn ty() -> dojo::database::schema::Ty {
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'EnumCustom',
                 attrs: array![].span(),
                 children: array![
                     (
@@ -694,7 +694,7 @@ impl PlainEnumDrop of Drop::<PlainEnum>;
                 
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'PlainEnum',
                 attrs: array![].span(),
                 children: array![
                 
@@ -752,7 +752,7 @@ layout.append(16);
                 
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'EnumPrimitive',
                 attrs: array![].span(),
                 children: array![
                 
@@ -815,7 +815,7 @@ layout.append(8);
                 
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'EnumTuple',
                 attrs: array![].span(),
                 children: array![
                 
@@ -883,7 +883,7 @@ dojo::database::schema::SchemaIntrospection::<Vec2>::layout(ref layout);
                 
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {
-                name: 'Direction',
+                name: 'EnumCustom',
                 attrs: array![].span(),
                 children: array![
                 
