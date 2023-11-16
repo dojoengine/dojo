@@ -7,8 +7,8 @@ pub enum Error {
     Parse(#[from] ParseError),
     #[error(transparent)]
     Sql(#[from] sqlx::Error),
-    #[error("unsupported query clause")]
-    UnsupportedQuery,
+    #[error(transparent)]
+    QueryError(#[from] QueryError),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -19,4 +19,10 @@ pub enum ParseError {
     CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
     #[error(transparent)]
     FromByteSliceError(#[from] FromByteSliceError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum QueryError {
+    #[error("unsupported query")]
+    UnsupportedQuery,
 }

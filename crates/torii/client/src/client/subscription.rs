@@ -4,7 +4,6 @@ use std::future::Future;
 use std::sync::Arc;
 use std::task::Poll;
 
-use dojo_types::schema::{Clause, EntityQuery};
 use dojo_types::WorldMetadata;
 use futures::channel::mpsc::{self, Receiver, Sender};
 use futures_util::StreamExt;
@@ -13,6 +12,7 @@ use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
 use torii_grpc::client::EntityUpdateStreaming;
+use torii_grpc::types::KeysClause;
 
 use super::error::{Error, ParseError};
 use super::ModelStorage;
@@ -24,61 +24,54 @@ pub enum SubscriptionEvent {
 
 pub struct SubscribedEntities {
     metadata: Arc<RwLock<WorldMetadata>>,
-    pub(super) entities: RwLock<HashSet<EntityQuery>>,
+    pub(super) entities_keys: RwLock<HashSet<KeysClause>>,
     /// All the relevant storage addresses derived from the subscribed entities
     pub(super) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
 }
 
 impl SubscribedEntities {
-    pub(super) fn is_synced(&self, entity: &EntityQuery) -> bool {
-        self.entities.read().contains(entity)
+    pub(super) fn is_synced(&self, keys: &KeysClause) -> bool {
+        self.entities_keys.read().contains(keys)
     }
 
     pub(super) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
         Self {
             metadata,
-            entities: Default::default(),
+            entities_keys: Default::default(),
             subscribed_storage_addresses: Default::default(),
         }
     }
 
-    pub(super) fn add_entities(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
-        for entity in entities {
-            Self::add_entity(self, entity)?;
+    pub(super) fn add_entities(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
+        for keys in entities_keys {
+            Self::add_entity(self, keys)?;
         }
         Ok(())
     }
 
-    pub(super) fn remove_entities(&self, entities: Vec<EntityQuery>) -> Result<(), Error> {
-        for entity in entities {
-            Self::remove_entity(self, entity)?;
+    pub(super) fn remove_entities(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
+        for keys in entities_keys {
+            Self::remove_entity(self, keys)?;
         }
         Ok(())
     }
 
-    pub(super) fn add_entity(&self, entity: EntityQuery) -> Result<(), Error> {
-        if !self.entities.write().insert(entity.clone()) {
+    pub(super) fn add_entity(&self, keys: KeysClause) -> Result<(), Error> {
+        if !self.entities_keys.write().insert(keys.clone()) {
             return Ok(());
         }
-
-        let keys = if let Clause::Keys(clause) = entity.clause {
-            clause.keys
-        } else {
-            return Err(Error::UnsupportedQuery);
-        };
 
         let model_packed_size = self
             .metadata
             .read()
             .models
-            .get(&entity.model)
+            .get(&keys.model)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(entity.model.clone()))?;
+            .ok_or(Error::UnknownModel(keys.model.clone()))?;
 
         let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&entity.model)
-                .map_err(ParseError::CairoShortStringToFelt)?,
-            &keys,
+            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
+            &keys.keys,
             model_packed_size,
         );
 
@@ -90,29 +83,22 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub(super) fn remove_entity(&self, entity: EntityQuery) -> Result<(), Error> {
-        if !self.entities.write().remove(&entity) {
+    pub(super) fn remove_entity(&self, keys: KeysClause) -> Result<(), Error> {
+        if !self.entities_keys.write().remove(&keys) {
             return Ok(());
         }
-
-        let keys = if let Clause::Keys(clause) = entity.clause {
-            clause.keys
-        } else {
-            return Err(Error::UnsupportedQuery);
-        };
 
         let model_packed_size = self
             .metadata
             .read()
             .models
-            .get(&entity.model)
+            .get(&keys.model)
             .map(|c| c.packed_size)
-            .ok_or(Error::UnknownModel(entity.model.clone()))?;
+            .ok_or(Error::UnknownModel(keys.model.clone()))?;
 
         let storage_addresses = compute_all_storage_addresses(
-            cairo_short_string_to_felt(&entity.model)
-                .map_err(ParseError::CairoShortStringToFelt)?,
-            &keys,
+            cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
+            &keys.keys,
             model_packed_size,
         );
 
@@ -256,11 +242,12 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use dojo_types::schema::{KeysClause, Ty};
+    use dojo_types::schema::Ty;
     use dojo_types::WorldMetadata;
     use parking_lot::RwLock;
     use starknet::core::utils::cairo_short_string_to_felt;
     use starknet::macros::felt;
+    use torii_grpc::types::KeysClause;
 
     use crate::utils::compute_all_storage_addresses;
 
@@ -295,29 +282,26 @@ mod tests {
 
         let metadata = self::create_dummy_metadata();
 
-        let entity = dojo_types::schema::EntityQuery {
-            model: model_name,
-            clause: dojo_types::schema::Clause::Keys(KeysClause { keys }),
-        };
+        let keys = KeysClause { model: model_name, keys };
 
         let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
-        subscribed_entities.add_entities(vec![entity.clone()]).expect("able to add entity");
+        subscribed_entities.add_entities(vec![keys.clone()]).expect("able to add entity");
 
         let actual_storage_addresses_count =
             subscribed_entities.subscribed_storage_addresses.read().len();
         let actual_storage_addresses =
             subscribed_entities.subscribed_storage_addresses.read().clone();
 
-        assert!(subscribed_entities.entities.read().contains(&entity));
+        assert!(subscribed_entities.entities_keys.read().contains(&keys));
         assert_eq!(actual_storage_addresses_count, expected_storage_addresses.len());
         assert!(expected_storage_addresses.all(|addr| actual_storage_addresses.contains(&addr)));
 
-        subscribed_entities.remove_entities(vec![entity.clone()]).expect("able to remove entities");
+        subscribed_entities.remove_entities(vec![keys.clone()]).expect("able to remove entities");
 
         let actual_storage_addresses_count_after =
             subscribed_entities.subscribed_storage_addresses.read().len();
 
         assert_eq!(actual_storage_addresses_count_after, 0);
-        assert!(!subscribed_entities.entities.read().contains(&entity));
+        assert!(!subscribed_entities.entities_keys.read().contains(&keys));
     }
 }

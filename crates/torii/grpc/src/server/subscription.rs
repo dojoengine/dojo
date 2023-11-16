@@ -6,7 +6,7 @@ use std::task::Poll;
 use futures_util::future::BoxFuture;
 use futures_util::FutureExt;
 use rand::Rng;
-use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use starknet::core::types::{
     BlockId, ContractStorageDiffItem, MaybePendingStateUpdate, StateUpdate, StorageEntry,
 };
@@ -15,10 +15,12 @@ use starknet::providers::Provider;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
+use torii_core::error::{Error, ParseError};
 use tracing::{debug, error, trace};
 
-use super::error::SubscriptionError as Error;
+use super::error::SubscriptionError;
 use crate::proto;
+use crate::types::KeysClause;
 
 pub struct ModelMetadata {
     pub name: FieldElement,
@@ -27,7 +29,22 @@ pub struct ModelMetadata {
 
 pub struct SubscribeRequest {
     pub model: ModelMetadata,
-    pub keys: Vec<FieldElement>,
+    pub keys: proto::types::KeysClause,
+}
+
+impl SubscribeRequest {
+    // pub fn slots(&self) -> Result<Vec<FieldElement>, QueryError> {
+    //     match self.query.clause {
+    //         Clause::Keys(KeysClause { keys }) => {
+    //             let base = poseidon_hash_many(&[
+    //                 short_string!("dojo_storage"),
+    //                 req.model.name,
+    //                 poseidon_hash_many(&keys),
+    //             ]);
+    //         }
+    //         _ => Err(QueryError::UnsupportedQuery),
+    //     }
+    // }
 }
 
 pub struct Subscriber {
@@ -45,33 +62,41 @@ pub struct SubscriberManager {
 impl SubscriberManager {
     pub(super) async fn add_subscriber(
         &self,
-        entities: Vec<SubscribeRequest>,
-    ) -> Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>> {
+        reqs: Vec<SubscribeRequest>,
+    ) -> Result<Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
+    {
         let id = rand::thread_rng().gen::<usize>();
 
         let (sender, receiver) = channel(1);
 
         // convert the list of entites into a list storage addresses
-        let storage_addresses = entities
-            .par_iter()
-            .map(|entity| {
+        let storage_addresses = reqs
+            .into_iter()
+            .map(|req| {
+                let keys: KeysClause =
+                    req.keys.try_into().map_err(ParseError::FromByteSliceError)?;
+
                 let base = poseidon_hash_many(&[
                     short_string!("dojo_storage"),
-                    entity.model.name,
-                    poseidon_hash_many(&entity.keys),
+                    req.model.name,
+                    poseidon_hash_many(&keys.keys),
                 ]);
 
-                (0..entity.model.packed_size)
+                let res = (0..req.model.packed_size)
                     .into_par_iter()
                     .map(|i| base + i.into())
-                    .collect::<Vec<FieldElement>>()
+                    .collect::<Vec<FieldElement>>();
+
+                Ok(res)
             })
+            .collect::<Result<Vec<_>, Error>>()?
+            .into_iter()
             .flatten()
             .collect::<HashSet<FieldElement>>();
 
         self.subscribers.write().await.insert(id, Subscriber { storage_addresses, sender });
 
-        receiver
+        Ok(receiver)
     }
 
     pub(super) async fn remove_subscriber(&self, id: usize) {
@@ -79,8 +104,8 @@ impl SubscriberManager {
     }
 }
 
-type PublishStateUpdateResult = Result<(), Error>;
-type RequestStateUpdateResult = Result<MaybePendingStateUpdate, Error>;
+type PublishStateUpdateResult = Result<(), SubscriptionError>;
+type RequestStateUpdateResult = Result<MaybePendingStateUpdate, SubscriptionError>;
 
 #[must_use = "Service does nothing unless polled"]
 pub struct Service<P: Provider> {
@@ -115,8 +140,10 @@ where
     }
 
     async fn fetch_state_update(provider: P, block_num: u64) -> (P, u64, RequestStateUpdateResult) {
-        let res =
-            provider.get_state_update(BlockId::Number(block_num)).await.map_err(Error::Provider);
+        let res = provider
+            .get_state_update(BlockId::Number(block_num))
+            .await
+            .map_err(SubscriptionError::Provider);
         (provider, block_num, res)
     }
 
