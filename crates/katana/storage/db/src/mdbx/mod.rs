@@ -52,7 +52,7 @@ impl<E: EnvironmentKind> Env<E> {
             .set_max_dbs(Tables::ALL.len())
             .set_geometry(Geometry {
                 // Maximum database size of 1 terabytes
-                size: Some(0..(1 * TERABYTE)),
+                size: Some(0..(TERABYTE)),
                 // We grow the database in increments of 4 gigabytes
                 growth_step: Some(4 * GIGABYTE as isize),
                 // The database never shrinks
