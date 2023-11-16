@@ -1,7 +1,5 @@
+use katana_primitives::transaction::TxNumber;
 use serde::{Deserialize, Serialize};
-
-/// The sequential number of all the transactions in the database.
-pub type TxNumber = u64;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoredBlockBodyIndices {
