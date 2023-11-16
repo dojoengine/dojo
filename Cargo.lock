@@ -4867,7 +4867,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "serde",
  "starknet",
