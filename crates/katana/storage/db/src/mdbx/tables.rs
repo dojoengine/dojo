@@ -1,12 +1,12 @@
-use katana_primitives::block::{BlockHash, BlockNumber, Header, StateUpdate};
+use katana_primitives::block::{BlockHash, BlockNumber, Header};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
     StorageValue,
 };
-use katana_primitives::transaction::{Receipt, Transaction, TxHash};
+use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
 use serde::{Deserialize, Serialize};
 
-use super::models::{StoredBlockBodyIndices, TxNumber};
+use super::models::StoredBlockBodyIndices;
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 
 pub trait Key: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone {}
@@ -42,7 +42,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 9;
+pub const NUM_TABLES: usize = 14;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -144,10 +144,15 @@ macro_rules! dupsort {
 
 define_tables_enum! {[
     (Headers, TableType::Table),
+    (BlockHashes, TableType::Table),
+    (BlockNumbers, TableType::Table),
     (BlockBodyIndices, TableType::Table),
+    (TxHashNumber, TableType::Table),
     (Transactions, TableType::Table),
     (Receipts, TableType::Table),
-    (StateUpdates, TableType::Table),
+    (ClassDeclarations, TableType::Table),
+    (ContractDeployments, TableType::Table),
+    (CompiledClassHashes, TableType::Table),
     (CompiledContractClasses, TableType::Table),
     (SierraClasses, TableType::Table),
     (ContractInfo, TableType::Table),
@@ -159,24 +164,28 @@ tables! {
     Headers: (BlockNumber) => Header,
     /// Stores block hashes according to its block number
     BlockHashes: (BlockNumber) => BlockHash,
+    /// Stores block numbers according to its block hash
+    BlockNumbers: (BlockHash) => BlockNumber,
     /// Block number to its body indices which stores the tx number of
     /// the first tx in the block and the number of txs in the block.
     BlockBodyIndices: (BlockNumber) => StoredBlockBodyIndices,
-    /// Store canonical transactions
+    /// Store canonical transactions hashes according to its tx number
     TxHashNumber: (TxHash) => TxNumber,
     /// Store canonical transactions
     Transactions: (TxNumber) => Transaction,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
-    /// Store block state updates
-    StateUpdates: (BlockNumber) => StateUpdate,
+    /// Stores the list of class hashes according to the block number it was declared in.
+    ClassDeclarations: (BlockNumber) => Vec<ClassHash>,
+    /// Store the list of contracts deployed in a block according to its block number.
+    ContractDeployments: (BlockNumber) => Vec<ContractAddress>,
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
     /// Store compiled contract classes according to its compiled class hash
     CompiledContractClasses: (CompiledClassHash) => u64,
-    /// Store Sierra classes
+    /// Store Sierra classes according to its class hash
     SierraClasses: (ClassHash) => SierraClass,
-    /// Store contract information
+    /// Store contract information according to its contract address
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage
     ContractStorage: (ContractAddress, StorageKey) => StorageValue
