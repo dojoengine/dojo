@@ -32,51 +32,55 @@ macro_rules! decode {
     };
 }
 
+#[allow(clippy::should_implement_trait)]
 impl<K: TransactionKind, T: DupSort> Cursor<'_, K, T> {
     pub fn first(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.first())
+        decode!(libmdbx::Cursor::first(&mut self.inner))
     }
 
     pub fn seek_exact(
         &mut self,
         key: <T as Table>::Key,
     ) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.set_key(key.encode().as_ref()))
+        decode!(libmdbx::Cursor::set_key(&mut self.inner, key.encode().as_ref()))
     }
 
     pub fn seek(&mut self, key: <T as Table>::Key) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.set_range(key.encode().as_ref()))
+        decode!(libmdbx::Cursor::set_range(&mut self.inner, key.encode().as_ref()))
     }
 
     pub fn next(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.next())
+        decode!(libmdbx::Cursor::next(&mut self.inner))
     }
 
     pub fn prev(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.prev())
+        decode!(libmdbx::Cursor::prev(&mut self.inner))
     }
 
     pub fn last(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.last())
+        decode!(libmdbx::Cursor::last(&mut self.inner))
     }
 
     pub fn current(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.get_current())
+        decode!(libmdbx::Cursor::get_current(&mut self.inner))
     }
 
     /// Returns the next `(key, value)` pair of a DUPSORT table.
     pub fn next_dup(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.next_dup())
+        decode!(libmdbx::Cursor::next_dup(&mut self.inner))
     }
 
     /// Returns the next `(key, value)` pair skipping the duplicates.
     pub fn next_no_dup(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(self.inner.next_nodup())
+        decode!(libmdbx::Cursor::next_nodup(&mut self.inner))
     }
 
     /// Returns the next `value` of a duplicate `key`.
     pub fn next_dup_val(&mut self) -> Result<Option<<T as Table>::Value>, DatabaseError> {
-        self.inner.next_dup().map_err(DatabaseError::Read)?.map(decode_value::<T>).transpose()
+        libmdbx::Cursor::next_dup(&mut self.inner)
+            .map_err(DatabaseError::Read)?
+            .map(decode_value::<T>)
+            .transpose()
     }
 
     pub fn seek_by_key_subkey(
@@ -84,11 +88,14 @@ impl<K: TransactionKind, T: DupSort> Cursor<'_, K, T> {
         key: <T as Table>::Key,
         subkey: <T as DupSort>::SubKey,
     ) -> Result<Option<<T as Table>::Value>, DatabaseError> {
-        self.inner
-            .get_both_range(key.encode().as_ref(), subkey.encode().as_ref())
-            .map_err(DatabaseError::Read)?
-            .map(decode_one::<T>)
-            .transpose()
+        libmdbx::Cursor::get_both_range(
+            &mut self.inner,
+            key.encode().as_ref(),
+            subkey.encode().as_ref(),
+        )
+        .map_err(DatabaseError::Read)?
+        .map(decode_one::<T>)
+        .transpose()
     }
 }
 
@@ -103,16 +110,29 @@ impl<T: Table> Cursor<'_, RW, T> {
     pub fn upsert(&mut self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = Encode::encode(key);
         let value = Compress::compress(value);
-        self.inner.put(key.as_ref(), value.as_ref(), WriteFlags::UPSERT).map_err(|error| {
-            DatabaseError::Write { error, table: T::NAME, key: Box::from(key.as_ref()) }
-        })
+
+        libmdbx::Cursor::put(&mut self.inner, key.as_ref(), value.as_ref(), WriteFlags::UPSERT)
+            .map_err(|error| DatabaseError::Write {
+                error,
+                table: T::NAME,
+                key: Box::from(key.as_ref()),
+            })
     }
 
     pub fn insert(&mut self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = Encode::encode(key);
         let value = Compress::compress(value);
-        self.inner.put(key.as_ref(), value.as_ref(), WriteFlags::NO_OVERWRITE).map_err(|error| {
-            DatabaseError::Write { error, table: T::NAME, key: Box::from(key.as_ref()) }
+
+        libmdbx::Cursor::put(
+            &mut self.inner,
+            key.as_ref(),
+            value.as_ref(),
+            WriteFlags::NO_OVERWRITE,
+        )
+        .map_err(|error| DatabaseError::Write {
+            error,
+            table: T::NAME,
+            key: Box::from(key.as_ref()),
         })
     }
 
@@ -121,26 +141,35 @@ impl<T: Table> Cursor<'_, RW, T> {
     pub fn append(&mut self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = Encode::encode(key);
         let value = Compress::compress(value);
-        self.inner.put(key.as_ref(), value.as_ref(), WriteFlags::APPEND).map_err(|error| {
-            DatabaseError::Write { error, table: T::NAME, key: Box::from(key.as_ref()) }
-        })
+
+        libmdbx::Cursor::put(&mut self.inner, key.as_ref(), value.as_ref(), WriteFlags::APPEND)
+            .map_err(|error| DatabaseError::Write {
+                error,
+                table: T::NAME,
+                key: Box::from(key.as_ref()),
+            })
     }
 
     pub fn delete_current(&mut self) -> Result<(), DatabaseError> {
-        self.inner.del(WriteFlags::CURRENT).map_err(|e| DatabaseError::Delete(e.into()))
+        libmdbx::Cursor::del(&mut self.inner, WriteFlags::CURRENT).map_err(DatabaseError::Delete)
     }
 }
 
 impl<T: DupSort> Cursor<'_, RW, T> {
     pub fn delete_current_duplicates(&mut self) -> Result<(), DatabaseError> {
-        self.inner.del(WriteFlags::NO_DUP_DATA).map_err(DatabaseError::Delete)
+        libmdbx::Cursor::del(&mut self.inner, WriteFlags::NO_DUP_DATA)
+            .map_err(DatabaseError::Delete)
     }
 
     pub fn append_dup(&mut self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = Encode::encode(key);
         let value = Compress::compress(value);
-        self.inner.put(key.as_ref(), value.as_ref(), WriteFlags::APPEND_DUP).map_err(|error| {
-            DatabaseError::Write { error, table: T::NAME, key: Box::from(key.as_ref()) }
-        })
+
+        libmdbx::Cursor::put(&mut self.inner, key.as_ref(), value.as_ref(), WriteFlags::APPEND_DUP)
+            .map_err(|error| DatabaseError::Write {
+                error,
+                table: T::NAME,
+                key: Box::from(key.as_ref()),
+            })
     }
 }
