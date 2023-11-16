@@ -8,6 +8,8 @@ use crate::FieldElement;
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
+/// The sequential number for all the transactions..
+pub type TxNumber = u64;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Transaction {
