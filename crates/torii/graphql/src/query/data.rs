@@ -1,12 +1,11 @@
 use async_graphql::connection::PageInfo;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::Row;
-use sqlx::{Result, Sqlite};
+use sqlx::{Result, Row, Sqlite};
 
 use super::filter::{Filter, FilterValue};
 use super::order::{CursorDirection, Direction, Order};
-use crate::constants::DEFAULT_LIMIT;
+use crate::constants::{DEFAULT_LIMIT, PAGE_INFO_OFFSET};
 use crate::object::connection::{cursor, ConnectionArguments};
 
 pub async fn count_rows(
@@ -62,8 +61,8 @@ pub async fn fetch_multiple_rows(
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }
 
-    let limit =
-        connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT) + 2;
+    let limit = connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT)
+        + PAGE_INFO_OFFSET;
 
     // NOTE: Order is determined by the `order` param if provided, otherwise it's inferred from the
     // `first` or `last` param. Explicit ordering take precedence
@@ -103,8 +102,6 @@ pub async fn fetch_multiple_rows(
         end_cursor: None,
     };
 
-    // cases
-
     let order_field = match order {
         Some(order) => format!("external_{}", order.field),
         None => id_column.to_string(),
@@ -126,7 +123,7 @@ pub async fn fetch_multiple_rows(
         None => {}
     }
 
-    if data.len() as u64 == limit - 1 {
+    if data.len() as u64 == limit {
         data.pop();
 
         page_info.has_next_page = true;

@@ -1,12 +1,13 @@
 use async_graphql::connection::PageInfo;
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{Field, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name, Value};
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 
 use self::page_info::PageInfoObject;
-
 use super::ObjectTrait;
+use crate::constants::PAGE_INFO_TYPE_NAME;
 use crate::query::order::Order;
 use crate::query::value_mapping_from_row;
 use crate::types::{GraphqlType, TypeData, TypeMapping, ValueMapping};
@@ -40,6 +41,10 @@ impl ConnectionObject {
                 TypeData::Simple(TypeRef::named_list(format!("{}Edge", type_name))),
             ),
             (Name::new("total_count"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
+            (
+                Name::new("page_info"),
+                TypeData::Nested((TypeRef::named(PAGE_INFO_TYPE_NAME), IndexMap::new())),
+            ),
         ]);
 
         Self {

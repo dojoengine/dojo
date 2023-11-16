@@ -34,7 +34,7 @@ impl ObjectTrait for PageInfoObject {
 impl PageInfoObject {
     pub fn value_mapping(page_info: PageInfo) -> ValueMapping {
         IndexMap::from([
-            (Name::new("has_revious_page"), Value::from(page_info.has_previous_page)),
+            (Name::new("has_previous_page"), Value::from(page_info.has_previous_page)),
             (Name::new("has_next_page"), Value::from(page_info.has_next_page)),
             (
                 Name::new("start_cursor"),

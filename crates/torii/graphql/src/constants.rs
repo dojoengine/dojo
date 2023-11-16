@@ -1,5 +1,6 @@
 pub const DEFAULT_LIMIT: u64 = 10;
 pub const BOOLEAN_TRUE: i64 = 1;
+pub const PAGE_INFO_OFFSET: u64 = 2;
 
 pub const ENTITY_TABLE: &str = "entities";
 pub const EVENT_TABLE: &str = "events";
@@ -21,6 +22,7 @@ pub const EVENT_TYPE_NAME: &str = "World__Event";
 pub const SOCIAL_TYPE_NAME: &str = "World__Social";
 pub const CONTENT_TYPE_NAME: &str = "World__Content";
 pub const METADATA_TYPE_NAME: &str = "World__Metadata";
+pub const PAGE_INFO_TYPE_NAME: &str = "World__PageInfo";
 pub const TRANSACTION_TYPE_NAME: &str = "World__Transaction";
 pub const QUERY_TYPE_NAME: &str = "World__Query";
 pub const SUBSCRIPTION_TYPE_NAME: &str = "World__Subscription";
