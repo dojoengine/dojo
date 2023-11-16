@@ -95,9 +95,22 @@ impl Default for ExecutionOutcome {
     }
 }
 
+/// The result of a transaction execution.
+pub type TxExecutionResult = Result<TransactionExecutionInfo, TransactionExecutionError>;
+
+/// A transaction executor.
+///
+/// The transactions will be executed in an iterator fashion, sequentially, in the
+/// exact order they are provided to the executor. The execution is done within its implementation
+/// of the [`Iterator`] trait.
 pub struct TransactionExecutor<'a> {
+    /// A flag to enable/disable fee charging.
     charge_fee: bool,
+    /// The block context the transactions will be executed on.
     block_context: &'a BlockContext,
+    /// The transactions to be executed (in the exact order they are in the iterator).
+    transactions: std::vec::IntoIter<Transaction>,
+    /// The state the transactions will be executed on.
     state: &'a mut CachedStateWrapper<StateRefDb>,
 
     // logs flags
@@ -111,6 +124,7 @@ impl<'a> TransactionExecutor<'a> {
         state: &'a mut CachedStateWrapper<StateRefDb>,
         block_context: &'a BlockContext,
         charge_fee: bool,
+        transactions: Vec<Transaction>,
     ) -> Self {
         Self {
             state,
@@ -119,6 +133,7 @@ impl<'a> TransactionExecutor<'a> {
             error_log: false,
             events_log: false,
             resources_log: false,
+            transactions: transactions.into_iter(),
         }
     }
 
@@ -133,78 +148,76 @@ impl<'a> TransactionExecutor<'a> {
     pub fn with_resources_log(self) -> Self {
         Self { resources_log: true, ..self }
     }
+
+    /// A method to conveniently execute all the transactions and return their results.
+    pub fn execute(self) -> Vec<TxExecutionResult> {
+        self.collect()
+    }
 }
 
-impl<'a> TransactionExecutor<'a> {
-    pub fn execute_many(
-        &mut self,
-        transactions: Vec<Transaction>,
-    ) -> Vec<Result<TransactionExecutionInfo, TransactionExecutionError>> {
-        transactions.into_iter().map(|tx| self.execute(tx)).collect()
-    }
+impl<'a> Iterator for TransactionExecutor<'a> {
+    type Item = TxExecutionResult;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.transactions.next().map(|tx| {
+            let sierra = if let Transaction::Declare(DeclareTransaction {
+                sierra_class: Some(sierra_class),
+                inner,
+                ..
+            }) = &tx
+            {
+                Some((inner.class_hash(), sierra_class.clone()))
+            } else {
+                None
+            };
 
-    pub fn execute(
-        &mut self,
-        transaction: Transaction,
-    ) -> Result<TransactionExecutionInfo, TransactionExecutionError> {
-        let sierra = if let Transaction::Declare(DeclareTransaction {
-            sierra_class: Some(sierra_class),
-            inner,
-            ..
-        }) = &transaction
-        {
-            Some((inner.class_hash(), sierra_class.clone()))
-        } else {
-            None
-        };
-
-        let res = match transaction.into() {
-            ExecutionTransaction::AccountTransaction(tx) => {
-                tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee)
-            }
-            ExecutionTransaction::L1HandlerTransaction(tx) => {
-                tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee)
-            }
-        };
-
-        match res {
-            Ok(exec_info) => {
-                if let Some((class_hash, sierra_class)) = sierra {
-                    self.state
-                        .set_sierra_class(class_hash, sierra_class)
-                        .expect("failed to set sierra class");
+            let res = match tx.into() {
+                ExecutionTransaction::AccountTransaction(tx) => {
+                    tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee)
                 }
+                ExecutionTransaction::L1HandlerTransaction(tx) => {
+                    tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee)
+                }
+            };
 
-                if self.error_log {
-                    if let Some(err) = &exec_info.revert_error {
-                        let formatted_err = format!("{:?}", err).replace("\\n", "\n");
-                        warn!(target: "executor", "Transaction execution error: {formatted_err}");
+            match res {
+                Ok(exec_info) => {
+                    if let Some((class_hash, sierra_class)) = sierra {
+                        self.state
+                            .set_sierra_class(class_hash, sierra_class)
+                            .expect("failed to set sierra class");
                     }
+
+                    if self.error_log {
+                        if let Some(err) = &exec_info.revert_error {
+                            let formatted_err = format!("{:?}", err).replace("\\n", "\n");
+                            warn!(target: "executor", "Transaction execution error: {formatted_err}");
+                        }
+                    }
+
+                    if self.resources_log {
+                        trace!(
+                            target: "executor",
+                            "Transaction resource usage: {}",
+                            pretty_print_resources(&exec_info.actual_resources)
+                        );
+                    }
+
+                    if self.events_log {
+                        trace_events(&events_from_exec_info(&exec_info));
+                    }
+
+                    Ok(exec_info)
                 }
 
-                if self.resources_log {
-                    trace!(
-                        target: "executor",
-                        "Transaction resource usage: {}",
-                        pretty_print_resources(&exec_info.actual_resources)
-                    );
-                }
+                Err(err) => {
+                    if self.error_log {
+                        warn_message_transaction_error_exec_error(&err);
+                    }
 
-                if self.events_log {
-                    trace_events(&events_from_exec_info(&exec_info));
+                    Err(err)
                 }
-
-                Ok(exec_info)
             }
-
-            Err(err) => {
-                if self.error_log {
-                    warn_message_transaction_error_exec_error(&err);
-                }
-
-                Err(err)
-            }
-        }
+        })
     }
 }
 
