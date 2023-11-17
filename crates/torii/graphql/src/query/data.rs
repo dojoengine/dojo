@@ -5,7 +5,7 @@ use sqlx::{Result, Row, Sqlite};
 
 use super::filter::{Filter, FilterValue};
 use super::order::{CursorDirection, Direction, Order};
-use crate::constants::{DEFAULT_LIMIT, PAGE_INFO_OFFSET};
+use crate::constants::DEFAULT_LIMIT;
 use crate::object::connection::{cursor, ConnectionArguments};
 
 pub async fn count_rows(
@@ -52,8 +52,8 @@ pub async fn fetch_multiple_rows(
     }
 
     if let Some(before_cursor) = &connection.before {
-        conditions.push(handle_cursor(before_cursor, order, CursorDirection::Before, id_column)?);
         cursor_param = &connection.before;
+        conditions.push(handle_cursor(before_cursor, order, CursorDirection::Before, id_column)?);
     }
 
     let mut query = format!("SELECT * FROM {}", table_name);
@@ -61,8 +61,12 @@ pub async fn fetch_multiple_rows(
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }
 
-    let limit = connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT)
-        + PAGE_INFO_OFFSET;
+    let data_limit =
+        connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT);
+    let limit = match &cursor_param {
+        Some(_) => data_limit + 2,
+        None => data_limit + 1, // prev page does not exist
+    };
 
     // NOTE: Order is determined by the `order` param if provided, otherwise it's inferred from the
     // `first` or `last` param. Explicit ordering take precedence
@@ -94,7 +98,6 @@ pub async fn fetch_multiple_rows(
     }
 
     let mut data = sqlx::query(&query).fetch_all(conn).await?;
-
     let mut page_info = PageInfo {
         has_previous_page: false,
         has_next_page: false,
@@ -102,43 +105,54 @@ pub async fn fetch_multiple_rows(
         end_cursor: None,
     };
 
-    let order_field = match order {
-        Some(order) => format!("external_{}", order.field),
-        None => id_column.to_string(),
-    };
-    match cursor_param {
-        Some(cursor) => {
-            let start_cursor = cursor::encode(
-                &data[0].try_get::<String, &str>(id_column)?,
-                &data[0].try_get_unchecked::<String, &str>(&order_field)?,
-            );
+    if data.is_empty() {
+        Ok((data, page_info))
+    } else {
+        let order_field = match order {
+            Some(order) => format!("external_{}", order.field),
+            None => id_column.to_string(),
+        };
 
-            if cursor == &start_cursor {
-                data.remove(0);
+        match cursor_param {
+            Some(cursor_query) => {
+                let first_cursor = cursor::encode(
+                    &data[0].try_get::<String, &str>(id_column)?,
+                    &data[0].try_get_unchecked::<String, &str>(&order_field)?,
+                );
 
-                page_info.has_previous_page = true;
-                page_info.start_cursor = Some(start_cursor);
+                if &first_cursor == cursor_query {
+                    data.remove(0);
+                    page_info.has_previous_page = true;
+                } else {
+                    data.pop();
+                }
+
+                if data.len() as u64 == limit - 1 {
+                    page_info.has_next_page = true;
+                    data.pop();
+                }
+            }
+            None => {
+                if data.len() as u64 == limit {
+                    page_info.has_next_page = true;
+                    data.pop();
+                }
             }
         }
-        None => {}
+
+        if !data.is_empty() {
+            page_info.start_cursor = Some(cursor::encode(
+                &data[0].try_get::<String, &str>(id_column)?,
+                &data[0].try_get_unchecked::<String, &str>(&order_field)?,
+            ));
+            page_info.end_cursor = Some(cursor::encode(
+                &data[data.len() - 1].try_get::<String, &str>(id_column)?,
+                &data[data.len() - 1].try_get_unchecked::<String, &str>(&order_field)?,
+            ));
+        }
+
+        Ok((data, page_info))
     }
-
-    if data.len() as u64 == limit {
-        data.pop();
-
-        page_info.has_next_page = true;
-    }
-
-    page_info.start_cursor = Some(cursor::encode(
-        &data[0].try_get::<String, &str>(id_column)?,
-        &data[0].try_get_unchecked::<String, &str>(&order_field)?,
-    ));
-    page_info.end_cursor = Some(cursor::encode(
-        &data[data.len() - 1].try_get::<String, &str>(id_column)?,
-        &data[data.len() - 1].try_get_unchecked::<String, &str>(&order_field)?,
-    ));
-
-    Ok((data, page_info))
 }
 
 fn handle_cursor(
