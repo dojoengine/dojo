@@ -189,12 +189,15 @@ impl CairoPlugin for BuiltinDojoPlugin {
     fn id(&self) -> PackageId {
         let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
         let version = env!("CARGO_PKG_VERSION");
-        PackageId::new(
-            PackageName::new(PACKAGE_NAME),
-            Version::parse(version).unwrap(),
+        let rev = env!("GIT_HASH");
+
+        let source_id =
             SourceId::for_git(&url, &scarb::core::GitReference::Tag(format!("v{version}").into()))
-                .unwrap(),
-        )
+                .unwrap()
+                .with_precise(rev.to_string())
+                .unwrap();
+
+        PackageId::new(PackageName::new(PACKAGE_NAME), Version::parse(version).unwrap(), source_id)
     }
 
     fn instantiate(&self) -> Result<Box<dyn CairoPluginInstance>> {

@@ -8,14 +8,14 @@ source = "git+https://github.com/ponderingdemocritus/cubit#9c3bbdfee7b165ab06ac8
 
 [[package]]
 name = "dojo"
-version = "0.3.3"
+version = "0.3.11"
 dependencies = [
  "dojo_plugin",
 ]
 
 [[package]]
 name = "dojo_defi"
-version = "0.3.3"
+version = "0.3.11"
 dependencies = [
  "cubit",
  "dojo",
@@ -23,4 +23,5 @@ dependencies = [
 
 [[package]]
 name = "dojo_plugin"
-version = "0.3.3"
+version = "0.3.11"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.3.11#adab82da604669393bf5391439ed4ab1825923d1"
