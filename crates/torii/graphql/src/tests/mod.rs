@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
+use async_graphql::MaybeUndefined;
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
@@ -40,6 +41,7 @@ use crate::schema::build_schema;
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
+    pub page_info: MaybeUndefined<PageInfo>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -53,6 +55,16 @@ pub struct Entity {
     pub model_names: String,
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+// same as type from `async-graphql` but derive necessary traits
+// https://docs.rs/async-graphql/6.0.10/async_graphql/types/connection/struct.PageInfo.html
+pub struct PageInfo {
+    pub has_previous_page: bool,
+    pub has_next_page: bool,
+    pub start_cursor: Option<String>,
+    pub end_cursor: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

@@ -117,7 +117,7 @@ pub fn connection_output(
     id_column: &str,
     total_count: i64,
     is_external: bool,
-    page_info: PageInfo,
+    page_info: Option<PageInfo>,
 ) -> sqlx::Result<ValueMapping> {
     let model_edges = data
         .iter()
@@ -139,11 +139,10 @@ pub fn connection_output(
             Ok(Value::Object(edge))
         })
         .collect::<sqlx::Result<Vec<Value>>>();
-    let page_info = PageInfoObject::value_mapping(page_info);
 
     Ok(ValueMapping::from([
         (Name::new("total_count"), Value::from(total_count)),
         (Name::new("edges"), Value::List(model_edges?)),
-        (Name::new("page_info"), Value::Object(page_info)),
+        (Name::new("page_info"), PageInfoObject::value(page_info)),
     ]))
 }
