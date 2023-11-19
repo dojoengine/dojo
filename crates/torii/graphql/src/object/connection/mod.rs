@@ -1,9 +1,13 @@
+use async_graphql::connection::PageInfo;
+use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{Field, InputValue, ResolverContext, TypeRef};
 use async_graphql::{Error, Name, Value};
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 
+use self::page_info::PageInfoObject;
 use super::ObjectTrait;
+use crate::constants::PAGE_INFO_TYPE_NAME;
 use crate::query::order::Order;
 use crate::query::value_mapping_from_row;
 use crate::types::{GraphqlType, TypeData, TypeMapping, ValueMapping};
@@ -37,6 +41,10 @@ impl ConnectionObject {
                 TypeData::Simple(TypeRef::named_list(format!("{}Edge", type_name))),
             ),
             (Name::new("total_count"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
+            (
+                Name::new("page_info"),
+                TypeData::Nested((TypeRef::named_nn(PAGE_INFO_TYPE_NAME), IndexMap::new())),
+            ),
         ]);
 
         Self {
@@ -109,6 +117,7 @@ pub fn connection_output(
     id_column: &str,
     total_count: i64,
     is_external: bool,
+    page_info: PageInfo,
 ) -> sqlx::Result<ValueMapping> {
     let model_edges = data
         .iter()
@@ -134,5 +143,6 @@ pub fn connection_output(
     Ok(ValueMapping::from([
         (Name::new("total_count"), Value::from(total_count)),
         (Name::new("edges"), Value::List(model_edges?)),
+        (Name::new("page_info"), PageInfoObject::value(page_info)),
     ]))
 }

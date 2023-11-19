@@ -1,8 +1,10 @@
+use async_graphql::connection::PageInfo;
 use async_graphql::dynamic::{Field, FieldFuture, TypeRef};
 use async_graphql::{Name, Value};
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 
+use super::connection::page_info::PageInfoObject;
 use super::connection::{connection_arguments, cursor, parse_connection_arguments};
 use super::ObjectTrait;
 use crate::constants::{
@@ -54,7 +56,7 @@ impl ObjectTrait for MetadataObject {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
                     let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
-                    let data = fetch_multiple_rows(
+                    let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
                         &table_name,
                         ID_COLUMN,
@@ -62,11 +64,13 @@ impl ObjectTrait for MetadataObject {
                         &None,
                         &None,
                         &connection,
+                        total_count,
                     )
                     .await?;
 
                     // convert json field to value_mapping expected by content object
-                    let results = metadata_connection_output(&data, &type_mapping, total_count)?;
+                    let results =
+                        metadata_connection_output(&data, &type_mapping, total_count, page_info)?;
 
                     Ok(Some(Value::Object(results)))
                 })
@@ -85,6 +89,7 @@ fn metadata_connection_output(
     data: &[SqliteRow],
     types: &TypeMapping,
     total_count: i64,
+    page_info: PageInfo,
 ) -> sqlx::Result<ValueMapping> {
     let edges = data
         .iter()
@@ -107,9 +112,10 @@ fn metadata_connection_output(
 
             value_mapping.insert(Name::new("content"), Value::Object(content));
 
-            let mut edge = ValueMapping::new();
-            edge.insert(Name::new("node"), Value::Object(value_mapping));
-            edge.insert(Name::new("cursor"), Value::String(cursor));
+            let edge = ValueMapping::from([
+                (Name::new("node"), Value::Object(value_mapping)),
+                (Name::new("cursor"), Value::String(cursor)),
+            ]);
 
             Ok(Value::Object(edge))
         })
@@ -118,6 +124,7 @@ fn metadata_connection_output(
     Ok(ValueMapping::from([
         (Name::new("total_count"), Value::from(total_count)),
         (Name::new("edges"), Value::List(edges?)),
+        (Name::new("page_info"), PageInfoObject::value(page_info)),
     ]))
 }
 
