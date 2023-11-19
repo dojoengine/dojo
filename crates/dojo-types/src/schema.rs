@@ -231,10 +231,6 @@ impl Struct {
     pub fn keys(&self) -> Vec<Member> {
         self.children.iter().filter(|m| m.key).cloned().collect()
     }
-
-    pub fn has_nested(&self) -> bool {
-        self.children.iter().any(|child| matches!(child.ty, Ty::Struct(_)))
-    }
 }
 
 #[derive(Debug, thiserror::Error)]

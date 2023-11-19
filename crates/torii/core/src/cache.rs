@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
@@ -7,15 +8,14 @@ use tokio::sync::RwLock;
 use crate::error::{Error, QueryError};
 use crate::model::{build_sql_model_query, parse_sql_model_members, SqlModelMember};
 
-#[derive(Clone)]
-pub struct SchemaInfo {
+pub struct SchemaData {
     pub ty: Ty,
-    pub query: String,
+    pub sql: String,
 }
 
 pub struct ModelCache {
     pool: SqlitePool,
-    schemas: RwLock<HashMap<String, SchemaInfo>>,
+    schemas: RwLock<HashMap<String, Arc<SchemaData>>>,
 }
 
 impl ModelCache {
@@ -23,18 +23,18 @@ impl ModelCache {
         Self { pool, schemas: RwLock::new(HashMap::new()) }
     }
 
-    pub async fn schema(&self, model: &str) -> Result<SchemaInfo, Error> {
+    pub async fn schema(&self, model: &str) -> Result<Arc<SchemaData>, Error> {
         {
             let schemas = self.schemas.read().await;
-            if let Some(schema_info) = schemas.get(model) {
-                return Ok(schema_info.clone());
+            if let Some(schema_data) = schemas.get(model) {
+                return Ok(Arc::clone(schema_data));
             }
         }
 
         self.update(model).await
     }
 
-    async fn update(&self, model: &str) -> Result<SchemaInfo, Error> {
+    async fn update(&self, model: &str) -> Result<Arc<SchemaData>, Error> {
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
             "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
@@ -48,13 +48,13 @@ impl ModelCache {
         }
 
         let ty = parse_sql_model_members(model, &model_members);
-        let query = build_sql_model_query(ty.as_struct().unwrap());
-        let schema_info = SchemaInfo { ty, query };
+        let sql = build_sql_model_query(ty.as_struct().unwrap());
+        let schema_data = Arc::new(SchemaData { ty, sql });
 
         let mut schemas = self.schemas.write().await;
-        schemas.insert(model.into(), schema_info.clone());
+        schemas.insert(model.into(), Arc::clone(&schema_data));
 
-        Ok(schema_info)
+        Ok(schema_data)
     }
 
     pub async fn clear(&self) {

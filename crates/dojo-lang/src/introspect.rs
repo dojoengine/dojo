@@ -191,7 +191,7 @@ pub fn handle_introspect_enum(
         "
         dojo::database::schema::Ty::Enum(
             dojo::database::schema::Enum {{
-                name: 'Direction',
+                name: '{name}',
                 attrs: array![].span(),
                 children: array![
                 {}
@@ -200,6 +200,7 @@ pub fn handle_introspect_enum(
         )",
         arms_ty.join(",\n")
     );
+
     // Enums have 1 size and 8 bit layout by default
     let layout = vec![RewriteNode::Text("layout.append(8);\n".into())];
     let size_precompute = 1;

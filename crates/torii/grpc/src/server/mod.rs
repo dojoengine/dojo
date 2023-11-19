@@ -84,14 +84,14 @@ impl DojoWorld {
 
         let mut models_metadata = Vec::with_capacity(models.len());
         for model in models {
-            let schema_info = self.model_cache.schema(&model.0).await?;
+            let schema_data = self.model_cache.schema(&model.0).await?;
             models_metadata.push(proto::types::ModelMetadata {
                 name: model.0,
                 class_hash: model.1,
                 packed_size: model.2,
                 unpacked_size: model.3,
                 layout: hex::decode(&model.4).unwrap(),
-                schema: serde_json::to_vec(&schema_info.ty).unwrap(),
+                schema: serde_json::to_vec(&schema_data.ty).unwrap(),
             });
         }
 
@@ -115,10 +115,24 @@ impl DojoWorld {
         &self,
         attribute: proto::types::AttributeClause,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        let schema_info = self.model_cache.schema(&attribute.model).await?;
-        let results = sqlx::query(&schema_info.query).fetch_all(&self.pool).await?;
-        let _ = map_rows_to_tys(schema_info.ty.as_struct().unwrap(), &results)?;
+        let schema_data = self.model_cache.schema(&attribute.model).await?;
+        let results = sqlx::query(&schema_data.sql).fetch_all(&self.pool).await?;
+        let tys = map_rows_to_tys(schema_data.ty.as_struct().unwrap(), &results)?;
 
+        let mut entities = Vec::with_capacity(tys.len());
+
+        for ty in tys {
+            entities.push(proto::types::Entity {
+                key: "".to_string(),
+                models: vec![
+                    proto::types::Model {
+                        name: ty.name(),
+                        data: serde_json::to_vec(&ty).unwrap()
+                    }
+                ]
+            })
+        }
+    
         Ok(vec![])
     }
 
