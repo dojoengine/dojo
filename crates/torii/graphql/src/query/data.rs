@@ -35,6 +35,7 @@ pub async fn fetch_single_row(
     sqlx::query(&query).fetch_one(conn).await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn fetch_multiple_rows(
     conn: &mut PoolConnection<Sqlite>,
     table_name: &str,
@@ -43,7 +44,8 @@ pub async fn fetch_multiple_rows(
     order: &Option<Order>,
     filters: &Option<Vec<Filter>>,
     connection: &ConnectionArguments,
-) -> Result<(Vec<SqliteRow>, Option<PageInfo>)> {
+    total_count: i64,
+) -> Result<(Vec<SqliteRow>, PageInfo)> {
     let mut conditions = build_conditions(keys, filters);
 
     let mut cursor_param = &connection.after;
@@ -104,65 +106,70 @@ pub async fn fetch_multiple_rows(
     }
 
     let mut data = sqlx::query(&query).fetch_all(conn).await?;
+    let mut page_info = PageInfo {
+        has_previous_page: false,
+        has_next_page: false,
+        start_cursor: None,
+        end_cursor: None,
+    };
 
-    if !is_cursor_based {
-        Ok((data, None))
-    } else {
-        let mut page_info = PageInfo {
-            has_previous_page: false,
-            has_next_page: false,
-            start_cursor: None,
-            end_cursor: None,
+    if data.is_empty() {
+        Ok((data, page_info))
+    } else if is_cursor_based {
+        let order_field = match order {
+            Some(order) => format!("external_{}", order.field),
+            None => id_column.to_string(),
         };
 
-        if data.is_empty() {
-            Ok((data, Some(page_info)))
-        } else {
-            let order_field = match order {
-                Some(order) => format!("external_{}", order.field),
-                None => id_column.to_string(),
-            };
-
-            match cursor_param {
-                Some(cursor_query) => {
-                    let first_cursor = cursor::encode(
-                        &data[0].try_get::<String, &str>(id_column)?,
-                        &data[0].try_get_unchecked::<String, &str>(&order_field)?,
-                    );
-
-                    if &first_cursor == cursor_query && data.len() != 1 {
-                        data.remove(0);
-                        page_info.has_previous_page = true;
-                    } else {
-                        data.pop();
-                    }
-
-                    if data.len() as u64 == limit - 1 {
-                        page_info.has_next_page = true;
-                        data.pop();
-                    }
-                }
-                None => {
-                    if data.len() as u64 == limit {
-                        page_info.has_next_page = true;
-                        data.pop();
-                    }
-                }
-            }
-
-            if !data.is_empty() {
-                page_info.start_cursor = Some(cursor::encode(
+        match cursor_param {
+            Some(cursor_query) => {
+                let first_cursor = cursor::encode(
                     &data[0].try_get::<String, &str>(id_column)?,
                     &data[0].try_get_unchecked::<String, &str>(&order_field)?,
-                ));
-                page_info.end_cursor = Some(cursor::encode(
-                    &data[data.len() - 1].try_get::<String, &str>(id_column)?,
-                    &data[data.len() - 1].try_get_unchecked::<String, &str>(&order_field)?,
-                ));
-            }
+                );
 
-            Ok((data, Some(page_info)))
+                if &first_cursor == cursor_query && data.len() != 1 {
+                    data.remove(0);
+                    page_info.has_previous_page = true;
+                } else {
+                    data.pop();
+                }
+
+                if data.len() as u64 == limit - 1 {
+                    page_info.has_next_page = true;
+                    data.pop();
+                }
+            }
+            None => {
+                if data.len() as u64 == limit {
+                    page_info.has_next_page = true;
+                    data.pop();
+                }
+            }
         }
+
+        if !data.is_empty() {
+            page_info.start_cursor = Some(cursor::encode(
+                &data[0].try_get::<String, &str>(id_column)?,
+                &data[0].try_get_unchecked::<String, &str>(&order_field)?,
+            ));
+            page_info.end_cursor = Some(cursor::encode(
+                &data[data.len() - 1].try_get::<String, &str>(id_column)?,
+                &data[data.len() - 1].try_get_unchecked::<String, &str>(&order_field)?,
+            ));
+        }
+
+        Ok((data, page_info))
+    } else {
+        let offset = connection.offset.unwrap_or(0);
+        if 1 < offset && offset < total_count as u64 {
+            page_info.has_previous_page = true;
+        }
+        if limit + offset < total_count as u64 {
+            page_info.has_next_page = true;
+        }
+
+        Ok((data, page_info))
     }
 }
 

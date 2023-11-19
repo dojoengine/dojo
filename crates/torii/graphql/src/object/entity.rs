@@ -60,6 +60,7 @@ impl ObjectTrait for EntityObject {
                         &None,
                         &None,
                         &connection,
+                        total_count,
                     )
                     .await?;
                     let results = connection_output(

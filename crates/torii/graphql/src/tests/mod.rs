@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
-use async_graphql::MaybeUndefined;
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
@@ -41,7 +40,7 @@ use crate::schema::build_schema;
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
-    pub page_info: MaybeUndefined<PageInfo>,
+    pub page_info: PageInfo,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

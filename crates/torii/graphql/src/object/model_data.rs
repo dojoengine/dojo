@@ -99,6 +99,7 @@ impl ObjectTrait for ModelDataObject {
                     &order,
                     &filters,
                     &connection,
+                    total_count,
                 )
                 .await?;
                 let connection = connection_output(

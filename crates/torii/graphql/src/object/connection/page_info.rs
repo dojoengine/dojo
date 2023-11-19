@@ -31,27 +31,24 @@ impl ObjectTrait for PageInfoObject {
 }
 
 impl PageInfoObject {
-    pub fn value(page_info: Option<PageInfo>) -> Value {
-        match page_info {
-            Some(page_info) => Value::Object(IndexMap::from([
-                (Name::new("has_previous_page"), Value::from(page_info.has_previous_page)),
-                (Name::new("has_next_page"), Value::from(page_info.has_next_page)),
-                (
-                    Name::new("start_cursor"),
-                    match page_info.start_cursor {
-                        Some(val) => Value::from(val),
-                        None => Value::Null,
-                    },
-                ),
-                (
-                    Name::new("end_cursor"),
-                    match page_info.end_cursor {
-                        Some(val) => Value::from(val),
-                        None => Value::Null,
-                    },
-                ),
-            ])),
-            None => Value::Null,
-        }
+    pub fn value(page_info: PageInfo) -> Value {
+        Value::Object(IndexMap::from([
+            (Name::new("has_previous_page"), Value::from(page_info.has_previous_page)),
+            (Name::new("has_next_page"), Value::from(page_info.has_next_page)),
+            (
+                Name::new("start_cursor"),
+                match page_info.start_cursor {
+                    Some(val) => Value::from(val),
+                    None => Value::Null,
+                },
+            ),
+            (
+                Name::new("end_cursor"),
+                match page_info.end_cursor {
+                    Some(val) => Value::from(val),
+                    None => Value::Null,
+                },
+            ),
+        ]))
     }
 }

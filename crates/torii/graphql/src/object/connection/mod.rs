@@ -43,7 +43,7 @@ impl ConnectionObject {
             (Name::new("total_count"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
             (
                 Name::new("page_info"),
-                TypeData::Nested((TypeRef::named(PAGE_INFO_TYPE_NAME), IndexMap::new())),
+                TypeData::Nested((TypeRef::named_nn(PAGE_INFO_TYPE_NAME), IndexMap::new())),
             ),
         ]);
 
@@ -117,7 +117,7 @@ pub fn connection_output(
     id_column: &str,
     total_count: i64,
     is_external: bool,
-    page_info: Option<PageInfo>,
+    page_info: PageInfo,
 ) -> sqlx::Result<ValueMapping> {
     let model_edges = data
         .iter()

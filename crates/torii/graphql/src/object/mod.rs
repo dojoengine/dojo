@@ -104,6 +104,7 @@ pub trait ObjectTrait: Send + Sync {
                         &None,
                         &None,
                         &connection,
+                        total_count,
                     )
                     .await?;
                     let results = connection_output(

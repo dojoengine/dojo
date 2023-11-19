@@ -57,6 +57,7 @@ impl ObjectTrait for EventObject {
                         &None,
                         &None,
                         &connection,
+                        total_count,
                     )
                     .await?;
                     let results = connection_output(

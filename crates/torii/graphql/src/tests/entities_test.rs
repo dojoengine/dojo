@@ -137,11 +137,10 @@ mod tests {
         assert_eq!(connection.edges.first().unwrap(), three);
         assert_eq!(connection.edges.last().unwrap(), four);
 
-        let page_info = connection.page_info.take().unwrap();
-        assert_eq!(page_info.has_previous_page, true);
-        assert_eq!(page_info.has_next_page, true);
-        assert_eq!(page_info.start_cursor.unwrap(), three.cursor);
-        assert_eq!(page_info.end_cursor.unwrap(), four.cursor);
+        assert!(connection.page_info.has_previous_page);
+        assert!(connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor.unwrap(), three.cursor);
+        assert_eq!(connection.page_info.end_cursor.unwrap(), four.cursor);
 
         let entities =
             entities_query(&schema, &format!("(first: 3, after: \"{}\")", three.cursor)).await;
@@ -150,11 +149,10 @@ mod tests {
         assert_eq!(connection.edges.first().unwrap(), four);
         assert_eq!(connection.edges.last().unwrap(), six);
 
-        let page_info = connection.page_info.take().unwrap();
-        assert_eq!(page_info.has_previous_page, true);
-        assert_eq!(page_info.has_next_page, true);
-        assert_eq!(page_info.start_cursor.unwrap(), four.cursor);
-        assert_eq!(page_info.end_cursor.unwrap(), six.cursor);
+        assert!(connection.page_info.has_previous_page);
+        assert!(connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor.unwrap(), four.cursor);
+        assert_eq!(connection.page_info.end_cursor.unwrap(), six.cursor);
 
         // cursor based backward pagination
         let entities =
@@ -164,11 +162,10 @@ mod tests {
         assert_eq!(connection.edges.first().unwrap(), six);
         assert_eq!(connection.edges.last().unwrap(), five);
 
-        let page_info = connection.page_info.take().unwrap();
-        assert_eq!(page_info.has_previous_page, true);
-        assert_eq!(page_info.has_next_page, true);
-        assert_eq!(page_info.start_cursor.unwrap(), six.cursor);
-        assert_eq!(page_info.end_cursor.unwrap(), five.cursor);
+        assert!(connection.page_info.has_previous_page);
+        assert!(connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor.unwrap(), six.cursor);
+        assert_eq!(connection.page_info.end_cursor.unwrap(), five.cursor);
 
         let entities =
             entities_query(&schema, &format!("(last: 3, before: \"{}\")", six.cursor)).await;
@@ -177,11 +174,10 @@ mod tests {
         assert_eq!(connection.edges.first().unwrap(), five);
         assert_eq!(connection.edges.last().unwrap(), three);
 
-        let page_info = connection.page_info.take().unwrap();
-        assert_eq!(page_info.has_previous_page, true);
-        assert_eq!(page_info.has_next_page, true);
-        assert_eq!(page_info.start_cursor.unwrap(), five.cursor);
-        assert_eq!(page_info.end_cursor.unwrap(), three.cursor);
+        assert!(connection.page_info.has_previous_page);
+        assert!(connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor.unwrap(), five.cursor);
+        assert_eq!(connection.page_info.end_cursor.unwrap(), three.cursor);
 
         let empty_entities = entities_query(
             &schema,
@@ -194,11 +190,10 @@ mod tests {
         let connection: Connection<Entity> = serde_json::from_value(empty_entities).unwrap();
         assert_eq!(connection.edges.len(), 0);
 
-        let page_info = connection.page_info.take().unwrap();
-        assert_eq!(page_info.has_previous_page, false);
-        assert_eq!(page_info.has_next_page, false);
-        assert_eq!(page_info.start_cursor, None);
-        assert_eq!(page_info.end_cursor, None);
+        assert!(!connection.page_info.has_previous_page);
+        assert!(!connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor, None);
+        assert_eq!(connection.page_info.end_cursor, None);
 
         // offset/limit based pagination
         let entities = entities_query(&schema, "(limit: 2)").await;
@@ -206,19 +201,31 @@ mod tests {
         assert_eq!(connection.edges.len(), 2);
         assert_eq!(connection.edges.first().unwrap(), one);
         assert_eq!(connection.edges.last().unwrap(), two);
-        assert!(connection.page_info.is_null());
+
+        assert!(!connection.page_info.has_previous_page);
+        assert!(connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor, None);
+        assert_eq!(connection.page_info.end_cursor, None);
 
         let entities = entities_query(&schema, "(limit: 3, offset: 2)").await;
         let connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
         assert_eq!(connection.edges.len(), 3);
         assert_eq!(connection.edges.first().unwrap(), three);
         assert_eq!(connection.edges.last().unwrap(), five);
-        assert!(connection.page_info.is_null());
+
+        assert!(connection.page_info.has_previous_page);
+        assert!(connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor, None);
+        assert_eq!(connection.page_info.end_cursor, None);
 
         let empty_entities = entities_query(&schema, "(limit: 1, offset: 20)").await;
         let connection: Connection<Entity> = serde_json::from_value(empty_entities).unwrap();
         assert_eq!(connection.edges.len(), 0);
-        assert!(connection.page_info.is_null());
+
+        assert!(!connection.page_info.has_previous_page);
+        assert!(!connection.page_info.has_next_page);
+        assert_eq!(connection.page_info.start_cursor, None);
+        assert_eq!(connection.page_info.end_cursor, None);
 
         // entity model union
         let id = poseidon_hash_many(&[FieldElement::ZERO]);
