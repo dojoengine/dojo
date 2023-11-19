@@ -32,6 +32,7 @@ struct Fizz {
 #[starknet::interface]
 trait Ibar<TContractState> {
     fn set_foo(self: @TContractState, a: felt252, b: u128);
+    fn delete_foo(self: @TContractState);
     fn set_char(self: @TContractState, a: felt252, b: u32);
 }
 
@@ -55,6 +56,10 @@ mod bar {
     impl IbarImpl of super::Ibar<ContractState> {
         fn set_foo(self: @ContractState, a: felt252, b: u128) {
             set!(self.world.read(), Foo { caller: get_caller_address(), a, b });
+        }
+
+        fn delete_foo(self: @ContractState) {
+            self.world.read().delete_entity('Foo', array![get_caller_address().into()].span());
         }
 
         fn set_char(self: @ContractState, a: felt252, b: u32) {
@@ -82,16 +87,12 @@ mod bar {
                         finished: true,
                         romances: 0x1234,
                     },
-                    weapon: Weapon::DualWield((
-                        Sword {
-                            swordsmith: get_caller_address(),
-                            damage: 0x12345678,
-                        },
-                        Sword {
-                            swordsmith: get_caller_address(),
-                            damage: 0x12345678,
-                        }
-                    )),
+                    weapon: Weapon::DualWield(
+                        (
+                            Sword { swordsmith: get_caller_address(), damage: 0x12345678, },
+                            Sword { swordsmith: get_caller_address(), damage: 0x12345678, }
+                        )
+                    ),
                     gold: b,
                 }
             );
@@ -100,6 +101,19 @@ mod bar {
 }
 
 // Tests
+
+fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
+    // Spawn empty world
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    // System contract
+    let bar_contract = IbarDispatcher {
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
+    };
+
+    (world, bar_contract)
+}
 
 #[test]
 #[available_gas(2000000)]
@@ -111,20 +125,31 @@ fn test_model() {
 #[test]
 #[available_gas(6000000)]
 fn test_system() {
-    // Spawn empty world
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    // System contract
-    let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
-    };
+    let (world, bar_contract) = deploy_world_and_bar();
 
     bar_contract.set_foo(1337, 1337);
 
     let stored: Foo = get!(world, get_caller_address(), Foo);
     assert(stored.a == 1337, 'data not stored');
     assert(stored.b == 1337, 'data not stored');
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_delete() {
+    let (world, bar_contract) = deploy_world_and_bar();
+
+    // set model
+    bar_contract.set_foo(1337, 1337);
+    let stored: Foo = get!(world, get_caller_address(), Foo);
+    assert(stored.a == 1337, 'data not stored');
+    assert(stored.b == 1337, 'data not stored');
+
+    // delete model
+    bar_contract.delete_foo();
+    let deleted: Foo = get!(world, get_caller_address(), Foo);
+    assert(deleted.a == 0, 'data not deleted');
+    assert(deleted.b == 0, 'data not deleted');
 }
 
 #[test]
@@ -153,13 +178,7 @@ fn test_emit() {
 #[test]
 #[available_gas(9000000)]
 fn test_set_entity_admin() {
-    // Spawn empty world
-    let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-    let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
-    };
+    let (world, bar_contract) = deploy_world_and_bar();
 
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
@@ -267,14 +286,14 @@ fn test_entities() {
     let ids = world.entity_ids('Foo');
     assert(keys.len() == ids.len(), 'result differs in entity_ids');
     assert(keys.len() == 0, 'found value for unindexed');
-    // query_keys.append(0x1337);
-    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
-    // assert(keys.len() == 1, 'No keys found!');
+// query_keys.append(0x1337);
+// let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
+// assert(keys.len() == 1, 'No keys found!');
 
-    // let mut query_keys = ArrayTrait::new();
-    // query_keys.append(0x1338);
-    // let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
-    // assert(keys.len() == 0, 'Keys found!');
+// let mut query_keys = ArrayTrait::new();
+// query_keys.append(0x1338);
+// let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
+// assert(keys.len() == 0, 'Keys found!');
 }
 
 #[test]
