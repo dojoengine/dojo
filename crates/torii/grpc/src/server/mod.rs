@@ -7,13 +7,12 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use dojo_types::schema::Ty;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     SubscribeEntitiesRequest, SubscribeEntitiesResponse,
 };
-use sqlx::{Pool, Row, Sqlite};
+use sqlx::{Pool, Sqlite};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -23,10 +22,9 @@ use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
-use torii_core::model::{
-    build_sql_model_query, map_rows_to_tys, parse_sql_model_members, SqlModelMember,
-};
+use torii_core::model::map_rows_to_tys;
 
 use self::subscription::SubscribeRequest;
 use crate::proto::types::clause::ClauseType;
@@ -38,6 +36,7 @@ pub struct DojoWorld {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
     subscriber_manager: Arc<subscription::SubscriberManager>,
+    model_cache: Arc<ModelCache>,
 }
 
 impl DojoWorld {
@@ -56,7 +55,9 @@ impl DojoWorld {
             Arc::clone(&subscriber_manager),
         ));
 
-        Self { pool, world_address, subscriber_manager }
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+
+        Self { pool, model_cache, world_address, subscriber_manager }
     }
 }
 
@@ -83,14 +84,14 @@ impl DojoWorld {
 
         let mut models_metadata = Vec::with_capacity(models.len());
         for model in models {
-            let schema = self.model_schema(&model.0).await?;
+            let schema_info = self.model_cache.schema(&model.0).await?;
             models_metadata.push(proto::types::ModelMetadata {
                 name: model.0,
                 class_hash: model.1,
                 packed_size: model.2,
                 unpacked_size: model.3,
                 layout: hex::decode(&model.4).unwrap(),
-                schema: serde_json::to_vec(&schema).unwrap(),
+                schema: serde_json::to_vec(&schema_info.ty).unwrap(),
             });
         }
 
@@ -103,25 +104,9 @@ impl DojoWorld {
         })
     }
 
-    async fn model_schema(&self, model: &str) -> Result<dojo_types::schema::Ty, Error> {
-        let model_members: Vec<SqlModelMember> = sqlx::query_as(
-            "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
-             model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
-        )
-        .bind(model)
-        .fetch_all(&self.pool)
-        .await?;
-
-        if model_members.is_empty() {
-            return Err(QueryError::ModelNotFound(model.into()).into());
-        }
-
-        Ok(parse_sql_model_members(model, &model_members))
-    }
-
     async fn entities_by_keys(
         &self,
-        keys: proto::types::KeysClause,
+        _keys: proto::types::KeysClause,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         Ok(vec![])
     }
@@ -130,22 +115,16 @@ impl DojoWorld {
         &self,
         attribute: proto::types::AttributeClause,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        // TODO: cache model schema and query to avoid rebuilding everytime
-        let ty = self.model_schema(&attribute.model).await?;
-        let schema = ty.as_struct().ok_or(QueryError::UnsupportedQuery)?;
-        let query = build_sql_model_query(schema);
-
-        let results = sqlx::query(&query).fetch_all(&self.pool).await?;
-        let tys = map_rows_to_tys(schema, &results)?;
-
-        println!("{:#?}", tys);
+        let schema_info = self.model_cache.schema(&attribute.model).await?;
+        let results = sqlx::query(&schema_info.query).fetch_all(&self.pool).await?;
+        let _ = map_rows_to_tys(schema_info.ty.as_struct().unwrap(), &results)?;
 
         Ok(vec![])
     }
 
     async fn entities_by_composite(
         &self,
-        composite: proto::types::CompositeClause,
+        _composite: proto::types::CompositeClause,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         Ok(vec![])
     }
@@ -164,7 +143,7 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let schema = self.model_schema(model).await?;
+        let schema = self.model_cache.schema(model).await?;
         let layout = hex::decode(&layout).unwrap();
 
         Ok(proto::types::ModelMetadata {
@@ -173,7 +152,7 @@ impl DojoWorld {
             class_hash,
             packed_size,
             unpacked_size,
-            schema: serde_json::to_vec(&schema).unwrap(),
+            schema: serde_json::to_vec(&schema.ty).unwrap(),
         })
     }
 

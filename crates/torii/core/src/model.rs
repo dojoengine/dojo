@@ -5,14 +5,12 @@ use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::model::ModelReader;
-use serde_json::Value;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
-use starknet::macros::felt;
 
 use super::error::{self, Error};
-use crate::error::{ParseError, QueryError};
+use crate::error::ParseError;
 
 pub struct ModelSQLReader {
     /// The name of the model
@@ -164,7 +162,7 @@ pub fn build_sql_model_query(schema: &Struct) -> String {
             match &child.ty {
                 Ty::Struct(s) => {
                     let table_name = format!("{}${}", path, s.name);
-                    build_sql_model_query_impl(&table_name, &s, selections, tables);
+                    build_sql_model_query_impl(&table_name, s, selections, tables);
 
                     tables.push(table_name);
                 }
@@ -188,19 +186,19 @@ pub fn build_sql_model_query(schema: &Struct) -> String {
     let join_clause = tables
         .into_iter()
         .map(|table| {
-            format!("LEFT JOIN {} ON {}.entity_id = {}.entity_id", table, model_table, table)
+            format!(" LEFT JOIN {} ON {}.entity_id = {}.entity_id", table, model_table, table)
         })
         .collect::<Vec<_>>()
         .join(" ");
 
     format!(
-        "SELECT {selections_clause} FROM {model_table} {join_clause} ORDER BY \
+        "SELECT {selections_clause} FROM {model_table}{join_clause} ORDER BY \
          {model_table}.event_id"
     )
 }
 
 /// Converts SQLite rows into a vector of `Ty` based on a specified schema.
-pub fn map_rows_to_tys(schema: &Struct, rows: &Vec<SqliteRow>) -> Result<Vec<Ty>, Error> {
+pub fn map_rows_to_tys(schema: &Struct, rows: &[SqliteRow]) -> Result<Vec<Ty>, Error> {
     fn populate_struct_from_row(
         path: &str,
         struct_ty: &mut Struct,
