@@ -38,7 +38,7 @@ trait Ibar<TContractState> {
 
 #[starknet::contract]
 mod bar {
-    use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait};
+    use super::{Foo, IWorldDispatcher, IWorldDispatcherTrait, SchemaIntrospection};
     use super::benchmarks::{Character, Abilities, Stats, Weapon, Sword};
     use traits::Into;
     use starknet::{get_caller_address, ContractAddress};
@@ -59,7 +59,12 @@ mod bar {
         }
 
         fn delete_foo(self: @ContractState) {
-            self.world.read().delete_entity('Foo', array![get_caller_address().into()].span());
+            let mut layout = array![];
+            SchemaIntrospection::<Foo>::layout(ref layout);
+            self
+                .world
+                .read()
+                .delete_entity('Foo', array![get_caller_address().into()].span(), layout.span());
         }
 
         fn set_char(self: @ContractState, a: felt252, b: u32) {

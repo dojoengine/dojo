@@ -35,7 +35,7 @@ trait IWorld<T> {
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
-    fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>);
+    fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
     fn is_owner(self: @T, address: ContractAddress, resource: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, resource: felt252);
     fn revoke_owner(ref self: T, address: ContractAddress, resource: felt252);
@@ -489,14 +489,14 @@ mod world {
         ///
         /// * `model` - The name of the model to be deleted.
         /// * `query` - The query to be used to find the entity.
-        fn delete_entity(ref self: ContractState, model: felt252, keys: Span<felt252>) {
+        fn delete_entity(
+            ref self: ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
+        ) {
             assert_can_write(@self, model, get_caller_address());
 
             let model_class_hash = self.models.read(model);
-            let layout = class_call(@self, model_class_hash, selector!("layout"), array![].span());
 
             let mut empty_values = ArrayTrait::new();
-            let mut u8_layout = ArrayTrait::new();
             let mut i = 0;
 
             loop {
@@ -504,12 +504,11 @@ mod world {
                     break;
                 }
                 empty_values.append(0);
-                u8_layout.append((*layout[i]).try_into().unwrap());
                 i += 1;
             };
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, 0, empty_values.span(), u8_layout.span());
+            database::set(model, key, 0, empty_values.span(), layout);
             // this deletes the index
             database::del(model, key);
 
