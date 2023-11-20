@@ -6,7 +6,8 @@ use katana_primitives::contract::{
 use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
 use serde::{Deserialize, Serialize};
 
-use super::models::StoredBlockBodyIndices;
+use super::models::block::StoredBlockBodyIndices;
+use super::models::contract::StoredCompiledContractClass;
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 
 pub trait Key: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone {}
@@ -182,7 +183,7 @@ tables! {
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
     /// Store compiled contract classes according to its compiled class hash
-    CompiledContractClasses: (CompiledClassHash) => u64,
+    CompiledContractClasses: (CompiledClassHash) => StoredCompiledContractClass,
     /// Store Sierra classes according to its class hash
     SierraClasses: (ClassHash) => SierraClass,
     /// Store contract information according to its contract address
