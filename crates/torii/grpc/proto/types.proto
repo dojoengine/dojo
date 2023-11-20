@@ -39,7 +39,7 @@ message Enum {
 message Member {
     // Name of the member
     string name = 1;
-    // Type of value
+    // Type of member
     oneof member_type {
         Value value = 2;
         Enum enum = 3;
@@ -87,6 +87,7 @@ message EntityUpdate {
 
 message EntityQuery {
     Clause clause = 1;
+    LimitOffset limit_offset = 4;
 }
 
 message Clause {
@@ -113,6 +114,11 @@ message CompositeClause {
     string model = 1;
     LogicalOperator operator = 2;
     repeated Clause clauses = 3;
+}
+
+message LimitOffset {
+    uint32 limit = 1;
+    uint32 offset = 2;
 }
 
 enum LogicalOperator {

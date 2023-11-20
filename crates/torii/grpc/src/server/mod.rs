@@ -33,6 +33,9 @@ use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::{self};
 
+const DEFAULT_LIMIT: u32 = 10;
+const DEFAULT_OFFSET: u32 = 0;
+
 #[derive(Clone)]
 pub struct DojoWorld {
     world_address: FieldElement,
@@ -116,9 +119,20 @@ impl DojoWorld {
     async fn entities_by_attribute(
         &self,
         attribute: proto::types::AttributeClause,
+        limit_offset: Option<proto::types::LimitOffset>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
+        let (limit, offset) = match limit_offset {
+            Some(values) => (values.limit, values.offset),
+            None => (DEFAULT_LIMIT, DEFAULT_OFFSET),
+        };
+
         let schema = self.model_cache.schema(&attribute.model).await?;
-        let rows = sqlx::query(&schema.sql).fetch_all(&self.pool).await?;
+        let rows = sqlx::query(&format!("{} LIMIT ? OFFSET ?", schema.sql))
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
+
         let models = self.map_rows_to_models(&schema.ty, &rows).await?;
 
         Ok(vec![proto::types::Entity { key: "".to_string(), models }])
@@ -195,7 +209,9 @@ impl DojoWorld {
 
         let entities = match clause_type {
             ClauseType::Keys(keys) => self.entities_by_keys(keys).await?,
-            ClauseType::Attribute(attribute) => self.entities_by_attribute(attribute).await?,
+            ClauseType::Attribute(attribute) => {
+                self.entities_by_attribute(attribute, query.limit_offset).await?
+            }
             ClauseType::Composite(composite) => self.entities_by_composite(composite).await?,
         };
 
