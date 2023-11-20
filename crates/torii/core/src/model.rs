@@ -150,7 +150,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
     parse_sql_model_members_impl(model, model_members_all)
 }
 
-/// A helper function to build a model query including all nested structs
+/// A helper function to build a model query including all nested structs and its the entity id
 pub fn build_sql_model_query(schema: &Struct) -> String {
     fn build_sql_model_query_impl(
         path: &str,
@@ -198,45 +198,45 @@ pub fn build_sql_model_query(schema: &Struct) -> String {
 }
 
 /// Converts SQLite rows into a vector of `Ty` based on a specified schema.
-pub fn map_rows_to_tys(schema: &Struct, rows: &[SqliteRow]) -> Result<Vec<Ty>, Error> {
+pub fn map_rows_to_tys(schema: &Ty, rows: &[SqliteRow]) -> Result<Vec<Ty>, Error> {
     fn populate_struct_from_row(
         path: &str,
         struct_ty: &mut Struct,
         row: &SqliteRow,
     ) -> Result<(), Error> {
-        for child in struct_ty.children.iter_mut() {
-            let column_name = format!("{}.{}", path, child.name);
-            match &mut child.ty {
-                Ty::Primitive(p) => {
-                    match &p {
+        for member in struct_ty.children.iter_mut() {
+            let column_name = format!("{}.{}", path, member.name);
+            match &mut member.ty {
+                Ty::Primitive(primitive) => {
+                    match &primitive {
                         Primitive::Bool(_) => {
-                            let value = row.try_get::<i64, &str>(&column_name)?;
-                            p.set_bool(Some(value == 1))?;
+                            let value = row.try_get::<bool, &str>(&column_name)?;
+                            primitive.set_bool(Some(value))?;
                         }
                         Primitive::USize(_) => {
-                            let value = row.try_get::<i64, &str>(&column_name)?;
-                            p.set_usize(Some(value as u32))?;
+                            let value = row.try_get::<u32, &str>(&column_name)?;
+                            primitive.set_usize(Some(value))?;
                         }
                         Primitive::U8(_) => {
-                            let value = row.try_get::<i64, &str>(&column_name)?;
-                            p.set_u8(Some(value as u8))?;
+                            let value = row.try_get::<u8, &str>(&column_name)?;
+                            primitive.set_u8(Some(value))?;
                         }
                         Primitive::U16(_) => {
-                            let value = row.try_get::<i64, &str>(&column_name)?;
-                            p.set_u16(Some(value as u16))?;
+                            let value = row.try_get::<u16, &str>(&column_name)?;
+                            primitive.set_u16(Some(value))?;
                         }
                         Primitive::U32(_) => {
-                            let value = row.try_get::<i64, &str>(&column_name)?;
-                            p.set_u32(Some(value as u32))?;
+                            let value = row.try_get::<u32, &str>(&column_name)?;
+                            primitive.set_u32(Some(value))?;
                         }
                         Primitive::U64(_) => {
                             let value = row.try_get::<i64, &str>(&column_name)?;
-                            p.set_u64(Some(value as u64))?;
+                            primitive.set_u64(Some(value as u64))?;
                         }
                         Primitive::U128(_) => {
                             let value = row.try_get::<String, &str>(&column_name)?;
                             let hex_str = value.trim_start_matches("0x");
-                            p.set_u128(Some(
+                            primitive.set_u128(Some(
                                 u128::from_str_radix(hex_str, 16)
                                     .map_err(ParseError::ParseIntError)?,
                             ))?;
@@ -244,35 +244,35 @@ pub fn map_rows_to_tys(schema: &Struct, rows: &[SqliteRow]) -> Result<Vec<Ty>, E
                         Primitive::U256(_) => {
                             let value = row.try_get::<String, &str>(&column_name)?;
                             let hex_str = value.trim_start_matches("0x");
-                            p.set_u256(Some(U256::from_be_hex(hex_str)))?;
+                            primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
                         }
                         Primitive::Felt252(_) => {
                             let value = row.try_get::<String, &str>(&column_name)?;
-                            p.set_felt252(Some(
+                            primitive.set_felt252(Some(
                                 FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
                             ))?;
                         }
                         Primitive::ClassHash(_) => {
                             let value = row.try_get::<String, &str>(&column_name)?;
-                            p.set_class_hash(Some(
+                            primitive.set_class_hash(Some(
                                 FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
                             ))?;
                         }
                         Primitive::ContractAddress(_) => {
                             let value = row.try_get::<String, &str>(&column_name)?;
-                            p.set_contract_address(Some(
+                            primitive.set_contract_address(Some(
                                 FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
                             ))?;
                         }
                     };
                 }
-                Ty::Enum(e) => {
+                Ty::Enum(enum_ty) => {
                     let value = row.try_get::<String, &str>(&column_name)?;
-                    e.set_option(&value)?;
+                    enum_ty.set_option(&value)?;
                 }
-                Ty::Struct(nested) => {
-                    let path = [path, &nested.name].join("$");
-                    populate_struct_from_row(&path, nested, row)?;
+                Ty::Struct(struct_ty) => {
+                    let path = [path, &struct_ty.name].join("$");
+                    populate_struct_from_row(&path, struct_ty, row)?;
                 }
                 ty => {
                     unimplemented!("unimplemented type_enum: {ty}");
@@ -285,8 +285,8 @@ pub fn map_rows_to_tys(schema: &Struct, rows: &[SqliteRow]) -> Result<Vec<Ty>, E
 
     rows.iter()
         .map(|row| {
-            let mut struct_ty = schema.clone();
-            populate_struct_from_row(&schema.name, &mut struct_ty, row)?;
+            let mut struct_ty = schema.as_struct().expect("schema should be struct ty").clone();
+            populate_struct_from_row(&schema.name(), &mut struct_ty, row)?;
 
             Ok(Ty::Struct(struct_ty))
         })

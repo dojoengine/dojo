@@ -26,8 +26,8 @@ impl ModelCache {
     pub async fn schema(&self, model: &str) -> Result<Arc<SchemaData>, Error> {
         {
             let schemas = self.schemas.read().await;
-            if let Some(schema_data) = schemas.get(model) {
-                return Ok(Arc::clone(schema_data));
+            if let Some(schema) = schemas.get(model) {
+                return Ok(Arc::clone(schema));
             }
         }
 
@@ -49,12 +49,12 @@ impl ModelCache {
 
         let ty = parse_sql_model_members(model, &model_members);
         let sql = build_sql_model_query(ty.as_struct().unwrap());
-        let schema_data = Arc::new(SchemaData { ty, sql });
+        let schema = Arc::new(SchemaData { ty, sql });
 
         let mut schemas = self.schemas.write().await;
-        schemas.insert(model.into(), Arc::clone(&schema_data));
+        schemas.insert(model.into(), Arc::clone(&schema));
 
-        Ok(schema_data)
+        Ok(schema)
     }
 
     pub async fn clear(&self) {

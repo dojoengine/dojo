@@ -63,7 +63,7 @@ macro_rules! set_primitive {
 }
 
 /// Macro to generate getter methods for Primitive enum variants.
-macro_rules! get_primitive {
+macro_rules! as_primitive {
     ($method_name:ident, $variant:ident, $type:ty) => {
         /// If the `Primitive` is type T, returns the associated [`T`]. Returns `None` otherwise.
         pub fn $method_name(&self) -> Option<$type> {
@@ -76,17 +76,17 @@ macro_rules! get_primitive {
 }
 
 impl Primitive {
-    get_primitive!(as_u8, U8, u8);
-    get_primitive!(as_u16, U16, u16);
-    get_primitive!(as_u32, U32, u32);
-    get_primitive!(as_u64, U64, u64);
-    get_primitive!(as_u128, U128, u128);
-    get_primitive!(as_u256, U256, U256);
-    get_primitive!(as_bool, Bool, bool);
-    get_primitive!(as_usize, USize, u32);
-    get_primitive!(as_felt252, Felt252, FieldElement);
-    get_primitive!(as_class_hash, ClassHash, FieldElement);
-    get_primitive!(as_contract_address, ContractAddress, FieldElement);
+    as_primitive!(as_u8, U8, u8);
+    as_primitive!(as_u16, U16, u16);
+    as_primitive!(as_u32, U32, u32);
+    as_primitive!(as_u64, U64, u64);
+    as_primitive!(as_u128, U128, u128);
+    as_primitive!(as_u256, U256, U256);
+    as_primitive!(as_bool, Bool, bool);
+    as_primitive!(as_usize, USize, u32);
+    as_primitive!(as_felt252, Felt252, FieldElement);
+    as_primitive!(as_class_hash, ClassHash, FieldElement);
+    as_primitive!(as_contract_address, ContractAddress, FieldElement);
 
     set_primitive!(set_u8, U8, u8);
     set_primitive!(set_u16, U16, u16);

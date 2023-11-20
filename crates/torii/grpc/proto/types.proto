@@ -29,13 +29,21 @@ message ModelMetadata {
     bytes schema = 6;
 }
 
+message Enum {
+    // Variant
+    uint32 option = 1;
+    // Variants of the enum
+    repeated string options = 2;
+}
+
 message Member {
     // Name of the member
     string name = 1;
     // Type of value
-    oneof value_type {
+    oneof member_type {
         Value value = 2;
-        Model struct = 3;
+        Enum enum = 3;
+        Model struct = 4;
     }
 }
 
