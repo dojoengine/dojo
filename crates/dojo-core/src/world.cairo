@@ -45,6 +45,12 @@ trait IWorld<T> {
     fn revoke_writer(ref self: T, model: felt252, system: ContractAddress);
 }
 
+#[starknet::interface]
+trait IWorldProvider<T> {
+    fn world(self: @T) -> IWorldDispatcher;
+}
+
+
 #[starknet::contract]
 mod world {
     use core::traits::TryInto;
@@ -66,9 +72,9 @@ mod world {
     use dojo::database;
     use dojo::database::index::WhereCondition;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::upgradable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::world::{IWorldDispatcher, IWorld};
-
+    
+    use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
@@ -404,8 +410,8 @@ mod world {
                 self.contract_base.read(), salt, array![].span(), false
             )
                 .unwrap_syscall();
-            let upgradable_dispatcher = IUpgradeableDispatcher { contract_address };
-            upgradable_dispatcher.upgrade(class_hash);
+            let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
+            upgradeable_dispatcher.upgrade(class_hash);
 
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
