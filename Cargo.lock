@@ -5141,6 +5141,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-provider"
+version = "0.3.14"
+dependencies = [
+ "anyhow",
+ "katana-db",
+ "katana-primitives",
+]
+
+[[package]]
 name = "katana-rpc"
 version = "0.3.15"
 dependencies = [

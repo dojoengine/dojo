@@ -13,6 +13,7 @@ members = [
   "crates/katana/primitives",
   "crates/katana/rpc",
   "crates/katana/storage/db",
+  "crates/katana/storage/provider",
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
