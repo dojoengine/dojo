@@ -1,0 +1,16 @@
+[package]
+description = "Katana storage provider"
+edition.workspace = true
+name = "katana-provider"
+version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+katana-db = { path = "../db" }
+katana-primitives = { path = "../../primitives" }
+
+[features]
+default = [ "in_memory" ]
+in_memory = [  ]
