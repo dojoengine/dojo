@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x99b08b2ff33750916e36b5e241b5d4a63e8d48862bf90a68fec2ff58a8de6",
+    "class_hash": "0x5b30619bf35113e4d24f47bd94abb2ff2c74073a9150370a7e0e658ea178cf9",
     "abi": [
       {
         "type": "impl",
@@ -79,7 +79,7 @@ test_manifest_file
       },
       {
         "type": "enum",
-        "name": "dojo::database::QueryClause",
+        "name": "dojo::database::Clause",
         "variants": [
           {
             "name": "KeyValue",
@@ -324,7 +324,7 @@ test_manifest_file
               },
               {
                 "name": "query",
-                "type": "dojo::database::QueryClause"
+                "type": "dojo::database::Clause"
               },
               {
                 "name": "values_length",
@@ -356,7 +356,7 @@ test_manifest_file
               },
               {
                 "name": "query",
-                "type": "dojo::database::QueryClause"
+                "type": "dojo::database::Clause"
               }
             ],
             "outputs": [

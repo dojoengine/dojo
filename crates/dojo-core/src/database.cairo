@@ -19,30 +19,34 @@ mod utils_test;
 
 use index::WhereCondition;
 
-#[derive(Copy, Drop, Serde)]
-struct KeyValuesClause {
-    key: felt252,
-    values: Span<felt252>,
-}
-
 // Could be replaced with a `KeyValues` with one value, 
 // but this allows us to avoid hashing, and is most common.
 #[derive(Copy, Drop, Serde)]
-struct KeyValueClause {
-    key: felt252,
+struct MemberClause {
+    member: felt252,
     value: felt252,
 }
 
 #[derive(Copy, Drop, Serde)]
-enum QueryClause {
-    KeyValue: KeyValueClause,
-    KeyValues: KeyValuesClause,
+struct CompositeClause {
+    operator: LogicalOperator,
+    clauses: Span<MemberClause>,
+}
+
+#[derive(Copy, Drop, Serde)]
+enum LogicalOperator {
+    And,
+    Or
+}
+
+#[derive(Copy, Drop, Serde)]
+enum Clause {
+    Member: MemberClause,
+    Composit: CompositeClause,
     All: (),
 }
 
-fn get(
-    table: felt252, key: felt252, offset: u8, length: usize, layout: Span<u8>
-) -> Span<felt252> {
+fn get(table: felt252, key: felt252, offset: u8, length: usize, layout: Span<u8>) -> Span<felt252> {
     let mut keys = ArrayTrait::new();
     keys.append('dojo_storage');
     keys.append(table);
@@ -66,7 +70,7 @@ fn set(table: felt252, key: felt252, offset: u8, value: Span<felt252>, layout: S
 /// * `offset` - The offset of the entry.
 /// * `value` - The value of the entry.
 /// * `layout` - The layout of the entry.
-fn set_with_index( 
+fn set_with_index(
     table: felt252,
     id: felt252,
     keys: Span<felt252>,
@@ -85,7 +89,7 @@ fn set_with_index(
         let index = poseidon_hash_span(array![table, idx.into()].span());
 
         index::create(0, index, id, *keys.at(idx)); // create a record for each of the keys
-        
+
         idx += 1;
     };
 
@@ -107,7 +111,7 @@ fn del(table: felt252, key: felt252) {
         let index = poseidon_hash_span(array![table, idx].span());
 
         index::delete(0, index, key);
-        
+
         idx += 1;
     };
 
@@ -118,16 +122,20 @@ fn del(table: felt252, key: felt252) {
 // Returns a tuple of spans, first contains the entity IDs,
 // second the deserialized entities themselves.
 fn scan(
-    model: felt252, index: Option<felt252>, where: QueryClause, values_length: usize, values_layout: Span<u8>
+    model: felt252,
+    index: Option<felt252>,
+    where: Clause,
+    values_length: usize,
+    values_layout: Span<u8>
 ) -> (Span<felt252>, Span<Span<felt252>>) {
     let all_ids = scan_ids(model, index, where);
     (all_ids, get_by_ids(model, all_ids, values_length, values_layout))
 }
 
 /// Analogous to `scan`, but returns only the IDs of the entities.
-fn scan_ids(model: felt252, index: Option<felt252>, where: QueryClause) -> Span<felt252> {
+fn scan_ids(model: felt252, index: Option<felt252>, where: Clause) -> Span<felt252> {
     match where {
-        QueryClause::KeyValue(clause) => {
+        Clause::Member(clause) => {
             let table = poseidon_hash_span(array![model, clause.key].span());
 
             match index {
@@ -138,8 +146,7 @@ fn scan_ids(model: felt252, index: Option<felt252>, where: QueryClause) -> Span<
                 Option::None => index::get(0, table, clause.value)
             }
         },
-
-        QueryClause::KeyValues(clause) => {
+        Clause::KeyValues(clause) => {
             let table = poseidon_hash_span(array![model, clause.key].span());
             let value = poseidon_hash_span(clause.values);
 
@@ -151,8 +158,7 @@ fn scan_ids(model: felt252, index: Option<felt252>, where: QueryClause) -> Span<
                 Option::None => index::get(0, table, value)
             }
         },
-
-        QueryClause::All => {
+        Clause::All => {
             index::get(0, model, 0)
         },
     }

@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
-use dojo::database::QueryClause;
+use dojo::database::Clause;
 
 #[starknet::interface]
 trait IWorld<T> {
@@ -28,11 +28,11 @@ trait IWorld<T> {
         self: @T,
         model: felt252,
         index: Option<felt252>,
-        query: QueryClause,
+        query: Clause,
         values_length: usize,
         values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
-    fn entity_ids(self: @T, model: felt252, index: Option<felt252>, query: QueryClause) -> Span<felt252>;
+    fn entity_ids(self: @T, model: felt252, index: Option<felt252>, query: Clause) -> Span<felt252>;
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
@@ -76,7 +76,7 @@ mod world {
     };
 
     use dojo::database;
-    use dojo::database::QueryClause;
+    use dojo::database::Clause;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     
@@ -571,7 +571,7 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, model: felt252, index: Option<felt252>, query: QueryClause, values_length: usize, values_layout: Span<u8>
+            self: @ContractState, model: felt252, index: Option<felt252>, query: Clause, values_length: usize, values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             database::scan(model, index, query, values_length, values_layout)
         }
@@ -588,7 +588,7 @@ mod world {
             self: @ContractState,
             model: felt252,
             index: Option<felt252>,
-            query: QueryClause
+            query: Clause
         ) -> Span<felt252> {
             database::scan_ids(model, index, query)
         }
