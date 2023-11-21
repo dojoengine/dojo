@@ -90,7 +90,8 @@ impl ObjectTrait for ModelDataObject {
                 let connection = parse_connection_arguments(&ctx)?;
                 let id_column = "event_id";
 
-                let data = fetch_multiple_rows(
+                let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
+                let (data, page_info) = fetch_multiple_rows(
                     &mut conn,
                     &type_name,
                     id_column,
@@ -98,12 +99,18 @@ impl ObjectTrait for ModelDataObject {
                     &order,
                     &filters,
                     &connection,
+                    total_count,
                 )
                 .await?;
-
-                let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
-                let connection =
-                    connection_output(&data, &type_mapping, &order, id_column, total_count, true)?;
+                let connection = connection_output(
+                    &data,
+                    &type_mapping,
+                    &order,
+                    id_column,
+                    total_count,
+                    true,
+                    page_info,
+                )?;
 
                 Ok(Some(Value::Object(connection)))
             })

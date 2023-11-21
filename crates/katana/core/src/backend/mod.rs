@@ -185,9 +185,9 @@ impl Backend {
 
         let mut estimations = Vec::with_capacity(transactions.len());
 
-        let results = TransactionExecutor::new(&mut state, &block_context, false)
+        let results = TransactionExecutor::new(&mut state, &block_context, false, transactions)
             .with_error_log()
-            .execute_many(transactions);
+            .execute();
 
         for res in results {
             let exec_info = res?;

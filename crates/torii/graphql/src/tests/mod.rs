@@ -40,6 +40,7 @@ use crate::schema::build_schema;
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
+    pub page_info: PageInfo,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -53,6 +54,16 @@ pub struct Entity {
     pub model_names: String,
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+// same as type from `async-graphql` but derive necessary traits
+// https://docs.rs/async-graphql/6.0.10/async_graphql/types/connection/struct.PageInfo.html
+pub struct PageInfo {
+    pub has_previous_page: bool,
+    pub has_next_page: bool,
+    pub start_cursor: Option<String>,
+    pub end_cursor: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -278,7 +289,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     //  Execute `create` and insert 10 records into storage
-    let records_contract = "0x5cb354584b1b49308e6dd2540dcde5c408a8ee282ce74949438d7da7f266a92"; // Haradcoded output of printed contract address
+    let records_contract = "0x2753d30656b393ecea156189bf0acf5e1063f3ac978fb5c3cebe7a4570bbc78";
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],

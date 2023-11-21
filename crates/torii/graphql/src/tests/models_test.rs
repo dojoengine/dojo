@@ -58,6 +58,12 @@ mod tests {
                     }}
                 }}
               }}
+              page_info {{
+                has_previous_page
+                has_next_page
+                start_cursor
+                end_cursor
+              }}
             }}
           }}
         "#,
