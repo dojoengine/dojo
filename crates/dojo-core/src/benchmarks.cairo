@@ -8,7 +8,7 @@ use starknet::SyscallResultTrait;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 
 use dojo::database;
-use dojo::database::{storage, index, QueryClause};
+use dojo::database::{storage, index, Clause};
 use dojo::packing::{shl, shr};
 use dojo::model::Model;
 use dojo::world_test::Foo;
@@ -255,7 +255,7 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), QueryClause::All, 2, layout);
+    let (keys, values) = database::scan('table', Option::None(()), Clause::All, 2, layout);
     end(gas, 'dbi scan arr 1');
 
     let gas = testing::get_available_gas();
@@ -265,7 +265,7 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), QueryClause::All, 2, layout);
+    let (keys, values) = database::scan('table', Option::None(()), Clause::All, 2, layout);
     end(gas, 'dbi scan arr 2');
 
     assert(keys.len() == 2, 'Wrong number of keys!');
