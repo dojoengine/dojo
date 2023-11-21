@@ -8,7 +8,8 @@ use libmdbx::WriteMap;
 pub mod codecs;
 pub mod error;
 pub mod mdbx;
-pub mod serde;
+pub mod models;
+pub mod tables;
 pub mod utils;
 
 use mdbx::{Env, EnvKind};

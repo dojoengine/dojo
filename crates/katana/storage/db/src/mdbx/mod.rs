@@ -1,8 +1,6 @@
 //! MDBX backend for the database.
 
 pub mod cursor;
-pub mod models;
-pub mod tables;
 pub mod tx;
 
 use std::ops::Deref;
@@ -13,9 +11,9 @@ use libmdbx::{
     SyncMode, RO, RW,
 };
 
-use self::tables::{TableType, Tables};
 use self::tx::Tx;
 use crate::error::DatabaseError;
+use crate::tables::{TableType, Tables};
 use crate::utils;
 
 const GIGABYTE: usize = 1024 * 1024 * 1024;
