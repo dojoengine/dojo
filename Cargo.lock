@@ -4920,16 +4920,12 @@ version = "0.3.14"
 dependencies = [
  "anyhow",
  "bincode 1.3.3",
- "blockifier",
- "cairo-vm",
  "flate2",
  "katana-primitives",
  "page_size",
  "parking_lot 0.12.1",
  "reth-libmdbx",
  "serde",
- "serde_json",
- "starknet_api",
  "thiserror",
 ]
 

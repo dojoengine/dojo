@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::codecs::{Decode, Decompress};
 use crate::error::DatabaseError;
-use crate::mdbx::tables::Table;
+use crate::tables::Table;
 
 // May lead to errors if it's reduced further because of the potential size of the data.
 const MIN_PAGE_SIZE: usize = 4096;
