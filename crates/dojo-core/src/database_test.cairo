@@ -8,7 +8,7 @@ use traits::{Into, TryInto};
 use starknet::syscalls::deploy_syscall;
 use dojo::world::{IWorldDispatcher};
 use dojo::executor::executor;
-use dojo::database::{get, set, set_with_index, del, scan, QueryClause, KeyValueClause};
+use dojo::database::{get, set, set_with_index, del, scan, Clause, MemberClause};
 
 #[test]
 #[available_gas(1000000)]
@@ -118,7 +118,7 @@ fn test_database_scan() {
     set_with_index('table', 'even', array!['x'].span(), 0, even, layout);
     set_with_index('table', 'odd', array!['x'].span(), 0, odd, layout);
 
-    let (keys, values) = scan('table', Option::None, QueryClause::All, 4, layout);
+    let (keys, values) = scan('table', Option::None, Clause::All, 4, layout);
     assert(keys.len() == 2, 'Wrong number of keys!');
     assert(values.len() == 2, 'Wrong number of values!');
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
@@ -126,12 +126,12 @@ fn test_database_scan() {
     assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
     assert(*(*values.at(0)).at(2) == 6, 'Wrong value at index 1!');
 
-    let where = KeyValueClause {
+    let where = MemberClause {
         key: 0,
         value: 'x',
     };
 
-    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 2, 'Wrong number of keys clause!');
 }
 
@@ -147,29 +147,29 @@ fn test_database_scan_where() {
     set_with_index('table', 'same', array!['p'].span(), 0, same, layout);
     set_with_index('table', 'other', array!['x'].span(), 0, other, layout);
 
-    let (keys, values) = scan('table', Option::None, QueryClause::All, 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::All, 2, layout);
     assert(keys.len() == 3, 'Wrong number of keys!');
     assert(*(*values.at(0)).at(0) != 0, 'value is not set');
 
-    let mut where = KeyValueClause {
+    let mut where = MemberClause {
         key: 0,
         value: 'x',
     };
 
-    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 1, 'Wrong number of keys for x!');
     assert(*(*values.at(0)).at(0) == 5, 'Wrong value 0 for x!!');
     assert(*(*values.at(0)).at(1) == 5, 'Wrong value 1 for x!');
 
     where.value = 'p';
-    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 2, 'Wrong number of keys for p!');
 
-    let (keys, values) = scan('table', Option::Some(1), QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::Some(1), Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 1, 'Wrong len for second of p!');
 
     where.value = 'q';
-    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 0, 'Wrong number of keys for q!');
 }
 
@@ -187,27 +187,27 @@ fn test_database_scan_where_deletion() {
 
     del('table', 'same');
 
-    let mut where = KeyValueClause {
+    let mut where = MemberClause {
         key: 0,
         value: 'a',
     };
 
-    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 1, 'Wrong number of keys for a!');
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value 0 for a!');
 
     where.key = 1;
     where.value = 'y';
-    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 0, 'Wrong number of keys for y!');
 
     where.value = 'x';
-    let (keys, values) = scan('table', Option::None, QueryClause::KeyValue(where), 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
     assert(keys.len() == 2, 'Wrong number of keys for x!');
 
     del('table', 'some');
     del('table', 'other');
 
-    let (keys, values) = scan('table', Option::None, QueryClause::All, 2, layout);
+    let (keys, values) = scan('table', Option::None, Clause::All, 2, layout);
     assert(keys.len() == 0, 'Wrong number of keys for c!');
 }

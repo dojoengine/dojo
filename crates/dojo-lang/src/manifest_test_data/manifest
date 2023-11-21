@@ -79,7 +79,7 @@ test_manifest_file
       },
       {
         "type": "enum",
-        "name": "dojo::database::QueryClause",
+        "name": "dojo::database::Clause",
         "variants": [
           {
             "name": "KeyValue",
@@ -324,7 +324,7 @@ test_manifest_file
               },
               {
                 "name": "query",
-                "type": "dojo::database::QueryClause"
+                "type": "dojo::database::Clause"
               },
               {
                 "name": "values_length",
@@ -356,7 +356,7 @@ test_manifest_file
               },
               {
                 "name": "query",
-                "type": "dojo::database::QueryClause"
+                "type": "dojo::database::Clause"
               }
             ],
             "outputs": [
