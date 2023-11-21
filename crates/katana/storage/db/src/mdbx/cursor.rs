@@ -4,9 +4,9 @@ use std::marker::PhantomData;
 
 use libmdbx::{self, TransactionKind, WriteFlags, RW};
 
-use super::tables::{DupSort, Table};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
+use crate::tables::{DupSort, Table};
 use crate::utils::{decode_one, decode_value, KeyValue};
 
 /// Cursor wrapper to access KV items.

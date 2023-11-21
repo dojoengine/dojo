@@ -7,9 +7,9 @@ use libmdbx::{EnvironmentKind, Transaction, TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
-use super::tables::{DupSort, Table, Tables, NUM_TABLES};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
+use crate::tables::{DupSort, Table, Tables, NUM_TABLES};
 use crate::utils::decode_one;
 
 /// Wrapper for a `libmdbx` transaction.
