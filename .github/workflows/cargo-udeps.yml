@@ -22,6 +22,8 @@ jobs:
           # cargo-udeps require nightly to run
           toolchain: nightly
 
+      - uses: arduino/setup-protoc@v2
+
       - name: Install cargo-udeps
         run: cargo install --locked cargo-udeps
 
