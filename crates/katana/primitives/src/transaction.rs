@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
 use starknet::core::types::{Event, MsgToL1};
 
 use crate::contract::{ClassHash, CompiledClassHash, ContractAddress, Nonce};
@@ -11,7 +10,8 @@ pub type TxHash = FieldElement;
 /// The sequential number for all the transactions..
 pub type TxNumber = u64;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Transaction {
     Invoke(InvokeTx),
     Declare(DeclareTx),
@@ -19,12 +19,14 @@ pub enum Transaction {
     DeployAccount(DeployAccountTx),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum InvokeTx {
     V1(InvokeTxV1),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxV1 {
     pub transaction_hash: TxHash,
     pub nonce: Nonce,
@@ -34,13 +36,15 @@ pub struct InvokeTxV1 {
     pub sender_address: ContractAddress,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DeclareTx {
     V1(DeclareTxV1),
     V2(DeclareTxV2),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV1 {
     pub transaction_hash: TxHash,
     pub max_fee: u128,
@@ -50,7 +54,8 @@ pub struct DeclareTxV1 {
     pub sender_address: ContractAddress,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV2 {
     pub transaction_hash: TxHash,
     pub max_fee: u128,
@@ -61,7 +66,8 @@ pub struct DeclareTxV2 {
     pub compiled_class_hash: CompiledClassHash,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTx {
     pub transaction_hash: TxHash,
     pub version: FieldElement,
@@ -72,7 +78,8 @@ pub struct L1HandlerTx {
     pub entry_point_selector: FieldElement,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTx {
     pub transaction_hash: TxHash,
     pub max_fee: u128,
@@ -85,7 +92,8 @@ pub struct DeployAccountTx {
 }
 
 /// A transaction finality status.
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FinalityStatus {
     AcceptedOnL2,
     AcceptedOnL1,
@@ -94,7 +102,8 @@ pub enum FinalityStatus {
 pub type ExecutionResources = HashMap<String, usize>;
 
 /// The receipt of a transaction containing the outputs of its execution.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Receipt {
     pub actual_fee: u128,
     pub events: Vec<Event>,

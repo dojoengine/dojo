@@ -5132,8 +5132,12 @@ dependencies = [
 name = "katana-primitives"
 version = "0.3.14"
 dependencies = [
+ "blockifier",
+ "cairo-vm",
  "serde",
+ "serde_json",
  "starknet",
+ "starknet_api",
 ]
 
 [[package]]
