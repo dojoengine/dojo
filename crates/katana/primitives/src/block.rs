@@ -1,12 +1,11 @@
-use serde::{Deserialize, Serialize};
-
 use crate::contract::ContractAddress;
 use crate::FieldElement;
 
 /// Block state update type.
 pub type StateUpdate = starknet::core::types::StateUpdate;
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum BlockHashOrNumber {
     Hash(BlockHash),
     Num(BlockNumber),
@@ -18,7 +17,8 @@ pub type BlockNumber = u64;
 pub type BlockHash = FieldElement;
 
 /// Represents a block header.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Header {
     pub parent_hash: BlockHash,
     pub number: BlockNumber,
