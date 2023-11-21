@@ -478,7 +478,7 @@ impl EventDrop of Drop::<Event>;
                     }
 
                     #[external(v0)]
-                    fn name(self: @ContractState) -> felt252 {
+                    fn dojo_resource(self: @ContractState) -> felt252 {
                         'withevent'
                     }
 
