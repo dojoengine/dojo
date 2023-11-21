@@ -1,14 +1,24 @@
 #[cfg(feature = "build-examples")]
 fn main() {
     use std::env;
+    use std::process::Command;
 
     use camino::{Utf8Path, Utf8PathBuf};
     use dojo_lang::compiler::DojoCompiler;
-    use dojo_lang::plugin::{BuiltinDojoPlugin, CairoPluginRepository};
+    use dojo_lang::plugin::CairoPluginRepository;
     use scarb::compiler::CompilerRepository;
     use scarb::core::{Config, TargetKind};
     use scarb::ops::{self, CompileOpts};
     use scarb_ui::Verbosity;
+
+    let version = env!("CARGO_PKG_VERSION");
+    let output = Command::new("git")
+        .args(["rev-list", "-n", "1", &format!("v{version}")])
+        .output()
+        .expect("Failed to execute command");
+
+    let git_hash = String::from_utf8(output.stdout).unwrap().trim().to_string();
+    println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
     let project_paths = ["../../examples/spawn-and-move", "../torii/graphql/src/tests/types-test"];
 
@@ -36,7 +46,6 @@ fn main() {
             .log_filter_directive(env::var_os("SCARB_LOG"))
             .compilers(compilers)
             .cairo_plugins(cairo_plugins.into())
-            .custom_source_patches(vec![BuiltinDojoPlugin::manifest_dependency()])
             .build()
             .unwrap();
 

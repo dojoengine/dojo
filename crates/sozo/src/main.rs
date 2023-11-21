@@ -6,7 +6,7 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
-use dojo_lang::plugin::{BuiltinDojoPlugin, CairoPluginRepository};
+use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::{Config, TomlManifest};
 use scarb_ui::{OutputFormat, Ui};
@@ -42,7 +42,6 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .profile(args.profile_spec.determine()?)
         .offline(args.offline)
         .cairo_plugins(cairo_plugins.into())
-        .custom_source_patches(vec![BuiltinDojoPlugin::manifest_dependency()])
         .ui_verbosity(args.ui_verbosity())
         .compilers(compilers)
         .build()?;
