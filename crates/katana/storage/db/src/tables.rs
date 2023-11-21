@@ -43,7 +43,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 14;
+pub const NUM_TABLES: usize = 15;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -148,7 +148,8 @@ define_tables_enum! {[
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
     (BlockBodyIndices, TableType::Table),
-    (TxHashNumber, TableType::Table),
+    (TxNumbers, TableType::Table),
+    (TxHashes, TableType::Table),
     (Transactions, TableType::Table),
     (Receipts, TableType::Table),
     (ClassDeclarations, TableType::Table),
@@ -170,8 +171,10 @@ tables! {
     /// Block number to its body indices which stores the tx number of
     /// the first tx in the block and the number of txs in the block.
     BlockBodyIndices: (BlockNumber) => StoredBlockBodyIndices,
-    /// Store canonical transactions hashes according to its tx number
-    TxHashNumber: (TxHash) => TxNumber,
+    /// Transaction number based on its hash
+    TxNumbers: (TxHash) => TxNumber,
+    /// Transaction hash based on its number
+    TxHashes: (TxNumber) => TxHash,
     /// Store canonical transactions
     Transactions: (TxNumber) => Transaction,
     /// Store transaction receipts
