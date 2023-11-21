@@ -3,7 +3,7 @@ use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
     StorageValue,
 };
-use katana_primitives::serde::contract::SerializableContractClass;
+use katana_primitives::serde::blockifier::SerializableContractClass;
 use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
 use serde::{Deserialize, Serialize};
 
