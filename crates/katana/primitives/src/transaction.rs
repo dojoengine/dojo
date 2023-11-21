@@ -2,13 +2,24 @@ use std::collections::HashMap;
 
 use starknet::core::types::{Event, MsgToL1};
 
-use crate::contract::{ClassHash, CompiledClassHash, ContractAddress, Nonce};
+use crate::contract::{
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce,
+};
 use crate::FieldElement;
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
 /// The sequential number for all the transactions..
 pub type TxNumber = u64;
+
+/// Represents a transaction that can be executed.
+#[derive(Debug, Clone)]
+pub enum ExecutionTx {
+    Invoke(InvokeTx),
+    L1Handler(L1HandlerTx),
+    Declare(DeclareTxWithCompiledClass),
+    DeployAccount(DeployAccountTxWithContractAddress),
+}
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -35,6 +46,12 @@ pub struct InvokeTxV1 {
     pub signature: Vec<FieldElement>,
     pub sender_address: ContractAddress,
 }
+
+#[derive(Debug, Clone)]
+pub struct DeclareTxWithCompiledClass(pub DeclareTx, pub CompiledContractClass);
+
+#[derive(Debug, Clone)]
+pub struct DeployAccountTxWithContractAddress(pub DeployAccountTx, pub ContractAddress);
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -104,11 +121,30 @@ pub type ExecutionResources = HashMap<String, usize>;
 /// The receipt of a transaction containing the outputs of its execution.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Receipt {
+pub enum Receipt {
+    Invoke(CommonReceipt),
+    Declare(CommonReceipt),
+    L1Handler(CommonReceipt),
+    DeployAccount(DeployAccountReceipt),
+}
+
+/// Commong transaction receipt fields.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct CommonReceipt {
     pub actual_fee: u128,
     pub events: Vec<Event>,
     pub messages_sent: Vec<MsgToL1>,
     pub revert_error: Option<String>,
     pub actual_resources: ExecutionResources,
     pub contract_address: Option<ContractAddress>,
+}
+
+/// Commong transaction receipt fields.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DeployAccountReceipt {
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub common: CommonReceipt,
+    pub contract_adddress: ContractAddress,
 }

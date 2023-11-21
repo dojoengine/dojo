@@ -22,7 +22,7 @@ pub type SierraClass = starknet::core::types::FlattenedSierraClass;
 /// Represents a contract address.
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ContractAddress(FieldElement);
+pub struct ContractAddress(pub FieldElement);
 
 impl ContractAddress {
     pub fn new(address: FieldElement) -> Self {
