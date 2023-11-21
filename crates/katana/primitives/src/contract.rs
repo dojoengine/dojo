@@ -1,6 +1,5 @@
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
 use starknet::core::utils::normalize_address;
 
 use crate::FieldElement;
@@ -21,7 +20,8 @@ pub type Nonce = FieldElement;
 pub type SierraClass = starknet::core::types::FlattenedSierraClass;
 
 /// Represents a contract address.
-#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ContractAddress(FieldElement);
 
 impl ContractAddress {
@@ -49,10 +49,15 @@ impl From<ContractAddress> for FieldElement {
 }
 
 /// Represents a generic contract instance information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GenericContractInfo {
     /// The nonce of the contract.
     pub nonce: Nonce,
     /// The hash of the contract class.
     pub class_hash: ClassHash,
 }
+
+/// Represents a runnable Starknet contract class (meaning, the program is runnable by the VM).
+#[cfg(feature = "blockifier")]
+pub type CompiledContractClass = ::blockifier::execution::contract_class::ContractClass;
