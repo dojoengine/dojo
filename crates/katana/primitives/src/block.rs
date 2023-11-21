@@ -1,4 +1,5 @@
 use crate::contract::ContractAddress;
+use crate::transaction::Transaction;
 use crate::FieldElement;
 
 /// Block state update type.
@@ -26,6 +27,14 @@ pub struct Header {
     pub timestamp: u64,
     pub state_root: FieldElement,
     pub sequencer_address: ContractAddress,
+}
+
+/// Represents a Starknet full block.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Block {
+    header: Header,
+    body: Vec<Transaction>,
 }
 
 impl From<BlockNumber> for BlockHashOrNumber {
