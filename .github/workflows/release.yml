@@ -192,11 +192,18 @@ jobs:
           files: |
             ${{ steps.artifacts.outputs.file_name }}
       
+      # Upload these for use with the Docker build later
       - name: Upload binaries
         uses: actions/upload-artifact@v2
         with:
           name: binaries
-          path: target/
+          path: |
+            target/x86_64-unknown-linux-gnu/release/katana
+            target/x86_64-unknown-linux-gnu/release/sozo
+            target/x86_64-unknown-linux-gnu/release/torii
+            target/aarch64-unknown-linux-gnu/release/katana
+            target/aarch64-unknown-linux-gnu/release/sozo
+            target/aarch64-unknown-linux-gnu/release/torii
           retention-days: 1
 
   cleanup:
