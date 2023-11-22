@@ -150,7 +150,7 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
     parse_sql_model_members_impl(model, model_members_all)
 }
 
-/// Creates a query that fetches all models and their nested structures.
+/// Creates a query that fetches all models and their nested data.
 pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
     fn parse_struct(
         path: &str,
@@ -508,7 +508,7 @@ mod tests {
             ],
         });
 
-        let query = build_sql_query(&vec![ty.clone()]).unwrap();
+        let query = build_sql_query(&vec![ty]).unwrap();
         assert_eq!(
             query,
             "SELECT Position.external_name AS \"Position.name\", Position.external_age AS \

@@ -65,7 +65,8 @@ macro_rules! set_primitive {
 /// Macro to generate getter methods for Primitive enum variants.
 macro_rules! as_primitive {
     ($method_name:ident, $variant:ident, $type:ty) => {
-        /// If the `Primitive` is type T, returns the associated [`T`]. Returns `None` otherwise.
+        /// If the `Primitive` is variant type, returns the associated vartiant value. Returns
+        /// `None` otherwise.
         pub fn $method_name(&self) -> Option<$type> {
             match self {
                 Primitive::$variant(value) => *value,
