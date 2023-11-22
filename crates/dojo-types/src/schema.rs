@@ -269,6 +269,16 @@ impl Enum {
         Ok(self.options[option].name.clone())
     }
 
+    pub fn set_option(&mut self, name: &str) -> Result<(), EnumError> {
+        match self.options.iter().position(|option| option.name == name) {
+            Some(index) => {
+                self.option = Some(index as u8);
+                Ok(())
+            }
+            None => Err(EnumError::OptionInvalid),
+        }
+    }
+
     pub fn to_sql_value(&self) -> Result<String, EnumError> {
         self.option()
     }

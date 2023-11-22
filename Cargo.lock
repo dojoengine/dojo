@@ -8300,6 +8300,7 @@ dependencies = [
  "base64 0.21.5",
  "camino",
  "chrono",
+ "crypto-bigint",
  "dojo-test-utils",
  "dojo-types",
  "dojo-world",

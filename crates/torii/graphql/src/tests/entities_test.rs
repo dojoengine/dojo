@@ -98,7 +98,7 @@ mod tests {
         assert_eq!(connection.edges.len(), 10);
         assert_eq!(connection.total_count, 20);
         assert_eq!(&first_entity.node.model_names, "Subrecord");
-        assert_eq!(&last_entity.node.model_names, "Record");
+        assert_eq!(&last_entity.node.model_names, "Record,RecordSibling");
 
         // first key param - returns all entities with `0x0` as first key
         let entities = entities_query(&schema, "(keys: [\"0x0\"])").await;
