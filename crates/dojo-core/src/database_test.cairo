@@ -4,6 +4,7 @@ use option::OptionTrait;
 use serde::Serde;
 use array::SpanTrait;
 use traits::{Into, TryInto};
+use debug::PrintTrait;
 
 use starknet::syscalls::deploy_syscall;
 use dojo::world::{IWorldDispatcher};
@@ -118,96 +119,79 @@ fn test_database_scan() {
     set_with_index('table', 'even', array!['x'].span(), 0, even, layout);
     set_with_index('table', 'odd', array!['x'].span(), 0, odd, layout);
 
-    let (keys, values) = scan('table', Option::None, Clause::All, 4, layout);
-    assert(keys.len() == 2, 'Wrong number of keys!');
+    let values = scan(Clause::All('table'), 3, layout);
     assert(values.len() == 2, 'Wrong number of values!');
-    assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
+    (*(*values.at(0)).at(0)).print();
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
     assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
     assert(*(*values.at(0)).at(2) == 6, 'Wrong value at index 1!');
 
-    let where = MemberClause {
-        key: 0,
-        value: 'x',
-    };
+    let where = MemberClause { model: 'table', member: 'x', value: 2 };
 
-    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 2, 'Wrong number of keys clause!');
+    let values = scan(Clause::Member(where), 32, layout);
+    assert(values.len() == 1, 'Wrong number of values clause!');
 }
 
 #[test]
 #[available_gas(10000000)]
 fn test_database_scan_where() {
-    let some = array![2, 4].span();
+    let some = array![1, 4].span();
     let same = array![1, 3].span();
     let other = array![5, 5].span();
     let layout = array![251, 251].span();
 
-    set_with_index('table', 'some', array!['p'].span(), 0, some, layout);
-    set_with_index('table', 'same', array!['p'].span(), 0, same, layout);
-    set_with_index('table', 'other', array!['x'].span(), 0, other, layout);
+    set_with_index('table', 'some', array!['p', 'x'].span(), 0, some, layout);
+    set_with_index('table', 'same', array!['p', 'x'].span(), 0, same, layout);
+    set_with_index('table', 'other', array!['p', 'x'].span(), 0, other, layout);
 
-    let (keys, values) = scan('table', Option::None, Clause::All, 2, layout);
-    assert(keys.len() == 3, 'Wrong number of keys!');
+    let values = scan(Clause::All('table'), 2, layout);
+    assert(values.len() == 3, 'Wrong number of values!');
     assert(*(*values.at(0)).at(0) != 0, 'value is not set');
 
-    let mut where = MemberClause {
-        key: 0,
-        value: 'x',
-    };
+    let mut where = MemberClause { model: 'table', member: 'x', value: 5 };
 
-    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 1, 'Wrong number of keys for x!');
-    assert(*(*values.at(0)).at(0) == 5, 'Wrong value 0 for x!!');
-    assert(*(*values.at(0)).at(1) == 5, 'Wrong value 1 for x!');
+    let values = scan(Clause::Member(where), 2, layout);
+    assert(values.len() == 1, 'Wrong len for x = 5');
+    assert(*(*values.at(0)).at(0) == 5, 'Wrong value 0 for x = 5');
+    assert(*(*values.at(0)).at(1) == 5, 'Wrong value 1 for x = 5');
 
-    where.value = 'p';
-    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 2, 'Wrong number of keys for p!');
+    where.value = 4;
+    let values = scan(Clause::Member(where), 2, layout);
+    assert(values.len() == 1, 'Wrong len for x = 1');
 
-    let (keys, values) = scan('table', Option::Some(1), Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 1, 'Wrong len for second of p!');
-
-    where.value = 'q';
-    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 0, 'Wrong number of keys for q!');
+    where.value = 6;
+    let values = scan(Clause::Member(where), 2, layout);
+    assert(values.len() == 0, 'Wrong len for x = 6');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_database_scan_where_deletion() {
-    let some = array![2, 4].span();
-    let same = array![1, 3].span();
-    let other = array![5, 5].span();
     let layout = array![251, 251].span();
 
-    set_with_index('table', 'some', array!['a', 'x'].span(), 0, some, layout);
-    set_with_index('table', 'same', array!['a', 'y'].span(), 0, same, layout);
-    set_with_index('table', 'other', array!['b', 'x'].span(), 0, other, layout);
+    set_with_index('model', 'some', array!['a', 'y'].span(), 0, array![2, 3].span(), layout);
+    set_with_index('model', 'same', array!['a', 'y'].span(), 0, array![1, 3].span(), layout);
+    set_with_index('model', 'other', array!['b', 'y'].span(), 0, array![5, 3].span(), layout);
 
-    del('table', 'same');
+    del('model', 'same');
 
-    let mut where = MemberClause {
-        key: 0,
-        value: 'a',
-    };
+    let mut where = MemberClause { model: 'model', member: 'a', value: 1 };
 
-    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 1, 'Wrong number of keys for a!');
-    assert(*(*values.at(0)).at(0) == 2, 'Wrong value 0 for a!');
+    let values = scan(Clause::Member(where), 1, layout);
+    assert(values.len() == 1, 'Wrong len a = 1');
+    assert(*(*values.at(0)).at(0) == 1, 'Wrong value for a');
 
-    where.key = 1;
-    where.value = 'y';
-    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 0, 'Wrong number of keys for y!');
+    where.member = 'y';
+    where.value = 3;
+    let values = scan(Clause::Member(where), 2, layout);
+    assert(values.len() == 3, 'Wrong len for  y = 3');
 
-    where.value = 'x';
-    let (keys, values) = scan('table', Option::None, Clause::KeyValue(where), 2, layout);
-    assert(keys.len() == 2, 'Wrong number of keys for x!');
+    del('model', 'some');
+    del('model', 'other');
 
-    del('table', 'some');
-    del('table', 'other');
+    let values = scan(Clause::Member(where), 2, layout);
+    assert(values.len() == 1, 'Wrong len for del y = 3');
 
-    let (keys, values) = scan('table', Option::None, Clause::All, 2, layout);
-    assert(keys.len() == 0, 'Wrong number of keys for c!');
+    let values = scan(Clause::All('model'), 2, layout);
+    assert(values.len() == 1, 'Wrong len for scan');
 }

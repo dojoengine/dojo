@@ -129,7 +129,7 @@ fn bench_index() {
     end(gas, 'idx query one');
     assert(query.len() == 1, 'entity not indexed');
     assert(*query.at(0) == 420, 'entity value incorrect');
-    
+
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
     index::create(0, 69, 1337, 0);
@@ -183,7 +183,7 @@ fn bench_big_index() {
     end(gas, 'idx query 1000');
     assert(query.len() == 1000, 'entity not indexed');
     assert(*query.at(420) == 420, 'entity value incorrect');
-    
+
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
     index::exists(0, 69, 999);
@@ -255,7 +255,7 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), Clause::All, 2, layout);
+    let values = database::scan(Clause::All('table'), 2, layout);
     end(gas, 'dbi scan arr 1');
 
     let gas = testing::get_available_gas();
@@ -265,12 +265,10 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), Clause::All, 2, layout);
+    let values = database::scan(Clause::All('table'), 2, layout);
     end(gas, 'dbi scan arr 2');
 
-    assert(keys.len() == 2, 'Wrong number of keys!');
     assert(values.len() == 2, 'Wrong number of values!');
-    assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
     assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
 }
@@ -283,11 +281,7 @@ fn bench_simple_struct() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let mut foo = Foo {
-        caller,
-        a: 0x123456789abcdef,
-        b: 0x123456789abcdef,
-    };
+    let mut foo = Foo { caller, a: 0x123456789abcdef, b: 0x123456789abcdef, };
     end(gas, 'foo init');
 
     let gas = testing::get_available_gas();
@@ -403,17 +397,11 @@ fn bench_nested_struct() {
     gas::withdraw_gas().unwrap();
 
     let mut case = Case {
-        owner: caller,
-        sword: Sword {
-            swordsmith: caller,
-            damage: 0x12345678,
-        },
-        material: 'wooden',
+        owner: caller, sword: Sword { swordsmith: caller, damage: 0x12345678, }, material: 'wooden',
     };
     end(gas, 'case init');
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
@@ -517,16 +505,16 @@ fn bench_complex_struct() {
             finished: true,
             romances: 0x1234,
         },
-        weapon: Weapon::DualWield((
-            Sword {
-                swordsmith: starknet::contract_address_const::<0x69>(),
-                damage: 0x12345678,
-            },
-            Sword {
-                swordsmith: starknet::contract_address_const::<0x69>(),
-                damage: 0x12345678,
-            }
-        )),
+        weapon: Weapon::DualWield(
+            (
+                Sword {
+                    swordsmith: starknet::contract_address_const::<0x69>(), damage: 0x12345678,
+                },
+                Sword {
+                    swordsmith: starknet::contract_address_const::<0x69>(), damage: 0x12345678,
+                }
+            )
+        ),
         gold: 0x12345678,
     };
     end(gas, 'chars init');
