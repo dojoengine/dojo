@@ -7,29 +7,16 @@ use tokio::sync::RwLock;
 use crate::error::{Error, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
 
-type EntityId = String;
 type ModelName = String;
 
 pub struct ModelCache {
     pool: SqlitePool,
-    models: RwLock<HashMap<EntityId, Vec<ModelName>>>,
     schemas: RwLock<HashMap<ModelName, Ty>>,
 }
 
 impl ModelCache {
     pub fn new(pool: SqlitePool) -> Self {
-        Self { pool, models: RwLock::new(HashMap::new()), schemas: RwLock::new(HashMap::new()) }
-    }
-
-    pub async fn model(&self, entity_id: &str) -> Result<Vec<ModelName>, Error> {
-        {
-            let models = self.models.read().await;
-            if let Some(models) = models.get(entity_id) {
-                return Ok(models.clone());
-            }
-        }
-
-        self.update_model(entity_id).await
+        Self { pool, schemas: RwLock::new(HashMap::new()) }
     }
 
     pub async fn schema(&self, model: &str) -> Result<Ty, Error> {
@@ -61,16 +48,6 @@ impl ModelCache {
         schemas.insert(model.into(), ty.clone());
 
         Ok(ty)
-    }
-
-    async fn update_model(&self, entity_id: &str) -> Result<Vec<ModelName>, Error> {
-        let (model_names,): (String,) =
-            sqlx::query_as("SELECT model_names FROM entities WHERE id = ?")
-                .bind(entity_id)
-                .fetch_one(&self.pool)
-                .await?;
-
-        Ok(model_names.split(',').map(|s| s.to_string()).collect())
     }
 
     pub async fn clear(&self) {
