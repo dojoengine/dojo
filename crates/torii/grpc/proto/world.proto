@@ -9,8 +9,11 @@ service World {
     rpc WorldMetadata (MetadataRequest) returns (MetadataResponse);
    
      
-    // Subscribes to entity updates.
+    // Subscribes to entities updates.
     rpc SubscribeEntities (SubscribeEntitiesRequest) returns (stream SubscribeEntitiesResponse);
+
+    // Retrieve entity
+    rpc RetrieveEntities (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
 }
 
 
@@ -32,4 +35,13 @@ message SubscribeEntitiesRequest {
 message SubscribeEntitiesResponse {
     // List of entities that have been updated.
     types.EntityUpdate entity_update = 1;
+}
+
+message RetrieveEntitiesRequest {
+    // The entities to retrieve
+    types.EntityQuery query = 1;
+}
+
+message RetrieveEntitiesResponse {
+    repeated types.Entity entities = 1;
 }

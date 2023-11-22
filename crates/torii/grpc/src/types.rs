@@ -13,6 +13,8 @@ use crate::proto;
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Clause,
+    pub limit: u32,
+    pub offset: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -31,7 +33,7 @@ pub struct KeysClause {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct AttributeClause {
     pub model: String,
-    pub attribute: String,
+    pub member: String,
     pub operator: ComparisonOperator,
     pub value: Value,
 }
@@ -105,7 +107,7 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
 impl From<Query> for proto::types::EntityQuery {
     fn from(value: Query) -> Self {
-        Self { clause: Some(value.clause.into()) }
+        Self { clause: Some(value.clause.into()), limit: value.limit, offset: value.offset }
     }
 }
 
@@ -152,7 +154,7 @@ impl From<AttributeClause> for proto::types::AttributeClause {
     fn from(value: AttributeClause) -> Self {
         Self {
             model: value.model,
-            attribute: value.attribute,
+            member: value.member,
             operator: value.operator as i32,
             value: Some(value.value.into()),
         }

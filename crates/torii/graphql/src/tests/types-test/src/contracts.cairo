@@ -8,7 +8,7 @@ trait IRecords<TContractState> {
 #[dojo::contract]
 mod records {
     use starknet::{ContractAddress, get_caller_address};
-    use types_test::models::{Record, Subrecord, Nested, NestedMore, NestedMoreMore, Depth};
+    use types_test::models::{Record, RecordSibling, Subrecord, Nested, NestedMore, NestedMoreMore, Depth};
     use types_test::{seed, random};
     use super::IRecords;
 
@@ -89,6 +89,9 @@ mod records {
                             },
                             random_u8,
                             random_u128
+                        },
+                        RecordSibling {
+                            record_id, random_u8
                         },
                         Subrecord {
                             record_id, subrecord_id, type_u8: record_idx.into(), random_u8,
