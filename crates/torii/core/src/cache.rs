@@ -70,7 +70,7 @@ impl ModelCache {
                 .fetch_one(&self.pool)
                 .await?;
 
-        Ok(model_names.split(",").map(|s| s.to_string()).collect())
+        Ok(model_names.split(',').map(|s| s.to_string()).collect())
     }
 
     pub async fn clear(&self) {

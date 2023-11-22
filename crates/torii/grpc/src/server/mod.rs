@@ -123,7 +123,7 @@ impl DojoWorld {
                 if bytes.is_empty() {
                     return Ok("%".to_string());
                 }
-                Ok(FieldElement::from_byte_slice_be(&bytes)
+                Ok(FieldElement::from_byte_slice_be(bytes)
                     .map(|felt| format!("{:#x}", felt))
                     .map_err(ParseError::FromByteSliceError)?)
             })
@@ -139,14 +139,14 @@ impl DojoWorld {
              OFFSET ?",
         )
         .bind(&keys_pattern)
-        .bind(&limit)
-        .bind(&offset)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&self.pool)
         .await?;
 
         let mut entities = Vec::new();
         for (entity_id, models_str) in db_entities {
-            let model_names: Vec<&str> = models_str.split(",").collect();
+            let model_names: Vec<&str> = models_str.split(',').collect();
             let mut schemas = Vec::new();
             for model in &model_names {
                 schemas.push(self.model_cache.schema(model).await?);
@@ -159,7 +159,7 @@ impl DojoWorld {
             let mut models = Vec::new();
             for schema in schemas {
                 let struct_ty = schema.as_struct().expect("schema should be struct");
-                models.push(self.map_row_to_model(&schema.name(), struct_ty, &row)?);
+                models.push(Self::map_row_to_model(&schema.name(), struct_ty, &row)?);
             }
 
             let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
@@ -263,7 +263,6 @@ impl DojoWorld {
     }
 
     fn map_row_to_model(
-        &self,
         path: &str,
         struct_ty: &Struct,
         row: &SqliteRow,
@@ -305,7 +304,6 @@ impl DojoWorld {
                             )),
                         }
                     }
-
                     Ty::Enum(enum_ty) => {
                         let value = row.try_get::<String, &str>(&column_name)?;
                         let options = enum_ty
@@ -328,7 +326,7 @@ impl DojoWorld {
                         proto::types::Member {
                             name,
                             member_type: Some(proto::types::member::MemberType::Struct(
-                                self.map_row_to_model(&path, struct_ty, row)?,
+                                Self::map_row_to_model(&path, struct_ty, row)?,
                             )),
                         }
                     }
