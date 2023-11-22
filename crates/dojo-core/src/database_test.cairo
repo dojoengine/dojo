@@ -140,9 +140,9 @@ fn test_database_scan_where() {
     let other = array![5, 5].span();
     let layout = array![251, 251].span();
 
-    set_with_index('table', 'some', array!['p'].span(), 0, some, layout);
-    set_with_index('table', 'same', array!['p'].span(), 0, same, layout);
-    set_with_index('table', 'other', array!['x'].span(), 0, other, layout);
+    set_with_index('table', 'some', array!['p', 'x'].span(), 0, some, layout);
+    set_with_index('table', 'same', array!['p', 'x'].span(), 0, same, layout);
+    set_with_index('table', 'other', array!['p', 'x'].span(), 0, other, layout);
 
     let values = scan(Clause::All('table'), 2, layout);
     assert(values.len() == 3, 'Wrong number of values!');

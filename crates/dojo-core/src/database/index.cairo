@@ -66,8 +66,8 @@ fn delete(address_domain: u32, index: felt252, id: felt252) {
     );
 }
 
-fn exists(address_domain: u32, table: felt252, id: felt252) -> bool {
-    storage::get(address_domain, build_index_item_key(table, id)) != 0
+fn exists(address_domain: u32, index: felt252, id: felt252) -> bool {
+    storage::get(address_domain, build_index_item_key(index, id)) != 0
 }
 
 fn get(address_domain: u32, index: felt252, value: felt252) -> Span<felt252> {
@@ -77,7 +77,7 @@ fn get(address_domain: u32, index: felt252, value: felt252) -> Span<felt252> {
     let mut idx = 0;
     loop {
         if idx == index_len {
-          break res.span();
+            break res.span();
         }
 
         res.append(storage::get(address_domain, build_index_key(index, value, idx)));
