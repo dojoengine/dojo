@@ -7,16 +7,20 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-blockifier.workspace = true
+anyhow.workspace = true
 cairo-vm.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
+
+blockifier.workspace = true
+cairo-lang-starknet.workspace = true
+flate2.workspace = true
 starknet_api.workspace = true
 
 [features]
-default = [ "blockifier", "conversion", "serde" ]
+default = [ "blockifier", "rpc", "serde" ]
 
 blockifier = [  ]
-conversion = [  ]
+rpc = [  ]
 serde = [  ]
