@@ -37,4 +37,6 @@ pub enum QueryError {
     UnsupportedQuery,
     #[error("model not found: {0}")]
     ModelNotFound(String),
+    #[error("exceeds sqlite `JOIN` limit (64)")]
+    SqliteJoinLimit,
 }

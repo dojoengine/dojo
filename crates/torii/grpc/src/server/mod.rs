@@ -5,6 +5,7 @@ pub mod subscription;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use dojo_types::primitive::Primitive;
@@ -27,6 +28,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
+use torii_core::model::build_sql_query;
 
 use self::subscription::SubscribeRequest;
 use crate::proto::types::clause::ClauseType;
@@ -96,7 +98,7 @@ impl DojoWorld {
                 packed_size: model.2,
                 unpacked_size: model.3,
                 layout: hex::decode(&model.4).unwrap(),
-                schema: serde_json::to_vec(&schema.ty).unwrap(),
+                schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
 
@@ -111,38 +113,78 @@ impl DojoWorld {
 
     async fn entities_by_keys(
         &self,
-        _keys: proto::types::KeysClause,
+        keys_clause: proto::types::KeysClause,
+        limit_offset: Option<proto::types::LimitOffset>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        Ok(vec![])
+        let keys = keys_clause
+            .keys
+            .iter()
+            .map(|bytes| {
+                if bytes.is_empty() {
+                    return Ok("%".to_string());
+                }
+                Ok(FieldElement::from_byte_slice_be(&bytes)
+                    .map(|felt| format!("{:#x}", felt))
+                    .map_err(ParseError::FromByteSliceError)?)
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        let keys_pattern = keys.join("/") + "/%";
+
+        let (limit, offset) = limit_offset
+            .map(|values| (values.limit, values.offset))
+            .unwrap_or((DEFAULT_LIMIT, DEFAULT_OFFSET));
+
+        let db_entities: Vec<(String, String)> = sqlx::query_as(
+            "SELECT id, model_names FROM entities WHERE keys LIKE ? ORDER BY event_id ASC LIMIT ? \
+             OFFSET ?",
+        )
+        .bind(&keys_pattern)
+        .bind(&limit)
+        .bind(&offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut entities = Vec::new();
+        for (entity_id, models_str) in db_entities {
+            let model_names: Vec<&str> = models_str.split(",").collect();
+            let mut schemas = Vec::new();
+            for model in &model_names {
+                schemas.push(self.model_cache.schema(model).await?);
+            }
+
+            let entity_query =
+                format!("{} WHERE {}.entity_id = ?", build_sql_query(&schemas)?, schemas[0].name());
+            let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+
+            let mut models = Vec::new();
+            for schema in schemas {
+                let struct_ty = schema.as_struct().expect("schema should be struct");
+                models.push(self.map_row_to_model(&schema.name(), struct_ty, &row)?);
+            }
+
+            let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
+            entities.push(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
+        }
+
+        Ok(entities)
     }
 
     async fn entities_by_attribute(
         &self,
-        attribute: proto::types::AttributeClause,
-        limit_offset: Option<proto::types::LimitOffset>,
+        _attribute: proto::types::AttributeClause,
+        _limit_offset: Option<proto::types::LimitOffset>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        let (limit, offset) = match limit_offset {
-            Some(values) => (values.limit, values.offset),
-            None => (DEFAULT_LIMIT, DEFAULT_OFFSET),
-        };
-
-        let schema = self.model_cache.schema(&attribute.model).await?;
-        let rows = sqlx::query(&format!("{} LIMIT ? OFFSET ?", schema.sql))
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
-
-        let models = self.map_rows_to_models(&schema.ty, &rows).await?;
-
-        Ok(vec![proto::types::Entity { key: "".to_string(), models }])
+        // TODO: Implement
+        Err(QueryError::UnsupportedQuery.into())
     }
 
     async fn entities_by_composite(
         &self,
         _composite: proto::types::CompositeClause,
+        _limit_offset: Option<proto::types::LimitOffset>,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        Ok(vec![])
+        // TODO: Implement
+        Err(QueryError::UnsupportedQuery.into())
     }
 
     pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
@@ -168,7 +210,7 @@ impl DojoWorld {
             class_hash,
             packed_size,
             unpacked_size,
-            schema: serde_json::to_vec(&schema.ty).unwrap(),
+            schema: serde_json::to_vec(&schema).unwrap(),
         })
     }
 
@@ -208,109 +250,98 @@ impl DojoWorld {
             .ok_or(QueryError::UnsupportedQuery)?;
 
         let entities = match clause_type {
-            ClauseType::Keys(keys) => self.entities_by_keys(keys).await?,
+            ClauseType::Keys(keys) => self.entities_by_keys(keys, query.limit_offset).await?,
             ClauseType::Attribute(attribute) => {
                 self.entities_by_attribute(attribute, query.limit_offset).await?
             }
-            ClauseType::Composite(composite) => self.entities_by_composite(composite).await?,
+            ClauseType::Composite(composite) => {
+                self.entities_by_composite(composite, query.limit_offset).await?
+            }
         };
 
         Ok(RetrieveEntitiesResponse { entities })
     }
 
-    async fn map_rows_to_models(
+    fn map_row_to_model(
         &self,
-        schema: &Ty,
-        rows: &[SqliteRow],
-    ) -> Result<Vec<proto::types::Model>, Error> {
-        fn row_to_model(
-            path: &str,
-            struct_ty: &Struct,
-            row: &SqliteRow,
-        ) -> Result<proto::types::Model, Error> {
-            let members = struct_ty
-                .children
-                .iter()
-                .map(|member| {
-                    let column_name = format!("{}.{}", path, member.name);
-                    let name = member.name.clone();
-                    let member = match &member.ty {
-                        Ty::Primitive(primitive) => {
-                            let value_type = match primitive {
-                                Primitive::Bool(_) => proto::types::value::ValueType::BoolValue(
-                                    row.try_get::<bool, &str>(&column_name)?,
-                                ),
-                                Primitive::U8(_)
-                                | Primitive::U16(_)
-                                | Primitive::U32(_)
-                                | Primitive::U64(_)
-                                | Primitive::USize(_) => {
-                                    let value = row.try_get::<i64, &str>(&column_name)?;
-                                    proto::types::value::ValueType::UintValue(value as u64)
-                                }
-                                Primitive::U128(_)
-                                | Primitive::U256(_)
-                                | Primitive::Felt252(_)
-                                | Primitive::ClassHash(_)
-                                | Primitive::ContractAddress(_) => {
-                                    let value = row.try_get::<String, &str>(&column_name)?;
-                                    proto::types::value::ValueType::StringValue(value)
-                                }
-                            };
-
-                            proto::types::Member {
-                                name,
-                                member_type: Some(proto::types::member::MemberType::Value(
-                                    proto::types::Value { value_type: Some(value_type) },
-                                )),
+        path: &str,
+        struct_ty: &Struct,
+        row: &SqliteRow,
+    ) -> Result<proto::types::Model, Error> {
+        let members = struct_ty
+            .children
+            .iter()
+            .map(|member| {
+                let column_name = format!("{}.{}", path, member.name);
+                let name = member.name.clone();
+                let member = match &member.ty {
+                    Ty::Primitive(primitive) => {
+                        let value_type = match primitive {
+                            Primitive::Bool(_) => proto::types::value::ValueType::BoolValue(
+                                row.try_get::<bool, &str>(&column_name)?,
+                            ),
+                            Primitive::U8(_)
+                            | Primitive::U16(_)
+                            | Primitive::U32(_)
+                            | Primitive::U64(_)
+                            | Primitive::USize(_) => {
+                                let value = row.try_get::<i64, &str>(&column_name)?;
+                                proto::types::value::ValueType::UintValue(value as u64)
                             }
-                        }
-
-                        Ty::Enum(enum_ty) => {
-                            let value = row.try_get::<String, &str>(&column_name)?;
-                            let options = enum_ty
-                                .options
-                                .iter()
-                                .map(|e| e.name.to_string())
-                                .collect::<Vec<String>>();
-                            let option =
-                                options.iter().position(|o| o == &value).expect("wrong enum value")
-                                    as u32;
-                            proto::types::Member {
-                                name: enum_ty.name.clone(),
-                                member_type: Some(proto::types::member::MemberType::Enum(
-                                    proto::types::Enum { option, options },
-                                )),
+                            Primitive::U128(_)
+                            | Primitive::U256(_)
+                            | Primitive::Felt252(_)
+                            | Primitive::ClassHash(_)
+                            | Primitive::ContractAddress(_) => {
+                                let value = row.try_get::<String, &str>(&column_name)?;
+                                proto::types::value::ValueType::StringValue(value)
                             }
+                        };
+
+                        proto::types::Member {
+                            name,
+                            member_type: Some(proto::types::member::MemberType::Value(
+                                proto::types::Value { value_type: Some(value_type) },
+                            )),
                         }
-                        Ty::Struct(struct_ty) => {
-                            let path = [path, &struct_ty.name].join("$");
-                            proto::types::Member {
-                                name,
-                                member_type: Some(proto::types::member::MemberType::Struct(
-                                    row_to_model(&path, struct_ty, row)?,
-                                )),
-                            }
+                    }
+
+                    Ty::Enum(enum_ty) => {
+                        let value = row.try_get::<String, &str>(&column_name)?;
+                        let options = enum_ty
+                            .options
+                            .iter()
+                            .map(|e| e.name.to_string())
+                            .collect::<Vec<String>>();
+                        let option =
+                            options.iter().position(|o| o == &value).expect("wrong enum value")
+                                as u32;
+                        proto::types::Member {
+                            name: enum_ty.name.clone(),
+                            member_type: Some(proto::types::member::MemberType::Enum(
+                                proto::types::Enum { option, options },
+                            )),
                         }
-                        ty => {
-                            unimplemented!("unimplemented type_enum: {ty}");
+                    }
+                    Ty::Struct(struct_ty) => {
+                        let path = [path, &struct_ty.name].join("$");
+                        proto::types::Member {
+                            name,
+                            member_type: Some(proto::types::member::MemberType::Struct(
+                                self.map_row_to_model(&path, struct_ty, row)?,
+                            )),
                         }
-                    };
+                    }
+                    ty => {
+                        unimplemented!("unimplemented type_enum: {ty}");
+                    }
+                };
 
-                    Ok(member)
-                })
-                .collect::<Result<Vec<proto::types::Member>, Error>>()?;
-
-            Ok(proto::types::Model { name: struct_ty.name.clone(), members })
-        }
-
-        rows.iter()
-            .map(|row| {
-                let struct_ty = schema.as_struct().expect("schema should be struct ty").clone();
-
-                row_to_model(&schema.name(), &struct_ty, row)
+                Ok(member)
             })
-            .collect::<Result<Vec<proto::types::Model>, Error>>()
+            .collect::<Result<Vec<proto::types::Member>, Error>>()?;
+
+        Ok(proto::types::Model { name: struct_ty.name.clone(), members })
     }
 }
 

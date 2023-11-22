@@ -56,7 +56,7 @@ message Model {
 
 message Entity {
     // The entity key
-    string key = 1;
+    bytes key = 1;
     // Models of the entity
     repeated Model models = 2;
 }

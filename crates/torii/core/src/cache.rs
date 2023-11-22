@@ -1,40 +1,49 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
 use tokio::sync::RwLock;
 
 use crate::error::{Error, QueryError};
-use crate::model::{build_sql_model_query, parse_sql_model_members, SqlModelMember};
+use crate::model::{parse_sql_model_members, SqlModelMember};
 
-pub struct SchemaData {
-    pub ty: Ty,
-    pub sql: String,
-}
+type EntityId = String;
+type ModelName = String;
 
 pub struct ModelCache {
     pool: SqlitePool,
-    schemas: RwLock<HashMap<String, Arc<SchemaData>>>,
+    models: RwLock<HashMap<EntityId, Vec<ModelName>>>,
+    schemas: RwLock<HashMap<ModelName, Ty>>,
 }
 
 impl ModelCache {
     pub fn new(pool: SqlitePool) -> Self {
-        Self { pool, schemas: RwLock::new(HashMap::new()) }
+        Self { pool, models: RwLock::new(HashMap::new()), schemas: RwLock::new(HashMap::new()) }
     }
 
-    pub async fn schema(&self, model: &str) -> Result<Arc<SchemaData>, Error> {
+    pub async fn model(&self, entity_id: &str) -> Result<Vec<ModelName>, Error> {
         {
-            let schemas = self.schemas.read().await;
-            if let Some(schema) = schemas.get(model) {
-                return Ok(Arc::clone(schema));
+            let models = self.models.read().await;
+            if let Some(models) = models.get(entity_id) {
+                return Ok(models.clone());
             }
         }
 
-        self.update(model).await
+        self.update_model(entity_id).await
     }
 
-    async fn update(&self, model: &str) -> Result<Arc<SchemaData>, Error> {
+    pub async fn schema(&self, model: &str) -> Result<Ty, Error> {
+        {
+            let schemas = self.schemas.read().await;
+            if let Some(schema) = schemas.get(model) {
+                return Ok(schema.clone());
+            }
+        }
+
+        self.update_schema(model).await
+    }
+
+    async fn update_schema(&self, model: &str) -> Result<Ty, Error> {
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
             "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
@@ -48,13 +57,20 @@ impl ModelCache {
         }
 
         let ty = parse_sql_model_members(model, &model_members);
-        let sql = build_sql_model_query(ty.as_struct().unwrap());
-        let schema = Arc::new(SchemaData { ty, sql });
-
         let mut schemas = self.schemas.write().await;
-        schemas.insert(model.into(), Arc::clone(&schema));
+        schemas.insert(model.into(), ty.clone());
 
-        Ok(schema)
+        Ok(ty)
+    }
+
+    async fn update_model(&self, entity_id: &str) -> Result<Vec<ModelName>, Error> {
+        let (model_names,): (String,) =
+            sqlx::query_as("SELECT model_names FROM entities WHERE id = ?")
+                .bind(entity_id)
+                .fetch_one(&self.pool)
+                .await?;
+
+        Ok(model_names.split(",").map(|s| s.to_string()).collect())
     }
 
     pub async fn clear(&self) {
