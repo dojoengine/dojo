@@ -89,7 +89,6 @@ pub struct L1HandlerTx {
     pub transaction_hash: TxHash,
     pub version: FieldElement,
     pub nonce: Nonce,
-    pub paid_l1_fee: u128,
     pub calldata: Vec<FieldElement>,
     pub contract_address: ContractAddress,
     pub entry_point_selector: FieldElement,
