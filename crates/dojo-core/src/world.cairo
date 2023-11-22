@@ -25,14 +25,9 @@ trait IWorld<T> {
         layout: Span<u8>
     );
     fn entities(
-        self: @T,
-        model: felt252,
-        index: Option<felt252>,
-        query: Clause,
-        values_length: usize,
-        values_layout: Span<u8>
-    ) -> (Span<felt252>, Span<Span<felt252>>);
-    fn entity_ids(self: @T, model: felt252, index: Option<felt252>, query: Clause) -> Span<felt252>;
+        self: @T, where: Clause, values_length: usize, values_layout: Span<u8>
+    ) -> Span<Span<felt252>>;
+    fn entity_ids(self: @T, where: Clause) -> Span<felt252>;
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
@@ -248,7 +243,9 @@ mod world {
                         self.metadata_uri.write(i, *item);
                         i += 1;
                     },
-                    Option::None(_) => { break; }
+                    Option::None(_) => {
+                        break;
+                    }
                 };
             };
         }
@@ -544,36 +541,26 @@ mod world {
 
         /// Returns entity IDs and entities that contain the model state.
         /// # Arguments
-        /// * `model` - The name of the model to be retrieved.
-        /// * `index` - The position in the index which to be retrieved.
-        /// * `query` - The query to be used to find the entity.
+        /// * `where` - The query to be used to find the entity.
         /// * `values_length` - The length of the model values.
         /// * `values_layout` - The layout of the model values.
         ///
         /// # Returns
-        /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entities(
-            self: @ContractState, model: felt252, index: Option<felt252>, query: Clause, values_length: usize, values_layout: Span<u8>
-        ) -> (Span<felt252>, Span<Span<felt252>>) {
-            database::scan(model, index, query, values_length, values_layout)
+            self: @ContractState, where: Clause, values_length: usize, values_layout: Span<u8>
+        ) -> Span<Span<felt252>> {
+            database::scan(where, values_length, values_layout)
         }
 
         /// Returns only the entity IDs that contain the model state.
         /// # Arguments
-        /// * `model` - The name of the model to be retrieved.
-        /// * `index` - The position in the index which to be retrieved.
-        /// * `query` - The query to be used to find the entity.
+        /// * `where` - The query to be used to find the entity.
         ///
         /// # Returns
         /// * `Span<felt252>` - The entity IDs.
-        fn entity_ids(
-            self: @ContractState,
-            model: felt252,
-            index: Option<felt252>,
-            query: Clause
-        ) -> Span<felt252> {
-            database::scan_ids(model, index, query)
+        fn entity_ids(self: @ContractState, where: Clause) -> Span<felt252> {
+            database::scan_keys(where)
         }
 
         /// Sets the executor contract address.
