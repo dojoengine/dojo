@@ -13,13 +13,8 @@ use crate::proto;
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Clause,
-    pub offset_limit: LimitOffset,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct LimitOffset {
-    pub offset: u32,
     pub limit: u32,
+    pub offset: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -112,13 +107,7 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
 impl From<Query> for proto::types::EntityQuery {
     fn from(value: Query) -> Self {
-        Self { clause: Some(value.clause.into()), limit_offset: Some(value.offset_limit.into()) }
-    }
-}
-
-impl From<LimitOffset> for proto::types::LimitOffset {
-    fn from(value: LimitOffset) -> Self {
-        Self { limit: value.limit, offset: value.offset }
+        Self { clause: Some(value.clause.into()), limit: value.limit, offset: value.offset }
     }
 }
 

@@ -35,9 +35,6 @@ use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::{self};
 
-const DEFAULT_LIMIT: u32 = 10;
-const DEFAULT_OFFSET: u32 = 0;
-
 #[derive(Clone)]
 pub struct DojoWorld {
     world_address: FieldElement,
@@ -114,7 +111,8 @@ impl DojoWorld {
     async fn entities_by_keys(
         &self,
         keys_clause: proto::types::KeysClause,
-        limit_offset: Option<proto::types::LimitOffset>,
+        limit: u32,
+        offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         let keys = keys_clause
             .keys
@@ -129,10 +127,6 @@ impl DojoWorld {
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
-
-        let (limit, offset) = limit_offset
-            .map(|values| (values.limit, values.offset))
-            .unwrap_or((DEFAULT_LIMIT, DEFAULT_OFFSET));
 
         let db_entities: Vec<(String, String)> = sqlx::query_as(
             "SELECT id, model_names FROM entities WHERE keys LIKE ? ORDER BY event_id ASC LIMIT ? \
@@ -172,7 +166,8 @@ impl DojoWorld {
     async fn entities_by_attribute(
         &self,
         _attribute: proto::types::AttributeClause,
-        _limit_offset: Option<proto::types::LimitOffset>,
+        _limit: u32,
+        _offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // TODO: Implement
         Err(QueryError::UnsupportedQuery.into())
@@ -181,7 +176,8 @@ impl DojoWorld {
     async fn entities_by_composite(
         &self,
         _composite: proto::types::CompositeClause,
-        _limit_offset: Option<proto::types::LimitOffset>,
+        _limit: u32,
+        _offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // TODO: Implement
         Err(QueryError::UnsupportedQuery.into())
@@ -250,12 +246,14 @@ impl DojoWorld {
             .ok_or(QueryError::UnsupportedQuery)?;
 
         let entities = match clause_type {
-            ClauseType::Keys(keys) => self.entities_by_keys(keys, query.limit_offset).await?,
+            ClauseType::Keys(keys) => {
+                self.entities_by_keys(keys, query.limit, query.offset).await?
+            }
             ClauseType::Attribute(attribute) => {
-                self.entities_by_attribute(attribute, query.limit_offset).await?
+                self.entities_by_attribute(attribute, query.limit, query.offset).await?
             }
             ClauseType::Composite(composite) => {
-                self.entities_by_composite(composite, query.limit_offset).await?
+                self.entities_by_composite(composite, query.limit, query.offset).await?
             }
         };
 
