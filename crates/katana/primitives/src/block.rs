@@ -33,8 +33,8 @@ pub struct Header {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Block {
-    header: Header,
-    body: Vec<Transaction>,
+    pub header: Header,
+    pub body: Vec<Transaction>,
 }
 
 impl From<BlockNumber> for BlockHashOrNumber {
