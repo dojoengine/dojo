@@ -153,10 +153,6 @@ where
     ) -> Result<Option<StorageValue>> {
         self.provider.storage(address, storage_key)
     }
-
-    fn compiled_contract_class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        self.provider.compiled_contract_class(hash)
-    }
 }
 
 impl<Db> StateProviderExt for BlockchainProvider<Db>

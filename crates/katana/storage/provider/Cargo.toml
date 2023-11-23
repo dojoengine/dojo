@@ -7,10 +7,16 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow.workspace = true
 katana-db = { path = "../db" }
 katana-primitives = { path = "../../primitives" }
+
+anyhow.workspace = true
+auto_impl = "1.1.0"
+parking_lot.workspace = true
 
 [features]
 default = [ "in_memory" ]
 in_memory = [  ]
+
+[dev-dependencies]
+starknet.workspace = true

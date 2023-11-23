@@ -5,7 +5,8 @@ use katana_primitives::contract::{
     StorageKey, StorageValue,
 };
 
-pub trait StateProvider: StateProviderExt {
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait StateProvider {
     /// Returns the compiled class definition of a contract class given its class hash.
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>>;
 
@@ -21,13 +22,11 @@ pub trait StateProvider: StateProviderExt {
 
     /// Returns the class hash of a contract.
     fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>>;
-
-    /// Returns the compiled contract class for the given class hash.
-    fn compiled_contract_class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>>;
 }
 
 /// An extension of the `StateProvider` trait which provides additional methods.
-pub trait StateProviderExt {
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait StateProviderExt: StateProvider {
     /// Retrieves the Sierra class definition of a contract class given its class hash.
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>>;
 
