@@ -120,30 +120,17 @@ pub type ExecutionResources = HashMap<String, usize>;
 /// The receipt of a transaction containing the outputs of its execution.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Receipt {
-    Invoke(CommonReceipt),
-    Declare(CommonReceipt),
-    L1Handler(CommonReceipt),
-    DeployAccount(DeployAccountReceipt),
-}
-
-/// Commong transaction receipt fields.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CommonReceipt {
+pub struct Receipt {
+    /// Actual fee paid for the transaction.
     pub actual_fee: u128,
+    /// Events emitted by contracts.
     pub events: Vec<Event>,
+    /// Messages sent to L1.
     pub messages_sent: Vec<MsgToL1>,
+    /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
+    /// The execution resources used by the transaction.
     pub actual_resources: ExecutionResources,
+    /// Contract address if the transaction deployed a contract. (only for deploy account tx)
     pub contract_address: Option<ContractAddress>,
-}
-
-/// Commong transaction receipt fields.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DeployAccountReceipt {
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    pub common: CommonReceipt,
-    pub contract_adddress: ContractAddress,
 }
