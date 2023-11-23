@@ -13,9 +13,17 @@ katana-primitives = { path = "../../primitives" }
 anyhow.workspace = true
 auto_impl = "1.1.0"
 parking_lot.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+# fork provider deps
+futures.workspace = true
+starknet.workspace = true
+tokio.workspace = true
 
 [features]
-default = [ "in_memory" ]
+default = [ "fork", "in_memory" ]
+fork = [  ]
 in_memory = [  ]
 
 [dev-dependencies]
