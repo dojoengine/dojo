@@ -5,7 +5,7 @@ use katana_primitives::block::{Block, BlockHash, BlockHashOrNumber, BlockNumber,
 
 use super::transaction::TransactionProvider;
 
-pub trait BlockHashProvider {
+pub trait BlockHashProvider: Send + Sync {
     /// Retrieves the latest block hash.
     ///
     /// There should always be at least one block (genesis) in the chain.
@@ -15,7 +15,7 @@ pub trait BlockHashProvider {
     fn block_hash_by_num(&self, num: BlockNumber) -> Result<Option<BlockHash>>;
 }
 
-pub trait BlockNumberProvider {
+pub trait BlockNumberProvider: Send + Sync {
     /// Retrieves the latest block number.
     ///
     /// There should always be at least one block (genesis) in the chain.
@@ -25,7 +25,7 @@ pub trait BlockNumberProvider {
     fn block_number_by_hash(&self, hash: BlockHash) -> Result<Option<BlockNumber>>;
 }
 
-pub trait HeaderProvider {
+pub trait HeaderProvider: Send + Sync {
     /// Retrieves the latest header by its block id.
     fn header(&self, id: BlockHashOrNumber) -> Result<Option<Header>>;
 
@@ -39,7 +39,7 @@ pub trait HeaderProvider {
 }
 
 pub trait BlockProvider:
-    BlockHashProvider + BlockNumberProvider + HeaderProvider + TransactionProvider
+    BlockHashProvider + BlockNumberProvider + HeaderProvider + TransactionProvider + Send + Sync
 {
     /// Returns a block by its id.
     fn block(&self, id: BlockHashOrNumber) -> Result<Option<Block>>;
@@ -58,7 +58,7 @@ pub trait BlockProvider:
     }
 }
 
-pub trait BlockExecutionWriter {
+pub trait BlockExecutionWriter: Send + Sync {
     /// Store an executed block along with its output to the storage.
     fn store_block(&mut self, block: Block) -> Result<()>;
 }
