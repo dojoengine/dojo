@@ -5149,10 +5149,14 @@ version = "0.3.14"
 dependencies = [
  "anyhow",
  "auto_impl",
+ "futures",
  "katana-db",
  "katana-primitives",
  "parking_lot 0.12.1",
  "starknet",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
