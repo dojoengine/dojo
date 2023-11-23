@@ -6,7 +6,7 @@ use katana_primitives::contract::{
 };
 
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateProvider {
+pub trait StateProvider: Send + Sync {
     /// Returns the compiled class definition of a contract class given its class hash.
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>>;
 
@@ -26,7 +26,7 @@ pub trait StateProvider {
 
 /// An extension of the `StateProvider` trait which provides additional methods.
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateProviderExt: StateProvider {
+pub trait StateProviderExt: StateProvider + Send + Sync {
     /// Retrieves the Sierra class definition of a contract class given its class hash.
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>>;
 
