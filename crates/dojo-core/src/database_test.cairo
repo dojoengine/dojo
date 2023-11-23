@@ -190,8 +190,8 @@ fn test_database_scan_where_deletion() {
     del('model', 'other');
 
     let values = scan(Clause::Member(where), 2, layout);
-    assert(values.len() == 1, 'Wrong len for del y = 3');
+    assert(values.len() == 0, 'Wrong len for del y = 3');
 
     let values = scan(Clause::All('model'), 2, layout);
-    assert(values.len() == 1, 'Wrong len for scan');
+    assert(values.len() == 0, 'Wrong len for scan');
 }
