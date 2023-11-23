@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
-use cairo_lang_syntax::node::ast::{Expr, ItemEnum, ItemStruct, OptionTypeClause};
+use cairo_lang_syntax::node::ast::{
+    Expr, GenericParam, ItemEnum, ItemStruct, OptionTypeClause, OptionWrappedGenericParamList,
+};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
@@ -57,23 +59,23 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
             if primitive_sizes.get(&ty).is_some() {
                 // It's a primitive type
                 member_types.push(format!(
-                    "
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
-                        name: '{name}',
-                        ty: dojo::database::schema::Ty::Primitive('{ty}'),
-                        attrs: array![{}].span()
-                    }})\n",
+                    "dojo::database::introspect::serialize_member(@\
+                     dojo::database::introspect::Member {{
+                name: '{name}',
+                ty: dojo::database::introspect::Ty::Primitive('{ty}'),
+                attrs: array![{}].span()
+            }})",
                     attrs.join(","),
                 ));
             } else {
                 // It's a custom struct/enum
                 member_types.push(format!(
-                    "
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {{
-                        name: '{name}',
-                        ty: dojo::database::schema::SchemaIntrospection::<{ty}>::ty(),
-                        attrs: array![{}].span()
-                    }})\n",
+                    "dojo::database::introspect::serialize_member(@\
+                     dojo::database::introspect::Member {{
+                name: '{name}',
+                ty: dojo::database::introspect::Introspect::<{ty}>::ty(),
+                attrs: array![{}].span()
+            }})",
                     attrs.join(","),
                 ));
             }
@@ -81,19 +83,17 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
             Member { name, ty, key }
         })
         .collect::<_>();
-    drop(primitive_sizes);
 
     let type_ty = format!(
-        "
-        dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {{
+        "dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {{
             name: '{name}',
             attrs: array![].span(),
             children: array![{}].span()
         }})",
-        member_types.join(",\n")
+        member_types.join(", ")
     );
 
-    handle_introspect_internal(db, name, vec![], 0, type_ty, members)
+    handle_introspect_internal(db, name, struct_ast.generic_params(db), vec![], 0, type_ty, members)
 }
 
 /// A handler for Dojo code derives Introspect for an enum
@@ -108,6 +108,7 @@ pub fn handle_introspect_enum(
     enum_ast: ItemEnum,
 ) -> RewriteNode {
     let name = enum_ast.name(db).text(db).into();
+
     let variant_type = enum_ast.variants(db).elements(db).first().unwrap().type_clause(db);
     let variant_type_text = variant_type.as_syntax_node().get_text(db);
     let variant_type_text = variant_type_text.trim();
@@ -121,8 +122,8 @@ pub fn handle_introspect_enum(
                 variant_type_arr.push((
                     // Not using Ty right now, but still keeping it for later.
                     format!(
-                        "dojo::database::schema::serialize_member_type(
-                            @dojo::database::schema::Ty::Primitive('{}')
+                        "dojo::database::introspect::serialize_member_type(
+                            @dojo::database::introspect::Ty::Primitive('{}')
                         )",
                         ty_name
                     ),
@@ -134,8 +135,8 @@ pub fn handle_introspect_enum(
             variant_type_arr.push((
                 // Not using Ty right now, but still keeping it for later.
                 format!(
-                    "dojo::database::schema::serialize_member_type(
-                        @dojo::database::schema::SchemaIntrospection::<{}>::ty()
+                    "dojo::database::introspect::serialize_member_type(
+                        @dojo::database::introspect::Introspect::<{}>::ty()
                     )",
                     ty_name
                 ),
@@ -170,17 +171,15 @@ pub fn handle_introspect_enum(
 
         // @TODO: Prepare type struct
         arms_ty.push(format!(
-            "
-            (
-                '{member_name}',
-                dojo::database::schema::serialize_member_type(
-                @dojo::database::schema::Ty::Tuple(array![{}].span()))
-            )",
+            "(
+                    '{member_name}',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![{}].span()))
+                )",
             if !variant_type_arr.is_empty() {
                 let ty_cairo: Vec<_> =
                     variant_type_arr.iter().map(|(ty_cairo, _)| ty_cairo.to_string()).collect();
-                // format!("'{}'", &ty_cairo.join("', '"))
-                ty_cairo.join(",\n")
+                ty_cairo.join(", ")
             } else {
                 "".to_string()
             }
@@ -188,14 +187,11 @@ pub fn handle_introspect_enum(
     });
 
     let type_ty = format!(
-        "
-        dojo::database::schema::Ty::Enum(
-            dojo::database::schema::Enum {{
+        "dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {{
                 name: '{name}',
                 attrs: array![].span(),
-                children: array![
-                {}
-                ].span()
+                children: array![{}].span()
             }}
         )",
         arms_ty.join(",\n")
@@ -204,12 +200,21 @@ pub fn handle_introspect_enum(
     // Enums have 1 size and 8 bit layout by default
     let layout = vec![RewriteNode::Text("layout.append(8);\n".into())];
     let size_precompute = 1;
-    handle_introspect_internal(db, name, layout, size_precompute, type_ty, members)
+    handle_introspect_internal(
+        db,
+        name,
+        enum_ast.generic_params(db),
+        layout,
+        size_precompute,
+        type_ty,
+        members,
+    )
 }
 
 fn handle_introspect_internal(
-    _db: &dyn SyntaxGroup,
+    db: &dyn SyntaxGroup,
     name: String,
+    generics: OptionWrappedGenericParamList,
     mut layout: Vec<RewriteNode>,
     mut size_precompute: usize,
     type_ty: String,
@@ -217,6 +222,30 @@ fn handle_introspect_internal(
 ) -> RewriteNode {
     let mut size = vec![];
     let primitive_sizes = primitive_type_introspection();
+
+    let generics = if let OptionWrappedGenericParamList::WrappedGenericParamList(params) = generics
+    {
+        params
+            .generic_params(db)
+            .elements(db)
+            .iter()
+            .filter_map(|el| {
+                if let GenericParam::Type(typ) = el {
+                    Some(typ.name(db).text(db).to_string())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
+
+    let generic_impls = generics
+        .iter()
+        .map(|g| format!("{g}, impl {g}Introspect: dojo::database::introspect::Introspect<{g}>"))
+        .collect::<Vec<_>>()
+        .join(", ");
 
     members.iter().for_each(|m| {
         let primitive_intro = primitive_sizes.get(&m.ty);
@@ -237,12 +266,9 @@ fn handle_introspect_internal(
             if m.key {
                 attrs.push("'key'");
             } else {
-                size.push(format!(
-                    "dojo::database::schema::SchemaIntrospection::<{}>::size()",
-                    m.ty,
-                ));
+                size.push(format!("dojo::database::introspect::Introspect::<{}>::size()", m.ty,));
                 layout.push(RewriteNode::Text(format!(
-                    "dojo::database::schema::SchemaIntrospection::<{}>::layout(ref layout);\n",
+                    "dojo::database::introspect::Introspect::<{}>::layout(ref layout);\n",
                     m.ty
                 )));
             }
@@ -255,26 +281,28 @@ fn handle_introspect_internal(
 
     RewriteNode::interpolate_patched(
         "
-        impl $name$SchemaIntrospection of dojo::database::schema::SchemaIntrospection<$name$> {
-            
-            #[inline(always)]
-            fn size() -> usize {
-                $size$
-            }
+impl $name$Introspect<$generics$> of \
+         dojo::database::introspect::Introspect<$name$<$generics_types$>> {
+    #[inline(always)]
+    fn size() -> usize {
+        $size$
+    }
 
-            #[inline(always)]
-            fn layout(ref layout: Array<u8>) {
-                $layout$
-            }
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        $layout$
+    }
 
-            #[inline(always)]
-            fn ty() -> dojo::database::schema::Ty {
-                $ty$
-            }
-        }
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        $ty$
+    }
+}
         ",
         &UnorderedHashMap::from([
             ("name".to_string(), RewriteNode::Text(name)),
+            ("generics".to_string(), RewriteNode::Text(generic_impls)),
+            ("generics_types".to_string(), RewriteNode::Text(generics.join(", "))),
             ("size".to_string(), RewriteNode::Text(size.join(" + "))),
             ("layout".to_string(), RewriteNode::new_modified(layout)),
             ("ty".to_string(), RewriteNode::Text(type_ty)),

@@ -41,7 +41,7 @@ fn serialize_member_type(m: @Ty) -> Span<felt252> {
     serialized.span()
 }
 
-trait SchemaIntrospection<T> {
+trait Introspect<T> {
     fn size() -> usize;
     fn layout(ref layout: Array<u8>);
     fn ty() -> Ty;

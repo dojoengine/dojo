@@ -7,7 +7,9 @@ use poseidon::poseidon_hash_span;
 mod index;
 #[cfg(test)]
 mod index_test;
-mod schema;
+mod introspect;
+#[cfg(test)]
+mod introspect_test;
 mod storage;
 #[cfg(test)]
 mod storage_test;

@@ -66,7 +66,7 @@ struct Vec3 {
     z: u8,
 }
 
-impl Vec3SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec3> {
+impl Vec3Introspect of dojo::database::introspect::Introspect<Vec3> {
     #[inline(always)]
     fn size() -> usize {
         3
@@ -80,30 +80,30 @@ impl Vec3SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec3
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::schema::Ty {
-        dojo::database::schema::Ty::Struct(
-            dojo::database::schema::Struct {
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
                 name: 'Vec3',
                 attrs: array![].span(),
                 children: array![
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'x',
-                            ty: dojo::database::schema::Ty::Primitive('u32'),
+                            ty: dojo::database::introspect::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     ),
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'y',
-                            ty: dojo::database::schema::Ty::Primitive('u32'),
+                            ty: dojo::database::introspect::Ty::Primitive('u32'),
                             attrs: array![].span()
                         }
                     ),
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'z',
-                            ty: dojo::database::schema::Ty::Primitive('u8'),
+                            ty: dojo::database::introspect::Ty::Primitive('u8'),
                             attrs: array![].span()
                         }
                     )
@@ -146,7 +146,7 @@ impl PositionModel of dojo::model::Model<Position> {
     #[inline(always)]
     fn layout(self: @Position) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
@@ -158,35 +158,35 @@ impl PositionModel of dojo::model::Model<Position> {
 }
 
 
-impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
+impl PositionIntrospect of dojo::database::introspect::Introspect<Position> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::schema::SchemaIntrospection::<Vec3>::size()
+        dojo::database::introspect::Introspect::<Vec3>::size()
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::database::schema::SchemaIntrospection::<Vec3>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Vec3>::layout(ref layout);
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::schema::Ty {
-        dojo::database::schema::Ty::Struct(
-            dojo::database::schema::Struct {
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
                 name: 'Position',
                 attrs: array![].span(),
                 children: array![
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'id',
-                            ty: dojo::database::schema::Ty::Primitive('felt252'),
+                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
                             attrs: array!['key'].span()
                         }
                     ),
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'v',
-                            ty: dojo::database::schema::SchemaIntrospection::<Vec3>::ty(),
+                            ty: dojo::database::introspect::Introspect::<Vec3>::ty(),
                             attrs: array![].span()
                         }
                     )
@@ -217,13 +217,13 @@ mod position {
 
     #[external(v0)]
     fn unpacked_size(self: @ContractState) -> usize {
-        dojo::database::schema::SchemaIntrospection::<Position>::size()
+        dojo::database::introspect::Introspect::<Position>::size()
     }
 
     #[external(v0)]
     fn packed_size(self: @ContractState) -> usize {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
         let mut layout_span = layout.span();
         dojo::packing::calculate_packed_size(ref layout_span)
     }
@@ -231,13 +231,13 @@ mod position {
     #[external(v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-        dojo::database::schema::SchemaIntrospection::<Position>::ty()
+    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Introspect::<Position>::ty()
     }
 }
 
@@ -291,7 +291,7 @@ impl RolesModel of dojo::model::Model<Roles> {
     #[inline(always)]
     fn layout(self: @Roles) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
@@ -303,28 +303,28 @@ impl RolesModel of dojo::model::Model<Roles> {
 }
 
 
-impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Roles> {
+impl RolesIntrospect of dojo::database::introspect::Introspect<Roles> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::schema::SchemaIntrospection::<Array<u8>>::size()
+        dojo::database::introspect::Introspect::<Array<u8>>::size()
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        dojo::database::schema::SchemaIntrospection::<Array<u8>>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Array<u8>>::layout(ref layout);
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::schema::Ty {
-        dojo::database::schema::Ty::Struct(
-            dojo::database::schema::Struct {
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
                 name: 'Roles',
                 attrs: array![].span(),
                 children: array![
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'role_ids',
-                            ty: dojo::database::schema::SchemaIntrospection::<Array<u8>>::ty(),
+                            ty: dojo::database::introspect::Introspect::<Array<u8>>::ty(),
                             attrs: array![].span()
                         }
                     )
@@ -355,13 +355,13 @@ mod roles {
 
     #[external(v0)]
     fn unpacked_size(self: @ContractState) -> usize {
-        dojo::database::schema::SchemaIntrospection::<Roles>::size()
+        dojo::database::introspect::Introspect::<Roles>::size()
     }
 
     #[external(v0)]
     fn packed_size(self: @ContractState) -> usize {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
         let mut layout_span = layout.span();
         dojo::packing::calculate_packed_size(ref layout_span)
     }
@@ -369,13 +369,13 @@ mod roles {
     #[external(v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-        dojo::database::schema::SchemaIntrospection::<Roles>::ty()
+    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Introspect::<Roles>::ty()
     }
 }
 
@@ -417,7 +417,7 @@ impl PlayerModel of dojo::model::Model<Player> {
     #[inline(always)]
     fn layout(self: @Player) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
@@ -429,7 +429,7 @@ impl PlayerModel of dojo::model::Model<Player> {
 }
 
 
-impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Player> {
+impl PlayerIntrospect of dojo::database::introspect::Introspect<Player> {
     #[inline(always)]
     fn size() -> usize {
         1
@@ -441,30 +441,30 @@ impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Pl
     }
 
     #[inline(always)]
-    fn ty() -> dojo::database::schema::Ty {
-        dojo::database::schema::Ty::Struct(
-            dojo::database::schema::Struct {
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(
+            dojo::database::introspect::Struct {
                 name: 'Player',
                 attrs: array![].span(),
                 children: array![
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'game',
-                            ty: dojo::database::schema::Ty::Primitive('felt252'),
+                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
                             attrs: array!['key'].span()
                         }
                     ),
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'player',
-                            ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
+                            ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
                             attrs: array!['key'].span()
                         }
                     ),
-                    dojo::database::schema::serialize_member(
-                        @dojo::database::schema::Member {
+                    dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
                             name: 'name',
-                            ty: dojo::database::schema::Ty::Primitive('felt252'),
+                            ty: dojo::database::introspect::Ty::Primitive('felt252'),
                             attrs: array![].span()
                         }
                     )
@@ -495,13 +495,13 @@ mod player {
 
     #[external(v0)]
     fn unpacked_size(self: @ContractState) -> usize {
-        dojo::database::schema::SchemaIntrospection::<Player>::size()
+        dojo::database::introspect::Introspect::<Player>::size()
     }
 
     #[external(v0)]
     fn packed_size(self: @ContractState) -> usize {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
         let mut layout_span = layout.span();
         dojo::packing::calculate_packed_size(ref layout_span)
     }
@@ -509,13 +509,13 @@ mod player {
     #[external(v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
-        dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
+        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
     #[external(v0)]
-    fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-        dojo::database::schema::SchemaIntrospection::<Player>::ty()
+    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Introspect::<Player>::ty()
     }
 }
 
@@ -526,37 +526,42 @@ struct Roles {
        ^***^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:80:13
+ --> test_src/lib.cairo[Position]:73:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:73:13
+ --> test_src/lib.cairo[Roles]:69:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:87:13
+ --> test_src/lib.cairo[Player]:77:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:84:17
+ --> test_src/lib.cairo[Position]:77:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:87:17
+ --> test_src/lib.cairo[Position]:80:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:92:17
+ --> test_src/lib.cairo[Position]:85:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:97:17
+ --> test_src/lib.cairo[Position]:90:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Position]:98:17
                 #[external(v0)]
                 ^*************^
 
@@ -566,44 +571,49 @@ error: Unsupported attribute.
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:112:17
-                #[external(v0)]
-                ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:77:17
+ --> test_src/lib.cairo[Roles]:73:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:80:17
+ --> test_src/lib.cairo[Roles]:76:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:85:17
+ --> test_src/lib.cairo[Roles]:81:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:90:17
+ --> test_src/lib.cairo[Roles]:86:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:98:17
+ --> test_src/lib.cairo[Roles]:94:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:105:17
+ --> test_src/lib.cairo[Roles]:101:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:91:17
+ --> test_src/lib.cairo[Player]:81:17
                 #[storage]
                 ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:84:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:89:17
+                #[external(v0)]
+                ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:94:17
@@ -611,22 +621,12 @@ error: Unsupported attribute.
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:99:17
+ --> test_src/lib.cairo[Player]:102:17
                 #[external(v0)]
                 ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:104:17
-                #[external(v0)]
-                ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:112:17
-                #[external(v0)]
-                ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:119:17
+ --> test_src/lib.cairo[Player]:109:17
                 #[external(v0)]
                 ^*************^
 
@@ -698,51 +698,41 @@ impl Vec3Serde of Serde::<Vec3> {
     }
 }
 
-        impl Vec3SchemaIntrospection of dojo::database::schema::SchemaIntrospection<Vec3> {
-            
-            #[inline(always)]
-            fn size() -> usize {
-                3
-            }
+impl Vec3Introspect<> of dojo::database::introspect::Introspect<Vec3<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        3
+    }
 
-            #[inline(always)]
-            fn layout(ref layout: Array<u8>) {
-                layout.append(32);
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(32);
 layout.append(32);
 layout.append(8);
 
-            }
+    }
 
-            #[inline(always)]
-            fn ty() -> dojo::database::schema::Ty {
-                
-        dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
             name: 'Vec3',
             attrs: array![].span(),
-            children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'x',
-                        ty: dojo::database::schema::Ty::Primitive('u32'),
-                        attrs: array![].span()
-                    })
-,
-
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'y',
-                        ty: dojo::database::schema::Ty::Primitive('u32'),
-                        attrs: array![].span()
-                    })
-,
-
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'z',
-                        ty: dojo::database::schema::Ty::Primitive('u8'),
-                        attrs: array![].span()
-                    })
-].span()
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'x',
+                ty: dojo::database::introspect::Ty::Primitive('u32'),
+                attrs: array![].span()
+            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'y',
+                ty: dojo::database::introspect::Ty::Primitive('u32'),
+                attrs: array![].span()
+            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'z',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            })].span()
         })
-            }
-        }
+    }
+}
 impl PositionCopy of Copy::<Position>;
 impl PositionDrop of Drop::<Position>;
 impl PositionSerde of Serde::<Position> {
@@ -781,7 +771,7 @@ impl PositionSerde of Serde::<Position> {
                 #[inline(always)]
                 fn layout(self: @Position) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Position>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
@@ -793,42 +783,35 @@ impl PositionSerde of Serde::<Position> {
             }
 
             
-        impl PositionSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Position> {
-            
-            #[inline(always)]
-            fn size() -> usize {
-                dojo::database::schema::SchemaIntrospection::<Vec3>::size()
-            }
+impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        dojo::database::introspect::Introspect::<Vec3>::size()
+    }
 
-            #[inline(always)]
-            fn layout(ref layout: Array<u8>) {
-                dojo::database::schema::SchemaIntrospection::<Vec3>::layout(ref layout);
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        dojo::database::introspect::Introspect::<Vec3>::layout(ref layout);
 
-            }
+    }
 
-            #[inline(always)]
-            fn ty() -> dojo::database::schema::Ty {
-                
-        dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
             name: 'Position',
             attrs: array![].span(),
-            children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'id',
-                        ty: dojo::database::schema::Ty::Primitive('felt252'),
-                        attrs: array!['key'].span()
-                    })
-,
-
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'v',
-                        ty: dojo::database::schema::SchemaIntrospection::<Vec3>::ty(),
-                        attrs: array![].span()
-                    })
-].span()
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'id',
+                ty: dojo::database::introspect::Ty::Primitive('felt252'),
+                attrs: array!['key'].span()
+            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'v',
+                ty: dojo::database::introspect::Introspect::<Vec3>::ty(),
+                attrs: array![].span()
+            })].span()
         })
-            }
-        }
+    }
+}
         
 
             #[starknet::interface]
@@ -850,13 +833,13 @@ impl PositionSerde of Serde::<Position> {
 
                 #[external(v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
-                    dojo::database::schema::SchemaIntrospection::<Position>::size()
+                    dojo::database::introspect::Introspect::<Position>::size()
                 }
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Position>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
@@ -864,13 +847,13 @@ impl PositionSerde of Serde::<Position> {
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Position>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Position>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-                    dojo::database::schema::SchemaIntrospection::<Position>::ty()
+                fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                    dojo::database::introspect::Introspect::<Position>::ty()
                 }
             }
 impl RolesSerde of Serde::<Roles> {
@@ -907,7 +890,7 @@ impl RolesSerde of Serde::<Roles> {
                 #[inline(always)]
                 fn layout(self: @Roles) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
@@ -919,35 +902,31 @@ impl RolesSerde of Serde::<Roles> {
             }
 
             
-        impl RolesSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Roles> {
-            
-            #[inline(always)]
-            fn size() -> usize {
-                dojo::database::schema::SchemaIntrospection::<Array<u8>>::size()
-            }
+impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        dojo::database::introspect::Introspect::<Array<u8>>::size()
+    }
 
-            #[inline(always)]
-            fn layout(ref layout: Array<u8>) {
-                dojo::database::schema::SchemaIntrospection::<Array<u8>>::layout(ref layout);
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        dojo::database::introspect::Introspect::<Array<u8>>::layout(ref layout);
 
-            }
+    }
 
-            #[inline(always)]
-            fn ty() -> dojo::database::schema::Ty {
-                
-        dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
             name: 'Roles',
             attrs: array![].span(),
-            children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'role_ids',
-                        ty: dojo::database::schema::SchemaIntrospection::<Array<u8>>::ty(),
-                        attrs: array![].span()
-                    })
-].span()
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'role_ids',
+                ty: dojo::database::introspect::Introspect::<Array<u8>>::ty(),
+                attrs: array![].span()
+            })].span()
         })
-            }
-        }
+    }
+}
         
 
             #[starknet::interface]
@@ -969,13 +948,13 @@ impl RolesSerde of Serde::<Roles> {
 
                 #[external(v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
-                    dojo::database::schema::SchemaIntrospection::<Roles>::size()
+                    dojo::database::introspect::Introspect::<Roles>::size()
                 }
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
@@ -983,13 +962,13 @@ impl RolesSerde of Serde::<Roles> {
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Roles>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-                    dojo::database::schema::SchemaIntrospection::<Roles>::ty()
+                fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                    dojo::database::introspect::Introspect::<Roles>::ty()
                 }
             }
 impl PlayerCopy of Copy::<Player>;
@@ -1032,7 +1011,7 @@ impl PlayerSerde of Serde::<Player> {
                 #[inline(always)]
                 fn layout(self: @Player) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Player>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
@@ -1044,49 +1023,39 @@ impl PlayerSerde of Serde::<Player> {
             }
 
             
-        impl PlayerSchemaIntrospection of dojo::database::schema::SchemaIntrospection<Player> {
-            
-            #[inline(always)]
-            fn size() -> usize {
-                1
-            }
+impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        1
+    }
 
-            #[inline(always)]
-            fn layout(ref layout: Array<u8>) {
-                layout.append(251);
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(251);
 
-            }
+    }
 
-            #[inline(always)]
-            fn ty() -> dojo::database::schema::Ty {
-                
-        dojo::database::schema::Ty::Struct(dojo::database::schema::Struct {
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
             name: 'Player',
             attrs: array![].span(),
-            children: array![
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'game',
-                        ty: dojo::database::schema::Ty::Primitive('felt252'),
-                        attrs: array!['key'].span()
-                    })
-,
-
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'player',
-                        ty: dojo::database::schema::Ty::Primitive('ContractAddress'),
-                        attrs: array!['key'].span()
-                    })
-,
-
-                    dojo::database::schema::serialize_member(@dojo::database::schema::Member {
-                        name: 'name',
-                        ty: dojo::database::schema::Ty::Primitive('felt252'),
-                        attrs: array![].span()
-                    })
-].span()
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'game',
+                ty: dojo::database::introspect::Ty::Primitive('felt252'),
+                attrs: array!['key'].span()
+            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'name',
+                ty: dojo::database::introspect::Ty::Primitive('felt252'),
+                attrs: array![].span()
+            })].span()
         })
-            }
-        }
+    }
+}
         
 
             #[starknet::interface]
@@ -1108,13 +1077,13 @@ impl PlayerSerde of Serde::<Player> {
 
                 #[external(v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
-                    dojo::database::schema::SchemaIntrospection::<Player>::size()
+                    dojo::database::introspect::Introspect::<Player>::size()
                 }
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Player>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
@@ -1122,12 +1091,12 @@ impl PlayerSerde of Serde::<Player> {
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<Player>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<Player>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-                    dojo::database::schema::SchemaIntrospection::<Player>::ty()
+                fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                    dojo::database::introspect::Introspect::<Player>::ty()
                 }
             }

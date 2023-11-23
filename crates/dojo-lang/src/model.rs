@@ -96,7 +96,7 @@ pub fn handle_model_struct(
                 #[inline(always)]
                 fn layout(self: @$type_name$) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
@@ -128,13 +128,13 @@ pub fn handle_model_struct(
 
                 #[external(v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::size()
+                    dojo::database::introspect::Introspect::<$type_name$>::size()
                 }
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
@@ -142,13 +142,13 @@ pub fn handle_model_struct(
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
                     array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::ty()
+                fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                    dojo::database::introspect::Introspect::<$type_name$>::ty()
                 }
             }
         ",
