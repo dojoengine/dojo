@@ -31,6 +31,16 @@ CREATE TABLE models (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE computed_values (
+    id TEXT NOT NULL PRIMARY KEY, -- ID is contract_name::entrypoint
+    contract_name TEXT NOT NULL,
+    entrypoint TEXT NOT NULL,
+    contract_address TEXT NOT NULL,
+    input BLOB NOT NULL,
+    output BLOB NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX idx_models_created_at ON models (created_at);
 
 CREATE TABLE model_members(

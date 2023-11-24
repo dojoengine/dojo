@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 
@@ -15,7 +16,10 @@ use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
-use crate::types::{Entity as EntityUpdated, Event as EventEmitted, Model as ModelRegistered};
+use crate::types::{
+    ComputedValue as ComputedValueRegistered, ComputedValueCall, Entity as EntityUpdated,
+    Event as EventEmitted, Model as ModelRegistered,
+};
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -107,6 +111,39 @@ impl Sql {
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(model_registered);
+
+        Ok(())
+    }
+
+    pub async fn register_computed_value_entrypoints(
+        &mut self,
+        computed_values: HashMap<String, Vec<ComputedValueCall>>,
+    ) -> Result<()> {
+        for (_component_name, computed_entrypoints) in computed_values.into_iter() {
+            for entrypoint in computed_entrypoints.iter() {
+                let sql = "INSERT INTO computed_values \
+                           (id,contract_name,entrypoint,contract_address,input,output) VALUES \
+                           (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET \
+                           contract_address=EXCLUDED.contract_address, input=EXCLUDED.input, \
+                           output=EXCLUDED.output RETURNING *";
+
+                let input_json = serde_json::to_string(&entrypoint.input).unwrap();
+                let output_json = serde_json::to_string(&entrypoint.output).unwrap();
+
+                let entrypoint_registered: ComputedValueRegistered = sqlx::query_as(sql)
+                    .bind(format!("{}::{}", entrypoint.contract_name, entrypoint.entry_point))
+                    .bind(&entrypoint.contract_name)
+                    .bind(&entrypoint.entry_point)
+                    .bind(format!("{:#x}", entrypoint.contract_address))
+                    .bind(input_json)
+                    .bind(output_json)
+                    .fetch_one(&self.pool)
+                    .await?;
+
+                println!("{entrypoint_registered:#?}",);
+                SimpleBroker::publish(entrypoint_registered);
+            }
+        }
 
         Ok(())
     }

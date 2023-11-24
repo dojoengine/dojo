@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
-use cairo_lang_starknet::abi;
+pub use cairo_lang_starknet::abi;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;

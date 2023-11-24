@@ -1,9 +1,11 @@
 mod proxy;
+mod utils;
 
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -14,6 +16,7 @@ use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
+use torii_core::computed_values::computed_value_entrypoints;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
@@ -35,6 +38,11 @@ struct Args {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
     world_address: FieldElement,
+
+    /// Path to build manifest.json file.
+    #[arg(short, long, env = "DOJO_MANIFEST_PATH")]
+    pub manifest_json: Option<Utf8PathBuf>,
+
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
     rpc: String,
@@ -99,6 +107,11 @@ async fn main() -> anyhow::Result<()> {
     let world = WorldContractReader::new(args.world_address, &provider);
 
     let mut db = Sql::new(pool.clone(), args.world_address).await?;
+
+    let computed_values = computed_value_entrypoints(args.manifest_json);
+
+    db.register_computed_value_entrypoints(computed_values).await?;
+
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),

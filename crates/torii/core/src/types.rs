@@ -1,6 +1,7 @@
 use core::fmt;
 
 use chrono::{DateTime, Utc};
+use dojo_world::manifest::abi;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use starknet::core::types::FieldElement;
@@ -51,10 +52,30 @@ pub struct Model {
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct ComputedValue {
+    pub id: String,
+    pub contract_name: String,
+    pub entrypoint: String,
+    pub contract_address: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Event {
     pub id: String,
     pub keys: String,
     pub data: String,
     pub transaction_hash: String,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ComputedValueCall {
+    pub contract_name: String,
+    pub contract_address: FieldElement,
+    pub entry_point: String,
+    pub entry_point_selector: FieldElement,
+    pub input: Vec<abi::Input>,
+    pub output: Vec<abi::Output>,
 }
