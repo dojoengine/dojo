@@ -192,6 +192,20 @@ pub async fn model_fixtures(db: &mut Sql) {
             name: "Record".to_string(),
             children: vec![
                 Member {
+                    name: "depth".to_string(),
+                    key: false,
+                    ty: Ty::Enum(Enum {
+                        name: "Depth".to_string(),
+                        option: None,
+                        options: vec![
+                            EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
+                        ],
+                    }),
+                },
+                Member {
                     name: "record_id".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::U32(None)),
@@ -201,6 +215,46 @@ pub async fn model_fixtures(db: &mut Sql) {
                     key: false,
                     ty: Ty::Primitive(Primitive::U8(None)),
                 },
+                Member {
+                    name: "type_u16".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U16(None)),
+                },
+                Member {
+                    name: "type_u32".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                },
+                Member {
+                    name: "type_u64".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U64(None)),
+                },
+                // Member {
+                //     name: "type_u128".to_string(),
+                //     key: false,
+                //     ty: Ty::Primitive(Primitive::U128(None)),
+                // },
+                // Member {
+                //     name: "type_u256".to_string(),
+                //     key: false,
+                //     ty: Ty::Primitive(Primitive::U256(None)),
+                // },
+                Member {
+                    name: "type_bool".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Bool(None)),
+                },
+                Member {
+                    name: "type_felt".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Felt252(None)),
+                },
+                // Member {
+                //     name: "type_class_hash".to_string(),
+                //     key: true,
+                //     ty: Ty::Primitive(Primitive::ClassHash(None)),
+                // },
                 Member {
                     name: "type_contract_address".to_string(),
                     key: true,

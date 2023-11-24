@@ -31,9 +31,17 @@ mod tests {
                 "keys":vec![keys_str],
                 "model_names": "Record",
                 "models" : [{
-                    "type_contract_address": format!("{:#x}", FieldElement::ONE),
-                    "record_id": 0,
-                    "type_u8": 10
+                    "__typename": "Record",
+                        "depth": "Zero",
+                        "record_id": 0,
+                        "type_u8": 1,
+                        "type_u16": 1,
+                        "type_u32": 1,
+                        "type_u64": 1,
+                        "type_bool": true,
+                        "type_felt": format!("{:#x}", FieldElement::from(1u128)),
+                        "type_contract_address": format!("{:#x}", FieldElement::ONE)
+                    
                 }]
             }
         });
@@ -43,15 +51,24 @@ mod tests {
             // 1. Open process and sleep.Go to execute subscription
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            // Set entity with one moves model
+            // Set entity with one Record model
             db.set_entity(
                 Ty::Struct(Struct {
                     name: "Record".to_string(),
                     children: vec![
                         Member {
-                            name: "type_contract_address".to_string(),
-                            key: true,
-                            ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
+                            name: "depth".to_string(),
+                            key: false,
+                            ty: Ty::Enum(Enum {
+                                name: "Depth".to_string(),
+                                option: Some(0),
+                                options: vec![
+                                    EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
+                                    EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
+                                ],
+                            }),
                         },
                         Member {
                             name: "record_id".to_string(),
@@ -61,7 +78,37 @@ mod tests {
                         Member {
                             name: "type_u8".to_string(),
                             key: false,
-                            ty: Ty::Primitive(Primitive::U8(Some(10))),
+                            ty: Ty::Primitive(Primitive::U8(Some(1))),
+                        },
+                        Member {
+                            name: "type_u16".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U16(Some(1))),
+                        },
+                        Member {
+                            name: "type_u32".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U32(Some(1))),
+                        },
+                        Member {
+                            name: "type_u64".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::U64(Some(1))),
+                        },
+                        Member {
+                            name: "type_bool".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::Bool(Some(true))),
+                        },
+                        Member {
+                            name: "type_felt".to_string(),
+                            key: false,
+                            ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
+                        },
+                        Member {
+                            name: "type_contract_address".to_string(),
+                            key: true,
+                            ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
                         },
                     ],
                 }),
@@ -69,7 +116,6 @@ mod tests {
             )
             .await
             .unwrap();
-            // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
         });
@@ -83,17 +129,24 @@ mod tests {
                     keys
                     model_names
                     models {
+                        __typename
                         ... on Record {
-                            type_contract_address
+                            depth
                             record_id
                             type_u8
+                            type_u16
+                            type_u32
+                            type_u64
+                            type_bool
+                            type_felt
+                            type_contract_address
                         }
                     }
                 }
             }"#,
         )
         .await;
-        // 4. The subcription has received the message from publish()
+        // 4. The subscription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
         rx.recv().await.unwrap();
@@ -101,7 +154,6 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
-    //#[ignore]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
@@ -118,7 +170,7 @@ mod tests {
                 "models" : [{
                     "type_contract_address": format!("{:#x}", FieldElement::ONE),
                     "record_id": 0,
-                    "type_u8": 10
+                    "type_u8": 1
                 }]
             }
         });
@@ -146,7 +198,7 @@ mod tests {
                         Member {
                             name: "type_u8".to_string(),
                             key: false,
-                            ty: Ty::Primitive(Primitive::U8(Some(10))),
+                            ty: Ty::Primitive(Primitive::U8(Some(1))),
                         },
                     ],
                 }),
@@ -238,7 +290,7 @@ mod tests {
     async fn test_model_subscription_with_id(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
-        let name = "Test".to_string();
+        let name = "Subrecord".to_string();
         let model_id = name.clone();
         let class_hash = FieldElement::TWO;
         let expected_value: async_graphql::Value = value!({
@@ -251,9 +303,9 @@ mod tests {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let model = Ty::Struct(Struct {
-                name: "Test".to_string(),
+                name: "Subrecord".to_string(),
                 children: vec![Member {
-                    name: "test".into(),
+                    name: "type_u8".into(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U8(None)),
                 }],
@@ -269,7 +321,7 @@ mod tests {
             &pool,
             r#"
                 subscription {
-                    modelRegistered(id: "Test") {
+                    modelRegistered(id: "Subrecord") {
                             id, name
                         }
                 }"#,
