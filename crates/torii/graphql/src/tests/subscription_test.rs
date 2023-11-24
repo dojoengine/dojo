@@ -29,11 +29,11 @@ mod tests {
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
-                "model_names": "Moves",
+                "model_names": "Record",
                 "models" : [{
-                    "player": format!("{:#x}", FieldElement::ONE),
-                    "remaining": 10,
-                    "last_direction": "Left"
+                    "type_contract_address": format!("{:#x}", FieldElement::ONE),
+                    "record_id": 0,
+                    "type_u8": 10
                 }]
             }
         });
@@ -46,32 +46,22 @@ mod tests {
             // Set entity with one moves model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: "Moves".to_string(),
+                    name: "Record".to_string(),
                     children: vec![
                         Member {
-                            name: "player".to_string(),
+                            name: "type_contract_address".to_string(),
                             key: true,
                             ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
                         },
                         Member {
-                            name: "remaining".to_string(),
+                            name: "record_id".to_string(),
                             key: false,
-                            ty: Ty::Primitive(Primitive::U8(Some(10))),
+                            ty: Ty::Primitive(Primitive::U8(Some(0))),
                         },
                         Member {
-                            name: "last_direction".to_string(),
+                            name: "type_u8".to_string(),
                             key: false,
-                            ty: Ty::Enum(Enum {
-                                name: "Direction".to_string(),
-                                option: Some(1),
-                                options: vec![
-                                    EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
-                                ],
-                            }),
+                            ty: Ty::Primitive(Primitive::U8(Some(10))),
                         },
                     ],
                 }),
@@ -93,10 +83,10 @@ mod tests {
                     keys
                     model_names
                     models {
-                        ... on Moves {
-                            player
-                            remaining
-                            last_direction
+                        ... on Record {
+                            type_contract_address
+                            record_id
+                            type_u8
                         }
                     }
                 }
@@ -111,6 +101,7 @@ mod tests {
 
     #[sqlx::test(migrations = "../migrations")]
     #[serial]
+    //#[ignore]
     async fn test_entity_subscription_with_id(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
 
@@ -123,11 +114,11 @@ mod tests {
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
-                "model_names": "Moves",
+                "model_names": "Record",
                 "models" : [{
-                    "player": format!("{:#x}", FieldElement::ONE),
-                    "remaining": 10,
-                    "last_direction": "Left"
+                    "type_contract_address": format!("{:#x}", FieldElement::ONE),
+                    "record_id": 0,
+                    "type_u8": 10
                 }]
             }
         });
@@ -140,32 +131,22 @@ mod tests {
             // Set entity with one moves model
             db.set_entity(
                 Ty::Struct(Struct {
-                    name: "Moves".to_string(),
+                    name: "Record".to_string(),
                     children: vec![
                         Member {
-                            name: "player".to_string(),
+                            name: "type_contract_address".to_string(),
                             key: true,
                             ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
                         },
                         Member {
-                            name: "remaining".to_string(),
+                            name: "record_id".to_string(),
                             key: false,
-                            ty: Ty::Primitive(Primitive::U8(Some(10))),
+                            ty: Ty::Primitive(Primitive::U8(Some(0))),
                         },
                         Member {
-                            name: "last_direction".to_string(),
+                            name: "type_u8".to_string(),
                             key: false,
-                            ty: Ty::Enum(Enum {
-                                name: "Direction".to_string(),
-                                option: Some(1),
-                                options: vec![
-                                    EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
-                                    EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
-                                ],
-                            }),
+                            ty: Ty::Primitive(Primitive::U8(Some(10))),
                         },
                     ],
                 }),
@@ -187,10 +168,10 @@ mod tests {
                     keys
                     model_names
                     models {
-                        ... on Moves {
-                            player
-                            remaining
-                            last_direction
+                        ... on Record {
+                            type_contract_address
+                            record_id
+                            type_u8
                         }
                     }
                 }
@@ -208,7 +189,7 @@ mod tests {
     async fn test_model_subscription(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
-        let name = "Moves".to_string();
+        let name = "Record".to_string();
         let model_id = name.clone();
         let class_hash = FieldElement::TWO;
         let expected_value: async_graphql::Value = value!({
@@ -221,9 +202,9 @@ mod tests {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
             let model = Ty::Struct(Struct {
-                name: "Moves".to_string(),
+                name: "Record".to_string(),
                 children: vec![Member {
-                    name: "player".to_string(),
+                    name: "type_contract_address".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 }],

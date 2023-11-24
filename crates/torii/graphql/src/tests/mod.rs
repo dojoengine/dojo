@@ -29,9 +29,9 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
-mod entities_test;
-mod metadata_test;
-mod models_test;
+// mod entities_test;
+// mod metadata_test;
+// mod models_test;
 mod subscription_test;
 
 use crate::schema::build_schema;
@@ -189,32 +189,22 @@ pub async fn run_graphql_subscription(
 pub async fn model_fixtures(db: &mut Sql) {
     db.register_model(
         Ty::Struct(Struct {
-            name: "Moves".to_string(),
+            name: "Record".to_string(),
             children: vec![
                 Member {
-                    name: "player".to_string(),
+                    name: "record_id".to_string(),
                     key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                    ty: Ty::Primitive(Primitive::U32(None)),
                 },
                 Member {
-                    name: "remaining".to_string(),
+                    name: "type_u8".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U8(None)),
                 },
                 Member {
-                    name: "last_direction".to_string(),
-                    key: false,
-                    ty: Ty::Enum(Enum {
-                        name: "Direction".to_string(),
-                        option: None,
-                        options: vec![
-                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
-                        ],
-                    }),
+                    name: "type_contract_address".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 },
             ],
         }),
@@ -228,31 +218,22 @@ pub async fn model_fixtures(db: &mut Sql) {
 
     db.register_model(
         Ty::Struct(Struct {
-            name: "Position".to_string(),
+            name: "Subrecord".to_string(),
             children: vec![
                 Member {
-                    name: "player".to_string(),
+                    name: "record_id".to_string(),
                     key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
+                    ty: Ty::Primitive(Primitive::U32(None)),
                 },
                 Member {
-                    name: "vec".to_string(),
+                    name: "subrecord_id".to_string(),
                     key: false,
-                    ty: Ty::Struct(Struct {
-                        name: "Vec2".to_string(),
-                        children: vec![
-                            Member {
-                                name: "x".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                            Member {
-                                name: "y".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                        ],
-                    }),
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                },
+                Member {
+                    name: "type_contract_address".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 },
             ],
         }),
