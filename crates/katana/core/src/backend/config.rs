@@ -53,7 +53,7 @@ impl Default for StarknetConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environment {
     pub chain_id: String,
     pub gas_price: u128,

@@ -5214,6 +5214,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "katana-rpc-types"
 version = "0.4.0-rc0"
 dependencies = [
@@ -5236,6 +5237,16 @@ dependencies = [
  "katana-provider",
  "katana-rpc-types",
  "starknet",
+=======
+name = "katana-runner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "katana-core",
+ "katana-rpc",
+ "lazy_static",
+ "tokio",
+>>>>>>> ba87171e (init katana runner)
 ]
 
 [[package]]
