@@ -4,6 +4,9 @@ use std::{fs, io};
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
+use katana_core::constants::{
+    ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
+};
 use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::{spawn, NodeHandle};
 use tokio::signal::ctrl_c;
@@ -87,9 +90,24 @@ fn print_intro(accounts: String, seed: String, address: String) {
 ██╔═██╗ ██╔══██║   ██║   ██╔══██║██║╚██╗██║██╔══██║
 ██║  ██╗██║  ██║   ██║   ██║  ██║██║ ╚████║██║  ██║
 ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
-                                                      
 "
         )
+    );
+
+    println!(
+        r"        
+Predeployed FeeToken
+Address:    {}
+Class Hash: {}
+
+Predeployed UDC
+Address:    {}
+Class Hash: {}
+    ",
+        FEE_TOKEN_ADDRESS.to_string(),
+        ERC20_CONTRACT_CLASS_HASH.to_string(),
+        UDC_ADDRESS.to_string(),
+        UDC_CLASS_HASH.to_string()
     );
 
     println!(
