@@ -17,7 +17,7 @@ use starknet::core::utils::get_contract_address;
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
 use self::primitives::{ContractAddress, InvokeTxV1};
-use crate::contract::{CompiledContractClass, SierraClass};
+use crate::contract::{ClassHash, CompiledClassHash, CompiledContractClass, SierraClass};
 use crate::utils::transaction::{
     compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
     compute_deploy_account_v1_transaction_hash, compute_invoke_v1_transaction_hash,
@@ -129,7 +129,7 @@ impl primitives::DeclareTx {
             }
 
             BroadcastedDeclareTransaction::V2(tx) => {
-                let (class_hash, contract_class) =
+                let (class_hash, _, contract_class) =
                     rpc_to_inner_class(&tx.contract_class).expect("valid contract class");
 
                 let transaction_hash = compute_declare_v2_transaction_hash(
@@ -179,11 +179,21 @@ pub fn legacy_inner_to_rpc_class(legacy_contract_class: ContractClassV0) -> Resu
 
 pub fn rpc_to_inner_class(
     contract_class: &SierraClass,
-) -> Result<(FieldElement, CompiledContractClass)> {
+) -> Result<(ClassHash, CompiledClassHash, CompiledContractClass)> {
     let class_hash = contract_class.class_hash();
+
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
     let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
-    Ok((class_hash, CompiledContractClass::V1(casm_contract.try_into()?)))
+
+    // compute compiled class hash
+    let res = serde_json::to_string(&casm_contract)?;
+    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
+
+    Ok((
+        class_hash,
+        compiled_class.class_hash()?,
+        CompiledContractClass::V1(casm_contract.try_into()?),
+    ))
 }
 
 /// Converts `starknet-rs` RPC [SierraClass] type to Cairo's
@@ -211,14 +221,14 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
 ) -> Result<FieldElement> {
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
     let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
-    let res = serde_json::to_string_pretty(&casm_contract)?;
+    let res = serde_json::to_string(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
 }
 
 pub fn legacy_rpc_to_inner_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
-) -> Result<(FieldElement, CompiledContractClass)> {
+) -> Result<(ClassHash, CompiledContractClass)> {
     let legacy_program_json = decompress(&compressed_legacy_contract.program)?;
     let legacy_program: LegacyProgram = serde_json::from_str(&legacy_program_json)?;
 
