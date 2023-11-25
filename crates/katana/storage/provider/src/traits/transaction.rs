@@ -4,6 +4,7 @@ use anyhow::Result;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
 
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait TransactionProvider: Send + Sync {
     /// Returns a transaction given its hash.
     fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<Transaction>>;
@@ -22,11 +23,13 @@ pub trait TransactionProvider: Send + Sync {
     ) -> Result<Option<Transaction>>;
 }
 
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait TransactionsProviderExt: TransactionProvider + Send + Sync {
     /// Retrieves the tx hashes for the given range of tx numbers.
     fn transaction_hashes_by_range(&self, range: Range<TxNumber>) -> Result<Vec<TxHash>>;
 }
 
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ReceiptProvider: Send + Sync {
     /// Returns the transaction receipt given a transaction hash.
     fn receipt_by_hash(&self, hash: TxHash) -> Result<Option<Receipt>>;

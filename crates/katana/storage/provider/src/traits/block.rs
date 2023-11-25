@@ -5,6 +5,7 @@ use katana_primitives::block::{Block, BlockHash, BlockHashOrNumber, BlockNumber,
 
 use super::transaction::TransactionProvider;
 
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait BlockHashProvider: Send + Sync {
     /// Retrieves the latest block hash.
     ///
@@ -15,6 +16,7 @@ pub trait BlockHashProvider: Send + Sync {
     fn block_hash_by_num(&self, num: BlockNumber) -> Result<Option<BlockHash>>;
 }
 
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait BlockNumberProvider: Send + Sync {
     /// Retrieves the latest block number.
     ///
@@ -25,6 +27,7 @@ pub trait BlockNumberProvider: Send + Sync {
     fn block_number_by_hash(&self, hash: BlockHash) -> Result<Option<BlockNumber>>;
 }
 
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait HeaderProvider: Send + Sync {
     /// Retrieves the latest header by its block id.
     fn header(&self, id: BlockHashOrNumber) -> Result<Option<Header>>;
@@ -38,6 +41,7 @@ pub trait HeaderProvider: Send + Sync {
     }
 }
 
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait BlockProvider:
     BlockHashProvider + BlockNumberProvider + HeaderProvider + TransactionProvider + Send + Sync
 {
