@@ -4,47 +4,16 @@ use std::sync::Arc;
 use anyhow::Result;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
+    StorageKey, StorageValue,
 };
-use parking_lot::RwLock;
 
+use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
 use crate::traits::state::{StateProvider, StateProviderExt};
 
-type ContractStorageMap = HashMap<(ContractAddress, StorageKey), StorageValue>;
-type ContractStateMap = HashMap<ContractAddress, GenericContractInfo>;
-
-type SierraClassesMap = HashMap<ClassHash, SierraClass>;
-type CompiledClassesMap = HashMap<ClassHash, CompiledContractClass>;
-type CompiledClassHashesMap = HashMap<ClassHash, CompiledClassHash>;
-
-pub struct StateSnapshot {
-    pub contract_state: ContractStateMap,
-    pub storage: ContractStorageMap,
-    pub compiled_class_hashes: CompiledClassHashesMap,
-    pub shared_sierra_classes: Arc<RwLock<SierraClassesMap>>,
-    pub shared_compiled_classes: Arc<RwLock<CompiledClassesMap>>,
-}
-
-#[derive(Default)]
-pub struct InMemoryState {
-    pub contract_state: RwLock<ContractStateMap>,
-    pub storage: RwLock<ContractStorageMap>,
-    pub compiled_class_hashes: RwLock<CompiledClassHashesMap>,
-    pub shared_sierra_classes: Arc<RwLock<SierraClassesMap>>,
-    pub shared_compiled_classes: Arc<RwLock<CompiledClassesMap>>,
-}
-
-impl InMemoryState {
-    pub(crate) fn create_snapshot(&self) -> StateSnapshot {
-        StateSnapshot {
-            storage: self.storage.read().clone(),
-            contract_state: self.contract_state.read().clone(),
-            compiled_class_hashes: self.compiled_class_hashes.read().clone(),
-            shared_sierra_classes: self.shared_sierra_classes.clone(),
-            shared_compiled_classes: self.shared_compiled_classes.clone(),
-        }
-    }
+pub struct StateSnapshot<Db> {
+    pub(crate) classes: Arc<SharedContractClasses>,
+    pub(crate) inner: CacheSnapshotWithoutClasses<Db>,
 }
 
 const DEFAULT_HISTORY_LIMIT: usize = 500;
@@ -55,7 +24,7 @@ const MIN_HISTORY_LIMIT: usize = 10;
 /// It should store at N - 1 states, where N is the latest block number.
 pub struct HistoricalStates {
     /// The states at a certain block based on the block number
-    states: HashMap<BlockNumber, Arc<StateSnapshot>>,
+    states: HashMap<BlockNumber, Arc<dyn StateProviderExt>>,
     /// How many states to store at most
     in_memory_limit: usize,
     /// minimum amount of states we keep in memory
@@ -75,7 +44,7 @@ impl HistoricalStates {
     }
 
     /// Returns the state for the given `block_hash` if present
-    pub fn get(&self, block_num: &BlockNumber) -> Option<&Arc<StateSnapshot>> {
+    pub fn get(&self, block_num: &BlockNumber) -> Option<&Arc<dyn StateProviderExt>> {
         self.states.get(block_num)
     }
 
@@ -87,7 +56,7 @@ impl HistoricalStates {
     /// Since we keep a snapshot of the entire state as history, the size of the state will increase
     /// with the transactions processed. To counter this, we gradually decrease the cache limit with
     /// the number of states/blocks until we reached the `min_limit`.
-    pub fn insert(&mut self, block_num: BlockNumber, state: StateSnapshot) {
+    pub fn insert(&mut self, block_num: BlockNumber, state: Box<dyn StateProviderExt>) {
         if self.present.len() >= self.in_memory_limit {
             // once we hit the max limit we gradually decrease it
             self.in_memory_limit =
@@ -118,7 +87,75 @@ impl Default for HistoricalStates {
     }
 }
 
-pub struct LatestStateProvider(pub(super) Arc<InMemoryState>);
+pub(super) type InMemoryStateDb = CacheStateDb<()>;
+pub(super) type InMemorySnapshot = StateSnapshot<()>;
+
+impl Default for InMemoryStateDb {
+    fn default() -> Self {
+        CacheStateDb {
+            db: (),
+            storage: Default::default(),
+            contract_state: Default::default(),
+            shared_contract_classes: Arc::new(SharedContractClasses {
+                sierra_classes: Default::default(),
+                compiled_classes: Default::default(),
+            }),
+            compiled_class_hashes: Default::default(),
+        }
+    }
+}
+
+impl InMemoryStateDb {
+    pub(crate) fn create_snapshot(&self) -> StateSnapshot<()> {
+        StateSnapshot {
+            inner: self.create_snapshot_without_classes(),
+            classes: Arc::clone(&self.shared_contract_classes),
+        }
+    }
+}
+
+impl StateProvider for InMemorySnapshot {
+    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+        let nonce = self.inner.contract_state.get(&address).map(|info| info.nonce);
+        Ok(nonce)
+    }
+
+    fn storage(
+        &self,
+        address: ContractAddress,
+        storage_key: StorageKey,
+    ) -> Result<Option<StorageValue>> {
+        let value = self.inner.storage.get(&(address, storage_key)).cloned();
+        Ok(value)
+    }
+
+    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+        let class = self.classes.compiled_classes.read().get(&hash).cloned();
+        Ok(class)
+    }
+
+    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+        let class_hash = self.inner.contract_state.get(&address).map(|info| info.class_hash);
+        Ok(class_hash)
+    }
+}
+
+impl StateProviderExt for InMemorySnapshot {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        let class = self.classes.sierra_classes.read().get(&hash).cloned();
+        Ok(class)
+    }
+
+    fn compiled_class_hash_of_class_hash(
+        &self,
+        hash: ClassHash,
+    ) -> Result<Option<CompiledClassHash>> {
+        let hash = self.inner.compiled_class_hashes.get(&hash).cloned();
+        Ok(hash)
+    }
+}
+
+pub(super) struct LatestStateProvider(pub(super) Arc<InMemoryStateDb>);
 
 impl StateProvider for LatestStateProvider {
     fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
@@ -136,7 +173,7 @@ impl StateProvider for LatestStateProvider {
     }
 
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        let class = self.0.shared_compiled_classes.read().get(&hash).cloned();
+        let class = self.0.shared_contract_classes.compiled_classes.read().get(&hash).cloned();
         Ok(class)
     }
 
@@ -148,7 +185,7 @@ impl StateProvider for LatestStateProvider {
 
 impl StateProviderExt for LatestStateProvider {
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        let class = self.0.shared_sierra_classes.read().get(&hash).cloned();
+        let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
         Ok(class)
     }
 
@@ -161,53 +198,10 @@ impl StateProviderExt for LatestStateProvider {
     }
 }
 
-pub struct SnapshotStateProvider(pub(super) Arc<StateSnapshot>);
-
-impl StateProvider for SnapshotStateProvider {
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
-        let nonce = self.0.contract_state.get(&address).map(|info| info.nonce);
-        Ok(nonce)
-    }
-
-    fn storage(
-        &self,
-        address: ContractAddress,
-        storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
-        let value = self.0.storage.get(&(address, storage_key)).cloned();
-        Ok(value)
-    }
-
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        let class = self.0.shared_compiled_classes.read().get(&hash).cloned();
-        Ok(class)
-    }
-
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
-        let class_hash = self.0.contract_state.get(&address).map(|info| info.class_hash);
-        Ok(class_hash)
-    }
-}
-
-impl StateProviderExt for SnapshotStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        let class = self.0.shared_sierra_classes.read().get(&hash).cloned();
-        Ok(class)
-    }
-
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
-        let hash = self.0.compiled_class_hashes.get(&hash).cloned();
-        Ok(hash)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use katana_primitives::block::BlockHashOrNumber;
-    use katana_primitives::contract::StorageKey;
+    use katana_primitives::contract::{GenericContractInfo, StorageKey};
     use starknet::macros::felt;
 
     use super::*;
@@ -232,7 +226,7 @@ mod tests {
     const ADDR_2_NONCE_AT_1: Nonce = felt!("0x1");
     const ADDR_2_NONCE_AT_2: Nonce = felt!("0x2");
 
-    fn create_mock_state() -> InMemoryState {
+    fn create_mock_state() -> InMemoryStateDb {
         let storage = HashMap::from([
             ((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE_AT_1),
             ((ADDR_2, STORAGE_KEY), ADDR_2_STORAGE_VALUE_AT_1),
@@ -249,7 +243,7 @@ mod tests {
             ),
         ]);
 
-        InMemoryState {
+        InMemoryStateDb {
             storage: storage.into(),
             contract_state: contract_state.into(),
             ..Default::default()
@@ -317,7 +311,7 @@ mod tests {
 
         let mut provider = create_mock_provider();
         provider.state = Arc::new(state);
-        provider.historical_states.write().insert(1, snapshot);
+        provider.historical_states.write().insert(1, Box::new(snapshot));
 
         // check latest state
 
