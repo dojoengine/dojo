@@ -236,14 +236,12 @@ impl ForkedBackend {
         contract_address: ContractAddress,
     ) -> Result<Nonce, ForkedBackendError> {
         trace!(target: "forked_backend", "request nonce for contract address {contract_address}");
-        tokio::task::block_in_place(|| {
-            let (sender, rx) = oneshot();
-            self.0
-                .lock()
-                .try_send(BackendRequest::GetNonce(contract_address, sender))
-                .map_err(ForkedBackendError::Send)?;
-            rx.recv().expect("failed to receive nonce result")
-        })
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetNonce(contract_address, sender))
+            .map_err(ForkedBackendError::Send)?;
+        rx.recv().expect("failed to receive nonce result")
     }
 
     pub fn do_get_storage(
@@ -252,14 +250,12 @@ impl ForkedBackend {
         key: StorageKey,
     ) -> Result<StorageValue, ForkedBackendError> {
         trace!(target: "forked_backend", "request storage for address {contract_address} at key {key:#x}" );
-        tokio::task::block_in_place(|| {
-            let (sender, rx) = oneshot();
-            self.0
-                .lock()
-                .try_send(BackendRequest::GetStorage(contract_address, key, sender))
-                .map_err(ForkedBackendError::Send)?;
-            rx.recv().expect("failed to receive storage result")
-        })
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetStorage(contract_address, key, sender))
+            .map_err(ForkedBackendError::Send)?;
+        rx.recv().expect("failed to receive storage result")
     }
 
     pub fn do_get_class_hash_at(
@@ -267,14 +263,12 @@ impl ForkedBackend {
         contract_address: ContractAddress,
     ) -> Result<ClassHash, ForkedBackendError> {
         trace!(target: "forked_backend", "request class hash at address {contract_address}");
-        tokio::task::block_in_place(|| {
-            let (sender, rx) = oneshot();
-            self.0
-                .lock()
-                .try_send(BackendRequest::GetClassHashAt(contract_address, sender))
-                .map_err(ForkedBackendError::Send)?;
-            rx.recv().expect("failed to receive class hash result")
-        })
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetClassHashAt(contract_address, sender))
+            .map_err(ForkedBackendError::Send)?;
+        rx.recv().expect("failed to receive class hash result")
     }
 
     pub fn do_get_class_at(
@@ -282,14 +276,12 @@ impl ForkedBackend {
         class_hash: ClassHash,
     ) -> Result<starknet::core::types::ContractClass, ForkedBackendError> {
         trace!(target: "forked_backend", "request class at hash {class_hash:#x}");
-        tokio::task::block_in_place(|| {
-            let (sender, rx) = oneshot();
-            self.0
-                .lock()
-                .try_send(BackendRequest::GetClassAt(class_hash, sender))
-                .map_err(ForkedBackendError::Send)?;
-            rx.recv().expect("failed to receive class result")
-        })
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetClassAt(class_hash, sender))
+            .map_err(ForkedBackendError::Send)?;
+        rx.recv().expect("failed to receive class result")
     }
 
     pub fn do_get_compiled_class_hash(
@@ -302,12 +294,9 @@ impl ForkedBackend {
         // else if sierra class, then we have to compile it and compute the compiled class hash.
         match class {
             starknet::core::types::ContractClass::Legacy(_) => Ok(class_hash),
-
             starknet::core::types::ContractClass::Sierra(sierra_class) => {
-                tokio::task::block_in_place(|| {
-                    compiled_class_hash_from_flattened_sierra_class(&sierra_class)
-                })
-                .map_err(|e| ForkedBackendError::ComputeClassHashError(e.to_string()))
+                compiled_class_hash_from_flattened_sierra_class(&sierra_class)
+                    .map_err(|e| ForkedBackendError::ComputeClassHashError(e.to_string()))
             }
         }
     }
@@ -408,10 +397,22 @@ impl StateProvider for SharedStateProvider {
 
 impl StateProviderExt for SharedStateProvider {
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        if let class @ Some(_) = self.0.shared_contract_classes.sierra_classes.read().get(&hash) {
+            return Ok(class.cloned());
+        }
+
         let class = self.0.do_get_class_at(hash).unwrap();
         match class {
             starknet::core::types::ContractClass::Legacy(_) => Ok(None),
-            starknet::core::types::ContractClass::Sierra(sierra_class) => Ok(Some(sierra_class)),
+            starknet::core::types::ContractClass::Sierra(sierra_class) => {
+                self.0
+                    .shared_contract_classes
+                    .sierra_classes
+                    .write()
+                    .insert(hash, sierra_class.clone());
+
+                Ok(Some(sierra_class))
+            }
         }
     }
 
@@ -419,7 +420,129 @@ impl StateProviderExt for SharedStateProvider {
         &self,
         hash: ClassHash,
     ) -> Result<Option<CompiledClassHash>> {
-        let hash = self.0.do_get_compiled_class_hash(hash).unwrap();
+        if let hash @ Some(_) = self.0.compiled_class_hashes.read().get(&hash) {
+            return Ok(hash.cloned());
+        }
+
+        let compiled_hash = self.0.do_get_compiled_class_hash(hash).unwrap();
+        self.0.compiled_class_hashes.write().insert(hash, compiled_hash);
+
         Ok(Some(hash))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use katana_primitives::block::BlockNumber;
+    use katana_primitives::contract::GenericContractInfo;
+    use starknet::macros::felt;
+    use url::Url;
+
+    use super::*;
+
+    const LOCAL_RPC_URL: &str = "http://localhost:5050";
+
+    const STORAGE_KEY: StorageKey = felt!("0x1");
+    const ADDR_1: ContractAddress = ContractAddress(felt!("0xADD1"));
+    const ADDR_1_NONCE: Nonce = felt!("0x1");
+    const ADDR_1_STORAGE_VALUE: StorageKey = felt!("0x8080");
+    const ADDR_1_CLASS_HASH: StorageKey = felt!("0x1");
+
+    fn create_forked_backend(rpc_url: String, block_num: BlockNumber) -> (ForkedBackend, Backend) {
+        ForkedBackend::new(
+            Arc::new(JsonRpcClient::new(HttpTransport::new(
+                Url::parse(&rpc_url).expect("valid url"),
+            ))),
+            BlockHashOrNumber::Num(block_num),
+        )
+    }
+
+    fn create_forked_backend_with_backend_thread(
+        rpc_url: String,
+        block_num: BlockNumber,
+    ) -> ForkedBackend {
+        ForkedBackend::new_with_backend_thread(
+            Arc::new(JsonRpcClient::new(HttpTransport::new(
+                Url::parse(&rpc_url).expect("valid url"),
+            ))),
+            BlockHashOrNumber::Num(block_num),
+        )
+    }
+
+    #[test]
+    fn get_from_cache_if_exist() {
+        // setup
+        let (backend, _) = create_forked_backend(LOCAL_RPC_URL.into(), 1);
+        let state_db = CacheStateDb::new(backend);
+
+        state_db.storage.write().insert((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE);
+        state_db.contract_state.write().insert(
+            ADDR_1,
+            GenericContractInfo { nonce: ADDR_1_NONCE, class_hash: ADDR_1_CLASS_HASH },
+        );
+
+        let provider = SharedStateProvider(Arc::new(state_db));
+
+        assert_eq!(StateProvider::nonce(&provider, ADDR_1).unwrap(), Some(ADDR_1_NONCE));
+        assert_eq!(
+            StateProvider::storage(&provider, ADDR_1, STORAGE_KEY).unwrap(),
+            Some(ADDR_1_STORAGE_VALUE)
+        );
+        assert_eq!(
+            StateProvider::class_hash_of_contract(&provider, ADDR_1).unwrap(),
+            Some(ADDR_1_CLASS_HASH)
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn fetch_from_fork_will_panic_if_backend_thread_not_running() {
+        let (backend, _) = create_forked_backend(LOCAL_RPC_URL.into(), 1);
+        let provider = SharedStateProvider(Arc::new(CacheStateDb::new(backend)));
+        let _ = StateProvider::nonce(&provider, ADDR_1);
+    }
+
+    const FORKED_URL: &str =
+        "https://starknet-goerli.infura.io/v3/369ce5ac40614952af936e4d64e40474";
+
+    const GOERLI_CONTRACT_ADDR: ContractAddress = ContractAddress(felt!(
+        "0x02b92ec12cA1e308f320e99364d4dd8fcc9efDAc574F836C8908de937C289974"
+    ));
+    const GOERLI_CONTRACT_STORAGE_KEY: StorageKey =
+        felt!("0x3b459c3fadecdb1a501f2fdeec06fd735cb2d93ea59779177a0981660a85352");
+
+    #[test]
+    #[ignore]
+    fn fetch_from_fork_if_not_in_cache() {
+        let backend = create_forked_backend_with_backend_thread(FORKED_URL.into(), 908622);
+        let provider = SharedStateProvider(Arc::new(CacheStateDb::new(backend)));
+
+        // fetch from remote
+
+        let class_hash =
+            StateProvider::class_hash_of_contract(&provider, GOERLI_CONTRACT_ADDR).unwrap();
+        let storage_value =
+            StateProvider::storage(&provider, GOERLI_CONTRACT_ADDR, GOERLI_CONTRACT_STORAGE_KEY)
+                .unwrap();
+        let nonce = StateProvider::nonce(&provider, GOERLI_CONTRACT_ADDR).unwrap();
+
+        // fetch from cache
+
+        let class_hash_in_cache =
+            provider.0.contract_state.read().get(&GOERLI_CONTRACT_ADDR).map(|i| i.class_hash);
+        let storage_value_in_cache = provider
+            .0
+            .storage
+            .read()
+            .get(&(GOERLI_CONTRACT_ADDR, GOERLI_CONTRACT_STORAGE_KEY))
+            .cloned();
+        let nonce_in_cache =
+            provider.0.contract_state.read().get(&GOERLI_CONTRACT_ADDR).map(|i| i.nonce);
+
+        // check
+
+        assert_eq!(nonce, nonce_in_cache, "value must be stored in cache");
+        assert_eq!(class_hash, class_hash_in_cache, "value must be stored in cache");
+        assert_eq!(storage_value, storage_value_in_cache, "value must be stored in cache");
     }
 }
