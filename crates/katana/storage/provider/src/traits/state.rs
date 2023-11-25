@@ -39,6 +39,7 @@ pub trait StateProviderExt: StateProvider + Send + Sync {
 
 /// A state factory provider is a provider which can create state providers for
 /// states at a particular block.
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait StateFactoryProvider {
     /// Returns a state provider for retrieving the latest state.
     fn latest(&self) -> Result<Box<dyn StateProvider>>;
