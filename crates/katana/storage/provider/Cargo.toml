@@ -22,9 +22,10 @@ starknet.workspace = true
 tokio.workspace = true
 
 [features]
-default = [ "fork", "in_memory" ]
-fork = [  ]
-in_memory = [  ]
+default = [ "fork", "in-memory" ]
+fork = [ "in-memory" ]
+in-memory = [  ]
 
 [dev-dependencies]
 starknet.workspace = true
+url.workspace = true

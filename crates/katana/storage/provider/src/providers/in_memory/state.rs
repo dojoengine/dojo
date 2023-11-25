@@ -213,18 +213,22 @@ mod tests {
     const ADDR_1: ContractAddress = ContractAddress(felt!("0xADD1"));
     const ADDR_1_STORAGE_VALUE_AT_1: StorageKey = felt!("0x8080");
     const ADDR_1_STORAGE_VALUE_AT_2: StorageKey = felt!("0x1212");
+    const ADDR_1_STORAGE_VALUE_AT_3: StorageKey = felt!("0x3434");
     const ADDR_1_CLASS_HASH_AT_1: ClassHash = felt!("0x4337");
     const ADDR_1_CLASS_HASH_AT_2: ClassHash = felt!("0x7334");
     const ADDR_1_NONCE_AT_1: Nonce = felt!("0x1");
     const ADDR_1_NONCE_AT_2: Nonce = felt!("0x2");
+    const ADDR_1_NONCE_AT_3: Nonce = felt!("0x3");
 
     const ADDR_2: ContractAddress = ContractAddress(felt!("0xADD2"));
     const ADDR_2_STORAGE_VALUE_AT_1: StorageKey = felt!("0x9090");
     const ADDR_2_STORAGE_VALUE_AT_2: StorageKey = felt!("1313");
+    const ADDR_2_STORAGE_VALUE_AT_3: StorageKey = felt!("5555");
     const ADDR_2_CLASS_HASH_AT_1: ClassHash = felt!("0x1559");
     const ADDR_2_CLASS_HASH_AT_2: ClassHash = felt!("0x9551");
     const ADDR_2_NONCE_AT_1: Nonce = felt!("0x1");
     const ADDR_2_NONCE_AT_2: Nonce = felt!("0x2");
+    const ADDR_2_NONCE_AT_3: Nonce = felt!("0x3");
 
     fn create_mock_state() -> InMemoryStateDb {
         let storage = HashMap::from([
@@ -285,7 +289,8 @@ mod tests {
         // setup
 
         let state = create_mock_state();
-        let snapshot = state.create_snapshot();
+        // create snapshot 1
+        let snapshot_1 = state.create_snapshot();
 
         state.storage.write().extend([
             ((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE_AT_2),
@@ -309,35 +314,57 @@ mod tests {
             ),
         ]);
 
+        // create snapshot 2
+        let snapshot_2 = state.create_snapshot();
+
+        state.storage.write().extend([
+            ((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE_AT_3),
+            ((ADDR_2, STORAGE_KEY), ADDR_2_STORAGE_VALUE_AT_3),
+        ]);
+
+        state.contract_state.write().entry(ADDR_1).and_modify(|e| e.nonce = ADDR_1_NONCE_AT_3);
+        state.contract_state.write().entry(ADDR_2).and_modify(|e| e.nonce = ADDR_2_NONCE_AT_3);
+
         let mut provider = create_mock_provider();
         provider.state = Arc::new(state);
-        provider.historical_states.write().insert(1, Box::new(snapshot));
+        provider.historical_states.write().insert(1, Box::new(snapshot_1));
+        provider.historical_states.write().insert(2, Box::new(snapshot_2));
 
         // check latest state
 
         let latest_state_provider = StateFactoryProvider::latest(&provider).unwrap();
 
-        assert_eq!(latest_state_provider.nonce(ADDR_1).unwrap(), Some(ADDR_1_NONCE_AT_2));
+        assert_eq!(
+            latest_state_provider.nonce(ADDR_1).unwrap(),
+            Some(ADDR_1_NONCE_AT_3),
+            "nonce must be updated"
+        );
         assert_eq!(
             latest_state_provider.storage(ADDR_1, STORAGE_KEY).unwrap(),
-            Some(ADDR_1_STORAGE_VALUE_AT_2)
+            Some(ADDR_1_STORAGE_VALUE_AT_3),
+            "storage must be updated"
         );
         assert_eq!(
             latest_state_provider.class_hash_of_contract(ADDR_1).unwrap(),
             Some(ADDR_1_CLASS_HASH_AT_2)
         );
 
-        assert_eq!(latest_state_provider.nonce(ADDR_2).unwrap(), Some(ADDR_2_NONCE_AT_2));
+        assert_eq!(
+            latest_state_provider.nonce(ADDR_2).unwrap(),
+            Some(ADDR_2_NONCE_AT_3),
+            "nonce must be updated"
+        );
         assert_eq!(
             latest_state_provider.storage(ADDR_2, STORAGE_KEY).unwrap(),
-            Some(ADDR_2_STORAGE_VALUE_AT_2)
+            Some(ADDR_2_STORAGE_VALUE_AT_3),
+            "storage must be updated"
         );
         assert_eq!(
             latest_state_provider.class_hash_of_contract(ADDR_2).unwrap(),
             Some(ADDR_2_CLASS_HASH_AT_2)
         );
 
-        // check historical state
+        // check historical state at 1
 
         let historical_state_provider =
             StateFactoryProvider::historical(&provider, BlockHashOrNumber::Num(1))
@@ -362,6 +389,33 @@ mod tests {
         assert_eq!(
             historical_state_provider.class_hash_of_contract(ADDR_2).unwrap(),
             Some(ADDR_2_CLASS_HASH_AT_1)
+        );
+
+        // check historical state at 2
+
+        let historical_state_provider =
+            StateFactoryProvider::historical(&provider, BlockHashOrNumber::Num(2))
+                .unwrap()
+                .unwrap();
+
+        assert_eq!(historical_state_provider.nonce(ADDR_1).unwrap(), Some(ADDR_1_NONCE_AT_2));
+        assert_eq!(
+            historical_state_provider.storage(ADDR_1, STORAGE_KEY).unwrap(),
+            Some(ADDR_1_STORAGE_VALUE_AT_2)
+        );
+        assert_eq!(
+            historical_state_provider.class_hash_of_contract(ADDR_1).unwrap(),
+            Some(ADDR_1_CLASS_HASH_AT_2)
+        );
+
+        assert_eq!(historical_state_provider.nonce(ADDR_2).unwrap(), Some(ADDR_2_NONCE_AT_2));
+        assert_eq!(
+            historical_state_provider.storage(ADDR_2, STORAGE_KEY).unwrap(),
+            Some(ADDR_2_STORAGE_VALUE_AT_2)
+        );
+        assert_eq!(
+            historical_state_provider.class_hash_of_contract(ADDR_2).unwrap(),
+            Some(ADDR_2_CLASS_HASH_AT_2)
         );
     }
 }
