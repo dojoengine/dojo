@@ -211,35 +211,15 @@ pub async fn model_fixtures(db: &mut Sql) {
                     ty: Ty::Primitive(Primitive::U32(None)),
                 },
                 Member {
-                    name: "type_u8".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U8(None)),
-                },
-                Member {
                     name: "type_u16".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U16(None)),
-                },
-                Member {
-                    name: "type_u32".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U32(None)),
                 },
                 Member {
                     name: "type_u64".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U64(None)),
                 },
-                // Member {
-                //     name: "type_u128".to_string(),
-                //     key: false,
-                //     ty: Ty::Primitive(Primitive::U128(None)),
-                // },
-                // Member {
-                //     name: "type_u256".to_string(),
-                //     key: false,
-                //     ty: Ty::Primitive(Primitive::U256(None)),
-                // },
                 Member {
                     name: "type_bool".to_string(),
                     key: false,
@@ -250,11 +230,6 @@ pub async fn model_fixtures(db: &mut Sql) {
                     key: false,
                     ty: Ty::Primitive(Primitive::Felt252(None)),
                 },
-                // Member {
-                //     name: "type_class_hash".to_string(),
-                //     key: true,
-                //     ty: Ty::Primitive(Primitive::ClassHash(None)),
-                // },
                 Member {
                     name: "type_contract_address".to_string(),
                     key: true,
@@ -264,35 +239,6 @@ pub async fn model_fixtures(db: &mut Sql) {
         }),
         vec![],
         FieldElement::ONE,
-        0,
-        0,
-    )
-    .await
-    .unwrap();
-
-    db.register_model(
-        Ty::Struct(Struct {
-            name: "Subrecord".to_string(),
-            children: vec![
-                Member {
-                    name: "record_id".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::U32(None)),
-                },
-                Member {
-                    name: "subrecord_id".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U32(None)),
-                },
-                Member {
-                    name: "type_contract_address".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-            ],
-        }),
-        vec![],
-        FieldElement::TWO,
         0,
         0,
     )
