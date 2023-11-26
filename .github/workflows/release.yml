@@ -93,12 +93,12 @@ jobs:
             platform: linux
             target: x86_64-unknown-linux-gnu
             arch: amd64
-          - os: ubuntu-latest-4-cores
+          - os: ubuntu-latest-8-cores
             platform: linux
             target: aarch64-unknown-linux-gnu
             arch: arm64
             svm_target_platform: linux-aarch64
-          - os: macos-latest
+          - os: macos-latest-xlarge
             platform: darwin
             target: x86_64-apple-darwin
             arch: amd64
@@ -124,9 +124,10 @@ jobs:
         with:
           cache-on-failure: true
 
-      - uses: arduino/setup-protoc@v1
+      - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "25.x"
 
       - name: Apple M1 setup
         if: ${{ matrix.job.target == 'aarch64-apple-darwin' }}
@@ -191,10 +192,10 @@ jobs:
           body: ${{ needs.prepare.outputs.changelog }}
           files: |
             ${{ steps.artifacts.outputs.file_name }}
-      
+
       # Upload these for use with the Docker build later
       - name: Upload binaries
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: binaries
           path: |
@@ -241,10 +242,10 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download binaries
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: binaries
-          path: target/
+          path: artifacts
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -259,12 +260,15 @@ jobs:
       - name: Build and push docker image
         uses: docker/build-push-action@v4
         with:
+          no-cache: true
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
           platforms: linux/arm64
           target: arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          build-contexts: |
+            artifacts=artifacts
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
 
   docker-build-and-push-linux-amd64:
     name: Build and push linux-amd64 docker image
@@ -276,10 +280,10 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download binaries
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: binaries
-          path: target/
+          path: artifacts
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -294,9 +298,12 @@ jobs:
       - name: Build and push docker image
         uses: docker/build-push-action@v4
         with:
+          build-contexts: |
+            artifacts=artifacts
+          no-cache: true
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
           platforms: linux/amd64
           target: amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
