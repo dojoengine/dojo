@@ -285,6 +285,10 @@ jobs:
           name: binaries
           path: artifacts
 
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: artifacts
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
