@@ -189,75 +189,56 @@ pub async fn run_graphql_subscription(
 pub async fn model_fixtures(db: &mut Sql) {
     db.register_model(
         Ty::Struct(Struct {
-            name: "Moves".to_string(),
+            name: "Record".to_string(),
             children: vec![
                 Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "remaining".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U8(None)),
-                },
-                Member {
-                    name: "last_direction".to_string(),
+                    name: "depth".to_string(),
                     key: false,
                     ty: Ty::Enum(Enum {
-                        name: "Direction".to_string(),
+                        name: "Depth".to_string(),
                         option: None,
                         options: vec![
-                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
                         ],
                     }),
+                },
+                Member {
+                    name: "record_id".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                },
+                Member {
+                    name: "type_u16".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U16(None)),
+                },
+                Member {
+                    name: "type_u64".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U64(None)),
+                },
+                Member {
+                    name: "type_bool".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Bool(None)),
+                },
+                Member {
+                    name: "type_felt".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Felt252(None)),
+                },
+                Member {
+                    name: "type_contract_address".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 },
             ],
         }),
         vec![],
         FieldElement::ONE,
-        0,
-        0,
-    )
-    .await
-    .unwrap();
-
-    db.register_model(
-        Ty::Struct(Struct {
-            name: "Position".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "vec".to_string(),
-                    key: false,
-                    ty: Ty::Struct(Struct {
-                        name: "Vec2".to_string(),
-                        children: vec![
-                            Member {
-                                name: "x".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                            Member {
-                                name: "y".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                        ],
-                    }),
-                },
-            ],
-        }),
-        vec![],
-        FieldElement::TWO,
         0,
         0,
     )
