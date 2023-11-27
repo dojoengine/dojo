@@ -55,9 +55,7 @@ impl StateProvider for ForkedStateDb {
         }
         StateProvider::storage(&self.db, address, storage_key)
     }
-}
 
-impl StateProviderExt for CacheStateDb<SharedStateProvider> {
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
@@ -65,9 +63,11 @@ impl StateProviderExt for CacheStateDb<SharedStateProvider> {
         if let hash @ Some(_) = self.compiled_class_hashes.read().get(&hash) {
             return Ok(hash.cloned());
         }
-        StateProviderExt::compiled_class_hash_of_class_hash(&self.db, hash)
+        StateProvider::compiled_class_hash_of_class_hash(&self.db, hash)
     }
+}
 
+impl StateProviderExt for CacheStateDb<SharedStateProvider> {
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
         if let class @ Some(_) = self.shared_contract_classes.sierra_classes.read().get(&hash) {
             return Ok(class.cloned());
@@ -98,18 +98,18 @@ impl StateProvider for LatestStateProvider {
     fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
         StateProvider::class_hash_of_contract(&self.0, address)
     }
-}
-
-impl StateProviderExt for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        StateProviderExt::sierra_class(&self.0, hash)
-    }
 
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
     ) -> Result<Option<CompiledClassHash>> {
-        StateProviderExt::compiled_class_hash_of_class_hash(&self.0, hash)
+        StateProvider::compiled_class_hash_of_class_hash(&self.0, hash)
+    }
+}
+
+impl StateProviderExt for LatestStateProvider {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        StateProviderExt::sierra_class(&self.0, hash)
     }
 }
 
@@ -147,15 +147,6 @@ impl StateProvider for ForkedSnapshot {
         }
         StateProvider::class_hash_of_contract(&self.inner.db, address)
     }
-}
-
-impl StateProviderExt for ForkedSnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        if let class @ Some(_) = self.classes.sierra_classes.read().get(&hash).cloned() {
-            return Ok(class);
-        }
-        StateProviderExt::sierra_class(&self.inner.db, hash)
-    }
 
     fn compiled_class_hash_of_class_hash(
         &self,
@@ -164,6 +155,15 @@ impl StateProviderExt for ForkedSnapshot {
         if let hash @ Some(_) = self.inner.compiled_class_hashes.get(&hash).cloned() {
             return Ok(hash);
         }
-        StateProviderExt::compiled_class_hash_of_class_hash(&self.inner.db, hash)
+        StateProvider::compiled_class_hash_of_class_hash(&self.inner.db, hash)
+    }
+}
+
+impl StateProviderExt for ForkedSnapshot {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        if let class @ Some(_) = self.classes.sierra_classes.read().get(&hash).cloned() {
+            return Ok(class);
+        }
+        StateProviderExt::sierra_class(&self.inner.db, hash)
     }
 }

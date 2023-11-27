@@ -150,6 +150,13 @@ where
     ) -> Result<Option<StorageValue>> {
         self.provider.storage(address, storage_key)
     }
+
+    fn compiled_class_hash_of_class_hash(
+        &self,
+        hash: ClassHash,
+    ) -> Result<Option<CompiledClassHash>> {
+        self.provider.compiled_class_hash_of_class_hash(hash)
+    }
 }
 
 impl<Db> StateProviderExt for BlockchainProvider<Db>
@@ -158,13 +165,6 @@ where
 {
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
         self.provider.sierra_class(hash)
-    }
-
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
-        self.provider.compiled_class_hash_of_class_hash(hash)
     }
 }
 
