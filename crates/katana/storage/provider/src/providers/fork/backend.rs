@@ -393,6 +393,20 @@ impl StateProvider for SharedStateProvider {
 
         Ok(Some(class_hash))
     }
+
+    fn compiled_class_hash_of_class_hash(
+        &self,
+        hash: ClassHash,
+    ) -> Result<Option<CompiledClassHash>> {
+        if let hash @ Some(_) = self.0.compiled_class_hashes.read().get(&hash) {
+            return Ok(hash.cloned());
+        }
+
+        let compiled_hash = self.0.do_get_compiled_class_hash(hash).unwrap();
+        self.0.compiled_class_hashes.write().insert(hash, compiled_hash);
+
+        Ok(Some(hash))
+    }
 }
 
 impl StateProviderExt for SharedStateProvider {
@@ -414,20 +428,6 @@ impl StateProviderExt for SharedStateProvider {
                 Ok(Some(sierra_class))
             }
         }
-    }
-
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
-        if let hash @ Some(_) = self.0.compiled_class_hashes.read().get(&hash) {
-            return Ok(hash.cloned());
-        }
-
-        let compiled_hash = self.0.do_get_compiled_class_hash(hash).unwrap();
-        self.0.compiled_class_hashes.write().insert(hash, compiled_hash);
-
-        Ok(Some(hash))
     }
 }
 

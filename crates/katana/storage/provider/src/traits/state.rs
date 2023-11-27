@@ -22,6 +22,12 @@ pub trait StateProvider: Send + Sync {
 
     /// Returns the class hash of a contract.
     fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>>;
+
+    /// Returns the compiled class hash for the given class hash.
+    fn compiled_class_hash_of_class_hash(
+        &self,
+        hash: ClassHash,
+    ) -> Result<Option<CompiledClassHash>>;
 }
 
 /// An extension of the `StateProvider` trait which provides additional methods.
@@ -29,12 +35,6 @@ pub trait StateProvider: Send + Sync {
 pub trait StateProviderExt: StateProvider + Send + Sync {
     /// Retrieves the Sierra class definition of a contract class given its class hash.
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>>;
-
-    /// Returns the compiled class hash for the given class hash.
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>>;
 }
 
 /// A state factory provider is a provider which can create state providers for

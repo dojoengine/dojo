@@ -138,13 +138,6 @@ impl StateProvider for InMemorySnapshot {
         let class_hash = self.inner.contract_state.get(&address).map(|info| info.class_hash);
         Ok(class_hash)
     }
-}
-
-impl StateProviderExt for InMemorySnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        let class = self.classes.sierra_classes.read().get(&hash).cloned();
-        Ok(class)
-    }
 
     fn compiled_class_hash_of_class_hash(
         &self,
@@ -152,6 +145,13 @@ impl StateProviderExt for InMemorySnapshot {
     ) -> Result<Option<CompiledClassHash>> {
         let hash = self.inner.compiled_class_hashes.get(&hash).cloned();
         Ok(hash)
+    }
+}
+
+impl StateProviderExt for InMemorySnapshot {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        let class = self.classes.sierra_classes.read().get(&hash).cloned();
+        Ok(class)
     }
 }
 
@@ -181,13 +181,6 @@ impl StateProvider for LatestStateProvider {
         let class_hash = self.0.contract_state.read().get(&address).map(|info| info.class_hash);
         Ok(class_hash)
     }
-}
-
-impl StateProviderExt for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
-        Ok(class)
-    }
 
     fn compiled_class_hash_of_class_hash(
         &self,
@@ -195,6 +188,13 @@ impl StateProviderExt for LatestStateProvider {
     ) -> Result<Option<CompiledClassHash>> {
         let hash = self.0.compiled_class_hashes.read().get(&hash).cloned();
         Ok(hash)
+    }
+}
+
+impl StateProviderExt for LatestStateProvider {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
+        Ok(class)
     }
 }
 
