@@ -169,15 +169,14 @@ mod tests {
         assert_eq!(last_record.node.type_u256, "0x0");
 
         // where filter on true bool
-        // TODO: use bool values on input instead of 0 or 1
-        let records = records_model_query(&schema, "(where: { type_bool: 1 })").await;
+        let records = records_model_query(&schema, "(where: { type_bool: true })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 5);
         assert!(first_record.node.type_bool, "should be true");
 
         // where filter on false bool
-        let records = records_model_query(&schema, "(where: { type_bool: 0 })").await;
+        let records = records_model_query(&schema, "(where: { type_bool: false })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 5);

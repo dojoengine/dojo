@@ -2,7 +2,7 @@ use core::fmt;
 
 use async_graphql::Name;
 use strum::IntoEnumIterator;
-use strum_macros::{AsRefStr, EnumIter};
+use strum_macros::{AsRefStr, Display, EnumIter};
 
 #[derive(AsRefStr, Debug, Clone, PartialEq, EnumIter)]
 #[strum(serialize_all = "UPPERCASE")]
@@ -28,7 +28,7 @@ impl fmt::Display for Comparator {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum FilterValue {
     Int(i64),
     String(String),
