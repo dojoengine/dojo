@@ -4,7 +4,7 @@ use katana_primitives::contract::{
     StorageValue,
 };
 use katana_primitives::serde::blockifier::SerializableContractClass;
-use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
+use katana_primitives::transaction::{Receipt, Tx, TxHash, TxNumber};
 use serde::{Deserialize, Serialize};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
@@ -176,7 +176,7 @@ tables! {
     /// Transaction hash based on its number
     TxHashes: (TxNumber) => TxHash,
     /// Store canonical transactions
-    Transactions: (TxNumber) => Transaction,
+    Transactions: (TxNumber) => Tx,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Stores the list of class hashes according to the block number it was declared in.

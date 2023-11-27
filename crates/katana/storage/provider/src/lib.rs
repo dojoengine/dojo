@@ -8,7 +8,7 @@ use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
     SierraClass, StorageKey, StorageValue,
 };
-use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
+use katana_primitives::transaction::{Receipt, Tx, TxHash, TxNumber};
 
 pub mod providers;
 pub mod traits;
@@ -85,7 +85,7 @@ impl<Db> TransactionProvider for BlockchainProvider<Db>
 where
     Db: TransactionProvider,
 {
-    fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<Transaction>> {
+    fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<Tx>> {
         self.provider.transaction_by_hash(hash)
     }
 
@@ -93,14 +93,11 @@ where
         &self,
         block_id: BlockHashOrNumber,
         idx: u64,
-    ) -> Result<Option<Transaction>> {
+    ) -> Result<Option<Tx>> {
         self.provider.transaction_by_block_and_idx(block_id, idx)
     }
 
-    fn transactions_by_block(
-        &self,
-        block_id: BlockHashOrNumber,
-    ) -> Result<Option<Vec<Transaction>>> {
+    fn transactions_by_block(&self, block_id: BlockHashOrNumber) -> Result<Option<Vec<Tx>>> {
         self.provider.transactions_by_block(block_id)
     }
 }
