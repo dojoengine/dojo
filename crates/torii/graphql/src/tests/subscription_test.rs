@@ -30,16 +30,16 @@ mod tests {
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
-                "model_names": model_name,
+                "modelNames": model_name,
                 "models" : [{
                     "__typename": model_name,
                         "depth": "Zero",
-                        "record_id": 0,
-                        "type_u16": 1,
-                        "type_u64": 1,
-                        "type_bool": true,
-                        "type_felt": format!("{:#x}", FieldElement::from(1u128)),
-                        "type_contract_address": format!("{:#x}", FieldElement::ONE)
+                        "recordId": 0,
+                        "typeU16": 1,
+                        "typeU64": 1,
+                        "typeBool": true,
+                        "typeFelt": format!("{:#x}", FieldElement::from(1u128)),
+                        "typeContractAddress": format!("{:#x}", FieldElement::ONE)
                 }]
             }
         });
@@ -115,17 +115,17 @@ mod tests {
                 entityUpdated {
                     id 
                     keys
-                    model_names
+                    modelNames
                     models {
                         __typename
                         ... on Record {
                             depth
-                            record_id
-                            type_u16
-                            type_u64
-                            type_bool
-                            type_felt
-                            type_contract_address
+                            recordId
+                            typeU16
+                            typeU64
+                            typeBool
+                            typeFelt
+                            typeContractAddress
                         }
                     }
                 }
@@ -153,13 +153,13 @@ mod tests {
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
-                "model_names": model_name,
+                "modelNames": model_name,
                 "models" : [{
                     "__typename": model_name,
                         "depth": "Zero",
-                        "record_id": 0,
-                        "type_felt": format!("{:#x}", FieldElement::from(1u128)),
-                        "type_contract_address": format!("{:#x}", FieldElement::ONE)
+                        "recordId": 0,
+                        "typeFelt": format!("{:#x}", FieldElement::from(1u128)),
+                        "typeContractAddress": format!("{:#x}", FieldElement::ONE)
                 }]
             }
         });
@@ -220,14 +220,14 @@ mod tests {
                 entityUpdated(id: "0x579e8877c7755365d5ec1ec7d3a94a457eff5d1f40482bbe9729c064cdead2") {
                     id 
                     keys
-                    model_names
+                    modelNames
                     models {
                         __typename
                         ... on Record {
                             depth
-                            record_id
-                            type_felt
-                            type_contract_address
+                            recordId
+                            typeFelt
+                            typeContractAddress
                         }
                     }
                 }
@@ -373,7 +373,7 @@ mod tests {
                         eventEmitted (keys: ["*", "{:#x}"]) {{
                             keys
                             data
-                            transaction_hash
+                            transactionHash
                         }}
                     }}
                 "#,
@@ -389,7 +389,7 @@ mod tests {
          ], "data": vec![
             format!("{:#x}", FieldElement::from_str("0xc0de").unwrap()),
             format!("{:#x}", FieldElement::from_str("0xface").unwrap())
-         ], "transaction_hash": format!("{:#x}", FieldElement::ZERO)}
+         ], "transactionHash": format!("{:#x}", FieldElement::ZERO)}
         });
 
         assert_eq!(response_value, expected_value);
