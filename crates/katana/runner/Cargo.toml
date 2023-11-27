@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-katana-core = { path = "../katana/core", default-features = false }
-katana-rpc = { path = "../katana/rpc", default-features = false }
+katana-core = { path = "../core", default-features = false }
+katana-rpc = { path = "../rpc", default-features = false }
 lazy_static.workspace = true
 starknet.workspace = true
 tokio.workspace = true
