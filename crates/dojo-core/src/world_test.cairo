@@ -9,7 +9,7 @@ use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
 use dojo::executor::executor;
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait };
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
@@ -405,36 +405,6 @@ fn test_set_writer_fails_for_non_owner() {
 }
 
 
-#[starknet::interface]
-trait IOrigin<TContractState> {
-    fn assert_origin(self: @TContractState);
-}
-
-#[starknet::contract]
-mod origin {
-    use super::{IWorldDispatcher, ContractAddress};
-
-    #[storage]
-    struct Storage {
-        world: IWorldDispatcher,
-    }
-
-    #[constructor]
-    fn constructor(ref self: ContractState, world: ContractAddress) {
-        self.world.write(IWorldDispatcher { contract_address: world })
-    }
-
-    #[external(v0)]
-    impl IOriginImpl of super::IOrigin<ContractState> {
-        fn assert_origin(self: @ContractState) {
-            assert(
-                starknet::get_caller_address() == starknet::contract_address_const::<0x1337>(),
-                'should be equal'
-            );
-        }
-    }
-}
-
 #[test]
 #[available_gas(60000000)]
 fn test_execute_multiple_worlds() {
@@ -510,4 +480,81 @@ fn bench_execute_complex() {
     end(gas, 'char get macro');
 
     assert(data.heigth == 1337, 'data not stored');
+}
+
+
+#[starknet::interface]
+trait IWorldUpgrade<TContractState> {
+    fn hello(self: @TContractState) -> felt252;
+}
+
+#[starknet::contract]
+mod worldupgrade {
+    use super::{IWorldUpgrade, IWorldDispatcher, ContractAddress};
+
+    #[storage]
+    struct Storage {
+        world: IWorldDispatcher,
+    }
+    
+    #[external(v0)]
+    impl IWorldUpgradeImpl of super::IWorldUpgrade<ContractState> {
+        fn hello(self: @ContractState) -> felt252{
+            'dojo'
+        }
+    }
+}
+
+
+#[test]
+#[available_gas(60000000)]
+fn test_upgradeable_world() {
+    
+    // Deploy world contract
+    let world = deploy_world();
+
+    let mut upgradeable_world_dispatcher = IUpgradeableWorldDispatcher {
+        contract_address: world.contract_address
+    };
+    upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
+
+    let res = (IWorldUpgradeDispatcher {
+        contract_address: world.contract_address
+    }).hello();
+
+    assert(res == 'dojo', 'should return dojo');
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected:('invalid class_hash', 'ENTRYPOINT_FAILED'))]
+fn test_upgradeable_world_with_class_hash_zero() {
+    
+    // Deploy world contract
+    let world = deploy_world();
+
+    starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
+
+    let mut upgradeable_world_dispatcher = IUpgradeableWorldDispatcher {
+        contract_address: world.contract_address
+    };
+    upgradeable_world_dispatcher.upgrade(0.try_into().unwrap());
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic( expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
+fn test_upgradeable_world_from_non_owner() {
+    
+    // Deploy world contract
+    let world = deploy_world();
+
+    let not_owner = starknet::contract_address_const::<0x1337>();
+    starknet::testing::set_contract_address(not_owner);
+    starknet::testing::set_account_contract_address(not_owner);
+
+    let mut upgradeable_world_dispatcher = IUpgradeableWorldDispatcher {
+        contract_address: world.contract_address
+    };
+    upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
 }
