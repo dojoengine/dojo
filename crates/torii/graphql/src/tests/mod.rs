@@ -40,6 +40,7 @@ use crate::schema::build_schema;
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
+    pub page_info: PageInfo,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -53,6 +54,16 @@ pub struct Entity {
     pub model_names: String,
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+// same as type from `async-graphql` but derive necessary traits
+// https://docs.rs/async-graphql/6.0.10/async_graphql/types/connection/struct.PageInfo.html
+pub struct PageInfo {
+    pub has_previous_page: bool,
+    pub has_next_page: bool,
+    pub start_cursor: Option<String>,
+    pub end_cursor: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -178,75 +189,56 @@ pub async fn run_graphql_subscription(
 pub async fn model_fixtures(db: &mut Sql) {
     db.register_model(
         Ty::Struct(Struct {
-            name: "Moves".to_string(),
+            name: "Record".to_string(),
             children: vec![
                 Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "remaining".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U8(None)),
-                },
-                Member {
-                    name: "last_direction".to_string(),
+                    name: "depth".to_string(),
                     key: false,
                     ty: Ty::Enum(Enum {
-                        name: "Direction".to_string(),
+                        name: "Depth".to_string(),
                         option: None,
                         options: vec![
-                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
                         ],
                     }),
+                },
+                Member {
+                    name: "record_id".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                },
+                Member {
+                    name: "type_u16".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U16(None)),
+                },
+                Member {
+                    name: "type_u64".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U64(None)),
+                },
+                Member {
+                    name: "type_bool".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Bool(None)),
+                },
+                Member {
+                    name: "type_felt".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Felt252(None)),
+                },
+                Member {
+                    name: "type_contract_address".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 },
             ],
         }),
         vec![],
         FieldElement::ONE,
-        0,
-        0,
-    )
-    .await
-    .unwrap();
-
-    db.register_model(
-        Ty::Struct(Struct {
-            name: "Position".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "vec".to_string(),
-                    key: false,
-                    ty: Ty::Struct(Struct {
-                        name: "Vec2".to_string(),
-                        children: vec![
-                            Member {
-                                name: "x".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                            Member {
-                                name: "y".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                        ],
-                    }),
-                },
-            ],
-        }),
-        vec![],
-        FieldElement::TWO,
         0,
         0,
     )
@@ -278,7 +270,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     //  Execute `create` and insert 10 records into storage
-    let records_contract = "0x2753d30656b393ecea156189bf0acf5e1063f3ac978fb5c3cebe7a4570bbc78";
+    let records_contract = "0x2e6254aaf7e47502319f35de01376cece263f9b83afe6169a4b3a76ef47c8a3";
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],

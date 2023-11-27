@@ -10,3 +10,5 @@ find . -type f -name "*.toml" -exec sed -i "" "s/dojo_plugin = \"$prev_version\"
 scripts/clippy.sh
 
 git commit -am "Prepare v$1"
+git tag -a "v$1" -m "Version $1"
+# git push origin --tags

@@ -31,6 +31,26 @@ mod ctxnamed {
     }
 }
 
+#[dojo::contract]
+mod withevent {
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        TestEvent: TestEvent,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct TestEvent {
+        address: ContractAddress,
+    }
+
+    #[external(v0)]
+    fn test(value: felt252) -> value {
+        value
+    }
+}
+
 //! > generated_cairo_code
 #[starknet::contract]
 mod spawn {
@@ -157,64 +177,154 @@ error: Unsupported attribute.
                 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:8:21
+ --> test_src/lib.cairo[withevent]:2:17
+                #[starknet::contract]
+                ^*******************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[spawn]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:12:21
                     #[storage]
                     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:13:21
+ --> test_src/lib.cairo[spawn]:15:25
+                        #[substorage(v0)]
+                        ^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:19:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:18:21
+ --> test_src/lib.cairo[spawn]:24:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:32:17
-                #[external(v0)]
-                ^*************^
+ --> test_src/lib.cairo[spawn]:31:21
+                    #[abi(embed_v0)]
+                    ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:8:21
+ --> test_src/lib.cairo[spawn]:41:13
+            #[event]
+            ^******^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[proxy]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:12:21
                     #[storage]
                     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:13:21
+ --> test_src/lib.cairo[proxy]:15:25
+                        #[substorage(v0)]
+                        ^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:19:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:18:21
+ --> test_src/lib.cairo[proxy]:24:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:30:17
-                #[external(v0)]
-                ^*************^
+ --> test_src/lib.cairo[proxy]:31:21
+                    #[abi(embed_v0)]
+                    ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:8:21
+ --> test_src/lib.cairo[proxy]:38:13
+            #[event]
+            ^******^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[ctxnamed]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:12:21
                     #[storage]
                     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:13:21
+ --> test_src/lib.cairo[ctxnamed]:15:25
+                        #[substorage(v0)]
+                        ^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:19:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:18:21
+ --> test_src/lib.cairo[ctxnamed]:24:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:32:17
-                #[external(v0)]
-                ^*************^
+ --> test_src/lib.cairo[ctxnamed]:31:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:41:13
+            #[event]
+            ^******^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[withevent]:9:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:12:21
+                    #[storage]
+                    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:15:25
+                        #[substorage(v0)]
+                        ^***************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:19:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:24:21
+                    #[external(v0)]
+                    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:31:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:35:13
+            #[event]
+            ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:47:5
+    #[external(v0)]
+    ^*************^
 
 //! > expanded_cairo_code
 #[starknet::contract]
@@ -222,10 +332,14 @@ error: Unsupported attribute.
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
 
+                    
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
+                        #[substorage(v0)]
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
                     }
 
                     #[external(v0)]
@@ -234,23 +348,28 @@ error: Unsupported attribute.
                     }
 
                     #[external(v0)]
-                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
-                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
-                            let caller = starknet::get_caller_address();
-                            assert(
-                                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
-                            );
-                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
                         }
                     }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                         use traits::Into;
     use dojo::world::Context;
 
-                #[external(v0)]
-                fn execute(self: @ContractState, ctx: Context, name: felt252)  {
+    fn execute(ctx: Context, name: felt252) {
         return ();
     }
+
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+impl EventDrop of Drop::<Event>;
             
                 }
 
@@ -259,10 +378,14 @@ error: Unsupported attribute.
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
 
+                    
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
+                        #[substorage(v0)]
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
                     }
 
                     #[external(v0)]
@@ -271,21 +394,25 @@ error: Unsupported attribute.
                     }
 
                     #[external(v0)]
-                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
-                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
-                            let caller = starknet::get_caller_address();
-                            assert(
-                                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
-                            );
-                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
                         }
                     }
 
-                    
-                #[external(v0)]
-                fn execute(self: @ContractState, value: felt252) -> felt252 {
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                        fn execute(value: felt252) -> felt252 {
         value
     }
+
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+impl EventDrop of Drop::<Event>;
             
                 }
 
@@ -294,10 +421,14 @@ error: Unsupported attribute.
                     use dojo::world;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
 
+                    
                     #[storage]
                     struct Storage {
                         world_dispatcher: IWorldDispatcher,
+                        #[substorage(v0)]
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
                     }
 
                     #[external(v0)]
@@ -306,22 +437,79 @@ error: Unsupported attribute.
                     }
 
                     #[external(v0)]
-                    impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
-                        fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
-                            let caller = starknet::get_caller_address();
-                            assert(
-                                self.world_dispatcher.read().contract_address == caller, 'only World can upgrade'
-                            );
-                            dojo::upgradable::UpgradeableTrait::upgrade(new_class_hash);
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
                         }
                     }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                         use traits::Into;
     use dojo::world::Context;
 
-                #[external(v0)]
-                fn execute(self: @ContractState, ctx2: Context, name: felt252)  {
+    fn execute(ctx2: Context, name: felt252) {
         return ();
     }
+
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+impl EventDrop of Drop::<Event>;
             
+                }
+
+                #[starknet::contract]
+                mod withevent {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+
+                    
+                    #[storage]
+                    struct Storage {
+                        world_dispatcher: IWorldDispatcher,
+                        #[substorage(v0)]
+                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+                    }
+
+                    #[external(v0)]
+                    fn dojo_resource(self: @ContractState) -> felt252 {
+                        'withevent'
+                    }
+
+                    #[external(v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                    
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+                        TestEvent: TestEvent
+            }
+            
+    #[derive(Drop, starknet::Event)]
+    struct TestEvent {
+        address: ContractAddress,
+    }
+
+    #[external(v0)]
+    fn test(value: felt252) -> value {
+        value
+    }
+impl EventDrop of Drop::<Event>;
+impl TestEventDrop of Drop::<TestEvent>;
+
                 }

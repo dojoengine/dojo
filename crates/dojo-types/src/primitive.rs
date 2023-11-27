@@ -33,6 +33,8 @@ pub enum PrimitiveError {
     NotEnoughFieldElements,
     #[error("Unsupported CairoType for SQL formatting")]
     UnsupportedType,
+    #[error("Set value type mismatch")]
+    TypeMismatch,
     #[error(transparent)]
     ValueOutOfRange(#[from] ValueOutOfRangeError),
 }
@@ -44,97 +46,60 @@ pub enum SqlType {
     Text,
 }
 
+/// Macro to generate setter methods for Primitive enum variants.
+macro_rules! set_primitive {
+    ($method_name:ident, $variant:ident, $type:ty) => {
+        /// Sets the inner value of the `Primitive` enum if variant matches.
+        pub fn $method_name(&mut self, value: Option<$type>) -> Result<(), PrimitiveError> {
+            match self {
+                Primitive::$variant(_) => {
+                    *self = Primitive::$variant(value);
+                    Ok(())
+                }
+                _ => Err(PrimitiveError::TypeMismatch),
+            }
+        }
+    };
+}
+
+/// Macro to generate getter methods for Primitive enum variants.
+macro_rules! as_primitive {
+    ($method_name:ident, $variant:ident, $type:ty) => {
+        /// If the `Primitive` is variant type, returns the associated vartiant value. Returns
+        /// `None` otherwise.
+        pub fn $method_name(&self) -> Option<$type> {
+            match self {
+                Primitive::$variant(value) => *value,
+                _ => None,
+            }
+        }
+    };
+}
+
 impl Primitive {
-    /// If the `Primitive` is a u8, returns the associated [`u8`]. Returns `None` otherwise.
-    pub fn as_u8(&self) -> Option<u8> {
-        match self {
-            Primitive::U8(value) => *value,
-            _ => None,
-        }
-    }
+    as_primitive!(as_u8, U8, u8);
+    as_primitive!(as_u16, U16, u16);
+    as_primitive!(as_u32, U32, u32);
+    as_primitive!(as_u64, U64, u64);
+    as_primitive!(as_u128, U128, u128);
+    as_primitive!(as_u256, U256, U256);
+    as_primitive!(as_bool, Bool, bool);
+    as_primitive!(as_usize, USize, u32);
+    as_primitive!(as_felt252, Felt252, FieldElement);
+    as_primitive!(as_class_hash, ClassHash, FieldElement);
+    as_primitive!(as_contract_address, ContractAddress, FieldElement);
 
-    /// If the `Primitive` is a u16, returns the associated [`u16`]. Returns `None` otherwise.
-    pub fn as_u16(&self) -> Option<u16> {
-        match self {
-            Primitive::U16(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a u32, returns the associated [`u32`]. Returns `None` otherwise.
-    pub fn as_u32(&self) -> Option<u32> {
-        match self {
-            Primitive::U32(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a u64, returns the associated [`u64`]. Returns `None` otherwise.
-    pub fn as_u64(&self) -> Option<u64> {
-        match self {
-            Primitive::U64(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a u128, returns the associated [`u128`]. Returns `None` otherwise.
-    pub fn as_u128(&self) -> Option<u128> {
-        match self {
-            Primitive::U128(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a u256, returns the associated [`U256`]. Returns `None` otherwise.
-    pub fn as_u256(&self) -> Option<U256> {
-        match self {
-            Primitive::U256(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a felt252, returns the associated [`FieldElement`]. Returns `None`
-    /// otherwise.
-    pub fn as_felt252(&self) -> Option<FieldElement> {
-        match self {
-            Primitive::Felt252(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a ClassHash, returns the associated [`FieldElement`]. Returns `None`
-    /// otherwise.
-    pub fn as_class_hash(&self) -> Option<FieldElement> {
-        match self {
-            Primitive::ClassHash(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a ContractAddress, returns the associated [`FieldElement`]. Returns
-    /// `None` otherwise.
-    pub fn as_contract_address(&self) -> Option<FieldElement> {
-        match self {
-            Primitive::ContractAddress(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a usize, returns the associated [`u32`]. Returns `None` otherwise.
-    pub fn as_usize(&self) -> Option<u32> {
-        match self {
-            Primitive::USize(value) => *value,
-            _ => None,
-        }
-    }
-
-    /// If the `Primitive` is a bool, returns the associated [`bool`]. Returns `None` otherwise.
-    pub fn as_bool(&self) -> Option<bool> {
-        match self {
-            Primitive::Bool(value) => *value,
-            _ => None,
-        }
-    }
+    set_primitive!(set_u8, U8, u8);
+    set_primitive!(set_u16, U16, u16);
+    set_primitive!(set_u32, U32, u32);
+    set_primitive!(set_u64, U64, u64);
+    set_primitive!(set_u128, U128, u128);
+    set_primitive!(set_u256, U256, U256);
+    set_primitive!(set_bool, Bool, bool);
+    set_primitive!(set_usize, USize, u32);
+    set_primitive!(set_felt252, Felt252, FieldElement);
+    set_primitive!(set_class_hash, ClassHash, FieldElement);
+    set_primitive!(set_contract_address, ContractAddress, FieldElement);
 
     pub fn to_sql_type(&self) -> SqlType {
         match self {
@@ -333,28 +298,39 @@ mod tests {
     }
 
     #[test]
-    fn as_inner_value() {
-        let primitive = Primitive::U8(Some(1u8));
+    fn inner_value_getter_setter() {
+        let mut primitive = Primitive::U8(None);
+        primitive.set_u8(Some(1u8)).unwrap();
         assert_eq!(primitive.as_u8(), Some(1u8));
-        let primitive = Primitive::U16(Some(1u16));
+        let mut primitive = Primitive::U16(None);
+        primitive.set_u16(Some(1u16)).unwrap();
         assert_eq!(primitive.as_u16(), Some(1u16));
-        let primitive = Primitive::U32(Some(1u32));
+        let mut primitive = Primitive::U32(None);
+        primitive.set_u32(Some(1u32)).unwrap();
         assert_eq!(primitive.as_u32(), Some(1u32));
-        let primitive = Primitive::U64(Some(1u64));
+        let mut primitive = Primitive::U64(None);
+        primitive.set_u64(Some(1u64)).unwrap();
         assert_eq!(primitive.as_u64(), Some(1u64));
-        let primitive = Primitive::U128(Some(1u128));
+        let mut primitive = Primitive::U128(None);
+        primitive.set_u128(Some(1u128)).unwrap();
         assert_eq!(primitive.as_u128(), Some(1u128));
-        let primitive = Primitive::U256(Some(U256::from(1u128)));
+        let mut primitive = Primitive::U256(None);
+        primitive.set_u256(Some(U256::from(1u128))).unwrap();
         assert_eq!(primitive.as_u256(), Some(U256::from(1u128)));
-        let primitive = Primitive::USize(Some(1u32));
+        let mut primitive = Primitive::USize(None);
+        primitive.set_usize(Some(1u32)).unwrap();
         assert_eq!(primitive.as_usize(), Some(1u32));
-        let primitive = Primitive::Bool(Some(true));
+        let mut primitive = Primitive::Bool(None);
+        primitive.set_bool(Some(true)).unwrap();
         assert_eq!(primitive.as_bool(), Some(true));
-        let primitive = Primitive::Felt252(Some(FieldElement::from(1u128)));
+        let mut primitive = Primitive::Felt252(None);
+        primitive.set_felt252(Some(FieldElement::from(1u128))).unwrap();
         assert_eq!(primitive.as_felt252(), Some(FieldElement::from(1u128)));
-        let primitive = Primitive::ClassHash(Some(FieldElement::from(1u128)));
+        let mut primitive = Primitive::ClassHash(None);
+        primitive.set_class_hash(Some(FieldElement::from(1u128))).unwrap();
         assert_eq!(primitive.as_class_hash(), Some(FieldElement::from(1u128)));
-        let primitive = Primitive::ContractAddress(Some(FieldElement::from(1u128)));
+        let mut primitive = Primitive::ContractAddress(None);
+        primitive.set_contract_address(Some(FieldElement::from(1u128))).unwrap();
         assert_eq!(primitive.as_contract_address(), Some(FieldElement::from(1u128)));
     }
 }

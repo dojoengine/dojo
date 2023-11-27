@@ -21,6 +21,13 @@ struct Record {
     random_u128: u128,
 }
 
+#[derive(Model, Copy, Drop, Serde)]
+struct RecordSibling {
+    #[key]
+    record_id: u32,
+    random_u8: u8
+}
+
 #[derive(Copy, Drop, Serde, Introspect)]
 struct Nested {
     depth: Depth,
