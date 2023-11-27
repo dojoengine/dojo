@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{
     fs::{self, File},
@@ -12,20 +13,25 @@ use std::{
 };
 use url::Url;
 
+use crate::{KatanaRunnerBuilder, KatanaRunnerConfig};
+
 #[derive(Debug)]
-pub struct KatanaRunner {
+pub struct KatanaBinary {
     child: Child,
-    client: JsonRpcClient<HttpTransport>,
 }
 
 pub fn find_free_port() -> u16 {
     TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port() // This might need to me mutexed
 }
 
-impl KatanaRunner {
-    pub fn new() -> Self {
+impl KatanaBinary {
+    pub fn build() -> KatanaRunnerBuilder {
+        KatanaRunnerBuilder::new()
+    }
+
+    pub fn new(config: KatanaRunnerConfig) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
         let katana_path = "katana";
-        let port = find_free_port();
+        let port = config.port.unwrap_or(find_free_port());
         let log_filename = format!("logs/katana-{}.log", port);
 
         let mut child = Command::new(katana_path)
@@ -33,27 +39,29 @@ impl KatanaRunner {
             .args(["--json-log"])
             .stdout(Stdio::piped())
             .spawn()
-            .expect("failed to start subprocess");
+            .context("failed to start subprocess")?;
 
-        let stdout = child.stdout.take().expect("failed to take subprocess stdout");
+        let stdout = child.stdout.take().context("failed to take subprocess stdout")?;
 
         let (sender, receiver) = mpsc::channel();
 
         thread::spawn(move || {
-            KatanaRunner::wait_for_server_started_and_signal(
+            KatanaBinary::wait_for_server_started_and_signal(
                 Path::new(&log_filename),
                 stdout,
                 sender,
             );
         });
 
-        receiver.recv_timeout(Duration::from_secs(5)).expect("timeout waiting for server to start");
+        receiver
+            .recv_timeout(Duration::from_secs(5))
+            .context("timeout waiting for server to start")?;
 
-        let client = JsonRpcClient::new(HttpTransport::new(
-            Url::parse(&format!("http://0.0.0.0:{}/", port)).unwrap(),
-        ));
+        let url =
+            Url::parse(&format!("http://127.0.0.1:{}/", port)).context("Failed to parse url")?;
+        let provider = JsonRpcClient::new(HttpTransport::new(url));
 
-        KatanaRunner { child, client }
+        Ok((KatanaBinary { child }, provider))
     }
 
     fn wait_for_server_started_and_signal(path: &Path, stdout: ChildStdout, sender: Sender<()>) {
@@ -77,7 +85,7 @@ impl KatanaRunner {
     }
 }
 
-impl Drop for KatanaRunner {
+impl Drop for KatanaBinary {
     fn drop(&mut self) {
         if let Err(e) = self.child.kill() {
             eprintln!("Failed to kill katana subprocess: {}", e);
