@@ -109,10 +109,10 @@ Class Hash: {}
 Account Contract
 Class Hash: {}
     ",
-        FEE_TOKEN_ADDRESS.to_string(),
-        ERC20_CONTRACT_CLASS_HASH.to_string(),
-        UDC_ADDRESS.to_string(),
-        UDC_CLASS_HASH.to_string(),
+        *FEE_TOKEN_ADDRESS,
+        *ERC20_CONTRACT_CLASS_HASH,
+        *UDC_ADDRESS,
+        *UDC_CLASS_HASH,
         account_class_hash
     );
 
