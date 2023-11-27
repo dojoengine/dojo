@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use starknet::core::types::{Event, MsgToL1};
 
 use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
 };
 use crate::FieldElement;
 
@@ -17,13 +17,13 @@ pub type TxNumber = u64;
 pub enum ExecutionTx {
     Invoke(InvokeTx),
     L1Handler(L1HandlerTx),
-    Declare(DeclareTxWithCompiledClass),
-    DeployAccount(DeployAccountTxWithContractAddress),
+    Declare(DeclareTxWithClasses),
+    DeployAccount(DeployAccountTx),
 }
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Transaction {
+pub enum Tx {
     Invoke(InvokeTx),
     Declare(DeclareTx),
     L1Handler(L1HandlerTx),
@@ -32,55 +32,37 @@ pub enum Transaction {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum InvokeTx {
-    V1(InvokeTxV1),
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InvokeTxV1 {
+pub struct InvokeTx {
     pub transaction_hash: TxHash,
     pub nonce: Nonce,
     pub max_fee: u128,
+    pub version: FieldElement,
     pub calldata: Vec<FieldElement>,
     pub signature: Vec<FieldElement>,
     pub sender_address: ContractAddress,
 }
 
 #[derive(Debug, Clone)]
-pub struct DeclareTxWithCompiledClass(pub DeclareTx, pub CompiledContractClass);
-
-#[derive(Debug, Clone)]
-pub struct DeployAccountTxWithContractAddress(pub DeployAccountTx, pub ContractAddress);
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum DeclareTx {
-    V1(DeclareTxV1),
-    V2(DeclareTxV2),
+pub struct DeclareTxWithClasses {
+    pub tx: DeclareTx,
+    pub sierra_class: Option<SierraClass>,
+    pub compiled_class: CompiledContractClass,
 }
 
+/// Represents a declare transaction type.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DeclareTxV1 {
+pub struct DeclareTx {
     pub transaction_hash: TxHash,
     pub max_fee: u128,
     pub nonce: Nonce,
+    pub version: FieldElement,
+    /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
     pub signature: Vec<FieldElement>,
     pub sender_address: ContractAddress,
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DeclareTxV2 {
-    pub transaction_hash: TxHash,
-    pub max_fee: u128,
-    pub nonce: Nonce,
-    pub class_hash: ClassHash,
-    pub signature: Vec<FieldElement>,
-    pub sender_address: ContractAddress,
-    pub compiled_class_hash: CompiledClassHash,
+    /// The compiled class hash of the contract class (only if it's a Sierra class).
+    pub compiled_class_hash: Option<CompiledClassHash>,
 }
 
 #[derive(Debug, Clone)]
@@ -89,6 +71,7 @@ pub struct L1HandlerTx {
     pub transaction_hash: TxHash,
     pub version: FieldElement,
     pub nonce: Nonce,
+    pub paid_fee_on_l1: u128,
     pub calldata: Vec<FieldElement>,
     pub contract_address: ContractAddress,
     pub entry_point_selector: FieldElement,
@@ -103,6 +86,7 @@ pub struct DeployAccountTx {
     pub class_hash: ClassHash,
     pub version: FieldElement,
     pub signature: Vec<FieldElement>,
+    pub contract_address: ContractAddress,
     pub contract_address_salt: FieldElement,
     pub constructor_calldata: Vec<FieldElement>,
 }

@@ -7,7 +7,7 @@ use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
     SierraClass, StorageKey, StorageValue,
 };
-use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
+use katana_primitives::transaction::{Receipt, Tx, TxHash, TxNumber};
 use parking_lot::RwLock;
 
 type ContractStorageMap = HashMap<(ContractAddress, StorageKey), StorageValue>;
@@ -48,7 +48,7 @@ pub struct CacheDb<Db> {
     pub(crate) latest_block_number: BlockNumber,
     pub(crate) state_update: HashMap<BlockNumber, StateUpdate>,
     pub(crate) receipts: Vec<Receipt>,
-    pub(crate) transactions: Vec<Transaction>,
+    pub(crate) transactions: Vec<Tx>,
     pub(crate) transaction_hashes: HashMap<TxNumber, TxHash>,
     pub(crate) transaction_numbers: HashMap<TxHash, TxNumber>,
 }
