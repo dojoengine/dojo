@@ -267,8 +267,6 @@ jobs:
           target: arm64
           build-contexts: |
             artifacts=artifacts
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
 
   docker-build-and-push-linux-amd64:
     name: Build and push linux-amd64 docker image
@@ -284,10 +282,6 @@ jobs:
         with:
           name: binaries
           path: artifacts
-
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: artifacts
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -309,5 +303,3 @@ jobs:
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
           platforms: linux/amd64
           target: amd64
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
