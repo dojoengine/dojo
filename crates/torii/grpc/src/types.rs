@@ -20,7 +20,7 @@ pub struct Query {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub enum Clause {
     Keys(KeysClause),
-    Attribute(AttributeClause),
+    Member(MemberClause),
     Composite(CompositeClause),
 }
 
@@ -31,7 +31,7 @@ pub struct KeysClause {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct AttributeClause {
+pub struct MemberClause {
     pub model: String,
     pub member: String,
     pub operator: ComparisonOperator,
@@ -117,9 +117,9 @@ impl From<Clause> for proto::types::Clause {
             Clause::Keys(clause) => {
                 Self { clause_type: Some(proto::types::clause::ClauseType::Keys(clause.into())) }
             }
-            Clause::Attribute(clause) => Self {
-                clause_type: Some(proto::types::clause::ClauseType::Attribute(clause.into())),
-            },
+            Clause::Member(clause) => {
+                Self { clause_type: Some(proto::types::clause::ClauseType::Member(clause.into())) }
+            }
             Clause::Composite(clause) => Self {
                 clause_type: Some(proto::types::clause::ClauseType::Composite(clause.into())),
             },
@@ -150,8 +150,8 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
     }
 }
 
-impl From<AttributeClause> for proto::types::AttributeClause {
-    fn from(value: AttributeClause) -> Self {
+impl From<MemberClause> for proto::types::MemberClause {
+    fn from(value: MemberClause) -> Self {
         Self {
             model: value.model,
             member: value.member,

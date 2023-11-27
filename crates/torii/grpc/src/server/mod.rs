@@ -165,7 +165,7 @@ impl DojoWorld {
 
     async fn entities_by_attribute(
         &self,
-        _attribute: proto::types::AttributeClause,
+        _attribute: proto::types::MemberClause,
         _limit: u32,
         _offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
@@ -249,7 +249,7 @@ impl DojoWorld {
             ClauseType::Keys(keys) => {
                 self.entities_by_keys(keys, query.limit, query.offset).await?
             }
-            ClauseType::Attribute(attribute) => {
+            ClauseType::Member(attribute) => {
                 self.entities_by_attribute(attribute, query.limit, query.offset).await?
             }
             ClauseType::Composite(composite) => {
