@@ -94,7 +94,7 @@ message EntityQuery {
 message Clause {
     oneof clause_type {
         KeysClause keys = 1;
-        AttributeClause attribute = 2;
+        MemberClause member = 2;
         CompositeClause composite = 3;
     }
 }
@@ -104,7 +104,7 @@ message KeysClause {
     repeated bytes keys = 2;
 }
 
-message AttributeClause {
+message MemberClause {
     string model = 1;
     string member = 2;
     ComparisonOperator operator = 3;
