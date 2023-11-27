@@ -86,7 +86,7 @@ impl ObjectTrait for ModelDataObject {
             FieldFuture::new(async move {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let order = parse_order_argument(&ctx);
-                let filters = parse_where_argument(&ctx, &where_mapping);
+                let filters = parse_where_argument(&ctx, &where_mapping)?;
                 let connection = parse_connection_arguments(&ctx)?;
                 let id_column = "event_id";
 
