@@ -5129,6 +5129,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-executor"
+version = "0.3.12"
+dependencies = [
+ "blockifier",
+ "convert_case 0.6.0",
+ "katana-primitives",
+ "katana-provider",
+ "parking_lot 0.12.1",
+ "starknet",
+ "starknet_api",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "katana-primitives"
 version = "0.3.14"
 dependencies = [
