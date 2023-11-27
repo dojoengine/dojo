@@ -2,25 +2,22 @@ use std::ops::Range;
 
 use anyhow::Result;
 use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
+use katana_primitives::transaction::{Receipt, Tx, TxHash, TxNumber};
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait TransactionProvider: Send + Sync {
     /// Returns a transaction given its hash.
-    fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<Transaction>>;
+    fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<Tx>>;
 
     /// Returns all the transactions for a given block.
-    fn transactions_by_block(
-        &self,
-        block_id: BlockHashOrNumber,
-    ) -> Result<Option<Vec<Transaction>>>;
+    fn transactions_by_block(&self, block_id: BlockHashOrNumber) -> Result<Option<Vec<Tx>>>;
 
     /// Returns the transaction at the given block and its exact index in the block.
     fn transaction_by_block_and_idx(
         &self,
         block_id: BlockHashOrNumber,
         idx: u64,
-    ) -> Result<Option<Transaction>>;
+    ) -> Result<Option<Tx>>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]

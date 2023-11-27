@@ -16,7 +16,6 @@ use starknet::core::types::{
 use starknet::core::utils::get_contract_address;
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
-use self::primitives::{ContractAddress, InvokeTxV1};
 use crate::contract::{ClassHash, CompiledClassHash, CompiledContractClass, SierraClass};
 use crate::utils::transaction::{
     compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
@@ -27,8 +26,7 @@ use crate::FieldElement;
 mod primitives {
     pub use crate::contract::{CompiledContractClass, ContractAddress, Nonce};
     pub use crate::transaction::{
-        DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxWithCompiledClass, DeployAccountTx,
-        DeployAccountTxWithContractAddress, InvokeTx, InvokeTxV1, L1HandlerTx, Transaction,
+        DeclareTx, DeclareTxWithClasses, DeployAccountTx, InvokeTx, L1HandlerTx, Tx,
     };
     pub use crate::FieldElement;
 }
@@ -46,14 +44,15 @@ impl primitives::InvokeTx {
             tx.is_query,
         );
 
-        primitives::InvokeTx::V1(InvokeTxV1 {
+        primitives::InvokeTx {
             transaction_hash,
             nonce: tx.nonce,
             calldata: tx.calldata,
             signature: tx.signature,
+            version: FieldElement::ONE,
             sender_address: tx.sender_address.into(),
             max_fee: tx.max_fee.try_into().expect("max_fee is too large"),
-        })
+        }
     }
 }
 
@@ -61,7 +60,7 @@ impl primitives::DeployAccountTx {
     pub fn from_broadcasted_rpc(
         tx: BroadcastedDeployAccountTransaction,
         chain_id: FieldElement,
-    ) -> (Self, ContractAddress) {
+    ) -> Self {
         let contract_address = get_contract_address(
             tx.contract_address_salt,
             tx.class_hash,
@@ -80,19 +79,17 @@ impl primitives::DeployAccountTx {
             tx.is_query,
         );
 
-        (
-            Self {
-                transaction_hash,
-                nonce: tx.nonce,
-                signature: tx.signature,
-                class_hash: tx.class_hash,
-                version: FieldElement::ONE,
-                constructor_calldata: tx.constructor_calldata,
-                contract_address_salt: tx.contract_address_salt,
-                max_fee: tx.max_fee.try_into().expect("max_fee is too large"),
-            },
-            contract_address.into(),
-        )
+        Self {
+            transaction_hash,
+            nonce: tx.nonce,
+            signature: tx.signature,
+            class_hash: tx.class_hash,
+            version: FieldElement::ONE,
+            contract_address: contract_address.into(),
+            constructor_calldata: tx.constructor_calldata,
+            contract_address_salt: tx.contract_address_salt,
+            max_fee: tx.max_fee.try_into().expect("max fee is too large"),
+        }
     }
 }
 
@@ -100,62 +97,64 @@ impl primitives::DeclareTx {
     pub fn from_broadcasted_rpc(
         tx: BroadcastedDeclareTransaction,
         chain_id: FieldElement,
-    ) -> (Self, primitives::CompiledContractClass) {
-        match tx {
+    ) -> (Self, primitives::CompiledContractClass, Option<SierraClass>) {
+        // extract class
+        let (class_hash, compiled_class_hash, sierra_class, compiled_class) = match &tx {
             BroadcastedDeclareTransaction::V1(tx) => {
-                let (class_hash, contract_class) =
-                    legacy_rpc_to_inner_class(&tx.contract_class).expect("valid contract class");
-
-                let transaction_hash = compute_declare_v1_transaction_hash(
-                    tx.sender_address,
-                    class_hash,
-                    tx.max_fee,
-                    chain_id,
-                    tx.nonce,
-                    tx.is_query,
-                );
-
-                (
-                    primitives::DeclareTx::V1(primitives::DeclareTxV1 {
-                        class_hash,
-                        nonce: tx.nonce,
-                        transaction_hash,
-                        signature: tx.signature,
-                        sender_address: tx.sender_address.into(),
-                        max_fee: tx.max_fee.try_into().expect("max_fee is too large"),
-                    }),
-                    contract_class,
-                )
+                let (hash, class) = legacy_rpc_to_inner_class(&tx.contract_class).unwrap();
+                (hash, None, None, class)
             }
 
             BroadcastedDeclareTransaction::V2(tx) => {
-                let (class_hash, _, contract_class) =
-                    rpc_to_inner_class(&tx.contract_class).expect("valid contract class");
-
-                let transaction_hash = compute_declare_v2_transaction_hash(
-                    tx.sender_address,
-                    class_hash,
-                    tx.max_fee,
-                    chain_id,
-                    tx.nonce,
-                    tx.compiled_class_hash,
-                    tx.is_query,
-                );
-
-                (
-                    primitives::DeclareTx::V2(primitives::DeclareTxV2 {
-                        class_hash,
-                        nonce: tx.nonce,
-                        transaction_hash,
-                        signature: tx.signature,
-                        sender_address: tx.sender_address.into(),
-                        compiled_class_hash: tx.compiled_class_hash,
-                        max_fee: tx.max_fee.try_into().expect("max_fee is too large"),
-                    }),
-                    contract_class,
-                )
+                let (hash, compiled_hash, class) = rpc_to_inner_class(&tx.contract_class).unwrap();
+                (hash, Some(compiled_hash), Some(tx.contract_class.as_ref().clone()), class)
             }
-        }
+        };
+
+        // compute transaction hash
+        let transaction_hash = match &tx {
+            BroadcastedDeclareTransaction::V1(tx) => compute_declare_v1_transaction_hash(
+                tx.sender_address,
+                class_hash,
+                tx.max_fee,
+                chain_id,
+                tx.nonce,
+                tx.is_query,
+            ),
+
+            BroadcastedDeclareTransaction::V2(tx) => compute_declare_v2_transaction_hash(
+                tx.sender_address,
+                class_hash,
+                tx.max_fee,
+                chain_id,
+                tx.nonce,
+                tx.compiled_class_hash,
+                tx.is_query,
+            ),
+        };
+
+        // extract common fields
+        let (nonce, max_fee, version, signature, sender_address) = match tx {
+            BroadcastedDeclareTransaction::V1(tx) => {
+                (tx.nonce, tx.max_fee, FieldElement::ONE, tx.signature, tx.sender_address)
+            }
+            BroadcastedDeclareTransaction::V2(tx) => {
+                (tx.nonce, tx.max_fee, FieldElement::TWO, tx.signature, tx.sender_address)
+            }
+        };
+
+        let tx = Self {
+            nonce,
+            version,
+            signature,
+            class_hash,
+            transaction_hash,
+            compiled_class_hash,
+            sender_address: sender_address.into(),
+            max_fee: max_fee.try_into().expect("max fee is too large"),
+        };
+
+        (tx, compiled_class, sierra_class)
     }
 }
 

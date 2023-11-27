@@ -10,7 +10,7 @@ use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, Header, StateUpdate,
 };
 use katana_primitives::contract::{ContractAddress, GenericContractInfo};
-use katana_primitives::transaction::{Receipt, Transaction, TxHash, TxNumber};
+use katana_primitives::transaction::{Receipt, Tx, TxHash, TxNumber};
 use parking_lot::RwLock;
 
 use self::cache::CacheDb;
@@ -98,7 +98,7 @@ impl BlockProvider for InMemoryProvider {
 }
 
 impl TransactionProvider for InMemoryProvider {
-    fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<Transaction>> {
+    fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<Tx>> {
         Ok(self
             .storage
             .transaction_numbers
@@ -106,10 +106,7 @@ impl TransactionProvider for InMemoryProvider {
             .and_then(|num| self.storage.transactions.get(*num as usize).cloned()))
     }
 
-    fn transactions_by_block(
-        &self,
-        block_id: BlockHashOrNumber,
-    ) -> Result<Option<Vec<Transaction>>> {
+    fn transactions_by_block(&self, block_id: BlockHashOrNumber) -> Result<Option<Vec<Tx>>> {
         let block_num = match block_id {
             BlockHashOrNumber::Num(num) => Some(num),
             BlockHashOrNumber::Hash(hash) => self.storage.block_numbers.get(&hash).cloned(),
@@ -131,7 +128,7 @@ impl TransactionProvider for InMemoryProvider {
         &self,
         block_id: BlockHashOrNumber,
         idx: u64,
-    ) -> Result<Option<Transaction>> {
+    ) -> Result<Option<Tx>> {
         let block_num = match block_id {
             BlockHashOrNumber::Num(num) => Some(num),
             BlockHashOrNumber::Hash(hash) => self.storage.block_numbers.get(&hash).cloned(),

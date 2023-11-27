@@ -1,5 +1,5 @@
 use crate::contract::ContractAddress;
-use crate::transaction::Transaction;
+use crate::transaction::Tx;
 use crate::FieldElement;
 
 /// Block state update type.
@@ -34,7 +34,7 @@ pub struct Header {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Block {
     pub header: Header,
-    pub body: Vec<Transaction>,
+    pub body: Vec<Tx>,
 }
 
 impl From<BlockNumber> for BlockHashOrNumber {
