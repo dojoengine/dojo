@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use katana_core::{
-    self,
-    backend::config::{Environment, StarknetConfig},
-    constants::{DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS},
-    sequencer::{KatanaSequencer, SequencerConfig},
+use katana_core::backend::config::{Environment, StarknetConfig};
+use katana_core::constants::{
+    DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
-use katana_rpc::{self, api::ApiKind, config::ServerConfig, spawn, NodeHandle};
+use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
+use katana_core::{self};
+use katana_rpc::api::ApiKind;
+use katana_rpc::config::ServerConfig;
+use katana_rpc::{self, spawn, NodeHandle};
 use lazy_static::lazy_static;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use url::Url;
 
 use crate::builder::KatanaRunnerConfig;

@@ -1,16 +1,15 @@
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader, Write};
+use std::net::TcpListener;
+use std::path::Path;
+use std::process::{Child, ChildStdout, Command, Stdio};
+use std::sync::mpsc::{self, Sender};
+use std::thread;
+use std::time::Duration;
+
 use anyhow::{Context, Result};
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
-use std::{
-    fs::{self, File},
-    io::Write,
-    io::{BufRead, BufReader},
-    net::TcpListener,
-    path::Path,
-    process::{Child, ChildStdout, Command, Stdio},
-    sync::mpsc::{self, Sender},
-    thread,
-    time::Duration,
-};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use url::Url;
 
 use crate::{KatanaRunnerBuilder, KatanaRunnerConfig};

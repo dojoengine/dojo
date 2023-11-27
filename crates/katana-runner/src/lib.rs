@@ -8,8 +8,9 @@ pub use compiled::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use starknet::providers::Provider;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_run() {

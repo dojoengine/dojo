@@ -1,7 +1,11 @@
-use crate::{binary::KatanaBinary, compiled::KatanaCompiled};
 use anyhow::Result;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 
+use crate::binary::KatanaBinary;
+use crate::compiled::KatanaCompiled;
+
+#[derive(Debug, Clone, Default)]
 pub struct KatanaRunnerBuilder(KatanaRunnerConfig);
 
 #[derive(Debug, Clone, Default)]
