@@ -5245,8 +5245,13 @@ dependencies = [
  "katana-core",
  "katana-rpc",
  "lazy_static",
+ "starknet",
  "tokio",
+<<<<<<< HEAD
 >>>>>>> ba87171e (init katana runner)
+=======
+ "url",
+>>>>>>> 6514b353 (added binary katana runner)
 ]
 
 [[package]]

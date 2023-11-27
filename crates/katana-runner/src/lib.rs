@@ -11,6 +11,10 @@ use katana_rpc::{self, api::ApiKind, config::ServerConfig, spawn, NodeHandle};
 
 use lazy_static::lazy_static;
 
+use crate::binary::KatanaRunner;
+
+mod binary;
+
 lazy_static! {
     static ref SERVER_CONFIG: ServerConfig = ServerConfig {
         port: 0,
@@ -68,6 +72,17 @@ pub async fn run() -> Result<KatanaGuard> {
 #[tokio::test]
 async fn test_run() {
     loop {
+        let guard = run().await.unwrap();
+        println!("Restarting server");
+        println!("Dropping server on {}", guard.address());
+    }
+}
+
+#[tokio::test]
+async fn test_run_binary() {
+    loop {
+        let a = KatanaRunner::new();
+
         let guard = run().await.unwrap();
         println!("Restarting server");
         println!("Dropping server on {}", guard.address());
