@@ -55,16 +55,15 @@ impl KatanaCompiled {
         let starknet_config = STARKNET_CONFIG.clone();
         let mut server_config = SERVER_CONFIG.clone();
 
-        let port = config.port.unwrap_or(0);
-        server_config.port = port;
+        server_config.port = config.port.unwrap_or(0);
 
         let sequencer_config = SequencerConfig::default();
         let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await);
 
         let server_handle = spawn(Arc::clone(&sequencer), server_config).await?;
 
-        let url =
-            Url::parse(&format!("http://127.0.0.1:{}/", port)).context("Failed to parse url")?;
+        let url = Url::parse(&format!("http://{}/", server_handle.addr))
+            .context("Failed to parse url")?;
         let provider = JsonRpcClient::new(HttpTransport::new(url));
 
         Ok((KatanaCompiled { sequencer, server_handle }, provider))
