@@ -99,6 +99,7 @@ lazy_static! {
         (Name::new("coverUri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("socials"), TypeData::Simple(TypeRef::named_list(SOCIAL_TYPE_NAME)))
     ]);
+    // Todo: refactor this to use the same type as the one in dojo-world
     pub static ref METADATA_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("uri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),

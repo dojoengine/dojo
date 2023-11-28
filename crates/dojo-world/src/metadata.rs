@@ -77,6 +77,7 @@ impl Uri {
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct WorldMetadata {
     pub name: Option<String>,
     pub description: Option<String>,
