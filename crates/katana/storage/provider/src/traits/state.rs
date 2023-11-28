@@ -1,15 +1,11 @@
 use anyhow::Result;
 use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
-    StorageKey, StorageValue,
-};
+use katana_primitives::contract::{ClassHash, ContractAddress, Nonce, StorageKey, StorageValue};
+
+use super::contract::{ContractClassProvider, ContractClassWriter, ContractInfoProvider};
 
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateProvider: Send + Sync {
-    /// Returns the compiled class definition of a contract class given its class hash.
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>>;
-
+pub trait StateProvider: ContractInfoProvider + ContractClassProvider + Send + Sync {
     /// Returns the nonce of a contract.
     fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>>;
 
@@ -22,19 +18,6 @@ pub trait StateProvider: Send + Sync {
 
     /// Returns the class hash of a contract.
     fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>>;
-
-    /// Returns the compiled class hash for the given class hash.
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>>;
-}
-
-/// An extension of the `StateProvider` trait which provides additional methods.
-#[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateProviderExt: StateProvider + Send + Sync {
-    /// Retrieves the Sierra class definition of a contract class given its class hash.
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>>;
 }
 
 /// A state factory provider is a provider which can create state providers for
@@ -46,4 +29,26 @@ pub trait StateFactoryProvider {
 
     /// Returns a state provider for retrieving historical state at the given block.
     fn historical(&self, block_id: BlockHashOrNumber) -> Result<Option<Box<dyn StateProvider>>>;
+}
+
+// TEMP: added mainly for compatibility reason following the path of least resistance.
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait StateWriter: StateProvider + ContractClassWriter + Send + Sync {
+    /// Sets the nonce of a contract.
+    fn set_nonce(&self, address: ContractAddress, nonce: Nonce) -> Result<()>;
+
+    /// Sets the value of a contract storage.
+    fn set_storage(
+        &self,
+        address: ContractAddress,
+        storage_key: StorageKey,
+        storage_value: StorageValue,
+    ) -> Result<()>;
+
+    /// Sets the class hash of a contract.
+    fn set_class_hash_of_contract(
+        &self,
+        address: ContractAddress,
+        class_hash: ClassHash,
+    ) -> Result<()>;
 }
