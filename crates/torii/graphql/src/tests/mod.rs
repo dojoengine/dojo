@@ -51,7 +51,6 @@ pub struct Edge<T> {
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct Entity {
-    pub model_names: String,
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
 }

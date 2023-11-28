@@ -54,7 +54,6 @@ mod tests {
                     }}
                     entity {{
                         keys
-                        model_names
                     }}
                 }}
               }}
@@ -92,7 +91,6 @@ mod tests {
         assert_eq!(connection.total_count, 10);
         assert_eq!(connection.edges.len(), 10);
         assert_eq!(&record.node.__typename, "Record");
-        assert_eq!(&entity.model_names, "Record,RecordSibling");
         assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
         assert_eq!(record.node.depth, "Zero");
         assert_eq!(nested.depth, "One");

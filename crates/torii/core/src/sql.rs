@@ -123,29 +123,19 @@ impl Sql {
         };
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let existing: Option<(String,)> =
-            sqlx::query_as("SELECT model_names FROM entities WHERE id = ?")
-                .bind(&entity_id)
-                .fetch_optional(&self.pool)
-                .await?;
-
-        let model_names = match existing {
-            Some((existing_names,)) if existing_names.contains(&entity.name()) => {
-                existing_names.to_string()
-            }
-            Some((existing_names,)) => format!("{},{}", existing_names, entity.name()),
-            None => entity.name().to_string(),
-        };
+        self.query_queue.enqueue(
+            "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING",
+            vec![Argument::String(entity_id.clone()), Argument::String(entity.name())],
+        );
 
         let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO entities (id, keys, model_names, event_id) VALUES (?, \
-                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               model_names=EXCLUDED.model_names, updated_at=CURRENT_TIMESTAMP, \
+        let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
+                               CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
-            .bind(&model_names)
             .bind(event_id)
             .fetch_one(&self.pool)
             .await?;
