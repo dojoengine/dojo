@@ -86,10 +86,7 @@ lazy_static! {
             Name::new("startCursor"),
             TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),
         ),
-        (
-            Name::new("endCursor"),
-            TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),
-        ),
+        (Name::new("endCursor"), TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),),
     ]);
     pub static ref SOCIAL_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),

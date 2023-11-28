@@ -206,7 +206,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                         ],
                     }),
                 },
-                Member {    
+                Member {
                     name: "recordId".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::U32(None)),
