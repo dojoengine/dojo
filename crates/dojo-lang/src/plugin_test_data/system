@@ -187,34 +187,34 @@ error: Unknown inline item macro: 'component'.
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:12:21
-                    #[storage]
-                    ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:15:25
-                        #[substorage(v0)]
-                        ^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:19:21
+ --> test_src/lib.cairo[spawn]:11:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:24:21
+ --> test_src/lib.cairo[spawn]:16:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:31:21
+ --> test_src/lib.cairo[spawn]:23:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:41:13
+ --> test_src/lib.cairo[spawn]:33:13
             #[event]
             ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:39:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[spawn]:42:17
+                #[substorage(v0)]
+                ^***************^
 
 error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo[proxy]:9:21
@@ -222,34 +222,34 @@ error: Unknown inline item macro: 'component'.
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:12:21
-                    #[storage]
-                    ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:15:25
-                        #[substorage(v0)]
-                        ^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:19:21
+ --> test_src/lib.cairo[proxy]:11:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:24:21
+ --> test_src/lib.cairo[proxy]:16:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:31:21
+ --> test_src/lib.cairo[proxy]:23:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:38:13
+ --> test_src/lib.cairo[proxy]:30:13
             #[event]
             ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:36:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[proxy]:39:17
+                #[substorage(v0)]
+                ^***************^
 
 error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo[ctxnamed]:9:21
@@ -257,34 +257,34 @@ error: Unknown inline item macro: 'component'.
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:12:21
-                    #[storage]
-                    ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:15:25
-                        #[substorage(v0)]
-                        ^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:19:21
+ --> test_src/lib.cairo[ctxnamed]:11:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:24:21
+ --> test_src/lib.cairo[ctxnamed]:16:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:31:21
+ --> test_src/lib.cairo[ctxnamed]:23:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:41:13
+ --> test_src/lib.cairo[ctxnamed]:33:13
             #[event]
             ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:39:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ctxnamed]:42:17
+                #[substorage(v0)]
+                ^***************^
 
 error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo[withevent]:9:21
@@ -292,39 +292,39 @@ error: Unknown inline item macro: 'component'.
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:12:21
-                    #[storage]
-                    ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:15:25
-                        #[substorage(v0)]
-                        ^***************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:19:21
+ --> test_src/lib.cairo[withevent]:11:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:24:21
+ --> test_src/lib.cairo[withevent]:16:21
                     #[external(v0)]
                     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:31:21
+ --> test_src/lib.cairo[withevent]:23:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:35:13
+ --> test_src/lib.cairo[withevent]:27:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:47:5
+ --> test_src/lib.cairo[withevent]:39:5
     #[external(v0)]
     ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:44:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[withevent]:47:17
+                #[substorage(v0)]
+                ^***************^
 
 //! > expanded_cairo_code
 #[starknet::contract]
@@ -333,14 +333,6 @@ error: Unsupported attribute.
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-
-                    
-                    #[storage]
-                    struct Storage {
-                        world_dispatcher: IWorldDispatcher,
-                        #[substorage(v0)]
-                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
-                    }
 
                     #[external(v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
@@ -369,6 +361,13 @@ error: Unsupported attribute.
             enum Event {
                 UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
             }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
 impl EventDrop of Drop::<Event>;
             
                 }
@@ -379,14 +378,6 @@ impl EventDrop of Drop::<Event>;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-
-                    
-                    #[storage]
-                    struct Storage {
-                        world_dispatcher: IWorldDispatcher,
-                        #[substorage(v0)]
-                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
-                    }
 
                     #[external(v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
@@ -412,6 +403,13 @@ impl EventDrop of Drop::<Event>;
             enum Event {
                 UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
             }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
 impl EventDrop of Drop::<Event>;
             
                 }
@@ -422,14 +420,6 @@ impl EventDrop of Drop::<Event>;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-
-                    
-                    #[storage]
-                    struct Storage {
-                        world_dispatcher: IWorldDispatcher,
-                        #[substorage(v0)]
-                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
-                    }
 
                     #[external(v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
@@ -458,6 +448,13 @@ impl EventDrop of Drop::<Event>;
             enum Event {
                 UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
             }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
 impl EventDrop of Drop::<Event>;
             
                 }
@@ -468,14 +465,6 @@ impl EventDrop of Drop::<Event>;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
-
-                    
-                    #[storage]
-                    struct Storage {
-                        world_dispatcher: IWorldDispatcher,
-                        #[substorage(v0)]
-                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
-                    }
 
                     #[external(v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
@@ -509,7 +498,14 @@ impl EventDrop of Drop::<Event>;
     fn test(value: felt252) -> value {
         value
     }
+
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
 impl EventDrop of Drop::<Event>;
 impl TestEventDrop of Drop::<TestEvent>;
-
+            
                 }

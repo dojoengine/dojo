@@ -24,6 +24,7 @@ impl DojoContract {
         let name = module_ast.name(db).text(db);
         let mut system = DojoContract { diagnostics: vec![], dependencies: HashMap::new() };
         let mut has_event = false;
+        let mut has_storage = false;
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
@@ -37,6 +38,12 @@ impl DojoContract {
                             return system.merge_event(db, enum_ast.clone());
                         }
                     }
+                    else if let ast::Item::Struct(struct_ast) = el {
+                        if struct_ast.name(db).text(db).to_string() == "Storage" {
+                            has_storage = true;
+                            return system.merge_storage(db, struct_ast.clone());
+                        }
+                    }
 
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
@@ -44,6 +51,10 @@ impl DojoContract {
 
             if !has_event {
                 body_nodes.append(&mut system.create_event())
+            }
+
+            if !has_storage {
+                body_nodes.append(&mut system.create_storage())
             }
 
             let mut builder = PatchBuilder::new(db);
@@ -58,14 +69,6 @@ impl DojoContract {
                    
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
-
-                    
-                    #[storage]
-                    struct Storage {
-                        world_dispatcher: IWorldDispatcher,
-                        #[substorage(v0)]
-                        upgradeable: dojo::components::upgradeable::upgradeable::Storage,
-                    }
 
                     #[external(v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
@@ -146,6 +149,47 @@ impl DojoContract {
             #[derive(Drop, starknet::Event)]
             enum Event {
                 UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            "
+            .to_string(),
+        )]
+    }
+
+    pub fn merge_storage(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        struct_ast: ast::ItemStruct,
+    ) -> Vec<RewriteNode> {
+        let mut rewrite_nodes = vec![];
+
+        let elements = struct_ast.members(db).elements(db);
+
+        let members = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
+        let members = members.join(", ");
+
+        rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+                $members$
+            }
+            ",
+            &UnorderedHashMap::from([("members".to_string(), RewriteNode::Text(members))]),
+        ));
+        rewrite_nodes
+    }
+
+    pub fn create_storage(&mut self) -> Vec<RewriteNode> {
+        vec![RewriteNode::Text(
+            "
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
             "
             .to_string(),
