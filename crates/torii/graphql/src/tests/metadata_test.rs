@@ -13,7 +13,7 @@ mod tests {
     const QUERY: &str = r#"
       {
         metadatas {
-          total_count
+          totalCount
           edges {
             cursor
             node {
@@ -23,8 +23,8 @@ mod tests {
               content {
                 name
                 description
-                cover_uri
-                icon_uri
+                coverUri
+                iconUri
                 website
                 socials {
                   name
@@ -33,11 +33,11 @@ mod tests {
               }
             }
           }
-          page_info {
-            has_previous_page
-            has_next_page
-            start_cursor
-            end_cursor
+          pageInfo {
+            hasPreviousPage
+            hasNextPage
+            startCursor
+            endCursor
           }
         }
       }

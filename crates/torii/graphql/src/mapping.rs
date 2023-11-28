@@ -113,11 +113,11 @@ lazy_static! {
         (Name::new("icon_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("cover_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
-            Name::new("createdAt"),
+            Name::new("created_at"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
         ),
         (
-            Name::new("updatedAt"),
+            Name::new("updated_at"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
         ),
     ]);

@@ -105,8 +105,8 @@ fn metadata_connection_output(
                 extract_str_mapping("name", &serde_value),
                 extract_str_mapping("description", &serde_value),
                 extract_str_mapping("website", &serde_value),
-                extract_str_mapping("icon_uri", &serde_value),
-                extract_str_mapping("cover_uri", &serde_value),
+                extract_str_mapping("iconUri", &serde_value),
+                extract_str_mapping("coverUri", &serde_value),
                 extract_socials_mapping("socials", &serde_value),
             ]);
 
@@ -122,9 +122,9 @@ fn metadata_connection_output(
         .collect::<sqlx::Result<Vec<Value>>>();
 
     Ok(ValueMapping::from([
-        (Name::new("total_count"), Value::from(total_count)),
+        (Name::new("totalCount"), Value::from(total_count)),
         (Name::new("edges"), Value::List(edges?)),
-        (Name::new("page_info"), PageInfoObject::value(page_info)),
+        (Name::new("pageInfo"), PageInfoObject::value(page_info)),
     ]))
 }
 
