@@ -16,7 +16,7 @@ use parking_lot::RwLock;
 use self::cache::CacheDb;
 use self::state::{HistoricalStates, InMemoryStateDb, LatestStateProvider};
 use crate::traits::block::{BlockHashProvider, BlockNumberProvider, BlockProvider, HeaderProvider};
-use crate::traits::contract::ContractProvider;
+use crate::traits::contract::ContractInfoProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{ReceiptProvider, TransactionProvider, TransactionsProviderExt};
@@ -25,6 +25,15 @@ pub struct InMemoryProvider {
     storage: CacheDb<()>,
     state: Arc<InMemoryStateDb>,
     historical_states: RwLock<HistoricalStates>,
+}
+
+impl InMemoryProvider {
+    pub fn new() -> Self {
+        let storage = CacheDb::new(());
+        let state = Arc::new(InMemoryStateDb::new(()));
+        let historical_states = RwLock::new(HistoricalStates::default());
+        Self { storage, state, historical_states }
+    }
 }
 
 impl BlockHashProvider for InMemoryProvider {
@@ -82,8 +91,9 @@ impl BlockProvider for InMemoryProvider {
         };
 
         let body = self.transactions_by_block(id)?.unwrap_or_default();
+        let status = self.storage.block_statusses.get(&header.number).cloned().expect("must have");
 
-        Ok(Some(Block { header, body }))
+        Ok(Some(Block { header, body, status }))
     }
 
     fn blocks_in_range(&self, range: RangeInclusive<u64>) -> Result<Vec<Block>> {
@@ -191,7 +201,7 @@ impl ReceiptProvider for InMemoryProvider {
     }
 }
 
-impl ContractProvider for InMemoryProvider {
+impl ContractInfoProvider for InMemoryProvider {
     fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
         let contract = self.state.contract_state.read().get(&address).cloned();
         Ok(contract)

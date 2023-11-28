@@ -4,12 +4,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
-    StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
+    Nonce, SierraClass, StorageKey, StorageValue,
 };
 
 use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
-use crate::traits::state::{StateProvider, StateProviderExt};
+use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
+use crate::traits::state::StateProvider;
 
 pub struct StateSnapshot<Db> {
     pub(crate) classes: Arc<SharedContractClasses>,
@@ -24,7 +25,7 @@ const MIN_HISTORY_LIMIT: usize = 10;
 /// It should store at N - 1 states, where N is the latest block number.
 pub struct HistoricalStates {
     /// The states at a certain block based on the block number
-    states: HashMap<BlockNumber, Arc<dyn StateProviderExt>>,
+    states: HashMap<BlockNumber, Arc<dyn StateProvider>>,
     /// How many states to store at most
     in_memory_limit: usize,
     /// minimum amount of states we keep in memory
@@ -44,7 +45,7 @@ impl HistoricalStates {
     }
 
     /// Returns the state for the given `block_hash` if present
-    pub fn get(&self, block_num: &BlockNumber) -> Option<&Arc<dyn StateProviderExt>> {
+    pub fn get(&self, block_num: &BlockNumber) -> Option<&Arc<dyn StateProvider>> {
         self.states.get(block_num)
     }
 
@@ -56,7 +57,7 @@ impl HistoricalStates {
     /// Since we keep a snapshot of the entire state as history, the size of the state will increase
     /// with the transactions processed. To counter this, we gradually decrease the cache limit with
     /// the number of states/blocks until we reached the `min_limit`.
-    pub fn insert(&mut self, block_num: BlockNumber, state: Box<dyn StateProviderExt>) {
+    pub fn insert(&mut self, block_num: BlockNumber, state: Box<dyn StateProvider>) {
         if self.present.len() >= self.in_memory_limit {
             // once we hit the max limit we gradually decrease it
             self.in_memory_limit =
@@ -114,9 +115,16 @@ impl InMemoryStateDb {
     }
 }
 
+impl ContractInfoProvider for InMemorySnapshot {
+    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+        let info = self.inner.contract_state.get(&address).cloned();
+        Ok(info)
+    }
+}
+
 impl StateProvider for InMemorySnapshot {
     fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
-        let nonce = self.inner.contract_state.get(&address).map(|info| info.nonce);
+        let nonce = ContractInfoProvider::contract(&self, address)?.map(|i| i.nonce);
         Ok(nonce)
     }
 
@@ -129,14 +137,21 @@ impl StateProvider for InMemorySnapshot {
         Ok(value)
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        let class = self.classes.compiled_classes.read().get(&hash).cloned();
+    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+        let class_hash = ContractInfoProvider::contract(&self, address)?.map(|i| i.class_hash);
+        Ok(class_hash)
+    }
+}
+
+impl ContractClassProvider for InMemorySnapshot {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        let class = self.classes.sierra_classes.read().get(&hash).cloned();
         Ok(class)
     }
 
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
-        let class_hash = self.inner.contract_state.get(&address).map(|info| info.class_hash);
-        Ok(class_hash)
+    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+        let class = self.classes.compiled_classes.read().get(&hash).cloned();
+        Ok(class)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -148,18 +163,18 @@ impl StateProvider for InMemorySnapshot {
     }
 }
 
-impl StateProviderExt for InMemorySnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        let class = self.classes.sierra_classes.read().get(&hash).cloned();
-        Ok(class)
+pub(super) struct LatestStateProvider(pub(super) Arc<InMemoryStateDb>);
+
+impl ContractInfoProvider for LatestStateProvider {
+    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+        let info = self.0.contract_state.read().get(&address).cloned();
+        Ok(info)
     }
 }
 
-pub(super) struct LatestStateProvider(pub(super) Arc<InMemoryStateDb>);
-
 impl StateProvider for LatestStateProvider {
     fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
-        let nonce = self.0.contract_state.read().get(&address).map(|info| info.nonce);
+        let nonce = ContractInfoProvider::contract(&self, address)?.map(|i| i.nonce);
         Ok(nonce)
     }
 
@@ -172,14 +187,21 @@ impl StateProvider for LatestStateProvider {
         Ok(value)
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        let class = self.0.shared_contract_classes.compiled_classes.read().get(&hash).cloned();
+    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+        let class_hash = ContractInfoProvider::contract(&self, address)?.map(|i| i.class_hash);
+        Ok(class_hash)
+    }
+}
+
+impl ContractClassProvider for LatestStateProvider {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
         Ok(class)
     }
 
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
-        let class_hash = self.0.contract_state.read().get(&address).map(|info| info.class_hash);
-        Ok(class_hash)
+    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+        let class = self.0.shared_contract_classes.compiled_classes.read().get(&hash).cloned();
+        Ok(class)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -188,13 +210,6 @@ impl StateProvider for LatestStateProvider {
     ) -> Result<Option<CompiledClassHash>> {
         let hash = self.0.compiled_class_hashes.read().get(&hash).cloned();
         Ok(hash)
-    }
-}
-
-impl StateProviderExt for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
-        Ok(class)
     }
 }
 

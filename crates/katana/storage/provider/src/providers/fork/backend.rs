@@ -12,8 +12,8 @@ use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
-    StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
+    Nonce, SierraClass, StorageKey, StorageValue,
 };
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
@@ -26,7 +26,8 @@ use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use tracing::trace;
 
 use crate::providers::in_memory::cache::CacheStateDb;
-use crate::traits::state::{StateProvider, StateProviderExt};
+use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
+use crate::traits::state::StateProvider;
 
 type GetNonceResult = Result<Nonce, ForkedBackendError>;
 type GetStorageResult = Result<StorageValue, ForkedBackendError>;
@@ -316,16 +317,82 @@ impl SharedStateProvider {
     }
 }
 
-impl StateProvider for SharedStateProvider {
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
-        if let Some(nonce) = self.0.contract_state.read().get(&address).map(|c| c.nonce) {
-            return Ok(Some(nonce));
+impl ContractInfoProvider for SharedStateProvider {
+    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+        if let Some(info) = self.0.contract_state.read().get(&address).cloned() {
+            return Ok(Some(info));
         }
 
         let nonce = self.0.do_get_nonce(address).unwrap();
-        self.0.contract_state.write().entry(address).or_default().nonce = nonce;
+        let class_hash = self.0.do_get_class_hash_at(address).unwrap();
+        let info = GenericContractInfo { nonce, class_hash };
 
-        Ok(Some(nonce))
+        self.0.contract_state.write().insert(address, info.clone());
+
+        Ok(Some(info))
+    }
+}
+
+impl StateProvider for SharedStateProvider {
+    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+        let nonce = ContractInfoProvider::contract(&self, address)?.map(|i| i.nonce);
+        Ok(nonce)
+    }
+
+    fn storage(
+        &self,
+        address: ContractAddress,
+        storage_key: StorageKey,
+    ) -> Result<Option<StorageValue>> {
+        if let Some(value) = self.0.storage.read().get(&(address, storage_key)).cloned() {
+            return Ok(Some(value));
+        }
+
+        let value = self.0.do_get_storage(address, storage_key).unwrap();
+        self.0.storage.write().entry((address, storage_key)).or_insert(value);
+
+        Ok(Some(value))
+    }
+
+    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+        let hash = ContractInfoProvider::contract(&self, address)?.map(|i| i.class_hash);
+        Ok(hash)
+    }
+}
+
+impl ContractClassProvider for SharedStateProvider {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+        if let class @ Some(_) = self.0.shared_contract_classes.sierra_classes.read().get(&hash) {
+            return Ok(class.cloned());
+        }
+
+        let class = self.0.do_get_class_at(hash).unwrap();
+        match class {
+            starknet::core::types::ContractClass::Legacy(_) => Ok(None),
+            starknet::core::types::ContractClass::Sierra(sierra_class) => {
+                self.0
+                    .shared_contract_classes
+                    .sierra_classes
+                    .write()
+                    .insert(hash, sierra_class.clone());
+
+                Ok(Some(sierra_class))
+            }
+        }
+    }
+
+    fn compiled_class_hash_of_class_hash(
+        &self,
+        hash: ClassHash,
+    ) -> Result<Option<CompiledClassHash>> {
+        if let hash @ Some(_) = self.0.compiled_class_hashes.read().get(&hash) {
+            return Ok(hash.cloned());
+        }
+
+        let compiled_hash = self.0.do_get_compiled_class_hash(hash).unwrap();
+        self.0.compiled_class_hashes.write().insert(hash, compiled_hash);
+
+        Ok(Some(hash))
     }
 
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
@@ -366,68 +433,6 @@ impl StateProvider for SharedStateProvider {
         }
 
         Ok(Some(casm))
-    }
-
-    fn storage(
-        &self,
-        address: ContractAddress,
-        storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
-        if let Some(value) = self.0.storage.read().get(&(address, storage_key)).cloned() {
-            return Ok(Some(value));
-        }
-
-        let value = self.0.do_get_storage(address, storage_key).unwrap();
-        self.0.storage.write().entry((address, storage_key)).or_insert(value);
-
-        Ok(Some(value))
-    }
-
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
-        if let Some(hash) = self.0.contract_state.read().get(&address).map(|c| c.class_hash) {
-            return Ok(Some(hash));
-        }
-
-        let class_hash = self.0.do_get_class_hash_at(address).unwrap();
-        self.0.contract_state.write().entry(address).or_default().class_hash = class_hash;
-
-        Ok(Some(class_hash))
-    }
-
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
-        if let hash @ Some(_) = self.0.compiled_class_hashes.read().get(&hash) {
-            return Ok(hash.cloned());
-        }
-
-        let compiled_hash = self.0.do_get_compiled_class_hash(hash).unwrap();
-        self.0.compiled_class_hashes.write().insert(hash, compiled_hash);
-
-        Ok(Some(hash))
-    }
-}
-
-impl StateProviderExt for SharedStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        if let class @ Some(_) = self.0.shared_contract_classes.sierra_classes.read().get(&hash) {
-            return Ok(class.cloned());
-        }
-
-        let class = self.0.do_get_class_at(hash).unwrap();
-        match class {
-            starknet::core::types::ContractClass::Legacy(_) => Ok(None),
-            starknet::core::types::ContractClass::Sierra(sierra_class) => {
-                self.0
-                    .shared_contract_classes
-                    .sierra_classes
-                    .write()
-                    .insert(hash, sierra_class.clone());
-
-                Ok(Some(sierra_class))
-            }
-        }
     }
 }
 

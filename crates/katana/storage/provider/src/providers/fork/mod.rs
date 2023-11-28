@@ -20,7 +20,7 @@ use self::state::ForkedStateDb;
 use super::in_memory::cache::{CacheDb, CacheStateDb};
 use super::in_memory::state::HistoricalStates;
 use crate::traits::block::{BlockHashProvider, BlockNumberProvider, BlockProvider, HeaderProvider};
-use crate::traits::contract::ContractProvider;
+use crate::traits::contract::ContractInfoProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{ReceiptProvider, TransactionProvider, TransactionsProviderExt};
@@ -100,8 +100,9 @@ impl BlockProvider for ForkedProvider {
         };
 
         let body = self.transactions_by_block(id)?.unwrap_or_default();
+        let status = self.storage.block_statusses.get(&header.number).cloned().expect("must have");
 
-        Ok(Some(Block { header, body }))
+        Ok(Some(Block { header, body, status }))
     }
 
     fn blocks_in_range(&self, range: RangeInclusive<u64>) -> Result<Vec<Block>> {
@@ -209,7 +210,7 @@ impl ReceiptProvider for ForkedProvider {
     }
 }
 
-impl ContractProvider for ForkedProvider {
+impl ContractInfoProvider for ForkedProvider {
     fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
         let contract = self.state.contract_state.read().get(&address).cloned();
         Ok(contract)
