@@ -30,7 +30,6 @@ mod tests {
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
-                "model_names": model_name,
                 "models" : [{
                     "__typename": model_name,
                         "depth": "Zero",
@@ -115,7 +114,6 @@ mod tests {
                 entityUpdated {
                     id 
                     keys
-                    model_names
                     models {
                         __typename
                         ... on Record {
@@ -153,7 +151,6 @@ mod tests {
             "entityUpdated": {
                 "id": entity_id,
                 "keys":vec![keys_str],
-                "model_names": model_name,
                 "models" : [{
                     "__typename": model_name,
                         "depth": "Zero",
@@ -220,7 +217,6 @@ mod tests {
                 entityUpdated(id: "0x579e8877c7755365d5ec1ec7d3a94a457eff5d1f40482bbe9729c064cdead2") {
                     id 
                     keys
-                    model_names
                     models {
                         __typename
                         ... on Record {
