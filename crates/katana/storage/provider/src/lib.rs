@@ -9,13 +9,14 @@ use katana_primitives::contract::{
     SierraClass, StorageKey, StorageValue,
 };
 use katana_primitives::transaction::{Receipt, Tx, TxHash, TxNumber};
+use traits::contract::ContractClassProvider;
 
 pub mod providers;
 pub mod traits;
 
 use crate::traits::block::{BlockHashProvider, BlockNumberProvider, BlockProvider, HeaderProvider};
-use crate::traits::contract::ContractProvider;
-use crate::traits::state::{StateFactoryProvider, StateProvider, StateProviderExt};
+use crate::traits::contract::ContractInfoProvider;
+use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{ReceiptProvider, TransactionProvider, TransactionsProviderExt};
 
@@ -128,10 +129,6 @@ impl<Db> StateProvider for BlockchainProvider<Db>
 where
     Db: StateProvider,
 {
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        self.provider.class(hash)
-    }
-
     fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
         self.provider.class_hash_of_contract(address)
     }
@@ -150,19 +147,23 @@ where
     ) -> Result<Option<StorageValue>> {
         self.provider.storage(address, storage_key)
     }
+}
 
+impl<Db> ContractClassProvider for BlockchainProvider<Db>
+where
+    Db: ContractClassProvider,
+{
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
     ) -> Result<Option<CompiledClassHash>> {
         self.provider.compiled_class_hash_of_class_hash(hash)
     }
-}
 
-impl<Db> StateProviderExt for BlockchainProvider<Db>
-where
-    Db: StateProviderExt,
-{
+    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+        self.provider.class(hash)
+    }
+
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
         self.provider.sierra_class(hash)
     }
@@ -190,9 +191,9 @@ where
     }
 }
 
-impl<Db> ContractProvider for BlockchainProvider<Db>
+impl<Db> ContractInfoProvider for BlockchainProvider<Db>
 where
-    Db: ContractProvider,
+    Db: ContractInfoProvider,
 {
     fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
         self.provider.contract(address)

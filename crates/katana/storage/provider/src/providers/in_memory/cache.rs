@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
-use katana_primitives::block::{BlockHash, BlockNumber, Header, StateUpdate};
+use katana_primitives::block::{BlockHash, BlockNumber, BlockStatus, Header, StateUpdate};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
     SierraClass, StorageKey, StorageValue,
@@ -43,6 +43,7 @@ pub struct CacheDb<Db> {
     pub(crate) block_headers: HashMap<BlockNumber, Header>,
     pub(crate) block_hashes: HashMap<BlockNumber, BlockHash>,
     pub(crate) block_numbers: HashMap<BlockHash, BlockNumber>,
+    pub(crate) block_statusses: HashMap<BlockNumber, BlockStatus>,
     pub(crate) block_body_indices: HashMap<BlockNumber, StoredBlockBodyIndices>,
     pub(crate) latest_block_hash: BlockHash,
     pub(crate) latest_block_number: BlockNumber,
@@ -75,6 +76,7 @@ impl<Db> CacheDb<Db> {
             block_hashes: HashMap::new(),
             block_headers: HashMap::new(),
             block_numbers: HashMap::new(),
+            block_statusses: HashMap::new(),
             transaction_hashes: HashMap::new(),
             block_body_indices: HashMap::new(),
             transaction_numbers: HashMap::new(),
