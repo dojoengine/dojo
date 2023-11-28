@@ -713,7 +713,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.1.0-rc0"
-source = "git+https://github.com/dojoengine/blockifier?rev=3357e69#3357e69d701e02d90766302b7d2315060ef0dbef"
+source = "git+https://github.com/dojoengine/blockifier?rev=2b4a0e5#2b4a0e5dd862dc00efb6b8a80e723004e82ecde5"
 dependencies = [
  "ark-ff",
  "ark-secp256k1",

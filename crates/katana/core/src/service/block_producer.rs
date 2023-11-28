@@ -228,6 +228,7 @@ impl IntervalBlockProducer {
                 &mut state,
                 &self.backend.env.read().block,
                 !self.backend.config.read().disable_fee,
+                self.backend.config.read().validate,
                 transactions.clone(),
             )
             .with_error_log()
@@ -353,6 +354,7 @@ impl InstantBlockProducer {
             &mut state,
             &block_context,
             !backend.config.read().disable_fee,
+            backend.config.read().validate,
             transactions.clone(),
         )
         .with_error_log()

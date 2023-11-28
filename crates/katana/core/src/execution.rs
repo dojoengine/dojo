@@ -112,6 +112,8 @@ pub struct TransactionExecutor<'a> {
     transactions: std::vec::IntoIter<Transaction>,
     /// The state the transactions will be executed on.
     state: &'a mut CachedStateWrapper<StateRefDb>,
+    ///
+    validate: bool,
 
     // logs flags
     error_log: bool,
@@ -124,11 +126,13 @@ impl<'a> TransactionExecutor<'a> {
         state: &'a mut CachedStateWrapper<StateRefDb>,
         block_context: &'a BlockContext,
         charge_fee: bool,
+        validate: bool,
         transactions: Vec<Transaction>,
     ) -> Self {
         Self {
             state,
             charge_fee,
+            validate,
             block_context,
             error_log: false,
             events_log: false,
@@ -172,10 +176,10 @@ impl<'a> Iterator for TransactionExecutor<'a> {
 
             let res = match tx.into() {
                 ExecutionTransaction::AccountTransaction(tx) => {
-                    tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee)
+                    tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee, self.validate)
                 }
                 ExecutionTransaction::L1HandlerTransaction(tx) => {
-                    tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee)
+                    tx.execute(&mut self.state.inner_mut(), self.block_context, self.charge_fee, self.validate)
                 }
             };
 

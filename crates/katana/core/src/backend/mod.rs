@@ -72,7 +72,6 @@ pub struct Backend {
     /// Prefunded dev accounts
     pub accounts: Vec<Account>,
 }
-
 impl Backend {
     pub async fn new(config: StarknetConfig) -> Self {
         let mut block_context = config.block_context();
@@ -185,7 +184,7 @@ impl Backend {
 
         let mut estimations = Vec::with_capacity(transactions.len());
 
-        let results = TransactionExecutor::new(&mut state, &block_context, false, transactions)
+        let results = TransactionExecutor::new(&mut state, &block_context, false, self.config.read().validate, transactions)
             .with_error_log()
             .execute();
 
