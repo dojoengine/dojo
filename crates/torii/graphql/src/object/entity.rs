@@ -134,10 +134,6 @@ fn model_union_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let model_names: Vec<String> = extract::<String>(indexmap, "modelNames")?
-                        .split(',')
-                        .map(|s| s.to_string())
-                        .collect();
 
                     let entity_id = extract::<String>(indexmap, "id")?;
                     let model_ids: Vec<(String,)> =
