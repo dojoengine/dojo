@@ -115,14 +115,14 @@ impl EntityObject {
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
-            (Name::new("model_names"), Value::from(entity.model_names)),
-            (Name::new("event_id"), Value::from(entity.event_id)),
+            (Name::new("modelNames"), Value::from(entity.model_names)),
+            (Name::new("eventId"), Value::from(entity.event_id)),
             (
-                Name::new("created_at"),
+                Name::new("createdAt"),
                 Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
             (
-                Name::new("updated_at"),
+                Name::new("updatedAt"),
                 Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
@@ -135,7 +135,7 @@ fn model_union_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let model_names: Vec<String> = extract::<String>(indexmap, "model_names")?
+                    let model_names: Vec<String> = extract::<String>(indexmap, "modelNames")?
                         .split(',')
                         .map(|s| s.to_string())
                         .collect();

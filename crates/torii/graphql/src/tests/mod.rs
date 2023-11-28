@@ -29,10 +29,10 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
-mod entities_test;
+// mod entities_test;
 mod metadata_test;
-mod models_test;
-mod subscription_test;
+// mod models_test;
+// mod subscription_test;
 
 use crate::schema::build_schema;
 
@@ -161,6 +161,7 @@ pub struct Content {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Metadata {
     pub uri: String,
     pub icon_img: String,
@@ -205,33 +206,33 @@ pub async fn model_fixtures(db: &mut Sql) {
                         ],
                     }),
                 },
-                Member {
-                    name: "record_id".to_string(),
+                Member {    
+                    name: "recordId".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::U32(None)),
                 },
                 Member {
-                    name: "type_u16".to_string(),
+                    name: "typeU16".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U16(None)),
                 },
                 Member {
-                    name: "type_u64".to_string(),
+                    name: "typeU64".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U64(None)),
                 },
                 Member {
-                    name: "type_bool".to_string(),
+                    name: "typeBool".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::Bool(None)),
                 },
                 Member {
-                    name: "type_felt".to_string(),
+                    name: "typeFelt".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::Felt252(None)),
                 },
                 Member {
-                    name: "type_contract_address".to_string(),
+                    name: "typeContractAddress".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 },

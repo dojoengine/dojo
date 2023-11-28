@@ -40,9 +40,9 @@ impl ConnectionObject {
                 Name::new("edges"),
                 TypeData::Simple(TypeRef::named_list(format!("{}Edge", type_name))),
             ),
-            (Name::new("total_count"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
+            (Name::new("totalCount"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
             (
-                Name::new("page_info"),
+                Name::new("pageInfo"),
                 TypeData::Nested((TypeRef::named_nn(PAGE_INFO_TYPE_NAME), IndexMap::new())),
             ),
         ]);
@@ -141,8 +141,8 @@ pub fn connection_output(
         .collect::<sqlx::Result<Vec<Value>>>();
 
     Ok(ValueMapping::from([
-        (Name::new("total_count"), Value::from(total_count)),
+        (Name::new("totalCount"), Value::from(total_count)),
         (Name::new("edges"), Value::List(model_edges?)),
-        (Name::new("page_info"), PageInfoObject::value(page_info)),
+        (Name::new("pageInfo"), PageInfoObject::value(page_info)),
     ]))
 }

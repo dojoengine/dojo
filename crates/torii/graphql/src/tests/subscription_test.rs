@@ -69,32 +69,32 @@ mod tests {
                             }),
                         },
                         Member {
-                            name: "record_id".to_string(),
+                            name: "recordId".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U8(Some(0))),
                         },
                         Member {
-                            name: "type_u16".to_string(),
+                            name: "typeU16".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U16(Some(1))),
                         },
                         Member {
-                            name: "type_u64".to_string(),
+                            name: "typeU64".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U64(Some(1))),
                         },
                         Member {
-                            name: "type_bool".to_string(),
+                            name: "typeBool".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::Bool(Some(true))),
                         },
                         Member {
-                            name: "type_felt".to_string(),
+                            name: "typeFelt".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
                         },
                         Member {
-                            name: "type_contract_address".to_string(),
+                            name: "typeContractAddress".to_string(),
                             key: true,
                             ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
                         },
@@ -189,17 +189,17 @@ mod tests {
                             }),
                         },
                         Member {
-                            name: "record_id".to_string(),
+                            name: "recordId".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U32(Some(0))),
                         },
                         Member {
-                            name: "type_felt".to_string(),
+                            name: "typeFelt".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
                         },
                         Member {
-                            name: "type_contract_address".to_string(),
+                            name: "typeContractAddress".to_string(),
                             key: true,
                             ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
                         },
@@ -260,7 +260,7 @@ mod tests {
             let model = Ty::Struct(Struct {
                 name: model_name,
                 children: vec![Member {
-                    name: "subrecord_id".to_string(),
+                    name: "subrecordId".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::U32(None)),
                 }],
@@ -309,7 +309,7 @@ mod tests {
             let model = Ty::Struct(Struct {
                 name: model_name,
                 children: vec![Member {
-                    name: "type_u8".into(),
+                    name: "typeU8".into(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U8(None)),
                 }],

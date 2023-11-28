@@ -110,8 +110,8 @@ lazy_static! {
             Name::new("content"),
             TypeData::Nested((TypeRef::named(CONTENT_TYPE_NAME), IndexMap::new()))
         ),
-        (Name::new("iconImg"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("coverImg"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("icon_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("cover_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
             Name::new("createdAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))

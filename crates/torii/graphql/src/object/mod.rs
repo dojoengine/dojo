@@ -149,6 +149,7 @@ pub trait ObjectTrait: Send + Sync {
         for (field_name, type_data) in self.type_mapping().clone() {
             let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
                 let field_name = field_name.clone();
+                println!("field_name: {}", field_name);
 
                 FieldFuture::new(async move {
                     match ctx.parent_value.try_to_value()? {

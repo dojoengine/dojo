@@ -16,7 +16,7 @@ mod tests {
             r#"
           {{
             entities {} {{
-              total_count
+              totalCount
               edges {{
                 cursor
                 node {{
