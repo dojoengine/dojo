@@ -124,12 +124,12 @@ fn test_database_scan() {
     (*(*values.at(0)).at(0)).print();
     assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
     assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
-    assert(*(*values.at(0)).at(2) == 6, 'Wrong value at index 1!');
+    assert(*(*values.at(0)).at(2) == 6, 'Wrong value at index 2!');
 
-    let where = MemberClause { model: 'table', member: 'x', value: 2 };
+    let where = MemberClause { model: 'table', member: 0, value: 'x' };
 
     let values = scan(Clause::Member(where), 32, layout);
-    assert(values.len() == 1, 'Wrong number of values clause!');
+    assert(values.len() == 2, 'Wrong number of values clause!');
 }
 
 #[test]
@@ -140,26 +140,26 @@ fn test_database_scan_where() {
     let other = array![5, 5].span();
     let layout = array![251, 251].span();
 
-    set_with_index('table', 'some', array!['p', 'x'].span(), 0, some, layout);
-    set_with_index('table', 'same', array!['p', 'x'].span(), 0, same, layout);
-    set_with_index('table', 'other', array!['p', 'x'].span(), 0, other, layout);
+    set_with_index('table', 'some', array!['p'].span(), 0, some, layout);
+    set_with_index('table', 'same', array!['p'].span(), 0, same, layout);
+    set_with_index('table', 'other', array!['x'].span(), 0, other, layout);
 
     let values = scan(Clause::All('table'), 2, layout);
     assert(values.len() == 3, 'Wrong number of values!');
     assert(*(*values.at(0)).at(0) != 0, 'value is not set');
 
-    let mut where = MemberClause { model: 'table', member: 'x', value: 5 };
+    let mut where = MemberClause { model: 'table', member: 0, value: 'x' };
 
     let values = scan(Clause::Member(where), 2, layout);
     assert(values.len() == 1, 'Wrong len for x = 5');
     assert(*(*values.at(0)).at(0) == 5, 'Wrong value 0 for x = 5');
     assert(*(*values.at(0)).at(1) == 5, 'Wrong value 1 for x = 5');
 
-    where.value = 4;
+    where.value = 'p';
     let values = scan(Clause::Member(where), 2, layout);
-    assert(values.len() == 1, 'Wrong len for x = 1');
+    assert(values.len() == 2, 'Wrong len for x = 1');
 
-    where.value = 6;
+    where.value = 'q';
     let values = scan(Clause::Member(where), 2, layout);
     assert(values.len() == 0, 'Wrong len for x = 6');
 }
@@ -169,28 +169,26 @@ fn test_database_scan_where() {
 fn test_database_scan_where_deletion() {
     let layout = array![251, 251].span();
 
-    set_with_index('model', 'some', array!['a', 'y'].span(), 0, array![2, 3].span(), layout);
+    set_with_index('model', 'some', array!['a', 'x'].span(), 0, array![2, 3].span(), layout);
     set_with_index('model', 'same', array!['a', 'y'].span(), 0, array![1, 3].span(), layout);
-    set_with_index('model', 'other', array!['b', 'y'].span(), 0, array![5, 3].span(), layout);
+    set_with_index('model', 'other', array!['b', 'x'].span(), 0, array![5, 3].span(), layout);
 
     del('model', 'same');
 
-    let mut where = MemberClause { model: 'model', member: 'a', value: 1 };
-
+    let where = MemberClause { model: 'model', member: 0, value: 'b' };
     let values = scan(Clause::Member(where), 1, layout);
-    assert(values.len() == 1, 'Wrong len a = 1');
-    assert(*(*values.at(0)).at(0) == 1, 'Wrong value for a');
+    assert(values.len() == 1, 'Wrong len a at 0');
+    assert(*(*values.at(0)).at(0) == 5, 'Wrong value for b at 0');
 
-    where.member = 'y';
-    where.value = 3;
+    let where = MemberClause { model: 'model', member: 1, value: 'x' };
     let values = scan(Clause::Member(where), 2, layout);
-    assert(values.len() == 3, 'Wrong len for  y = 3');
+    assert(values.len() == 2, 'Wrong len for x at 1');
 
     del('model', 'some');
     del('model', 'other');
 
     let values = scan(Clause::Member(where), 2, layout);
-    assert(values.len() == 0, 'Wrong len for del y = 3');
+    assert(values.len() == 0, 'Wrong len for del y');
 
     let values = scan(Clause::All('model'), 2, layout);
     assert(values.len() == 0, 'Wrong len for scan');

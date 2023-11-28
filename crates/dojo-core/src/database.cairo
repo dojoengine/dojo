@@ -19,12 +19,10 @@ mod utils_test;
 
 use index::WhereCondition;
 
-// Could be replaced with a `KeyValues` with one value, 
-// but this allows us to avoid hashing, and is most common.
 #[derive(Copy, Drop, Serde)]
 struct MemberClause {
     model: felt252,
-    member: felt252,
+    member: felt252, // positon of the member in the model
     value: felt252,
 }
 
@@ -84,11 +82,12 @@ fn set_with_index(
     let mut idx = 0;
     loop {
         if idx == members.len() {
-            break;
+            break; // Iterating over all members of the model with `#[key]` attribute
         }
 
-        let index = poseidon_hash_span(array![model, *members.at(idx)].span());
-        index::create(0, index, key, *values.at(idx)); // create a record for each of the indexes
+        // The position of the member in the model identifies the index
+        let index = poseidon_hash_span(array![model, idx.into()].span()); 
+        index::create(0, index, key, *members.at(idx)); // create a record for each of the indexes
         idx += 1;
     };
 }
@@ -96,22 +95,17 @@ fn set_with_index(
 fn del(model: felt252, key: felt252) {
     index::delete(0, model, key);
 
-    let len_keys = array!['dojo_storage_keys_len', model, key].span();
-    let len = storage::get(0, len_keys);
-
-    let mut idx = 0;
+    let mut idx = 0; // Iterating over all members of the model...
     loop {
-        if idx == len {
-            break;
-        }
         let index = poseidon_hash_span(array![model, idx].span());
 
-        index::delete(0, index, key);
+        if !index::exists(0, index, key) {
+            break; // ...until we find a member without `#[key]` attribute
+        }
 
+        index::delete(0, index, key); // deleting all inbetween
         idx += 1;
     };
-
-    storage::set(0, len_keys, 0); // overwrite the number of keys
 }
 
 // Query all entities that meet a criteria. If no index is defined,
@@ -120,8 +114,9 @@ fn del(model: felt252, key: felt252) {
 fn scan(where: Clause, values_length: usize, values_layout: Span<u8>) -> Span<Span<felt252>> {
     match where {
         Clause::Member(clause) => {
-            let i = poseidon_hash_span(array![clause.model, clause.member].span());
-            let keys = index::get(0, i, clause.value);
+            // The position of the member in the model identifies the index
+            let index = poseidon_hash_span(array![clause.model, clause.member].span());
+            let keys = index::get(0, index, clause.value);
             get_by_keys(clause.model, keys, values_length, values_layout)
         },
         Clause::Composite(clause) => {
@@ -139,6 +134,7 @@ fn scan(where: Clause, values_length: usize, values_layout: Span<u8>) -> Span<Sp
 fn scan_keys(where: Clause) -> Span<felt252> {
     match where {
         Clause::Member(clause) => {
+            // The position of the member in the model identifies the index
             let i = poseidon_hash_span(array![clause.model, clause.member].span());
             index::get(0, i, clause.value)
         },
