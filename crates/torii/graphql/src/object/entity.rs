@@ -115,7 +115,6 @@ impl EntityObject {
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
-            (Name::new("modelNames"), Value::from(entity.model_names)),
             (Name::new("eventId"), Value::from(entity.event_id)),
             (
                 Name::new("createdAt"),
@@ -141,8 +140,14 @@ fn model_union_field() -> Field {
                         .collect();
 
                     let entity_id = extract::<String>(indexmap, "id")?;
+                    let model_ids: Vec<(String,)> =
+                        sqlx::query_as("SELECT model_id from entity_model WHERE entity_id = ?")
+                            .bind(&entity_id)
+                            .fetch_all(&mut conn)
+                            .await?;
+
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for name in model_names {
+                    for (name,) in model_ids {
                         let type_mapping = type_mapping_query(&mut conn, &name).await?;
                         let mut path_array = vec![name.clone()];
 

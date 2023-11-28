@@ -11,8 +11,7 @@ lazy_static! {
     pub static ref ENTITY_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
-        (Name::new("modelNames"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("eventId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("event_id"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
             Name::new("createdAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
