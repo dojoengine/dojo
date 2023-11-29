@@ -29,16 +29,9 @@ impl KatanaRunner {
     }
 
     pub fn new_with_port(port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
-        let katana_path = home::home_dir()
-            .expect("failed to find home dir")
-            .join(".dojo/bin/katana")
-            .to_str()
-            .unwrap()
-            .to_string();
-
         let log_filename = format!("logs/katana-{}.log", port);
 
-        let mut child = Command::new(katana_path)
+        let mut child = Command::new("katana")
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
             .stdout(Stdio::piped())
