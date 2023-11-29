@@ -52,10 +52,12 @@ pub fn computed_value_entrypoints(
                             Ok((input, output)) => {
                                 let contract_entrypoint = ComputedValueCall {
                                     contract_name: computed_val_fn.contract.to_string(),
-                                    contract_address: contract.address.expect(&format!(
-                                        "Contract {} doesn't have an address.",
-                                        computed_val_fn.contract.to_string()
-                                    )),
+                                    contract_address: contract.address.unwrap_or_else(|| {
+                                        panic!(
+                                            "Contract {} doesn't have an address.",
+                                            computed_val_fn.contract.to_string()
+                                        )
+                                    }),
                                     entry_point: computed_val_fn.entrypoint.to_string(),
                                     entry_point_selector: get_selector_from_name(
                                         &computed_val_fn.entrypoint.to_string(),
