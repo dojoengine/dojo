@@ -35,15 +35,15 @@ lazy_static! {
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("name"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
-            Name::new("classHash"),
+            Name::new("class_hash"),
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
         ),
         (
-            Name::new("transactionHash"),
+            Name::new("transaction_hash"),
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
         ),
         (
-            Name::new("createdAt"),
+            Name::new("created_at"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
