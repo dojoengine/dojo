@@ -78,7 +78,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
-      - run: curl -L https://install.dojoengine.org | bash && echo $HOME && echo $XDG_CONFIG_HOME && ls ~/.dojo/bin && ~/.dojo/bin/dojoup
+      - run: curl -L https://install.dojoengine.org | bash && ls -la ~ && ls -la ~/.dojo && ls ~/.dojo/bin && ~/.dojo/bin/dojoup
       - run: cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
