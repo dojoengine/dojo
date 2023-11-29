@@ -10,10 +10,9 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use url::Url;
-
 #[cfg(test)]
 use starknet::providers::Provider;
+use url::Url;
 
 #[derive(Debug)]
 pub struct KatanaRunner {
