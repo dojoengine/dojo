@@ -95,7 +95,6 @@ pub struct PageInfo {
 // }
 
 #[derive(Deserialize, Debug, PartialEq)]
-//#[serde(rename_all = "camelCase")]
 pub struct Record {
     pub __typename: String,
     pub depth: String,
@@ -117,7 +116,6 @@ pub struct Record {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-//#[serde(rename_all = "camelCase")]
 pub struct Nested {
     pub __typename: String,
     pub depth: String,
@@ -127,7 +125,6 @@ pub struct Nested {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-//#[serde(rename_all = "camelCase")]
 pub struct NestedMore {
     pub __typename: String,
     pub depth: String,
@@ -137,7 +134,6 @@ pub struct NestedMore {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-//#[serde(rename_all = "camelCase")]
 pub struct NestedMoreMore {
     pub __typename: String,
     pub depth: String,
@@ -146,7 +142,6 @@ pub struct NestedMoreMore {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct Subrecord {
     pub __typename: String,
     pub record_id: u32,
