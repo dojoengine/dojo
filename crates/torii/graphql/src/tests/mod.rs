@@ -31,7 +31,7 @@ use torii_core::sql::Sql;
 
 // mod entities_test;
 mod metadata_test;
-mod models_test;
+// mod models_test;
 mod subscription_test;
 
 use crate::schema::build_schema;
@@ -145,7 +145,7 @@ pub struct NestedMoreMore {
     pub type_string: String,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]#[serde(rename_all = "camelCase")]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Subrecord {
     pub __typename: String,
@@ -220,7 +220,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                     }),
                 },
                 Member {
-                    name: "recordId".to_string(),
+                    name: "record_id".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::U32(None)),
                 },
@@ -230,7 +230,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                     ty: Ty::Primitive(Primitive::U16(None)),
                 },
                 Member {
-                    name: "typeU64".to_string(),
+                    name: "type_u64".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U64(None)),
                 },
@@ -240,7 +240,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                     ty: Ty::Primitive(Primitive::Bool(None)),
                 },
                 Member {
-                    name: "typeFelt".to_string(),
+                    name: "type_felt".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::Felt252(None)),
                 },

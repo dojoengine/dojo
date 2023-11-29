@@ -33,11 +33,11 @@ mod tests {
                 "models" : [{
                     "__typename": model_name,
                         "depth": "Zero",
-                        "recordId": 0,
+                        "record_id": 0,
                         "typeU16": 1,
-                        "typeU64": 1,
+                        "type_u64": 1,
                         "typeBool": true,
-                        "typeFelt": format!("{:#x}", FieldElement::from(1u128)),
+                        "type_felt": format!("{:#x}", FieldElement::from(1u128)),
                         "typeContractAddress": format!("{:#x}", FieldElement::ONE)
                 }]
             }
@@ -68,7 +68,7 @@ mod tests {
                             }),
                         },
                         Member {
-                            name: "recordId".to_string(),
+                            name: "record_id".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U8(Some(0))),
                         },
@@ -78,7 +78,7 @@ mod tests {
                             ty: Ty::Primitive(Primitive::U16(Some(1))),
                         },
                         Member {
-                            name: "typeU64".to_string(),
+                            name: "type_u64".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U64(Some(1))),
                         },
@@ -88,7 +88,7 @@ mod tests {
                             ty: Ty::Primitive(Primitive::Bool(Some(true))),
                         },
                         Member {
-                            name: "typeFelt".to_string(),
+                            name: "type_felt".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
                         },
@@ -118,11 +118,11 @@ mod tests {
                         __typename
                         ... on Record {
                             depth
-                            recordId
+                            record_id
                             typeU16
-                            typeU64
+                            type_u64
                             typeBool
-                            typeFelt
+                            type_felt
                             typeContractAddress
                         }
                     }
@@ -154,8 +154,8 @@ mod tests {
                 "models" : [{
                     "__typename": model_name,
                         "depth": "Zero",
-                        "recordId": 0,
-                        "typeFelt": format!("{:#x}", FieldElement::from(1u128)),
+                        "record_id": 0,
+                        "type_felt": format!("{:#x}", FieldElement::from(1u128)),
                         "typeContractAddress": format!("{:#x}", FieldElement::ONE)
                 }]
             }
@@ -186,12 +186,12 @@ mod tests {
                             }),
                         },
                         Member {
-                            name: "recordId".to_string(),
+                            name: "record_id".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U32(Some(0))),
                         },
                         Member {
-                            name: "typeFelt".to_string(),
+                            name: "type_felt".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
                         },
@@ -221,8 +221,8 @@ mod tests {
                         __typename
                         ... on Record {
                             depth
-                            recordId
-                            typeFelt
+                            record_id
+                            type_felt
                             typeContractAddress
                         }
                     }
@@ -305,7 +305,7 @@ mod tests {
             let model = Ty::Struct(Struct {
                 name: model_name,
                 children: vec![Member {
-                    name: "typeU8".into(),
+                    name: "type_u8".into(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U8(None)),
                 }],
