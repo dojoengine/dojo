@@ -26,6 +26,12 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install nextest test runner
         uses: taiki-e/install-action@nextest
+
+      - name: Build and run dev container task
+        uses: devcontainers/ci@v0.3
+        with:
+          runCmd: cargo test
+
       - run: |
           cargo nextest run --all-features
 
@@ -78,8 +84,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
-      - run: curl -L https://install.dojoengine.org | bash && source /home/runner/.bashrc && echo $PATH && /home/runner/.config/.dojo/bin/dojoup
-      - run: source /home/runner/.bashrc && cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
+      - run: cargo run --bin sozo -- --manifest-path crates/dojo-core/Scarb.toml test
 
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
