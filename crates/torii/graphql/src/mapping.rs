@@ -13,11 +13,11 @@ lazy_static! {
         (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
         (Name::new("event_id"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
-            Name::new("createdAt"),
+            Name::new("created_at"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
         (
-            Name::new("updatedAt"),
+            Name::new("updated_at"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);

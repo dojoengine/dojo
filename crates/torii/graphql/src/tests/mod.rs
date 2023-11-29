@@ -29,9 +29,9 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
-// mod entities_test;
+mod entities_test;
 mod metadata_test;
-// mod models_test;
+mod models_test;
 mod subscription_test;
 
 use crate::schema::build_schema;
@@ -51,6 +51,7 @@ pub struct Edge<T> {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
@@ -58,7 +59,6 @@ pub struct Entity {
 
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
-
 // same as type from `async-graphql` but derive necessary traits
 // https://docs.rs/async-graphql/6.0.10/async_graphql/types/connection/struct.PageInfo.html
 pub struct PageInfo {
@@ -95,7 +95,7 @@ pub struct PageInfo {
 // }
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
+//#[serde(rename_all = "camelCase")]
 pub struct Record {
     pub __typename: String,
     pub depth: String,
@@ -117,7 +117,7 @@ pub struct Record {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
+//#[serde(rename_all = "camelCase")]
 pub struct Nested {
     pub __typename: String,
     pub depth: String,
@@ -127,7 +127,7 @@ pub struct Nested {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
+//#[serde(rename_all = "camelCase")]
 pub struct NestedMore {
     pub __typename: String,
     pub depth: String,
@@ -137,7 +137,7 @@ pub struct NestedMore {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
+//#[serde(rename_all = "camelCase")]
 pub struct NestedMoreMore {
     pub __typename: String,
     pub depth: String,
@@ -284,7 +284,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     //  Execute `create` and insert 10 records into storage
-    let records_contract = "0x2e6254aaf7e47502319f35de01376cece263f9b83afe6169a4b3a76ef47c8a3";
+    let records_contract = "0x2753d30656b393ecea156189bf0acf5e1063f3ac978fb5c3cebe7a4570bbc78";
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],

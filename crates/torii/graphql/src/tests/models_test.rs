@@ -20,35 +20,35 @@ mod tests {
                 cursor
                 node {{
                     __typename
-                    recordId
+                    record_id
                     depth
-                    typeU8
-                    typeU16
-                    typeU32
-                    typeU64
-                    typeU128
-                    typeU256
-                    typeBool
-                    typeFelt
-                    typeClassHash
-                    typeContractAddress
-                    randomU8
-                    randomU128
-                    typeNested {{
+                    type_u8
+                    type_u16
+                    type_u32
+                    type_u64
+                    type_u128
+                    type_u256
+                    type_bool
+                    type_felt
+                    type_class_hash
+                    type_contract_address
+                    random_u8
+                    random_u128
+                    type_nested {{
                         __typename
                         depth
-                        typeNumber
-                        typeString
-                        typeNestedMore {{
+                        type_number
+                        type_string
+                        type_nested_more {{
                             __typename
                             depth
-                            typeNumber
-                            typeString
-                            typeNestedMoreMore {{
+                            type_number
+                            type_string
+                            type_nested_more_more {{
                                 __typename
                                 depth
-                                typeNumber
-                                typeString
+                                type_number
+                                type_string
                             }}
                         }}
                     }}
@@ -100,25 +100,25 @@ mod tests {
         // *** WHERE FILTER TESTING ***
 
         // where filter EQ on u8
-        let records = records_model_query(&schema, "(where: { typeU8: 0 })").await;
+        let records = records_model_query(&schema, "(where: { type_u8: 0 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 1);
         assert_eq!(first_record.node.record_id, 0);
 
         // where filter GTE on u16
-        let records = records_model_query(&schema, "(where: { typeU16GTE: 5 })").await;
+        let records = records_model_query(&schema, "(where: { type_u16GTE: 5 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.total_count, 5);
 
         // where filter LTE on u32
-        let records = records_model_query(&schema, "(where: { typeU32LTE: 4 })").await;
+        let records = records_model_query(&schema, "(where: { type_u32LTE: 4 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.total_count, 5);
 
         // where filter LT and GT
         let records =
-            records_model_query(&schema, "(where: { typeU32GT: 2, typeU64LT: 4 })").await;
+            records_model_query(&schema, "(where: { type_u32GT: 2, type_u64LT: 4 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(first_record.node.type_u64, 3);
@@ -131,7 +131,7 @@ mod tests {
         let records = records_model_query(
             &schema,
             &format!(
-                "(where: {{ typeClassHash: \"{}\", typeContractAddress: \"{}\" }})",
+                "(where: {{ type_class_hash: \"{}\", type_contract_address: \"{}\" }})",
                 felt_str_0x5, felt_str_0x5
             ),
         )
@@ -143,7 +143,7 @@ mod tests {
         // where filter GTE on u128 (string)
         let records = records_model_query(
             &schema,
-            &format!("(where: {{ typeU128GTE: \"{}\" }})", felt_str_0x5),
+            &format!("(where: {{ type_u128GTE: \"{}\" }})", felt_str_0x5),
         )
         .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
@@ -156,7 +156,7 @@ mod tests {
         // where filter LT on u256 (string)
         let records = records_model_query(
             &schema,
-            &format!("(where: {{ typeU256LT: \"{}\" }})", felt_str_0x5),
+            &format!("(where: {{ type_u256LT: \"{}\" }})", felt_str_0x5),
         )
         .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
@@ -167,14 +167,14 @@ mod tests {
         assert_eq!(last_record.node.type_u256, "0x0");
 
         // where filter on true bool
-        let records = records_model_query(&schema, "(where: { typeBool: true })").await;
+        let records = records_model_query(&schema, "(where: { type_bool: true })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 5);
         assert!(first_record.node.type_bool, "should be true");
 
         // where filter on false bool
-        let records = records_model_query(&schema, "(where: { typeBool: false })").await;
+        let records = records_model_query(&schema, "(where: { type_bool: false })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 5);
@@ -208,7 +208,7 @@ mod tests {
         let records = records_model_query(
             &schema,
             &format!(
-                "(where: {{ typeFeltGTE: \"{}\" }}, order: {{ field: TYPE_FELT, direction: DESC \
+                "(where: {{ type_feltGTE: \"{}\" }}, order: {{ field: TYPE_FELT, direction: DESC \
                  }})",
                 felt_str_0x5
             ),
@@ -222,7 +222,7 @@ mod tests {
 
         // *** WHERE FILTER + PAGINATION TESTING ***
 
-        let records = records_model_query(&schema, "(where: { typeU8GTE: 5 })").await;
+        let records = records_model_query(&schema, "(where: { type_u8GTE: 5 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let one = connection.edges.get(0).unwrap();
         let two = connection.edges.get(1).unwrap();
@@ -231,7 +231,7 @@ mod tests {
         let five = connection.edges.get(4).unwrap();
 
         // cursor based pagination
-        let records = records_model_query(&schema, "(where: { typeU8GTE: 5 }, first: 2)").await;
+        let records = records_model_query(&schema, "(where: { type_u8GTE: 5 }, first: 2)").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         let last_record = connection.edges.last().unwrap();
@@ -242,7 +242,7 @@ mod tests {
 
         let records = records_model_query(
             &schema,
-            &format!("(where: {{ typeU8GTE: 5 }}, first: 3, after: \"{}\")", last_record.cursor),
+            &format!("(where: {{ type_u8GTE: 5 }}, first: 3, after: \"{}\")", last_record.cursor),
         )
         .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
@@ -255,7 +255,7 @@ mod tests {
 
         // offset/limit base pagination
         let records =
-            records_model_query(&schema, "(where: { typeU8GTE: 5 }, limit: 2, offset: 2)").await;
+            records_model_query(&schema, "(where: { type_u8GTE: 5 }, limit: 2, offset: 2)").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         let last_record = connection.edges.last().unwrap();
@@ -268,7 +268,7 @@ mod tests {
 
         let records = records_model_query(
             &schema,
-            "(where: { typeU8GTE: 7 }, order: {field: TYPE_U8, direction: DESC})",
+            "(where: { type_u8GTE: 7 }, order: {field: TYPE_U8, direction: DESC})",
         )
         .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
@@ -280,7 +280,7 @@ mod tests {
         let records = records_model_query(
             &schema,
             &format!(
-                "(where: {{ typeU8GTE: 7 }}, order: {{field: TYPE_U8, direction: DESC}}, after: \
+                "(where: {{ type_u8GTE: 7 }}, order: {{field: TYPE_U8, direction: DESC}}, after: \
                  \"{}\")",
                 one.cursor
             ),
@@ -293,7 +293,7 @@ mod tests {
         let records = records_model_query(
             &schema,
             &format!(
-                "(where: {{ typeU8GTE: 7 }}, order: {{field: TYPE_U8, direction: DESC}}, after: \
+                "(where: {{ type_u8GTE: 7 }}, order: {{field: TYPE_U8, direction: DESC}}, after: \
                  \"{}\")",
                 three.cursor
             ),

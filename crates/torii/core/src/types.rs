@@ -29,7 +29,7 @@ impl fmt::LowerHex for SQLFieldElement {
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
+//#[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub id: String,
     pub keys: String,
