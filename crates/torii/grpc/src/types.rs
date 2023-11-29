@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use dojo_types::schema::Ty;
+use dojo_types::primitive::Primitive;
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
 use starknet_crypto::FieldElement;
 
-use crate::proto;
+use crate::client::Error as ClientError;
+use crate::proto::{self};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
@@ -62,7 +64,13 @@ pub enum ComparisonOperator {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub enum Value {
+pub struct Value {
+    pub primitive_type: Primitive,
+    pub value_type: ValueType,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum ValueType {
     String(String),
     Int(i64),
     UInt(u64),
@@ -173,23 +181,105 @@ impl From<CompositeClause> for proto::types::CompositeClause {
 
 impl From<Value> for proto::types::Value {
     fn from(value: Value) -> Self {
-        match value {
-            Value::String(val) => {
-                Self { value_type: Some(proto::types::value::ValueType::StringValue(val)) }
+        let value_type = match value.value_type {
+            ValueType::String(val) => Some(proto::types::value::ValueType::StringValue(val)),
+            ValueType::Int(val) => Some(proto::types::value::ValueType::IntValue(val)),
+            ValueType::UInt(val) => Some(proto::types::value::ValueType::UintValue(val)),
+            ValueType::Bool(val) => Some(proto::types::value::ValueType::BoolValue(val)),
+            ValueType::Bytes(val) => Some(proto::types::value::ValueType::ByteValue(val)),
+        };
+
+        Self { primitive_type: value.primitive_type.to_numeric() as i32, value_type }
+    }
+}
+
+impl TryFrom<proto::types::Value> for Primitive {
+    type Error = ClientError;
+    fn try_from(value: proto::types::Value) -> Result<Self, Self::Error> {
+        let value_type = value.value_type.as_ref().ok_or(ClientError::MissingExpectedData)?;
+
+        let primitive = match value_type {
+            proto::types::value::ValueType::BoolValue(bool) => Primitive::Bool(Some(*bool)),
+            proto::types::value::ValueType::UintValue(int) => {
+                match proto::types::PrimitiveType::try_from(value.primitive_type)
+                    .map_err(ClientError::Decode)?
+                {
+                    proto::types::PrimitiveType::U8 => Primitive::U8(Some(*int as u8)),
+                    proto::types::PrimitiveType::U16 => Primitive::U16(Some(*int as u16)),
+                    proto::types::PrimitiveType::U32 => Primitive::U32(Some(*int as u32)),
+                    proto::types::PrimitiveType::U64 => Primitive::U64(Some(*int as u64)),
+                    proto::types::PrimitiveType::Usize => Primitive::USize(Some(*int as u32)),
+                    _ => return Err(ClientError::UnsupportedType),
+                }
             }
-            Value::Int(val) => {
-                Self { value_type: Some(proto::types::value::ValueType::IntValue(val)) }
+            proto::types::value::ValueType::ByteValue(bytes) => {
+                match proto::types::PrimitiveType::try_from(value.primitive_type)
+                    .map_err(ClientError::Decode)?
+                {
+                    proto::types::PrimitiveType::U128
+                    | proto::types::PrimitiveType::Felt252
+                    | proto::types::PrimitiveType::ClassHash
+                    | proto::types::PrimitiveType::ContractAddress => Primitive::Felt252(Some(
+                        FieldElement::from_byte_slice_be(bytes).map_err(ClientError::SliceError)?,
+                    )),
+                    _ => return Err(ClientError::UnsupportedType),
+                }
             }
-            Value::UInt(val) => {
-                Self { value_type: Some(proto::types::value::ValueType::UintValue(val)) }
+            proto::types::value::ValueType::StringValue(_string) => {
+                match proto::types::PrimitiveType::try_from(value.primitive_type)
+                    .map_err(ClientError::Decode)?
+                {
+                    proto::types::PrimitiveType::U256 => {
+                        // TODO: Handle u256
+                        Primitive::U256(None)
+                    }
+                    _ => return Err(ClientError::UnsupportedType),
+                }
             }
-            Value::Bool(val) => {
-                Self { value_type: Some(proto::types::value::ValueType::BoolValue(val)) }
+            _ => {
+                return Err(ClientError::UnsupportedType);
             }
-            Value::Bytes(val) => {
-                Self { value_type: Some(proto::types::value::ValueType::ByteValue(val)) }
-            }
+        };
+
+        Ok(primitive)
+    }
+}
+
+impl From<proto::types::Enum> for Enum {
+    fn from(enum_val: proto::types::Enum) -> Self {
+        let options = enum_val
+            .options
+            .iter()
+            .map(|s| EnumOption { name: s.to_owned(), ty: Ty::Tuple(vec![]) })
+            .collect::<Vec<_>>();
+
+        Enum { name: enum_val.name.clone(), option: Some(enum_val.option as u8), options }
+    }
+}
+
+impl TryFrom<proto::types::Model> for Ty {
+    type Error = ClientError;
+    fn try_from(model: proto::types::Model) -> Result<Self, Self::Error> {
+        let mut struct_ty = Struct { name: model.name, children: Vec::new() };
+
+        for member in &model.members {
+            let member_type =
+                member.member_type.as_ref().ok_or(ClientError::MissingExpectedData)?;
+
+            let ty = match member_type {
+                proto::types::member::MemberType::Value(value) => {
+                    Ty::Primitive(Primitive::try_from(value.clone())?)
+                }
+                proto::types::member::MemberType::Enum(enum_val) => {
+                    Ty::Enum(Enum::from(enum_val.clone()))
+                }
+                proto::types::member::MemberType::Struct(nested) => Self::try_from(nested.clone())?,
+            };
+
+            struct_ty.children.push(Member { key: false, name: member.name.clone(), ty });
         }
+
+        Ok(Ty::Struct(struct_ty))
     }
 }
 

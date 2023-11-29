@@ -1,8 +1,11 @@
 //! Client implementation for the gRPC service.
+use std::num::ParseIntError;
+
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
+use prost::DecodeError;
 use proto::world::{world_client, SubscribeEntitiesRequest};
-use starknet::core::types::{FromStrError, StateUpdate};
+use starknet::core::types::{FromByteSliceError, FromStrError, StateUpdate};
 use starknet_crypto::FieldElement;
 
 use crate::proto::world::{MetadataRequest, SubscribeEntitiesResponse};
@@ -15,8 +18,16 @@ pub enum Error {
     Grpc(tonic::Status),
     #[error("Missing expected data")]
     MissingExpectedData,
+    #[error("Unsupported type")]
+    UnsupportedType,
     #[error(transparent)]
-    Parsing(FromStrError),
+    ParseStr(FromStrError),
+    #[error(transparent)]
+    SliceError(FromByteSliceError),
+    #[error(transparent)]
+    ParseInt(ParseIntError),
+    #[error(transparent)]
+    Decode(DecodeError),
 
     #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
@@ -61,7 +72,7 @@ impl WorldClient {
             .await
             .map_err(Error::Grpc)
             .and_then(|res| res.into_inner().metadata.ok_or(Error::MissingExpectedData))
-            .and_then(|metadata| metadata.try_into().map_err(Error::Parsing))
+            .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
     }
 
     /// Subscribe to the state diff for a set of entities of a World.

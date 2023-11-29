@@ -7,7 +7,7 @@ version.workspace = true
 
 [dependencies]
 async-trait.workspace = true
-crypto-bigint = "0.5.3"
+crypto-bigint.workspace = true
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 futures-util = "0.3.28"

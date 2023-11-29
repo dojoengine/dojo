@@ -128,15 +128,21 @@ impl DojoWorld {
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
 
-        let db_entities: Vec<(String, String)> = sqlx::query_as(
-            "SELECT id, model_names FROM entities WHERE keys LIKE ? ORDER BY event_id ASC LIMIT ? \
-             OFFSET ?",
-        )
-        .bind(&keys_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.pool)
-        .await?;
+        let query = r#"
+            SELECT entities.id, group_concat(entity_model.model_id) as model_names
+            FROM entities
+            JOIN entity_model ON entities.id = entity_model.entity_id
+            WHERE entities.keys LIKE ?
+            GROUP BY entities.id
+            ORDER BY entities.event_id DESC
+            LIMIT ? OFFSET ?
+        "#;
+        let db_entities: Vec<(String, String)> = sqlx::query_as(query)
+            .bind(&keys_pattern)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
 
         let mut entities = Vec::new();
         for (entity_id, models_str) in db_entities {
@@ -153,7 +159,7 @@ impl DojoWorld {
             let mut models = Vec::new();
             for schema in schemas {
                 let struct_ty = schema.as_struct().expect("schema should be struct");
-                models.push(Self::map_row_to_model(&schema.name(), struct_ty, &row)?);
+                models.push(Self::map_row_to_proto(&schema.name(), struct_ty, &row)?);
             }
 
             let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
@@ -260,7 +266,8 @@ impl DojoWorld {
         Ok(RetrieveEntitiesResponse { entities })
     }
 
-    fn map_row_to_model(
+    /// Helper function to map Sqlite row to proto::types::Model
+    fn map_row_to_proto(
         path: &str,
         struct_ty: &Struct,
         row: &SqliteRow,
@@ -271,7 +278,7 @@ impl DojoWorld {
             .map(|member| {
                 let column_name = format!("{}.{}", path, member.name);
                 let name = member.name.clone();
-                let member = match &member.ty {
+                let member_type = match &member.ty {
                     Ty::Primitive(primitive) => {
                         let value_type = match primitive {
                             Primitive::Bool(_) => proto::types::value::ValueType::BoolValue(
@@ -286,21 +293,26 @@ impl DojoWorld {
                                 proto::types::value::ValueType::UintValue(value as u64)
                             }
                             Primitive::U128(_)
-                            | Primitive::U256(_)
                             | Primitive::Felt252(_)
                             | Primitive::ClassHash(_)
                             | Primitive::ContractAddress(_) => {
+                                let value = row.try_get::<String, &str>(&column_name)?;
+                                let felt =
+                                    FieldElement::from_str(&value).map_err(ParseError::FromStr)?;
+                                proto::types::value::ValueType::ByteValue(
+                                    felt.to_bytes_be().to_vec(),
+                                )
+                            }
+                            Primitive::U256(_) => {
                                 let value = row.try_get::<String, &str>(&column_name)?;
                                 proto::types::value::ValueType::StringValue(value)
                             }
                         };
 
-                        proto::types::Member {
-                            name,
-                            member_type: Some(proto::types::member::MemberType::Value(
-                                proto::types::Value { value_type: Some(value_type) },
-                            )),
-                        }
+                        Some(proto::types::member::MemberType::Value(proto::types::Value {
+                            primitive_type: primitive.to_numeric() as i32,
+                            value_type: Some(value_type),
+                        }))
                     }
                     Ty::Enum(enum_ty) => {
                         let value = row.try_get::<String, &str>(&column_name)?;
@@ -312,28 +324,25 @@ impl DojoWorld {
                         let option =
                             options.iter().position(|o| o == &value).expect("wrong enum value")
                                 as u32;
-                        proto::types::Member {
-                            name: enum_ty.name.clone(),
-                            member_type: Some(proto::types::member::MemberType::Enum(
-                                proto::types::Enum { option, options },
-                            )),
-                        }
+
+                        Some(proto::types::member::MemberType::Enum(proto::types::Enum {
+                            option,
+                            options,
+                            name: member.ty.name(),
+                        }))
                     }
                     Ty::Struct(struct_ty) => {
                         let path = [path, &struct_ty.name].join("$");
-                        proto::types::Member {
-                            name,
-                            member_type: Some(proto::types::member::MemberType::Struct(
-                                Self::map_row_to_model(&path, struct_ty, row)?,
-                            )),
-                        }
+                        Some(proto::types::member::MemberType::Struct(Self::map_row_to_proto(
+                            &path, struct_ty, row,
+                        )?))
                     }
                     ty => {
                         unimplemented!("unimplemented type_enum: {ty}");
                     }
                 };
 
-                Ok(member)
+                Ok(proto::types::Member { name, member_type })
             })
             .collect::<Result<Vec<proto::types::Member>, Error>>()?;
 

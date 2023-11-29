@@ -177,14 +177,9 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
         }
     }
 
-    let primary_table = model_schemas[0].name();
     let mut global_selections = Vec::new();
-    let mut global_tables = model_schemas
-        .iter()
-        .enumerate()
-        .filter(|(index, _)| *index != 0) // primary_table don't `JOIN` itself
-        .map(|(_, schema)| schema.name())
-        .collect::<Vec<String>>();
+    let mut global_tables =
+        model_schemas.iter().enumerate().map(|(_, schema)| schema.name()).collect::<Vec<String>>();
 
     for ty in model_schemas {
         let schema = ty.as_struct().expect("schema should be struct");
@@ -206,11 +201,11 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
     let selections_clause = global_selections.join(", ");
     let join_clause = global_tables
         .into_iter()
-        .map(|table| format!(" LEFT JOIN {table} ON {primary_table}.entity_id = {table}.entity_id"))
+        .map(|table| format!(" LEFT JOIN {table} ON entities.id = {table}.entity_id"))
         .collect::<Vec<_>>()
         .join(" ");
 
-    Ok(format!("SELECT {selections_clause} FROM {primary_table}{join_clause}"))
+    Ok(format!("SELECT entities.keys, {selections_clause} FROM entities{join_clause}"))
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.

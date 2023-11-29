@@ -8370,6 +8370,7 @@ name = "torii-grpc"
 version = "0.3.13"
 dependencies = [
  "bytes",
+ "crypto-bigint",
  "dojo-types",
  "futures",
  "futures-util",
