@@ -1,11 +1,10 @@
 mod proxy;
-mod utils;
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -41,7 +40,7 @@ struct Args {
 
     /// Path to build manifest.json file.
     #[arg(short, long, env = "DOJO_MANIFEST_PATH")]
-    pub manifest_json: Option<Utf8PathBuf>,
+    pub manifest_json: Option<PathBuf>,
 
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]

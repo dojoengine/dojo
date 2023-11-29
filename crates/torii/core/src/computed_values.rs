@@ -1,10 +1,16 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
+use std::str::FromStr;
 
-use camino::Utf8PathBuf;
 use dojo_world::manifest::{abi, ComputedValueEntrypoint, Manifest};
+use sqlx::{Pool, Sqlite};
+use starknet::core::types::{BlockId, BlockTag, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
-use torii_core::types::ComputedValueCall;
+use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 use tracing::error;
+
+use crate::types::ComputedValueCall;
 
 pub fn function_input_output_from_abi(
     computed_val_fn: &ComputedValueEntrypoint,
@@ -29,7 +35,7 @@ pub fn function_input_output_from_abi(
 }
 
 pub fn computed_value_entrypoints(
-    manifest_json: Option<Utf8PathBuf>,
+    manifest_json: Option<PathBuf>,
 ) -> HashMap<String, Vec<ComputedValueCall>> {
     let mut computed_values: HashMap<String, Vec<ComputedValueCall>> = HashMap::new();
     if let Some(manifest) = manifest_json {
@@ -82,4 +88,32 @@ pub fn computed_value_entrypoints(
         // model
     };
     computed_values
+}
+
+pub async fn call_computed_value<P: Provider + Sync>(
+    contract_name: &str,
+    entry_point: &str,
+    calldata: Vec<FieldElement>,
+    pool: Pool<Sqlite>,
+    provider: &P,
+) -> anyhow::Result<Vec<String>> {
+    let (contract_address, _input, _output): (String, String, String) =
+        sqlx::query_as("SELECT contract_address, input, output FROM computed_values WHERE id = ?")
+            .bind(format!("{}::{}", contract_name, entry_point))
+            .fetch_one(&pool)
+            .await?;
+
+    let entry_point_selector = get_selector_from_name(entry_point).expect("invalid selector name");
+    let values = provider
+        .call(
+            FunctionCall {
+                calldata,
+                contract_address: FieldElement::from_str(&contract_address).unwrap(),
+                entry_point_selector,
+            },
+            BlockId::Tag(BlockTag::Latest),
+        )
+        .await?;
+
+    Ok(values.iter().map(|v| format!("{v:x}")).collect())
 }
