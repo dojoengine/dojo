@@ -5242,6 +5242,7 @@ name = "katana-runner"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "home",
  "katana-core",
  "katana-rpc",
  "lazy_static",
