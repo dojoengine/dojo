@@ -140,7 +140,6 @@ impl Sql {
                     .fetch_one(&self.pool)
                     .await?;
 
-                println!("{entrypoint_registered:#?}",);
                 SimpleBroker::publish(entrypoint_registered);
             }
         }
