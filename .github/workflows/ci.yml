@@ -30,10 +30,8 @@ jobs:
       - name: Build and run dev container task
         uses: devcontainers/ci@v0.3
         with:
-          runCmd: cargo install nextest && katana & && sleep 5 && cargo nextest run --all-features
+          runCmd: cargo install nextest && cargo nextest run --all-features
 
-      - run: |
-          cargo nextest run --all-features
 
   ensure-wasm:
     runs-on: ubuntu-latest
