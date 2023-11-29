@@ -8,8 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 home = "0.5.5"
-katana-core = { path = "../core", default-features = false }
-katana-rpc = { path = "../rpc", default-features = false }
 lazy_static.workspace = true
 starknet.workspace = true
 tokio.workspace = true
