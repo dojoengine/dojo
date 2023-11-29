@@ -260,7 +260,6 @@ jobs:
       - name: Build and push docker image
         uses: docker/build-push-action@v4
         with:
-          no-cache: true
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
           platforms: linux/arm64
@@ -298,7 +297,6 @@ jobs:
         with:
           build-contexts: |
             artifacts=artifacts
-          no-cache: true
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
           platforms: linux/amd64
