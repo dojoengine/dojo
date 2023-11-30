@@ -342,16 +342,21 @@ where
 
             let metadata = dojo_metadata_from_workspace(ws);
             if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
-                let hash = meta.upload().await?;
+                match meta.upload().await {
+                    Ok(hash) => {
+                        let InvokeTransactionResult { transaction_hash } =
+                            WorldContract::new(world.contract_address, migrator)
+                                .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
+                                .await
+                                .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
 
-                let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(world.contract_address, migrator)
-                        .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
-                        .await
-                        .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
-
-                ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
-                ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+                        ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
+                        ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+                    }
+                    Err(err) => {
+                        ui.print_sub(format!("Failed to set World metadata:\n{err}"));
+                    }
+                }
             }
         }
         None => {}

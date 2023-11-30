@@ -4,6 +4,9 @@ use std::{fs, io};
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
+use katana_core::constants::{
+    ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
+};
 use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::{spawn, NodeHandle};
 use tokio::signal::ctrl_c;
@@ -36,7 +39,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
 
     if !config.silent {
-        let accounts = sequencer.backend.accounts.iter();
+        let mut accounts = sequencer.backend.accounts.iter().peekable();
+        let account_class_hash = accounts.peek().unwrap().class_hash;
 
         if config.json_log {
             info!(
@@ -56,6 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "🚀 JSON-RPC server started: {}",
                     Style::new().red().apply_to(format!("http://{addr}"))
                 ),
+                format!("{}", account_class_hash),
             );
         }
     }
@@ -74,7 +79,7 @@ fn print_completion(shell: Shell) {
     generate(shell, &mut command, name, &mut io::stdout());
 }
 
-fn print_intro(accounts: String, seed: String, address: String) {
+fn print_intro(accounts: String, seed: String, address: String, account_class_hash: String) {
     println!(
         "{}",
         Style::new().red().apply_to(
@@ -87,9 +92,31 @@ fn print_intro(accounts: String, seed: String, address: String) {
 ██╔═██╗ ██╔══██║   ██║   ██╔══██║██║╚██╗██║██╔══██║
 ██║  ██╗██║  ██║   ██║   ██║  ██║██║ ╚████║██║  ██║
 ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
-                                                      
 "
         )
+    );
+
+    println!(
+        r"
+PREDEPLOYED CONTRACTS  
+================== 
+
+| Contract        | Fee Token
+| Address         | {}
+| Class Hash      | {}
+
+| Contract        | Universal Deployer
+| Address         | {}
+| Class Hash      | {}
+
+| Contract        | Account Contract
+| Class Hash      | {}
+    ",
+        *FEE_TOKEN_ADDRESS,
+        *ERC20_CONTRACT_CLASS_HASH,
+        *UDC_ADDRESS,
+        *UDC_CLASS_HASH,
+        account_class_hash
     );
 
     println!(

@@ -91,7 +91,7 @@ pub fn find_function_rw(
                                                 match db.concrete_function_signature(layout_fn) {
                                                     Ok(signature) => {
                                                         if let Some(params) =
-                                                            signature.params.get(0)
+                                                            signature.params.first()
                                                         {
                                                             // looks like
                                                             // "@dojo_examples::models::Position"

@@ -1,4 +1,4 @@
-FROM debian:buster-slim as base
+FROM debian:bookworm-slim as base
 
 LABEL description="Dojo is a provable game engine and toolchain for building onchain games and autonomous worlds with Cairo" \
     authors="tarrence <tarrence@cartridge.gg>" \
@@ -11,8 +11,16 @@ COPY --from=artifacts x86_64-unknown-linux-gnu/release/katana /usr/local/bin/kat
 COPY --from=artifacts x86_64-unknown-linux-gnu/release/sozo /usr/local/bin/sozo
 COPY --from=artifacts x86_64-unknown-linux-gnu/release/torii /usr/local/bin/torii
 
+RUN chmod +x /usr/local/bin/katana \
+    && chmod +x /usr/local/bin/sozo \
+    && chmod +x /usr/local/bin/torii
+
 FROM base as arm64
 
 COPY --from=artifacts aarch64-unknown-linux-gnu/release/katana /usr/local/bin/katana
 COPY --from=artifacts aarch64-unknown-linux-gnu/release/sozo /usr/local/bin/sozo
 COPY --from=artifacts aarch64-unknown-linux-gnu/release/torii /usr/local/bin/torii
+
+RUN chmod +x /usr/local/bin/katana \
+    && chmod +x /usr/local/bin/sozo \
+    && chmod +x /usr/local/bin/torii
