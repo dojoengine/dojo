@@ -17,7 +17,8 @@ pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Re
     let world_address = env_metadata
         .as_ref()
         .and_then(|env| env.world_address.as_ref())
-        .map(|address| address.clone())
+        .cloned()
+        .map(|address| address)
         .ok_or_else(|| anyhow::anyhow!("No World Address found"))?;
 
     let contract_class_hash = provider
@@ -27,7 +28,7 @@ pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Re
                 entry_point_selector: selector!("base"),
                 calldata: [].to_vec(),
             },
-            &BlockId::Tag(BlockTag::Latest),
+            BlockId::Tag(BlockTag::Latest),
         )
         .await?;
 
