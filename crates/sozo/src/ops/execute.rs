@@ -10,7 +10,7 @@ use starknet::providers::Provider;
 use crate::commands::execute::ExecuteArgs;
 
 pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Result<()> {
-    let ExecuteArgs { contract_name, entrypoint, calldata, starknet, account } = args;
+    let ExecuteArgs { contract, entrypoint, calldata, starknet, account } = args;
 
     let provider = starknet.provider(env_metadata.as_ref())?;
 
@@ -31,11 +31,11 @@ pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Re
         )
         .await?;
 
-    let contract_address = if contract_name.starts_with("0x") {
-        FieldElement::from_hex_be(&contract_name)?
+    let contract_address = if contract.starts_with("0x") {
+        FieldElement::from_hex_be(&contract)?
     } else {
         get_contract_address(
-            generate_salt(&contract_name),
+            generate_salt(&contract),
             contract_class_hash[0],
             &[],
             FieldElement::from_hex_be(&world_address).unwrap(),

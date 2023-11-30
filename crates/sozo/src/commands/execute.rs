@@ -12,7 +12,7 @@ use crate::ops::execute;
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {
     #[arg(help = "The address of the contract to be executed.")]
-    pub contract_name: String,
+    pub contract: String,
 
     #[arg(help = "The name of the entrypoint to be executed.")]
     pub entrypoint: String,
