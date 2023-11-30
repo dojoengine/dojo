@@ -23,8 +23,8 @@ mod tests {
               content {
                 name
                 description
-                coverUri
-                iconUri
+                cover_uri
+                icon_uri
                 website
                 socials {
                   name
@@ -54,13 +54,12 @@ mod tests {
   [world]
   name = "example"
   description = "example world"
-  coverUri = "file://example_cover.png"
+  cover_uri = "file://example_cover.png"
   website = "https://dojoengine.org"
   socials.x = "https://x.com/dojostarknet"
           "#,
         )
         .unwrap();
-        // todo: coverUri -> cover_uri?
         let world_metadata = dojo_metadata.world.unwrap();
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .await

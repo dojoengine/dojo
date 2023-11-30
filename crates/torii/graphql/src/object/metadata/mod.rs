@@ -105,8 +105,8 @@ fn metadata_connection_output(
                 extract_str_mapping("name", &serde_value),
                 extract_str_mapping("description", &serde_value),
                 extract_str_mapping("website", &serde_value),
-                extract_str_mapping("iconUri", &serde_value),
-                extract_str_mapping("coverUri", &serde_value),
+                extract_str_mapping("icon_uri", &serde_value),
+                extract_str_mapping("cover_uri", &serde_value),
                 extract_socials_mapping("socials", &serde_value),
             ]);
 

@@ -132,7 +132,6 @@ pub struct Social {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct Content {
     pub name: Option<String>,
     pub description: Option<String>,
