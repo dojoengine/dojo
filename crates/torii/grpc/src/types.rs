@@ -189,19 +189,56 @@ impl From<Value> for proto::types::Value {
             ValueType::Bytes(val) => Some(proto::types::value::ValueType::ByteValue(val)),
         };
 
-        Self { primitive_type: value.primitive_type.to_numeric() as i32, value_type }
+        Self { value_type }
     }
 }
 
-impl TryFrom<proto::types::Value> for Primitive {
-    type Error = ClientError;
-    fn try_from(value: proto::types::Value) -> Result<Self, Self::Error> {
-        let value_type = value.value_type.as_ref().ok_or(ClientError::MissingExpectedData)?;
+impl From<proto::types::EnumOption> for EnumOption {
+    fn from(option: proto::types::EnumOption) -> Self {
+        EnumOption { name: option.name, ty: Ty::Tuple(vec![]) }
+    }
+}
 
-        let primitive = match value_type {
+impl From<proto::types::Enum> for Enum {
+    fn from(r#enum: proto::types::Enum) -> Self {
+        let options = r#enum.options.into_iter().map(|option| option.into()).collect::<Vec<_>>();
+
+        Enum { name: r#enum.name.clone(), option: Some(r#enum.option as u8), options }
+    }
+}
+
+impl TryFrom<proto::types::Struct> for Struct {
+    type Error = ClientError;
+    fn try_from(r#struct: proto::types::Struct) -> Result<Self, Self::Error> {
+        let mut children = Vec::new();
+        for child in r#struct.children {
+            children.push(child.try_into()?);
+        }
+
+        Ok(Struct { name: r#struct.name, children })
+    }
+}
+
+impl From<proto::types::Struct> for proto::types::Model {
+    fn from(r#struct: proto::types::Struct) -> Self {
+        Self { name: r#struct.name, members: r#struct.children }
+    }
+}
+
+impl TryFrom<proto::types::Primitive> for Primitive {
+    type Error = ClientError;
+    fn try_from(primitive: proto::types::Primitive) -> Result<Self, Self::Error> {
+        let primitive_type = primitive.r#type;
+        let value_type = primitive
+            .value
+            .ok_or(ClientError::MissingExpectedData)?
+            .value_type
+            .ok_or(ClientError::MissingExpectedData)?;
+
+        let primitive = match &value_type {
             proto::types::value::ValueType::BoolValue(bool) => Primitive::Bool(Some(*bool)),
             proto::types::value::ValueType::UintValue(int) => {
-                match proto::types::PrimitiveType::try_from(value.primitive_type)
+                match proto::types::PrimitiveType::try_from(primitive_type)
                     .map_err(ClientError::Decode)?
                 {
                     proto::types::PrimitiveType::U8 => Primitive::U8(Some(*int as u8)),
@@ -213,7 +250,7 @@ impl TryFrom<proto::types::Value> for Primitive {
                 }
             }
             proto::types::value::ValueType::ByteValue(bytes) => {
-                match proto::types::PrimitiveType::try_from(value.primitive_type)
+                match proto::types::PrimitiveType::try_from(primitive_type)
                     .map_err(ClientError::Decode)?
                 {
                     proto::types::PrimitiveType::U128
@@ -226,7 +263,7 @@ impl TryFrom<proto::types::Value> for Primitive {
                 }
             }
             proto::types::value::ValueType::StringValue(_string) => {
-                match proto::types::PrimitiveType::try_from(value.primitive_type)
+                match proto::types::PrimitiveType::try_from(primitive_type)
                     .map_err(ClientError::Decode)?
                 {
                     proto::types::PrimitiveType::U256 => {
@@ -245,41 +282,27 @@ impl TryFrom<proto::types::Value> for Primitive {
     }
 }
 
-impl From<proto::types::Enum> for Enum {
-    fn from(enum_val: proto::types::Enum) -> Self {
-        let options = enum_val
-            .options
-            .iter()
-            .map(|s| EnumOption { name: s.to_owned(), ty: Ty::Tuple(vec![]) })
-            .collect::<Vec<_>>();
-
-        Enum { name: enum_val.name.clone(), option: Some(enum_val.option as u8), options }
+impl TryFrom<proto::types::Ty> for Ty {
+    type Error = ClientError;
+    fn try_from(ty: proto::types::Ty) -> Result<Self, Self::Error> {
+        match ty.ty_type.ok_or(ClientError::MissingExpectedData)? {
+            proto::types::ty::TyType::Primitive(primitive) => {
+                Ok(Ty::Primitive(primitive.try_into()?))
+            }
+            proto::types::ty::TyType::Struct(r#struct) => Ok(Ty::Struct(r#struct.try_into()?)),
+            proto::types::ty::TyType::Enum(r#enum) => Ok(Ty::Enum(r#enum.into())),
+        }
     }
 }
 
-impl TryFrom<proto::types::Model> for Ty {
+impl TryFrom<proto::types::Member> for Member {
     type Error = ClientError;
-    fn try_from(model: proto::types::Model) -> Result<Self, Self::Error> {
-        let mut struct_ty = Struct { name: model.name, children: Vec::new() };
-
-        for member in &model.members {
-            let member_type =
-                member.member_type.as_ref().ok_or(ClientError::MissingExpectedData)?;
-
-            let ty = match member_type {
-                proto::types::member::MemberType::Value(value) => {
-                    Ty::Primitive(Primitive::try_from(value.clone())?)
-                }
-                proto::types::member::MemberType::Enum(enum_val) => {
-                    Ty::Enum(Enum::from(enum_val.clone()))
-                }
-                proto::types::member::MemberType::Struct(nested) => Self::try_from(nested.clone())?,
-            };
-
-            struct_ty.children.push(Member { key: false, name: member.name.clone(), ty });
-        }
-
-        Ok(Ty::Struct(struct_ty))
+    fn try_from(member: proto::types::Member) -> Result<Self, Self::Error> {
+        Ok(Member {
+            name: member.name,
+            ty: member.ty.ok_or(ClientError::MissingExpectedData)?.try_into()?,
+            key: member.key,
+        })
     }
 }
 

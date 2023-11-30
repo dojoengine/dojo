@@ -159,7 +159,7 @@ impl DojoWorld {
             let mut models = Vec::new();
             for schema in schemas {
                 let struct_ty = schema.as_struct().expect("schema should be struct");
-                models.push(Self::map_row_to_proto(&schema.name(), struct_ty, &row)?);
+                models.push(Self::map_row_to_proto(&schema.name(), struct_ty, &row)?.into());
             }
 
             let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
@@ -271,26 +271,26 @@ impl DojoWorld {
         path: &str,
         struct_ty: &Struct,
         row: &SqliteRow,
-    ) -> Result<proto::types::Model, Error> {
-        let members = struct_ty
+    ) -> Result<proto::types::Struct, Error> {
+        let children = struct_ty
             .children
             .iter()
             .map(|member| {
                 let column_name = format!("{}.{}", path, member.name);
                 let name = member.name.clone();
-                let member_type = match &member.ty {
+                let ty_type = match &member.ty {
                     Ty::Primitive(primitive) => {
                         let value_type = match primitive {
-                            Primitive::Bool(_) => proto::types::value::ValueType::BoolValue(
+                            Primitive::Bool(_) => Some(proto::types::value::ValueType::BoolValue(
                                 row.try_get::<bool, &str>(&column_name)?,
-                            ),
+                            )),
                             Primitive::U8(_)
                             | Primitive::U16(_)
                             | Primitive::U32(_)
                             | Primitive::U64(_)
                             | Primitive::USize(_) => {
                                 let value = row.try_get::<i64, &str>(&column_name)?;
-                                proto::types::value::ValueType::UintValue(value as u64)
+                                Some(proto::types::value::ValueType::UintValue(value as u64))
                             }
                             Primitive::U128(_)
                             | Primitive::Felt252(_)
@@ -299,19 +299,19 @@ impl DojoWorld {
                                 let value = row.try_get::<String, &str>(&column_name)?;
                                 let felt =
                                     FieldElement::from_str(&value).map_err(ParseError::FromStr)?;
-                                proto::types::value::ValueType::ByteValue(
+                                Some(proto::types::value::ValueType::ByteValue(
                                     felt.to_bytes_be().to_vec(),
-                                )
+                                ))
                             }
                             Primitive::U256(_) => {
                                 let value = row.try_get::<String, &str>(&column_name)?;
-                                proto::types::value::ValueType::StringValue(value)
+                                Some(proto::types::value::ValueType::StringValue(value))
                             }
                         };
 
-                        Some(proto::types::member::MemberType::Value(proto::types::Value {
-                            primitive_type: primitive.to_numeric() as i32,
-                            value_type: Some(value_type),
+                        Some(proto::types::ty::TyType::Primitive(proto::types::Primitive {
+                            value: Some(proto::types::Value { value_type }),
+                            r#type: primitive.to_numeric() as i32,
                         }))
                     }
                     Ty::Enum(enum_ty) => {
@@ -319,13 +319,16 @@ impl DojoWorld {
                         let options = enum_ty
                             .options
                             .iter()
-                            .map(|e| e.name.to_string())
-                            .collect::<Vec<String>>();
+                            .map(|r#enum| proto::types::EnumOption {
+                                name: r#enum.name.clone(),
+                                ty: None,
+                            })
+                            .collect::<Vec<_>>();
                         let option =
-                            options.iter().position(|o| o == &value).expect("wrong enum value")
+                            options.iter().position(|o| o.name == value).expect("wrong enum value")
                                 as u32;
 
-                        Some(proto::types::member::MemberType::Enum(proto::types::Enum {
+                        Some(proto::types::ty::TyType::Enum(proto::types::Enum {
                             option,
                             options,
                             name: member.ty.name(),
@@ -333,7 +336,7 @@ impl DojoWorld {
                     }
                     Ty::Struct(struct_ty) => {
                         let path = [path, &struct_ty.name].join("$");
-                        Some(proto::types::member::MemberType::Struct(Self::map_row_to_proto(
+                        Some(proto::types::ty::TyType::Struct(Self::map_row_to_proto(
                             &path, struct_ty, row,
                         )?))
                     }
@@ -342,11 +345,15 @@ impl DojoWorld {
                     }
                 };
 
-                Ok(proto::types::Member { name, member_type })
+                Ok(proto::types::Member {
+                    name,
+                    ty: Some(proto::types::Ty { ty_type }),
+                    key: member.key,
+                })
             })
             .collect::<Result<Vec<proto::types::Member>, Error>>()?;
 
-        Ok(proto::types::Model { name: struct_ty.name.clone(), members })
+        Ok(proto::types::Struct { name: struct_ty.name.clone(), children })
     }
 }
 

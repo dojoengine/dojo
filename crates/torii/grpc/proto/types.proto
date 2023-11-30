@@ -1,6 +1,8 @@
 syntax = "proto3";
 package types;
 
+import "schema.proto";
+
 message WorldMetadata {
     // The hex-encoded address of the world.
     string world_address = 1;
@@ -29,34 +31,10 @@ message ModelMetadata {
     bytes schema = 6;
 }
 
-message Enum {
-    // Type name
-    string name = 1;
-    // Variant
-    uint32 option = 2;
-    // Variants of the enum
-    repeated string options = 3;
-
-}
-
-message Member {
-    // Name of the member
-    string name = 1;
-    // Type of member
-    oneof member_type {
-        Value value = 2;
-        Enum enum = 3;
-        Model struct = 4;
-    }
-}
-
 message Model {
-    // Name of the model
     string name = 1;
-    // Members of the model
     repeated Member members = 2;
 }
-
 message Entity {
     // The entity key
     bytes key = 1;
@@ -132,29 +110,4 @@ enum ComparisonOperator {
     GTE = 3;
     LT = 4;
     LTE = 5;
-}
-
-enum PrimitiveType {
-    U8 = 0;
-    U16 = 1;
-    U32 = 2;
-    U64 = 3;
-    U128 = 4;
-    U256 = 5;
-    USIZE = 6;
-    BOOL = 7;
-    FELT252 = 8;
-    CLASS_HASH = 9;
-    CONTRACT_ADDRESS = 10;
-}
-
-message Value {
-    PrimitiveType primitive_type = 1;
-    oneof value_type {
-        string string_value = 2;
-        int64 int_value = 3;
-        uint64 uint_value = 4;
-        bool bool_value = 5;
-        bytes byte_value = 6;
-    }
 }
