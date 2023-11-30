@@ -7270,6 +7270,7 @@ dependencies = [
  "smol_str",
  "snapbox",
  "starknet",
+ "starknet-crypto 0.6.1",
  "thiserror",
  "tokio",
  "tracing",
