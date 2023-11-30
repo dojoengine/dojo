@@ -18,8 +18,8 @@ mod tests {
             cursor
             node {
               uri
-              cover_img
-              icon_img
+              coverImg
+              iconImg
               content {
                 name
                 description

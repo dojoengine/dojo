@@ -115,13 +115,13 @@ impl EntityObject {
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
-            (Name::new("event_id"), Value::from(entity.event_id)),
+            (Name::new("eventId"), Value::from(entity.event_id)),
             (
-                Name::new("created_at"),
+                Name::new("createdAt"),
                 Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
             (
-                Name::new("updated_at"),
+                Name::new("updatedAt"),
                 Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])

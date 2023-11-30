@@ -11,13 +11,13 @@ lazy_static! {
     pub static ref ENTITY_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
-        (Name::new("event_id"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("eventId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
-            Name::new("created_at"),
+            Name::new("createdAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
         (
-            Name::new("updated_at"),
+            Name::new("updatedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
@@ -107,14 +107,14 @@ lazy_static! {
             Name::new("content"),
             TypeData::Nested((TypeRef::named(CONTENT_TYPE_NAME), IndexMap::new()))
         ),
-        (Name::new("icon_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("cover_img"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("iconImg"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("coverImg"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
-            Name::new("created_at"),
+            Name::new("createdAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
         ),
         (
-            Name::new("updated_at"),
+            Name::new("updatedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
         ),
     ]);
