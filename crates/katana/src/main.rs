@@ -100,6 +100,7 @@ fn print_intro(accounts: String, seed: String, address: String, account_class_ha
         r"
 PREDEPLOYED CONTRACTS  
 ================== 
+
 | Contract        | Fee Token
 | Address         | {}
 | Class Hash      | {}
