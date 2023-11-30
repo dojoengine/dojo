@@ -18,7 +18,6 @@ pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Re
         .as_ref()
         .and_then(|env| env.world_address.as_ref())
         .cloned()
-        .map(|address| address)
         .ok_or_else(|| anyhow::anyhow!("No World Address found"))?;
 
     let contract_class_hash = provider
