@@ -37,8 +37,7 @@ impl DojoContract {
                             has_event = true;
                             return system.merge_event(db, enum_ast.clone());
                         }
-                    }
-                    else if let ast::Item::Struct(struct_ast) = el {
+                    } else if let ast::Item::Struct(struct_ast) = el {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
                             return system.merge_storage(db, struct_ast.clone());
