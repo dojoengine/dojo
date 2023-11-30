@@ -90,6 +90,13 @@ fn set_with_index(
         index::create(0, index, key, *members.at(idx)); // create a record for each of the indexes
         idx += 1;
     };
+}
+
+fn del(model: felt252, key: felt252) {
+    index::delete(0, model, key);
+
+    let len_keys = array!['dojo_storage_keys_len', model, key].span();
+    let len = storage::get(0, len_keys);
 
     let mut idx = 0; // Iterating over all members of the model...
     loop {

@@ -10,8 +10,8 @@ use debug::PrintTrait;
 
 use dojo::benchmarks;
 use dojo::executor::executor;
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait };
 use dojo::database::introspect::Introspect;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world};
 use dojo::database::{Clause, MemberClause};
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
@@ -245,50 +245,6 @@ fn test_set_entity_unauthorized() {
 // Utils
 fn deploy_world() -> IWorldDispatcher {
     spawn_test_world(array![])
-}
-
-#[test]
-#[available_gas(60000000)]
-fn test_entities() {
-    // Deploy world contract
-    let world = spawn_test_world(array![fizz::TEST_CLASS_HASH],);
-
-    let bar_contract = IbarDispatcher {
-        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
-    };
-
-    let alice = starknet::contract_address_const::<0x1337>();
-    starknet::testing::set_contract_address(alice);
-    bar_contract.set_fizz(1337, 1337);
-    bar_contract.set_fizz(7331, 7331);
-    let bob = starknet::contract_address_const::<0x420>();
-    starknet::testing::set_contract_address(bob);
-    bar_contract.set_fizz(1337, 420);
-
-    let layout = array![251].span();
-
-    // Get all in the index
-    let values = world.entities(Clause::All('Fizz'), 1, layout);
-    // assert(keys.len() == 3, 'Not all found for any!');
-    // assert(values.len() == 3, 'Number of values does not match');
-    // assert(*(*values.at(0)).at(0) == 0x1337, 'Caller at 0 not valid');
-    // assert(*(*values.at(1)).at(0) == 0x1337, 'Caller at 1 not valid');
-    // assert(*(*values.at(2)).at(0) == 0x420, 'Caller at 2 not valid');
-
-    let mut where = MemberClause { model: 'Fizz', member: 0, value: 1337, };
-
-    // Get all with a == 1337
-    let values = world.entities(Clause::Member(where), 1, layout);
-    // assert(keys.len() == 2, 'Not all keys found for 1337!');
-    // assert(*(*values.at(0)).at(0) == 0x1337, 'Caller at 0 not valid');
-    // assert(*(*values.at(1)).at(0) == 0x420, 'Caller at 1 not valid');
-
-    // Get all with b == 420
-    where.member = 1;
-    where.value = 420;
-    let values = world.entities(Clause::Member(where), 1, layout);
-// assert(keys.len() == 1, 'Not all keys found for 420!');
-// assert(*(*values.at(0)).at(0) == 0x420, 'Caller at 1 not valid');
 }
 
 #[test]
