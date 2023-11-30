@@ -97,17 +97,19 @@ fn print_intro(accounts: String, seed: String, address: String, account_class_ha
     );
 
     println!(
-        r"        
-Predeployed FeeToken
-Address:    {}
-Class Hash: {}
+        r"
+PREDEPLOYED CONTRACTS  
+================== 
+| Contract        | Fee Token
+| Address         | {}
+| Class Hash      | {}
 
-Predeployed UDC
-Address:    {}
-Class Hash: {}
+| Contract        | Universal Deployer UDC
+| Address         | {}
+| Class Hash      | {}
 
-Account Contract
-Class Hash: {}
+| Contract        | Account Contract
+| Class Hash      | {}
     ",
         *FEE_TOKEN_ADDRESS,
         *ERC20_CONTRACT_CLASS_HASH,
