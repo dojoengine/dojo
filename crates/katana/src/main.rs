@@ -105,7 +105,7 @@ PREDEPLOYED CONTRACTS
 | Address         | {}
 | Class Hash      | {}
 
-| Contract        | Universal Deployer UDC
+| Contract        | Universal Deployer
 | Address         | {}
 | Class Hash      | {}
 
