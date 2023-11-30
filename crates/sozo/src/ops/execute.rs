@@ -26,8 +26,6 @@ pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Re
 
     let contract_address_str = world_address.as_ref().unwrap().as_str();
 
-    print!("{}", contract_address_str);
-
     let contract_class_hash = provider
         .call(
             FunctionCall {
