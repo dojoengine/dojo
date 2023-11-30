@@ -8,3 +8,4 @@ dojo.iml
 .DS_Store
 .env
 data
+crates/benches/gas_usage.txt

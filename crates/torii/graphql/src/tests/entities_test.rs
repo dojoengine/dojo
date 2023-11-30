@@ -115,7 +115,7 @@ mod tests {
         // pagination testing
         let entities = entities_query(&schema, "(first: 20)").await;
         let all_entities_connection: Connection<Entity> = serde_json::from_value(entities).unwrap();
-        let one = all_entities_connection.edges.get(0).unwrap();
+        let one = all_entities_connection.edges.first().unwrap();
         let two = all_entities_connection.edges.get(1).unwrap();
         let three = all_entities_connection.edges.get(2).unwrap();
         let four = all_entities_connection.edges.get(3).unwrap();

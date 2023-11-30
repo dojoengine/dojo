@@ -224,7 +224,7 @@ mod tests {
 
         let records = records_model_query(&schema, "(where: { type_u8GTE: 5 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
-        let one = connection.edges.get(0).unwrap();
+        let one = connection.edges.first().unwrap();
         let two = connection.edges.get(1).unwrap();
         let three = connection.edges.get(2).unwrap();
         let four = connection.edges.get(3).unwrap();

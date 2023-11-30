@@ -86,7 +86,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
         .filter(|cu| packages.contains(&cu.main_package_id))
         .collect::<Vec<_>>();
     // we have only 1 unit in projects
-    let unit = compilation_units.get(0).unwrap();
+    let unit = compilation_units.first().unwrap();
     let db = build_scarb_root_database(unit, &ws).unwrap();
     Ok(DevContext { db, unit: unit.clone(), ws })
 }
