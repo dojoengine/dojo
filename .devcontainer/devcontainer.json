@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/rust
 {
 	"name": "Rust",
-	"image": "ghcr.io/dojoengine/dojo-dev:4979471 ",
+	"image": "ghcr.io/matzayonc/dojo-dev:b838a3f7a840dd83b3ab5054b5bde2b6693d0c74",
 	"runArgs": [
 		"--cap-add=SYS_PTRACE",
 		"--security-opt",
@@ -41,5 +41,5 @@
 	"remoteEnv": {
 		"PATH": "${containerEnv:PATH}:/workspace/dojo/target/release:/home/vscode/.dojo/bin"
 	},
-	"postCreateCommand": "dojoup"
+	"postCreateCommand": "dojoup/dojoup && cargo install cargo-nextest"
 }

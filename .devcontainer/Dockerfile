@@ -1,6 +1,6 @@
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/rust/.devcontainer/base.Dockerfile
 
-# [Choice] Debian OS version (use bullseye on local arm64/Apple Silicon): buster, bullseye
+# [Choice] Debian OS version (use 0-bullseye on local arm64/Apple Silicon): 0-buster, 0-bullseye bookworm
 ARG VARIANT
 FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
 
