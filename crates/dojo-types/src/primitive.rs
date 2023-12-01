@@ -15,8 +15,8 @@ use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
     Serialize,
     Deserialize,
     PartialEq,
-    Eq,
     Hash,
+    Eq,
 )]
 #[serde(tag = "scalar_type", content = "value")]
 #[strum(serialize_all = "lowercase")]

@@ -13,6 +13,18 @@ use crate::client::Error as ClientError;
 use crate::proto::{self};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Entity {
+    pub key: FieldElement,
+    pub models: Vec<Model>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Model {
+    pub name: String,
+    pub members: Vec<Member>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Clause,
     pub limit: u32,
@@ -113,7 +125,7 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
     }
 }
 
-impl From<Query> for proto::types::EntityQuery {
+impl From<Query> for proto::types::Query {
     fn from(value: Query) -> Self {
         Self { clause: Some(value.clause.into()), limit: value.limit, offset: value.offset }
     }
@@ -155,6 +167,34 @@ impl TryFrom<proto::types::KeysClause> for KeysClause {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Self { model: value.model, keys })
+    }
+}
+
+impl TryFrom<proto::types::Entity> for Entity {
+    type Error = ClientError;
+    fn try_from(entity: proto::types::Entity) -> Result<Self, Self::Error> {
+        Ok(Self {
+            key: FieldElement::from_byte_slice_be(&entity.key).map_err(ClientError::SliceError)?,
+            models: entity
+                .models
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
+impl TryFrom<proto::types::Model> for Model {
+    type Error = ClientError;
+    fn try_from(model: proto::types::Model) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: model.name,
+            members: model
+                .members
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
     }
 }
 
@@ -201,21 +241,25 @@ impl From<proto::types::EnumOption> for EnumOption {
 
 impl From<proto::types::Enum> for Enum {
     fn from(r#enum: proto::types::Enum) -> Self {
-        let options = r#enum.options.into_iter().map(|option| option.into()).collect::<Vec<_>>();
-
-        Enum { name: r#enum.name.clone(), option: Some(r#enum.option as u8), options }
+        Enum {
+            name: r#enum.name.clone(),
+            option: Some(r#enum.option as u8),
+            options: r#enum.options.into_iter().map(Into::into).collect::<Vec<_>>(),
+        }
     }
 }
 
 impl TryFrom<proto::types::Struct> for Struct {
     type Error = ClientError;
     fn try_from(r#struct: proto::types::Struct) -> Result<Self, Self::Error> {
-        let mut children = Vec::new();
-        for child in r#struct.children {
-            children.push(child.try_into()?);
-        }
-
-        Ok(Struct { name: r#struct.name, children })
+        Ok(Struct {
+            name: r#struct.name,
+            children: r#struct
+                .children
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<_>, _>>()?,
+        })
     }
 }
 
@@ -244,7 +288,7 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                     proto::types::PrimitiveType::U8 => Primitive::U8(Some(*int as u8)),
                     proto::types::PrimitiveType::U16 => Primitive::U16(Some(*int as u16)),
                     proto::types::PrimitiveType::U32 => Primitive::U32(Some(*int as u32)),
-                    proto::types::PrimitiveType::U64 => Primitive::U64(Some(*int as u64)),
+                    proto::types::PrimitiveType::U64 => Primitive::U64(Some(*int)),
                     proto::types::PrimitiveType::Usize => Primitive::USize(Some(*int as u32)),
                     _ => return Err(ClientError::UnsupportedType),
                 }

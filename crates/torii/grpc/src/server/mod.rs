@@ -243,7 +243,7 @@ impl DojoWorld {
 
     async fn retrieve_entities(
         &self,
-        query: proto::types::EntityQuery,
+        query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
         let clause_type = query
             .clause
@@ -266,7 +266,8 @@ impl DojoWorld {
         Ok(RetrieveEntitiesResponse { entities })
     }
 
-    /// Helper function to map Sqlite row to proto::types::Model
+    /// Helper function to map Sqlite row to proto::types::Struct
+    // TODO: refactor this to use `map_row_to_ty` from core and implement Ty to protobuf conversion
     fn map_row_to_proto(
         path: &str,
         struct_ty: &Struct,
