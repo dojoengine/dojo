@@ -193,18 +193,30 @@ jobs:
           files: |
             ${{ steps.artifacts.outputs.file_name }}
 
+      # We move binaries so they match $TARGETPLATFORM in the Docker build
+      - name: Move Binaries
+        run: |
+          mkdir -p linux/amd64 linux/arm64
+          mv target/x86_64-unknown-linux-gnu/release/katana linux/amd64/
+          mv target/x86_64-unknown-linux-gnu/release/sozo linux/amd64/
+          mv target/x86_64-unknown-linux-gnu/release/torii linux/amd64/
+          mv target/aarch64-unknown-linux-gnu/release/katana linux/arm64/
+          mv target/aarch64-unknown-linux-gnu/release/sozo linux/arm64/
+          mv target/aarch64-unknown-linux-gnu/release/torii linux/arm64/
+        shell: bash
+
       # Upload these for use with the Docker build later
       - name: Upload binaries
         uses: actions/upload-artifact@v3
         with:
           name: binaries
           path: |
-            target/x86_64-unknown-linux-gnu/release/katana
-            target/x86_64-unknown-linux-gnu/release/sozo
-            target/x86_64-unknown-linux-gnu/release/torii
-            target/aarch64-unknown-linux-gnu/release/katana
-            target/aarch64-unknown-linux-gnu/release/sozo
-            target/aarch64-unknown-linux-gnu/release/torii
+            linux/amd64/katana
+            linux/amd64/sozo
+            linux/amd64/torii
+            linux/arm64/katana
+            linux/arm64/sozo
+            linux/arm64/torii
           retention-days: 1
 
   cleanup:
@@ -232,8 +244,8 @@ jobs:
             const prunePrereleases = require('./.github/scripts/prune-prereleases.js')
             await prunePrereleases({github, context})
 
-  docker-build-and-push-linux-amd64:
-    name: Build and push linux-amd64 docker image
+  docker-build-and-push:
+    name: Build and push docker image
     runs-on: ubuntu-latest-4-cores
     needs: [prepare, release]
 
@@ -245,7 +257,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: binaries
-          path: artifacts
+          path: artifacts/linux
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -258,49 +270,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push docker image
-        uses: docker/build-push-action@v4
-        with:
-          build-contexts: |
-            artifacts=artifacts
-          push: true
-          provenance: false
-          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
-          platforms: linux/amd64
-          target: amd64
-
-  docker-build-and-push-linux-arm64:
-    name: Build and push linux-arm64 docker image
-    runs-on: ubuntu-latest-4-cores
-    needs: [prepare, release]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Download binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: binaries
-          path: artifacts
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v3
         with:
           push: true
-          provenance: false
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
-          platforms: linux/arm64
-          target: arm64
+          platforms: linux/amd64,linux/arm64
           build-contexts: |
             artifacts=artifacts
-
