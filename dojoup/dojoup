@@ -21,8 +21,8 @@ main() {
       -b|--branch)      shift; DOJOUP_BRANCH=$1;;
       -v|--version)     shift; DOJOUP_VERSION=$1;;
       -p|--path)        shift; DOJOUP_LOCAL_REPO=$1;;
-      -P|--pr)          shift; DOJOUP_PR=$1;;
-      -C|--commit)      shift; DOJOUP_COMMIT=$1;;
+      -p|--pr)          shift; DOJOUP_PR=$1;;
+      -c|--commit)      shift; DOJOUP_COMMIT=$1;;
       -h|--help)
         usage
         exit 0
