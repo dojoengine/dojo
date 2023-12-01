@@ -39,7 +39,7 @@ message SubscribeEntitiesResponse {
 
 message RetrieveEntitiesRequest {
     // The entities to retrieve
-    types.EntityQuery query = 1;
+    types.Query query = 1;
 }
 
 message RetrieveEntitiesResponse {

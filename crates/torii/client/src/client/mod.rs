@@ -17,7 +17,8 @@ use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::EntityUpdateStreaming;
-use torii_grpc::types::KeysClause;
+use torii_grpc::proto::world::RetrieveEntitiesResponse;
+use torii_grpc::types::{Entity, KeysClause, Query};
 
 use self::error::{Error, ParseError};
 use self::storage::ModelStorage;
@@ -96,6 +97,18 @@ impl Client {
 
     pub fn subscribed_entities(&self) -> RwLockReadGuard<'_, HashSet<KeysClause>> {
         self.subscribed_entities.entities_keys.read()
+    }
+
+    /// Retrieves entities matching specified keys and/or model name in query parameter.
+    ///
+    /// The query can include keys and a model name, both optional. Without parameters, it fetches
+    /// all entities, which is less efficient as it requires additional queries for each
+    /// entity's model data. Specifying a model name optimizes the process by limiting the
+    /// retrieval to entities with that model, requiring just one query.
+    pub async fn entities(&self, query: Query) -> Result<Vec<Entity>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let RetrieveEntitiesResponse { entities } = grpc_client.retrieve_entities(query).await?;
+        Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
     /// Returns the model value of an entity.

@@ -6,7 +6,7 @@ use strum_macros::AsRefStr;
 use crate::primitive::{Primitive, PrimitiveError};
 
 /// Represents a model member.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Member {
     pub name: String,
     #[serde(rename = "member_type")]
@@ -31,7 +31,7 @@ pub struct ModelMetadata {
 }
 
 /// Represents all possible types in Cairo
-#[derive(AsRefStr, Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(AsRefStr, Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 #[serde(tag = "type", content = "content")]
 #[serde(rename_all = "lowercase")]
 pub enum Ty {
@@ -216,7 +216,7 @@ impl std::fmt::Display for Ty {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Struct {
     pub name: String,
     pub children: Vec<Member>,
@@ -241,14 +241,14 @@ pub enum EnumError {
     OptionInvalid,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Enum {
     pub name: String,
     pub option: Option<u8>,
     pub options: Vec<EnumOption>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct EnumOption {
     pub name: String,
     pub ty: Ty,

@@ -19,6 +19,7 @@ torii-core = { path = "../core", optional = true }
 
 serde.workspace = true
 strum_macros.workspace = true
+crypto-bigint.workspace = true
 
 # server
 hex.workspace = true

@@ -128,15 +128,21 @@ impl DojoWorld {
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
 
-        let db_entities: Vec<(String, String)> = sqlx::query_as(
-            "SELECT id, model_names FROM entities WHERE keys LIKE ? ORDER BY event_id ASC LIMIT ? \
-             OFFSET ?",
-        )
-        .bind(&keys_pattern)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.pool)
-        .await?;
+        let query = r#"
+            SELECT entities.id, group_concat(entity_model.model_id) as model_names
+            FROM entities
+            JOIN entity_model ON entities.id = entity_model.entity_id
+            WHERE entities.keys LIKE ?
+            GROUP BY entities.id
+            ORDER BY entities.event_id DESC
+            LIMIT ? OFFSET ?
+        "#;
+        let db_entities: Vec<(String, String)> = sqlx::query_as(query)
+            .bind(&keys_pattern)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
 
         let mut entities = Vec::new();
         for (entity_id, models_str) in db_entities {
@@ -153,7 +159,7 @@ impl DojoWorld {
             let mut models = Vec::new();
             for schema in schemas {
                 let struct_ty = schema.as_struct().expect("schema should be struct");
-                models.push(Self::map_row_to_model(&schema.name(), struct_ty, &row)?);
+                models.push(Self::map_row_to_proto(&schema.name(), struct_ty, &row)?.into());
             }
 
             let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
@@ -237,7 +243,7 @@ impl DojoWorld {
 
     async fn retrieve_entities(
         &self,
-        query: proto::types::EntityQuery,
+        query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
         let clause_type = query
             .clause
@@ -260,84 +266,95 @@ impl DojoWorld {
         Ok(RetrieveEntitiesResponse { entities })
     }
 
-    fn map_row_to_model(
+    /// Helper function to map Sqlite row to proto::types::Struct
+    // TODO: refactor this to use `map_row_to_ty` from core and implement Ty to protobuf conversion
+    fn map_row_to_proto(
         path: &str,
         struct_ty: &Struct,
         row: &SqliteRow,
-    ) -> Result<proto::types::Model, Error> {
-        let members = struct_ty
+    ) -> Result<proto::types::Struct, Error> {
+        let children = struct_ty
             .children
             .iter()
             .map(|member| {
                 let column_name = format!("{}.{}", path, member.name);
                 let name = member.name.clone();
-                let member = match &member.ty {
+                let ty_type = match &member.ty {
                     Ty::Primitive(primitive) => {
                         let value_type = match primitive {
-                            Primitive::Bool(_) => proto::types::value::ValueType::BoolValue(
+                            Primitive::Bool(_) => Some(proto::types::value::ValueType::BoolValue(
                                 row.try_get::<bool, &str>(&column_name)?,
-                            ),
+                            )),
                             Primitive::U8(_)
                             | Primitive::U16(_)
                             | Primitive::U32(_)
                             | Primitive::U64(_)
                             | Primitive::USize(_) => {
                                 let value = row.try_get::<i64, &str>(&column_name)?;
-                                proto::types::value::ValueType::UintValue(value as u64)
+                                Some(proto::types::value::ValueType::UintValue(value as u64))
                             }
                             Primitive::U128(_)
-                            | Primitive::U256(_)
                             | Primitive::Felt252(_)
                             | Primitive::ClassHash(_)
                             | Primitive::ContractAddress(_) => {
                                 let value = row.try_get::<String, &str>(&column_name)?;
-                                proto::types::value::ValueType::StringValue(value)
+                                let felt =
+                                    FieldElement::from_str(&value).map_err(ParseError::FromStr)?;
+                                Some(proto::types::value::ValueType::ByteValue(
+                                    felt.to_bytes_be().to_vec(),
+                                ))
+                            }
+                            Primitive::U256(_) => {
+                                let value = row.try_get::<String, &str>(&column_name)?;
+                                Some(proto::types::value::ValueType::StringValue(value))
                             }
                         };
 
-                        proto::types::Member {
-                            name,
-                            member_type: Some(proto::types::member::MemberType::Value(
-                                proto::types::Value { value_type: Some(value_type) },
-                            )),
-                        }
+                        Some(proto::types::ty::TyType::Primitive(proto::types::Primitive {
+                            value: Some(proto::types::Value { value_type }),
+                            r#type: primitive.to_numeric() as i32,
+                        }))
                     }
                     Ty::Enum(enum_ty) => {
                         let value = row.try_get::<String, &str>(&column_name)?;
                         let options = enum_ty
                             .options
                             .iter()
-                            .map(|e| e.name.to_string())
-                            .collect::<Vec<String>>();
+                            .map(|r#enum| proto::types::EnumOption {
+                                name: r#enum.name.clone(),
+                                ty: None,
+                            })
+                            .collect::<Vec<_>>();
                         let option =
-                            options.iter().position(|o| o == &value).expect("wrong enum value")
+                            options.iter().position(|o| o.name == value).expect("wrong enum value")
                                 as u32;
-                        proto::types::Member {
-                            name: enum_ty.name.clone(),
-                            member_type: Some(proto::types::member::MemberType::Enum(
-                                proto::types::Enum { option, options },
-                            )),
-                        }
+
+                        Some(proto::types::ty::TyType::Enum(proto::types::Enum {
+                            option,
+                            options,
+                            name: member.ty.name(),
+                        }))
                     }
                     Ty::Struct(struct_ty) => {
                         let path = [path, &struct_ty.name].join("$");
-                        proto::types::Member {
-                            name,
-                            member_type: Some(proto::types::member::MemberType::Struct(
-                                Self::map_row_to_model(&path, struct_ty, row)?,
-                            )),
-                        }
+                        Some(proto::types::ty::TyType::Struct(Self::map_row_to_proto(
+                            &path, struct_ty, row,
+                        )?))
                     }
                     ty => {
                         unimplemented!("unimplemented type_enum: {ty}");
                     }
                 };
 
-                Ok(member)
+                Ok(proto::types::Member {
+                    name,
+                    ty: Some(proto::types::Ty { ty_type }),
+                    key: member.key,
+                })
             })
             .collect::<Result<Vec<proto::types::Member>, Error>>()?;
 
-        Ok(proto::types::Model { name: struct_ty.name.clone(), members })
+        Ok(proto::types::Struct { name: struct_ty.name.clone(), children })
     }
 }
 

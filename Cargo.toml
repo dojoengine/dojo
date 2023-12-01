@@ -66,6 +66,7 @@ clap_complete = "4.3"
 colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
+crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 env_logger = "0.10.0"
 flate2 = "1.0.24"
 futures = "0.3.28"

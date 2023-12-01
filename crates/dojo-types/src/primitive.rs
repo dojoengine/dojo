@@ -1,10 +1,22 @@
 use crypto_bigint::{Encoding, U256};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, ValueOutOfRangeError};
+use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 #[derive(
-    AsRefStr, Display, EnumIter, EnumString, Copy, Clone, Debug, Serialize, Deserialize, PartialEq,
+    AsRefStr,
+    Display,
+    EnumIter,
+    EnumString,
+    Copy,
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Hash,
+    Eq,
 )]
 #[serde(tag = "scalar_type", content = "value")]
 #[strum(serialize_all = "lowercase")]
@@ -100,6 +112,14 @@ impl Primitive {
     set_primitive!(set_felt252, Felt252, FieldElement);
     set_primitive!(set_class_hash, ClassHash, FieldElement);
     set_primitive!(set_contract_address, ContractAddress, FieldElement);
+
+    pub fn to_numeric(&self) -> usize {
+        Self::iter().position(|p| p == *self).unwrap()
+    }
+
+    pub fn from_numeric(value: usize) -> Option<Self> {
+        Self::iter().nth(value)
+    }
 
     pub fn to_sql_type(&self) -> SqlType {
         match self {

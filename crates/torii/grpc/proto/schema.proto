@@ -1,0 +1,62 @@
+syntax = "proto3";
+package types;
+
+enum PrimitiveType {
+    U8 = 0;
+    U16 = 1;
+    U32 = 2;
+    U64 = 3;
+    U128 = 4;
+    U256 = 5;
+    USIZE = 6;
+    BOOL = 7;
+    FELT252 = 8;
+    CLASS_HASH = 9;
+    CONTRACT_ADDRESS = 10;
+}
+
+message EnumOption {
+    string name = 1;
+    Ty ty = 2;
+}
+
+message Enum {
+    string name = 1;
+    uint32 option = 2;
+    repeated EnumOption options = 3;
+}
+
+message Primitive {
+    PrimitiveType type = 1;
+    Value value = 2;
+}
+
+message Struct {
+    string name = 1;
+    repeated Member children = 2;
+}
+
+message Ty {
+    oneof ty_type {
+        Primitive primitive = 2;
+        Enum enum = 3;
+        Struct struct = 4;
+        // TODO: Tuple
+    }
+}
+
+message Member {
+    string name = 1;
+    Ty ty = 2;
+    bool key = 3;
+}
+
+message Value {
+    oneof value_type {
+        string string_value = 2;
+        int64 int_value = 3;
+        uint64 uint_value = 4;
+        bool bool_value = 5;
+        bytes byte_value = 6;
+    }
+}
