@@ -26,9 +26,9 @@ use crate::contracts::WorldContractReader;
 #[path = "manifest_test.rs"]
 mod test;
 
-pub const WORLD_CONTRACT_NAME: &str = "world";
-pub const EXECUTOR_CONTRACT_NAME: &str = "executor";
-pub const BASE_CONTRACT_NAME: &str = "base";
+pub const WORLD_CONTRACT_NAME: &str = "dojo::world::world";
+pub const EXECUTOR_CONTRACT_NAME: &str = "dojo::executor::executor";
+pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
 
 #[derive(Error, Debug)]
 pub enum ManifestError {

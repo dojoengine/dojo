@@ -6,7 +6,7 @@ test_manifest_file
 //! > expected_manifest_file
 {
   "world": {
-    "name": "world",
+    "name": "dojo::world::world",
     "address": null,
     "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
     "abi": [
@@ -789,7 +789,7 @@ test_manifest_file
     "computed": []
   },
   "executor": {
-    "name": "executor",
+    "name": "dojo::executor::executor",
     "address": null,
     "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
     "abi": [
@@ -850,7 +850,7 @@ test_manifest_file
     "computed": []
   },
   "base": {
-    "name": "base",
+    "name": "dojo::base::base",
     "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
     "abi": [
       {
@@ -953,7 +953,7 @@ test_manifest_file
   },
   "contracts": [
     {
-      "name": "actions",
+      "name": "dojo_examples::actions::actions",
       "address": null,
       "class_hash": "0x69c6bec7de74fc2404fe6b68ad8ece7be81ad6d861b38a8ba8fa583bfc3666b",
       "abi": [
@@ -1203,7 +1203,7 @@ test_manifest_file
       "computed": []
     },
     {
-      "name": "moves",
+      "name": "dojo_examples::models::moves",
       "address": null,
       "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
       "abi": [
@@ -1372,7 +1372,7 @@ test_manifest_file
       "computed": []
     },
     {
-      "name": "position",
+      "name": "dojo_examples::models::position",
       "address": null,
       "class_hash": "0x2b233bba9a232a5e891c85eca9f67beedca7a12f9768729ff017bcb62d25c9d",
       "abi": [

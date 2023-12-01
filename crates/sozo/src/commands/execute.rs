@@ -11,7 +11,8 @@ use crate::ops::execute;
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {
-    #[arg(help = "The address of the contract to be executed.")]
+    #[arg(help = "The address of the contract to be executed. Or fully qualified contract name \
+                  (ex: dojo_example::actions::actions")]
     pub contract: String,
 
     #[arg(help = "The name of the entrypoint to be executed.")]
