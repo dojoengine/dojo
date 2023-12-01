@@ -216,8 +216,8 @@ OPTIONS:
     -h, --help      Print help information
     -v, --version   Install a specific version
     -b, --branch    Install a specific branch
-    -P, --pr        Install a specific Pull Request
-    -C, --commit    Install a specific commit
+    -pr, --pr        Install a specific Pull Request
+    -c, --commit    Install a specific commit
     -r, --repo      Install from a remote GitHub repo (uses default branch if no other options are set)
     -p, --path      Install a local repository
 EOF
