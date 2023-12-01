@@ -269,6 +269,11 @@ impl From<proto::types::Struct> for proto::types::Model {
     }
 }
 
+// FIX: weird catch-22 issue - prost Enum has `try_from` trait we can use, however, using it results
+// in wasm compile err about From<i32> missing. Implementing that trait results in clippy error
+// about duplicate From<i32>... Workaround is to use deprecated `from_i32` and allow deprecation
+// warning.
+#[allow(deprecated)]
 impl TryFrom<proto::types::Primitive> for Primitive {
     type Error = ClientError;
     fn try_from(primitive: proto::types::Primitive) -> Result<Self, Self::Error> {
@@ -282,35 +287,32 @@ impl TryFrom<proto::types::Primitive> for Primitive {
         let primitive = match &value_type {
             proto::types::value::ValueType::BoolValue(bool) => Primitive::Bool(Some(*bool)),
             proto::types::value::ValueType::UintValue(int) => {
-                match proto::types::PrimitiveType::try_from(primitive_type)
-                    .map_err(ClientError::Decode)?
-                {
-                    proto::types::PrimitiveType::U8 => Primitive::U8(Some(*int as u8)),
-                    proto::types::PrimitiveType::U16 => Primitive::U16(Some(*int as u16)),
-                    proto::types::PrimitiveType::U32 => Primitive::U32(Some(*int as u32)),
-                    proto::types::PrimitiveType::U64 => Primitive::U64(Some(*int)),
-                    proto::types::PrimitiveType::Usize => Primitive::USize(Some(*int as u32)),
+                match proto::types::PrimitiveType::from_i32(primitive_type) {
+                    Some(proto::types::PrimitiveType::U8) => Primitive::U8(Some(*int as u8)),
+                    Some(proto::types::PrimitiveType::U16) => Primitive::U16(Some(*int as u16)),
+                    Some(proto::types::PrimitiveType::U32) => Primitive::U32(Some(*int as u32)),
+                    Some(proto::types::PrimitiveType::U64) => Primitive::U64(Some(*int)),
+                    Some(proto::types::PrimitiveType::Usize) => Primitive::USize(Some(*int as u32)),
                     _ => return Err(ClientError::UnsupportedType),
                 }
             }
             proto::types::value::ValueType::ByteValue(bytes) => {
-                match proto::types::PrimitiveType::try_from(primitive_type)
-                    .map_err(ClientError::Decode)?
-                {
-                    proto::types::PrimitiveType::U128
-                    | proto::types::PrimitiveType::Felt252
-                    | proto::types::PrimitiveType::ClassHash
-                    | proto::types::PrimitiveType::ContractAddress => Primitive::Felt252(Some(
-                        FieldElement::from_byte_slice_be(bytes).map_err(ClientError::SliceError)?,
-                    )),
+                match proto::types::PrimitiveType::from_i32(primitive_type) {
+                    Some(proto::types::PrimitiveType::U128)
+                    | Some(proto::types::PrimitiveType::Felt252)
+                    | Some(proto::types::PrimitiveType::ClassHash)
+                    | Some(proto::types::PrimitiveType::ContractAddress) => {
+                        Primitive::Felt252(Some(
+                            FieldElement::from_byte_slice_be(bytes)
+                                .map_err(ClientError::SliceError)?,
+                        ))
+                    }
                     _ => return Err(ClientError::UnsupportedType),
                 }
             }
             proto::types::value::ValueType::StringValue(_string) => {
-                match proto::types::PrimitiveType::try_from(primitive_type)
-                    .map_err(ClientError::Decode)?
-                {
-                    proto::types::PrimitiveType::U256 => {
+                match proto::types::PrimitiveType::from_i32(primitive_type) {
+                    Some(proto::types::PrimitiveType::U256) => {
                         // TODO: Handle u256
                         Primitive::U256(None)
                     }

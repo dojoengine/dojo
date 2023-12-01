@@ -3,7 +3,6 @@ use std::num::ParseIntError;
 
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use prost::DecodeError;
 use proto::world::{world_client, SubscribeEntitiesRequest};
 use starknet::core::types::{FromByteSliceError, FromStrError, StateUpdate};
 use starknet_crypto::FieldElement;
@@ -28,8 +27,6 @@ pub enum Error {
     SliceError(FromByteSliceError),
     #[error(transparent)]
     ParseInt(ParseIntError),
-    #[error(transparent)]
-    Decode(DecodeError),
 
     #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
