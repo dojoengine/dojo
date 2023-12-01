@@ -2,7 +2,7 @@
 
 # [Choice] Debian OS version (use bullseye on local arm64/Apple Silicon): buster, bullseye
 ARG VARIANT
-FROM mcr.microsoft.com/vscode/devcontainers/rust:0-${VARIANT}
+FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
@@ -28,10 +28,9 @@ ENV NVM_SYMLINK_CURRENT=true \
 COPY .devcontainer/library-scripts/node-debian.sh /tmp/library-scripts/
 RUN apt-get update && bash /tmp/library-scripts/node-debian.sh "${NVM_DIR}"
 
-RUN pip install starknet-devnet==v0.5.0a2 
-
-# Install dojoup for vscode user
+# Install dojoup and scarb for vscode user
 USER vscode
 RUN curl -L https://install.dojoengine.org | bash
+RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 
 ENV PATH=${PATH}:/workspaces/dojo/target/release

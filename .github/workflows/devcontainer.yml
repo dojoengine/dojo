@@ -31,7 +31,9 @@ jobs:
 
     - name: Set Docker tag for push event
       if: github.event_name == 'push'
-      run: echo "DOCKER_TAG=${{ github.sha }}" >> $GITHUB_ENV
+      run: |
+        SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
+        echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v2
