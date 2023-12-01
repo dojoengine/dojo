@@ -504,12 +504,14 @@ mod tests {
         });
 
         let query = build_sql_query(&vec![ty]).unwrap();
+        println!("{query}");
         assert_eq!(
             query,
-            "SELECT Position.external_name AS \"Position.name\", Position.external_age AS \
-             \"Position.age\", Position$Vec2.external_x AS \"Position$Vec2.x\", \
-             Position$Vec2.external_y AS \"Position$Vec2.y\" FROM Position LEFT JOIN \
-             Position$Vec2 ON Position.entity_id = Position$Vec2.entity_id"
+            "SELECT entities.keys, Position.external_name AS \"Position.name\", \
+             Position.external_age AS \"Position.age\", Position$Vec2.external_x AS \
+             \"Position$Vec2.x\", Position$Vec2.external_y AS \"Position$Vec2.y\" FROM entities \
+             LEFT JOIN Position ON entities.id = Position.entity_id  LEFT JOIN Position$Vec2 ON \
+             entities.id = Position$Vec2.entity_id"
         );
     }
 }
