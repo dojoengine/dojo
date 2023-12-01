@@ -11,6 +11,12 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    env:
+      DOCKER_TAG: latest
+
+    outputs:
+      tag_name: ${{ steps.release_info.outputs.tag_name }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -27,13 +33,20 @@ jobs:
 
       - name: Set Docker tag for release event
         if: github.event_name == 'release'
-        run: echo "DOCKER_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+        run: |
+          echo "DOCKER_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          echo "tag_name=$DOCKER_TAG" >> $GITHUB_OUTPUT
 
       - name: Set Docker tag for push event
         if: github.event_name == 'push'
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
           echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
+          
+      - name: Set outputs
+        id: release_info
+        run: |
+          echo "tag_name=${{ env.DOCKER_TAG }}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
@@ -58,7 +71,7 @@ jobs:
 
       - name: Update devcontainer.json
         run: |
-          sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.DOCKER_TAG }}|" .devcontainer/devcontainer.json
+          sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .devcontainer/devcontainer.json
 
       - name: Setup Git credentials
         run: |
@@ -68,14 +81,15 @@ jobs:
       - name: Commit and push changes
         run: |
           git add .devcontainer/devcontainer.json
-          git commit -m "Update devcontainer image hash: ${{needs.build-and-push.outputs.DOCKER_TAG}}"
-          git push -b devcontainer-${{needs.build-and-push.outputs.DOCKER_TAG}}
+          git commit -m "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
+          git checkout -b devcontainer-${{ needs.build-and-push.outputs.tag_name }}
+          git push --set-upstream origin devcontainer--${{ needs.build-and-push.outputs.tag_name }}
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Update devcontainer image hash: ${{needs.build-and-push.outputs.DOCKER_TAG}}"
+          title: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
           commit-message: "Update devcontainer image hash"
           branch: update-devcontainer-image-hash
           base: main
