@@ -26,7 +26,7 @@ jobs:
         run: dojoup/dojoup
 
       - run: |
-          cargo nextest run --all-features
+          chmod 777 -R . && su vscode && cargo nextest run --all-features
 
   ensure-wasm:
     runs-on: ubuntu-latest
