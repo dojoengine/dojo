@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use katana_primitives::transaction::TxNumber;
 use serde::{Deserialize, Serialize};
 
@@ -9,4 +11,12 @@ pub struct StoredBlockBodyIndices {
     pub tx_offset: TxNumber,
     /// The total number of transactions in the block.
     pub tx_count: u64,
+}
+
+impl From<StoredBlockBodyIndices> for Range<u64> {
+    fn from(value: StoredBlockBodyIndices) -> Self {
+        let start = value.tx_offset;
+        let end = value.tx_offset + value.tx_count;
+        std::ops::Range { start, end }
+    }
 }

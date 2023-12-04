@@ -11,15 +11,15 @@ use crate::utils::{decode_one, decode_value, KeyValue};
 
 /// Cursor wrapper to access KV items.
 #[derive(Debug)]
-pub struct Cursor<'tx, K: TransactionKind, T: Table> {
+pub struct Cursor<K: TransactionKind, T: Table> {
     /// Inner `libmdbx` cursor.
-    pub(crate) inner: libmdbx::Cursor<'tx, K>,
+    pub(crate) inner: libmdbx::Cursor<K>,
     /// Phantom data to enforce encoding/decoding.
     _dbi: PhantomData<T>,
 }
 
-impl<'tx, K: TransactionKind, T: Table> Cursor<'tx, K, T> {
-    pub(crate) fn new(inner: libmdbx::Cursor<'tx, K>) -> Self {
+impl<K: TransactionKind, T: Table> Cursor<K, T> {
+    pub(crate) fn new(inner: libmdbx::Cursor<K>) -> Self {
         Self { inner, _dbi: PhantomData }
     }
 }
@@ -33,7 +33,7 @@ macro_rules! decode {
 }
 
 #[allow(clippy::should_implement_trait)]
-impl<K: TransactionKind, T: DupSort> Cursor<'_, K, T> {
+impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
     pub fn first(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
         decode!(libmdbx::Cursor::first(&mut self.inner))
     }
@@ -99,7 +99,7 @@ impl<K: TransactionKind, T: DupSort> Cursor<'_, K, T> {
     }
 }
 
-impl<T: Table> Cursor<'_, RW, T> {
+impl<T: Table> Cursor<RW, T> {
     /// Database operation that will update an existing row if a specified value already
     /// exists in a table, and insert a new row if the specified value doesn't already exist
     ///
@@ -155,7 +155,7 @@ impl<T: Table> Cursor<'_, RW, T> {
     }
 }
 
-impl<T: DupSort> Cursor<'_, RW, T> {
+impl<T: DupSort> Cursor<RW, T> {
     pub fn delete_current_duplicates(&mut self) -> Result<(), DatabaseError> {
         libmdbx::Cursor::del(&mut self.inner, WriteFlags::NO_DUP_DATA)
             .map_err(DatabaseError::Delete)
