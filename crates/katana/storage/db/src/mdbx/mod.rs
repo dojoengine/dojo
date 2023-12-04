@@ -37,7 +37,7 @@ pub struct DbEnv(libmdbx::Environment);
 impl DbEnv {
     /// Opens the database at the specified path with the given `EnvKind`.
     ///
-    /// It does not create the tables, for that call [`Env::create_tables`].
+    /// It does not create the tables, for that call [`DbEnv::create_tables`].
     pub fn open(path: &Path, kind: EnvKind) -> Result<DbEnv, DatabaseError> {
         let mode = match kind {
             EnvKind::RO => Mode::ReadOnly,
