@@ -6823,7 +6823,7 @@ dependencies = [
 [[package]]
 name = "reth-libmdbx"
 version = "0.1.0-alpha.12"
-source = "git+https://github.com/paradigmxyz/reth.git#b3b84c4e33feb91df415be7c6cdeede3c91c5d1d"
+source = "git+https://github.com/paradigmxyz/reth.git#6f7d6d50160e0dbb84de5b74f9794e14cc04406b"
 dependencies = [
  "bitflags 2.4.1",
  "byteorder",
@@ -6838,7 +6838,7 @@ dependencies = [
 [[package]]
 name = "reth-mdbx-sys"
 version = "0.1.0-alpha.12"
-source = "git+https://github.com/paradigmxyz/reth.git#b3b84c4e33feb91df415be7c6cdeede3c91c5d1d"
+source = "git+https://github.com/paradigmxyz/reth.git#6f7d6d50160e0dbb84de5b74f9794e14cc04406b"
 dependencies = [
  "bindgen",
  "cc",

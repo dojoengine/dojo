@@ -7,8 +7,7 @@ use std::ops::Deref;
 use std::path::Path;
 
 use libmdbx::{
-    DatabaseFlags, Environment, EnvironmentFlags, EnvironmentKind, Geometry, Mode, PageSize,
-    SyncMode, RO, RW,
+    DatabaseFlags, Environment, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW,
 };
 
 use self::tx::Tx;
@@ -33,19 +32,19 @@ pub enum EnvKind {
 
 /// Wrapper for `libmdbx-sys` environment.
 #[derive(Debug)]
-pub struct Env<E: EnvironmentKind>(pub libmdbx::Environment<E>);
+pub struct DbEnv(libmdbx::Environment);
 
-impl<E: EnvironmentKind> Env<E> {
+impl DbEnv {
     /// Opens the database at the specified path with the given `EnvKind`.
     ///
     /// It does not create the tables, for that call [`Env::create_tables`].
-    pub fn open(path: &Path, kind: EnvKind) -> Result<Env<E>, DatabaseError> {
+    pub fn open(path: &Path, kind: EnvKind) -> Result<DbEnv, DatabaseError> {
         let mode = match kind {
             EnvKind::RO => Mode::ReadOnly,
             EnvKind::RW => Mode::ReadWrite { sync_mode: SyncMode::Durable },
         };
 
-        let mut builder = Environment::new();
+        let mut builder = libmdbx::Environment::builder();
         builder
             .set_max_dbs(Tables::ALL.len())
             .set_geometry(Geometry {
@@ -67,7 +66,7 @@ impl<E: EnvironmentKind> Env<E> {
             })
             .set_max_readers(DEFAULT_MAX_READERS);
 
-        Ok(Env(builder.open(path).map_err(DatabaseError::OpenEnv)?))
+        Ok(DbEnv(builder.open(path).map_err(DatabaseError::OpenEnv)?))
     }
 
     /// Creates all the defined tables in [`Tables`], if necessary.
@@ -89,20 +88,20 @@ impl<E: EnvironmentKind> Env<E> {
     }
 }
 
-impl<'env, E: EnvironmentKind> Env<E> {
+impl DbEnv {
     /// Begin a read-only transaction.
-    pub fn tx(&'env self) -> Result<Tx<'env, RO, E>, DatabaseError> {
+    pub fn tx(&self) -> Result<Tx<RO>, DatabaseError> {
         Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
     }
 
     /// Begin a read-write transaction.
-    pub fn tx_mut(&'env self) -> Result<Tx<'env, RW, E>, DatabaseError> {
+    pub fn tx_mut(&self) -> Result<Tx<RW>, DatabaseError> {
         Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
 }
 
-impl<E: EnvironmentKind> Deref for Env<E> {
-    type Target = Environment<E>;
+impl Deref for DbEnv {
+    type Target = Environment;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
