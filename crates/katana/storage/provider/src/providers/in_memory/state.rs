@@ -1,7 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
-use anyhow::Result;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
@@ -11,6 +10,7 @@ use katana_primitives::contract::{
 use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
 use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
 use crate::traits::state::StateProvider;
+use crate::Result;
 
 pub struct StateSnapshot<Db> {
     pub(crate) classes: Arc<SharedContractClasses>,
@@ -133,7 +133,7 @@ impl StateProvider for InMemorySnapshot {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> Result<Option<StorageValue>> {
-        let value = self.inner.storage.get(&(address, storage_key)).cloned();
+        let value = self.inner.storage.get(&address).and_then(|s| s.get(&storage_key)).copied();
         Ok(value)
     }
 
@@ -183,7 +183,7 @@ impl StateProvider for LatestStateProvider {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> Result<Option<StorageValue>> {
-        let value = self.0.storage.read().get(&(address, storage_key)).cloned();
+        let value = self.0.storage.read().get(&address).and_then(|s| s.get(&storage_key)).copied();
         Ok(value)
     }
 
@@ -247,8 +247,8 @@ mod tests {
 
     fn create_mock_state() -> InMemoryStateDb {
         let storage = HashMap::from([
-            ((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE_AT_1),
-            ((ADDR_2, STORAGE_KEY), ADDR_2_STORAGE_VALUE_AT_1),
+            (ADDR_1, HashMap::from([(STORAGE_KEY, ADDR_1_STORAGE_VALUE_AT_1)])),
+            (ADDR_2, HashMap::from([(STORAGE_KEY, ADDR_2_STORAGE_VALUE_AT_1)])),
         ]);
 
         let contract_state = HashMap::from([
@@ -308,8 +308,8 @@ mod tests {
         let snapshot_1 = state.create_snapshot();
 
         state.storage.write().extend([
-            ((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE_AT_2),
-            ((ADDR_2, STORAGE_KEY), ADDR_2_STORAGE_VALUE_AT_2),
+            (ADDR_1, HashMap::from([(STORAGE_KEY, ADDR_1_STORAGE_VALUE_AT_2)])),
+            (ADDR_2, HashMap::from([(STORAGE_KEY, ADDR_2_STORAGE_VALUE_AT_2)])),
         ]);
 
         state.contract_state.write().extend([
@@ -333,8 +333,8 @@ mod tests {
         let snapshot_2 = state.create_snapshot();
 
         state.storage.write().extend([
-            ((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE_AT_3),
-            ((ADDR_2, STORAGE_KEY), ADDR_2_STORAGE_VALUE_AT_3),
+            (ADDR_1, HashMap::from([(STORAGE_KEY, ADDR_1_STORAGE_VALUE_AT_3)])),
+            (ADDR_2, HashMap::from([(STORAGE_KEY, ADDR_2_STORAGE_VALUE_AT_3)])),
         ]);
 
         state.contract_state.write().entry(ADDR_1).and_modify(|e| e.nonce = ADDR_1_NONCE_AT_3);

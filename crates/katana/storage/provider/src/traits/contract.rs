@@ -26,9 +26,9 @@ pub trait ContractClassProvider: Send + Sync {
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>>;
 }
 
-// TEMP: added mainly for compatibility reason following the path of least resistance.
+// TEMP: added mainly for compatibility reason. might be removed in the future.
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait ContractClassWriter: ContractClassProvider + Send + Sync {
+pub trait ContractClassWriter: Send + Sync {
     /// Returns the compiled class hash for the given class hash.
     fn set_compiled_class_hash_of_class_hash(
         &self,
