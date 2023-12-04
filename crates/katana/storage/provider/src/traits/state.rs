@@ -1,11 +1,18 @@
 use anyhow::Result;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::contract::{ClassHash, ContractAddress, Nonce, StorageKey, StorageValue};
+use katana_primitives::FieldElement;
 
-use super::contract::{ContractClassProvider, ContractClassWriter, ContractInfoProvider};
+use super::contract::ContractClassProvider;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateProvider: ContractInfoProvider + ContractClassProvider + Send + Sync {
+pub trait StateRootProvider: Send + Sync {
+    /// Retrieves the state root of a block.
+    fn state_root(&self, block_id: BlockHashOrNumber) -> Result<Option<FieldElement>>;
+}
+
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait StateProvider: ContractClassProvider + Send + Sync {
     /// Returns the nonce of a contract.
     fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>>;
 
@@ -20,10 +27,9 @@ pub trait StateProvider: ContractInfoProvider + ContractClassProvider + Send + S
     fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>>;
 }
 
-/// A state factory provider is a provider which can create state providers for
-/// states at a particular block.
+/// A type which can create [`StateProvider`] for states at a particular block.
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateFactoryProvider {
+pub trait StateFactoryProvider: Send + Sync {
     /// Returns a state provider for retrieving the latest state.
     fn latest(&self) -> Result<Box<dyn StateProvider>>;
 
@@ -31,9 +37,9 @@ pub trait StateFactoryProvider {
     fn historical(&self, block_id: BlockHashOrNumber) -> Result<Option<Box<dyn StateProvider>>>;
 }
 
-// TEMP: added mainly for compatibility reason following the path of least resistance.
+// TEMP: added mainly for compatibility reason. it might be removed in the future.
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateWriter: StateProvider + ContractClassWriter + Send + Sync {
+pub trait StateWriter: Send + Sync {
     /// Sets the nonce of a contract.
     fn set_nonce(&self, address: ContractAddress, nonce: Nonce) -> Result<()>;
 
