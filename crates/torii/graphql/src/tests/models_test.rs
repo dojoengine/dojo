@@ -123,9 +123,8 @@ mod tests {
         let first_record = connection.edges.first().unwrap();
         assert_eq!(first_record.node.type_u64, 3);
 
-        // NOTE: output leading zeros on hex strings are trimmed, however, we don't do this yet on
-        // input hex strings
-        let felt_str_0x5 = format!("0x{:064x}", 5);
+        // NOTE: Server side is gonna parse "5" to format!("0x{:064x}", 5);
+        let felt_str_0x5 = "5";
 
         // where filter EQ on class_hash and contract_address
         let records = records_model_query(

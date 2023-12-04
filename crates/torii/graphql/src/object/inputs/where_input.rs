@@ -111,6 +111,6 @@ fn parse_integer(
 fn parse_string(input: ValueAccessor<'_>, type_name: &str) -> Result<FilterValue> {
     input
         .string()
-        .map(|i| FilterValue::String(i.to_string()))
+        .map(|i| FilterValue::String(format!("0x{:0>64}", i)))
         .map_err(|_| GqlError::new(format!("Expected string on field {}", type_name)))
 }
