@@ -1,5 +1,3 @@
-// Code adapted from Foundry's Anvil
-
 //! background service
 
 use std::future::Future;
@@ -9,11 +7,11 @@ use std::task::{Context, Poll};
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
+use katana_primitives::transaction::ExecutableTxWithHash;
 use starknet::core::types::FieldElement;
 use tracing::trace;
 
 use self::block_producer::BlockProducer;
-use crate::backend::storage::transaction::Transaction;
 use crate::pool::TransactionPool;
 
 pub mod block_producer;
@@ -97,7 +95,7 @@ impl TransactionMiner {
         &mut self,
         pool: &Arc<TransactionPool>,
         cx: &mut Context<'_>,
-    ) -> Poll<Vec<Transaction>> {
+    ) -> Poll<Vec<ExecutableTxWithHash>> {
         // drain the notification stream
         while let Poll::Ready(Some(_)) = Pin::new(&mut self.rx).poll_next(cx) {
             self.has_pending_txs = Some(true);
