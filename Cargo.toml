@@ -2,6 +2,7 @@
 resolver = "2"
 
 members = [
+  "crates/benches",
   "crates/dojo-lang",
   "crates/dojo-language-server",
   "crates/dojo-signers",
@@ -13,12 +14,13 @@ members = [
   "crates/katana/executor",
   "crates/katana/primitives",
   "crates/katana/rpc",
+  "crates/katana/rpc/rpc-types",
+  "crates/katana/rpc/rpc-types-builder",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
-  "crates/benches",
 ]
 
 [workspace.package]
@@ -71,6 +73,7 @@ colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
+derive_more = "0.99.17"
 env_logger = "0.10.0"
 flate2 = "1.0.24"
 futures = "0.3.28"
