@@ -1,5 +1,5 @@
 [package]
-description = "Katana execution engine"
+description = "Katana execution engine. This crate provides implementations for executing transactions."
 edition.workspace = true
 name = "katana-executor"
 version.workspace = true
@@ -10,6 +10,7 @@ version.workspace = true
 katana-primitives = { path = "../primitives" }
 katana-provider = { path = "../storage/provider" }
 
+anyhow.workspace = true
 convert_case.workspace = true
 parking_lot.workspace = true
 starknet.workspace = true
