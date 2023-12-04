@@ -1,5 +1,6 @@
 pub mod outcome;
 pub mod state;
+pub mod transactions;
 pub mod utils;
 
 use std::sync::Arc;
@@ -8,14 +9,17 @@ use blockifier::block_context::BlockContext;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
-use blockifier::transaction::transaction_execution::Transaction as BlockifierExecuteTx;
+use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
-use katana_primitives::transaction::{DeclareTxWithClasses, ExecutionTx};
+use katana_primitives::transaction::{
+    DeclareTxWithClass, ExecutableTx, ExecutableTxWithHash, TxWithHash,
+};
 use parking_lot::RwLock;
 use tracing::{trace, warn};
 
-use self::outcome::ExecutedTx;
+use self::outcome::TxReceiptWithExecInfo;
 use self::state::{CachedStateWrapper, StateRefDb};
+use self::transactions::BlockifierTx;
 use self::utils::events_from_exec_info;
 use crate::blockifier::utils::{
     pretty_print_resources, trace_events, warn_message_transaction_error_exec_error,
@@ -29,15 +33,15 @@ type TxExecutionResult = Result<TransactionExecutionInfo, TransactionExecutionEr
 /// The transactions will be executed in an iterator fashion, sequentially, in the
 /// exact order they are provided to the executor. The execution is done within its
 /// implementation of the [`Iterator`] trait.
-pub struct TransactionExecutor<'a, S: StateReader> {
+pub struct TransactionExecutor<'a, S: StateReader, T> {
     /// A flag to enable/disable fee charging.
     charge_fee: bool,
     /// The block context the transactions will be executed on.
     block_context: &'a BlockContext,
     /// The transactions to be executed (in the exact order they are in the iterator).
-    transactions: std::vec::IntoIter<ExecutionTx>,
+    transactions: T,
     /// The state the transactions will be executed on.
-    state: &'a mut CachedStateWrapper<S>,
+    state: &'a CachedStateWrapper<S>,
 
     // logs flags
     error_log: bool,
@@ -45,21 +49,25 @@ pub struct TransactionExecutor<'a, S: StateReader> {
     resources_log: bool,
 }
 
-impl<'a, S: StateReader> TransactionExecutor<'a, S> {
+impl<'a, S, T> TransactionExecutor<'a, S, T>
+where
+    S: StateReader,
+    T: Iterator<Item = ExecutableTxWithHash>,
+{
     pub fn new(
-        state: &'a mut CachedStateWrapper<S>,
+        state: &'a CachedStateWrapper<S>,
         block_context: &'a BlockContext,
         charge_fee: bool,
-        transactions: Vec<ExecutionTx>,
+        transactions: T,
     ) -> Self {
         Self {
             state,
             charge_fee,
+            transactions,
             block_context,
             error_log: false,
             events_log: false,
             resources_log: false,
-            transactions: transactions.into_iter(),
         }
     }
 
@@ -81,87 +89,91 @@ impl<'a, S: StateReader> TransactionExecutor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> Iterator for TransactionExecutor<'a, S> {
+impl<'a, S, T> Iterator for TransactionExecutor<'a, S, T>
+where
+    S: StateReader,
+    T: Iterator<Item = ExecutableTxWithHash>,
+{
     type Item = TxExecutionResult;
+
     fn next(&mut self) -> Option<Self::Item> {
-        self.transactions.next().map(|tx| {
-            let res = execute_tx(tx, &mut self.state, self.block_context, self.charge_fee);
+        let res = self
+            .transactions
+            .next()
+            .map(|tx| execute_tx(tx, self.state, self.block_context, self.charge_fee))?;
 
-            match res {
-                Ok(info) => {
-                    if self.error_log {
-                        if let Some(err) = &info.revert_error {
-                            let formatted_err = format!("{err:?}").replace("\\n", "\n");
-                            warn!(target: "executor", "Transaction execution error: {formatted_err}");
-                        }
+        match res {
+            Ok(ref info) => {
+                if self.error_log {
+                    if let Some(err) = &info.revert_error {
+                        let formatted_err = format!("{err:?}").replace("\\n", "\n");
+                        warn!(target: "executor", "Transaction execution error: {formatted_err}");
                     }
-
-                    if self.resources_log {
-                        trace!(
-                            target: "executor",
-                            "Transaction resource usage: {}",
-                            pretty_print_resources(&info.actual_resources)
-                        );
-                    }
-
-                    if self.events_log {
-                        trace_events(&events_from_exec_info(&info));
-                    }
-
-                    Ok(info)
                 }
 
-                Err(err) => {
-                    if self.error_log {
-                        warn_message_transaction_error_exec_error(&err);
-                    }
-
-                    Err(err)
+                if self.resources_log {
+                    trace!(
+                        target: "executor",
+                        "Transaction resource usage: {}",
+                        pretty_print_resources(&info.actual_resources)
+                    );
                 }
+
+                if self.events_log {
+                    trace_events(&events_from_exec_info(info));
+                }
+
+                Some(res)
             }
-        })
+
+            Err(ref err) => {
+                if self.error_log {
+                    warn_message_transaction_error_exec_error(err);
+                }
+
+                Some(res)
+            }
+        }
     }
 }
 
-pub struct PendingState {
-    pub state: RwLock<CachedStateWrapper<StateRefDb>>,
-    /// The transactions that have been executed.
-    pub executed_transactions: RwLock<Vec<Arc<ExecutedTx>>>,
-}
-
 fn execute_tx<S: StateReader>(
-    tx: ExecutionTx,
-    state: &mut CachedStateWrapper<S>,
+    tx: ExecutableTxWithHash,
+    state: &CachedStateWrapper<S>,
     block_context: &BlockContext,
     charge_fee: bool,
 ) -> TxExecutionResult {
-    let sierra = if let ExecutionTx::Declare(DeclareTxWithClasses {
-        tx,
+    let sierra = if let ExecutableTx::Declare(DeclareTxWithClass {
+        transaction,
         sierra_class: Some(sierra_class),
         ..
-    }) = &tx
+    }) = tx.as_ref()
     {
-        Some((tx.class_hash, sierra_class.clone()))
+        Some((transaction.class_hash(), sierra_class.clone()))
     } else {
         None
     };
 
-    let res = match tx.into() {
-        BlockifierExecuteTx::AccountTransaction(tx) => {
-            tx.execute(&mut state.inner_mut(), block_context, charge_fee)
+    let res = match BlockifierTx::from(tx).0 {
+        Transaction::AccountTransaction(tx) => {
+            tx.execute(&mut state.inner(), block_context, charge_fee)
         }
-        BlockifierExecuteTx::L1HandlerTransaction(tx) => {
-            tx.execute(&mut state.inner_mut(), block_context, charge_fee)
+        Transaction::L1HandlerTransaction(tx) => {
+            tx.execute(&mut state.inner(), block_context, charge_fee)
         }
     };
 
-    if let res @ Ok(_) = res {
+    if res.is_ok() {
         if let Some((class_hash, sierra_class)) = sierra {
             state.sierra_class_mut().insert(class_hash, sierra_class);
         }
-
-        res
-    } else {
-        res
     }
+
+    res
+}
+
+pub struct PendingState {
+    pub state: Arc<CachedStateWrapper<StateRefDb>>,
+    /// The transactions that have been executed.
+    pub executed_txs: RwLock<Vec<(TxWithHash, TxReceiptWithExecInfo)>>,
 }
