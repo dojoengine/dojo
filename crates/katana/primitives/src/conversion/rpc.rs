@@ -105,8 +105,7 @@ pub fn legacy_rpc_to_inner_class(
     Ok((class_hash, CompiledContractClass::V0(contract_class)))
 }
 
-/// Returns a [LegacyEntryPointsByType](rpc::LegacyEntryPointsByType) (RPC type) from a
-/// [EntryPointType] (blockifier type)
+/// Returns a [LegacyEntryPointsByType] (RPC type) from a [EntryPointType] (blockifier type)
 fn to_rpc_legacy_entry_points_by_type(
     entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
 ) -> Result<LegacyEntryPointsByType> {
