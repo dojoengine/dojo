@@ -9,9 +9,11 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 cairo-vm.workspace = true
+derive_more.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
+thiserror.workspace = true
 
 blockifier.workspace = true
 cairo-lang-starknet.workspace = true
