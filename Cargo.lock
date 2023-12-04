@@ -4899,6 +4899,9 @@ dependencies = [
  "flate2",
  "futures",
  "hex",
+ "katana-executor",
+ "katana-primitives",
+ "katana-provider",
  "lazy_static",
  "parking_lot 0.12.1",
  "rand",
@@ -4931,8 +4934,9 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.3.12"
+version = "0.3.14"
 dependencies = [
+ "anyhow",
  "blockifier",
  "convert_case 0.6.0",
  "katana-primitives",
@@ -4952,11 +4956,13 @@ dependencies = [
  "blockifier",
  "cairo-lang-starknet",
  "cairo-vm",
+ "derive_more",
  "flate2",
  "serde",
  "serde_json",
  "starknet",
  "starknet_api",
+ "thiserror",
 ]
 
 [[package]]
@@ -4982,9 +4988,7 @@ version = "0.3.14"
 dependencies = [
  "anyhow",
  "assert_matches",
- "blockifier",
  "cairo-lang-starknet",
- "cairo-vm",
  "dojo-test-utils",
  "flate2",
  "futures",
@@ -4992,6 +4996,11 @@ dependencies = [
  "hyper",
  "jsonrpsee",
  "katana-core",
+ "katana-executor",
+ "katana-primitives",
+ "katana-provider",
+ "katana-rpc-types",
+ "katana-rpc-types-builder",
  "serde",
  "serde_json",
  "serde_with",
@@ -5003,6 +5012,31 @@ dependencies = [
  "tower-http",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "katana-rpc-types"
+version = "0.3.14"
+dependencies = [
+ "anyhow",
+ "derive_more",
+ "katana-primitives",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet",
+]
+
+[[package]]
+name = "katana-rpc-types-builder"
+version = "0.3.14"
+dependencies = [
+ "anyhow",
+ "katana-executor",
+ "katana-primitives",
+ "katana-provider",
+ "katana-rpc-types",
+ "starknet",
 ]
 
 [[package]]

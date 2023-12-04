@@ -3,11 +3,7 @@ use std::sync::Arc;
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
 use katana_core::sequencer::KatanaSequencer;
-use starknet::core::types::FieldElement;
-use starknet_api::core::{ContractAddress, PatriciaKey};
-use starknet_api::hash::{StarkFelt, StarkHash};
-use starknet_api::state::StorageKey;
-use starknet_api::{patricia_key, stark_felt};
+use katana_primitives::FieldElement;
 
 use crate::api::katana::{KatanaApiError, KatanaApiServer};
 
@@ -35,14 +31,12 @@ impl KatanaApiServer for KatanaApi {
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
             .set_next_block_timestamp(timestamp)
-            .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
     }
 
     async fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {
         self.sequencer
             .increase_next_block_timestamp(timestamp)
-            .await
             .map_err(|_| Error::from(KatanaApiError::FailedToChangeNextBlockTimestamp))
     }
 
@@ -52,17 +46,14 @@ impl KatanaApiServer for KatanaApi {
 
     async fn set_storage_at(
         &self,
-        contract_address: FieldElement,
-        key: FieldElement,
-        value: FieldElement,
+        _contract_address: FieldElement,
+        _key: FieldElement,
+        _value: FieldElement,
     ) -> Result<(), Error> {
-        self.sequencer
-            .set_storage_at(
-                ContractAddress(patricia_key!(contract_address)),
-                StorageKey(patricia_key!(key)),
-                stark_felt!(value),
-            )
-            .await
-            .map_err(|_| Error::from(KatanaApiError::FailedToUpdateStorage))
+        // self.sequencer
+        //     .set_storage_at(contract_address.into(), key, value)
+        //     .await
+        //     .map_err(|_| Error::from(KatanaApiError::FailedToUpdateStorage))
+        Ok(())
     }
 }

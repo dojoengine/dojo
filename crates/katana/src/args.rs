@@ -6,7 +6,6 @@ use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
-use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
@@ -56,12 +55,6 @@ pub struct KatanaArgs {
     #[arg(value_name = "BLOCK_NUMBER")]
     #[arg(help = "Fork the network at a specific block.")]
     pub fork_block_number: Option<u64>,
-
-    #[arg(long)]
-    #[arg(value_name = "PATH")]
-    #[arg(value_parser = SerializableState::parse)]
-    #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
-    pub load_state: Option<SerializableState>,
 
     #[cfg(feature = "messaging")]
     #[arg(long)]
@@ -198,7 +191,6 @@ impl KatanaArgs {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
             disable_fee: self.starknet.disable_fee,
-            init_state: self.load_state.clone(),
             fork_rpc_url: self.rpc_url.clone(),
             fork_block_number: self.fork_block_number,
             env: Environment {

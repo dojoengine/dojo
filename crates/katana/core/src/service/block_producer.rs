@@ -1,29 +1,28 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use blockifier::state::state_api::{State, StateReader};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
+use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
+use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
+use katana_executor::blockifier::utils::get_state_update_from_cached_state;
+use katana_executor::blockifier::{PendingState, TransactionExecutor};
+use katana_primitives::receipt::Receipt;
+use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
+use katana_provider::traits::state::StateFactoryProvider;
 use parking_lot::RwLock;
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::trace;
 
-use crate::backend::storage::transaction::{RejectedTransaction, Transaction};
 use crate::backend::Backend;
-use crate::db::cached::CachedStateWrapper;
-use crate::db::StateRefDb;
-use crate::execution::{
-    create_execution_outcome, ExecutedTransaction, ExecutionOutcome,
-    MaybeInvalidExecutedTransaction, PendingState, TransactionExecutor,
-};
 
 pub struct MinedBlockOutcome {
     pub block_number: u64,
-    pub transactions: Vec<MaybeInvalidExecutedTransaction>,
 }
 
 type ServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + Sync>>;
@@ -70,7 +69,7 @@ impl BlockProducer {
         }
     }
 
-    pub(super) fn queue(&self, transactions: Vec<Transaction>) {
+    pub(super) fn queue(&self, transactions: Vec<ExecutableTxWithHash>) {
         let mut mode = self.inner.write();
         match &mut *mode {
             BlockProducerMode::Instant(producer) => producer.queued.push_back(transactions),
@@ -93,12 +92,8 @@ impl BlockProducer {
         trace!(target: "miner", "force mining");
         let mut mode = self.inner.write();
         match &mut *mode {
-            BlockProducerMode::Instant(producer) => {
-                tokio::task::block_in_place(|| futures::executor::block_on(producer.force_mine()))
-            }
-            BlockProducerMode::Interval(producer) => {
-                tokio::task::block_in_place(|| futures::executor::block_on(producer.force_mine()))
-            }
+            BlockProducerMode::Instant(producer) => producer.force_mine(),
+            BlockProducerMode::Interval(producer) => producer.force_mine(),
         }
     }
 }
@@ -139,7 +134,7 @@ pub struct IntervalBlockProducer {
     /// Single active future that mines a new block
     block_mining: Option<IntervalBlockMiningFuture>,
     /// Backlog of sets of transactions ready to be mined
-    queued: VecDeque<Vec<Transaction>>,
+    queued: VecDeque<Vec<ExecutableTxWithHash>>,
     /// The state of the pending block after executing all the transactions within the interval.
     state: Arc<PendingState>,
     /// This is to make sure that the block context is updated
@@ -157,8 +152,8 @@ impl IntervalBlockProducer {
         };
 
         let state = Arc::new(PendingState {
-            state: RwLock::new(CachedStateWrapper::new(db)),
-            executed_transactions: Default::default(),
+            state: Arc::new(CachedStateWrapper::new(db)),
+            executed_txs: Default::default(),
         });
 
         Self {
@@ -176,8 +171,8 @@ impl IntervalBlockProducer {
     /// keep hold of the pending state.
     pub fn new_no_mining(backend: Arc<Backend>, db: StateRefDb) -> Self {
         let state = Arc::new(PendingState {
-            state: RwLock::new(CachedStateWrapper::new(db)),
-            executed_transactions: Default::default(),
+            state: Arc::new(CachedStateWrapper::new(db)),
+            executed_txs: Default::default(),
         });
 
         Self {
@@ -195,84 +190,62 @@ impl IntervalBlockProducer {
     }
 
     /// Force mine a new block. It will only able to mine if there is no ongoing mining process.
-    pub async fn force_mine(&self) {
+    pub fn force_mine(&self) {
         if self.block_mining.is_none() {
             let outcome = self.outcome();
-            let _ = Self::do_mine(outcome, self.backend.clone(), self.state.clone()).await;
+            let _ = Self::do_mine(outcome, self.backend.clone(), self.state.clone());
         } else {
             trace!(target: "miner", "unable to force mine while a mining process is running")
         }
     }
 
-    async fn do_mine(
-        execution_outcome: ExecutionOutcome,
+    fn do_mine(
+        state_updates: StateUpdatesWithDeclaredClasses,
         backend: Arc<Backend>,
         pending_state: Arc<PendingState>,
     ) -> MinedBlockOutcome {
         trace!(target: "miner", "creating new block");
-        let (outcome, new_state) = backend.mine_pending_block(execution_outcome).await;
+
+        let tx_receipt_pairs = {
+            let mut txs_lock = pending_state.executed_txs.write();
+            txs_lock.drain(..).map(|(tx, rct)| (tx, rct.receipt)).collect::<Vec<_>>()
+        };
+
+        let (outcome, new_state) = backend.mine_pending_block(tx_receipt_pairs, state_updates);
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
         backend.update_block_context();
-        // reset the state for the next block
-        pending_state.executed_transactions.write().clear();
-        *pending_state.state.write() = CachedStateWrapper::new(new_state);
+        pending_state.state.reset_with_new_state(new_state.into());
 
         outcome
     }
 
-    fn execute_transactions(&self, transactions: Vec<Transaction>) {
-        let transactions = {
-            let mut state = self.state.state.write();
+    fn execute_transactions(&self, transactions: Vec<ExecutableTxWithHash>) {
+        let txs = transactions.iter().map(TxWithHash::from);
+        let results = {
             TransactionExecutor::new(
-                &mut state,
+                &self.state.state,
                 &self.backend.env.read().block,
                 !self.backend.config.read().disable_fee,
-                transactions.clone(),
+                transactions.clone().into_iter(),
             )
             .with_error_log()
             .with_events_log()
             .with_resources_log()
-            .zip(transactions)
-            .map(|(res, tx)| match res {
-                Ok(execution_info) => {
-                    let executed_tx = ExecutedTransaction::new(tx, execution_info);
-                    MaybeInvalidExecutedTransaction::Valid(Arc::new(executed_tx))
-                }
-                Err(err) => {
-                    let rejected_tx =
-                        RejectedTransaction { inner: tx, execution_error: err.to_string() };
-                    MaybeInvalidExecutedTransaction::Invalid(Arc::new(rejected_tx))
-                }
+            .zip(txs)
+            .filter_map(|(res, tx)| {
+                let Ok(info) = res else { return None };
+                let receipt = TxReceiptWithExecInfo::from_tx_exec_result(&tx, info);
+                Some((tx, receipt))
             })
             .collect::<Vec<_>>()
         };
 
-        self.state.executed_transactions.write().extend(transactions);
+        self.state.executed_txs.write().extend(results);
     }
 
-    fn outcome(&self) -> ExecutionOutcome {
-        let state = &mut self.state.state.write();
-
-        let declared_sierra_classes = state.sierra_class().clone();
-        let state_diff = state.to_state_diff();
-        let declared_classes = state_diff
-            .class_hash_to_compiled_class_hash
-            .iter()
-            .map(|(class_hash, _)| {
-                let contract_class = state
-                    .get_compiled_contract_class(class_hash)
-                    .expect("contract class must exist in state if declared");
-                (*class_hash, contract_class)
-            })
-            .collect::<HashMap<_, _>>();
-
-        ExecutionOutcome {
-            state_diff,
-            declared_classes,
-            declared_sierra_classes,
-            transactions: self.state.executed_transactions.read().clone(),
-        }
+    fn outcome(&self) -> StateUpdatesWithDeclaredClasses {
+        get_state_update_from_cached_state(&self.state.state)
     }
 }
 
@@ -290,11 +263,15 @@ impl Stream for IntervalBlockProducer {
 
         if let Some(interval) = &mut pin.interval {
             if interval.poll_tick(cx).is_ready() && pin.block_mining.is_none() {
-                pin.block_mining = Some(Box::pin(Self::do_mine(
-                    pin.outcome(),
-                    pin.backend.clone(),
-                    pin.state.clone(),
-                )));
+                let backend = pin.backend.clone();
+                let outcome = pin.outcome();
+                let state = pin.state.clone();
+
+                pin.block_mining = Some(Box::pin(async move {
+                    tokio::task::spawn_blocking(|| Self::do_mine(outcome, backend, state))
+                        .await
+                        .unwrap()
+                }));
             }
         }
 
@@ -324,7 +301,7 @@ pub struct InstantBlockProducer {
     /// Single active future that mines a new block
     block_mining: Option<InstantBlockMiningFuture>,
     /// Backlog of sets of transactions ready to be mined
-    queued: VecDeque<Vec<Transaction>>,
+    queued: VecDeque<Vec<ExecutableTxWithHash>>,
 }
 
 impl InstantBlockProducer {
@@ -332,40 +309,55 @@ impl InstantBlockProducer {
         Self { backend, block_mining: None, queued: VecDeque::default() }
     }
 
-    pub async fn force_mine(&mut self) {
+    pub fn force_mine(&mut self) {
         if self.block_mining.is_none() {
             let txs = self.queued.pop_front().unwrap_or_default();
-            let _ = Self::do_mine(self.backend.clone(), txs).await;
+            let _ = Self::do_mine(self.backend.clone(), txs);
         } else {
             trace!(target: "miner", "unable to force mine while a mining process is running")
         }
     }
 
-    async fn do_mine(backend: Arc<Backend>, transactions: Vec<Transaction>) -> MinedBlockOutcome {
+    fn do_mine(
+        backend: Arc<Backend>,
+        transactions: Vec<ExecutableTxWithHash>,
+    ) -> MinedBlockOutcome {
         trace!(target: "miner", "creating new block");
 
         backend.update_block_context();
 
-        let mut state = CachedStateWrapper::new(backend.state.read().await.as_ref_db());
+        let latest_state = StateFactoryProvider::latest(backend.blockchain.provider())
+            .expect("able to get latest state");
+        let state = CachedStateWrapper::new(latest_state.into());
         let block_context = backend.env.read().block.clone();
 
-        let results = TransactionExecutor::new(
-            &mut state,
+        let txs = transactions.iter().map(TxWithHash::from);
+
+        let tx_receipt_pairs: Vec<(TxWithHash, Receipt)> = TransactionExecutor::new(
+            &state,
             &block_context,
             !backend.config.read().disable_fee,
-            transactions.clone(),
+            transactions.clone().into_iter(),
         )
         .with_error_log()
         .with_events_log()
         .with_resources_log()
-        .execute();
+        .zip(txs)
+        .filter_map(|(res, tx)| {
+            if let Ok(info) = res {
+                let receipt = TxReceiptWithExecInfo::from_tx_exec_result(&tx, info);
+                Some((tx, receipt.receipt))
+            } else {
+                None
+            }
+        })
+        .collect();
 
-        let outcome = backend
-            .do_mine_block(create_execution_outcome(
-                &mut state,
-                transactions.into_iter().zip(results).collect(),
-            ))
-            .await;
+        let outcome = backend.do_mine_block(
+            block_context,
+            tx_receipt_pairs,
+            get_state_update_from_cached_state(&state),
+        );
 
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
@@ -382,7 +374,11 @@ impl Stream for InstantBlockProducer {
 
         if !pin.queued.is_empty() && pin.block_mining.is_none() {
             let transactions = pin.queued.pop_front().expect("not empty; qed");
-            pin.block_mining = Some(Box::pin(Self::do_mine(pin.backend.clone(), transactions)));
+            let backend = pin.backend.clone();
+
+            pin.block_mining = Some(Box::pin(async move {
+                tokio::task::spawn_blocking(|| Self::do_mine(backend, transactions)).await.unwrap()
+            }));
         }
 
         // poll the mining future

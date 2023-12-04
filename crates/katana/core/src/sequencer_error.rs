@@ -1,9 +1,9 @@
 use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::state::errors::StateError;
 use blockifier::transaction::errors::TransactionExecutionError;
-use starknet::core::types::BlockId;
-use starknet_api::core::ContractAddress;
-use starknet_api::transaction::TransactionHash;
+use katana_primitives::block::BlockIdOrTag;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::transaction::TxHash;
 use starknet_api::StarknetApiError;
 
 use crate::utils::event::ContinuationTokenError;
@@ -11,15 +11,15 @@ use crate::utils::event::ContinuationTokenError;
 #[derive(Debug, thiserror::Error)]
 pub enum SequencerError {
     #[error("Block {0:?} not found.")]
-    BlockNotFound(BlockId),
+    BlockNotFound(BlockIdOrTag),
     #[error("Contract address {0:?} not found.")]
     ContractNotFound(ContractAddress),
     #[error("State update for block {0:?} not found.")]
-    StateUpdateNotFound(BlockId),
+    StateUpdateNotFound(BlockIdOrTag),
     #[error("State for block {0:?} not found.")]
-    StateNotFound(BlockId),
+    StateNotFound(BlockIdOrTag),
     #[error("Transaction with {0} hash not found.")]
-    TxnNotFound(TransactionHash),
+    TxnNotFound(TxHash),
     #[error(transparent)]
     State(#[from] StateError),
     #[error(transparent)]
@@ -42,4 +42,6 @@ pub enum SequencerError {
     DataUnavailable,
     #[error("Failed to decode state")]
     FailedToDecodeStateDump,
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }

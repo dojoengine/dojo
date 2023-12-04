@@ -1,5 +1,5 @@
+use std::io;
 use std::sync::Arc;
-use std::{fs, io};
 
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
@@ -10,7 +10,7 @@ use katana_core::constants::{
 use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::{spawn, NodeHandle};
 use tokio::signal::ctrl_c;
-use tracing::{error, info};
+use tracing::info;
 
 mod args;
 
@@ -67,7 +67,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Wait until Ctrl + C is pressed, then shutdown
     ctrl_c().await?;
-    shutdown_handler(sequencer, config).await;
     handle.stop()?;
 
     Ok(())
@@ -136,23 +135,4 @@ ACCOUNTS SEED
     );
 
     println!("\n{address}\n\n");
-}
-
-pub async fn shutdown_handler(sequencer: Arc<KatanaSequencer>, config: KatanaArgs) {
-    if let Some(path) = config.dump_state {
-        info!("Dumping state on shutdown");
-        let state = (*sequencer).backend().dump_state().await;
-        if let Ok(state) = state {
-            match fs::write(path.clone(), state) {
-                Ok(_) => {
-                    info!("Successfully dumped state")
-                }
-                Err(_) => {
-                    error!("Failed to write state dump to {:?}", path)
-                }
-            };
-        } else {
-            error!("Failed to fetch state dump.")
-        }
-    };
 }
