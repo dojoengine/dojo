@@ -9,156 +9,18 @@ use serde_json::json;
 pub use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
 pub use starknet::core::types::contract::CompiledClass;
 use starknet::core::types::{
-    BroadcastedDeclareTransaction, BroadcastedDeployAccountTransaction,
-    BroadcastedInvokeTransaction, CompressedLegacyContractClass, ContractClass,
-    LegacyContractEntryPoint, LegacyEntryPointsByType,
+    CompressedLegacyContractClass, ContractClass, LegacyContractEntryPoint, LegacyEntryPointsByType,
 };
-use starknet::core::utils::get_contract_address;
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
 use crate::contract::{ClassHash, CompiledClassHash, CompiledContractClass, SierraClass};
-use crate::utils::transaction::{
-    compute_declare_v1_transaction_hash, compute_declare_v2_transaction_hash,
-    compute_deploy_account_v1_transaction_hash, compute_invoke_v1_transaction_hash,
-};
 use crate::FieldElement;
 
 mod primitives {
     pub use crate::contract::{CompiledContractClass, ContractAddress, Nonce};
-    pub use crate::transaction::{
-        DeclareTx, DeclareTxWithClasses, DeployAccountTx, InvokeTx, L1HandlerTx, Tx,
-    };
+    pub use crate::transaction::{DeclareTx, DeployAccountTx, InvokeTx, L1HandlerTx, Tx};
     pub use crate::FieldElement;
 }
-
-// Transactions
-
-impl primitives::InvokeTx {
-    pub fn from_broadcasted_rpc(tx: BroadcastedInvokeTransaction, chain_id: FieldElement) -> Self {
-        let transaction_hash = compute_invoke_v1_transaction_hash(
-            tx.sender_address,
-            &tx.calldata,
-            tx.max_fee,
-            chain_id,
-            tx.nonce,
-            tx.is_query,
-        );
-
-        primitives::InvokeTx {
-            transaction_hash,
-            nonce: tx.nonce,
-            calldata: tx.calldata,
-            signature: tx.signature,
-            version: FieldElement::ONE,
-            sender_address: tx.sender_address.into(),
-            max_fee: tx.max_fee.try_into().expect("max_fee is too large"),
-        }
-    }
-}
-
-impl primitives::DeployAccountTx {
-    pub fn from_broadcasted_rpc(
-        tx: BroadcastedDeployAccountTransaction,
-        chain_id: FieldElement,
-    ) -> Self {
-        let contract_address = get_contract_address(
-            tx.contract_address_salt,
-            tx.class_hash,
-            &tx.constructor_calldata,
-            FieldElement::ZERO,
-        );
-
-        let transaction_hash = compute_deploy_account_v1_transaction_hash(
-            contract_address,
-            &tx.constructor_calldata,
-            tx.class_hash,
-            tx.contract_address_salt,
-            tx.max_fee,
-            chain_id,
-            tx.nonce,
-            tx.is_query,
-        );
-
-        Self {
-            transaction_hash,
-            nonce: tx.nonce,
-            signature: tx.signature,
-            class_hash: tx.class_hash,
-            version: FieldElement::ONE,
-            contract_address: contract_address.into(),
-            constructor_calldata: tx.constructor_calldata,
-            contract_address_salt: tx.contract_address_salt,
-            max_fee: tx.max_fee.try_into().expect("max fee is too large"),
-        }
-    }
-}
-
-impl primitives::DeclareTx {
-    pub fn from_broadcasted_rpc(
-        tx: BroadcastedDeclareTransaction,
-        chain_id: FieldElement,
-    ) -> (Self, primitives::CompiledContractClass, Option<SierraClass>) {
-        // extract class
-        let (class_hash, compiled_class_hash, sierra_class, compiled_class) = match &tx {
-            BroadcastedDeclareTransaction::V1(tx) => {
-                let (hash, class) = legacy_rpc_to_inner_class(&tx.contract_class).unwrap();
-                (hash, None, None, class)
-            }
-
-            BroadcastedDeclareTransaction::V2(tx) => {
-                let (hash, compiled_hash, class) = rpc_to_inner_class(&tx.contract_class).unwrap();
-                (hash, Some(compiled_hash), Some(tx.contract_class.as_ref().clone()), class)
-            }
-        };
-
-        // compute transaction hash
-        let transaction_hash = match &tx {
-            BroadcastedDeclareTransaction::V1(tx) => compute_declare_v1_transaction_hash(
-                tx.sender_address,
-                class_hash,
-                tx.max_fee,
-                chain_id,
-                tx.nonce,
-                tx.is_query,
-            ),
-
-            BroadcastedDeclareTransaction::V2(tx) => compute_declare_v2_transaction_hash(
-                tx.sender_address,
-                class_hash,
-                tx.max_fee,
-                chain_id,
-                tx.nonce,
-                tx.compiled_class_hash,
-                tx.is_query,
-            ),
-        };
-
-        // extract common fields
-        let (nonce, max_fee, version, signature, sender_address) = match tx {
-            BroadcastedDeclareTransaction::V1(tx) => {
-                (tx.nonce, tx.max_fee, FieldElement::ONE, tx.signature, tx.sender_address)
-            }
-            BroadcastedDeclareTransaction::V2(tx) => {
-                (tx.nonce, tx.max_fee, FieldElement::TWO, tx.signature, tx.sender_address)
-            }
-        };
-
-        let tx = Self {
-            nonce,
-            version,
-            signature,
-            class_hash,
-            transaction_hash,
-            compiled_class_hash,
-            sender_address: sender_address.into(),
-            max_fee: max_fee.try_into().expect("max fee is too large"),
-        };
-
-        (tx, compiled_class, sierra_class)
-    }
-}
-
-// Contract class
 
 pub fn legacy_inner_to_rpc_class(legacy_contract_class: ContractClassV0) -> Result<ContractClass> {
     let entry_points_by_type =
@@ -214,14 +76,13 @@ pub fn rpc_to_cairo_contract_class(
     })
 }
 
-/// Compute the compiled class hash from the given [FlattenedSierraClass].
+/// Compute the compiled class hash from the given [`SierraClass`].
 pub fn compiled_class_hash_from_flattened_sierra_class(
     contract_class: &SierraClass,
 ) -> Result<FieldElement> {
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
-    let casm_contract = CasmContractClass::from_contract_class(contract_class, true)?;
-    let res = serde_json::to_string(&casm_contract)?;
-    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
+    let casm = CasmContractClass::from_contract_class(contract_class, true)?;
+    let compiled_class: CompiledClass = serde_json::from_str(&serde_json::to_string(&casm)?)?;
     Ok(compiled_class.class_hash()?)
 }
 

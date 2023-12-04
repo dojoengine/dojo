@@ -20,7 +20,7 @@ pub type Nonce = FieldElement;
 pub type SierraClass = starknet::core::types::FlattenedSierraClass;
 
 /// Represents a contract address.
-#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ContractAddress(pub FieldElement);
 
@@ -61,3 +61,9 @@ pub struct GenericContractInfo {
 /// Represents a runnable Starknet contract class (meaning, the program is runnable by the VM).
 #[cfg(feature = "blockifier")]
 pub type CompiledContractClass = ::blockifier::execution::contract_class::ContractClass;
+/// V0 of the compiled contract class
+#[cfg(feature = "blockifier")]
+pub type CompiledContractClassV0 = ::blockifier::execution::contract_class::ContractClassV0;
+/// V1 of the compiled contract class
+#[cfg(feature = "blockifier")]
+pub type CompiledContractClassV1 = ::blockifier::execution::contract_class::ContractClassV1;
