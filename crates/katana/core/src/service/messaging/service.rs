@@ -5,11 +5,14 @@ use std::time::Duration;
 
 use ::starknet::core::types::{FieldElement, MsgToL1};
 use futures::{Future, FutureExt, Stream};
+use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
+use katana_provider::traits::block::BlockNumberProvider;
+use katana_provider::traits::transaction::ReceiptProvider;
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info};
 
 use super::{MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
-use crate::backend::storage::transaction::{L1HandlerTransaction, Transaction};
 use crate::backend::Backend;
 use crate::pool::TransactionPool;
 
@@ -86,8 +89,9 @@ impl MessagingService {
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
-                    trace_l1_handler_tx_exec(&tx);
-                    pool.add_transaction(Transaction::L1Handler(tx))
+                    let hash = tx.calculate_hash();
+                    trace_l1_handler_tx_exec(hash, &tx);
+                    pool.add_transaction(ExecutableTxWithHash { hash, transaction: tx.into() })
                 });
 
                 Ok((block_num, txs_count))
@@ -100,8 +104,9 @@ impl MessagingService {
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
-                    trace_l1_handler_tx_exec(&tx);
-                    pool.add_transaction(Transaction::L1Handler(tx))
+                    let hash = tx.calculate_hash();
+                    trace_l1_handler_tx_exec(hash, &tx);
+                    pool.add_transaction(ExecutableTxWithHash { hash, transaction: tx.into() })
                 });
 
                 Ok((block_num, txs_count))
@@ -114,16 +119,12 @@ impl MessagingService {
         backend: Arc<Backend>,
         messenger: Arc<MessengerMode>,
     ) -> MessengerResult<Option<(u64, usize)>> {
-        let Some(messages) = backend
-            .blockchain
-            .storage
-            .read()
-            .block_by_number(block_num)
-            .map(|block| &block.outputs)
-            .map(|outputs| {
-                outputs.iter().flat_map(|o| o.messages_sent.clone()).collect::<Vec<MsgToL1>>()
-            })
-        else {
+        let Some(messages) = ReceiptProvider::receipts_by_block(
+            backend.blockchain.provider(),
+            BlockHashOrNumber::Num(block_num),
+        )
+        .unwrap()
+        .map(|r| r.iter().flat_map(|r| r.messages_sent().to_vec()).collect::<Vec<MsgToL1>>()) else {
             return Ok(None);
         };
 
@@ -186,7 +187,8 @@ impl Stream for MessagingService {
             }
 
             if pin.msg_send_fut.is_none() {
-                let local_latest_block_num = pin.backend.blockchain.storage.read().latest_number;
+                let local_latest_block_num =
+                    BlockNumberProvider::latest_number(pin.backend.blockchain.provider()).unwrap();
                 if pin.send_from_block <= local_latest_block_num {
                     pin.msg_send_fut = Some(Box::pin(Self::send_messages(
                         pin.send_from_block,
@@ -312,23 +314,22 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
     }
 }
 
-fn trace_l1_handler_tx_exec(tx: &L1HandlerTransaction) {
-    let calldata_str: Vec<String> =
-        tx.inner.calldata.0.iter().map(|f| format!("{:#x}", FieldElement::from(*f))).collect();
+fn trace_l1_handler_tx_exec(hash: TxHash, tx: &L1HandlerTx) {
+    let calldata_str: Vec<_> = tx.calldata.iter().map(|f| format!("{f:#x}")).collect();
 
     #[rustfmt::skip]
     info!(
         target: LOG_TARGET,
         r"L1Handler transaction added to the pool:
 |      tx_hash     | {:#x}
-| contract_address | {:#x}
+| contract_address | {}
 |     selector     | {:#x}
 |     calldata     | [{}]
 
 ",
-        FieldElement::from(tx.inner.transaction_hash.0),
-        FieldElement::from(*tx.inner.contract_address.0.key()),
-        FieldElement::from(tx.inner.entry_point_selector.0),
+hash,
+        tx.contract_address,
+        tx.entry_point_selector,
         calldata_str.join(", ")
     );
 }

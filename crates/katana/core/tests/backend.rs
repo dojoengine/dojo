@@ -1,5 +1,6 @@
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::backend::Backend;
+use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use starknet_api::block::BlockNumber;
 
 fn create_test_starknet_config() -> StarknetConfig {
@@ -18,21 +19,23 @@ async fn create_test_backend() -> Backend {
 
 #[tokio::test]
 async fn test_creating_blocks() {
-    let starknet = create_test_backend().await;
+    let backend = create_test_backend().await;
 
-    assert_eq!(starknet.blockchain.storage.read().blocks.len(), 1);
-    assert_eq!(starknet.blockchain.storage.read().latest_number, 0);
+    let provider = backend.blockchain.provider();
 
-    starknet.mine_empty_block().await;
-    starknet.mine_empty_block().await;
+    assert_eq!(BlockNumberProvider::latest_number(provider).unwrap(), 0);
 
-    assert_eq!(starknet.blockchain.storage.read().blocks.len(), 3);
-    assert_eq!(starknet.blockchain.storage.read().latest_number, 2);
-    assert_eq!(starknet.env.read().block.block_number, BlockNumber(2),);
+    backend.mine_empty_block();
+    backend.mine_empty_block();
 
-    let block0 = starknet.blockchain.storage.read().block_by_number(0).unwrap().clone();
-    let block1 = starknet.blockchain.storage.read().block_by_number(1).unwrap().clone();
+    assert_eq!(BlockNumberProvider::latest_number(provider).unwrap(), 2);
+    assert_eq!(backend.env.read().block.block_number, BlockNumber(2));
+
+    let block0 = BlockProvider::block_by_number(provider, 0).unwrap().unwrap();
+    let block1 = BlockProvider::block_by_number(provider, 1).unwrap().unwrap();
+    let block2 = BlockProvider::block_by_number(provider, 2).unwrap().unwrap();
 
     assert_eq!(block0.header.number, 0);
     assert_eq!(block1.header.number, 1);
+    assert_eq!(block2.header.number, 2);
 }
