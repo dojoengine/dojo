@@ -344,12 +344,14 @@ impl StateProvider for SharedStateProvider {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> Result<Option<StorageValue>> {
-        if let Some(value) = self.0.storage.read().get(&(address, storage_key)).cloned() {
-            return Ok(Some(value));
+        if let value @ Some(_) =
+            self.0.storage.read().get(&address).and_then(|s| s.get(&storage_key)).copied()
+        {
+            return Ok(value);
         }
 
         let value = self.0.do_get_storage(address, storage_key).unwrap();
-        self.0.storage.write().entry((address, storage_key)).or_insert(value);
+        self.0.storage.write().entry(address).or_default().insert(storage_key, value);
 
         Ok(Some(value))
     }
@@ -480,7 +482,13 @@ mod tests {
         let (backend, _) = create_forked_backend(LOCAL_RPC_URL.into(), 1);
         let state_db = CacheStateDb::new(backend);
 
-        state_db.storage.write().insert((ADDR_1, STORAGE_KEY), ADDR_1_STORAGE_VALUE);
+        state_db
+            .storage
+            .write()
+            .entry(ADDR_1)
+            .or_default()
+            .insert(STORAGE_KEY, ADDR_1_STORAGE_VALUE);
+
         state_db.contract_state.write().insert(
             ADDR_1,
             GenericContractInfo { nonce: ADDR_1_NONCE, class_hash: ADDR_1_CLASS_HASH },
@@ -539,8 +547,9 @@ mod tests {
             .0
             .storage
             .read()
-            .get(&(GOERLI_CONTRACT_ADDR, GOERLI_CONTRACT_STORAGE_KEY))
-            .cloned();
+            .get(&GOERLI_CONTRACT_ADDR)
+            .and_then(|s| s.get(&GOERLI_CONTRACT_STORAGE_KEY))
+            .copied();
         let nonce_in_cache =
             provider.0.contract_state.read().get(&GOERLI_CONTRACT_ADDR).map(|i| i.nonce);
 

@@ -53,8 +53,10 @@ impl StateProvider for ForkedStateDb {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> Result<Option<StorageValue>> {
-        if let value @ Some(_) = self.storage.read().get(&(address, storage_key)) {
-            return Ok(value.cloned());
+        if let value @ Some(_) =
+            self.storage.read().get(&address).and_then(|s| s.get(&storage_key)).copied()
+        {
+            return Ok(value);
         }
         StateProvider::storage(&self.db, address, storage_key)
     }
@@ -151,7 +153,9 @@ impl StateProvider for ForkedSnapshot {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> Result<Option<StorageValue>> {
-        if let value @ Some(_) = self.inner.storage.get(&(address, storage_key)).cloned() {
+        if let value @ Some(_) =
+            self.inner.storage.get(&address).and_then(|s| s.get(&storage_key)).copied()
+        {
             return Ok(value);
         }
         StateProvider::storage(&self.inner.db, address, storage_key)
