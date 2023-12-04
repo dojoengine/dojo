@@ -3,7 +3,6 @@
 use std::path::Path;
 
 use anyhow::Context;
-use libmdbx::WriteMap;
 
 pub mod codecs;
 pub mod error;
@@ -12,14 +11,14 @@ pub mod models;
 pub mod tables;
 pub mod utils;
 
-use mdbx::{Env, EnvKind};
+use mdbx::{DbEnv, EnvKind};
 use utils::is_database_empty;
 
 /// Initialize the database at the given path and returning a handle to the its
 /// environment.
 ///
 /// This will create the default tables, if necessary.
-pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<Env<WriteMap>> {
+pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
     if is_database_empty(path.as_ref()) {
         // TODO: create dir if it doesn't exist and insert db version file
         std::fs::create_dir_all(path.as_ref()).with_context(|| {
@@ -34,8 +33,8 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<Env<WriteMap>> {
 }
 
 /// Open the database at the given `path` in read-write mode.
-pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<Env<WriteMap>> {
-    Env::open(path.as_ref(), EnvKind::RW).with_context(|| {
+pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
+    DbEnv::open(path.as_ref(), EnvKind::RW).with_context(|| {
         format!("Opening database in read-write mode at path {}", path.as_ref().display())
     })
 }

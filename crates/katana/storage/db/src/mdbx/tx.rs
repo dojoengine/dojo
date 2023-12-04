@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use libmdbx::ffi::DBI;
-use libmdbx::{EnvironmentKind, Transaction, TransactionKind, WriteFlags, RW};
+use libmdbx::{Transaction, TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
@@ -14,21 +14,21 @@ use crate::utils::decode_one;
 
 /// Wrapper for a `libmdbx` transaction.
 #[derive(Debug)]
-pub struct Tx<'env, K: TransactionKind, E: EnvironmentKind> {
+pub struct Tx<K: TransactionKind> {
     /// Libmdbx-sys transaction.
-    pub inner: libmdbx::Transaction<'env, K, E>,
+    pub inner: libmdbx::Transaction<K>,
     /// Database table handle cache.
     pub(crate) db_handles: RwLock<[Option<DBI>; NUM_TABLES]>,
 }
 
-impl<'env, K: TransactionKind, E: EnvironmentKind> Tx<'env, K, E> {
+impl<K: TransactionKind> Tx<K> {
     /// Creates new `Tx` object with a `RO` or `RW` transaction.
-    pub fn new(inner: Transaction<'env, K, E>) -> Self {
+    pub fn new(inner: Transaction<K>) -> Self {
         Self { inner, db_handles: Default::default() }
     }
 
     /// Create db Cursor
-    pub fn new_cursor<T: Table>(&self) -> Result<Cursor<'env, K, T>, DatabaseError> {
+    pub fn new_cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
         let inner = self
             .inner
             .cursor_with_dbi(self.get_dbi::<T>()?)
@@ -71,17 +71,17 @@ impl<'env, K: TransactionKind, E: EnvironmentKind> Tx<'env, K, E> {
     }
 
     // Creates a cursor to iterate over a table values.
-    pub fn cursor<T: Table>(&self) -> Result<Cursor<'env, K, T>, DatabaseError> {
+    pub fn cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
         self.new_cursor()
     }
 
     // Creates a cursor to iterate over a `DUPSORT` table values.
-    pub fn cursor_dup<T: DupSort>(&self) -> Result<Cursor<'env, K, T>, DatabaseError> {
+    pub fn cursor_dup<T: DupSort>(&self) -> Result<Cursor<K, T>, DatabaseError> {
         self.new_cursor()
     }
 }
 
-impl<'env, E: EnvironmentKind> Tx<'env, RW, E> {
+impl Tx<RW> {
     pub fn put<T: Table>(&self, key: T::Key, value: T::Value) -> Result<(), DatabaseError> {
         let key = key.encode();
         let value = value.compress();
@@ -114,12 +114,11 @@ impl<'env, E: EnvironmentKind> Tx<'env, RW, E> {
     }
 }
 
-impl<'env, K, E> From<libmdbx::Transaction<'env, K, E>> for Tx<'env, K, E>
+impl<K> From<libmdbx::Transaction<K>> for Tx<K>
 where
     K: TransactionKind,
-    E: EnvironmentKind,
 {
-    fn from(inner: libmdbx::Transaction<'env, K, E>) -> Self {
+    fn from(inner: libmdbx::Transaction<K>) -> Self {
         Tx::new(inner)
     }
 }
