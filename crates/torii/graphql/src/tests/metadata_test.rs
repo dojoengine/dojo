@@ -13,13 +13,13 @@ mod tests {
     const QUERY: &str = r#"
       {
         metadatas {
-          total_count
+          totalCount
           edges {
             cursor
             node {
               uri
-              cover_img
-              icon_img
+              coverImg
+              iconImg
               content {
                 name
                 description
@@ -33,11 +33,11 @@ mod tests {
               }
             }
           }
-          page_info {
-            has_previous_page
-            has_next_page
-            start_cursor
-            end_cursor
+          pageInfo {
+            hasPreviousPage
+            hasNextPage
+            startCursor
+            endCursor
           }
         }
       }
@@ -60,7 +60,6 @@ mod tests {
           "#,
         )
         .unwrap();
-
         let world_metadata = dojo_metadata.world.unwrap();
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .await

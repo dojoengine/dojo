@@ -16,6 +16,7 @@ async-recursion = "1.0.5"
 async-trait.workspace = true
 base64.workspace = true
 chrono.workspace = true
+convert_case = "0.6.0"
 dojo-types = { path = "../../dojo-types" }
 lazy_static.workspace = true
 scarb-ui.workspace = true
@@ -28,8 +29,8 @@ thiserror.workspace = true
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tokio.workspace = true
-torii-core = { path = "../core" }
 toml.workspace = true
+torii-core = { path = "../core" }
 tracing.workspace = true
 url.workspace = true
 warp.workspace = true
@@ -39,7 +40,7 @@ camino.workspace = true
 dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples" ] }
 dojo-world = { path = "../../dojo-world" }
 scarb.workspace = true
+serial_test = "2.0.0"
 sozo = { path = "../../sozo" }
 starknet-crypto.workspace = true
 starknet.workspace = true
-serial_test = "2.0.0"

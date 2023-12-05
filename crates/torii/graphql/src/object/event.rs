@@ -102,9 +102,9 @@ impl EventObject {
             (Name::new("id"), Value::from(event.id)),
             (Name::new("keys"), Value::from(keys)),
             (Name::new("data"), Value::from(data)),
-            (Name::new("transaction_hash"), Value::from(event.transaction_hash)),
+            (Name::new("transactionHash"), Value::from(event.transaction_hash)),
             (
-                Name::new("created_at"),
+                Name::new("createdAt"),
                 Value::from(event.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])

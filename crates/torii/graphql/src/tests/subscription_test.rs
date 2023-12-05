@@ -34,11 +34,11 @@ mod tests {
                     "__typename": model_name,
                         "depth": "Zero",
                         "record_id": 0,
-                        "type_u16": 1,
+                        "typeU16": 1,
                         "type_u64": 1,
-                        "type_bool": true,
+                        "typeBool": true,
                         "type_felt": format!("{:#x}", FieldElement::from(1u128)),
-                        "type_contract_address": format!("{:#x}", FieldElement::ONE)
+                        "typeContractAddress": format!("{:#x}", FieldElement::ONE)
                 }]
             }
         });
@@ -73,7 +73,7 @@ mod tests {
                             ty: Ty::Primitive(Primitive::U8(Some(0))),
                         },
                         Member {
-                            name: "type_u16".to_string(),
+                            name: "typeU16".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::U16(Some(1))),
                         },
@@ -83,7 +83,7 @@ mod tests {
                             ty: Ty::Primitive(Primitive::U64(Some(1))),
                         },
                         Member {
-                            name: "type_bool".to_string(),
+                            name: "typeBool".to_string(),
                             key: false,
                             ty: Ty::Primitive(Primitive::Bool(Some(true))),
                         },
@@ -93,7 +93,7 @@ mod tests {
                             ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
                         },
                         Member {
-                            name: "type_contract_address".to_string(),
+                            name: "typeContractAddress".to_string(),
                             key: true,
                             ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
                         },
@@ -119,11 +119,11 @@ mod tests {
                         ... on Record {
                             depth
                             record_id
-                            type_u16
+                            typeU16
                             type_u64
-                            type_bool
+                            typeBool
                             type_felt
-                            type_contract_address
+                            typeContractAddress
                         }
                     }
                 }
@@ -156,7 +156,7 @@ mod tests {
                         "depth": "Zero",
                         "record_id": 0,
                         "type_felt": format!("{:#x}", FieldElement::from(1u128)),
-                        "type_contract_address": format!("{:#x}", FieldElement::ONE)
+                        "typeContractAddress": format!("{:#x}", FieldElement::ONE)
                 }]
             }
         });
@@ -196,7 +196,7 @@ mod tests {
                             ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from(1u128)))),
                         },
                         Member {
-                            name: "type_contract_address".to_string(),
+                            name: "typeContractAddress".to_string(),
                             key: true,
                             ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::ONE))),
                         },
@@ -223,7 +223,7 @@ mod tests {
                             depth
                             record_id
                             type_felt
-                            type_contract_address
+                            typeContractAddress
                         }
                     }
                 }
@@ -256,7 +256,7 @@ mod tests {
             let model = Ty::Struct(Struct {
                 name: model_name,
                 children: vec![Member {
-                    name: "subrecord_id".to_string(),
+                    name: "subrecordId".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::U32(None)),
                 }],
@@ -369,7 +369,7 @@ mod tests {
                         eventEmitted (keys: ["*", "{:#x}"]) {{
                             keys
                             data
-                            transaction_hash
+                            transactionHash
                         }}
                     }}
                 "#,
@@ -385,7 +385,7 @@ mod tests {
          ], "data": vec![
             format!("{:#x}", FieldElement::from_str("0xc0de").unwrap()),
             format!("{:#x}", FieldElement::from_str("0xface").unwrap())
-         ], "transaction_hash": format!("{:#x}", FieldElement::ZERO)}
+         ], "transactionHash": format!("{:#x}", FieldElement::ZERO)}
         });
 
         assert_eq!(response_value, expected_value);

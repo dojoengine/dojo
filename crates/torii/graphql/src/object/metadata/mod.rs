@@ -122,9 +122,9 @@ fn metadata_connection_output(
         .collect::<sqlx::Result<Vec<Value>>>();
 
     Ok(ValueMapping::from([
-        (Name::new("total_count"), Value::from(total_count)),
+        (Name::new("totalCount"), Value::from(total_count)),
         (Name::new("edges"), Value::List(edges?)),
-        (Name::new("page_info"), PageInfoObject::value(page_info)),
+        (Name::new("pageInfo"), PageInfoObject::value(page_info)),
     ]))
 }
 

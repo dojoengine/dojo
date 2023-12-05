@@ -37,6 +37,7 @@ mod subscription_test;
 use crate::schema::build_schema;
 
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
@@ -50,12 +51,14 @@ pub struct Edge<T> {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 // same as type from `async-graphql` but derive necessary traits
 // https://docs.rs/async-graphql/6.0.10/async_graphql/types/connection/struct.PageInfo.html
 pub struct PageInfo {
@@ -63,27 +66,6 @@ pub struct PageInfo {
     pub has_next_page: bool,
     pub start_cursor: Option<String>,
     pub end_cursor: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Moves {
-    pub __typename: String,
-    pub remaining: u32,
-    pub last_direction: String,
-    pub entity: Option<Entity>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Vec2 {
-    pub x: u32,
-    pub y: u32,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Position {
-    pub __typename: String,
-    pub vec: Vec2,
-    pub entity: Option<Entity>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -160,6 +142,7 @@ pub struct Content {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Metadata {
     pub uri: String,
     pub icon_img: String,
@@ -210,7 +193,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                     ty: Ty::Primitive(Primitive::U32(None)),
                 },
                 Member {
-                    name: "type_u16".to_string(),
+                    name: "typeU16".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::U16(None)),
                 },
@@ -220,7 +203,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                     ty: Ty::Primitive(Primitive::U64(None)),
                 },
                 Member {
-                    name: "type_bool".to_string(),
+                    name: "typeBool".to_string(),
                     key: false,
                     ty: Ty::Primitive(Primitive::Bool(None)),
                 },
@@ -230,7 +213,7 @@ pub async fn model_fixtures(db: &mut Sql) {
                     ty: Ty::Primitive(Primitive::Felt252(None)),
                 },
                 Member {
-                    name: "type_contract_address".to_string(),
+                    name: "typeContractAddress".to_string(),
                     key: true,
                     ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 },

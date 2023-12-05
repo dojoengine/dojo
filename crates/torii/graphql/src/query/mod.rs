@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
+use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
@@ -144,8 +145,11 @@ fn fetch_value(
     type_name: &str,
     is_external: bool,
 ) -> sqlx::Result<Value> {
-    let column_name =
-        if is_external { format!("external_{}", field_name) } else { field_name.to_string() };
+    let column_name = if is_external {
+        format!("external_{}", field_name)
+    } else {
+        field_name.to_string().to_case(Case::Snake)
+    };
 
     match Primitive::from_str(type_name) {
         // fetch boolean
