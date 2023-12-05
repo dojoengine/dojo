@@ -201,10 +201,14 @@ impl KatanaSequencer {
         block_id: BlockIdOrTag,
     ) -> SequencerResult<StorageValue> {
         let state = self.state(&block_id)?;
-        let Some(value) = StateProvider::storage(&state, contract_address, storage_key)? else {
+
+        // check that contract exist by checking the class hash of the contract
+        let Some(_) = StateProvider::class_hash_of_contract(&state, contract_address)? else {
             return Err(SequencerError::ContractNotFound(contract_address));
         };
-        Ok(value)
+
+        let value = StateProvider::storage(&state, contract_address, storage_key)?;
+        Ok(value.unwrap_or_default())
     }
 
     pub fn chain_id(&self) -> ChainId {
