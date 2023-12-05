@@ -260,75 +260,64 @@ fn felt_from_address(v: Address) -> FieldElement {
 #[cfg(test)]
 mod tests {
 
-    use starknet::macros::selector;
+    use starknet::macros::{felt, selector};
 
     use super::*;
 
-    // #[test]
-    // fn l1_handler_tx_from_log_parse_ok() {
-    //     let from_address = "0x000000000000000000000000be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be";
-    //     let to_address = "0x039dc79e64f4bb3289240f88e0bae7d21735bef0d1a51b2bf3c4730cb16983e1";
-    //     let selector = "0x02f15cff7b0eed8b9beb162696cf4e3e0e35fa7032af69cd1b7d2ac67a13f40f";
-    //     let nonce = 783082_u128;
-    //     let fee = 30000_u128;
+    #[test]
+    fn l1_handler_tx_from_log_parse_ok() {
+        let from_address = "0x000000000000000000000000be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be";
+        let to_address = "0x039dc79e64f4bb3289240f88e0bae7d21735bef0d1a51b2bf3c4730cb16983e1";
+        let selector = "0x02f15cff7b0eed8b9beb162696cf4e3e0e35fa7032af69cd1b7d2ac67a13f40f";
+        let nonce = 783082_u128;
+        let fee = 30000_u128;
 
-    //     // Payload two values: [1, 2].
-    //     let payload_buf =
-    // hex::decode("
-    // 000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000bf2ea0000000000000000000000000000000000000000000000000000000000007530000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002"
-    // ).unwrap();
+        // Payload two values: [1, 2].
+        let payload_buf = hex::decode("000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000bf2ea0000000000000000000000000000000000000000000000000000000000007530000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002").unwrap();
 
-    //     let calldata: Vec<StarkFelt> = vec![
-    //         FieldElement::from_hex_be(from_address).unwrap().into(),
-    //         FieldElement::ONE.into(),
-    //         FieldElement::TWO.into(),
-    //     ];
+        let calldata = vec![
+            FieldElement::from_hex_be(from_address).unwrap(),
+            FieldElement::ONE,
+            FieldElement::TWO,
+        ];
 
-    //     let transaction_hash: FieldElement = FieldElement::from_hex_be(
-    //         "0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b",
-    //     )
-    //     .unwrap();
+        let expected_tx_hash =
+            felt!("0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b");
 
-    //     let log = Log {
-    //         address: H160::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
-    //         topics: vec![
-    //             H256::from_str(
-    //                 "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
-    //             )
-    //             .unwrap(),
-    //             H256::from_str(from_address).unwrap(),
-    //             H256::from_str(to_address).unwrap(),
-    //             H256::from_str(selector).unwrap(),
-    //         ],
-    //         data: payload_buf.into(),
-    //         ..Default::default()
-    //     };
+        let log = Log {
+            address: H160::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
+            topics: vec![
+                H256::from_str(
+                    "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
+                )
+                .unwrap(),
+                H256::from_str(from_address).unwrap(),
+                H256::from_str(to_address).unwrap(),
+                H256::from_str(selector).unwrap(),
+            ],
+            data: payload_buf.into(),
+            ..Default::default()
+        };
 
-    //     let expected = L1HandlerTransaction {
-    //         inner: ApiL1HandlerTransaction {
-    //             transaction_hash: TransactionHash(transaction_hash.into()),
-    //             version: TransactionVersion(stark_felt!(0_u32)),
-    //             nonce: Nonce(FieldElement::from(nonce).into()),
-    //             contract_address: ContractAddress::try_from(
-    //                 <FieldElement as Into<StarkFelt>>::into(
-    //                     FieldElement::from_hex_be(to_address).unwrap(),
-    //                 ),
-    //             )
-    //             .unwrap(),
-    //             entry_point_selector: EntryPointSelector(
-    //                 FieldElement::from_hex_be(selector).unwrap().into(),
-    //             ),
-    //             calldata: Calldata(calldata.into()),
-    //         },
-    //         paid_l1_fee: fee,
-    //     };
+        // SN_GOERLI.
+        let chain_id = starknet::macros::felt!("0x534e5f474f45524c49");
 
-    //     // SN_GOERLI.
-    //     let chain_id = starknet::macros::felt!("0x534e5f474f45524c49");
-    //     let tx = l1_handler_tx_from_log(log, chain_id).expect("bad log format");
+        let expected = L1HandlerTx {
+            calldata,
+            chain_id,
+            paid_fee_on_l1: fee,
+            version: FieldElement::ZERO,
+            nonce: FieldElement::from(nonce),
+            entry_point_selector: FieldElement::from_hex_be(selector).unwrap(),
+            contract_address: FieldElement::from_hex_be(to_address).unwrap().into(),
+        };
+        let tx_hash = expected.calculate_hash();
 
-    //     assert_eq!(tx.inner, expected.inner);
-    // }
+        let tx = l1_handler_tx_from_log(log, chain_id).expect("bad log format");
+
+        assert_eq!(tx, expected);
+        assert_eq!(tx_hash, expected_tx_hash);
+    }
 
     #[test]
     fn parse_msg_to_l1() {
