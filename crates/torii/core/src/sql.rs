@@ -53,7 +53,7 @@ impl Sql {
         let indexer_query = sqlx::query_as::<_, (i64,)>("SELECT head FROM indexers WHERE id = ?")
             .bind(format!("{:#x}", self.world_address));
 
-        let indexer: (i64,) = indexer_query.fetch_one(&mut conn).await?;
+        let indexer: (i64,) = indexer_query.fetch_one(&mut *conn).await?;
         Ok(indexer.0.try_into().expect("doesn't fit in u64"))
     }
 
@@ -68,7 +68,7 @@ impl Sql {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let meta: World = sqlx::query_as("SELECT * FROM worlds WHERE id = ?")
             .bind(format!("{:#x}", self.world_address))
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
 
         Ok(meta)
@@ -223,14 +223,14 @@ impl Sql {
             .bind(format!("{:#x}", key));
 
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let row: (i32, String, String) = query.fetch_one(&mut conn).await?;
+        let row: (i32, String, String) = query.fetch_one(&mut *conn).await?;
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
     pub async fn entities(&self, model: String) -> Result<Vec<Vec<FieldElement>>> {
         let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ?").bind(model);
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let mut rows = query.fetch_all(&mut conn).await?;
+        let mut rows = query.fetch_all(&mut *conn).await?;
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 

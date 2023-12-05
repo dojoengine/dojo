@@ -11,18 +11,27 @@ type ModelName = String;
 
 pub struct ModelCache {
     pool: SqlitePool,
-    schemas: RwLock<HashMap<ModelName, Ty>>,
+    cache: RwLock<HashMap<ModelName, Ty>>,
 }
 
 impl ModelCache {
     pub fn new(pool: SqlitePool) -> Self {
-        Self { pool, schemas: RwLock::new(HashMap::new()) }
+        Self { pool, cache: RwLock::new(HashMap::new()) }
+    }
+
+    pub async fn schemas(&self, models: Vec<&str>) -> Result<Vec<Ty>, Error> {
+        let mut schemas = Vec::with_capacity(models.len());
+        for model in models {
+            schemas.push(self.schema(model).await?);
+        }
+
+        Ok(schemas)
     }
 
     pub async fn schema(&self, model: &str) -> Result<Ty, Error> {
         {
-            let schemas = self.schemas.read().await;
-            if let Some(schema) = schemas.get(model) {
+            let cache = self.cache.read().await;
+            if let Some(schema) = cache.get(model) {
                 return Ok(schema.clone());
             }
         }
@@ -44,13 +53,13 @@ impl ModelCache {
         }
 
         let ty = parse_sql_model_members(model, &model_members);
-        let mut schemas = self.schemas.write().await;
-        schemas.insert(model.into(), ty.clone());
+        let mut cache = self.cache.write().await;
+        cache.insert(model.into(), ty.clone());
 
         Ok(ty)
     }
 
     pub async fn clear(&self) {
-        self.schemas.write().await.clear();
+        self.cache.write().await.clear();
     }
 }

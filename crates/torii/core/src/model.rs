@@ -201,11 +201,11 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
     let selections_clause = global_selections.join(", ");
     let join_clause = global_tables
         .into_iter()
-        .map(|table| format!(" LEFT JOIN {table} ON entities.id = {table}.entity_id"))
+        .map(|table| format!(" JOIN {table} ON entities.id = {table}.entity_id"))
         .collect::<Vec<_>>()
         .join(" ");
 
-    Ok(format!("SELECT entities.keys, {selections_clause} FROM entities{join_clause}"))
+    Ok(format!("SELECT entities.id, entities.keys, {selections_clause} FROM entities{join_clause}"))
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.

@@ -35,6 +35,8 @@ pub enum ParseError {
 pub enum QueryError {
     #[error("unsupported query")]
     UnsupportedQuery,
+    #[error("missing param: {0}")]
+    MissingParam(String),
     #[error("model not found: {0}")]
     ModelNotFound(String),
     #[error("exceeds sqlite `JOIN` limit (64)")]

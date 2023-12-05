@@ -108,6 +108,43 @@ impl DojoWorld {
         })
     }
 
+    async fn entities_all(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<proto::types::Entity>, Error> {
+        let query = r#"
+            SELECT entities.id, group_concat(entity_model.model_id) as model_names
+            FROM entities
+            JOIN entity_model ON entities.id = entity_model.entity_id
+            GROUP BY entities.id
+            ORDER BY entities.event_id DESC
+            LIMIT ? OFFSET ?
+        "#;
+        let db_entities: Vec<(String, String)> =
+            sqlx::query_as(query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+
+        let mut entities = Vec::with_capacity(db_entities.len());
+        for (entity_id, models_str) in db_entities {
+            let model_names: Vec<&str> = models_str.split(',').collect();
+            let schemas = self.model_cache.schemas(model_names).await?;
+
+            let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
+            let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
+
+            let mut models = Vec::with_capacity(schemas.len());
+            for schema in schemas {
+                let struct_ty = schema.as_struct().expect("schema should be struct");
+                models.push(Self::map_row_to_struct(&schema.name(), struct_ty, &row)?.into());
+            }
+
+            let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
+            entities.push(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
+        }
+
+        Ok(entities)
+    }
+
     async fn entities_by_keys(
         &self,
         keys_clause: proto::types::KeysClause,
@@ -128,45 +165,36 @@ impl DojoWorld {
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
 
-        let query = r#"
-            SELECT entities.id, group_concat(entity_model.model_id) as model_names
+        let models_query = format!(
+            r#"
+            SELECT group_concat(entity_model.model_id) as model_names
             FROM entities
             JOIN entity_model ON entities.id = entity_model.entity_id
             WHERE entities.keys LIKE ?
             GROUP BY entities.id
-            ORDER BY entities.event_id DESC
-            LIMIT ? OFFSET ?
-        "#;
-        let db_entities: Vec<(String, String)> = sqlx::query_as(query)
+            HAVING model_names REGEXP '(^|,){}(,|$)'
+            LIMIT 1
+        "#,
+            keys_clause.model
+        );
+        let (models_str,): (String,) =
+            sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
+
+        let model_names = models_str.split(',').collect::<Vec<&str>>();
+        let schemas = self.model_cache.schemas(model_names).await?;
+
+        let entities_query = format!(
+            "{} WHERE entities.keys LIKE ? ORDER BY entities.event_id DESC LIMIT ? OFFSET ?",
+            build_sql_query(&schemas)?
+        );
+        let db_entities = sqlx::query(&entities_query)
             .bind(&keys_pattern)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
 
-        let mut entities = Vec::new();
-        for (entity_id, models_str) in db_entities {
-            let model_names: Vec<&str> = models_str.split(',').collect();
-            let mut schemas = Vec::new();
-            for model in &model_names {
-                schemas.push(self.model_cache.schema(model).await?);
-            }
-
-            let entity_query =
-                format!("{} WHERE {}.entity_id = ?", build_sql_query(&schemas)?, schemas[0].name());
-            let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
-
-            let mut models = Vec::new();
-            for schema in schemas {
-                let struct_ty = schema.as_struct().expect("schema should be struct");
-                models.push(Self::map_row_to_proto(&schema.name(), struct_ty, &row)?.into());
-            }
-
-            let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
-            entities.push(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
-        }
-
-        Ok(entities)
+        db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
     }
 
     async fn entities_by_attribute(
@@ -245,30 +273,54 @@ impl DojoWorld {
         &self,
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
-        let clause_type = query
-            .clause
-            .ok_or(QueryError::UnsupportedQuery)?
-            .clause_type
-            .ok_or(QueryError::UnsupportedQuery)?;
+        let entities = match query.clause {
+            None => self.entities_all(query.limit, query.offset).await?,
+            Some(clause) => {
+                let clause_type =
+                    clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
 
-        let entities = match clause_type {
-            ClauseType::Keys(keys) => {
-                self.entities_by_keys(keys, query.limit, query.offset).await?
-            }
-            ClauseType::Member(attribute) => {
-                self.entities_by_attribute(attribute, query.limit, query.offset).await?
-            }
-            ClauseType::Composite(composite) => {
-                self.entities_by_composite(composite, query.limit, query.offset).await?
+                match clause_type {
+                    ClauseType::Keys(keys) => {
+                        if keys.keys.is_empty() {
+                            return Err(QueryError::MissingParam("keys".into()).into());
+                        }
+
+                        if keys.model.is_empty() {
+                            return Err(QueryError::MissingParam("model".into()).into());
+                        }
+
+                        self.entities_by_keys(keys, query.limit, query.offset).await?
+                    }
+                    ClauseType::Member(attribute) => {
+                        self.entities_by_attribute(attribute, query.limit, query.offset).await?
+                    }
+                    ClauseType::Composite(composite) => {
+                        self.entities_by_composite(composite, query.limit, query.offset).await?
+                    }
+                }
             }
         };
 
         Ok(RetrieveEntitiesResponse { entities })
     }
 
+    fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
+        let key =
+            FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+        let models = schemas
+            .iter()
+            .map(|schema| {
+                let struct_ty = schema.as_struct().expect("schema should be struct");
+                Self::map_row_to_struct(&schema.name(), struct_ty, row).map(Into::into)
+            })
+            .collect::<Result<Vec<proto::types::Model>, Error>>()?;
+
+        Ok(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
+    }
+
     /// Helper function to map Sqlite row to proto::types::Struct
     // TODO: refactor this to use `map_row_to_ty` from core and implement Ty to protobuf conversion
-    fn map_row_to_proto(
+    fn map_row_to_struct(
         path: &str,
         struct_ty: &Struct,
         row: &SqliteRow,
@@ -337,7 +389,7 @@ impl DojoWorld {
                     }
                     Ty::Struct(struct_ty) => {
                         let path = [path, &struct_ty.name].join("$");
-                        Some(proto::types::ty::TyType::Struct(Self::map_row_to_proto(
+                        Some(proto::types::ty::TyType::Struct(Self::map_row_to_struct(
                             &path, struct_ty, row,
                         )?))
                     }
