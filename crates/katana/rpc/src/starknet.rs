@@ -380,8 +380,8 @@ impl StarknetApiServer for StarknetApi {
     ) -> Result<FeltAsHex, Error> {
         let value = self.sequencer.storage_at(contract_address.into(), key, block_id).map_err(
             |e| match e {
-                SequencerError::StateNotFound(_) => StarknetApiError::BlockNotFound,
-                SequencerError::State(_) => StarknetApiError::ContractNotFound,
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
                 _ => StarknetApiError::UnexpectedError,
             },
         )?;
