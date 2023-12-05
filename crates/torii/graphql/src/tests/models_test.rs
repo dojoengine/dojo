@@ -124,14 +124,15 @@ mod tests {
         assert_eq!(first_record.node.type_u64, 3);
 
         // NOTE: Server side is gonna parse "5" to format!("0x{:064x}", 5);
-        let felt_str_0x5 = "5";
+        let felt_str_0x5 = "0x5";
+        let felt_str_5 = "5";
 
         // where filter EQ on class_hash and contract_address
         let records = records_model_query(
             &schema,
             &format!(
                 "(where: {{ type_class_hash: \"{}\", type_contract_address: \"{}\" }})",
-                felt_str_0x5, felt_str_0x5
+                felt_str_0x5, felt_str_5
             ),
         )
         .await;
@@ -155,7 +156,7 @@ mod tests {
         // where filter LT on u256 (string)
         let records = records_model_query(
             &schema,
-            &format!("(where: {{ type_u256LT: \"{}\" }})", felt_str_0x5),
+            &format!("(where: {{ type_u256LT: \"{}\" }})", felt_str_5),
         )
         .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
