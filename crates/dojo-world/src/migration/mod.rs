@@ -162,7 +162,7 @@ pub trait Deployable: Declarable + Sync {
                     calldata: vec![],
                     entry_point_selector: get_selector_from_name("base").unwrap(),
                 },
-                BlockId::Tag(BlockTag::Latest),
+                BlockId::Tag(BlockTag::Pending),
             )
             .await
             .map_err(MigrationError::Provider)?;
