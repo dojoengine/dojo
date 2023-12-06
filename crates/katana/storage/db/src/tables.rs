@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 
-pub trait Key: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone {}
+pub trait Key: Encode + Decode + Clone {}
 pub trait Value: Compress + Decompress {}
 
-impl<T> Key for T where T: Serialize + for<'a> Deserialize<'a> + Clone {}
-impl<T> Value for T where T: Serialize + for<'a> Deserialize<'a> {}
+impl<T> Key for T where T: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone {}
+impl<T> Value for T where T: Compress + Decompress + Serialize + for<'a> Deserialize<'a> {}
 
 /// An asbtraction for a table.
 pub trait Table {
@@ -44,6 +44,7 @@ pub enum TableType {
     DupSort,
 }
 
+/// The number of default tables in database.
 pub const NUM_TABLES: usize = 15;
 
 /// Macro to declare `libmdbx` tables.

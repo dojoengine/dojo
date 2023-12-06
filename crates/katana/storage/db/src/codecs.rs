@@ -1,6 +1,4 @@
-use std::io::Read;
-
-use flate2::Compression;
+use serde::{Deserialize, Serialize};
 
 use crate::error::CodecError;
 
@@ -27,47 +25,38 @@ pub trait Decompress: Sized {
 
 impl<T> Encode for T
 where
-    T: serde::Serialize,
+    T: Serialize,
 {
     type Encoded = Vec<u8>;
     fn encode(self) -> Self::Encoded {
-        bincode::serialize(&self).expect("valid encoding")
+        serde_json::to_vec(&self).unwrap()
     }
 }
 
 impl<T> Decode for T
 where
-    T: for<'a> serde::Deserialize<'a>,
+    T: for<'de> Deserialize<'de>,
 {
     fn decode<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
-        bincode::deserialize(bytes.as_ref()).map_err(|e| CodecError::Decode(e.to_string()))
+        serde_json::from_slice(bytes.as_ref()).map_err(|e| CodecError::Decode(e.to_string()))
     }
 }
 
 impl<T> Compress for T
 where
-    T: Encode + serde::Serialize,
-    <T as Encode>::Encoded: AsRef<[u8]>,
+    T: Serialize,
 {
     type Compressed = Vec<u8>;
     fn compress(self) -> Self::Compressed {
-        let mut compressed = Vec::new();
-        flate2::read::DeflateEncoder::new(Encode::encode(self).as_ref(), Compression::best())
-            .read_to_end(&mut compressed)
-            .unwrap();
-        compressed
+        self.encode()
     }
 }
 
 impl<T> Decompress for T
 where
-    T: Decode + for<'a> serde::Deserialize<'a>,
+    T: for<'de> Deserialize<'de>,
 {
     fn decompress<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
-        let mut bin = Vec::new();
-        flate2::read::DeflateDecoder::new(bytes.as_ref())
-            .read_to_end(&mut bin)
-            .map_err(|e| CodecError::Decompress(e.to_string()))?;
-        Decode::decode(bin)
+        Self::decode(bytes)
     }
 }
