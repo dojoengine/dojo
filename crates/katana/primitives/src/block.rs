@@ -20,7 +20,7 @@ pub type BlockNumber = u64;
 pub type BlockHash = FieldElement;
 
 /// Finality status of a canonical block.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FinalityStatus {
     AcceptedOnL2,
@@ -84,7 +84,7 @@ impl Header {
 }
 
 /// Represents a Starknet full block.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Block {
     pub header: Header,
@@ -121,7 +121,14 @@ pub struct SealedBlock {
     pub body: Vec<TxWithHash>,
 }
 
+impl SealedBlock {
+    pub fn unseal(self) -> Block {
+        Block { header: self.header.header, body: self.body }
+    }
+}
+
 /// A sealed block along with its status.
+#[derive(Debug, Clone)]
 pub struct SealedBlockWithStatus {
     pub block: SealedBlock,
     /// The block status.

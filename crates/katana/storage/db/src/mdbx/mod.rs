@@ -83,9 +83,7 @@ impl DbEnv {
 
         Ok(())
     }
-}
 
-impl DbEnv {
     /// Begin a read-only transaction.
     pub fn tx(&self) -> Result<Tx<RO>, DatabaseError> {
         Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
@@ -97,21 +95,17 @@ impl DbEnv {
     }
 }
 
-// test ported from `reth`: https://github.com/paradigmxyz/reth/blob/227e1b7ad513977f4f48b18041df02686fca5f94/crates/storage/db/src/implementation/mdbx/mod.rs#L198
-#[cfg(test)]
-mod tests {
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils {
+    use std::path::Path;
     use std::sync::Arc;
 
-    use katana_primitives::block::Header;
-    use katana_primitives::FieldElement;
+    use super::{DbEnv, DbEnvKind};
 
-    use super::*;
-    use crate::codecs::Encode;
-    use crate::mdbx::cursor::Walker;
-    use crate::tables::{BlockHashes, Headers, Table};
+    const ERROR_DB_CREATION: &str = "Not able to create the mdbx file.";
 
     /// Create database for testing
-    fn create_test_db(kind: DbEnvKind) -> Arc<DbEnv> {
+    pub fn create_test_db(kind: DbEnvKind) -> Arc<DbEnv> {
         Arc::new(create_test_db_with_path(
             kind,
             &tempfile::TempDir::new().expect("Failed to create temp dir.").into_path(),
@@ -119,13 +113,26 @@ mod tests {
     }
 
     /// Create database for testing with specified path
-    fn create_test_db_with_path(kind: DbEnvKind, path: &Path) -> DbEnv {
+    pub fn create_test_db_with_path(kind: DbEnvKind, path: &Path) -> DbEnv {
         let env = DbEnv::open(path, kind).expect(ERROR_DB_CREATION);
         env.create_tables().expect("Failed to create tables.");
         env
     }
+}
 
-    const ERROR_DB_CREATION: &str = "Not able to create the mdbx file.";
+// test ported from `reth`: https://github.com/paradigmxyz/reth/blob/227e1b7ad513977f4f48b18041df02686fca5f94/crates/storage/db/src/implementation/mdbx/mod.rs#L198
+#[cfg(test)]
+mod tests {
+
+    use katana_primitives::block::Header;
+    use katana_primitives::FieldElement;
+
+    use super::*;
+    use crate::codecs::Encode;
+    use crate::mdbx::cursor::Walker;
+    use crate::mdbx::test_utils::create_test_db;
+    use crate::tables::{BlockHashes, Headers, Table};
+
     const ERROR_PUT: &str = "Not able to insert value into table.";
     const ERROR_DELETE: &str = "Failed to delete value from table.";
     const ERROR_GET: &str = "Not able to get value from table.";

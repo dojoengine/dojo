@@ -8,7 +8,7 @@ use crate::contract::ContractAddress;
 pub type ExecutionResources = HashMap<String, usize>;
 
 /// Receipt for a `Invoke` transaction.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxReceipt {
     /// Actual fee paid for the transaction.

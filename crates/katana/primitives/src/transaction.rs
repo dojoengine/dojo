@@ -14,7 +14,7 @@ pub type TxHash = FieldElement;
 /// The sequential number for all the transactions..
 pub type TxNumber = u64;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Tx {
     Invoke(InvokeTx),
@@ -141,7 +141,7 @@ impl InvokeTx {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DeclareTx {
     V1(DeclareTxV1),
@@ -267,7 +267,7 @@ impl DeployAccountTx {
     }
 }
 
-#[derive(Debug, Clone, AsRef, Deref)]
+#[derive(Debug, Clone, AsRef, Deref, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxWithHash {
     /// The hash of the transaction.
