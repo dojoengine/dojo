@@ -4,9 +4,8 @@ use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
 use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
-use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Row, Sqlite};
+use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
 
 use crate::constants::{BOOLEAN_TRUE, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
@@ -18,7 +17,7 @@ pub mod filter;
 pub mod order;
 
 pub async fn type_mapping_query(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut SqliteConnection,
     model_id: &str,
 ) -> sqlx::Result<TypeMapping> {
     let model_members = fetch_model_members(conn, model_id).await?;
@@ -29,7 +28,7 @@ pub async fn type_mapping_query(
 }
 
 async fn fetch_model_members(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut SqliteConnection,
     model_id: &str,
 ) -> sqlx::Result<Vec<ModelMember>> {
     sqlx::query_as(

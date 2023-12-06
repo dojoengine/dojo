@@ -26,7 +26,7 @@ pub struct Model {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
-    pub clause: Clause,
+    pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
 }
@@ -127,7 +127,7 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
 
 impl From<Query> for proto::types::Query {
     fn from(value: Query) -> Self {
-        Self { clause: Some(value.clause.into()), limit: value.limit, offset: value.offset }
+        Self { clause: value.clause.map(|c| c.into()), limit: value.limit, offset: value.offset }
     }
 }
 

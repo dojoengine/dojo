@@ -99,12 +99,12 @@ impl Client {
         self.subscribed_entities.entities_keys.read()
     }
 
-    /// Retrieves entities matching specified keys and/or model name in query parameter.
+    /// Retrieves entities matching query parameter.
     ///
-    /// The query can include keys and a model name, both optional. Without parameters, it fetches
-    /// all entities, which is less efficient as it requires additional queries for each
-    /// entity's model data. Specifying a model name optimizes the process by limiting the
-    /// retrieval to entities with that model, requiring just one query.
+    /// The query param includes an optional clause for filtering. Without clause, it fetches ALL
+    /// entities, this is less efficient as it requires an additional query for each entity's
+    /// model data. Specifying a clause can optimize the query by limiting the retrieval to specific
+    /// type of entites matching keys and/or models.
     pub async fn entities(&self, query: Query) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEntitiesResponse { entities } = grpc_client.retrieve_entities(query).await?;

@@ -201,11 +201,11 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
     let selections_clause = global_selections.join(", ");
     let join_clause = global_tables
         .into_iter()
-        .map(|table| format!(" LEFT JOIN {table} ON entities.id = {table}.entity_id"))
+        .map(|table| format!(" JOIN {table} ON entities.id = {table}.entity_id"))
         .collect::<Vec<_>>()
         .join(" ");
 
-    Ok(format!("SELECT entities.keys, {selections_clause} FROM entities{join_clause}"))
+    Ok(format!("SELECT entities.id, entities.keys, {selections_clause} FROM entities{join_clause}"))
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.
@@ -504,14 +504,9 @@ mod tests {
         });
 
         let query = build_sql_query(&vec![ty]).unwrap();
-        println!("{query}");
         assert_eq!(
             query,
-            "SELECT entities.keys, Position.external_name AS \"Position.name\", \
-             Position.external_age AS \"Position.age\", Position$Vec2.external_x AS \
-             \"Position$Vec2.x\", Position$Vec2.external_y AS \"Position$Vec2.y\" FROM entities \
-             LEFT JOIN Position ON entities.id = Position.entity_id  LEFT JOIN Position$Vec2 ON \
-             entities.id = Position$Vec2.entity_id"
+            r#"SELECT entities.id, entities.keys, Position.external_name AS "Position.name", Position.external_age AS "Position.age", Position$Vec2.external_x AS "Position$Vec2.x", Position$Vec2.external_y AS "Position$Vec2.y" FROM entities JOIN Position ON entities.id = Position.entity_id  JOIN Position$Vec2 ON entities.id = Position$Vec2.entity_id"#
         );
     }
 }

@@ -139,7 +139,7 @@ fn model_union_field() -> Field {
                     let model_ids: Vec<(String,)> =
                         sqlx::query_as("SELECT model_id from entity_model WHERE entity_id = ?")
                             .bind(&entity_id)
-                            .fetch_all(&mut conn)
+                            .fetch_all(&mut *conn)
                             .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
