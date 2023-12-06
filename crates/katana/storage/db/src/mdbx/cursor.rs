@@ -1,5 +1,7 @@
 //! Cursor wrapper for libmdbx-sys.
 
+use std::borrow::Cow;
+use std::fmt;
 use std::marker::PhantomData;
 
 use libmdbx::{self, TransactionKind, WriteFlags, RW};
@@ -86,13 +88,19 @@ impl<K: TransactionKind, T: Table> Cursor<K, T> {
     }
 }
 
-impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
-    /// Returns the next `(key, value)` pair of a DUPSORT table.
+impl<K, T> Cursor<K, T>
+where
+    K: TransactionKind,
+    T: DupSort,
+{
+    /// Position at next data item of current key, returning the next `(key, value)` pair of a
+    /// DUPSORT table.
     pub fn next_dup(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
         decode!(libmdbx::Cursor::next_dup(&mut self.inner))
     }
 
-    /// Returns the next `value` of a duplicate `key`.
+    /// Positions the cursor at next data item of current key, returning the next `value` of a
+    /// duplicate `key`.
     pub fn next_dup_val(&mut self) -> Result<Option<<T as Table>::Value>, DatabaseError> {
         libmdbx::Cursor::next_dup(&mut self.inner)
             .map_err(DatabaseError::Read)?
@@ -100,6 +108,7 @@ impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
             .transpose()
     }
 
+    /// Position at given key and at first data greater than or equal to specified data,
     pub fn seek_by_key_subkey(
         &mut self,
         key: <T as Table>::Key,
@@ -113,6 +122,53 @@ impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
         .map_err(DatabaseError::Read)?
         .map(decode_one::<T>)
         .transpose()
+    }
+
+    /// Depending on its arguments, returns an iterator starting at:
+    /// - Some(key), Some(subkey): a `key` item whose data is >= than `subkey`
+    /// - Some(key), None: first item of a specified `key`
+    /// - None, Some(subkey): like first case, but in the first key
+    /// - None, None: first item in the table
+    /// of a DUPSORT table.
+    pub fn walk_dup(
+        &mut self,
+        key: Option<T::Key>,
+        subkey: Option<T::SubKey>,
+    ) -> Result<DupWalker<'_, K, T>, DatabaseError> {
+        let start = match (key, subkey) {
+            (Some(key), Some(subkey)) => {
+                // encode key and decode it after.
+                let key: Vec<u8> = key.encode().into();
+                self.inner
+                    .get_both_range(key.as_ref(), subkey.encode().as_ref())
+                    .map_err(DatabaseError::Read)?
+                    .map(|val| decoder::<T>((Cow::Owned(key), val)))
+            }
+
+            (Some(key), None) => {
+                let key: Vec<u8> = key.encode().into();
+                self.inner
+                    .set(key.as_ref())
+                    .map_err(DatabaseError::Read)?
+                    .map(|val| decoder::<T>((Cow::Owned(key), val)))
+            }
+
+            (None, Some(subkey)) => {
+                if let Some((key, _)) = self.first()? {
+                    let key: Vec<u8> = key.encode().into();
+                    self.inner
+                        .get_both_range(key.as_ref(), subkey.encode().as_ref())
+                        .map_err(DatabaseError::Read)?
+                        .map(|val| decoder::<T>((Cow::Owned(key), val)))
+                } else {
+                    Some(Err(DatabaseError::Read(libmdbx::Error::NotFound)))
+                }
+            }
+
+            (None, None) => self.first().transpose(),
+        };
+
+        Ok(DupWalker::<'_, K, T> { cursor: self, start })
     }
 }
 
@@ -244,5 +300,48 @@ impl<K: TransactionKind, T: Table> std::iter::Iterator for Walker<'_, K, T> {
     type Item = Result<KeyValue<T>, DatabaseError>;
     fn next(&mut self) -> Option<Self::Item> {
         if let value @ Some(_) = self.start.take() { value } else { self.cursor.next().transpose() }
+    }
+}
+
+/// A cursor iterator for dupsort table.
+pub struct DupWalker<'c, K: TransactionKind, T: DupSort> {
+    /// Cursor to be used to walk through the table.
+    pub cursor: &'c mut Cursor<K, T>,
+    /// Value where to start the walk.
+    pub start: IterPairResult<T>,
+}
+
+impl<'c, T: DupSort> DupWalker<'c, RW, T> {
+    /// Delete current item that walker points to.
+    pub fn delete_current(&mut self) -> Result<(), DatabaseError> {
+        self.cursor.delete_current()
+    }
+}
+
+impl<'c, K, T> std::iter::Iterator for DupWalker<'c, K, T>
+where
+    K: TransactionKind,
+    T: DupSort,
+{
+    type Item = Result<KeyValue<T>, DatabaseError>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let value @ Some(_) = self.start.take() {
+            value
+        } else {
+            self.cursor.next_dup().transpose()
+        }
+    }
+}
+
+impl<K, T> fmt::Debug for DupWalker<'_, K, T>
+where
+    K: TransactionKind,
+    T: DupSort,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DupWalker")
+            .field("cursor", &self.cursor)
+            .field("start", &self.start)
+            .finish()
     }
 }
