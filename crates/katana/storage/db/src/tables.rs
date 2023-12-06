@@ -1,4 +1,6 @@
-use katana_primitives::block::{BlockHash, BlockNumber, Header};
+use std::fmt;
+
+use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
     StorageValue,
@@ -11,11 +13,13 @@ use serde::{Deserialize, Serialize};
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 
-pub trait Key: Encode + Decode + Clone {}
-pub trait Value: Compress + Decompress {}
+pub trait Key: Encode + Decode + Clone + fmt::Debug {}
+pub trait Value: Compress + Decompress + fmt::Debug {}
 
-impl<T> Key for T where T: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone {}
-impl<T> Value for T where T: Compress + Decompress + Serialize + for<'a> Deserialize<'a> {}
+impl<T> Key for T where T: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone + fmt::Debug
+{}
+impl<T> Value for T where T: Compress + Decompress + Serialize + for<'a> Deserialize<'a> + fmt::Debug
+{}
 
 /// An asbtraction for a table.
 pub trait Table {
@@ -45,10 +49,9 @@ pub enum TableType {
 }
 
 /// The number of default tables in database.
-pub const NUM_TABLES: usize = 15;
+pub const NUM_TABLES: usize = 17;
 
 /// Macro to declare `libmdbx` tables.
-#[macro_export]
 macro_rules! define_tables_enum {
     { [$(($table:ident, $type:expr)),*] } => {
         #[derive(Debug, PartialEq, Copy, Clone)]
@@ -106,7 +109,6 @@ macro_rules! define_tables_enum {
 }
 
 /// Macro to declare key value table.
-#[macro_export]
 macro_rules! tables {
     { $( $(#[$docs:meta])+ $table_name:ident: ($key:ty $(,$key_type2:ty)?) => $value:ty ),* } => {
        $(
@@ -136,7 +138,6 @@ macro_rules! tables {
 }
 
 /// Macro to declare duplicate key value table.
-#[macro_export]
 macro_rules! dupsort {
     ($table_name:ident, $subkey:ty) => {
         impl DupSort for $table_name {
@@ -149,10 +150,12 @@ define_tables_enum! {[
     (Headers, TableType::Table),
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
+    (BlockStatusses, TableType::Table),
     (BlockBodyIndices, TableType::Table),
     (TxNumbers, TableType::Table),
     (TxHashes, TableType::Table),
     (Transactions, TableType::Table),
+    (TxBlocks, TableType::Table),
     (Receipts, TableType::Table),
     (ClassDeclarations, TableType::Table),
     (ContractDeployments, TableType::Table),
@@ -170,6 +173,8 @@ tables! {
     BlockHashes: (BlockNumber) => BlockHash,
     /// Stores block numbers according to its block hash
     BlockNumbers: (BlockHash) => BlockNumber,
+    /// Stores block finality status according to its block number
+    BlockStatusses: (BlockNumber) => FinalityStatus,
     /// Block number to its body indices which stores the tx number of
     /// the first tx in the block and the number of txs in the block.
     BlockBodyIndices: (BlockNumber) => StoredBlockBodyIndices,
@@ -179,6 +184,8 @@ tables! {
     TxHashes: (TxNumber) => TxHash,
     /// Store canonical transactions
     Transactions: (TxNumber) => Tx,
+    /// Stores the block number of a transaction.
+    TxBlocks: (TxNumber) => BlockNumber,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Stores the list of class hashes according to the block number it was declared in.

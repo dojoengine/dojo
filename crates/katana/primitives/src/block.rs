@@ -39,7 +39,7 @@ pub struct PartialHeader {
 }
 
 /// Represents a block header.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Header {
     pub parent_hash: BlockHash,

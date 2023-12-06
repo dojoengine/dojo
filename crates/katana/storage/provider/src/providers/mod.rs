@@ -1,3 +1,4 @@
+pub mod db;
 #[cfg(feature = "fork")]
 pub mod fork;
 #[cfg(feature = "in-memory")]

@@ -179,7 +179,7 @@ impl Future for Backend {
     }
 }
 
-/// A thread safe handler to the [`ForkedBackend`]. This is the primary interface for sending
+/// A thread safe handler to the [`Backend`]. This is the primary interface for sending
 /// request to the backend thread to fetch data from the forked provider.
 pub struct ForkedBackend(Mutex<Sender<BackendRequest>>);
 
@@ -190,6 +190,9 @@ impl Clone for ForkedBackend {
 }
 
 impl ForkedBackend {
+    /// Create a new [`ForkedBackend`] with a dedicated backend thread.
+    ///
+    /// This method will spawn a new thread that will run the [`Backend`].
     pub fn new_with_backend_thread(
         provider: Arc<JsonRpcClient<HttpTransport>>,
         block_id: BlockHashOrNumber,

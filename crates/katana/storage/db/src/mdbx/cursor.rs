@@ -49,6 +49,7 @@ impl<K: TransactionKind, T: Table> Cursor<K, T> {
     }
 
     /// Position the cursor at the next KV pair, returning the value.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
         decode!(libmdbx::Cursor::next(&mut self.inner))
     }

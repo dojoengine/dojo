@@ -171,7 +171,7 @@ mod tests {
 
         // PUT
         let tx = env.tx_mut().expect(ERROR_INIT_TX);
-        tx.put::<Headers>(key, value.clone()).expect(ERROR_PUT);
+        tx.put::<Headers>(key, value).expect(ERROR_PUT);
         tx.commit().expect(ERROR_COMMIT);
 
         let entries = env.tx().expect(ERROR_INIT_TX).entries::<Headers>().expect(ERROR_GET);
@@ -268,7 +268,6 @@ mod tests {
         // PUT
         let tx = db.tx_mut().expect(ERROR_INIT_TX);
         (0..=4)
-            .into_iter()
             .try_for_each(|key| tx.put::<BlockHashes>(key, FieldElement::ZERO))
             .expect(ERROR_PUT);
         tx.commit().expect(ERROR_COMMIT);
