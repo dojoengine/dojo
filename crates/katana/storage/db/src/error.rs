@@ -1,4 +1,4 @@
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum DatabaseError {
     #[error("failed to open an environment: {0}")]
     OpenEnv(libmdbx::Error),
@@ -40,7 +40,7 @@ pub enum DatabaseError {
     Clear(libmdbx::Error),
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum CodecError {
     #[error("failed to decode data: {0}")]
     Decode(String),

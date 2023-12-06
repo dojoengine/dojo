@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use libmdbx::ffi::DBI;
-use libmdbx::{Transaction, TransactionKind, WriteFlags, RW};
+use libmdbx::{TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
@@ -12,6 +12,8 @@ use crate::error::DatabaseError;
 use crate::tables::{DupSort, Table, Tables, NUM_TABLES};
 use crate::utils::decode_one;
 
+/// Database transaction.
+///
 /// Wrapper for a `libmdbx` transaction.
 #[derive(Debug)]
 pub struct Tx<K: TransactionKind> {
@@ -23,7 +25,7 @@ pub struct Tx<K: TransactionKind> {
 
 impl<K: TransactionKind> Tx<K> {
     /// Creates new `Tx` object with a `RO` or `RW` transaction.
-    pub fn new(inner: Transaction<K>) -> Self {
+    pub fn new(inner: libmdbx::Transaction<K>) -> Self {
         Self { inner, db_handles: Default::default() }
     }
 
@@ -79,6 +81,11 @@ impl<K: TransactionKind> Tx<K> {
     pub fn cursor_dup<T: DupSort>(&self) -> Result<Cursor<K, T>, DatabaseError> {
         self.new_cursor()
     }
+
+    /// Commits the transaction.
+    pub fn commit(self) -> Result<bool, DatabaseError> {
+        self.inner.commit().map_err(DatabaseError::Commit)
+    }
 }
 
 impl Tx<RW> {
@@ -89,6 +96,12 @@ impl Tx<RW> {
         Ok(())
     }
 
+    /// Delete items from a database, removing the key/data pair if it exists.
+    ///
+    /// If the data parameter is [Some] only the matching data item will be deleted. Otherwise, if
+    /// data parameter is [None], any/all value(s) for specified key will be deleted.
+    ///
+    /// Returns `true` if the key/value pair was present.
     pub fn delete<T: Table>(
         &self,
         key: T::Key,
@@ -101,11 +114,6 @@ impl Tx<RW> {
 
     pub fn clear<T: Table>(&self) -> Result<(), DatabaseError> {
         self.inner.clear_db(self.get_dbi::<T>()?).map_err(DatabaseError::Clear)
-    }
-
-    /// Commits the transaction.
-    pub fn commit(self) -> Result<bool, DatabaseError> {
-        self.inner.commit().map_err(DatabaseError::Commit)
     }
 
     /// Aborts the transaction.
