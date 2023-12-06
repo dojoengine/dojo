@@ -7,9 +7,9 @@ use libmdbx::{self, TransactionKind, WriteFlags, RW};
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
 use crate::tables::{DupSort, Table};
-use crate::utils::{decode_one, decode_value, KeyValue};
+use crate::utils::{decode_one, decode_value, decoder, KeyValue};
 
-/// Cursor wrapper to access KV items.
+/// Cursor for navigating the items within a database.
 #[derive(Debug)]
 pub struct Cursor<K: TransactionKind, T: Table> {
     /// Inner `libmdbx` cursor.
@@ -25,15 +25,14 @@ impl<K: TransactionKind, T: Table> Cursor<K, T> {
 }
 
 /// Takes `(key, value)` from the database and decodes it appropriately.
-#[macro_export]
 macro_rules! decode {
     ($v:expr) => {
         $v.map_err($crate::error::DatabaseError::Read)?.map($crate::utils::decoder::<T>).transpose()
     };
 }
 
-#[allow(clippy::should_implement_trait)]
-impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
+impl<K: TransactionKind, T: Table> Cursor<K, T> {
+    /// Positions the cursor at the first entry in the table, returning the value.
     pub fn first(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
         decode!(libmdbx::Cursor::first(&mut self.inner))
     }
@@ -49,10 +48,12 @@ impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
         decode!(libmdbx::Cursor::set_range(&mut self.inner, key.encode().as_ref()))
     }
 
+    /// Position the cursor at the next KV pair, returning the value.
     pub fn next(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
         decode!(libmdbx::Cursor::next(&mut self.inner))
     }
 
+    /// Position the cursor at the previous KV pair, returning the value.
     pub fn prev(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
         decode!(libmdbx::Cursor::prev(&mut self.inner))
     }
@@ -65,14 +66,29 @@ impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
         decode!(libmdbx::Cursor::get_current(&mut self.inner))
     }
 
-    /// Returns the next `(key, value)` pair of a DUPSORT table.
-    pub fn next_dup(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
-        decode!(libmdbx::Cursor::next_dup(&mut self.inner))
-    }
-
     /// Returns the next `(key, value)` pair skipping the duplicates.
     pub fn next_no_dup(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
         decode!(libmdbx::Cursor::next_nodup(&mut self.inner))
+    }
+
+    pub fn walk(&mut self, start_key: Option<T::Key>) -> Result<Walker<'_, K, T>, DatabaseError> {
+        let start = if let Some(start_key) = start_key {
+            self.inner
+                .set_range(start_key.encode().as_ref())
+                .map_err(DatabaseError::Read)?
+                .map(decoder::<T>)
+        } else {
+            self.first().transpose()
+        };
+
+        Ok(Walker::new(self, start))
+    }
+}
+
+impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
+    /// Returns the next `(key, value)` pair of a DUPSORT table.
+    pub fn next_dup(&mut self) -> Result<Option<KeyValue<T>>, DatabaseError> {
+        decode!(libmdbx::Cursor::next_dup(&mut self.inner))
     }
 
     /// Returns the next `value` of a duplicate `key`.
@@ -171,5 +187,61 @@ impl<T: DupSort> Cursor<RW, T> {
                 table: T::NAME,
                 key: Box::from(key.as_ref()),
             })
+    }
+}
+
+/// A key-value pair coming from an iterator.
+///
+/// The `Result` represents that the operation might fail, while the `Option` represents whether or
+/// not there is another entry.
+pub type IterPairResult<T> = Option<Result<KeyValue<T>, DatabaseError>>;
+
+/// Provides an iterator to `Cursor` when handling `Table`.
+///
+/// Reason why we have two lifetimes is to distinguish between `'cursor` lifetime
+/// and inherited `'tx` lifetime. If there is only one, rust would short circle
+/// the Cursor lifetime and it wouldn't be possible to use Walker.
+pub struct Walker<'c, K: TransactionKind, T: Table> {
+    /// Cursor to be used to walk through the table.
+    cursor: &'c mut Cursor<K, T>,
+    /// `(key, value)` where to start the walk.
+    start: IterPairResult<T>,
+}
+
+impl<K, T> std::fmt::Debug for Walker<'_, K, T>
+where
+    K: TransactionKind,
+    T: Table + std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Walker").field("cursor", &self.cursor).field("start", &self.start).finish()
+    }
+}
+
+impl<'c, K, T> Walker<'c, K, T>
+where
+    K: TransactionKind,
+    T: Table,
+{
+    /// Create a new [`Walker`] from a [`Cursor`] and a [`IterPairResult`].
+    pub fn new(cursor: &'c mut Cursor<K, T>, start: IterPairResult<T>) -> Self {
+        Self { cursor, start }
+    }
+}
+
+impl<'c, T> Walker<'c, RW, T>
+where
+    T: Table,
+{
+    /// Delete current item that walker points to.
+    pub fn delete_current(&mut self) -> Result<(), DatabaseError> {
+        self.cursor.delete_current()
+    }
+}
+
+impl<K: TransactionKind, T: Table> std::iter::Iterator for Walker<'_, K, T> {
+    type Item = Result<KeyValue<T>, DatabaseError>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let value @ Some(_) = self.start.take() { value } else { self.cursor.next().transpose() }
     }
 }
