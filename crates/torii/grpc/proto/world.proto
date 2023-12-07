@@ -9,10 +9,10 @@ service World {
     rpc WorldMetadata (MetadataRequest) returns (MetadataResponse);
    
      
-    // Subscribes to entities updates.
-    rpc SubscribeEntities (SubscribeEntitiesRequest) returns (stream SubscribeEntitiesResponse);
+    // Subscribes to models updates.
+    rpc SubscribeModels (SubscribeModelsRequest) returns (stream SubscribeModelsResponse);
 
-    // Retrieve entity
+    // Retrieve entities
     rpc RetrieveEntities (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
 }
 
@@ -27,14 +27,14 @@ message MetadataResponse {
    types.WorldMetadata metadata = 1;
 }
 
-message SubscribeEntitiesRequest {
-    // The list of entity keys to subscribe to.
-    repeated types.KeysClause entities_keys = 1;
+message SubscribeModelsRequest {
+    // The list of model keys to subscribe to.
+    repeated types.KeysClause models_keys = 1;
 }
 
-message SubscribeEntitiesResponse {
-    // List of entities that have been updated.
-    types.EntityUpdate entity_update = 1;
+message SubscribeModelsResponse {
+    // List of models that have been updated.
+    types.ModelUpdate model_update = 1;
 }
 
 message RetrieveEntitiesRequest {

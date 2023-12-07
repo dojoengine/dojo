@@ -13,7 +13,7 @@ use dojo_types::schema::{Struct, Ty};
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeEntitiesRequest, SubscribeEntitiesResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
@@ -244,11 +244,10 @@ impl DojoWorld {
         })
     }
 
-    async fn subscribe_entities(
+    async fn subscribe_models(
         &self,
         entities_keys: Vec<proto::types::KeysClause>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
-    {
+    ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let mut subs = Vec::with_capacity(entities_keys.len());
         for keys in entities_keys {
             let model = cairo_short_string_to_felt(&keys.model)
@@ -411,8 +410,8 @@ impl DojoWorld {
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
-type SubscribeEntitiesResponseStream =
-    Pin<Box<dyn Stream<Item = Result<SubscribeEntitiesResponse, Status>> + Send>>;
+type SubscribeModelsResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeModelsResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -428,18 +427,18 @@ impl proto::world::world_server::World for DojoWorld {
         Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
     }
 
-    type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
+    type SubscribeModelsStream = SubscribeModelsResponseStream;
 
-    async fn subscribe_entities(
+    async fn subscribe_models(
         &self,
-        request: Request<SubscribeEntitiesRequest>,
-    ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { entities_keys } = request.into_inner();
+        request: Request<SubscribeModelsRequest>,
+    ) -> ServiceResult<Self::SubscribeModelsStream> {
+        let SubscribeModelsRequest { models_keys } = request.into_inner();
         let rx = self
-            .subscribe_entities(entities_keys)
+            .subscribe_models(models_keys)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeModelsStream))
     }
 
     async fn retrieve_entities(
