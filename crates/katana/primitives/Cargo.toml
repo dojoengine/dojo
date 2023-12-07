@@ -21,7 +21,8 @@ flate2.workspace = true
 starknet_api.workspace = true
 
 [features]
-default = [ "blockifier", "rpc" ]
+default = [ "blockifier", "rpc", "serde" ]
 
 blockifier = [  ]
 rpc = [  ]
+serde = [  ]
