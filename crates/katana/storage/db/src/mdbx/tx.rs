@@ -12,6 +12,9 @@ use crate::error::DatabaseError;
 use crate::tables::{Table, Tables, NUM_TABLES};
 use crate::utils::decode_one;
 
+/// Alias for read-only transaction.
+pub type TxRO = Tx<libmdbx::RO>;
+
 /// Database transaction.
 ///
 /// Wrapper for a `libmdbx` transaction.
@@ -29,8 +32,8 @@ impl<K: TransactionKind> Tx<K> {
         Self { inner, db_handles: Default::default() }
     }
 
-    /// Create db Cursor
-    pub fn new_cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
+    /// Creates a cursor to iterate over a table values.
+    pub fn cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
         let inner = self
             .inner
             .cursor_with_dbi(self.get_dbi::<T>()?)
@@ -70,11 +73,6 @@ impl<K: TransactionKind> Tx<K> {
             .db_stat_with_dbi(self.get_dbi::<T>()?)
             .map_err(DatabaseError::Stat)?
             .entries())
-    }
-
-    // Creates a cursor to iterate over a table values.
-    pub fn cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
-        self.new_cursor()
     }
 
     /// Commits the transaction.

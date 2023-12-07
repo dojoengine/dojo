@@ -1,29 +1,46 @@
+pub mod state;
+
 use std::ops::{Range, RangeInclusive};
 
 use anyhow::Result;
 use katana_db::mdbx::DbEnv;
 use katana_db::models::block::StoredBlockBodyIndices;
+use katana_db::models::storage::StorageEntry;
 use katana_db::tables::{
     BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatusses, CompiledClassHashes,
-    CompiledContractClasses, Headers, Receipts, SierraClasses, Transactions, TxBlocks, TxHashes,
-    TxNumbers,
+    CompiledContractClasses, ContractInfo, ContractStorage, Headers, Receipts, SierraClasses,
+    Transactions, TxBlocks, TxHashes, TxNumbers,
 };
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
+use katana_primitives::contract::GenericContractInfo;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
+use katana_primitives::FieldElement;
 
 use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
 };
+use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
+
+impl StateFactoryProvider for DbEnv {
+    fn latest(&self) -> Result<Box<dyn StateProvider>> {
+        let tx = self.tx()?;
+        Ok(Box::new(self::state::LatestStateProvider(tx)))
+    }
+
+    fn historical(&self, _block_id: BlockHashOrNumber) -> Result<Option<Box<dyn StateProvider>>> {
+        unimplemented!("historical state not implemented yet")
+    }
+}
 
 impl BlockNumberProvider for DbEnv {
     fn block_number_by_hash(&self, hash: BlockHash) -> Result<Option<BlockNumber>> {
@@ -177,6 +194,31 @@ impl BlockStatusProvider for DbEnv {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl StateRootProvider for DbEnv {
+    fn state_root(&self, block_id: BlockHashOrNumber) -> Result<Option<FieldElement>> {
+        let db_tx = self.tx()?;
+
+        let block_num = match block_id {
+            BlockHashOrNumber::Num(num) => Some(num),
+            BlockHashOrNumber::Hash(hash) => db_tx.get::<BlockNumbers>(hash)?,
+        };
+
+        if let Some(block_num) = block_num {
+            let header = db_tx.get::<Headers>(block_num)?;
+            db_tx.commit()?;
+            Ok(header.map(|h| h.state_root))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl StateUpdateProvider for DbEnv {
+    fn state_update(&self, _block_id: BlockHashOrNumber) -> Result<Option<StateUpdates>> {
+        unimplemented!()
     }
 }
 
@@ -334,12 +376,6 @@ impl ReceiptProvider for DbEnv {
     }
 }
 
-impl StateUpdateProvider for DbEnv {
-    fn state_update(&self, _block_id: BlockHashOrNumber) -> Result<Option<StateUpdates>> {
-        todo!()
-    }
-}
-
 impl BlockWriter for DbEnv {
     fn insert_block_with_states_and_receipts(
         &self,
@@ -347,78 +383,112 @@ impl BlockWriter for DbEnv {
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
     ) -> Result<()> {
-        let db_tx = self.tx_mut()?;
+        self.update(move |db_tx| -> Result<()> {
+            let block_hash = block.block.header.hash;
+            let block_number = block.block.header.header.number;
 
-        let block_hash = block.block.header.hash;
-        let block_number = block.block.header.header.number;
+            let block_header = block.block.header.header;
+            let transactions = block.block.body;
 
-        let block_header = block.block.header.header;
-        let transactions = block.block.body;
+            let tx_count = transactions.len() as u64;
+            let tx_offset = db_tx.entries::<Transactions>()? as u64;
+            let block_body_indices = StoredBlockBodyIndices { tx_offset, tx_count };
 
-        let tx_count = transactions.len() as u64;
-        let tx_offset = db_tx.entries::<Transactions>()? as u64;
-        let block_body_indices = StoredBlockBodyIndices { tx_offset, tx_count };
+            db_tx.put::<BlockHashes>(block_number, block_hash)?;
+            db_tx.put::<BlockNumbers>(block_hash, block_number)?;
+            db_tx.put::<BlockStatusses>(block_number, block.status)?;
 
-        db_tx.put::<BlockHashes>(block_number, block_hash)?;
-        db_tx.put::<BlockNumbers>(block_hash, block_number)?;
-        db_tx.put::<BlockStatusses>(block_number, block.status)?;
+            db_tx.put::<Headers>(block_number, block_header)?;
+            db_tx.put::<BlockBodyIndices>(block_number, block_body_indices)?;
 
-        db_tx.put::<Headers>(block_number, block_header)?;
-        db_tx.put::<BlockBodyIndices>(block_number, block_body_indices)?;
+            for (i, (transaction, receipt)) in transactions.into_iter().zip(receipts).enumerate() {
+                let tx_number = tx_offset + i as u64;
+                let tx_hash = transaction.hash;
 
-        for (i, (transaction, receipt)) in transactions.into_iter().zip(receipts).enumerate() {
-            let tx_number = tx_offset + i as u64;
-            let tx_hash = transaction.hash;
+                db_tx.put::<TxHashes>(tx_number, tx_hash)?;
+                db_tx.put::<TxNumbers>(tx_hash, tx_number)?;
+                db_tx.put::<TxBlocks>(tx_number, block_number)?;
+                db_tx.put::<Transactions>(tx_number, transaction.transaction)?;
+                db_tx.put::<Receipts>(tx_number, receipt)?;
+            }
 
-            db_tx.put::<TxHashes>(tx_number, tx_hash)?;
-            db_tx.put::<TxNumbers>(tx_hash, tx_number)?;
-            db_tx.put::<TxBlocks>(tx_number, block_number)?;
-            db_tx.put::<Transactions>(tx_number, transaction.transaction)?;
-            db_tx.put::<Receipts>(tx_number, receipt)?;
-        }
+            // insert classes
 
-        // insert classes
+            for (class_hash, compiled_hash) in states.state_updates.declared_classes {
+                db_tx.put::<CompiledClassHashes>(class_hash, compiled_hash)?;
+            }
 
-        for ((class_hash, compiled_hash), compiled_class) in states
-            .state_updates
-            .declared_classes
-            .into_iter()
-            .zip(states.declared_compiled_classes.into_values())
-        {
-            db_tx.put::<CompiledClassHashes>(class_hash, compiled_hash)?;
-            db_tx.put::<CompiledContractClasses>(compiled_hash, compiled_class.into())?;
-        }
+            for (hash, compiled_class) in states.declared_compiled_classes {
+                db_tx.put::<CompiledContractClasses>(hash, compiled_class.into())?;
+            }
 
-        for (class_hash, sierra_class) in states.declared_sierra_classes {
-            db_tx.put::<SierraClasses>(class_hash, sierra_class)?;
-        }
+            for (class_hash, sierra_class) in states.declared_sierra_classes {
+                db_tx.put::<SierraClasses>(class_hash, sierra_class)?;
+            }
 
-        // insert states
+            // insert storage changes
+            {
+                let mut cursor = db_tx.cursor::<ContractStorage>()?;
+                for (addr, entries) in states.state_updates.storage_updates {
+                    let entries =
+                        entries.into_iter().map(|(key, value)| StorageEntry { key, value });
 
-        // for (addr, entries) in states.state_updates.storage_updates {
-        //     for (key, value) in entries {
-        //         db_tx.put::<ContractStorage>(addr, key)?;
-        //     }
-        // }
+                    for entry in entries {
+                        match cursor.seek_by_key_subkey(addr, entry.key)? {
+                            Some(current) if current.key == entry.key => {
+                                cursor.delete_current()?;
+                            }
+                            _ => {}
+                        }
 
-        db_tx.commit()?;
-        Ok(())
+                        cursor.upsert(addr, entry)?
+                    }
+                }
+            }
+
+            // update contract info
+
+            for (addr, class_hash) in states.state_updates.contract_updates {
+                let value = if let Some(info) = db_tx.get::<ContractInfo>(addr)? {
+                    GenericContractInfo { class_hash, ..info }
+                } else {
+                    GenericContractInfo { class_hash, ..Default::default() }
+                };
+                db_tx.put::<ContractInfo>(addr, value)?;
+            }
+
+            for (addr, nonce) in states.state_updates.nonce_updates {
+                let value = if let Some(info) = db_tx.get::<ContractInfo>(addr)? {
+                    GenericContractInfo { nonce, ..info }
+                } else {
+                    GenericContractInfo { nonce, ..Default::default() }
+                };
+                db_tx.put::<ContractInfo>(addr, value)?;
+            }
+
+            Ok(())
+        })?
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use katana_db::mdbx::DbEnvKind;
     use katana_primitives::block::{
         Block, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
     };
+    use katana_primitives::contract::ContractAddress;
     use katana_primitives::receipt::Receipt;
-    use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+    use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
     use katana_primitives::transaction::{Tx, TxHash, TxWithHash};
+    use starknet::macros::felt;
 
     use crate::traits::block::{
         BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     };
+    use crate::traits::state::StateFactoryProvider;
     use crate::traits::transaction::TransactionProvider;
 
     fn create_dummy_block() -> SealedBlockWithStatus {
@@ -434,16 +504,63 @@ mod tests {
         SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 }
     }
 
+    fn create_dummy_state_updates() -> StateUpdatesWithDeclaredClasses {
+        StateUpdatesWithDeclaredClasses {
+            state_updates: StateUpdates {
+                nonce_updates: HashMap::from([
+                    (ContractAddress::from(felt!("1")), felt!("1")),
+                    (ContractAddress::from(felt!("2")), felt!("2")),
+                ]),
+                contract_updates: HashMap::from([
+                    (ContractAddress::from(felt!("1")), felt!("3")),
+                    (ContractAddress::from(felt!("2")), felt!("4")),
+                ]),
+                declared_classes: HashMap::from([
+                    (felt!("3"), felt!("89")),
+                    (felt!("4"), felt!("90")),
+                ]),
+                storage_updates: HashMap::from([(
+                    ContractAddress::from(felt!("1")),
+                    HashMap::from([(felt!("1"), felt!("1")), (felt!("2"), felt!("2"))]),
+                )]),
+            },
+            ..Default::default()
+        }
+    }
+
+    fn create_dummy_state_updates_2() -> StateUpdatesWithDeclaredClasses {
+        StateUpdatesWithDeclaredClasses {
+            state_updates: StateUpdates {
+                nonce_updates: HashMap::from([
+                    (ContractAddress::from(felt!("1")), felt!("5")),
+                    (ContractAddress::from(felt!("2")), felt!("6")),
+                ]),
+                contract_updates: HashMap::from([
+                    (ContractAddress::from(felt!("1")), felt!("77")),
+                    (ContractAddress::from(felt!("2")), felt!("66")),
+                ]),
+                storage_updates: HashMap::from([(
+                    ContractAddress::from(felt!("1")),
+                    HashMap::from([(felt!("1"), felt!("100")), (felt!("2"), felt!("200"))]),
+                )]),
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn insert_block() {
         let env = katana_db::mdbx::test_utils::create_test_db(DbEnvKind::RW);
+
         let block = create_dummy_block();
+        let state_updates = create_dummy_state_updates();
 
         // insert block
         BlockWriter::insert_block_with_states_and_receipts(
             &env,
             block.clone(),
-            StateUpdatesWithDeclaredClasses::default(),
+            state_updates,
             vec![Receipt::Invoke(Default::default())],
         )
         .expect("failed to insert block");
@@ -463,6 +580,24 @@ mod tests {
         let tx_hash: TxHash = 24u8.into();
         let tx = env.transaction_by_hash(tx_hash).unwrap().unwrap();
 
+        let state_prov = StateFactoryProvider::latest(&env).unwrap();
+
+        let nonce1 = state_prov.nonce(ContractAddress::from(felt!("1"))).unwrap().unwrap();
+        let nonce2 = state_prov.nonce(ContractAddress::from(felt!("2"))).unwrap().unwrap();
+
+        let class_hash1 = state_prov.class_hash_of_contract(felt!("1").into()).unwrap().unwrap();
+        let class_hash2 = state_prov.class_hash_of_contract(felt!("2").into()).unwrap().unwrap();
+
+        let compiled_hash1 =
+            state_prov.compiled_class_hash_of_class_hash(class_hash1).unwrap().unwrap();
+        let compiled_hash2 =
+            state_prov.compiled_class_hash_of_class_hash(class_hash2).unwrap().unwrap();
+
+        let storage1 =
+            state_prov.storage(ContractAddress::from(felt!("1")), felt!("1")).unwrap().unwrap();
+        let storage2 =
+            state_prov.storage(ContractAddress::from(felt!("1")), felt!("2")).unwrap().unwrap();
+
         // assert values are populated correctly
 
         assert_eq!(tx_hash, tx.hash);
@@ -477,5 +612,67 @@ mod tests {
         assert_eq!(block.block.body.len() as u64, tx_count);
         assert_eq!(block.block.header.header.number, latest_number);
         assert_eq!(block.block.unseal(), actual_block);
+
+        assert_eq!(nonce1, felt!("1"));
+        assert_eq!(nonce2, felt!("2"));
+        assert_eq!(class_hash1, felt!("3"));
+        assert_eq!(class_hash2, felt!("4"));
+
+        assert_eq!(compiled_hash1, felt!("89"));
+        assert_eq!(compiled_hash2, felt!("90"));
+
+        assert_eq!(storage1, felt!("1"));
+        assert_eq!(storage2, felt!("2"));
+    }
+
+    #[test]
+    fn storage_updated_correctly() {
+        let env = katana_db::mdbx::test_utils::create_test_db(DbEnvKind::RW);
+
+        let block = create_dummy_block();
+        let state_updates1 = create_dummy_state_updates();
+        let state_updates2 = create_dummy_state_updates_2();
+
+        // insert block
+        BlockWriter::insert_block_with_states_and_receipts(
+            &env,
+            block.clone(),
+            state_updates1,
+            vec![Receipt::Invoke(Default::default())],
+        )
+        .expect("failed to insert block");
+
+        // insert another block
+        BlockWriter::insert_block_with_states_and_receipts(
+            &env,
+            block.clone(),
+            state_updates2,
+            vec![Receipt::Invoke(Default::default())],
+        )
+        .expect("failed to insert block");
+
+        // assert storage is updated correctly
+
+        let state_prov = StateFactoryProvider::latest(&env).unwrap();
+
+        let nonce1 = state_prov.nonce(ContractAddress::from(felt!("1"))).unwrap().unwrap();
+        let nonce2 = state_prov.nonce(ContractAddress::from(felt!("2"))).unwrap().unwrap();
+
+        let class_hash1 = state_prov.class_hash_of_contract(felt!("1").into()).unwrap().unwrap();
+        let class_hash2 = state_prov.class_hash_of_contract(felt!("2").into()).unwrap().unwrap();
+
+        let storage1 =
+            state_prov.storage(ContractAddress::from(felt!("1")), felt!("1")).unwrap().unwrap();
+        let storage2 =
+            state_prov.storage(ContractAddress::from(felt!("1")), felt!("2")).unwrap().unwrap();
+
+        assert_eq!(nonce1, felt!("5"));
+        assert_eq!(nonce2, felt!("6"));
+
+        assert_eq!(class_hash1, felt!("77"));
+        assert_eq!(class_hash2, felt!("66"));
+
+        assert_eq!(storage1, felt!("100"));
+        assert_eq!(storage2, felt!("200"));
     }
 }

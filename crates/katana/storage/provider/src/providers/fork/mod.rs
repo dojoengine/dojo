@@ -11,8 +11,7 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    SierraClass,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, SierraClass,
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -29,7 +28,7 @@ use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
 };
-use crate::traits::contract::{ContractClassWriter, ContractInfoProvider};
+use crate::traits::contract::ContractClassWriter;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -327,13 +326,6 @@ impl ReceiptProvider for ForkedProvider {
         let count = tx_count as usize;
 
         Ok(Some(self.storage.read().receipts[offset..offset + count].to_vec()))
-    }
-}
-
-impl ContractInfoProvider for ForkedProvider {
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
-        let contract = self.state.contract_state.read().get(&address).cloned();
-        Ok(contract)
     }
 }
 

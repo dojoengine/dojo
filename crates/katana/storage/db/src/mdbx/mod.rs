@@ -148,13 +148,14 @@ mod tests {
     use crate::mdbx::cursor::Walker;
     use crate::mdbx::test_utils::create_test_db;
     use crate::models::storage::StorageEntry;
-    use crate::tables::{BlockHashes, ContractStorage, Headers, Table};
+    use crate::tables::{BlockHashes, ContractInfo, ContractStorage, Headers, Table};
 
     const ERROR_PUT: &str = "Not able to insert value into table.";
     const ERROR_DELETE: &str = "Failed to delete value from table.";
     const ERROR_GET: &str = "Not able to get value from table.";
     const ERROR_COMMIT: &str = "Not able to commit transaction.";
     const ERROR_RETURN_VALUE: &str = "Mismatching result.";
+    const ERROR_UPSERT: &str = "Not able to upsert the value to the table.";
     const ERROR_INIT_TX: &str = "Failed to create a MDBX transaction.";
     const ERROR_INIT_CURSOR: &str = "Failed to create cursor.";
     const ERROR_GET_AT_CURSOR_POS: &str = "Failed to get value at cursor position.";
@@ -240,6 +241,44 @@ mod tests {
         assert!(result2 == header2);
         assert!(result3 == header3);
     }
+
+    #[test]
+    fn db_cursor_upsert() {
+        let db = create_test_db(DbEnvKind::RW);
+        let tx = db.tx_mut().expect(ERROR_INIT_TX);
+
+        let mut cursor = tx.cursor::<ContractInfo>().unwrap();
+        let key: ContractAddress = felt!("0x1337").into();
+
+        let account = GenericContractInfo::default();
+        cursor.upsert(key, account).expect(ERROR_UPSERT);
+        assert_eq!(cursor.seek_exact(key), Ok(Some((key, account))));
+
+        let account = GenericContractInfo { nonce: 1u8.into(), ..Default::default() };
+        cursor.upsert(key, account).expect(ERROR_UPSERT);
+        assert_eq!(cursor.seek_exact(key), Ok(Some((key, account))));
+
+        let account = GenericContractInfo { nonce: 1u8.into(), ..Default::default() };
+        cursor.upsert(key, account).expect(ERROR_UPSERT);
+        assert_eq!(cursor.seek_exact(key), Ok(Some((key, account))));
+
+        let mut dup_cursor = tx.cursor::<ContractStorage>().unwrap();
+        let subkey = felt!("0x9");
+
+        let value = FieldElement::from(1u8);
+        let entry1 = StorageEntry { key: subkey, value };
+        dup_cursor.upsert(key, entry1).expect(ERROR_UPSERT);
+        assert_eq!(dup_cursor.seek_by_key_subkey(key, subkey), Ok(Some(entry1)));
+
+        let value = FieldElement::from(2u8);
+        let entry2 = StorageEntry { key: subkey, value };
+        dup_cursor.upsert(key, entry2).expect(ERROR_UPSERT);
+        assert_eq!(dup_cursor.seek_by_key_subkey(key, subkey), Ok(Some(entry1)));
+        assert_eq!(dup_cursor.next_dup_val(), Ok(Some(entry2)));
+    }
+
+    #[test]
+    fn db_cursor_dup_upsert() {}
 
     #[test]
     fn db_cursor_walk() {
