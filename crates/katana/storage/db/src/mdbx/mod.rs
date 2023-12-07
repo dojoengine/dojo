@@ -1,4 +1,6 @@
 //! MDBX backend for the database.
+//!
+//! The code is adapted from `reth` mdbx implementation:  https://github.com/paradigmxyz/reth/blob/227e1b7ad513977f4f48b18041df02686fca5f94/crates/storage/db/src/implementation/mdbx/mod.rs
 
 pub mod cursor;
 pub mod tx;
@@ -93,6 +95,18 @@ impl DbEnv {
     pub fn tx_mut(&self) -> Result<Tx<RW>, DatabaseError> {
         Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
+
+    /// Takes a function and passes a write-read transaction into it, making sure it's committed in
+    /// the end of the execution.
+    pub fn update<T, F>(&self, f: F) -> Result<T, DatabaseError>
+    where
+        F: FnOnce(&Tx<RW>) -> T,
+    {
+        let tx = self.tx_mut()?;
+        let res = f(&tx);
+        tx.commit()?;
+        Ok(res)
+    }
 }
 
 #[cfg(any(test, feature = "test-utils"))]
@@ -125,13 +139,16 @@ pub mod test_utils {
 mod tests {
 
     use katana_primitives::block::Header;
+    use katana_primitives::contract::ContractAddress;
     use katana_primitives::FieldElement;
+    use starknet::macros::felt;
 
     use super::*;
     use crate::codecs::Encode;
     use crate::mdbx::cursor::Walker;
     use crate::mdbx::test_utils::create_test_db;
-    use crate::tables::{BlockHashes, Headers, Table};
+    use crate::models::storage::StorageEntry;
+    use crate::tables::{BlockHashes, ContractStorage, Headers, Table};
 
     const ERROR_PUT: &str = "Not able to insert value into table.";
     const ERROR_DELETE: &str = "Failed to delete value from table.";
@@ -293,7 +310,7 @@ mod tests {
             Err(DatabaseError::Write {
                 table: BlockHashes::NAME,
                 error: libmdbx::Error::KeyExist,
-                key: key_to_insert.encode().into_boxed_slice()
+                key: Box::from(key_to_insert.encode())
             })
         );
         assert_eq!(cursor.current(), Ok(Some((key_to_insert, FieldElement::ZERO))));
@@ -306,5 +323,49 @@ mod tests {
         let res = cursor.walk(None).unwrap().map(|res| res.unwrap().0).collect::<Vec<_>>();
         assert_eq!(res, vec![0, 1, 2, 3, 4, 5]);
         tx.commit().expect(ERROR_COMMIT);
+    }
+
+    #[test]
+    fn db_dup_sort() {
+        let env = create_test_db(DbEnvKind::RW);
+        let key = ContractAddress::from(felt!("0xa2c122be93b0074270ebee7f6b7292c7deb45047"));
+
+        // PUT (0,0)
+        let value00 = StorageEntry::default();
+        env.update(|tx| tx.put::<ContractStorage>(key, value00).expect(ERROR_PUT)).unwrap();
+
+        // PUT (2,2)
+        let value22 = StorageEntry { key: felt!("2"), value: felt!("2") };
+        env.update(|tx| tx.put::<ContractStorage>(key, value22).expect(ERROR_PUT)).unwrap();
+
+        // // PUT (1,1)
+        let value11 = StorageEntry { key: felt!("1"), value: felt!("1") };
+        env.update(|tx| tx.put::<ContractStorage>(key, value11).expect(ERROR_PUT)).unwrap();
+
+        // Iterate with cursor
+        {
+            let tx = env.tx().expect(ERROR_INIT_TX);
+            let mut cursor = tx.cursor::<ContractStorage>().unwrap();
+
+            // Notice that value11 and value22 have been ordered in the DB.
+            assert!(Some(value00) == cursor.next_dup_val().unwrap());
+            assert!(Some(value11) == cursor.next_dup_val().unwrap());
+            assert!(Some(value22) == cursor.next_dup_val().unwrap());
+        }
+
+        // Seek value with exact subkey
+        {
+            let tx = env.tx().expect(ERROR_INIT_TX);
+            let mut cursor = tx.cursor::<ContractStorage>().unwrap();
+            let mut walker = cursor.walk_dup(Some(key), Some(felt!("1"))).unwrap();
+
+            assert_eq!(
+                (key, value11),
+                walker
+                    .next()
+                    .expect("element should exist.")
+                    .expect("should be able to retrieve it.")
+            );
+        }
     }
 }

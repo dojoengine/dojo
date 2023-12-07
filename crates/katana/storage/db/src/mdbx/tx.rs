@@ -9,7 +9,7 @@ use parking_lot::RwLock;
 use super::cursor::Cursor;
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
-use crate::tables::{DupSort, Table, Tables, NUM_TABLES};
+use crate::tables::{Table, Tables, NUM_TABLES};
 use crate::utils::decode_one;
 
 /// Database transaction.
@@ -74,11 +74,6 @@ impl<K: TransactionKind> Tx<K> {
 
     // Creates a cursor to iterate over a table values.
     pub fn cursor<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
-        self.new_cursor()
-    }
-
-    // Creates a cursor to iterate over a `DUPSORT` table values.
-    pub fn cursor_dup<T: DupSort>(&self) -> Result<Cursor<K, T>, DatabaseError> {
         self.new_cursor()
     }
 

@@ -4,8 +4,9 @@ use anyhow::Result;
 use katana_db::mdbx::DbEnv;
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_db::tables::{
-    BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatusses, CompiledClassHashes, Headers,
-    Receipts, SierraClasses, Transactions, TxBlocks, TxHashes, TxNumbers,
+    BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatusses, CompiledClassHashes,
+    CompiledContractClasses, Headers, Receipts, SierraClasses, Transactions, TxBlocks, TxHashes,
+    TxNumbers,
 };
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
@@ -378,19 +379,27 @@ impl BlockWriter for DbEnv {
 
         // insert classes
 
-        for ((class_hash, compiled_hash), _compiled_class) in states
+        for ((class_hash, compiled_hash), compiled_class) in states
             .state_updates
             .declared_classes
             .into_iter()
             .zip(states.declared_compiled_classes.into_values())
         {
             db_tx.put::<CompiledClassHashes>(class_hash, compiled_hash)?;
-            // db_tx.put::<CompiledContractClasses>(compiled_hash, compiled_class)?;
+            db_tx.put::<CompiledContractClasses>(compiled_hash, compiled_class.into())?;
         }
 
         for (class_hash, sierra_class) in states.declared_sierra_classes {
             db_tx.put::<SierraClasses>(class_hash, sierra_class)?;
         }
+
+        // insert states
+
+        // for (addr, entries) in states.state_updates.storage_updates {
+        //     for (key, value) in entries {
+        //         db_tx.put::<ContractStorage>(addr, key)?;
+        //     }
+        // }
 
         db_tx.commit()?;
         Ok(())

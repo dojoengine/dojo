@@ -23,6 +23,7 @@ package = "reth-libmdbx"
 version = "=0.1.0-alpha.12"
 
 [dev-dependencies]
+starknet.workspace = true
 tempfile = "3.8.1"
 
 [features]

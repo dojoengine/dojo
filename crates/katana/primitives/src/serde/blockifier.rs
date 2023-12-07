@@ -16,26 +16,26 @@ use serde::{Deserialize, Serialize};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointOffset, EntryPointType};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SerializableContractClass {
     V0(SerializableContractClassV0),
     V1(SerializableContractClassV1),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableContractClassV0 {
     pub program: SerializableProgram,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<SerializableEntryPoint>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableContractClassV1 {
     pub program: SerializableProgram,
     pub hints: HashMap<String, Vec<u8>>,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<SerializableEntryPointV1>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableEntryPoint {
     pub selector: EntryPointSelector,
     pub offset: SerializableEntryPointOffset,
@@ -53,7 +53,7 @@ impl From<SerializableEntryPoint> for EntryPoint {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableEntryPointOffset(pub usize);
 
 impl From<EntryPointOffset> for SerializableEntryPointOffset {
@@ -68,7 +68,7 @@ impl From<SerializableEntryPointOffset> for EntryPointOffset {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableEntryPointV1 {
     pub selector: EntryPointSelector,
     pub offset: SerializableEntryPointOffset,
