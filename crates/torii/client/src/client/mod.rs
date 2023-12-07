@@ -18,7 +18,8 @@ use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::EntityUpdateStreaming;
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
-use torii_grpc::types::{Entity, KeysClause, Query};
+use torii_grpc::types::schema::Entity;
+use torii_grpc::types::{KeysClause, Query};
 
 use self::error::{Error, ParseError};
 use self::storage::ModelStorage;

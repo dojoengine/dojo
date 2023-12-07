@@ -8,8 +8,7 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Struct, Ty};
+use dojo_types::schema::Ty;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
@@ -28,7 +27,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
-use torii_core::model::build_sql_query;
+use torii_core::model::{build_sql_query, map_row_to_ty};
 
 use self::subscription::SubscribeRequest;
 use crate::proto::types::clause::ClauseType;
@@ -132,11 +131,15 @@ impl DojoWorld {
             let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
 
-            let mut models = Vec::with_capacity(schemas.len());
-            for schema in schemas {
-                let struct_ty = schema.as_struct().expect("schema should be struct");
-                models.push(Self::map_row_to_struct(&schema.name(), struct_ty, &row)?.into());
-            }
+            let models = schemas
+                .iter()
+                .map(|s| {
+                    let mut struct_ty = s.as_struct().expect("schema should be struct").to_owned();
+                    map_row_to_ty(&s.name(), &mut struct_ty, &row)?;
+
+                    Ok(struct_ty.try_into().unwrap())
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
 
             let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
             entities.push(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
@@ -310,103 +313,14 @@ impl DojoWorld {
         let models = schemas
             .iter()
             .map(|schema| {
-                let struct_ty = schema.as_struct().expect("schema should be struct");
-                Self::map_row_to_struct(&schema.name(), struct_ty, row).map(Into::into)
+                let mut struct_ty = schema.as_struct().expect("schema should be struct").to_owned();
+                map_row_to_ty(&schema.name(), &mut struct_ty, row)?;
+
+                Ok(struct_ty.try_into().unwrap())
             })
-            .collect::<Result<Vec<proto::types::Model>, Error>>()?;
+            .collect::<Result<Vec<_>, Error>>()?;
 
         Ok(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
-    }
-
-    /// Helper function to map Sqlite row to proto::types::Struct
-    // TODO: refactor this to use `map_row_to_ty` from core and implement Ty to protobuf conversion
-    fn map_row_to_struct(
-        path: &str,
-        struct_ty: &Struct,
-        row: &SqliteRow,
-    ) -> Result<proto::types::Struct, Error> {
-        let children = struct_ty
-            .children
-            .iter()
-            .map(|member| {
-                let column_name = format!("{}.{}", path, member.name);
-                let name = member.name.clone();
-                let ty_type = match &member.ty {
-                    Ty::Primitive(primitive) => {
-                        let value_type = match primitive {
-                            Primitive::Bool(_) => Some(proto::types::value::ValueType::BoolValue(
-                                row.try_get::<bool, &str>(&column_name)?,
-                            )),
-                            Primitive::U8(_)
-                            | Primitive::U16(_)
-                            | Primitive::U32(_)
-                            | Primitive::U64(_)
-                            | Primitive::USize(_) => {
-                                let value = row.try_get::<i64, &str>(&column_name)?;
-                                Some(proto::types::value::ValueType::UintValue(value as u64))
-                            }
-                            Primitive::U128(_)
-                            | Primitive::Felt252(_)
-                            | Primitive::ClassHash(_)
-                            | Primitive::ContractAddress(_) => {
-                                let value = row.try_get::<String, &str>(&column_name)?;
-                                let felt =
-                                    FieldElement::from_str(&value).map_err(ParseError::FromStr)?;
-                                Some(proto::types::value::ValueType::ByteValue(
-                                    felt.to_bytes_be().to_vec(),
-                                ))
-                            }
-                            Primitive::U256(_) => {
-                                let value = row.try_get::<String, &str>(&column_name)?;
-                                Some(proto::types::value::ValueType::StringValue(value))
-                            }
-                        };
-
-                        Some(proto::types::ty::TyType::Primitive(proto::types::Primitive {
-                            value: Some(proto::types::Value { value_type }),
-                            r#type: primitive.to_numeric() as i32,
-                        }))
-                    }
-                    Ty::Enum(enum_ty) => {
-                        let value = row.try_get::<String, &str>(&column_name)?;
-                        let options = enum_ty
-                            .options
-                            .iter()
-                            .map(|r#enum| proto::types::EnumOption {
-                                name: r#enum.name.clone(),
-                                ty: None,
-                            })
-                            .collect::<Vec<_>>();
-                        let option =
-                            options.iter().position(|o| o.name == value).expect("wrong enum value")
-                                as u32;
-
-                        Some(proto::types::ty::TyType::Enum(proto::types::Enum {
-                            option,
-                            options,
-                            name: member.ty.name(),
-                        }))
-                    }
-                    Ty::Struct(struct_ty) => {
-                        let path = [path, &struct_ty.name].join("$");
-                        Some(proto::types::ty::TyType::Struct(Self::map_row_to_struct(
-                            &path, struct_ty, row,
-                        )?))
-                    }
-                    ty => {
-                        unimplemented!("unimplemented type_enum: {ty}");
-                    }
-                };
-
-                Ok(proto::types::Member {
-                    name,
-                    ty: Some(proto::types::Ty { ty_type }),
-                    key: member.key,
-                })
-            })
-            .collect::<Result<Vec<proto::types::Member>, Error>>()?;
-
-        Ok(proto::types::Struct { name: struct_ty.name.clone(), children })
     }
 }
 
