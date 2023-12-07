@@ -1,6 +1,5 @@
-pub mod error;
 pub mod logger;
-pub mod subscription;
+pub mod subscriptions;
 
 use std::future::Future;
 use std::net::SocketAddr;
@@ -13,7 +12,7 @@ use dojo_types::schema::{Struct, Ty};
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeEntitiesRequest, SubscribeEntitiesResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
@@ -30,7 +29,7 @@ use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::build_sql_query;
 
-use self::subscription::SubscribeRequest;
+use self::subscriptions::model_update::{ModelSubscriptionRequest, ModelSubscriberManager};
 use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::{self};
@@ -39,7 +38,7 @@ use crate::proto::{self};
 pub struct DojoWorld {
     world_address: FieldElement,
     pool: Pool<Sqlite>,
-    subscriber_manager: Arc<subscription::SubscriberManager>,
+    model_subscriber: Arc<ModelSubscriberManager>,
     model_cache: Arc<ModelCache>,
 }
 
@@ -50,18 +49,18 @@ impl DojoWorld {
         world_address: FieldElement,
         provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
-        let subscriber_manager = Arc::new(subscription::SubscriberManager::default());
+        let model_subscriber = Arc::new(ModelSubscriberManager::default());
 
-        tokio::task::spawn(subscription::Service::new_with_block_rcv(
+        tokio::task::spawn(subscriptions::model_update::Service::new_with_block_rcv(
             block_rx,
             world_address,
             provider,
-            Arc::clone(&subscriber_manager),
+            Arc::clone(&model_subscriber),
         ));
 
         let model_cache = Arc::new(ModelCache::new(pool.clone()));
 
-        Self { pool, model_cache, world_address, subscriber_manager }
+        Self { pool, model_cache, world_address, model_subscriber }
     }
 }
 
@@ -138,8 +137,8 @@ impl DojoWorld {
                 models.push(Self::map_row_to_struct(&schema.name(), struct_ty, &row)?.into());
             }
 
-            let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
-            entities.push(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
+            let id = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
+            entities.push(proto::types::Entity { id: id.to_bytes_be().to_vec(), models })
         }
 
         Ok(entities)
@@ -244,11 +243,10 @@ impl DojoWorld {
         })
     }
 
-    async fn subscribe_entities(
+    async fn subscribe_models(
         &self,
         entities_keys: Vec<proto::types::KeysClause>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
-    {
+    ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let mut subs = Vec::with_capacity(entities_keys.len());
         for keys in entities_keys {
             let model = cairo_short_string_to_felt(&keys.model)
@@ -257,16 +255,16 @@ impl DojoWorld {
             let proto::types::ModelMetadata { packed_size, .. } =
                 self.model_metadata(&keys.model).await?;
 
-            subs.push(SubscribeRequest {
+            subs.push(ModelSubscriptionRequest {
                 keys,
-                model: subscription::ModelMetadata {
+                model: subscriptions::model_update::ModelMetadata {
                     name: model,
                     packed_size: packed_size as usize,
                 },
             });
         }
 
-        self.subscriber_manager.add_subscriber(subs).await
+        self.model_subscriber.add_subscriber(subs).await
     }
 
     async fn retrieve_entities(
@@ -305,7 +303,7 @@ impl DojoWorld {
     }
 
     fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
-        let key =
+        let id =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
         let models = schemas
             .iter()
@@ -315,7 +313,7 @@ impl DojoWorld {
             })
             .collect::<Result<Vec<proto::types::Model>, Error>>()?;
 
-        Ok(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
+        Ok(proto::types::Entity { id: id.to_bytes_be().to_vec(), models })
     }
 
     /// Helper function to map Sqlite row to proto::types::Struct
@@ -411,8 +409,8 @@ impl DojoWorld {
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
-type SubscribeEntitiesResponseStream =
-    Pin<Box<dyn Stream<Item = Result<SubscribeEntitiesResponse, Status>> + Send>>;
+type SubscribeModelsResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeModelsResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -428,18 +426,18 @@ impl proto::world::world_server::World for DojoWorld {
         Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
     }
 
-    type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
+    type SubscribeModelsStream = SubscribeModelsResponseStream;
 
-    async fn subscribe_entities(
+    async fn subscribe_models(
         &self,
-        request: Request<SubscribeEntitiesRequest>,
-    ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { entities_keys } = request.into_inner();
+        request: Request<SubscribeModelsRequest>,
+    ) -> ServiceResult<Self::SubscribeModelsStream> {
+        let SubscribeModelsRequest { models_keys } = request.into_inner();
         let rx = self
-            .subscribe_entities(entities_keys)
+            .subscribe_models(models_keys)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeModelsStream))
     }
 
     async fn retrieve_entities(

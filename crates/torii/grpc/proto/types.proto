@@ -36,8 +36,8 @@ message Model {
     repeated Member members = 2;
 }
 message Entity {
-    // The entity key
-    bytes key = 1;
+    // The entity id
+    bytes id = 1;
     // Models of the entity
     repeated Model models = 2;
 }
@@ -56,14 +56,14 @@ message StorageDiff {
     repeated StorageEntry storage_entries = 2;
 }
 
-message EntityDiff {
+message ModelDiff {
     // Storage diffs
     repeated StorageDiff storage_diffs = 1;
 }
 
-message EntityUpdate {
+message ModelUpdate {
     string block_hash = 1;
-    EntityDiff entity_diff = 2;
+    ModelDiff model_diff = 2;
 }
 
 message Query {
