@@ -6,8 +6,6 @@ pub mod receipt;
 pub mod transaction;
 
 pub mod conversion;
-#[cfg(feature = "serde")]
-pub mod serde;
 
 pub mod state;
 pub mod utils;

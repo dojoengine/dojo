@@ -5,11 +5,11 @@ use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
 };
 use katana_primitives::receipt::Receipt;
-use katana_primitives::serde::blockifier::SerializableContractClass;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
+use crate::models::contract::StoredContractClass;
 use crate::models::storage::StorageEntry;
 
 pub trait Key: Encode + Decode + Clone + fmt::Debug {}
@@ -192,7 +192,7 @@ tables! {
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
     /// Store compiled contract classes according to its compiled class hash
-    CompiledContractClasses: (CompiledClassHash) => SerializableContractClass,
+    CompiledContractClasses: (ClassHash) => StoredContractClass,
     /// Store Sierra classes according to its class hash
     SierraClasses: (ClassHash) => SierraClass,
     /// Store contract information according to its contract address

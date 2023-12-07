@@ -4913,6 +4913,8 @@ name = "katana-db"
 version = "0.3.14"
 dependencies = [
  "anyhow",
+ "blockifier",
+ "cairo-vm",
  "katana-primitives",
  "page_size",
  "parking_lot 0.12.1",
@@ -4920,6 +4922,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet",
+ "starknet_api",
  "tempfile",
  "thiserror",
 ]

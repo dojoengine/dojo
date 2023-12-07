@@ -17,6 +17,10 @@ serde_json.workspace = true
 tempfile = { version = "3.8.1", optional = true }
 thiserror.workspace = true
 
+blockifier.workspace = true
+cairo-vm.workspace = true
+starknet_api.workspace = true
+
 [dependencies.libmdbx]
 git = "https://github.com/paradigmxyz/reth.git"
 package = "reth-libmdbx"

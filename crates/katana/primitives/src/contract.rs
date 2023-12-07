@@ -51,7 +51,7 @@ impl From<ContractAddress> for FieldElement {
 }
 
 /// Represents a generic contract instance information.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GenericContractInfo {
     /// The nonce of the contract.

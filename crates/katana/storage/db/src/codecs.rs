@@ -3,13 +3,13 @@ use std::array::TryFromSliceError;
 use katana_primitives::block::{FinalityStatus, Header};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, SierraClass};
 use katana_primitives::receipt::Receipt;
-use katana_primitives::serde::blockifier::SerializableContractClass;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};
 
 use crate::error::CodecError;
 use crate::models::block::StoredBlockBodyIndices;
+use crate::models::contract::StoredContractClass;
 
 /// A trait for encoding the key of a table.
 pub trait Encode {
@@ -88,7 +88,7 @@ impl_encode_decode_for_serde_types!(
     StoredBlockBodyIndices,
     Tx,
     Receipt,
-    SerializableContractClass,
+    StoredContractClass,
     SierraClass,
     GenericContractInfo
 );
