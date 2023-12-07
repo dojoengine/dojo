@@ -10,7 +10,6 @@ use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
-use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use parking_lot::RwLock;
@@ -92,7 +91,10 @@ impl Backend {
 
             Box::new(ForkedProvider::new(provider, BlockHashOrNumber::Num(forked_block_num)))
         } else {
-            Box::new(InMemoryProvider::new())
+            let db_env = katana_db::init_db("./katana_db").unwrap();
+            Box::new(db_env)
+
+            // Box::new(InMemoryProvider::new())
         };
 
         let blockchain = Blockchain::new_with_genesis(provider, &block_context).unwrap();

@@ -62,8 +62,9 @@ impl BlockHashProvider for DbEnv {
     fn latest_hash(&self) -> Result<BlockHash> {
         let db_tx = self.tx()?;
         let total_blocks = db_tx.entries::<BlockNumbers>()? as u64;
+        dbg!(total_blocks);
         let latest_block = if total_blocks == 0 { 0 } else { total_blocks - 1 };
-        let latest_hash = db_tx.get::<BlockHashes>(latest_block)?.expect("should exist");
+        let latest_hash = db_tx.get::<BlockHashes>(latest_block)?.expect("block hash should exist");
         db_tx.commit()?;
         Ok(latest_hash)
     }

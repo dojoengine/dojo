@@ -362,11 +362,14 @@ impl StarknetApiServer for StarknetApi {
             entry_point_selector: request.entry_point_selector,
         };
 
-        let res = self.sequencer.call(request, block_id).map_err(|e| match e {
-            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
-            SequencerError::EntryPointExecution(_) => StarknetApiError::ContractError,
-            _ => StarknetApiError::UnexpectedError,
+        let res = self.sequencer.call(request, block_id).map_err(|e| {
+            println!("call error: {e}");
+            match e {
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+                SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
+                SequencerError::EntryPointExecution(_) => StarknetApiError::ContractError,
+                _ => StarknetApiError::UnexpectedError,
+            }
         })?;
 
         Ok(res.into_iter().map(|v| v.into()).collect())
