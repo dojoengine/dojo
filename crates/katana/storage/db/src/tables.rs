@@ -3,23 +3,20 @@ use std::fmt;
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
-    StorageValue,
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::serde::blockifier::SerializableContractClass;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
-use serde::{Deserialize, Serialize};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
+use crate::models::storage::StorageEntry;
 
 pub trait Key: Encode + Decode + Clone + fmt::Debug {}
 pub trait Value: Compress + Decompress + fmt::Debug {}
 
-impl<T> Key for T where T: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone + fmt::Debug
-{}
-impl<T> Value for T where T: Compress + Decompress + Serialize + for<'a> Deserialize<'a> + fmt::Debug
-{}
+impl<T> Key for T where T: Encode + Decode + Clone + fmt::Debug {}
+impl<T> Value for T where T: Compress + Decompress + fmt::Debug {}
 
 /// An asbtraction for a table.
 pub trait Table {
@@ -34,7 +31,7 @@ pub trait Table {
 /// DupSort allows for keys to be repeated in the database.
 ///
 /// Upstream docs: <https://libmdbx.dqdkfa.ru/usage.html#autotoc_md48>
-pub trait DupSort: Table {
+pub trait DupSort: Table + fmt::Debug {
     /// Upstream docs: <https://libmdbx.dqdkfa.ru/usage.html#autotoc_md48>
     type SubKey: Key;
 }
@@ -201,5 +198,5 @@ tables! {
     /// Store contract information according to its contract address
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage
-    ContractStorage: (ContractAddress, StorageKey) => StorageValue
+    ContractStorage: (ContractAddress, StorageKey) => StorageEntry
 }
