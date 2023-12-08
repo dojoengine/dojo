@@ -41,7 +41,7 @@ anyhow = "1.0.75"
 assert_matches = "1.5.0"
 async-trait = "0.1.68"
 base64 = "0.21.2"
-blockifier = { path = "../../sn/blockifier/crates/blockifier" }
+blockifier = { git = "https://github.com/glihm/blockifier" }
 cairo-lang-casm = "2.4.0"
 cairo-lang-compiler = "2.4.0"
 cairo-lang-debug = "2.4.0"
