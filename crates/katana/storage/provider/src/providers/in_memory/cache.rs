@@ -85,7 +85,6 @@ pub struct CacheDb<Db> {
     pub(crate) transaction_hashes: HashMap<TxNumber, TxHash>,
     pub(crate) transaction_numbers: HashMap<TxHash, TxNumber>,
     pub(crate) transaction_block: HashMap<TxNumber, BlockNumber>,
-    pub(crate) transaction_status: HashMap<TxNumber, FinalityStatus>,
 }
 
 impl<Db> CacheStateDb<Db> {
@@ -112,7 +111,6 @@ impl<Db> CacheDb<Db> {
             block_numbers: HashMap::new(),
             block_statusses: HashMap::new(),
             transaction_block: HashMap::new(),
-            transaction_status: HashMap::new(),
             transaction_hashes: HashMap::new(),
             block_body_indices: HashMap::new(),
             transaction_numbers: HashMap::new(),
