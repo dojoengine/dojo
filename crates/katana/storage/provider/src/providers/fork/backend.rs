@@ -566,11 +566,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn fetch_from_fork_will_panic_if_backend_thread_not_running() {
+    fn fetch_from_fork_will_err_if_backend_thread_not_running() {
         let (backend, _) = create_forked_backend(LOCAL_RPC_URL.into(), 1);
         let provider = SharedStateProvider(Arc::new(CacheStateDb::new(backend)));
-        let _ = StateProvider::nonce(&provider, ADDR_1);
+        assert!(StateProvider::nonce(&provider, ADDR_1).is_err())
     }
 
     const FORKED_URL: &str =
