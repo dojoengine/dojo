@@ -87,8 +87,8 @@ parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"
 rayon = "1.8.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb", rev = "cba988e" }
-scarb-ui = { git = "https://github.com/software-mansion/scarb", rev = "cba988e"}
+scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.4.0" }
+scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.4.0"}
 semver = "1.0.5"
 serde = { version = "1.0.156", features = [ "derive" ] }
 serde_json = "1.0"
@@ -129,8 +129,8 @@ wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "
 blockifier = { git = "https://github.com/glihm/blockifier", branch = "patch-dojo" }
 
 [patch."https://github.com/software-mansion/scarb"]
-scarb = { path = "../../sn/scarb/scarb" }
-scarb-ui = { path = "../../sn/scarb/utils/scarb-ui" }
+scarb = { path = "../scarb/scarb" }
+scarb-ui = { path = "../scarb/utils/scarb-ui" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
