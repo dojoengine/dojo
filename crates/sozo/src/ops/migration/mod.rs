@@ -52,7 +52,7 @@ where
     // Load local and remote World manifests.
 
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&target_dir, &account, world_address, ui).await?;
+        load_world_manifests(&target_dir, &account, world_address, &ui).await?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -129,7 +129,7 @@ where
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
-    let strategy = prepare_migration(target_dir, diff, name, world_address, ui)?;
+    let strategy = prepare_migration(target_dir, diff, name, world_address, &ui)?;
 
     println!("  ");
 
@@ -288,7 +288,7 @@ where
     match &strategy.executor {
         Some(executor) => {
             ui.print_header("# Executor");
-            deploy_contract(executor, "executor", vec![], migrator, ui, &txn_config).await?;
+            deploy_contract(executor, "executor", vec![], migrator, &ui, &txn_config).await?;
 
             // There is no world migration, so it exists already.
             if strategy.world.is_none() {
@@ -336,7 +336,7 @@ where
                 strategy.executor.as_ref().unwrap().contract_address,
                 strategy.base.as_ref().unwrap().diff.local,
             ];
-            deploy_contract(world, "world", calldata.clone(), migrator, ui, &txn_config).await?;
+            deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config).await?;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
@@ -362,8 +362,8 @@ where
         None => {}
     };
 
-    register_models(strategy, migrator, ui, txn_config.clone()).await?;
-    deploy_contracts(strategy, migrator, ui, txn_config).await?;
+    register_models(strategy, migrator, &ui, txn_config.clone()).await?;
+    deploy_contracts(strategy, migrator, &ui, txn_config).await?;
 
     // This gets current block numder if helpful
     // let block_height = migrator.provider().block_number().await.ok();

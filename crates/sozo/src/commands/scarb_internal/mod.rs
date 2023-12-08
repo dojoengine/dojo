@@ -6,9 +6,27 @@ use anyhow::Result;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::ids::Directory;
+use cairo_lang_project::{AllCratesConfig, SingleCrateConfig};
+use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use scarb::compiler::CompilationUnit;
 use scarb::core::Workspace;
+use smol_str::SmolStr;
 use tracing::trace;
+
+pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesConfig {
+    let crates_config: OrderedHashMap<SmolStr, SingleCrateConfig> = unit
+        .components
+        .iter()
+        .map(|component| {
+            (
+                component.cairo_package_name(),
+                SingleCrateConfig { edition: component.package.manifest.edition },
+            )
+        })
+        .collect();
+
+    AllCratesConfig { override_map: crates_config, ..Default::default() }
+}
 
 // TODO(mkaput): ScarbDatabase?
 pub(crate) fn build_scarb_root_database(
@@ -23,12 +41,7 @@ pub(crate) fn build_scarb_root_database(
         let package_id = plugin_info.package.id;
         let plugin = ws.config().cairo_plugins().fetch(package_id)?;
         let instance = plugin.instantiate()?;
-        for macro_plugin in instance.macro_plugins() {
-            b.with_macro_plugin(macro_plugin);
-        }
-        for (name, inline_macro_plugin) in instance.inline_macro_plugins() {
-            b.with_inline_macro_plugin(&name, inline_macro_plugin);
-        }
+        b.with_plugin_suite(instance.plugin_suite());
     }
 
     b.build()
@@ -44,7 +57,10 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
 
     let corelib = Some(Directory::Real(unit.core_package_component().target.source_root().into()));
 
-    let content = ProjectConfigContent { crate_roots };
+    let content = ProjectConfigContent {
+        crate_roots,
+        crates_config: crates_config_for_compilation_unit(unit),
+    };
 
     let project_config =
         ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
