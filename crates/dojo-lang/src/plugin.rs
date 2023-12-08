@@ -1,8 +1,8 @@
 use anyhow::Result;
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin,
-    PluginDiagnostic, PluginGeneratedFile, PluginResult, PluginSuite,
+    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, PluginDiagnostic,
+    PluginGeneratedFile, PluginResult, PluginSuite,
 };
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
