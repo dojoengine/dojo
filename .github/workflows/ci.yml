@@ -14,19 +14,17 @@ jobs:
   test:
     runs-on: ubuntu-latest-4-cores
     container:
-      image: ghcr.io/matzayonc/dojo-dev:b838a3f7a840dd83b3ab5054b5bde2b6693d0c74
+      image: ghcr.io/dojoengine/dojo-dev:d7a174c
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - uses: Swatinem/rust-cache@v2
+
       - name: Install nextest test runner
         uses: taiki-e/install-action@nextest
-      - name: Run the dojoup script
-        run: dojoup/dojoup
 
-      - run: |
-          chmod 777 -R . && su vscode && cargo nextest run --all-features
+      - run: cargo nextest run --all-features
 
   ensure-wasm:
     runs-on: ubuntu-latest
