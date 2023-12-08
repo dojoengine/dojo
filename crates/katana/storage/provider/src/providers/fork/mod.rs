@@ -290,13 +290,19 @@ impl TransactionsProviderExt for ForkedProvider {
 
 impl TransactionStatusProvider for ForkedProvider {
     fn transaction_status(&self, hash: TxHash) -> Result<Option<FinalityStatus>> {
-        let status = self
+        let tx_block = self
             .storage
             .read()
             .transaction_numbers
             .get(&hash)
-            .and_then(|n| self.storage.read().transaction_status.get(n).copied());
-        Ok(status)
+            .and_then(|n| self.storage.read().transaction_block.get(n).copied());
+
+        if let Some(num) = tx_block {
+            let status = self.block_status(num.into())?;
+            Ok(status)
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -404,7 +410,7 @@ impl BlockWriter for ForkedProvider {
 
         // create block body indices
         let tx_count = txs.len() as u64;
-        let tx_offset = self.storage.read().transactions.len() as u64;
+        let tx_offset = storage.transactions.len() as u64;
         let block_body_indices = StoredBlockBodyIndices { tx_offset, tx_count };
 
         let (txs_id, txs): (Vec<(TxNumber, TxHash)>, Vec<Tx>) = txs

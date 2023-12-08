@@ -266,7 +266,6 @@ impl TransactionProvider for InMemoryProvider {
         let storage_read = self.storage.read();
 
         let Some(number) = storage_read.transaction_numbers.get(&hash) else { return Ok(None) };
-        println!("number: {:?}", number);
         let block_num = storage_read.transaction_block.get(number).expect("block num should exist");
         let block_hash = storage_read.block_hashes.get(block_num).expect("block hash should exist");
 
@@ -288,13 +287,19 @@ impl TransactionsProviderExt for InMemoryProvider {
 
 impl TransactionStatusProvider for InMemoryProvider {
     fn transaction_status(&self, hash: TxHash) -> Result<Option<FinalityStatus>> {
-        let status = self
+        let tx_block = self
             .storage
             .read()
             .transaction_numbers
             .get(&hash)
-            .and_then(|n| self.storage.read().transaction_status.get(n).copied());
-        Ok(status)
+            .and_then(|n| self.storage.read().transaction_block.get(n).copied());
+
+        if let Some(num) = tx_block {
+            let status = self.block_status(num.into())?;
+            Ok(status)
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -413,7 +418,6 @@ impl BlockWriter for InMemoryProvider {
 
         let txs_num = txs_id.clone().into_iter().map(|(num, hash)| (hash, num));
         let txs_block = txs_id.clone().into_iter().map(|(num, _)| (num, block_number));
-        let txs_status = txs_id.clone().into_iter().map(|(num, _)| (num, block.status));
 
         storage.latest_block_hash = block_hash;
         storage.latest_block_number = block_number;
@@ -428,7 +432,6 @@ impl BlockWriter for InMemoryProvider {
         storage.transaction_hashes.extend(txs_id);
         storage.transaction_numbers.extend(txs_num);
         storage.transaction_block.extend(txs_block);
-        storage.transaction_status.extend(txs_status);
         storage.receipts.extend(receipts);
 
         storage.state_update.insert(block_number, states.state_updates.clone());
