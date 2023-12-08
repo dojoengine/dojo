@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    DynGeneratedFileAuxData, GeneratedFileAuxData, InlineMacroExprPlugin, MacroPlugin,
-    PluginDiagnostic, PluginGeneratedFile, PluginResult,
+    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin,
+    PluginDiagnostic, PluginGeneratedFile, PluginResult, PluginSuite,
 };
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
@@ -207,17 +205,21 @@ impl CairoPlugin for BuiltinDojoPlugin {
 
 struct BuiltinDojoPluginInstance;
 impl CairoPluginInstance for BuiltinDojoPluginInstance {
-    fn macro_plugins(&self) -> Vec<Arc<dyn MacroPlugin>> {
-        vec![Arc::new(BuiltinDojoPlugin)]
+    fn plugin_suite(&self) -> PluginSuite {
+        dojo_plugin_suite()
     }
+}
 
-    fn inline_macro_plugins(&self) -> Vec<(String, Arc<dyn InlineMacroExprPlugin>)> {
-        vec![
-            (GetMacro::NAME.into(), Arc::new(GetMacro)),
-            (SetMacro::NAME.into(), Arc::new(SetMacro)),
-            (EmitMacro::NAME.into(), Arc::new(EmitMacro)),
-        ]
-    }
+pub fn dojo_plugin_suite() -> PluginSuite {
+    let mut suite = PluginSuite::default();
+
+    suite
+        .add_plugin::<BuiltinDojoPlugin>()
+        .add_inline_macro_plugin::<GetMacro>()
+        .add_inline_macro_plugin::<SetMacro>()
+        .add_inline_macro_plugin::<EmitMacro>();
+
+    suite
 }
 
 impl MacroPlugin for BuiltinDojoPlugin {
