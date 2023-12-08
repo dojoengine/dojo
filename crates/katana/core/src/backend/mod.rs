@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use blockifier::block_context::BlockContext;
 use katana_primitives::block::{
-    Block, BlockHashOrNumber, FinalityStatus, Header, PartialHeader, SealedBlockWithStatus,
+    Block, FinalityStatus, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::receipt::Receipt;
@@ -14,7 +14,7 @@ use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use parking_lot::RwLock;
-use starknet::core::types::{BlockId, MaybePendingBlockWithTxHashes};
+use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -56,9 +56,7 @@ impl Backend {
             .with_balance(*DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
             .generate();
 
-        let provider: Box<dyn self::storage::Database> = if let Some(forked_url) =
-            &config.fork_rpc_url
-        {
+        let blockchain: Blockchain = if let Some(forked_url) = &config.fork_rpc_url {
             let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
             let forked_chain_id = provider.chain_id().await.unwrap();
 
@@ -90,12 +88,24 @@ impl Backend {
                 forked_url
             );
 
-            Box::new(ForkedProvider::new(provider, BlockHashOrNumber::Num(forked_block_num)))
+            Blockchain::new_from_forked(
+                ForkedProvider::new(provider, forked_block_num.into()),
+                block.block_hash,
+                block.parent_hash,
+                &block_context,
+                block.new_root,
+                match block.status {
+                    BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
+                    BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
+                    _ => panic!("unable to fork for non-accepted block"),
+                },
+            )
+            .expect("able to create forked blockchain")
         } else {
-            Box::new(InMemoryProvider::new())
+            Blockchain::new_with_genesis(InMemoryProvider::new(), &block_context)
+                .expect("able to create blockchain from genesis block")
         };
 
-        let blockchain = Blockchain::new_with_genesis(provider, &block_context).unwrap();
         let env = Env { block: block_context };
 
         for acc in &accounts {
