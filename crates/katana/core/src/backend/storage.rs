@@ -95,7 +95,7 @@ impl Blockchain {
         let header = Header {
             state_root,
             parent_hash,
-            gas_price: block_context.gas_price,
+            gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
