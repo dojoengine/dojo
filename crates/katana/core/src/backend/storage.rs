@@ -66,8 +66,9 @@ impl Blockchain {
 
     pub fn new_with_genesis(provider: impl Database, block_context: &BlockContext) -> Result<Self> {
         let header = PartialHeader {
+            // TODO: need to be adjusted, eth is used for compatibility for now.
             parent_hash: 0u8.into(),
-            gas_price: block_context.gas_price,
+            gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,

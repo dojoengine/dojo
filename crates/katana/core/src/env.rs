@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use blockifier::block_context::BlockContext;
+use blockifier::block_context::{BlockContext, FeeTokenAddresses, GasPrices};
 use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
@@ -33,9 +33,15 @@ impl Default for Env {
                 block_number: BlockNumber::default(),
                 block_timestamp: BlockTimestamp::default(),
                 sequencer_address: (*SEQUENCER_ADDRESS).into(),
-                fee_token_address: (*FEE_TOKEN_ADDRESS).into(),
+                fee_token_addresses: FeeTokenAddresses {
+                    eth_fee_token_address: (*FEE_TOKEN_ADDRESS).into(),
+                    strk_fee_token_address: Default::default(),
+                },
                 vm_resource_fee_cost: get_default_vm_resource_fee_cost().into(),
-                gas_price: DEFAULT_GAS_PRICE,
+                gas_prices: GasPrices {
+                    eth_l1_gas_price: DEFAULT_GAS_PRICE,
+                    strk_l1_gas_price: Default::default(),
+                },
                 invoke_tx_max_n_steps: 1_000_000,
                 validate_max_n_steps: 1_000_000,
                 max_recursion_depth: 100,

@@ -231,7 +231,7 @@ mod test {
     fn default_block_context_from_args() {
         let args = KatanaArgs::parse_from(["katana"]);
         let block_context = args.starknet_config().block_context();
-        assert_eq!(block_context.gas_price, DEFAULT_GAS_PRICE);
+        assert_eq!(block_context.gas_prices.eth_l1_gas_price, DEFAULT_GAS_PRICE);
         assert_eq!(block_context.chain_id.0, "KATANA".to_string());
         assert_eq!(block_context.validate_max_n_steps, DEFAULT_VALIDATE_MAX_STEPS);
         assert_eq!(block_context.invoke_tx_max_n_steps, DEFAULT_INVOKE_MAX_STEPS);
@@ -253,7 +253,7 @@ mod test {
 
         let block_context = args.starknet_config().block_context();
 
-        assert_eq!(block_context.gas_price, 10);
+        assert_eq!(block_context.gas_prices.eth_l1_gas_price, 10);
         assert_eq!(block_context.chain_id.0, "SN_GOERLI".to_string());
         assert_eq!(block_context.validate_max_n_steps, 100);
         assert_eq!(block_context.invoke_tx_max_n_steps, 200);
