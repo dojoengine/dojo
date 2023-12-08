@@ -135,3 +135,4 @@ scarb-ui = { path = "../scarb/utils/scarb-ui" }
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
+starknet_api = { path = "../starknet-api" }
