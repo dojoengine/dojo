@@ -128,9 +128,9 @@ wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/glihm/blockifier", branch = "patch-dojo" }
 
-# [patch."https://github.com/software-mansion/scarb"]
-# scarb = { path = "../../sn/scarb/scarb" }
-# scarb-ui = { path = "../../sn/scarb/utils/scarb-ui" }
+[patch."https://github.com/software-mansion/scarb"]
+scarb = { path = "../../sn/scarb/scarb" }
+scarb-ui = { path = "../../sn/scarb/utils/scarb-ui" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
