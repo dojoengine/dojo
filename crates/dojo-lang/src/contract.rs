@@ -125,7 +125,7 @@ impl DojoContract {
         let elements = enum_ast.variants(db).elements(db);
 
         let variants = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
-        let variants = variants.join(", ");
+        let variants = variants.join(",\n");
 
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
@@ -164,7 +164,7 @@ impl DojoContract {
         let elements = struct_ast.members(db).elements(db);
 
         let members = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
-        let members = members.join(", ");
+        let members = members.join(",\n");
 
         rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
