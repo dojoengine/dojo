@@ -20,7 +20,7 @@ pub type BlockNumber = u64;
 pub type BlockHash = FieldElement;
 
 /// Finality status of a canonical block.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FinalityStatus {
     AcceptedOnL2,
@@ -99,8 +99,14 @@ pub struct BlockWithTxHashes {
 }
 
 impl Block {
+    /// Seals the block. This computes the hash of the block.
     pub fn seal(self) -> SealedBlock {
         SealedBlock { header: self.header.seal(), body: self.body }
+    }
+
+    /// Seals the block with a given hash.
+    pub fn seal_with_hash(self, hash: BlockHash) -> SealedBlock {
+        SealedBlock { header: SealedHeader { hash, header: self.header }, body: self.body }
     }
 }
 

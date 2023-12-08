@@ -145,9 +145,9 @@ pub struct EnvironmentOptions {
 
 impl KatanaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,server=debug,katana_core=trace,\
-                                          blockifier=off,jsonrpsee_server=off,hyper=off,\
-                                          messaging=debug";
+        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forked_backend=trace,server=debug,\
+                                          katana_core=trace,blockifier=off,jsonrpsee_server=off,\
+                                          hyper=off,messaging=debug";
 
         let builder = fmt::Subscriber::builder().with_env_filter(
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,

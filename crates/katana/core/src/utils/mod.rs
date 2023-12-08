@@ -87,7 +87,7 @@ pub fn convert_state_diff_to_rpc_state_diff(state_diff: CommitmentStateDiff) -> 
     }
 }
 
-pub fn get_genesis_states_for_testing() -> StateUpdatesWithDeclaredClasses {
+pub(super) fn get_genesis_states_for_testing() -> StateUpdatesWithDeclaredClasses {
     let nonce_updates =
         HashMap::from([(*UDC_ADDRESS, 0u8.into()), (*FEE_TOKEN_ADDRESS, 0u8.into())]);
 
