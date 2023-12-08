@@ -2089,6 +2089,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.4.0#cba988e685f2f9b07a8ea0b5f056009f91c6c9ed"
 dependencies = [
  "anyhow",
  "core-foundation",
@@ -7453,6 +7454,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.4.0"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.4.0#cba988e685f2f9b07a8ea0b5f056009f91c6c9ed"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7490,7 +7492,7 @@ dependencies = [
  "redb",
  "reqwest",
  "scarb-build-metadata",
- "scarb-metadata 1.9.0",
+ "scarb-metadata 1.9.0 (git+https://github.com/software-mansion/scarb?tag=v2.4.0)",
  "scarb-ui",
  "semver",
  "serde",
@@ -7522,20 +7524,9 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.4.0"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.4.0#cba988e685f2f9b07a8ea0b5f056009f91c6c9ed"
 dependencies = [
  "cargo_metadata",
-]
-
-[[package]]
-name = "scarb-metadata"
-version = "1.9.0"
-dependencies = [
- "camino",
- "derive_builder",
- "semver",
- "serde",
- "serde_json",
- "thiserror",
 ]
 
 [[package]]
@@ -7552,15 +7543,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "scarb-metadata"
+version = "1.9.0"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.4.0#cba988e685f2f9b07a8ea0b5f056009f91c6c9ed"
+dependencies = [
+ "camino",
+ "derive_builder",
+ "semver",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "scarb-ui"
 version = "0.1.2"
+source = "git+https://github.com/software-mansion/scarb?tag=v2.4.0#cba988e685f2f9b07a8ea0b5f056009f91c6c9ed"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.9.0",
+ "scarb-metadata 1.9.0 (git+https://github.com/software-mansion/scarb?tag=v2.4.0)",
  "serde",
  "serde_json",
 ]
