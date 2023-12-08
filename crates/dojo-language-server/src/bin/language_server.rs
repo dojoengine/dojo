@@ -1,19 +1,12 @@
-use std::sync::Arc;
-
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_language_server::Backend;
-use cairo_lang_starknet::inline_macros::selector::SelectorMacro;
-use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_starknet::starknet_plugin_suite;
-use cairo_lang_test_plugin::{test_plugin_suite, TestPlugin};
+use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::logging::init_logging;
 use clap::Parser;
-use dojo_lang::inline_macros::emit::EmitMacro;
-use dojo_lang::inline_macros::get::GetMacro;
-use dojo_lang::inline_macros::set::SetMacro;
 use dojo_lang::plugin::dojo_plugin_suite;
-use tower_lsp::{Client, LspService, Server};
+use tower_lsp::{LspService, Server};
 
 /// Dojo Language Server
 #[derive(Parser, Debug)]
