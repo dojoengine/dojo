@@ -2,18 +2,20 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use ::blockifier::block_context::BlockContext;
+use ::blockifier::execution::call_info::CallInfo;
+use ::blockifier::execution::common_hints::ExecutionMode;
 use ::blockifier::execution::entry_point::{
     CallEntryPoint, EntryPointExecutionContext, ExecutionResources,
 };
-use ::blockifier::execution::call_info::CallInfo;
-use ::blockifier::execution::common_hints::ExecutionMode;
 use ::blockifier::execution::errors::EntryPointExecutionError;
 use ::blockifier::state::cached_state::{CachedState, GlobalContractCache, MutRefState};
 use ::blockifier::transaction::objects::AccountTransactionContext;
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
 use blockifier::state::state_api::State;
 use blockifier::transaction::errors::TransactionExecutionError;
-use blockifier::transaction::objects::{DeprecatedAccountTransactionContext, ResourcesMapping, TransactionExecutionInfo};
+use blockifier::transaction::objects::{
+    DeprecatedAccountTransactionContext, ResourcesMapping, TransactionExecutionInfo,
+};
 use convert_case::{Case, Casing};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -117,7 +119,8 @@ pub fn raw_call(
             ExecutionMode::Execute,
             limit_steps_by_resources,
         )?,
-    ).map_err(TransactionExecutionError::ExecutionError)
+    )
+    .map_err(TransactionExecutionError::ExecutionError)
 }
 
 /// Calculate the fee of a transaction execution.

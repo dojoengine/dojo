@@ -269,13 +269,11 @@ impl KatanaSequencer {
 
         let retdata = katana_executor::blockifier::utils::call(request, block_context, state)
             .map_err(|e| match e {
-                TransactionExecutionError::ExecutionError(exe) => {
-                    match exe {
-                        EntryPointExecutionError::PreExecutionError(
-                            PreExecutionError::UninitializedStorageAddress(addr),
-                        ) => SequencerError::ContractNotFound(addr.into()),
-                        _ => SequencerError::EntryPointExecution(exe),
-                    }
+                TransactionExecutionError::ExecutionError(exe) => match exe {
+                    EntryPointExecutionError::PreExecutionError(
+                        PreExecutionError::UninitializedStorageAddress(addr),
+                    ) => SequencerError::ContractNotFound(addr.into()),
+                    _ => SequencerError::EntryPointExecution(exe),
                 },
                 _ => SequencerError::TransactionExecution(e),
             })?;

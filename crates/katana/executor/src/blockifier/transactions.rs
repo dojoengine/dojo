@@ -7,9 +7,11 @@ use blockifier::transaction::transactions::{DeclareTransaction, L1HandlerTransac
 use katana_primitives::transaction::{DeclareTx, ExecutableTx, ExecutableTxWithHash};
 use starknet_api::core::{ClassHash, CompiledClassHash, EntryPointSelector, Nonce};
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2, DeployAccountTransaction as ApiDeployAccountTransaction, Fee,
+    Calldata, ContractAddressSalt, DeclareTransaction as ApiDeclareTransaction,
+    DeclareTransactionV0V1, DeclareTransactionV2,
+    DeployAccountTransaction as ApiDeployAccountTransaction, DeployAccountTransactionV1, Fee,
     InvokeTransaction as ApiInvokeTransaction, TransactionHash, TransactionSignature,
-    TransactionVersion, DeployAccountTransactionV1,
+    TransactionVersion,
 };
 
 /// A newtype wrapper for execution transaction used in `blockifier`.
@@ -23,19 +25,17 @@ impl From<ExecutableTxWithHash> for BlockifierTx {
             ExecutableTx::Invoke(tx) => {
                 let calldata = tx.calldata.into_iter().map(|f| f.into()).collect();
                 let signature = tx.signature.into_iter().map(|f| f.into()).collect();
-                Transaction::AccountTransaction(AccountTransaction::Invoke(
-                    InvokeTransaction {
-                        tx: ApiInvokeTransaction::V1(starknet_api::transaction::InvokeTransactionV1 {
-                            max_fee: Fee(tx.max_fee),
-                            nonce: Nonce(tx.nonce.into()),
-                            sender_address: tx.sender_address.into(),
-                            signature: TransactionSignature(signature),
-                            calldata: Calldata(Arc::new(calldata)),
-                        }),
-                        tx_hash: TransactionHash(hash.into()),
-                        only_query: false,
-                    }
-                ))
+                Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
+                    tx: ApiInvokeTransaction::V1(starknet_api::transaction::InvokeTransactionV1 {
+                        max_fee: Fee(tx.max_fee),
+                        nonce: Nonce(tx.nonce.into()),
+                        sender_address: tx.sender_address.into(),
+                        signature: TransactionSignature(signature),
+                        calldata: Calldata(Arc::new(calldata)),
+                    }),
+                    tx_hash: TransactionHash(hash.into()),
+                    only_query: false,
+                }))
             }
 
             ExecutableTx::DeployAccount(tx) => {
@@ -44,17 +44,16 @@ impl From<ExecutableTxWithHash> for BlockifierTx {
                 Transaction::AccountTransaction(AccountTransaction::DeployAccount(
                     DeployAccountTransaction {
                         contract_address: tx.contract_address.into(),
-                        tx: ApiDeployAccountTransaction::V1(
-                            DeployAccountTransactionV1 {
-                                max_fee: Fee(tx.max_fee),
-                                nonce: Nonce(tx.nonce.into()),
-                                signature: TransactionSignature(signature),
-                                class_hash: ClassHash(tx.class_hash.into()),
-                                constructor_calldata: Calldata(Arc::new(calldata)),
-                                contract_address_salt: ContractAddressSalt(
-                                    tx.contract_address_salt.into(),
-                                ),
-                            }),
+                        tx: ApiDeployAccountTransaction::V1(DeployAccountTransactionV1 {
+                            max_fee: Fee(tx.max_fee),
+                            nonce: Nonce(tx.nonce.into()),
+                            signature: TransactionSignature(signature),
+                            class_hash: ClassHash(tx.class_hash.into()),
+                            constructor_calldata: Calldata(Arc::new(calldata)),
+                            contract_address_salt: ContractAddressSalt(
+                                tx.contract_address_salt.into(),
+                            ),
+                        }),
                         tx_hash: TransactionHash(hash.into()),
                         only_query: false,
                     },
@@ -89,7 +88,8 @@ impl From<ExecutableTxWithHash> for BlockifierTx {
                     }
                 };
 
-                let tx = DeclareTransaction::new(tx, TransactionHash(hash.into()), contract_class).expect("class mismatch");
+                let tx = DeclareTransaction::new(tx, TransactionHash(hash.into()), contract_class)
+                    .expect("class mismatch");
                 Transaction::AccountTransaction(AccountTransaction::Declare(tx))
             }
 
