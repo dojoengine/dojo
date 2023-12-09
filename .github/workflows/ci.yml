@@ -23,7 +23,7 @@ jobs:
 
       - name: Install nextest test runner
         uses: taiki-e/install-action@nextest
-
+      - run: dojoup
       - run: cargo nextest run --all-features
 
   ensure-wasm:

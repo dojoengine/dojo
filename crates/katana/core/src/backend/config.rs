@@ -1,4 +1,4 @@
-use blockifier::block_context::BlockContext;
+use blockifier::block_context::{BlockContext, FeeTokenAddresses, GasPrices};
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::ChainId;
 use url::Url;
@@ -26,9 +26,19 @@ impl StarknetConfig {
             chain_id: ChainId(self.env.chain_id.clone()),
             block_timestamp: BlockTimestamp::default(),
             sequencer_address: (*SEQUENCER_ADDRESS).into(),
-            fee_token_address: (*FEE_TOKEN_ADDRESS).into(),
+            // As the fee has two currencies, we also have to adjust their addresses.
+            // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/block_context.rs#L34
+            fee_token_addresses: FeeTokenAddresses {
+                eth_fee_token_address: (*FEE_TOKEN_ADDRESS).into(),
+                strk_fee_token_address: Default::default(),
+            },
             vm_resource_fee_cost: get_default_vm_resource_fee_cost().into(),
-            gas_price: self.env.gas_price,
+            // Gas prices are dual too.
+            // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/block_context.rs#L49
+            gas_prices: GasPrices {
+                eth_l1_gas_price: self.env.gas_price,
+                strk_l1_gas_price: Default::default(),
+            },
             validate_max_n_steps: self.env.validate_max_steps,
             invoke_tx_max_n_steps: self.env.invoke_max_steps,
             max_recursion_depth: 1000,

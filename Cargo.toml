@@ -42,29 +42,29 @@ anyhow = "1.0.75"
 assert_matches = "1.5.0"
 async-trait = "0.1.68"
 base64 = "0.21.2"
-blockifier = { git = "https://github.com/starkware-libs/blockifier" }
-cairo-lang-casm = "2.3.1"
-cairo-lang-compiler = "2.3.1"
-cairo-lang-debug = "2.3.1"
-cairo-lang-defs = "2.3.1"
-cairo-lang-diagnostics = "2.3.1"
-cairo-lang-filesystem = "2.3.1"
-cairo-lang-formatter = "2.3.1"
-cairo-lang-language-server = "2.3.1"
-cairo-lang-lowering = "2.3.1"
-cairo-lang-parser = "2.3.1"
-cairo-lang-plugins = "2.3.1"
-cairo-lang-project = "2.3.1"
-cairo-lang-semantic = { version = "2.3.1", features = [ "testing" ] }
-cairo-lang-sierra = "2.3.1"
-cairo-lang-sierra-generator = "2.3.1"
-cairo-lang-sierra-to-casm = "2.3.1"
-cairo-lang-starknet = "2.3.1"
-cairo-lang-syntax = "2.3.1"
-cairo-lang-test-plugin = "2.3.1"
-cairo-lang-test-runner = "2.3.1"
-cairo-lang-test-utils = "2.3.1"
-cairo-lang-utils = "2.3.1"
+blockifier = { git = "https://github.com/starkware-libs/blockifier", tag = "v0.4.0-rc9.2" }
+cairo-lang-casm = "2.4.0"
+cairo-lang-compiler = "2.4.0"
+cairo-lang-debug = "2.4.0"
+cairo-lang-defs = "2.4.0"
+cairo-lang-diagnostics = "2.4.0"
+cairo-lang-filesystem = "2.4.0"
+cairo-lang-formatter = "2.4.0"
+cairo-lang-language-server = "2.4.0"
+cairo-lang-lowering = "2.4.0"
+cairo-lang-parser = "2.4.0"
+cairo-lang-plugins = "2.4.0"
+cairo-lang-project = "2.4.0"
+cairo-lang-semantic = { version = "2.4.0", features = [ "testing" ] }
+cairo-lang-sierra = "2.4.0"
+cairo-lang-sierra-generator = "2.4.0"
+cairo-lang-sierra-to-casm = "2.4.0"
+cairo-lang-starknet = "2.4.0"
+cairo-lang-syntax = "2.4.0"
+cairo-lang-test-plugin = "2.4.0"
+cairo-lang-test-runner = "2.4.0"
+cairo-lang-test-utils = "2.4.0"
+cairo-lang-utils = "2.4.0"
 cairo-vm = "0.8.2"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
@@ -88,17 +88,17 @@ parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"
 rayon = "1.8.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/software-mansion/scarb", rev = "0c8def3" }
-scarb-ui = { git = "https://github.com/software-mansion/scarb", rev = "0c8def3" }
+scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.4.0" }
+scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.4.0" }
 semver = "1.0.5"
 serde = { version = "1.0.156", features = [ "derive" ] }
 serde_json = "1.0"
 serde_with = "2.3.1"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
-sqlx = { version = "0.7.2", features = [ "chrono", "macros", "runtime-async-std", "runtime-tokio", "sqlite", "uuid", "regexp" ] }
+sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
 starknet = "0.7.0"
 starknet-crypto = "0.6.1"
-starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
+starknet_api = "0.6.0-rc3"
 strum = "0.25"
 strum_macros = "0.25"
 test-log = "0.2.11"
@@ -127,7 +127,7 @@ wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codege
 wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "prost" ], package = "tonic-build" }
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "3357e69" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "e6e9c90" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }

@@ -60,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "🚀 JSON-RPC server started: {}",
                     Style::new().red().apply_to(format!("http://{addr}"))
                 ),
-                format!("{}", account_class_hash),
+                format!("{:#064x}", account_class_hash),
             );
         }
     }
@@ -102,11 +102,11 @@ PREDEPLOYED CONTRACTS
 
 | Contract        | Fee Token
 | Address         | {}
-| Class Hash      | {}
+| Class Hash      | {:#064x}
 
 | Contract        | Universal Deployer
 | Address         | {}
-| Class Hash      | {}
+| Class Hash      | {:#064x}
 
 | Contract        | Account Contract
 | Class Hash      | {}
