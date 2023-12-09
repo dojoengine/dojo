@@ -68,9 +68,8 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<()> {
     for unit in compilation_units {
         let mut db = build_scarb_root_database(&unit).unwrap();
 
-        match ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
-            Err(err) => ws.config().ui().anyhow(&err),
-            Ok(_) => (),
+        if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
+            ws.config().ui().anyhow(&err)
         }
     }
 
