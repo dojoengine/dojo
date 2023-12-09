@@ -2,16 +2,20 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use ::blockifier::block_context::BlockContext;
+use ::blockifier::execution::call_info::CallInfo;
+use ::blockifier::execution::common_hints::ExecutionMode;
 use ::blockifier::execution::entry_point::{
-    CallEntryPoint, CallInfo, EntryPointExecutionContext, ExecutionResources,
+    CallEntryPoint, EntryPointExecutionContext, ExecutionResources,
 };
 use ::blockifier::execution::errors::EntryPointExecutionError;
-use ::blockifier::state::cached_state::{CachedState, MutRefState};
+use ::blockifier::state::cached_state::{CachedState, GlobalContractCache, MutRefState};
 use ::blockifier::transaction::objects::AccountTransactionContext;
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
 use blockifier::state::state_api::State;
 use blockifier::transaction::errors::TransactionExecutionError;
-use blockifier::transaction::objects::{ResourcesMapping, TransactionExecutionInfo};
+use blockifier::transaction::objects::{
+    DeprecatedAccountTransactionContext, ResourcesMapping, TransactionExecutionInfo,
+};
 use convert_case::{Case, Casing};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -43,8 +47,8 @@ pub fn call(
     request: EntryPointCall,
     block_context: BlockContext,
     state: Box<dyn StateProvider>,
-) -> Result<Vec<FieldElement>, EntryPointExecutionError> {
-    let res = raw_call(request, block_context, state, 1_000_000_000, 1_000_000_000)?;
+) -> Result<Vec<FieldElement>, TransactionExecutionError> {
+    let res = raw_call(request, block_context, state, 1_000_000_000)?;
     let retdata = res.execution.retdata.0;
     let retdata = retdata.into_iter().map(|f| f.into()).collect::<Vec<FieldElement>>();
     Ok(retdata)
@@ -83,10 +87,9 @@ pub fn raw_call(
     block_context: BlockContext,
     state: Box<dyn StateProvider>,
     initial_gas: u64,
-    max_n_steps: usize,
-) -> Result<CallInfo, EntryPointExecutionError> {
-    let mut state = CachedState::new(StateRefDb::from(state));
-    let mut state = CachedState::new(MutRefState::new(&mut state));
+) -> Result<CallInfo, TransactionExecutionError> {
+    let mut state = CachedState::new(StateRefDb::from(state), GlobalContractCache::default());
+    let mut state = CachedState::new(MutRefState::new(&mut state), GlobalContractCache::default());
 
     let call = CallEntryPoint {
         initial_gas,
@@ -96,15 +99,28 @@ pub fn raw_call(
         ..Default::default()
     };
 
+    // TODO: this must be false if fees are disabled I assume.
+    let limit_steps_by_resources = true;
+
+    // Now, the max step is not given directly to this function.
+    // It's computed by a new function max_steps, and it tooks the values
+    // from teh block context itself instead of the input give.
+    // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/execution/entry_point.rs#L165
+    // The blockifier patch must be adjusted to modify this function to return
+    // the limit we have into the block context without min applied:
+    // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/execution/entry_point.rs#L215
     call.execute(
         &mut state,
         &mut ExecutionResources::default(),
         &mut EntryPointExecutionContext::new(
-            block_context,
-            AccountTransactionContext::default(),
-            max_n_steps,
-        ),
+            &block_context,
+            // TODO: the current does not have Default, let's use the old one for now.
+            &AccountTransactionContext::Deprecated(DeprecatedAccountTransactionContext::default()),
+            ExecutionMode::Execute,
+            limit_steps_by_resources,
+        )?,
     )
+    .map_err(TransactionExecutionError::ExecutionError)
 }
 
 /// Calculate the fee of a transaction execution.
@@ -117,7 +133,11 @@ pub fn calculate_execution_fee(
 
     let total_l1_gas_usage = l1_gas_usage as f64 + l1_gas_by_vm_usage;
 
-    let gas_price = block_context.gas_price as u64;
+    // Gas prices are now in two currencies: eth and strk.
+    // For now let's only consider eth to be compatible with V2.
+    // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/block_context.rs#L19C26-L19C26
+    // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/block_context.rs#L49
+    let gas_price = block_context.gas_prices.eth_l1_gas_price as u64;
     let gas_consumed = total_l1_gas_usage.ceil() as u64;
     let overall_fee = total_l1_gas_usage.ceil() as u64 * gas_price;
 
@@ -126,8 +146,7 @@ pub fn calculate_execution_fee(
 
 pub(crate) fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {
     match err {
-        TransactionExecutionError::EntryPointExecutionError(ref eperr)
-        | TransactionExecutionError::ExecutionError(ref eperr) => match eperr {
+        TransactionExecutionError::ExecutionError(ref eperr) => match eperr {
             EntryPointExecutionError::ExecutionFailed { error_data } => {
                 let mut reasons: Vec<String> = vec![];
                 error_data.iter().for_each(|felt| {

@@ -1,6 +1,6 @@
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
+    InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{Expr, ItemModule};
@@ -11,11 +11,13 @@ use itertools::Itertools;
 use super::utils::{parent_of_kind, SYSTEM_READS};
 use super::{extract_models, unsupported_arg_diagnostic, CAIRO_ERR_MSG_LEN};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GetMacro;
-impl GetMacro {
-    pub const NAME: &'static str = "get";
+
+impl NamedPlugin for GetMacro {
+    const NAME: &'static str = "get";
 }
+
 impl InlineMacroExprPlugin for GetMacro {
     fn generate_code(
         &self,
@@ -31,7 +33,7 @@ impl InlineMacroExprPlugin for GetMacro {
                 let mut __get_macro_keys__ = array::ArrayTrait::new();\n",
         );
 
-        let args = arg_list.args(db).elements(db);
+        let args = arg_list.arguments(db).elements(db);
 
         if args.len() != 3 {
             return InlinePluginResult {

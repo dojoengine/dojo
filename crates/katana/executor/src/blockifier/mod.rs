@@ -143,6 +143,9 @@ fn execute_tx<S: StateReader>(
     block_context: &BlockContext,
     charge_fee: bool,
 ) -> TxExecutionResult {
+    // TODO: check how this value must be controlled.
+    let validate = true;
+
     let sierra = if let ExecutableTx::Declare(DeclareTxWithClass {
         transaction,
         sierra_class: Some(sierra_class),
@@ -156,10 +159,10 @@ fn execute_tx<S: StateReader>(
 
     let res = match BlockifierTx::from(tx).0 {
         Transaction::AccountTransaction(tx) => {
-            tx.execute(&mut state.inner(), block_context, charge_fee)
+            tx.execute(&mut state.inner(), block_context, charge_fee, validate)
         }
         Transaction::L1HandlerTransaction(tx) => {
-            tx.execute(&mut state.inner(), block_context, charge_fee)
+            tx.execute(&mut state.inner(), block_context, charge_fee, validate)
         }
     };
 

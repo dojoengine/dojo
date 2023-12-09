@@ -20,4 +20,4 @@ thiserror.workspace = true
 [dependencies.libmdbx]
 git = "https://github.com/paradigmxyz/reth.git"
 package = "reth-libmdbx"
-version = "=0.1.0-alpha.12"
+version = "=0.1.0-alpha.13"

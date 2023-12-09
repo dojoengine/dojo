@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x99b08b2ff33750916e36b5e241b5d4a63e8d48862bf90a68fec2ff58a8de6",
+    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
     "abi": [
       {
         "type": "impl",
@@ -791,7 +791,7 @@ test_manifest_file
   "executor": {
     "name": "executor",
     "address": null,
-    "class_hash": "0x54ee9d99457d82d53e21030920f7e6f43509b98ea62282b5c2520050264a28c",
+    "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
     "abi": [
       {
         "type": "impl",
@@ -851,7 +851,7 @@ test_manifest_file
   },
   "base": {
     "name": "base",
-    "class_hash": "0x77638e9a645209ac1e32e143bfdbfe9caf723c4f7645fcf465c38967545ea2f",
+    "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
     "abi": [
       {
         "type": "impl",
@@ -955,7 +955,7 @@ test_manifest_file
     {
       "name": "actions",
       "address": null,
-      "class_hash": "0x1f740b30fc835ecf509a40e8dc8e4eb7ada046243833d2060f17ab961e4e154",
+      "class_hash": "0x69c6bec7de74fc2404fe6b68ad8ece7be81ad6d861b38a8ba8fa583bfc3666b",
       "abi": [
         {
           "type": "impl",
@@ -1198,49 +1198,14 @@ test_manifest_file
           ]
         }
       ],
-      "reads": [
-        "Moves",
-        "Position"
-      ],
-      "writes": [
-        "Moves",
-        "Position"
-      ],
-      "computed": [
-        {
-          "contract": "actions",
-          "entrypoint": "tile_terrain",
-          "model": null
-        },
-        {
-          "contract": "actions",
-          "entrypoint": "quadrant",
-          "model": "Position"
-        }
-      ]
-    }
-  ],
-  "models": [
+      "reads": [],
+      "writes": [],
+      "computed": []
+    },
     {
-      "name": "Moves",
-      "members": [
-        {
-          "name": "player",
-          "type": "ContractAddress",
-          "key": true
-        },
-        {
-          "name": "remaining",
-          "type": "u8",
-          "key": false
-        },
-        {
-          "name": "last_direction",
-          "type": "Direction",
-          "key": false
-        }
-      ],
-      "class_hash": "0x509a65bd8cc5516176a694a3b3c809011f1f0680959c567b3189e60ddab7ce1",
+      "name": "moves",
+      "address": null,
+      "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
       "abi": [
         {
           "type": "function",
@@ -1401,23 +1366,15 @@ test_manifest_file
           "kind": "enum",
           "variants": []
         }
-      ]
+      ],
+      "reads": [],
+      "writes": [],
+      "computed": []
     },
     {
-      "name": "Position",
-      "members": [
-        {
-          "name": "player",
-          "type": "ContractAddress",
-          "key": true
-        },
-        {
-          "name": "vec",
-          "type": "Vec2",
-          "key": false
-        }
-      ],
-      "class_hash": "0x52a1da1853c194683ca5d6d154452d0654d23f2eacd4267c555ff2338e144d6",
+      "name": "position",
+      "address": null,
+      "class_hash": "0x2b233bba9a232a5e891c85eca9f67beedca7a12f9768729ff017bcb62d25c9d",
       "abi": [
         {
           "type": "function",
@@ -1578,7 +1535,11 @@ test_manifest_file
           "kind": "enum",
           "variants": []
         }
-      ]
+      ],
+      "reads": [],
+      "writes": [],
+      "computed": []
     }
-  ]
+  ],
+  "models": []
 }

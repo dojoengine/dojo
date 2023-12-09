@@ -66,8 +66,9 @@ impl Blockchain {
 
     pub fn new_with_genesis(provider: impl Database, block_context: &BlockContext) -> Result<Self> {
         let header = PartialHeader {
+            // TODO: need to be adjusted, eth is used for compatibility for now.
             parent_hash: 0u8.into(),
-            gas_price: block_context.gas_price,
+            gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
@@ -94,7 +95,7 @@ impl Blockchain {
         let header = Header {
             state_root,
             parent_hash,
-            gas_price: block_context.gas_price,
+            gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
@@ -124,7 +125,7 @@ impl Blockchain {
 
 #[cfg(test)]
 mod tests {
-    use blockifier::block_context::BlockContext;
+    use blockifier::block_context::{BlockContext, FeeTokenAddresses, GasPrices};
     use katana_primitives::block::FinalityStatus;
     use katana_primitives::FieldElement;
     use katana_provider::providers::in_memory::InMemoryProvider;
@@ -145,7 +146,7 @@ mod tests {
     fn blockchain_from_genesis_states() {
         let provider = InMemoryProvider::new();
         let block_context = BlockContext {
-            gas_price: 0,
+            gas_prices: GasPrices { eth_l1_gas_price: 0, strk_l1_gas_price: 0 },
             max_recursion_depth: 0,
             validate_max_n_steps: 0,
             invoke_tx_max_n_steps: 0,
@@ -153,7 +154,10 @@ mod tests {
             chain_id: ChainId("test".into()),
             block_timestamp: BlockTimestamp(0),
             sequencer_address: Default::default(),
-            fee_token_address: Default::default(),
+            fee_token_addresses: FeeTokenAddresses {
+                eth_fee_token_address: Default::default(),
+                strk_fee_token_address: Default::default(),
+            },
             vm_resource_fee_cost: Default::default(),
         };
 
@@ -176,7 +180,7 @@ mod tests {
         let provider = InMemoryProvider::new();
 
         let block_context = BlockContext {
-            gas_price: 9090,
+            gas_prices: GasPrices { eth_l1_gas_price: 9090, strk_l1_gas_price: 0 },
             max_recursion_depth: 0,
             validate_max_n_steps: 0,
             invoke_tx_max_n_steps: 0,
@@ -184,7 +188,10 @@ mod tests {
             block_number: BlockNumber(23),
             block_timestamp: BlockTimestamp(6868),
             sequencer_address: Default::default(),
-            fee_token_address: Default::default(),
+            fee_token_addresses: FeeTokenAddresses {
+                eth_fee_token_address: Default::default(),
+                strk_fee_token_address: Default::default(),
+            },
             vm_resource_fee_cost: Default::default(),
         };
 

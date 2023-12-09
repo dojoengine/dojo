@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use blockifier::state::cached_state::CachedState;
+use blockifier::state::cached_state::{CachedState, GlobalContractCache};
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::StateReader;
 use katana_primitives::contract::SierraClass;
@@ -99,11 +99,14 @@ pub struct CachedStateWrapper<S: StateReader> {
 
 impl<S: StateReader> CachedStateWrapper<S> {
     pub fn new(db: S) -> Self {
-        Self { sierra_class: Default::default(), inner: Mutex::new(CachedState::new(db)) }
+        Self {
+            sierra_class: Default::default(),
+            inner: Mutex::new(CachedState::new(db, GlobalContractCache::default())),
+        }
     }
 
     pub fn reset_with_new_state(&self, db: S) {
-        *self.inner() = CachedState::new(db);
+        *self.inner() = CachedState::new(db, GlobalContractCache::default());
         self.sierra_class_mut().clear();
     }
 

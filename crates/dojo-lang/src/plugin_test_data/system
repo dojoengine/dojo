@@ -499,7 +499,7 @@ mod testcomponent2 {
                 #[substorage(v0)]
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
-impl EventDrop of Drop::<Event>;
+impl EventDrop of core::traits::Drop::<Event>;
             
                 }
 
@@ -541,7 +541,7 @@ impl EventDrop of Drop::<Event>;
                 #[substorage(v0)]
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
-impl EventDrop of Drop::<Event>;
+impl EventDrop of core::traits::Drop::<Event>;
             
                 }
 
@@ -586,7 +586,7 @@ impl EventDrop of Drop::<Event>;
                 #[substorage(v0)]
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
-impl EventDrop of Drop::<Event>;
+impl EventDrop of core::traits::Drop::<Event>;
             
                 }
 
@@ -636,8 +636,8 @@ impl EventDrop of Drop::<Event>;
                 #[substorage(v0)]
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
-impl EventDrop of Drop::<Event>;
-impl TestEventDrop of Drop::<TestEvent>;
+impl EventDrop of core::traits::Drop::<Event>;
+impl TestEventDrop of core::traits::Drop::<TestEvent>;
             
                 }
 
@@ -682,6 +682,6 @@ impl TestEventDrop of Drop::<TestEvent>;
         testcomponent1_event: testcomponent1::Event,
         testcomponent2_event: testcomponent2::Event
             }
-impl EventDrop of Drop::<Event>;
+impl EventDrop of core::traits::Drop::<Event>;
             
                 }

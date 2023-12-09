@@ -27,7 +27,7 @@ tracing.workspace = true
 dojo-types = { path = "../dojo-types", optional = true }
 http = { version = "0.2.9", optional = true }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
-scarb = { git = "https://github.com/software-mansion/scarb", rev = "0c8def3", optional = true }
+scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.4.0", optional = true }
 tokio = { version = "1.32.0", features = [ "time" ], default-features = false, optional = true }
 url = { version = "2.2.2", optional = true }
 

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
+use blockifier::transaction::errors::TransactionExecutionError;
 use katana_executor::blockifier::state::StateRefDb;
 use katana_executor::blockifier::utils::EntryPointCall;
 use katana_executor::blockifier::PendingState;
@@ -268,11 +269,13 @@ impl KatanaSequencer {
 
         let retdata = katana_executor::blockifier::utils::call(request, block_context, state)
             .map_err(|e| match e {
-                EntryPointExecutionError::PreExecutionError(
-                    PreExecutionError::UninitializedStorageAddress(addr),
-                ) => SequencerError::ContractNotFound(addr.into()),
-
-                _ => SequencerError::EntryPointExecution(e),
+                TransactionExecutionError::ExecutionError(exe) => match exe {
+                    EntryPointExecutionError::PreExecutionError(
+                        PreExecutionError::UninitializedStorageAddress(addr),
+                    ) => SequencerError::ContractNotFound(addr.into()),
+                    _ => SequencerError::EntryPointExecution(exe),
+                },
+                _ => SequencerError::TransactionExecution(e),
             })?;
 
         Ok(retdata)
