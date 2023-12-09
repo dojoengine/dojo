@@ -7,6 +7,7 @@ use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
+use crate::commands::scarb_internal::compile_workspace;
 use crate::ops::migration;
 
 #[derive(Args)]
@@ -49,11 +50,9 @@ impl MigrateArgs {
         let target_dir = target_dir.join(ws.config().profile().as_str());
 
         if !target_dir.join("manifest.json").exists() {
-            let packages = ws.members().map(|p| p.id).collect();
-            scarb::ops::compile(
-                packages,
+            compile_workspace(
+                config,
                 CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-                &ws,
             )?;
         }
 

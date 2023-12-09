@@ -7,9 +7,13 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_project::{AllCratesConfig, SingleCrateConfig};
+use cairo_lang_starknet::starknet_plugin_suite;
+use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use dojo_lang::plugin::dojo_plugin_suite;
 use scarb::compiler::CompilationUnit;
-use scarb::core::Workspace;
+use scarb::core::Config;
+use scarb::ops::CompileOpts;
 use smol_str::SmolStr;
 use tracing::trace;
 
@@ -29,22 +33,42 @@ pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesCo
 }
 
 // TODO(mkaput): ScarbDatabase?
-pub(crate) fn build_scarb_root_database(
-    unit: &CompilationUnit,
-    ws: &Workspace<'_>,
-) -> Result<RootDatabase> {
+pub(crate) fn build_scarb_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
     b.with_cfg(unit.cfg_set.clone());
 
-    for plugin_info in &unit.cairo_plugins {
-        let package_id = plugin_info.package.id;
-        let plugin = ws.config().cairo_plugins().fetch(package_id)?;
-        let instance = plugin.instantiate()?;
-        b.with_plugin_suite(instance.plugin_suite());
-    }
+    // TODO: Is it fair to consider only those plugins at the moment?
+    b.with_plugin_suite(test_plugin_suite());
+    b.with_plugin_suite(dojo_plugin_suite());
+    b.with_plugin_suite(starknet_plugin_suite());
 
     b.build()
+}
+
+pub(crate) fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<()> {
+    let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+    let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
+    let resolve = scarb::ops::resolve_workspace(&ws)?;
+    let compilation_units = scarb::ops::generate_compilation_units(&resolve, &ws)?
+        .into_iter()
+        .filter(|cu| !opts.exclude_targets.contains(&cu.target().kind))
+        .filter(|cu| {
+            opts.include_targets.is_empty() || opts.include_targets.contains(&cu.target().kind)
+        })
+        .filter(|cu| packages.contains(&cu.main_package_id))
+        .collect::<Vec<_>>();
+
+    for unit in compilation_units {
+        let mut db = build_scarb_root_database(&unit).unwrap();
+
+        match ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
+            Err(err) => ws.config().ui().anyhow(&err),
+            Ok(_) => (),
+        }
+    }
+
+    Ok(())
 }
 
 fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {

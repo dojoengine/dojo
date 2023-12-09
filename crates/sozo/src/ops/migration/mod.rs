@@ -336,7 +336,9 @@ where
                 strategy.executor.as_ref().unwrap().contract_address,
                 strategy.base.as_ref().unwrap().diff.local,
             ];
-            deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config).await?;
+            deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
+                .await
+                .map_err(|e| anyhow!("Failed to deploy world: {e}"))?;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
