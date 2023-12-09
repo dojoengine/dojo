@@ -95,11 +95,6 @@ async fn test_send_declare_and_deploy_contract() {
     sequencer.stop().expect("failed to stop sequencer");
 }
 
-// In the executor in `execute_tx`, we seem to only support
-// cairo 1 sierra class declare transactions.
-// This test is in that case not relevant.
-// TODO: to be confirmed with @kariy.
-#[ignore]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_declare_and_deploy_legacy_contract() {
     let sequencer =
