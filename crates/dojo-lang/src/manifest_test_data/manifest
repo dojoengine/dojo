@@ -1198,48 +1198,13 @@ test_manifest_file
           ]
         }
       ],
-      "reads": [
-        "Moves",
-        "Position"
-      ],
-      "writes": [
-        "Moves",
-        "Position"
-      ],
-      "computed": [
-        {
-          "contract": "actions",
-          "entrypoint": "tile_terrain",
-          "model": null
-        },
-        {
-          "contract": "actions",
-          "entrypoint": "quadrant",
-          "model": "Position"
-        }
-      ]
-    }
-  ],
-  "models": [
+      "reads": [],
+      "writes": [],
+      "computed": []
+    },
     {
-      "name": "Moves",
-      "members": [
-        {
-          "name": "player",
-          "type": "ContractAddress",
-          "key": true
-        },
-        {
-          "name": "remaining",
-          "type": "u8",
-          "key": false
-        },
-        {
-          "name": "last_direction",
-          "type": "Direction",
-          "key": false
-        }
-      ],
+      "name": "moves",
+      "address": null,
       "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
       "abi": [
         {
@@ -1401,22 +1366,14 @@ test_manifest_file
           "kind": "enum",
           "variants": []
         }
-      ]
+      ],
+      "reads": [],
+      "writes": [],
+      "computed": []
     },
     {
-      "name": "Position",
-      "members": [
-        {
-          "name": "player",
-          "type": "ContractAddress",
-          "key": true
-        },
-        {
-          "name": "vec",
-          "type": "Vec2",
-          "key": false
-        }
-      ],
+      "name": "position",
+      "address": null,
       "class_hash": "0x2b233bba9a232a5e891c85eca9f67beedca7a12f9768729ff017bcb62d25c9d",
       "abi": [
         {
@@ -1578,7 +1535,11 @@ test_manifest_file
           "kind": "enum",
           "variants": []
         }
-      ]
+      ],
+      "reads": [],
+      "writes": [],
+      "computed": []
     }
-  ]
+  ],
+  "models": []
 }
