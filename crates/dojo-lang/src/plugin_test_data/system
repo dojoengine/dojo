@@ -682,6 +682,6 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
         testcomponent1_event: testcomponent1::Event,
         testcomponent2_event: testcomponent2::Event
             }
-impl EventDrop of Drop::<Event>;
+impl EventDrop of core::traits::Drop::<Event>;
             
                 }
