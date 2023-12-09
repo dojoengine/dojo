@@ -78,7 +78,6 @@ struct DevContext<'a> {
 }
 
 fn load_context(config: &Config) -> Result<DevContext<'_>> {
-    println!("CONFIG: {:?}", config.manifest_path());
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
     let resolve = scarb::ops::resolve_workspace(&ws)?;
@@ -86,7 +85,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
         .into_iter()
         .filter(|cu| packages.contains(&cu.main_package_id))
         .collect::<Vec<_>>();
-    println!("COMPIL UNITS: {:?}", compilation_units);
+
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
     let unit = compilation_units.first().unwrap();
