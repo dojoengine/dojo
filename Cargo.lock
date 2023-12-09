@@ -2561,6 +2561,7 @@ dependencies = [
  "cairo-lang-sierra-generator",
  "cairo-lang-starknet",
  "cairo-lang-syntax",
+ "cairo-lang-test-plugin",
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "camino",

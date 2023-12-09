@@ -8,6 +8,7 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
+use dojo_lang::scarb_internal::build_scarb_root_database;
 use dojo_world::manifest::Manifest;
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
@@ -23,7 +24,6 @@ use tracing_log::log;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use super::scarb_internal::build_scarb_root_database;
 use crate::ops::migration;
 
 #[derive(Args)]

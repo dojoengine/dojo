@@ -1,9 +1,8 @@
 use anyhow::Result;
 use clap::Args;
+use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
-
-use super::scarb_internal::compile_workspace;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs;

@@ -7,11 +7,12 @@ use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use dojo_test_utils::compiler::build_test_config;
 use dojo_world::manifest::{BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 use scarb::core::TargetKind;
-use scarb::ops::{self, CompileOpts};
+use scarb::ops::CompileOpts;
 use smol_str::SmolStr;
 use starknet::macros::felt;
 
 use super::do_update_manifest;
+use crate::scarb_internal::{self};
 
 fn build_mock_manifest() -> dojo_world::manifest::Manifest {
     dojo_world::manifest::Manifest {
@@ -152,13 +153,10 @@ fn update_manifest_correctly() {
 #[test]
 fn test_compiler() {
     let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
-    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
-    let packages = ws.members().map(|p| p.id).collect();
     assert!(
-        ops::compile(
-            packages,
+        scarb_internal::compile_workspace(
+            &config,
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-            &ws
         )
         .is_ok(),
         "compilation failed"
@@ -179,15 +177,12 @@ pub fn test_manifest_file(
     _args: &OrderedHashMap<String, String>,
 ) -> TestRunnerResult {
     let config = build_test_config("./src/manifest_test_data/spawn-and-move/Scarb.toml").unwrap();
-    let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
 
-    let packages = ws.members().map(|p| p.id).collect();
-    ops::compile(
-        packages,
+    scarb_internal::compile_workspace(
+        &config,
         CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-        &ws,
     )
-    .unwrap_or_else(|op| panic!("Error compiling: {op:?}"));
+    .unwrap_or_else(|err| panic!("Error compiling: {err:?}"));
 
     let target_dir = config.target_dir_override().unwrap();
 

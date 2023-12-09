@@ -1,7 +1,9 @@
 // I have copied source code from https://github.com/software-mansion/scarb/blob/main/scarb/src/compiler/db.rs
-// since build_scarb_root_database is not public
+// since build_scarb_root_database is not public.
 //
-// NOTE: This files needs to be updated whenever scarb version is updated
+// NOTE: This files needs to be updated whenever scarb version is updated.
+// NOTE: This file was moved here from `sozo` as we need to compile here too,
+//       and `sozo` has `dojo-lang` as dependency.
 use anyhow::Result;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
@@ -10,12 +12,13 @@ use cairo_lang_project::{AllCratesConfig, SingleCrateConfig};
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use dojo_lang::plugin::dojo_plugin_suite;
 use scarb::compiler::CompilationUnit;
 use scarb::core::Config;
 use scarb::ops::CompileOpts;
 use smol_str::SmolStr;
 use tracing::trace;
+
+use crate::plugin::dojo_plugin_suite;
 
 pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesConfig {
     let crates_config: OrderedHashMap<SmolStr, SingleCrateConfig> = unit
@@ -33,7 +36,7 @@ pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesCo
 }
 
 // TODO(mkaput): ScarbDatabase?
-pub(crate) fn build_scarb_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
+pub fn build_scarb_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
     b.with_cfg(unit.cfg_set.clone());
@@ -46,7 +49,10 @@ pub(crate) fn build_scarb_root_database(unit: &CompilationUnit) -> Result<RootDa
     b.build()
 }
 
-pub(crate) fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<()> {
+/// This function is an alternative to `ops::compile`, it's doing the same job.
+/// However, we can control the injection of the plugins, required to have dojo plugin present
+/// for each compilation.
+pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<()> {
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
     let resolve = scarb::ops::resolve_workspace(&ws)?;

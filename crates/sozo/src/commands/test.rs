@@ -11,13 +11,12 @@ use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig};
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
+use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::CompilationUnit;
 use scarb::core::Config;
 use scarb::ops;
 use tracing::trace;
-
-use crate::commands::scarb_internal::crates_config_for_compilation_unit;
 
 /// Execute all unit tests of a local package.
 #[derive(Args, Clone)]

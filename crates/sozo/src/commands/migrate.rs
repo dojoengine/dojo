@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Args;
+use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 
@@ -7,7 +8,6 @@ use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use crate::commands::scarb_internal::compile_workspace;
 use crate::ops::migration;
 
 #[derive(Args)]
