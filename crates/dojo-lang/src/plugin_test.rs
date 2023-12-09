@@ -97,10 +97,7 @@ pub fn test_expand_plugin_inner(
     let crate_id = db.intern_crate(CrateLongId::Real("test".into()));
     let root = Directory::Real("test_src".into());
 
-    db.set_crate_config(
-        crate_id,
-        Some(CrateConfiguration::default_for_root(root)),
-    );
+    db.set_crate_config(crate_id, Some(CrateConfiguration::default_for_root(root)));
 
     // Main module file.
     let file_id = db.intern_file(FileLongId::OnDisk("test_src/lib.cairo".into()));

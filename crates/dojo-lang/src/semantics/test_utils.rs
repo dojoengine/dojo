@@ -6,16 +6,17 @@ use cairo_lang_defs::db::{DefsDatabase, DefsGroup};
 use cairo_lang_defs::ids::{FunctionWithBodyId, ModuleId};
 use cairo_lang_diagnostics::{Diagnostics, DiagnosticsBuilder};
 use cairo_lang_filesystem::db::{
-    init_dev_corelib, init_files_group, AsFilesGroupMut, CrateConfiguration, FilesDatabase, FilesGroup, FilesGroupEx,
+    init_dev_corelib, init_files_group, AsFilesGroupMut, CrateConfiguration, FilesDatabase,
+    FilesGroup, FilesGroupEx,
 };
 use cairo_lang_filesystem::ids::{
     CrateId, CrateLongId, Directory, FileKind, FileLongId, VirtualFile,
 };
 use cairo_lang_parser::db::ParserDatabase;
 use cairo_lang_semantic::db::{SemanticDatabase, SemanticGroup};
+use cairo_lang_semantic::inline_macros::get_default_plugin_suite;
 use cairo_lang_semantic::items::functions::GenericFunctionId;
 use cairo_lang_semantic::{ConcreteFunctionWithBodyId, SemanticDiagnostic};
-use cairo_lang_semantic::inline_macros::get_default_plugin_suite;
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_syntax::node::db::{SyntaxDatabase, SyntaxGroup};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
@@ -55,10 +56,7 @@ impl DojoSemanticDatabase {
         let core_crate = db.intern_crate(CrateLongId::Real("dojo".into()));
         let core_root_dir = Directory::Real(dojo_path);
 
-        db.set_crate_config(
-            core_crate,
-            Some(CrateConfiguration::default_for_root(core_root_dir)),
-        );
+        db.set_crate_config(core_crate, Some(CrateConfiguration::default_for_root(core_root_dir)));
 
         db
     }

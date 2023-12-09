@@ -186,7 +186,8 @@ impl BuiltinDojoPlugin {
 impl CairoPlugin for BuiltinDojoPlugin {
     fn id(&self) -> PackageId {
         let url = Url::parse("https://github.com/dojoengine/dojo").unwrap();
-        let version = "0.3.11";
+        let version = "0.4.0";
+        // TODO: update this once pushed.
         let rev = "1e651b5d4d3b79b14a7d8aa29a92062fcb9e6659";
 
         let source_id =
