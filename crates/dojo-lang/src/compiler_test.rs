@@ -210,7 +210,8 @@ pub fn test_compiler_cairo_v240(
     _inputs: &OrderedHashMap<String, String>,
     _args: &OrderedHashMap<String, String>,
 ) -> TestRunnerResult {
-    let config = build_test_config("./src/manifest_test_data/compiler_cairo_v240/Scarb.toml").unwrap();
+    let config =
+        build_test_config("./src/manifest_test_data/compiler_cairo_v240/Scarb.toml").unwrap();
 
     scarb_internal::compile_workspace(
         &config,

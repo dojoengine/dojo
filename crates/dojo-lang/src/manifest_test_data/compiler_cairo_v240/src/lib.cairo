@@ -1,3 +1,4 @@
+//! Cairo 2.4.0 feature testing.
 #[starknet::contract]
 mod cairo_v240 {
     use core::fmt::Formatter;
