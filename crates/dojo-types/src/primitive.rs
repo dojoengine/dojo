@@ -114,7 +114,19 @@ impl Primitive {
     set_primitive!(set_contract_address, ContractAddress, FieldElement);
 
     pub fn to_numeric(&self) -> usize {
-        Self::iter().position(|p| p == *self).unwrap()
+        match self {
+            Primitive::U8(_) => 0,
+            Primitive::U16(_) => 1,
+            Primitive::U32(_) => 2,
+            Primitive::U64(_) => 3,
+            Primitive::U128(_) => 4,
+            Primitive::U256(_) => 5,
+            Primitive::USize(_) => 6,
+            Primitive::Bool(_) => 7,
+            Primitive::Felt252(_) => 8,
+            Primitive::ClassHash(_) => 9,
+            Primitive::ContractAddress(_) => 10,
+        }
     }
 
     pub fn from_numeric(value: usize) -> Option<Self> {

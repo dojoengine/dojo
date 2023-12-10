@@ -12,4 +12,8 @@ To run the tests, run:
 cargo test --package dojo-lang --lib -- plugin::test::expand_contract::model --exact --nocapture
 ```
 
-To regenerate, set `CAIRO_FIX_TESTS=1`.
+To regenerate, set `CAIRO_FIX_TESTS=1`:
+
+```
+CAIRO_FIX_TESTS=1 cargo test --package dojo-lang
+```

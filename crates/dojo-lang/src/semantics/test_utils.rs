@@ -6,19 +6,18 @@ use cairo_lang_defs::db::{DefsDatabase, DefsGroup};
 use cairo_lang_defs::ids::{FunctionWithBodyId, ModuleId};
 use cairo_lang_diagnostics::{Diagnostics, DiagnosticsBuilder};
 use cairo_lang_filesystem::db::{
-    init_dev_corelib, init_files_group, AsFilesGroupMut, FilesDatabase, FilesGroup, FilesGroupEx,
+    init_dev_corelib, init_files_group, AsFilesGroupMut, CrateConfiguration, FilesDatabase,
+    FilesGroup, FilesGroupEx,
 };
 use cairo_lang_filesystem::ids::{
     CrateId, CrateLongId, Directory, FileKind, FileLongId, VirtualFile,
 };
 use cairo_lang_parser::db::ParserDatabase;
-use cairo_lang_plugins::get_default_plugins;
 use cairo_lang_semantic::db::{SemanticDatabase, SemanticGroup};
-use cairo_lang_semantic::inline_macros::get_default_inline_macro_plugins;
+use cairo_lang_semantic::inline_macros::get_default_plugin_suite;
 use cairo_lang_semantic::items::functions::GenericFunctionId;
 use cairo_lang_semantic::{ConcreteFunctionWithBodyId, SemanticDiagnostic};
-use cairo_lang_starknet::inline_macros::selector::SelectorMacro;
-use cairo_lang_starknet::plugin::StarkNetPlugin;
+use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_syntax::node::db::{SyntaxDatabase, SyntaxGroup};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::{extract_matches, OptionFrom, Upcast};
@@ -26,10 +25,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::corelib;
 use once_cell::sync::Lazy;
 
-use crate::inline_macros::emit::EmitMacro;
-use crate::inline_macros::get::GetMacro;
-use crate::inline_macros::set::SetMacro;
-use crate::plugin::BuiltinDojoPlugin;
+use crate::plugin::dojo_plugin_suite;
 
 #[salsa::database(SemanticDatabase, DefsDatabase, ParserDatabase, SyntaxDatabase, FilesDatabase)]
 pub struct DojoSemanticDatabase {
@@ -46,25 +42,21 @@ impl DojoSemanticDatabase {
     pub fn new_empty() -> Self {
         let mut db = DojoSemanticDatabase { storage: Default::default() };
         init_files_group(&mut db);
-        let mut plugins = get_default_plugins();
-        plugins.push(Arc::new(StarkNetPlugin::default()));
-        plugins.push(Arc::new(BuiltinDojoPlugin));
-        db.set_macro_plugins(plugins);
 
-        let mut inline_plugins = get_default_inline_macro_plugins();
-        inline_plugins.insert(SelectorMacro::NAME.into(), Arc::new(SelectorMacro));
-        inline_plugins.insert(GetMacro::NAME.into(), Arc::new(GetMacro));
-        inline_plugins.insert(SetMacro::NAME.into(), Arc::new(SetMacro));
-        inline_plugins.insert(EmitMacro::NAME.into(), Arc::new(EmitMacro));
+        let mut suite = get_default_plugin_suite();
+        suite.add(starknet_plugin_suite());
+        suite.add(dojo_plugin_suite());
 
-        db.set_inline_macro_plugins(inline_plugins.into());
+        db.set_macro_plugins(suite.plugins);
+        db.set_inline_macro_plugins(suite.inline_macro_plugins.into());
 
         init_dev_corelib(&mut db, corelib());
         let dojo_path = Utf8PathBuf::from_path_buf("../../crates/dojo-core/src".into()).unwrap();
         let dojo_path: PathBuf = dojo_path.canonicalize_utf8().unwrap().into();
         let core_crate = db.intern_crate(CrateLongId::Real("dojo".into()));
         let core_root_dir = Directory::Real(dojo_path);
-        db.set_crate_root(core_crate, Some(core_root_dir));
+
+        db.set_crate_config(core_crate, Some(CrateConfiguration::default_for_root(core_root_dir)));
 
         db
     }

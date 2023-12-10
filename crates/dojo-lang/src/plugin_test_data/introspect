@@ -4,7 +4,7 @@
 test_expand_plugin
 
 //! > cairo_code
-use serde::Serde;
+use core::serde::Serde;
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct Vec2 {
@@ -51,7 +51,7 @@ struct GenericStruct<T> {
 }
 
 //! > expanded_cairo_code
-use serde::Serde;
+use core::serde::Serde;
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct Vec2 {
@@ -96,17 +96,17 @@ struct Position {
 struct GenericStruct<T> {
     t: T,
 }
-impl Vec2Copy of Copy::<Vec2>;
-impl Vec2Drop of Drop::<Vec2>;
-impl Vec2Serde of Serde::<Vec2> {
-    fn serialize(self: @Vec2, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.x, ref output);
-        serde::Serde::serialize(self.y, ref output)
+impl Vec2Copy of core::traits::Copy::<Vec2>;
+impl Vec2Drop of core::traits::Drop::<Vec2>;
+impl Vec2Serde of core::serde::Serde::<Vec2> {
+    fn serialize(self: @Vec2, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Vec2> {
-        Option::Some(Vec2 {
-            x: serde::Serde::deserialize(ref serialized)?,
-            y: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Vec2> {
+        core::option::Option::Some(Vec2 {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }
@@ -141,24 +141,24 @@ layout.append(32);
         })
     }
 }
-impl PlainEnumSerde of Serde::<PlainEnum> {
-    fn serialize(self: @PlainEnum, ref output: array::Array<felt252>) {
+impl PlainEnumSerde of core::serde::Serde::<PlainEnum> {
+    fn serialize(self: @PlainEnum, ref output: core::array::Array<felt252>) {
         match self {
-            PlainEnum::Left(x) => { serde::Serde::serialize(@0, ref output); serde::Serde::serialize(x, ref output); },
-            PlainEnum::Right(x) => { serde::Serde::serialize(@1, ref output); serde::Serde::serialize(x, ref output); },
+            PlainEnum::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            PlainEnum::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
         }
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<PlainEnum> {
-        let idx: felt252 = serde::Serde::deserialize(ref serialized)?;
-        Option::Some(
-            if idx == 0 { PlainEnum::Left(serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { PlainEnum::Right(serde::Serde::deserialize(ref serialized)?) }
-            else { return Option::None; }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<PlainEnum> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            if idx == 0 { PlainEnum::Left(core::serde::Serde::deserialize(ref serialized)?) }
+            else if idx == 1 { PlainEnum::Right(core::serde::Serde::deserialize(ref serialized)?) }
+            else { return core::option::Option::None; }
         )
     }
 }
-impl PlainEnumCopy of Copy::<PlainEnum>;
-impl PlainEnumDrop of Drop::<PlainEnum>;
+impl PlainEnumCopy of core::traits::Copy::<PlainEnum>;
+impl PlainEnumDrop of core::traits::Drop::<PlainEnum>;
 
 impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>> {
     #[inline(always)]
@@ -192,24 +192,24 @@ impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>
         )
     }
 }
-impl EnumPrimitiveSerde of Serde::<EnumPrimitive> {
-    fn serialize(self: @EnumPrimitive, ref output: array::Array<felt252>) {
+impl EnumPrimitiveSerde of core::serde::Serde::<EnumPrimitive> {
+    fn serialize(self: @EnumPrimitive, ref output: core::array::Array<felt252>) {
         match self {
-            EnumPrimitive::Left(x) => { serde::Serde::serialize(@0, ref output); serde::Serde::serialize(x, ref output); },
-            EnumPrimitive::Right(x) => { serde::Serde::serialize(@1, ref output); serde::Serde::serialize(x, ref output); },
+            EnumPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
         }
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<EnumPrimitive> {
-        let idx: felt252 = serde::Serde::deserialize(ref serialized)?;
-        Option::Some(
-            if idx == 0 { EnumPrimitive::Left(serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { EnumPrimitive::Right(serde::Serde::deserialize(ref serialized)?) }
-            else { return Option::None; }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumPrimitive> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            if idx == 0 { EnumPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?) }
+            else if idx == 1 { EnumPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?) }
+            else { return core::option::Option::None; }
         )
     }
 }
-impl EnumPrimitiveCopy of Copy::<EnumPrimitive>;
-impl EnumPrimitiveDrop of Drop::<EnumPrimitive>;
+impl EnumPrimitiveCopy of core::traits::Copy::<EnumPrimitive>;
+impl EnumPrimitiveDrop of core::traits::Drop::<EnumPrimitive>;
 
 impl EnumPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumPrimitive<>> {
     #[inline(always)]
@@ -248,24 +248,24 @@ layout.append(16);
         )
     }
 }
-impl EnumTupleSerde of Serde::<EnumTuple> {
-    fn serialize(self: @EnumTuple, ref output: array::Array<felt252>) {
+impl EnumTupleSerde of core::serde::Serde::<EnumTuple> {
+    fn serialize(self: @EnumTuple, ref output: core::array::Array<felt252>) {
         match self {
-            EnumTuple::Left(x) => { serde::Serde::serialize(@0, ref output); serde::Serde::serialize(x, ref output); },
-            EnumTuple::Right(x) => { serde::Serde::serialize(@1, ref output); serde::Serde::serialize(x, ref output); },
+            EnumTuple::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumTuple::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
         }
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<EnumTuple> {
-        let idx: felt252 = serde::Serde::deserialize(ref serialized)?;
-        Option::Some(
-            if idx == 0 { EnumTuple::Left(serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { EnumTuple::Right(serde::Serde::deserialize(ref serialized)?) }
-            else { return Option::None; }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTuple> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            if idx == 0 { EnumTuple::Left(core::serde::Serde::deserialize(ref serialized)?) }
+            else if idx == 1 { EnumTuple::Right(core::serde::Serde::deserialize(ref serialized)?) }
+            else { return core::option::Option::None; }
         )
     }
 }
-impl EnumTupleCopy of Copy::<EnumTuple>;
-impl EnumTupleDrop of Drop::<EnumTuple>;
+impl EnumTupleCopy of core::traits::Copy::<EnumTuple>;
+impl EnumTupleDrop of core::traits::Drop::<EnumTuple>;
 
 impl EnumTupleIntrospect<> of dojo::database::introspect::Introspect<EnumTuple<>> {
     #[inline(always)]
@@ -309,24 +309,24 @@ layout.append(8);
         )
     }
 }
-impl EnumCustomSerde of Serde::<EnumCustom> {
-    fn serialize(self: @EnumCustom, ref output: array::Array<felt252>) {
+impl EnumCustomSerde of core::serde::Serde::<EnumCustom> {
+    fn serialize(self: @EnumCustom, ref output: core::array::Array<felt252>) {
         match self {
-            EnumCustom::Left(x) => { serde::Serde::serialize(@0, ref output); serde::Serde::serialize(x, ref output); },
-            EnumCustom::Right(x) => { serde::Serde::serialize(@1, ref output); serde::Serde::serialize(x, ref output); },
+            EnumCustom::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumCustom::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
         }
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<EnumCustom> {
-        let idx: felt252 = serde::Serde::deserialize(ref serialized)?;
-        Option::Some(
-            if idx == 0 { EnumCustom::Left(serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { EnumCustom::Right(serde::Serde::deserialize(ref serialized)?) }
-            else { return Option::None; }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumCustom> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            if idx == 0 { EnumCustom::Left(core::serde::Serde::deserialize(ref serialized)?) }
+            else if idx == 1 { EnumCustom::Right(core::serde::Serde::deserialize(ref serialized)?) }
+            else { return core::option::Option::None; }
         )
     }
 }
-impl EnumCustomCopy of Copy::<EnumCustom>;
-impl EnumCustomDrop of Drop::<EnumCustom>;
+impl EnumCustomCopy of core::traits::Copy::<EnumCustom>;
+impl EnumCustomDrop of core::traits::Drop::<EnumCustom>;
 
 impl EnumCustomIntrospect<> of dojo::database::introspect::Introspect<EnumCustom<>> {
     #[inline(always)]
@@ -365,8 +365,8 @@ dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
         )
     }
 }
-impl PositionCopy of Copy::<Position>;
-impl PositionDrop of Drop::<Position>;
+impl PositionCopy of core::traits::Copy::<Position>;
+impl PositionDrop of core::traits::Drop::<Position>;
 
 impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> {
     #[inline(always)]
@@ -407,15 +407,15 @@ layout.append(16);
         })
     }
 }
-impl GenericStructCopy<T, impl TCopy: Copy<T>> of Copy::<GenericStruct<T>>;
-impl GenericStructDrop<T, impl TDrop: Drop<T>> of Drop::<GenericStruct<T>>;
-impl GenericStructSerde<T, impl TSerde: Serde<T>, impl TDestruct: Destruct<T>> of Serde::<GenericStruct<T>> {
-    fn serialize(self: @GenericStruct<T>, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.t, ref output)
+impl GenericStructCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<GenericStruct<T>>;
+impl GenericStructDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<GenericStruct<T>>;
+impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<GenericStruct<T>> {
+    fn serialize(self: @GenericStruct<T>, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.t, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<GenericStruct<T>> {
-        Option::Some(GenericStruct {
-            t: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<GenericStruct<T>> {
+        core::option::Option::Some(GenericStruct {
+            t: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }

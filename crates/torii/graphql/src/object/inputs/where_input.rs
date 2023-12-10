@@ -109,8 +109,17 @@ fn parse_integer(
 }
 
 fn parse_string(input: ValueAccessor<'_>, type_name: &str) -> Result<FilterValue> {
-    input
-        .string()
-        .map(|i| FilterValue::String(i.to_string()))
-        .map_err(|_| GqlError::new(format!("Expected string on field {}", type_name)))
+    match input.string() {
+        Ok(i) => match i.starts_with("0x") {
+            true => Ok(FilterValue::String(format!("0x{:0>64}", i.strip_prefix("0x").unwrap()))), /* safe to unwrap since we know it starts with 0x */
+            false => match i.parse::<u128>() {
+                Ok(val) => Ok(FilterValue::String(format!("0x{:0>64x}", val))),
+                Err(_) => Err(GqlError::new(format!(
+                    "Failed to parse integer value on field {}",
+                    type_name
+                ))),
+            },
+        },
+        Err(_) => Err(GqlError::new(format!("Expected string on field {}", type_name))),
+    }
 }
