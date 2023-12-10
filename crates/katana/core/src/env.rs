@@ -9,7 +9,7 @@ use cairo_vm::vm::runners::builtin_runner::{
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::ChainId;
 
-use crate::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS};
+use crate::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS, ECVRF_KEYPAIR};
 
 /// Represents the chain environment.
 #[derive(Debug, Clone)]
@@ -45,6 +45,8 @@ impl Default for Env {
                 invoke_tx_max_n_steps: 1_000_000,
                 validate_max_n_steps: 1_000_000,
                 max_recursion_depth: 100,
+                ecvrf_private_key: ECVRF_KEYPAIR.0,
+                ecvrf_public_key: ECVRF_KEYPAIR.1,
             },
         }
     }

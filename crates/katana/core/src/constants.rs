@@ -4,6 +4,12 @@ use katana_primitives::contract::{
 use katana_primitives::FieldElement;
 use lazy_static::lazy_static;
 use starknet::macros::felt;
+use starknet_api::hash::StarkFelt;
+use starknet_api::stark_felt;
+use starknet_api::state::StorageKey;
+use ecvrf::{VrfSk, VrfPk};
+
+use crate::utils::contract::get_contract_class;
 
 pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of wei.
 
@@ -46,4 +52,8 @@ lazy_static! {
     pub static ref ERC20_NAME_STORAGE_SLOT: StorageKey = felt!("0x0341c1bdfd89f69748aa00b5742b03adbffd79b8e80cab5c50d91cd8c2a79be1");
     pub static ref ERC20_SYMBOL_STORAGE_SLOT: StorageKey = felt!("0x00b6ce5410fca59d078ee9b2a4371a9d684c530d697c64fbef0ae6d5e8f0ac72");
     pub static ref ERC20_DECIMALS_STORAGE_SLOT: StorageKey = felt!("0x01f0d4aa99431d246bac9b8e48c33e888245b15e9678f64f9bdfc8823dc8f979");
+
+    // ECVRF
+
+    pub static ref ECVRF_KEYPAIR: (VrfSk, VrfPk) = ecvrf::keygen();
 }

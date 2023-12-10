@@ -34,6 +34,7 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
+ecvrf = "0.4.3"
 
 [dev-dependencies]
 assert_matches.workspace = true
@@ -42,3 +43,4 @@ hex = "0.4.3"
 [features]
 messaging = [ "ethers", "sha3" ]
 starknet-messaging = [  ]
+randomness = [  ]
