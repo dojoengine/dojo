@@ -532,7 +532,7 @@ dependencies = [
  "futures-lite 2.1.0",
  "parking",
  "polling 3.3.1",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "slab",
  "tracing",
  "windows-sys 0.52.0",
@@ -3352,7 +3352,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29f9df8a11882c4e3335eb2d18a0137c505d9ca927470b0cac9c6f0ae07d28f7"
 dependencies = [
  "async-trait",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "tokio",
  "windows-sys 0.48.0",
 ]
@@ -3950,7 +3950,7 @@ dependencies = [
  "itoa",
  "libc",
  "memmap2",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "smallvec",
  "thiserror",
 ]
@@ -4113,7 +4113,7 @@ dependencies = [
  "gix-command",
  "gix-config-value",
  "parking_lot 0.12.1",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "thiserror",
 ]
 
@@ -5065,7 +5065,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb0889898416213fab133e1d33a0e5858a48177452750691bde3666d0fdbaf8b"
 dependencies = [
  "hermit-abi",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "windows-sys 0.48.0",
 ]
 
@@ -5418,6 +5418,18 @@ dependencies = [
  "katana-provider",
  "katana-rpc-types",
  "starknet",
+]
+
+[[package]]
+name = "katana-runner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "home",
+ "lazy_static",
+ "starknet",
+ "tokio",
+ "url",
 ]
 
 [[package]]
@@ -6615,7 +6627,7 @@ dependencies = [
  "cfg-if",
  "concurrent-queue",
  "pin-project-lite",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "tracing",
  "windows-sys 0.52.0",
 ]
@@ -7136,7 +7148,7 @@ dependencies = [
 [[package]]
 name = "reth-libmdbx"
 version = "0.1.0-alpha.13"
-source = "git+https://github.com/paradigmxyz/reth.git#cf5006108c5ed2b774f09fbf02a694ec67e95ba0"
+source = "git+https://github.com/paradigmxyz/reth.git#8a670d57ec1c8f3cdf617e09f939d7d2624b6ded"
 dependencies = [
  "bitflags 2.4.1",
  "byteorder",
@@ -7151,7 +7163,7 @@ dependencies = [
 [[package]]
 name = "reth-mdbx-sys"
 version = "0.1.0-alpha.13"
-source = "git+https://github.com/paradigmxyz/reth.git#cf5006108c5ed2b774f09fbf02a694ec67e95ba0"
+source = "git+https://github.com/paradigmxyz/reth.git#8a670d57ec1c8f3cdf617e09f939d7d2624b6ded"
 dependencies = [
  "bindgen",
  "cc",
@@ -7291,9 +7303,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.27"
+version = "0.38.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfeae074e687625746172d639330f1de242a178bf3189b51e35a7a21573513ac"
+checksum = "72e572a5e8ca657d7366229cdde4bd14c4eb5499a9573d4d366fe1b599daa316"
 dependencies = [
  "bitflags 2.4.1",
  "errno",
@@ -8395,7 +8407,7 @@ checksum = "351ffff1bcf6a1dc569a1b330dfd85779e16506e7d4a87baa8be3744cb5415a6"
 dependencies = [
  "starknet-accounts",
  "starknet-contract",
- "starknet-core",
+ "starknet-core 0.7.2",
  "starknet-crypto 0.6.1",
  "starknet-ff",
  "starknet-macros",
@@ -8411,7 +8423,7 @@ checksum = "c7062b020f65d9da7f9dd9f1d97bfb644e881cda8ddb999799a799e6f2e408dd"
 dependencies = [
  "async-trait",
  "auto_impl",
- "starknet-core",
+ "starknet-core 0.7.2",
  "starknet-providers",
  "starknet-signers",
  "thiserror",
@@ -8427,7 +8439,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet-accounts",
- "starknet-core",
+ "starknet-core 0.7.2",
  "starknet-providers",
  "thiserror",
 ]
@@ -8437,6 +8449,24 @@ name = "starknet-core"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f1683ca7c63f0642310eddedb7d35056d8306084dff323d440711065c63ed87"
+dependencies = [
+ "base64 0.21.5",
+ "flate2",
+ "hex",
+ "serde",
+ "serde_json",
+ "serde_json_pythonic",
+ "serde_with",
+ "sha3",
+ "starknet-crypto 0.6.1",
+ "starknet-ff",
+]
+
+[[package]]
+name = "starknet-core"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff50e281d4fdb97988a3d5c7b7cae22b9d67bb2ef9be2cfafc17a1e35542cb53"
 dependencies = [
  "base64 0.21.5",
  "flate2",
@@ -8536,11 +8566,11 @@ dependencies = [
 
 [[package]]
 name = "starknet-macros"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f66fe05edab7ee6752a0aff3e14508001191083f3c6d0b6fa14f7008a96839b0"
+checksum = "840be1a7eb5735863eee47d3a3f26df45b9be2c519e8da294e74b4d0524d77d1"
 dependencies = [
- "starknet-core",
+ "starknet-core 0.8.0",
  "syn 2.0.39",
 ]
 
@@ -8559,7 +8589,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "starknet-core",
+ "starknet-core 0.7.2",
  "thiserror",
  "url",
 ]
@@ -8575,7 +8605,7 @@ dependencies = [
  "crypto-bigint",
  "eth-keystore",
  "rand",
- "starknet-core",
+ "starknet-core 0.7.2",
  "starknet-crypto 0.6.1",
  "thiserror",
 ]
@@ -8790,7 +8820,7 @@ dependencies = [
  "cfg-if",
  "fastrand 2.0.1",
  "redox_syscall 0.4.1",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "windows-sys 0.48.0",
 ]
 
@@ -10072,7 +10102,7 @@ dependencies = [
  "either",
  "home",
  "once_cell",
- "rustix 0.38.27",
+ "rustix 0.38.28",
 ]
 
 [[package]]
@@ -10084,7 +10114,7 @@ dependencies = [
  "either",
  "home",
  "once_cell",
- "rustix 0.38.27",
+ "rustix 0.38.28",
  "windows-sys 0.48.0",
 ]
 
@@ -10390,9 +10420,9 @@ dependencies = [
 
 [[package]]
 name = "xattr"
-version = "1.0.1"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4686009f71ff3e5c4dbcf1a282d0a44db3f021ba69350cd42086b3e5f1c6985"
+checksum = "fbc6ab6ec1907d1a901cdbcd2bd4cb9e7d64ce5c9739cbb97d3c391acd8c7fae"
 dependencies = [
  "libc",
 ]

@@ -9,7 +9,7 @@ use crate::constants::{
 };
 use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StarknetConfig {
     pub seed: [u8; 32],
     pub total_accounts: u8,
@@ -63,7 +63,7 @@ impl Default for StarknetConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environment {
     pub chain_id: String,
     pub gas_price: u128,

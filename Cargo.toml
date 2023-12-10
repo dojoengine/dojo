@@ -18,6 +18,7 @@ members = [
   "crates/katana/rpc/rpc-types-builder",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
+  "crates/katana/runner",
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
