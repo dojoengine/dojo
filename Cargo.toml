@@ -16,9 +16,9 @@ members = [
   "crates/katana/rpc",
   "crates/katana/rpc/rpc-types",
   "crates/katana/rpc/rpc-types-builder",
+  "crates/katana/runner",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
-  "crates/katana/runner",
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
@@ -96,7 +96,7 @@ serde_json = "1.0"
 serde_with = "2.3.1"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 sqlx = { version = "0.7.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
-starknet = "0.7.0"
+starknet = "0.8.0"
 starknet-crypto = "0.6.1"
 starknet_api = "0.6.0-rc3"
 strum = "0.25"
