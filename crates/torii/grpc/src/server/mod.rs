@@ -28,17 +28,20 @@ use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 
-use self::subscriptions::model_update::{ModelSubscriptionRequest, ModelSubscriberManager};
+use self::subscriptions::entity::EntitySubscriberManager;
+use self::subscriptions::state_diff::{ModelSubscriberManager, ModelSubscriptionRequest};
 use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
+use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
 
 #[derive(Clone)]
 pub struct DojoWorld {
-    world_address: FieldElement,
     pool: Pool<Sqlite>,
-    model_subscriber: Arc<ModelSubscriberManager>,
+    world_address: FieldElement,
     model_cache: Arc<ModelCache>,
+    model_manager: Arc<ModelSubscriberManager>,
+    entity_manager: Arc<EntitySubscriberManager>,
 }
 
 impl DojoWorld {
@@ -48,18 +51,24 @@ impl DojoWorld {
         world_address: FieldElement,
         provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
-        let model_subscriber = Arc::new(ModelSubscriberManager::default());
+        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        let model_manager = Arc::new(ModelSubscriberManager::default());
+        let entity_manager = Arc::new(EntitySubscriberManager::default());
 
-        tokio::task::spawn(subscriptions::model_update::Service::new_with_block_rcv(
+        tokio::task::spawn(subscriptions::state_diff::Service::new_with_block_rcv(
             block_rx,
             world_address,
             provider,
-            Arc::clone(&model_subscriber),
+            Arc::clone(&model_manager),
         ));
 
-        let model_cache = Arc::new(ModelCache::new(pool.clone()));
+        tokio::task::spawn(subscriptions::entity::Service::new(
+            pool.clone(),
+            Arc::clone(&entity_manager),
+            Arc::clone(&model_cache),
+        ));
 
-        Self { pool, model_cache, world_address, model_subscriber }
+        Self { pool, world_address, model_cache, model_manager, entity_manager }
     }
 }
 
@@ -260,14 +269,26 @@ impl DojoWorld {
 
             subs.push(ModelSubscriptionRequest {
                 keys,
-                model: subscriptions::model_update::ModelMetadata {
+                model: subscriptions::state_diff::ModelMetadata {
                     name: model,
                     packed_size: packed_size as usize,
                 },
             });
         }
 
-        self.model_subscriber.add_subscriber(subs).await
+        self.model_manager.add_subscriber(subs).await
+    }
+
+    async fn subscribe_entities(
+        &self,
+        ids: Vec<String>,
+    ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
+        let ids = ids
+            .iter()
+            .map(|id| Ok(FieldElement::from_str(&id).map_err(ParseError::FromStr)?))
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        self.entity_manager.add_subscriber(ids).await
     }
 
     async fn retrieve_entities(
@@ -325,9 +346,14 @@ impl DojoWorld {
 type ServiceResult<T> = Result<Response<T>, Status>;
 type SubscribeModelsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeModelsResponse, Status>> + Send>>;
+type SubscribeEntitiesResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeEntityResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
+    type SubscribeModelsStream = SubscribeModelsResponseStream;
+    type SubscribeEntitiesStream = SubscribeEntitiesResponseStream;
+
     async fn world_metadata(
         &self,
         _request: Request<MetadataRequest>,
@@ -340,8 +366,6 @@ impl proto::world::world_server::World for DojoWorld {
         Ok(Response::new(MetadataResponse { metadata: Some(metadata) }))
     }
 
-    type SubscribeModelsStream = SubscribeModelsResponseStream;
-
     async fn subscribe_models(
         &self,
         request: Request<SubscribeModelsRequest>,
@@ -352,6 +376,16 @@ impl proto::world::world_server::World for DojoWorld {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeModelsStream))
+    }
+
+    async fn subscribe_entities(
+        &self,
+        request: Request<SubscribeEntitiesRequest>,
+    ) -> ServiceResult<Self::SubscribeEntitiesStream> {
+        let SubscribeEntitiesRequest { ids } = request.into_inner();
+        let rx = self.subscribe_entities(ids).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
 
     async fn retrieve_entities(
