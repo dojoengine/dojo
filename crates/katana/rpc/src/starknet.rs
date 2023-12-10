@@ -122,9 +122,9 @@ impl StarknetApiServer for StarknetApi {
 
             let header = PartialHeader {
                 parent_hash: latest_hash,
-                gas_price: block_context.gas_prices.eth_l1_gas_price,
                 number: block_context.block_number.0,
                 timestamp: block_context.block_timestamp.0,
+                l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
                 sequencer_address: block_context.sequencer_address.into(),
             };
 
@@ -191,9 +191,9 @@ impl StarknetApiServer for StarknetApi {
 
             let header = PartialHeader {
                 parent_hash: latest_hash,
-                gas_price: block_context.gas_prices.eth_l1_gas_price,
                 number: block_context.block_number.0,
                 timestamp: block_context.block_timestamp.0,
+                l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
                 sequencer_address: block_context.sequencer_address.into(),
             };
 

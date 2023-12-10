@@ -33,7 +33,7 @@ pub enum FinalityStatus {
 pub struct PartialHeader {
     pub parent_hash: FieldElement,
     pub number: BlockNumber,
-    pub gas_price: u128,
+    pub l1_gas_price: u128,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
 }
@@ -44,7 +44,7 @@ pub struct PartialHeader {
 pub struct Header {
     pub parent_hash: BlockHash,
     pub number: BlockNumber,
-    pub gas_price: u128,
+    pub l1_gas_price: u128,
     pub timestamp: u64,
     pub state_root: FieldElement,
     pub sequencer_address: ContractAddress,
@@ -55,7 +55,7 @@ impl Header {
         Self {
             state_root,
             number: partial_header.number,
-            gas_price: partial_header.gas_price,
+            l1_gas_price: partial_header.l1_gas_price,
             timestamp: partial_header.timestamp,
             parent_hash: partial_header.parent_hash,
             sequencer_address: partial_header.sequencer_address,

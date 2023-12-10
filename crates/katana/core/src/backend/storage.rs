@@ -68,7 +68,7 @@ impl Blockchain {
         let header = PartialHeader {
             // TODO: need to be adjusted, eth is used for compatibility for now.
             parent_hash: 0u8.into(),
-            gas_price: block_context.gas_prices.eth_l1_gas_price,
+            l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
@@ -95,7 +95,7 @@ impl Blockchain {
         let header = Header {
             state_root,
             parent_hash,
-            gas_price: block_context.gas_prices.eth_l1_gas_price,
+            l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
@@ -214,7 +214,7 @@ mod tests {
         assert_eq!(latest_number, 23);
         assert_eq!(latest_hash, felt!("1111"));
 
-        assert_eq!(header.gas_price, 9090);
+        assert_eq!(header.l1_gas_price, 9090);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
         assert_eq!(header.state_root, felt!("1334"));

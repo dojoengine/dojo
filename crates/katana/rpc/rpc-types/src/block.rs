@@ -21,6 +21,7 @@ impl BlockWithTxs {
             timestamp: block.header.timestamp,
             block_number: block.header.number,
             parent_hash: block.header.parent_hash,
+            l1_gas_price: block.header.l1_gas_price,
             sequencer_address: block.header.sequencer_address.into(),
             status: match finality_status {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
