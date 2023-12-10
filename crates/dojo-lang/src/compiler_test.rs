@@ -196,3 +196,38 @@ pub fn test_manifest_file(
         generated_file,
     )]))
 }
+
+cairo_lang_test_utils::test_file_test!(
+    compiler_cairo_v240,
+    "src/manifest_test_data/",
+    {
+        cairo_v240: "cairo_v240",
+    },
+    test_compiler_cairo_v240
+);
+
+pub fn test_compiler_cairo_v240(
+    _inputs: &OrderedHashMap<String, String>,
+    _args: &OrderedHashMap<String, String>,
+) -> TestRunnerResult {
+    let config =
+        build_test_config("./src/manifest_test_data/compiler_cairo_v240/Scarb.toml").unwrap();
+
+    scarb_internal::compile_workspace(
+        &config,
+        CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+    )
+    .unwrap_or_else(|err| panic!("Error compiling: {err:?}"));
+
+    let target_dir = config.target_dir_override().unwrap();
+
+    let generated_manifest_path =
+        Path::new(target_dir).join(config.profile().as_str()).join("manifest.json");
+
+    let generated_file = fs::read_to_string(generated_manifest_path).unwrap();
+
+    TestRunnerResult::success(OrderedHashMap::from([(
+        "expected_manifest_file".into(),
+        generated_file,
+    )]))
+}

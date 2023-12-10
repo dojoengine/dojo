@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
 
     env:
       DOCKER_TAG: latest
@@ -42,7 +42,7 @@ jobs:
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c 1-7)
           echo "DOCKER_TAG=$SHORT_SHA" >> $GITHUB_ENV
-          
+
       - name: Set outputs
         id: release_info
         run: |
@@ -55,10 +55,9 @@ jobs:
           file: .devcontainer/Dockerfile
           tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
           build-args: |
-            VARIANT=bullseye
+            VARIANT=bookworm
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}-dev:cache
 
   propose-update-pr:
     needs: build-and-push
@@ -70,8 +69,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Update devcontainer.json
-        run: |
-          sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .devcontainer/devcontainer.json
+        run: sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .devcontainer/devcontainer.json
 
       - name: Setup Git credentials
         run: |
@@ -83,14 +81,14 @@ jobs:
           git add .devcontainer/devcontainer.json
           git commit -m "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
           git checkout -b devcontainer-${{ needs.build-and-push.outputs.tag_name }}
-          git push --set-upstream origin devcontainer--${{ needs.build-and-push.outputs.tag_name }}
+          git push --set-upstream origin devcontainer-${{ needs.build-and-push.outputs.tag_name }}
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
-          commit-message: "Update devcontainer image hash"
-          branch: update-devcontainer-image-hash
+          commit-message: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
+          branch: devcontainer-${{ needs.build-and-push.outputs.tag_name }}
           base: main
           delete-branch: true

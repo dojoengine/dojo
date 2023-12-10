@@ -1,0 +1,23 @@
+[package]
+name = "cairo_v240"
+version = "0.1.0"
+edition = "2023_10"
+cairo-version = "2.4.0"
+
+# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
+
+[cairo]
+sierra-replace-ids = true
+
+[dependencies]
+dojo = { path = "../../../../dojo-core" }
+
+[[target.dojo]]
+build-external-contracts = [  ]
+
+[tool.dojo.world]
+description = "Cairo 240 features"
+name = "compiler_cairo_240"
+
+[tool.dojo.env]
+rpc_url = "http://localhost:5050/"
