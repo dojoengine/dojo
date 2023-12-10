@@ -1,6 +1,6 @@
 //! MDBX backend for the database.
 //!
-//! The code is adapted from `reth` mdbx implementation:  https://github.com/paradigmxyz/reth/blob/227e1b7ad513977f4f48b18041df02686fca5f94/crates/storage/db/src/implementation/mdbx/mod.rs
+//! The code is adapted from `reth` mdbx implementation:  <https://github.com/paradigmxyz/reth/blob/227e1b7ad513977f4f48b18041df02686fca5f94/crates/storage/db/src/implementation/mdbx/mod.rs>
 
 pub mod cursor;
 pub mod tx;
