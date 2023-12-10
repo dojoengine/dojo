@@ -11,11 +11,14 @@ use serde::{Deserialize, Serialize};
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 
-pub trait Key: Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone {}
-pub trait Value: Compress + Decompress {}
+pub trait Key:
+    Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone + std::fmt::Debug
+{
+}
+pub trait Value: Compress + Decompress + std::fmt::Debug {}
 
-impl<T> Key for T where T: Serialize + for<'a> Deserialize<'a> + Clone {}
-impl<T> Value for T where T: Serialize + for<'a> Deserialize<'a> {}
+impl<T> Key for T where T: Serialize + for<'a> Deserialize<'a> + Clone + std::fmt::Debug {}
+impl<T> Value for T where T: Serialize + for<'a> Deserialize<'a> + std::fmt::Debug {}
 
 /// An asbtraction for a table.
 pub trait Table {
