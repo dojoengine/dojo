@@ -4,8 +4,8 @@ use starknet_api::core::ChainId;
 use url::Url;
 
 use crate::constants::{
-    DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, FEE_TOKEN_ADDRESS,
-    SEQUENCER_ADDRESS, ECVRF_KEYPAIR,
+    DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, ECVRF_KEYPAIR,
+    FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS,
 };
 use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 

@@ -139,7 +139,7 @@ mod tests {
 
     use super::Blockchain;
     use crate::constants::{
-        ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH, ECVRF_KEYPAIR,
+        ECVRF_KEYPAIR, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
     };
 
     #[test]

@@ -1,10 +1,10 @@
+use ecvrf::{VrfPk, VrfSk};
 use katana_primitives::contract::{
     CompiledContractClass, CompiledContractClassV0, ContractAddress, StorageKey,
 };
 use katana_primitives::FieldElement;
 use lazy_static::lazy_static;
 use starknet::macros::felt;
-use ecvrf::{VrfSk, VrfPk};
 
 pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of wei.
 

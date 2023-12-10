@@ -9,7 +9,7 @@ use cairo_vm::vm::runners::builtin_runner::{
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::ChainId;
 
-use crate::constants::{DEFAULT_GAS_PRICE, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS, ECVRF_KEYPAIR};
+use crate::constants::{DEFAULT_GAS_PRICE, ECVRF_KEYPAIR, FEE_TOKEN_ADDRESS, SEQUENCER_ADDRESS};
 
 /// Represents the chain environment.
 #[derive(Debug, Clone)]
