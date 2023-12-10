@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS, FEE_TOKEN_ADDRESS,
-    SEQUENCER_ADDRESS,
+    SEQUENCER_ADDRESS, ECVRF_KEYPAIR,
 };
 use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 
@@ -42,6 +42,8 @@ impl StarknetConfig {
             validate_max_n_steps: self.env.validate_max_steps,
             invoke_tx_max_n_steps: self.env.invoke_max_steps,
             max_recursion_depth: 1000,
+            ecvrf_private_key: ECVRF_KEYPAIR.0.clone(),
+            ecvrf_public_key: ECVRF_KEYPAIR.1.clone(),
         }
     }
 

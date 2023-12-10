@@ -955,7 +955,7 @@ dependencies = [
  "serde_json",
  "sha3 0.10.8",
  "starknet-crypto 0.5.2",
- "starknet_api 0.6.0-rc3",
+ "starknet_api",
  "strum 0.24.1",
  "strum_macros 0.24.3",
  "thiserror",
@@ -5300,7 +5300,7 @@ dependencies = [
  "katana-core",
  "katana-rpc",
  "serde_json",
- "starknet_api 0.2.0",
+ "starknet_api",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -5335,7 +5335,7 @@ dependencies = [
  "serde_with",
  "sha3 0.10.8",
  "starknet",
- "starknet_api 0.2.0",
+ "starknet_api",
  "thiserror",
  "tokio",
  "tracing",
@@ -5430,7 +5430,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet",
- "starknet_api 0.2.0",
+ "starknet_api",
  "thiserror",
  "tokio",
  "tower",
@@ -8572,7 +8572,7 @@ dependencies = [
  "serde_json",
  "serde_json_pythonic",
  "serde_with",
- "sha3",
+ "sha3 0.10.8",
  "starknet-crypto 0.6.1",
  "starknet-ff",
 ]
@@ -8701,29 +8701,9 @@ dependencies = [
  "auto_impl",
  "crypto-bigint",
  "eth-keystore",
- "rand",
+ "rand 0.8.5",
  "starknet-core 0.7.2",
  "starknet-crypto 0.6.1",
- "thiserror",
-]
-
-[[package]]
-name = "starknet_api"
-version = "0.6.0-rc3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "874475a79285b03525dcb6773c5b6436d0bb937de9791c43a02a682a0fcbefd4"
-dependencies = [
- "cairo-lang-starknet",
- "derive_more",
- "hex",
- "indexmap 2.1.0",
- "once_cell",
- "primitive-types",
- "serde",
- "serde_json",
- "starknet-crypto 0.5.2",
- "strum 0.24.1",
- "strum_macros 0.24.3",
  "thiserror",
 ]
 
@@ -9807,7 +9787,7 @@ dependencies = [
  "http",
  "httparse",
  "log",
- "rand",
+ "rand 0.8.5",
  "rustls 0.21.10",
  "sha1",
  "thiserror",

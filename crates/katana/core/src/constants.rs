@@ -4,12 +4,7 @@ use katana_primitives::contract::{
 use katana_primitives::FieldElement;
 use lazy_static::lazy_static;
 use starknet::macros::felt;
-use starknet_api::hash::StarkFelt;
-use starknet_api::stark_felt;
-use starknet_api::state::StorageKey;
 use ecvrf::{VrfSk, VrfPk};
-
-use crate::utils::contract::get_contract_class;
 
 pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of wei.
 

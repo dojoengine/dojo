@@ -45,8 +45,8 @@ impl Default for Env {
                 invoke_tx_max_n_steps: 1_000_000,
                 validate_max_n_steps: 1_000_000,
                 max_recursion_depth: 100,
-                ecvrf_private_key: ECVRF_KEYPAIR.0,
-                ecvrf_public_key: ECVRF_KEYPAIR.1,
+                ecvrf_private_key: ECVRF_KEYPAIR.0.clone(),
+                ecvrf_public_key: ECVRF_KEYPAIR.1.clone(),
             },
         }
     }

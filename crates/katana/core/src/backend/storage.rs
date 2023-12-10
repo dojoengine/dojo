@@ -139,7 +139,7 @@ mod tests {
 
     use super::Blockchain;
     use crate::constants::{
-        ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
+        ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH, ECVRF_KEYPAIR,
     };
 
     #[test]
@@ -159,6 +159,8 @@ mod tests {
                 strk_fee_token_address: Default::default(),
             },
             vm_resource_fee_cost: Default::default(),
+            ecvrf_private_key: ECVRF_KEYPAIR.0.clone(),
+            ecvrf_public_key: ECVRF_KEYPAIR.1.clone(),
         };
 
         let blockchain = Blockchain::new_with_genesis(provider, &block_context)
@@ -193,6 +195,8 @@ mod tests {
                 strk_fee_token_address: Default::default(),
             },
             vm_resource_fee_cost: Default::default(),
+            ecvrf_private_key: ECVRF_KEYPAIR.0.clone(),
+            ecvrf_public_key: ECVRF_KEYPAIR.1.clone(),
         };
 
         let blockchain = Blockchain::new_from_forked(
