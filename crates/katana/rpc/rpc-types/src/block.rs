@@ -1,7 +1,7 @@
 use katana_primitives::block::{Block, BlockHash, BlockNumber, FinalityStatus, PartialHeader};
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use serde::Serialize;
-use starknet::core::types::BlockStatus;
+use starknet::core::types::{BlockStatus, ResourcePrice};
 
 pub type BlockTxCount = u64;
 
@@ -11,17 +11,24 @@ pub struct BlockWithTxs(starknet::core::types::BlockWithTxs);
 
 impl BlockWithTxs {
     pub fn new(block_hash: BlockHash, block: Block, finality_status: FinalityStatus) -> Self {
+        let l1_gas_price = ResourcePrice {
+            price_in_wei: block.header.l1_gas_prices.eth_l1_gas_price.try_into().expect("msg"),
+            price_in_strk: Some(
+                block.header.l1_gas_prices.strk_l1_gas_price.try_into().expect("msg"),
+            ),
+        };
+
         let transactions =
             block.body.into_iter().map(|tx| crate::transaction::Tx::from(tx).0).collect();
 
         Self(starknet::core::types::BlockWithTxs {
             block_hash,
+            l1_gas_price,
             transactions,
             new_root: block.header.state_root,
             timestamp: block.header.timestamp,
             block_number: block.header.number,
             parent_hash: block.header.parent_hash,
-            l1_gas_price: block.header.l1_gas_price,
             sequencer_address: block.header.sequencer_address.into(),
             status: match finality_status {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,

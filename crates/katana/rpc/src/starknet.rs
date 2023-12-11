@@ -338,18 +338,18 @@ impl StarknetApiServer for StarknetApi {
         Ok(events)
     }
 
-    async fn pending_transactions(&self) -> Result<Vec<Tx>, Error> {
-        let Some(pending_state) = self.sequencer.pending_state() else { return Ok(vec![]) };
+    // async fn pending_transactions(&self) -> Result<Vec<Tx>, Error> {
+    //     let Some(pending_state) = self.sequencer.pending_state() else { return Ok(vec![]) };
 
-        let txs = pending_state
-            .executed_txs
-            .read()
-            .iter()
-            .map(|(tx, _)| tx.clone().into())
-            .collect::<Vec<Tx>>();
+    //     let txs = pending_state
+    //         .executed_txs
+    //         .read()
+    //         .iter()
+    //         .map(|(tx, _)| tx.clone().into())
+    //         .collect::<Vec<Tx>>();
 
-        Ok(txs)
-    }
+    //     Ok(txs)
+    // }
 
     async fn call(
         &self,

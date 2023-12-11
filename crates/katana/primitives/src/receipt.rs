@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use starknet::core::types::{Event, MsgToL1};
+use starknet::core::types::{Event, ExecutionResources, MsgToL1};
 
 use crate::contract::ContractAddress;
-
-/// A mapping of execution resource to the amount used.
-pub type ExecutionResources = HashMap<String, usize>;
 
 /// Receipt for a `Invoke` transaction.
 #[derive(Debug, Clone)]
@@ -20,7 +17,7 @@ pub struct InvokeTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
 }
 
 /// Receipt for a `Declare` transaction.
@@ -36,7 +33,7 @@ pub struct DeclareTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
 }
 
 /// Receipt for a `L1Handler` transaction.
@@ -52,7 +49,7 @@ pub struct L1HandlerTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
 }
 
 /// Receipt for a `DeployAccount` transaction.
@@ -68,7 +65,7 @@ pub struct DeployAccountTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
     /// Contract address of the deployed account contract.
     pub contract_address: ContractAddress,
 }
