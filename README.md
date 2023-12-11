@@ -6,8 +6,8 @@
 <br />
 <!-- markdownlint-restore -->
 
-<a href="https://twitter.com/dojostarknet">
-<img src="https://img.shields.io/twitter/follow/dojostarknet?style=social"/>
+<a href="https://twitter.com/ohayo_dojo">
+<img src="https://img.shields.io/twitter/follow/ohayo_dojo?style=social"/>
 </a>
 <a href="https://github.com/dojoengine/dojo">
 <img src="https://img.shields.io/github/stars/dojoengine/dojo?style=social"/>
@@ -24,19 +24,9 @@
 
 # Dojo: The Provable Game Engine
 
-**Dojo is a community driven open-source, Provable Game Engine, providing a comprehensive toolkit for building verifiable games and autonomous worlds.**
+Dojo provides a developer friendly framework for developing and scaling onchain games and autonomous worlds that are composable, extensible, permissionless and persistent. We do so by providing a ~zero-cost abstraction for developers to succinctly define their onchain world using [Cairo](https://github.com/starkware-libs/cairo) and a robust toolchain for building, migrating, deploying, proving and settling these worlds in production. Leveraging execution sharding and fractal scaling, we're able to scale computation to meet the needs of complex, interactive experiences, while maintaining the security properties of Ethereum.
 
-### 🚀 Launch Your Onchain Game Faster with Dojo
-
-Dojo offers a comprehensive suite of onchain game development tools, harnessing the capabilities of Rust and Cairo 🦀, to deliver unparalleled speed and scalability.
-
-### 🔑 Highlighted Features of Dojo:
-
-1. **Default Entity Component System (ECS)**: Crafted in [Cairo](https://github.com/starkware-libs/cairo), it provides a solid foundation to structure your game.
-2. **[Torii Indexer](/crates/torii/README.md)**: Say goodbye to manually creating indexers. Torii does it automatically for you!
-3. **[Katana Network](/crates/katana/README.md)**: An RPC development network to streamline and expedite your game's iterative processes.
-4. **[Sozo CLI](/crates/sozo/README.md)**: Your trusty CLI tool to oversee and upkeep your in-game universes.
-5. **Typed SDKs**: For a smoother, error-free coding experience.
+![Dojo Feature Matrix](.github/feature_matrix.png)
 
 ## 🚀 Quick Start
 
