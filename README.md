@@ -1,32 +1,12 @@
-<!-- markdownlint-disable -->
-<div align="center">
-  <img src=".github/dojo-mark-full-dark.svg" height="128">
-</div>
-<div align="center">
-<br />
-<!-- markdownlint-restore -->
+![Dojo Feature Matrix](.github/feature_matrix.png)
 
-<a href="https://twitter.com/ohayo_dojo">
-<img src="https://img.shields.io/twitter/follow/ohayo_dojo?style=social"/>
-</a>
-<a href="https://github.com/dojoengine/dojo">
-<img src="https://img.shields.io/github/stars/dojoengine/dojo?style=social"/>
-</a>
-
-[![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.gg/PwDa2mKhR4)
-![Github Actions][gha-badge] [![Telegram Chat][tg-badge]][tg-url]
+# Dojo: Provable Game Engine [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.gg/PwDa2mKhR4) [![Telegram Chat][tg-badge]][tg-url] ![Github Actions][gha-badge]
 
 [gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
 [tg-url]: https://t.me/dojoengine
 
-</div>
-
-# Dojo: The Provable Game Engine
-
 Dojo provides a developer friendly framework for developing and scaling onchain games and autonomous worlds that are composable, extensible, permissionless and persistent. We do so by providing a ~zero-cost abstraction for developers to succinctly define their onchain world using [Cairo](https://github.com/starkware-libs/cairo) and a robust toolchain for building, migrating, deploying, proving and settling these worlds in production. Leveraging execution sharding and fractal scaling, we're able to scale computation to meet the needs of complex, interactive experiences, while maintaining the security properties of Ethereum.
-
-![Dojo Feature Matrix](.github/feature_matrix.png)
 
 ## 🚀 Quick Start
 
