@@ -6,7 +6,7 @@ use crate::error::CodecError;
 
 /// A trait for encoding the key of a table.
 pub trait Encode {
-    type Encoded: AsRef<[u8]>;
+    type Encoded: AsRef<[u8]> + Into<Vec<u8>>;
     fn encode(self) -> Self::Encoded;
 }
 

@@ -1,14 +1,13 @@
 //! MDBX backend for the database.
+//!
+//! The code is adapted from `reth` mdbx implementation:  <https://github.com/paradigmxyz/reth/blob/227e1b7ad513977f4f48b18041df02686fca5f94/crates/storage/db/src/implementation/mdbx/mod.rs>
 
 pub mod cursor;
 pub mod tx;
 
-use std::ops::Deref;
 use std::path::Path;
 
-use libmdbx::{
-    DatabaseFlags, Environment, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW,
-};
+use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
 
 use self::tx::Tx;
 use crate::error::DatabaseError;
@@ -23,7 +22,7 @@ const DEFAULT_MAX_READERS: u64 = 32_000;
 
 /// Environment used when opening a MDBX environment. RO/RW.
 #[derive(Debug)]
-pub enum EnvKind {
+pub enum DbEnvKind {
     /// Read-only MDBX environment.
     RO,
     /// Read-write MDBX environment.
@@ -38,10 +37,10 @@ impl DbEnv {
     /// Opens the database at the specified path with the given `EnvKind`.
     ///
     /// It does not create the tables, for that call [`DbEnv::create_tables`].
-    pub fn open(path: &Path, kind: EnvKind) -> Result<DbEnv, DatabaseError> {
+    pub fn open(path: impl AsRef<Path>, kind: DbEnvKind) -> Result<DbEnv, DatabaseError> {
         let mode = match kind {
-            EnvKind::RO => Mode::ReadOnly,
-            EnvKind::RW => Mode::ReadWrite { sync_mode: SyncMode::Durable },
+            DbEnvKind::RO => Mode::ReadOnly,
+            DbEnvKind::RW => Mode::ReadWrite { sync_mode: SyncMode::Durable },
         };
 
         let mut builder = libmdbx::Environment::builder();
@@ -66,12 +65,12 @@ impl DbEnv {
             })
             .set_max_readers(DEFAULT_MAX_READERS);
 
-        Ok(DbEnv(builder.open(path).map_err(DatabaseError::OpenEnv)?))
+        Ok(DbEnv(builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?))
     }
 
     /// Creates all the defined tables in [`Tables`], if necessary.
     pub fn create_tables(&self) -> Result<(), DatabaseError> {
-        let tx = self.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
+        let tx = self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
 
         for table in Tables::ALL {
             let flags = match table.table_type() {
@@ -86,9 +85,7 @@ impl DbEnv {
 
         Ok(())
     }
-}
 
-impl DbEnv {
     /// Begin a read-only transaction.
     pub fn tx(&self) -> Result<Tx<RO>, DatabaseError> {
         Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
@@ -97,12 +94,5 @@ impl DbEnv {
     /// Begin a read-write transaction.
     pub fn tx_mut(&self) -> Result<Tx<RW>, DatabaseError> {
         Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
-    }
-}
-
-impl Deref for DbEnv {
-    type Target = Environment;
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }

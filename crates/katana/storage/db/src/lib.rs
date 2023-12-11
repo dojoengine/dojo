@@ -11,7 +11,7 @@ pub mod models;
 pub mod tables;
 pub mod utils;
 
-use mdbx::{DbEnv, EnvKind};
+use mdbx::{DbEnv, DbEnvKind};
 use utils::is_database_empty;
 
 /// Initialize the database at the given path and returning a handle to the its
@@ -34,7 +34,7 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
 
 /// Open the database at the given `path` in read-write mode.
 pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
-    DbEnv::open(path.as_ref(), EnvKind::RW).with_context(|| {
+    DbEnv::open(path.as_ref(), DbEnvKind::RW).with_context(|| {
         format!("Opening database in read-write mode at path {}", path.as_ref().display())
     })
 }
