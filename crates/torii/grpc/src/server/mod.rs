@@ -28,8 +28,8 @@ use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 
-use self::subscriptions::entity::EntitySubscriberManager;
-use self::subscriptions::state_diff::{ModelSubscriberManager, ModelSubscriptionRequest};
+use self::subscriptions::entity::EntityManager;
+use self::subscriptions::state_diff::{StateDiffManager, StateDiffRequest};
 use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
@@ -40,8 +40,8 @@ pub struct DojoWorld {
     pool: Pool<Sqlite>,
     world_address: FieldElement,
     model_cache: Arc<ModelCache>,
-    model_manager: Arc<ModelSubscriberManager>,
-    entity_manager: Arc<EntitySubscriberManager>,
+    entity_manager: Arc<EntityManager>,
+    state_diff_manager: Arc<StateDiffManager>,
 }
 
 impl DojoWorld {
@@ -52,14 +52,14 @@ impl DojoWorld {
         provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
         let model_cache = Arc::new(ModelCache::new(pool.clone()));
-        let model_manager = Arc::new(ModelSubscriberManager::default());
-        let entity_manager = Arc::new(EntitySubscriberManager::default());
+        let entity_manager = Arc::new(EntityManager::default());
+        let state_diff_manager = Arc::new(StateDiffManager::default());
 
         tokio::task::spawn(subscriptions::state_diff::Service::new_with_block_rcv(
             block_rx,
             world_address,
             provider,
-            Arc::clone(&model_manager),
+            Arc::clone(&state_diff_manager),
         ));
 
         tokio::task::spawn(subscriptions::entity::Service::new(
@@ -68,7 +68,7 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
-        Self { pool, world_address, model_cache, model_manager, entity_manager }
+        Self { pool, world_address, model_cache, entity_manager, state_diff_manager }
     }
 }
 
@@ -257,17 +257,17 @@ impl DojoWorld {
 
     async fn subscribe_models(
         &self,
-        entities_keys: Vec<proto::types::KeysClause>,
+        models_keys: Vec<proto::types::KeysClause>,
     ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
-        let mut subs = Vec::with_capacity(entities_keys.len());
-        for keys in entities_keys {
+        let mut subs = Vec::with_capacity(models_keys.len());
+        for keys in models_keys {
             let model = cairo_short_string_to_felt(&keys.model)
                 .map_err(ParseError::CairoShortStringToFelt)?;
 
             let proto::types::ModelMetadata { packed_size, .. } =
                 self.model_metadata(&keys.model).await?;
 
-            subs.push(ModelSubscriptionRequest {
+            subs.push(StateDiffRequest {
                 keys,
                 model: subscriptions::state_diff::ModelMetadata {
                     name: model,
@@ -276,18 +276,13 @@ impl DojoWorld {
             });
         }
 
-        self.model_manager.add_subscriber(subs).await
+        self.state_diff_manager.add_subscriber(subs).await
     }
 
     async fn subscribe_entities(
         &self,
         ids: Vec<String>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        let ids = ids
-            .iter()
-            .map(|id| Ok(FieldElement::from_str(&id).map_err(ParseError::FromStr)?))
-            .collect::<Result<Vec<_>, Error>>()?;
-
         self.entity_manager.add_subscriber(ids).await
     }
 

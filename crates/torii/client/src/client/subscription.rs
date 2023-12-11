@@ -11,30 +11,30 @@ use parking_lot::{Mutex, RwLock};
 use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
-use torii_grpc::client::ModelUpdateStreaming;
+use torii_grpc::client::StateDiffStreaming;
 use torii_grpc::types::KeysClause;
 
-use super::error::{Error, ParseError};
-use super::ModelStorage;
+use crate::client::error::{Error, ParseError};
+use crate::client::storage::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
 pub enum SubscriptionEvent {
-    UpdateSubsciptionStream(ModelUpdateStreaming),
+    StateDiffUpdateStream(StateDiffStreaming),
 }
 
 pub struct SubscribedModels {
     metadata: Arc<RwLock<WorldMetadata>>,
-    pub(super) models_keys: RwLock<HashSet<KeysClause>>,
+    pub(crate) models_keys: RwLock<HashSet<KeysClause>>,
     /// All the relevant storage addresses derived from the subscribed models
-    pub(super) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
+    pub(crate) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
 }
 
 impl SubscribedModels {
-    pub(super) fn is_synced(&self, keys: &KeysClause) -> bool {
+    pub(crate) fn is_synced(&self, keys: &KeysClause) -> bool {
         self.models_keys.read().contains(keys)
     }
 
-    pub(super) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
+    pub(crate) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
         Self {
             metadata,
             models_keys: Default::default(),
@@ -42,21 +42,21 @@ impl SubscribedModels {
         }
     }
 
-    pub(super) fn add_models(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub(crate) fn add_models(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
         for keys in models_keys {
             Self::add_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(super) fn remove_models(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub(crate) fn remove_models(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
         for keys in entities_keys {
             Self::remove_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(super) fn add_model(&self, keys: KeysClause) -> Result<(), Error> {
+    pub(crate) fn add_model(&self, keys: KeysClause) -> Result<(), Error> {
         if !self.models_keys.write().insert(keys.clone()) {
             return Ok(());
         }
@@ -83,7 +83,7 @@ impl SubscribedModels {
         Ok(())
     }
 
-    pub(super) fn remove_model(&self, keys: KeysClause) -> Result<(), Error> {
+    pub(crate) fn remove_model(&self, keys: KeysClause) -> Result<(), Error> {
         if !self.models_keys.write().remove(&keys) {
             return Ok(());
         }
@@ -112,50 +112,50 @@ impl SubscribedModels {
 }
 
 #[derive(Debug)]
-pub(crate) struct SubscriptionClientHandle(Mutex<Sender<SubscriptionEvent>>);
+pub(crate) struct SubscriptionHandle(Mutex<Sender<SubscriptionEvent>>);
 
-impl SubscriptionClientHandle {
+impl SubscriptionHandle {
     fn new(sender: Sender<SubscriptionEvent>) -> Self {
         Self(Mutex::new(sender))
     }
 
-    pub(crate) fn update_subscription_stream(&self, stream: ModelUpdateStreaming) {
-        let _ = self.0.lock().try_send(SubscriptionEvent::UpdateSubsciptionStream(stream));
+    pub(crate) fn update_subscription_stream(&self, stream: StateDiffStreaming) {
+        let _ = self.0.lock().try_send(SubscriptionEvent::StateDiffUpdateStream(stream));
     }
 }
 
 #[must_use = "SubscriptionClient does nothing unless polled"]
 pub struct SubscriptionService {
     req_rcv: Receiver<SubscriptionEvent>,
-    /// The stream returned by the subscription server to receive the response
-    sub_res_stream: RefCell<Option<ModelUpdateStreaming>>,
+    /// State Diff stream by subscription server to receive response
+    state_diff_stream: RefCell<Option<StateDiffStreaming>>,
 
     /// Callback to be called on error
     err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
 
-    // for processing the entity diff and updating the storage
+    // for processing the model diff and updating the storage
     storage: Arc<ModelStorage>,
     world_metadata: Arc<RwLock<WorldMetadata>>,
     subscribed_models: Arc<SubscribedModels>,
 }
 
 impl SubscriptionService {
-    pub(super) fn new(
+    pub(crate) fn new(
         storage: Arc<ModelStorage>,
         world_metadata: Arc<RwLock<WorldMetadata>>,
         subscribed_models: Arc<SubscribedModels>,
-        sub_res_stream: ModelUpdateStreaming,
-    ) -> (Self, SubscriptionClientHandle) {
+        state_diff_stream: StateDiffStreaming,
+    ) -> (Self, SubscriptionHandle) {
         let (req_sender, req_rcv) = mpsc::channel(128);
 
-        let handle = SubscriptionClientHandle::new(req_sender);
-        let sub_res_stream = RefCell::new(Some(sub_res_stream));
+        let handle = SubscriptionHandle::new(req_sender);
+        let state_diff_stream = RefCell::new(Some(state_diff_stream));
 
         let client = Self {
             req_rcv,
             storage,
             world_metadata,
-            sub_res_stream,
+            state_diff_stream,
             err_callback: None,
             subscribed_models,
         };
@@ -166,8 +166,8 @@ impl SubscriptionService {
     // TODO: handle the subscription events properly
     fn handle_event(&self, event: SubscriptionEvent) -> Result<(), Error> {
         match event {
-            SubscriptionEvent::UpdateSubsciptionStream(stream) => {
-                self.sub_res_stream.replace(Some(stream));
+            SubscriptionEvent::StateDiffUpdateStream(stream) => {
+                self.state_diff_stream.replace(Some(stream));
             }
         }
         Ok(())
@@ -177,7 +177,7 @@ impl SubscriptionService {
     fn handle_response(&mut self, response: Result<StateUpdate, tonic::Status>) {
         match response {
             Ok(update) => {
-                self.process_entity_diff(update.state_diff);
+                self.process_model_diff(update.state_diff);
             }
 
             Err(err) => {
@@ -188,7 +188,7 @@ impl SubscriptionService {
         }
     }
 
-    fn process_entity_diff(&mut self, diff: StateDiff) {
+    fn process_model_diff(&mut self, diff: StateDiff) {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
@@ -226,7 +226,7 @@ impl Future for SubscriptionService {
                 let _ = pin.handle_event(req);
             }
 
-            if let Some(stream) = pin.sub_res_stream.get_mut() {
+            if let Some(stream) = pin.state_diff_stream.get_mut() {
                 match stream.poll_next_unpin(cx) {
                     Poll::Ready(Some(res)) => pin.handle_response(res),
                     Poll::Ready(None) => return Poll::Ready(()),
@@ -268,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn add_and_remove_subscribed_entity() {
+    fn add_and_remove_subscribed_model() {
         let model_name = String::from("Position");
         let keys = vec![felt!("0x12345")];
         let packed_size: u32 = 1;
@@ -285,7 +285,7 @@ mod tests {
         let keys = KeysClause { model: model_name, keys };
 
         let subscribed_models = super::SubscribedModels::new(Arc::new(RwLock::new(metadata)));
-        subscribed_models.add_models(vec![keys.clone()]).expect("able to add entity");
+        subscribed_models.add_models(vec![keys.clone()]).expect("able to add model");
 
         let actual_storage_addresses_count =
             subscribed_models.subscribed_storage_addresses.read().len();

@@ -27,14 +27,14 @@ pub struct ModelMetadata {
     pub packed_size: usize,
 }
 
-pub struct ModelSubscriptionRequest {
+pub struct StateDiffRequest {
     pub model: ModelMetadata,
     pub keys: proto::types::KeysClause,
 }
 
-impl ModelSubscriptionRequest {}
+impl StateDiffRequest {}
 
-pub struct ModelSubscriber {
+pub struct StateDiffSubscriber {
     /// The storage addresses that the subscriber is interested in.
     storage_addresses: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
@@ -42,14 +42,14 @@ pub struct ModelSubscriber {
 }
 
 #[derive(Default)]
-pub struct ModelSubscriberManager {
-    subscribers: RwLock<HashMap<usize, ModelSubscriber>>,
+pub struct StateDiffManager {
+    subscribers: RwLock<HashMap<usize, StateDiffSubscriber>>,
 }
 
-impl ModelSubscriberManager {
+impl StateDiffManager {
     pub async fn add_subscriber(
         &self,
-        reqs: Vec<ModelSubscriptionRequest>,
+        reqs: Vec<StateDiffRequest>,
     ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
 
@@ -80,7 +80,10 @@ impl ModelSubscriberManager {
             .flatten()
             .collect::<HashSet<FieldElement>>();
 
-        self.subscribers.write().await.insert(id, ModelSubscriber { storage_addresses, sender });
+        self.subscribers
+            .write()
+            .await
+            .insert(id, StateDiffSubscriber { storage_addresses, sender });
 
         Ok(receiver)
     }
@@ -100,7 +103,7 @@ pub struct Service<P: Provider> {
     block_num_rcv: Receiver<u64>,
     state_update_queue: VecDeque<u64>,
     state_update_req_fut: Option<BoxFuture<'static, (P, u64, RequestStateUpdateResult)>>,
-    subs_manager: Arc<ModelSubscriberManager>,
+    subs_manager: Arc<StateDiffManager>,
     publish_fut: Option<BoxFuture<'static, PublishStateUpdateResult>>,
 }
 
@@ -112,7 +115,7 @@ where
         block_num_rcv: Receiver<u64>,
         world_address: FieldElement,
         provider: P,
-        subs_manager: Arc<ModelSubscriberManager>,
+        subs_manager: Arc<StateDiffManager>,
     ) -> Self {
         Self {
             subs_manager,
@@ -134,7 +137,7 @@ where
     }
 
     async fn publish_updates(
-        subs: Arc<ModelSubscriberManager>,
+        subs: Arc<StateDiffManager>,
         contract_address: FieldElement,
         state_update: StateUpdate,
     ) -> PublishStateUpdateResult {

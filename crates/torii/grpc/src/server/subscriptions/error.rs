@@ -7,6 +7,4 @@ pub enum SubscriptionError {
     Parse(#[from] ParseError),
     #[error(transparent)]
     Provider(ProviderError),
-    #[error(transparent)]
-    Sql(#[from] sqlx::Error),
 }

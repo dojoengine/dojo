@@ -16,15 +16,14 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::ModelUpdateStreaming;
+use torii_grpc::client::{EntityUpdateStreaming, StateDiffStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
 
-use self::error::{Error, ParseError};
-use self::storage::ModelStorage;
-use self::subscription::{SubscribedModels, SubscriptionClientHandle};
-use crate::client::subscription::SubscriptionService;
+use crate::client::error::{Error, ParseError};
+use crate::client::storage::ModelStorage;
+use crate::client::subscription::{SubscribedModels, SubscriptionHandle, SubscriptionService};
 
 // TODO: remove reliance on RPC
 #[allow(unused)]
@@ -38,7 +37,7 @@ pub struct Client {
     /// Models the client are subscribed to.
     subscribed_models: Arc<SubscribedModels>,
     /// The subscription client handle.
-    sub_client_handle: OnceCell<SubscriptionClientHandle>,
+    sub_client_handle: OnceCell<SubscriptionHandle>,
     /// World contract reader.
     world_reader: WorldContractReader<JsonRpcClient<HttpTransport>>,
 }
@@ -73,7 +72,7 @@ impl Client {
                 let model_reader = world_reader.model(&keys.model).await?;
                 let values = model_reader.entity_storage(&keys.keys).await?;
 
-                client_storage.set_entity_storage(
+                client_storage.set_model_storage(
                     cairo_short_string_to_felt(&keys.model).unwrap(),
                     keys.keys,
                     values,
@@ -112,6 +111,16 @@ impl Client {
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
+    /// A direct stream to grpc subscribe entities
+    pub async fn on_entity_updated(
+        &self,
+        ids: Vec<String>,
+    ) -> Result<EntityUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_entities(ids).await?;
+        Ok(stream)
+    }
+
     /// Returns the value of a model.
     ///
     /// This function will only return `None`, if `model` doesn't exist. If there is no model with
@@ -130,7 +139,7 @@ impl Client {
             return Ok(Some(model.entity(&keys.keys).await?));
         }
 
-        let Ok(Some(raw_values)) = self.storage.get_entity_storage(
+        let Ok(Some(raw_values)) = self.storage.get_model_storage(
             cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
             &keys.keys,
         ) else {
@@ -174,7 +183,7 @@ impl Client {
     /// NOTE: This will establish a new subscription stream with the server.
     pub async fn add_models_to_sync(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
         for keys in &models_keys {
-            self.initiate_entity(&keys.model, keys.keys.clone()).await?;
+            self.initiate_model(&keys.model, keys.keys.clone()).await?;
         }
 
         self.subscribed_models.add_models(models_keys)?;
@@ -214,16 +223,16 @@ impl Client {
     async fn initiate_subscription(
         &self,
         keys: Vec<KeysClause>,
-    ) -> Result<ModelUpdateStreaming, Error> {
+    ) -> Result<StateDiffStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_models(keys).await?;
+        let stream = grpc_client.subscribe_state_diff(keys).await?;
         Ok(stream)
     }
 
-    async fn initiate_entity(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
+    async fn initiate_model(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
         let model_reader = self.world_reader.model(model).await?;
         let values = model_reader.entity_storage(&keys).await?;
-        self.storage.set_entity_storage(
+        self.storage.set_model_storage(
             cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,
             keys,
             values,
