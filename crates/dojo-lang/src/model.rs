@@ -50,13 +50,13 @@ pub fn handle_model_struct(
 
         if m.ty == "felt252" {
             return Some(RewriteNode::Text(format!(
-                "array::ArrayTrait::append(ref serialized, *self.{});",
+                "core::array::ArrayTrait::append(ref serialized, *self.{});",
                 m.name
             )));
         }
 
         Some(RewriteNode::Text(format!(
-            "serde::Serde::serialize(self.{}, ref serialized);",
+            "core::serde::Serde::serialize(self.{}, ref serialized);",
             m.name
         )))
     };
@@ -81,23 +81,23 @@ pub fn handle_model_struct(
 
                 #[inline(always)]
                 fn keys(self: @$type_name$) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
+                    let mut serialized = core::array::ArrayTrait::new();
                     $serialized_keys$
-                    array::ArrayTrait::span(@serialized)
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn values(self: @$type_name$) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
+                    let mut serialized = core::array::ArrayTrait::new();
                     $serialized_values$
-                    array::ArrayTrait::span(@serialized)
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn layout(self: @$type_name$) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[inline(always)]
@@ -133,7 +133,7 @@ pub fn handle_model_struct(
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
@@ -141,9 +141,9 @@ pub fn handle_model_struct(
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]

@@ -1,4 +1,4 @@
-use array::ArrayTrait;
+use core::array::ArrayTrait;
 use core::debug::PrintTrait;
 use starknet::ContractAddress;
 
