@@ -110,7 +110,8 @@ impl InlineMacroExprPlugin for GetMacro {
                 "\n            let mut __{model}_layout__ = core::array::ArrayTrait::new();
                  dojo::database::introspect::Introspect::<{model}>::layout(ref __{model}_layout__);
                  let mut __{model}_layout_clone__ = __{model}_layout__.clone();
-                 let mut __{model}_layout_span__ = core::array::ArrayTrait::span(@__{model}_layout__);
+                 let mut __{model}_layout_span__ = \
+                 core::array::ArrayTrait::span(@__{model}_layout__);
                  let mut __{model}_layout_clone_span__ = \
                  core::array::ArrayTrait::span(@__{model}_layout_clone__);
                  let mut __{model}_values__ = {}.entity('{model}', __get_macro_keys__, 0_u8,
@@ -119,8 +120,10 @@ impl InlineMacroExprPlugin for GetMacro {
                  let mut __{model}_model__ = core::array::ArrayTrait::new();
                  core::array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);
                  core::array::serialize_array_helper(__{model}_values__, ref __{model}_model__);
-                 let mut __{model}_model_span__ = core::array::ArrayTrait::span(@__{model}_model__);
-                 let __{model} = core::option::OptionTrait::expect(core::serde::Serde::<{model}>::deserialize(
+                 let mut __{model}_model_span__ = \
+                 core::array::ArrayTrait::span(@__{model}_model__);
+                 let __{model} = \
+                 core::option::OptionTrait::expect(core::serde::Serde::<{model}>::deserialize(
                     ref __{model}_model_span__
                 ), '{deser_err_msg}');\n",
                 world.as_syntax_node().get_text(db),

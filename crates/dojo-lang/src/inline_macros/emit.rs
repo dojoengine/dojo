@@ -44,7 +44,8 @@ impl InlineMacroExprPlugin for EmitMacro {
         let event = &args[1];
 
         builder.add_str(
-            "\n            starknet::Event::append_keys_and_data(@core::traits::Into::<_, Event>::into(",
+            "\n            starknet::Event::append_keys_and_data(@core::traits::Into::<_, \
+             Event>::into(",
         );
         builder.add_node(event.as_syntax_node());
         builder.add_str("), ref keys, ref data);");
