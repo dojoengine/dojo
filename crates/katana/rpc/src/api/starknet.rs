@@ -92,7 +92,7 @@ pub trait StarknetApi {
 
     #[method(name = "specVersion")]
     async fn spec_version(&self) -> Result<String, Error> {
-        unimplemented!("specVersion")
+        Ok("0.5.1".into())
     }
 
     #[method(name = "chainId")]
