@@ -175,8 +175,50 @@ fn execute_tx<S: StateReader>(
     res
 }
 
+pub type AcceptedTxPair = (TxWithHash, TxReceiptWithExecInfo);
+pub type RejectedTxPair = (TxWithHash, TransactionExecutionError);
+
 pub struct PendingState {
     pub state: Arc<CachedStateWrapper<StateRefDb>>,
     /// The transactions that have been executed.
     pub executed_txs: RwLock<Vec<(TxWithHash, TxReceiptWithExecInfo)>>,
+    /// The transactions that have been rejected.
+    pub rejected_txs: RwLock<Vec<(TxWithHash, TransactionExecutionError)>>,
+}
+
+impl PendingState {
+    pub fn new(state: StateRefDb) -> Self {
+        Self {
+            state: Arc::new(CachedStateWrapper::new(state)),
+            executed_txs: RwLock::new(Vec::new()),
+            rejected_txs: RwLock::new(Vec::new()),
+        }
+    }
+
+    pub fn reset_state_with(&self, state: StateRefDb) {
+        self.state.reset_with_new_state(state);
+    }
+
+    pub fn add_executed_txs(&self, transactions: Vec<(TxWithHash, TxExecutionResult)>) {
+        transactions.into_iter().for_each(|(tx, res)| self.add_executed_tx(tx, res));
+    }
+
+    /// Drain the pending transactions, returning the executed and rejected transactions.
+    pub fn take_txs_all(&self) -> (Vec<AcceptedTxPair>, Vec<RejectedTxPair>) {
+        let executed_txs = std::mem::take(&mut *self.executed_txs.write());
+        let rejected_txs = std::mem::take(&mut *self.rejected_txs.write());
+        (executed_txs, rejected_txs)
+    }
+
+    fn add_executed_tx(&self, tx: TxWithHash, execution_result: TxExecutionResult) {
+        match execution_result {
+            Ok(execution_info) => {
+                let receipt = TxReceiptWithExecInfo::new(&tx, execution_info);
+                self.executed_txs.write().push((tx, receipt));
+            }
+            Err(err) => {
+                self.rejected_txs.write().push((tx, err));
+            }
+        }
+    }
 }

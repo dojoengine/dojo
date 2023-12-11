@@ -81,6 +81,18 @@ pub enum Receipt {
 }
 
 impl Receipt {
+    /// Returns `true` if the transaction is reverted.
+    ///
+    /// A transaction is reverted if the `revert_error` field in the receipt is not `None`.
+    pub fn is_reverted(&self) -> bool {
+        match self {
+            Receipt::Invoke(rct) => rct.revert_error.is_some(),
+            Receipt::Declare(rct) => rct.revert_error.is_some(),
+            Receipt::L1Handler(rct) => rct.revert_error.is_some(),
+            Receipt::DeployAccount(rct) => rct.revert_error.is_some(),
+        }
+    }
+
     pub fn messages_sent(&self) -> &[MsgToL1] {
         match self {
             Receipt::Invoke(rct) => &rct.messages_sent,

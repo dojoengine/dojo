@@ -237,11 +237,7 @@ fn parse_messages(messages: &[MsgToL1]) -> Vec<U256> {
     messages
         .iter()
         .map(|msg| {
-            let hash = compute_l1_message_hash(
-                msg.from_address,
-                msg.to_address,
-                &msg.payload.iter().map(|p| *p).collect::<Vec<FieldElement>>(),
-            );
+            let hash = compute_l1_message_hash(msg.from_address, msg.to_address, &msg.payload);
             U256::from_big_endian(hash.as_bytes())
         })
         .collect()

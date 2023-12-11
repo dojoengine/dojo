@@ -16,6 +16,7 @@ use katana_rpc_types::transaction::{
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
+use starknet::core::types::TransactionStatus;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum StarknetApiError {
@@ -152,9 +153,10 @@ pub trait StarknetApi {
     ) -> Result<MaybePendingTxReceipt, Error>;
 
     #[method(name = "getTransactionStatus")]
-    async fn transaction_status(&self, transaction_hash: TxHash) -> Result<String, Error> {
-        unimplemented!("getTransactionStatus")
-    }
+    async fn transaction_status(
+        &self,
+        transaction_hash: TxHash,
+    ) -> Result<TransactionStatus, Error>;
 
     #[method(name = "getClassHashAt")]
     async fn class_hash_at(

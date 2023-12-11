@@ -151,10 +151,7 @@ impl IntervalBlockProducer {
             interval
         };
 
-        let state = Arc::new(PendingState {
-            state: Arc::new(CachedStateWrapper::new(db)),
-            executed_txs: Default::default(),
-        });
+        let state = Arc::new(PendingState::new(db));
 
         Self {
             state,
@@ -170,10 +167,7 @@ impl IntervalBlockProducer {
     /// for every fixed interval, although it will still execute all queued transactions and
     /// keep hold of the pending state.
     pub fn new_no_mining(backend: Arc<Backend>, db: StateRefDb) -> Self {
-        let state = Arc::new(PendingState {
-            state: Arc::new(CachedStateWrapper::new(db)),
-            executed_txs: Default::default(),
-        });
+        let state = Arc::new(PendingState::new(db));
 
         Self {
             state,
@@ -206,16 +200,15 @@ impl IntervalBlockProducer {
     ) -> MinedBlockOutcome {
         trace!(target: "miner", "creating new block");
 
-        let tx_receipt_pairs = {
-            let mut txs_lock = pending_state.executed_txs.write();
-            txs_lock.drain(..).map(|(tx, rct)| (tx, rct.receipt)).collect::<Vec<_>>()
-        };
+        let (txs, _) = pending_state.take_txs_all();
+        let tx_receipt_pairs =
+            txs.into_iter().map(|(tx, rct)| (tx, rct.receipt)).collect::<Vec<_>>();
 
         let (outcome, new_state) = backend.mine_pending_block(tx_receipt_pairs, state_updates);
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
         backend.update_block_context();
-        pending_state.state.reset_with_new_state(new_state.into());
+        pending_state.reset_state_with(new_state.into());
 
         outcome
     }
@@ -235,7 +228,7 @@ impl IntervalBlockProducer {
             .zip(txs)
             .filter_map(|(res, tx)| {
                 let Ok(info) = res else { return None };
-                let receipt = TxReceiptWithExecInfo::from_tx_exec_result(&tx, info);
+                let receipt = TxReceiptWithExecInfo::new(&tx, info);
                 Some((tx, receipt))
             })
             .collect::<Vec<_>>()
@@ -345,7 +338,7 @@ impl InstantBlockProducer {
         .zip(txs)
         .filter_map(|(res, tx)| {
             if let Ok(info) = res {
-                let receipt = TxReceiptWithExecInfo::from_tx_exec_result(&tx, info);
+                let receipt = TxReceiptWithExecInfo::new(&tx, info);
                 Some((tx, receipt.receipt))
             } else {
                 None

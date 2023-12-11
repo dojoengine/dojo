@@ -7,11 +7,15 @@ use katana_core::sequencer::KatanaSequencer;
 use katana_core::sequencer_error::SequencerError;
 use katana_core::utils::contract::legacy_inner_to_rpc_class;
 use katana_executor::blockifier::utils::EntryPointCall;
-use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, GasPrices, PartialHeader};
-use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
+use katana_primitives::block::{
+    BlockHashOrNumber, BlockIdOrTag, FinalityStatus, GasPrices, PartialHeader,
+};
+use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
-use katana_provider::traits::transaction::TransactionProvider;
+use katana_provider::traits::transaction::{
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider,
+};
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithTxHashes, PendingBlockWithTxs,
@@ -26,7 +30,7 @@ use katana_rpc_types::transaction::{
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use katana_rpc_types_builder::ReceiptBuilder;
-use starknet::core::types::{BlockTag, ResourcePrice};
+use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
 
 use crate::api::starknet::{StarknetApiError, StarknetApiServer};
 
@@ -348,19 +352,6 @@ impl StarknetApiServer for StarknetApi {
         Ok(events)
     }
 
-    // async fn pending_transactions(&self) -> Result<Vec<Tx>, Error> {
-    //     let Some(pending_state) = self.sequencer.pending_state() else { return Ok(vec![]) };
-
-    //     let txs = pending_state
-    //         .executed_txs
-    //         .read()
-    //         .iter()
-    //         .map(|(tx, _)| tx.clone().into())
-    //         .collect::<Vec<Tx>>();
-
-    //     Ok(txs)
-    // }
-
     async fn call(
         &self,
         request: FunctionCall,
@@ -541,5 +532,60 @@ impl StarknetApiServer for StarknetApi {
         self.sequencer.add_transaction_to_pool(tx);
 
         Ok(tx_hash.into())
+    }
+
+    async fn transaction_status(
+        &self,
+        transaction_hash: TxHash,
+    ) -> Result<TransactionStatus, Error> {
+        let provider = self.sequencer.backend.blockchain.provider();
+
+        let tx_status = TransactionStatusProvider::transaction_status(provider, transaction_hash)
+            .map_err(|_| StarknetApiError::UnexpectedError)?;
+
+        if let Some(status) = tx_status {
+            let receipt = ReceiptProvider::receipt_by_hash(provider, transaction_hash)
+                .map_err(|_| StarknetApiError::UnexpectedError)?
+                .ok_or(StarknetApiError::UnexpectedError)?;
+
+            let execution_status = if receipt.is_reverted() {
+                TransactionExecutionStatus::Reverted
+            } else {
+                TransactionExecutionStatus::Succeeded
+            };
+
+            Ok(match status {
+                FinalityStatus::AcceptedOnL1 => TransactionStatus::AcceptedOnL1(execution_status),
+                FinalityStatus::AcceptedOnL2 => TransactionStatus::AcceptedOnL2(execution_status),
+            })
+        } else {
+            let pending_state = self.sequencer.pending_state();
+            let state = pending_state.ok_or(StarknetApiError::TxnHashNotFound)?;
+            let executed_txs = state.executed_txs.read();
+
+            // attemps to find in the valid transactions list first (executed_txs)
+            // if not found, then search in the rejected transactions list (rejected_txs)
+            if let Some(is_reverted) = executed_txs
+                .iter()
+                .find(|(tx, _)| tx.hash == transaction_hash)
+                .map(|(_, rct)| rct.receipt.is_reverted())
+            {
+                let exec_status = if is_reverted {
+                    TransactionExecutionStatus::Reverted
+                } else {
+                    TransactionExecutionStatus::Succeeded
+                };
+
+                Ok(TransactionStatus::AcceptedOnL2(exec_status))
+            } else {
+                let rejected_txs = state.rejected_txs.read();
+
+                rejected_txs
+                    .iter()
+                    .find(|(tx, _)| tx.hash == transaction_hash)
+                    .map(|_| TransactionStatus::Rejected)
+                    .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
+            }
+        }
     }
 }
