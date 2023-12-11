@@ -12,10 +12,8 @@ pub struct BlockWithTxs(starknet::core::types::BlockWithTxs);
 impl BlockWithTxs {
     pub fn new(block_hash: BlockHash, block: Block, finality_status: FinalityStatus) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: block.header.l1_gas_prices.eth_l1_gas_price.try_into().expect("msg"),
-            price_in_strk: Some(
-                block.header.l1_gas_prices.strk_l1_gas_price.try_into().expect("msg"),
-            ),
+            price_in_wei: block.header.l1_gas_prices.eth_l1_gas_price,
+            price_in_strk: Some(block.header.l1_gas_prices.strk_l1_gas_price),
         };
 
         let transactions =
@@ -25,6 +23,8 @@ impl BlockWithTxs {
             block_hash,
             l1_gas_price,
             transactions,
+            /// TODO: not hardcode this
+            starknet_version: "0.5.1".into(),
             new_root: block.header.state_root,
             timestamp: block.header.timestamp,
             block_number: block.header.number,
@@ -47,10 +47,18 @@ impl PendingBlockWithTxs {
         let transactions =
             transactions.into_iter().map(|tx| crate::transaction::Tx::from(tx).0).collect();
 
+        let l1_gas_price = ResourcePrice {
+            price_in_wei: header.l1_gas_prices.eth_l1_gas_price,
+            price_in_strk: Some(header.l1_gas_prices.strk_l1_gas_price),
+        };
+
         Self(starknet::core::types::PendingBlockWithTxs {
             transactions,
+            l1_gas_price,
             timestamp: header.timestamp,
             parent_hash: header.parent_hash,
+            /// TODO: not hardcode this
+            starknet_version: "0.5.1".into(),
             sequencer_address: header.sequencer_address.into(),
         })
     }
@@ -73,9 +81,17 @@ impl BlockWithTxHashes {
         block: katana_primitives::block::BlockWithTxHashes,
         finality_status: FinalityStatus,
     ) -> Self {
+        let l1_gas_price = ResourcePrice {
+            price_in_wei: block.header.l1_gas_prices.eth_l1_gas_price,
+            price_in_strk: Some(block.header.l1_gas_prices.strk_l1_gas_price),
+        };
+
         Self(starknet::core::types::BlockWithTxHashes {
             block_hash,
+            l1_gas_price,
             transactions: block.body,
+            /// TODO: not hardcode this
+            starknet_version: "0.5.1".into(),
             new_root: block.header.state_root,
             timestamp: block.header.timestamp,
             block_number: block.header.number,
@@ -95,10 +111,18 @@ pub struct PendingBlockWithTxHashes(starknet::core::types::PendingBlockWithTxHas
 
 impl PendingBlockWithTxHashes {
     pub fn new(header: PartialHeader, transactions: Vec<TxHash>) -> Self {
+        let l1_gas_price = ResourcePrice {
+            price_in_wei: header.l1_gas_prices.eth_l1_gas_price,
+            price_in_strk: Some(header.l1_gas_prices.strk_l1_gas_price),
+        };
+
         Self(starknet::core::types::PendingBlockWithTxHashes {
             transactions,
+            l1_gas_price,
             timestamp: header.timestamp,
             parent_hash: header.parent_hash,
+            /// TODO: not hardcode this
+            starknet_version: "0.5.1".into(),
             sequencer_address: header.sequencer_address.into(),
         })
     }

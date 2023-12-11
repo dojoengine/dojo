@@ -1,7 +1,7 @@
 use anyhow::Result;
 use blockifier::block_context::BlockContext;
 use katana_primitives::block::{
-    Block, BlockHash, FinalityStatus, Header, PartialHeader, SealedBlockWithStatus,
+    Block, BlockHash, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::FieldElement;
@@ -66,12 +66,14 @@ impl Blockchain {
 
     pub fn new_with_genesis(provider: impl Database, block_context: &BlockContext) -> Result<Self> {
         let header = PartialHeader {
-            // TODO: need to be adjusted, eth is used for compatibility for now.
             parent_hash: 0u8.into(),
-            l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
+            l1_gas_prices: GasPrices {
+                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            },
         };
 
         let block = SealedBlockWithStatus {
@@ -95,10 +97,13 @@ impl Blockchain {
         let header = Header {
             state_root,
             parent_hash,
-            l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
+            l1_gas_prices: GasPrices {
+                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            },
         };
 
         let block = SealedBlockWithStatus {
@@ -214,7 +219,7 @@ mod tests {
         assert_eq!(latest_number, 23);
         assert_eq!(latest_hash, felt!("1111"));
 
-        assert_eq!(header.l1_gas_price, 9090);
+        assert_eq!(header.l1_gas_prices.eth_l1_gas_price, 9090);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
         assert_eq!(header.state_root, felt!("1334"));

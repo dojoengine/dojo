@@ -10,9 +10,7 @@ use starknet::core::utils::{
     ParseCairoShortStringError,
 };
 use starknet::macros::short_string;
-use starknet::providers::{
-    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
-};
+use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::poseidon_hash_many;
 
 use crate::contracts::world::{ContractReaderError, WorldContractReader};
@@ -89,10 +87,9 @@ where
             .await
             .map(|res| res[0])
             .map_err(|err| match err {
-                ProviderError::StarknetError(StarknetErrorWithMessage {
-                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
-                    ..
-                }) => ModelError::ModelNotFound,
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
+                    ModelError::ModelNotFound
+                }
                 err => err.into(),
             })?;
 

@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use starknet::core::types::{Event, ExecutionResources, MsgToL1};
+use starknet::core::types::{Event, ExecutionResources, Hash256, MsgToL1};
 
 use crate::contract::ContractAddress;
 
@@ -44,6 +42,8 @@ pub struct L1HandlerTxReceipt {
     pub actual_fee: u128,
     /// Events emitted by contracts.
     pub events: Vec<Event>,
+    /// The hash of the L1 message
+    pub message_hash: Hash256,
     /// Messages sent to L1.
     pub messages_sent: Vec<MsgToL1>,
     /// Revert error message if the transaction execution failed.

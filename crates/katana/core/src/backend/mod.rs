@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use blockifier::block_context::BlockContext;
 use katana_primitives::block::{
-    Block, FinalityStatus, Header, PartialHeader, SealedBlockWithStatus,
+    Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::receipt::Receipt;
@@ -149,10 +149,13 @@ impl Backend {
 
         let partial_header = PartialHeader {
             parent_hash: prev_hash,
-            l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: block_context.sequencer_address.into(),
+            l1_gas_prices: GasPrices {
+                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            },
         };
 
         let tx_count = txs.len();

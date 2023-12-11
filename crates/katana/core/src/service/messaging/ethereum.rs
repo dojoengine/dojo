@@ -9,8 +9,8 @@ use ethers::providers::{Http, Provider};
 use ethers::types::{Address, BlockNumber, Log};
 use k256::ecdsa::SigningKey;
 use katana_primitives::transaction::L1HandlerTx;
+use katana_primitives::utils::transaction::compute_l1_message_hash;
 use katana_primitives::FieldElement;
-use sha3::{Digest, Keccak256};
 use starknet::core::types::MsgToL1;
 use tracing::{debug, error, trace, warn};
 
@@ -218,10 +218,13 @@ fn l1_handler_tx_from_log(log: Log, chain_id: FieldElement) -> MessengerResult<L
     let mut calldata = vec![from_address];
     calldata.extend(parsed_log.payload.into_iter().map(felt_from_u256));
 
+    let message_hash = compute_l1_message_hash(from_address, contract_address, &calldata);
+
     Ok(L1HandlerTx {
         nonce,
         calldata,
         chain_id,
+        message_hash,
         paid_fee_on_l1,
         entry_point_selector,
         version: FieldElement::ZERO,
@@ -234,17 +237,12 @@ fn parse_messages(messages: &[MsgToL1]) -> Vec<U256> {
     messages
         .iter()
         .map(|msg| {
-            let mut buf: Vec<u8> = vec![];
-            buf.extend(msg.from_address.to_bytes_be());
-            buf.extend(msg.to_address.to_bytes_be());
-            buf.extend(FieldElement::from(msg.payload.len()).to_bytes_be());
-            msg.payload.iter().for_each(|p| buf.extend(p.to_bytes_be()));
-
-            let mut hasher = Keccak256::new();
-            hasher.update(buf);
-            let hash = hasher.finalize();
-            let hash_bytes = hash.as_slice();
-            U256::from_big_endian(hash_bytes)
+            let hash = compute_l1_message_hash(
+                msg.from_address,
+                msg.to_address,
+                &msg.payload.iter().map(|p| *p).collect::<Vec<FieldElement>>(),
+            );
+            U256::from_big_endian(hash.as_bytes())
         })
         .collect()
 }
@@ -301,15 +299,20 @@ mod tests {
 
         // SN_GOERLI.
         let chain_id = starknet::macros::felt!("0x534e5f474f45524c49");
+        let to_address = FieldElement::from_hex_be(to_address).unwrap();
+        let from_address = FieldElement::from_hex_be(from_address).unwrap();
+
+        let message_hash = compute_l1_message_hash(from_address, to_address, &calldata);
 
         let expected = L1HandlerTx {
             calldata,
             chain_id,
+            message_hash,
             paid_fee_on_l1: fee,
             version: FieldElement::ZERO,
             nonce: FieldElement::from(nonce),
+            contract_address: to_address.into(),
             entry_point_selector: FieldElement::from_hex_be(selector).unwrap(),
-            contract_address: FieldElement::from_hex_be(to_address).unwrap().into(),
         };
         let tx_hash = expected.calculate_hash();
 

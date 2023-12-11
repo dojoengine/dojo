@@ -7,7 +7,7 @@ use katana_core::sequencer::KatanaSequencer;
 use katana_core::sequencer_error::SequencerError;
 use katana_core::utils::contract::legacy_inner_to_rpc_class;
 use katana_executor::blockifier::utils::EntryPointCall;
-use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, PartialHeader};
+use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, GasPrices, PartialHeader};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
@@ -26,7 +26,7 @@ use katana_rpc_types::transaction::{
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use katana_rpc_types_builder::ReceiptBuilder;
-use starknet::core::types::BlockTag;
+use starknet::core::types::{BlockTag, ResourcePrice};
 
 use crate::api::starknet::{StarknetApiError, StarknetApiServer};
 
@@ -120,11 +120,16 @@ impl StarknetApiServer for StarknetApi {
             let block_context = self.sequencer.backend.env.read().block.clone();
             let latest_hash = BlockHashProvider::latest_hash(provider)?;
 
+            let l1_gas_prices = GasPrices {
+                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            };
+
             let header = PartialHeader {
+                l1_gas_prices,
                 parent_hash: latest_hash,
                 number: block_context.block_number.0,
                 timestamp: block_context.block_timestamp.0,
-                l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
                 sequencer_address: block_context.sequencer_address.into(),
             };
 
@@ -189,11 +194,16 @@ impl StarknetApiServer for StarknetApi {
             let block_context = self.sequencer.backend.env.read().block.clone();
             let latest_hash = BlockHashProvider::latest_hash(provider)?;
 
+            let l1_gas_prices = GasPrices {
+                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            };
+
             let header = PartialHeader {
+                l1_gas_prices,
                 parent_hash: latest_hash,
                 number: block_context.block_number.0,
                 timestamp: block_context.block_timestamp.0,
-                l1_gas_price: block_context.gas_prices.eth_l1_gas_price,
                 sequencer_address: block_context.sequencer_address.into(),
             };
 
@@ -459,9 +469,16 @@ impl StarknetApiServer for StarknetApi {
         message: MsgFromL1,
         block_id: BlockIdOrTag,
     ) -> Result<FeeEstimate, Error> {
+        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
+            .map_err(|_| StarknetApiError::UnexpectedError)?;
+
+        let tx = message.into_tx_with_chain_id(chain_id);
+        let hash = tx.calculate_hash();
+        let tx: ExecutableTxWithHash = ExecutableTxWithHash { hash, transaction: tx.into() };
+
         let res = self
             .sequencer
-            .estimate_fee(vec![message.into()], block_id)
+            .estimate_fee(vec![tx], block_id)
             .map_err(|e| match e {
                 SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
                 SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,

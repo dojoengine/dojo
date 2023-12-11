@@ -66,6 +66,7 @@ impl TxReceipt {
                 finality_status,
                 transaction_hash,
                 events: rct.events,
+                message_hash: rct.message_hash,
                 messages_sent: rct.messages_sent,
                 actual_fee: rct.actual_fee.into(),
                 execution_resources: rct.execution_resources,
@@ -141,6 +142,7 @@ impl PendingTxReceipt {
                 PendingTransactionReceipt::L1Handler(PendingL1HandlerTransactionReceipt {
                     transaction_hash,
                     events: rct.events,
+                    message_hash: rct.message_hash,
                     messages_sent: rct.messages_sent,
                     actual_fee: rct.actual_fee.into(),
                     execution_resources: rct.execution_resources,

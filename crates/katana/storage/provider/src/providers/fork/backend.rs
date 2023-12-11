@@ -22,9 +22,7 @@ use katana_primitives::FieldElement;
 use parking_lot::Mutex;
 use starknet::core::types::{BlockId, ContractClass, StarknetError};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{
-    JsonRpcClient, MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
-};
+use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use tracing::{error, trace};
 
 use crate::providers::in_memory::cache::CacheStateDb;
@@ -483,13 +481,7 @@ fn handle_contract_or_class_not_found_err<T>(
         Ok(value) => Ok(Some(value)),
 
         Err(ForkedBackendError::Provider(ProviderError::StarknetError(
-            StarknetErrorWithMessage {
-                code:
-                    MaybeUnknownErrorCode::Known(
-                        StarknetError::ContractNotFound | StarknetError::ClassHashNotFound,
-                    ),
-                ..
-            },
+            StarknetError::ContractNotFound | StarknetError::ClassHashNotFound,
         ))) => Ok(None),
 
         Err(e) => Err(e),

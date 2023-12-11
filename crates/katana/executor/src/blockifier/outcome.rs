@@ -42,11 +42,12 @@ impl TxReceiptWithExecInfo {
                 execution_resources: actual_resources,
             }),
 
-            Tx::L1Handler(_) => Receipt::L1Handler(L1HandlerTxReceipt {
+            Tx::L1Handler(tx) => Receipt::L1Handler(L1HandlerTxReceipt {
                 events,
                 actual_fee,
                 revert_error,
                 messages_sent,
+                message_hash: tx.message_hash,
                 execution_resources: actual_resources,
             }),
 
@@ -64,6 +65,8 @@ impl TxReceiptWithExecInfo {
     }
 }
 
+/// Parse the `actual resources` field from the execution info into a more structured type,
+/// [`ExecutionResources`].
 fn parse_actual_resources(resources: &HashMap<String, usize>) -> ExecutionResources {
     ExecutionResources {
         steps: resources.get("n_steps").copied().unwrap_or_default() as u64,
