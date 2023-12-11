@@ -17,7 +17,7 @@ pub fn derive_print(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode
         .iter()
         .map(|m| {
             format!(
-                "debug::PrintTrait::print('{}'); debug::PrintTrait::print(self.{});",
+                "core::debug::PrintTrait::print('{}'); core::debug::PrintTrait::print(self.{});",
                 m.name(db).text(db).to_string(),
                 m.name(db).text(db).to_string()
             )
@@ -26,7 +26,7 @@ pub fn derive_print(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode
 
     RewriteNode::interpolate_patched(
         "#[cfg(test)]
-            impl $type_name$PrintImpl of debug::PrintTrait<$type_name$> {
+            impl $type_name$PrintImpl of core::debug::PrintTrait<$type_name$> {
                 fn print(self: $type_name$) {
                     $print$
                 }

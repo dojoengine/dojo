@@ -2,6 +2,9 @@
 cairo-version = "2.4.0"
 name = "dojo_examples"
 version = "0.4.0-rc0"
+# Use the prelude with the less imports as possible
+# from corelib.
+edition = "2023_10"
 
 [cairo]
 sierra-replace-ids = true
