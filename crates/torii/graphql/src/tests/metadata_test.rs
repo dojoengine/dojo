@@ -24,8 +24,8 @@ mod tests {
               content {
                 name
                 description
-                cover_uri
-                icon_uri
+                coverUri
+                iconUri
                 website
                 socials {
                   name
