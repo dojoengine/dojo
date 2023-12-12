@@ -83,7 +83,7 @@ impl Compiler for DojoCompiler {
         let contracts = find_project_contracts(
             db.upcast_mut(),
             main_crate_ids.clone(),
-            props.build_external_contracts,
+            props.build_external_contracts.clone(),
         )?;
 
         let contract_paths = contracts
@@ -122,7 +122,13 @@ impl Compiler for DojoCompiler {
             .map(|file| dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default())
             .unwrap_or_default();
 
-        update_manifest(&mut manifest, db, &main_crate_ids, compiled_classes)?;
+        update_manifest(
+            &mut manifest,
+            db,
+            &main_crate_ids,
+            compiled_classes,
+            props.build_external_contracts,
+        )?;
 
         manifest.write_to_path(
             target_dir.open_rw("manifest.json", "output file", ws.config())?.path(),
@@ -208,6 +214,7 @@ fn update_manifest(
     db: &RootDatabase,
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
+    external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
     fn get_compiled_artifact_from_map<'a>(
         artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
@@ -217,6 +224,8 @@ fn update_manifest(
             "Contract `{artifact_name}` not found. Did you include `dojo` as a dependency?",
         ))
     }
+
+    let mut crate_ids = crate_ids.to_vec();
 
     let world = {
         let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
@@ -248,8 +257,13 @@ fn update_manifest(
     let mut contracts = BTreeMap::new();
     let mut computed = BTreeMap::new();
 
+    if let Some(external_contracts) = external_contracts {
+        let external_crate_ids = collect_external_crate_ids(db, external_contracts);
+        crate_ids.extend(external_crate_ids);
+    }
+
     for crate_id in crate_ids {
-        for module_id in db.crate_modules(*crate_id).as_ref() {
+        for module_id in db.crate_modules(crate_id).as_ref() {
             let file_infos = db.module_generated_file_infos(*module_id).unwrap_or_default();
             for aux_data in file_infos
                 .iter()
@@ -316,20 +330,21 @@ fn get_dojo_model_artifacts(
             let model_contract_name = model.name.to_case(Case::Snake);
             let model_full_name = format!("{module_name}::{}", &model_contract_name);
 
-            let (class_hash, abi) = compiled_classes
-                .get(model_full_name.as_str())
-                .cloned()
-                .ok_or(anyhow!("Model {} not found in target.", model.name))?;
+            let compiled_class = compiled_classes.get(model_full_name.as_str()).cloned();
 
-            models.insert(
-                model_full_name.clone(),
-                dojo_world::manifest::Model {
-                    abi,
-                    class_hash,
-                    name: model_full_name.clone(),
-                    members: model.members.clone(),
-                },
-            );
+            if let Some((class_hash, abi)) = compiled_class {
+                models.insert(
+                    model_full_name.clone(),
+                    dojo_world::manifest::Model {
+                        abi,
+                        class_hash,
+                        name: model_full_name.clone(),
+                        members: model.members.clone(),
+                    },
+                );
+            } else {
+                println!("Model {} not found in target.", model_full_name.clone());
+            }
         }
     }
 
@@ -370,6 +385,10 @@ fn get_dojo_contract_artifacts(
         .contracts
         .iter()
         .filter(|name| !matches!(name.as_ref(), "world" | "executor" | "base"))
+        .filter(|_name| {
+            let module_name = module_id.full_path(db);
+            compiled_classes.get(module_name.as_str()).cloned().is_some()
+        })
         .map(|name| {
             let module_name = module_id.full_path(db);
             let module_name = module_name.as_str();
