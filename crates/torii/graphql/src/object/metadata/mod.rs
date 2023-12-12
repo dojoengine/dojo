@@ -122,8 +122,8 @@ fn metadata_connection_output(
                 extract_str_mapping("name", &serde_value),
                 extract_str_mapping("description", &serde_value),
                 extract_str_mapping("website", &serde_value),
-                extract_str_mapping("iconUri", &serde_value),
-                extract_str_mapping("coverUri", &serde_value),
+                extract_str_mapping("icon_uri", &serde_value),
+                extract_str_mapping("cover_uri", &serde_value),
                 extract_socials_mapping("socials", &serde_value),
             ]);
 
@@ -146,11 +146,11 @@ fn metadata_connection_output(
 }
 
 fn extract_str_mapping(name: &str, serde_value: &serde_json::Value) -> (Name, Value) {
-    let name_snake = name.to_case(Case::Snake);
-    if let Some(serde_json::Value::String(str)) = serde_value.get(name_snake) {
-        (Name::new(name), Value::String(str.to_owned()))
+    let name_lower_camel = name.to_case(Case::Camel);
+    if let Some(serde_json::Value::String(str)) = serde_value.get(name) {
+        (Name::new(name_lower_camel), Value::String(str.to_owned()))
     } else {
-        (Name::new(name), Value::Null)
+        (Name::new(name_lower_camel), Value::Null)
     }
 }
 
