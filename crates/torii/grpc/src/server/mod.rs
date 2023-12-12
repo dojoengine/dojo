@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use dojo_types::schema::Ty;
 use futures::Stream;
+use hex::encode;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     SubscribeModelsRequest, SubscribeModelsResponse,
@@ -378,6 +379,7 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { ids } = request.into_inner();
+        let ids = ids.iter().map(encode).collect();
         let rx = self.subscribe_entities(ids).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))

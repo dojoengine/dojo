@@ -116,7 +116,7 @@ impl Client {
     /// A direct stream to grpc subscribe entities
     pub async fn on_entity_updated(
         &self,
-        ids: Vec<String>,
+        ids: Vec<FieldElement>,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_entities(ids).await?;
