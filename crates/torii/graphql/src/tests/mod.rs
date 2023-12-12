@@ -145,6 +145,7 @@ pub struct Content {
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {
     pub uri: String,
+    pub world_address: String,
     pub icon_img: String,
     pub cover_img: String,
     pub content: Content,
