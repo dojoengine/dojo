@@ -29,7 +29,7 @@ use torii_core::error::{Error, ParseError, QueryError};
 use torii_core::model::{build_sql_query, map_row_to_ty};
 
 use self::subscriptions::entity::EntityManager;
-use self::subscriptions::state_diff::{StateDiffManager, StateDiffRequest};
+use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
 use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
@@ -55,7 +55,7 @@ impl DojoWorld {
         let entity_manager = Arc::new(EntityManager::default());
         let state_diff_manager = Arc::new(StateDiffManager::default());
 
-        tokio::task::spawn(subscriptions::state_diff::Service::new_with_block_rcv(
+        tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
             block_rx,
             world_address,
             provider,
@@ -267,9 +267,9 @@ impl DojoWorld {
             let proto::types::ModelMetadata { packed_size, .. } =
                 self.model_metadata(&keys.model).await?;
 
-            subs.push(StateDiffRequest {
+            subs.push(ModelDiffRequest {
                 keys,
-                model: subscriptions::state_diff::ModelMetadata {
+                model: subscriptions::model_diff::ModelMetadata {
                     name: model,
                     packed_size: packed_size as usize,
                 },

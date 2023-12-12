@@ -27,14 +27,14 @@ pub struct ModelMetadata {
     pub packed_size: usize,
 }
 
-pub struct StateDiffRequest {
+pub struct ModelDiffRequest {
     pub model: ModelMetadata,
     pub keys: proto::types::KeysClause,
 }
 
-impl StateDiffRequest {}
+impl ModelDiffRequest {}
 
-pub struct StateDiffSubscriber {
+pub struct ModelDiffSubscriber {
     /// The storage addresses that the subscriber is interested in.
     storage_addresses: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
@@ -43,13 +43,13 @@ pub struct StateDiffSubscriber {
 
 #[derive(Default)]
 pub struct StateDiffManager {
-    subscribers: RwLock<HashMap<usize, StateDiffSubscriber>>,
+    subscribers: RwLock<HashMap<usize, ModelDiffSubscriber>>,
 }
 
 impl StateDiffManager {
     pub async fn add_subscriber(
         &self,
-        reqs: Vec<StateDiffRequest>,
+        reqs: Vec<ModelDiffRequest>,
     ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
 
@@ -83,7 +83,7 @@ impl StateDiffManager {
         self.subscribers
             .write()
             .await
-            .insert(id, StateDiffSubscriber { storage_addresses, sender });
+            .insert(id, ModelDiffSubscriber { storage_addresses, sender });
 
         Ok(receiver)
     }

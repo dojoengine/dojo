@@ -101,11 +101,11 @@ impl WorldClient {
         }))))
     }
 
-    /// Subscribe to the state diff for a set of models of a World.
-    pub async fn subscribe_state_diff(
+    /// Subscribe to the model diff for a set of models of a World.
+    pub async fn subscribe_model_diffs(
         &mut self,
         models_keys: Vec<KeysClause>,
-    ) -> Result<StateDiffStreaming, Error> {
+    ) -> Result<ModelDiffsStreaming, Error> {
         let stream = self
             .inner
             .subscribe_models(SubscribeModelsRequest {
@@ -115,22 +115,22 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
-        Ok(StateDiffStreaming(stream.map_ok(Box::new(|res| {
+        Ok(ModelDiffsStreaming(stream.map_ok(Box::new(|res| {
             let update = res.model_update.expect("qed; state update must exist");
             TryInto::<StateUpdate>::try_into(update).expect("must able to serialize")
         }))))
     }
 }
 
-type StateDiffMappedStream = MapOk<
+type ModelDiffMappedStream = MapOk<
     tonic::Streaming<SubscribeModelsResponse>,
     Box<dyn Fn(SubscribeModelsResponse) -> StateUpdate + Send>,
 >;
 
-pub struct StateDiffStreaming(StateDiffMappedStream);
+pub struct ModelDiffsStreaming(ModelDiffMappedStream);
 
-impl Stream for StateDiffStreaming {
-    type Item = <StateDiffMappedStream as Stream>::Item;
+impl Stream for ModelDiffsStreaming {
+    type Item = <ModelDiffMappedStream as Stream>::Item;
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

@@ -11,7 +11,7 @@ use parking_lot::{Mutex, RwLock};
 use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
-use torii_grpc::client::StateDiffStreaming;
+use torii_grpc::client::ModelDiffsStreaming;
 use torii_grpc::types::KeysClause;
 
 use crate::client::error::{Error, ParseError};
@@ -19,7 +19,7 @@ use crate::client::storage::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
 pub enum SubscriptionEvent {
-    StateDiffUpdateStream(StateDiffStreaming),
+    UpdateSubsciptionStream(ModelDiffsStreaming),
 }
 
 pub struct SubscribedModels {
@@ -112,23 +112,23 @@ impl SubscribedModels {
 }
 
 #[derive(Debug)]
-pub(crate) struct SubscriptionHandle(Mutex<Sender<SubscriptionEvent>>);
+pub(crate) struct SubscriptionClientHandle(Mutex<Sender<SubscriptionEvent>>);
 
-impl SubscriptionHandle {
+impl SubscriptionClientHandle {
     fn new(sender: Sender<SubscriptionEvent>) -> Self {
         Self(Mutex::new(sender))
     }
 
-    pub(crate) fn update_subscription_stream(&self, stream: StateDiffStreaming) {
-        let _ = self.0.lock().try_send(SubscriptionEvent::StateDiffUpdateStream(stream));
+    pub(crate) fn update_subscription_stream(&self, stream: ModelDiffsStreaming) {
+        let _ = self.0.lock().try_send(SubscriptionEvent::UpdateSubsciptionStream(stream));
     }
 }
 
 #[must_use = "SubscriptionClient does nothing unless polled"]
 pub struct SubscriptionService {
     req_rcv: Receiver<SubscriptionEvent>,
-    /// State Diff stream by subscription server to receive response
-    state_diff_stream: RefCell<Option<StateDiffStreaming>>,
+    /// Model Diff stream by subscription server to receive response
+    model_diffs_stream: RefCell<Option<ModelDiffsStreaming>>,
 
     /// Callback to be called on error
     err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
@@ -144,18 +144,18 @@ impl SubscriptionService {
         storage: Arc<ModelStorage>,
         world_metadata: Arc<RwLock<WorldMetadata>>,
         subscribed_models: Arc<SubscribedModels>,
-        state_diff_stream: StateDiffStreaming,
-    ) -> (Self, SubscriptionHandle) {
+        model_diffs_stream: ModelDiffsStreaming,
+    ) -> (Self, SubscriptionClientHandle) {
         let (req_sender, req_rcv) = mpsc::channel(128);
 
-        let handle = SubscriptionHandle::new(req_sender);
-        let state_diff_stream = RefCell::new(Some(state_diff_stream));
+        let handle = SubscriptionClientHandle::new(req_sender);
+        let model_diffs_stream = RefCell::new(Some(model_diffs_stream));
 
         let client = Self {
             req_rcv,
             storage,
             world_metadata,
-            state_diff_stream,
+            model_diffs_stream,
             err_callback: None,
             subscribed_models,
         };
@@ -166,8 +166,8 @@ impl SubscriptionService {
     // TODO: handle the subscription events properly
     fn handle_event(&self, event: SubscriptionEvent) -> Result<(), Error> {
         match event {
-            SubscriptionEvent::StateDiffUpdateStream(stream) => {
-                self.state_diff_stream.replace(Some(stream));
+            SubscriptionEvent::UpdateSubsciptionStream(stream) => {
+                self.model_diffs_stream.replace(Some(stream));
             }
         }
         Ok(())
@@ -226,7 +226,7 @@ impl Future for SubscriptionService {
                 let _ = pin.handle_event(req);
             }
 
-            if let Some(stream) = pin.state_diff_stream.get_mut() {
+            if let Some(stream) = pin.model_diffs_stream.get_mut() {
                 match stream.poll_next_unpin(cx) {
                     Poll::Ready(Some(res)) => pin.handle_response(res),
                     Poll::Ready(None) => return Poll::Ready(()),

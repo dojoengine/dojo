@@ -16,14 +16,16 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::{EntityUpdateStreaming, StateDiffStreaming};
+use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
 
 use crate::client::error::{Error, ParseError};
 use crate::client::storage::ModelStorage;
-use crate::client::subscription::{SubscribedModels, SubscriptionHandle, SubscriptionService};
+use crate::client::subscription::{
+    SubscribedModels, SubscriptionClientHandle, SubscriptionService,
+};
 
 // TODO: remove reliance on RPC
 #[allow(unused)]
@@ -37,7 +39,7 @@ pub struct Client {
     /// Models the client are subscribed to.
     subscribed_models: Arc<SubscribedModels>,
     /// The subscription client handle.
-    sub_client_handle: OnceCell<SubscriptionHandle>,
+    sub_client_handle: OnceCell<SubscriptionClientHandle>,
     /// World contract reader.
     world_reader: WorldContractReader<JsonRpcClient<HttpTransport>>,
 }
@@ -223,9 +225,9 @@ impl Client {
     async fn initiate_subscription(
         &self,
         keys: Vec<KeysClause>,
-    ) -> Result<StateDiffStreaming, Error> {
+    ) -> Result<ModelDiffsStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_state_diff(keys).await?;
+        let stream = grpc_client.subscribe_model_diffs(keys).await?;
         Ok(stream)
     }
 

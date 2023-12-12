@@ -99,7 +99,7 @@ impl Service {
                 let model_names: Vec<&str> = model_names.split(',').collect();
                 let schemas = cache.schemas(model_names).await?;
                 let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
-                let row = sqlx::query(&entity_query).bind(&id).fetch_one(&pool).await?;
+                let row = sqlx::query(&entity_query).bind(id).fetch_one(&pool).await?;
 
                 let models = schemas
                     .iter()
@@ -114,7 +114,7 @@ impl Service {
 
                 let resp = proto::world::SubscribeEntityResponse {
                     entity: Some(proto::types::Entity {
-                        id: FieldElement::from_str(&id)
+                        id: FieldElement::from_str(id)
                             .map_err(ParseError::FromStr)?
                             .to_bytes_be()
                             .to_vec(),

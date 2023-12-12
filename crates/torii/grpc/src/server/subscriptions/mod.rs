@@ -1,3 +1,3 @@
 pub mod entity;
 pub mod error;
-pub mod state_diff;
+pub mod model_diff;
