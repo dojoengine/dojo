@@ -1,6 +1,7 @@
 use async_graphql::connection::PageInfo;
 use async_graphql::dynamic::{Field, FieldFuture, TypeRef};
 use async_graphql::{Name, Value};
+use convert_case::{Case, Casing};
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 
@@ -145,11 +146,12 @@ fn metadata_connection_output(
 }
 
 fn extract_str_mapping(name: &str, serde_value: &serde_json::Value) -> (Name, Value) {
+    let name_lower_camel = name.to_case(Case::Camel);
     if let Some(serde_json::Value::String(str)) = serde_value.get(name) {
-        return (Name::new(name), Value::String(str.to_owned()));
+        (Name::new(name_lower_camel), Value::String(str.to_owned()))
+    } else {
+        (Name::new(name_lower_camel), Value::Null)
     }
-
-    (Name::new(name), Value::Null)
 }
 
 fn extract_socials_mapping(name: &str, serde_value: &serde_json::Value) -> (Name, Value) {
