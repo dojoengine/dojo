@@ -8,7 +8,7 @@ test_compiler_cairo_v240
   "world": {
     "name": "world",
     "address": null,
-    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
+    "class_hash": "0x1a28bd76a573f2ea79164d91edb11452fe08b9e8ffbfa1dfe216d46fb37b925",
     "abi": [
       {
         "type": "impl",
@@ -36,16 +36,72 @@ test_compiler_cairo_v240
         ]
       },
       {
-        "type": "enum",
-        "name": "core::option::Option::<core::felt252>",
-        "variants": [
+        "type": "struct",
+        "name": "dojo::database::MemberClause",
+        "members": [
           {
-            "name": "Some",
+            "name": "model",
             "type": "core::felt252"
           },
           {
-            "name": "None",
+            "name": "member",
+            "type": "core::felt252"
+          },
+          {
+            "name": "value",
+            "type": "core::felt252"
+          }
+        ]
+      },
+      {
+        "type": "enum",
+        "name": "dojo::database::LogicalOperator",
+        "variants": [
+          {
+            "name": "And",
             "type": "()"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<dojo::database::Clause>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<dojo::database::Clause>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "dojo::database::CompositeClause",
+        "members": [
+          {
+            "name": "operator",
+            "type": "dojo::database::LogicalOperator"
+          },
+          {
+            "name": "clauses",
+            "type": "core::array::Span::<dojo::database::Clause>"
+          }
+        ]
+      },
+      {
+        "type": "enum",
+        "name": "dojo::database::Clause",
+        "variants": [
+          {
+            "name": "Member",
+            "type": "dojo::database::MemberClause"
+          },
+          {
+            "name": "Composite",
+            "type": "dojo::database::CompositeClause"
+          },
+          {
+            "name": "All",
+            "type": "core::felt252"
           }
         ]
       },
@@ -269,16 +325,8 @@ test_compiler_cairo_v240
             "name": "entities",
             "inputs": [
               {
-                "name": "model",
-                "type": "core::felt252"
-              },
-              {
-                "name": "index",
-                "type": "core::option::Option::<core::felt252>"
-              },
-              {
-                "name": "values",
-                "type": "core::array::Span::<core::felt252>"
+                "name": "where",
+                "type": "dojo::database::Clause"
               },
               {
                 "name": "values_length",
@@ -291,7 +339,7 @@ test_compiler_cairo_v240
             ],
             "outputs": [
               {
-                "type": "(core::array::Span::<core::felt252>, core::array::Span::<core::array::Span::<core::felt252>>)"
+                "type": "core::array::Span::<core::array::Span::<core::felt252>>"
               }
             ],
             "state_mutability": "view"
@@ -301,8 +349,8 @@ test_compiler_cairo_v240
             "name": "entity_ids",
             "inputs": [
               {
-                "name": "model",
-                "type": "core::felt252"
+                "name": "where",
+                "type": "dojo::database::Clause"
               }
             ],
             "outputs": [
