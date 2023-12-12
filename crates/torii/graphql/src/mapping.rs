@@ -103,6 +103,7 @@ lazy_static! {
     pub static ref METADATA_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("uri"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("worldAddress"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (
             Name::new("content"),
             TypeData::Nested((TypeRef::named(CONTENT_TYPE_NAME), IndexMap::new()))
