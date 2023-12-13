@@ -218,9 +218,9 @@ impl TryFrom<proto::types::StorageDiff> for ContractStorageDiffItem {
     }
 }
 
-impl TryFrom<proto::types::EntityDiff> for StateDiff {
+impl TryFrom<proto::types::ModelDiff> for StateDiff {
     type Error = FromStrError;
-    fn try_from(value: proto::types::EntityDiff) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::ModelDiff) -> Result<Self, Self::Error> {
         Ok(Self {
             nonces: vec![],
             declared_classes: vec![],
@@ -236,14 +236,14 @@ impl TryFrom<proto::types::EntityDiff> for StateDiff {
     }
 }
 
-impl TryFrom<proto::types::EntityUpdate> for StateUpdate {
+impl TryFrom<proto::types::ModelUpdate> for StateUpdate {
     type Error = FromStrError;
-    fn try_from(value: proto::types::EntityUpdate) -> Result<Self, Self::Error> {
+    fn try_from(value: proto::types::ModelUpdate) -> Result<Self, Self::Error> {
         Ok(Self {
             new_root: FieldElement::ZERO,
             old_root: FieldElement::ZERO,
             block_hash: FieldElement::from_str(&value.block_hash)?,
-            state_diff: value.entity_diff.expect("must have").try_into()?,
+            state_diff: value.model_diff.expect("must have").try_into()?,
         })
     }
 }

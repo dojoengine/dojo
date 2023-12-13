@@ -27,44 +27,30 @@ pub struct ModelMetadata {
     pub packed_size: usize,
 }
 
-pub struct SubscribeRequest {
+pub struct ModelDiffRequest {
     pub model: ModelMetadata,
     pub keys: proto::types::KeysClause,
 }
 
-impl SubscribeRequest {
-    // pub fn slots(&self) -> Result<Vec<FieldElement>, QueryError> {
-    //     match self.query.clause {
-    //         Clause::Keys(KeysClause { keys }) => {
-    //             let base = poseidon_hash_many(&[
-    //                 short_string!("dojo_storage"),
-    //                 req.model.name,
-    //                 poseidon_hash_many(&keys),
-    //             ]);
-    //         }
-    //         _ => Err(QueryError::UnsupportedQuery),
-    //     }
-    // }
-}
+impl ModelDiffRequest {}
 
-pub struct Subscriber {
+pub struct ModelDiffSubscriber {
     /// The storage addresses that the subscriber is interested in.
     storage_addresses: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
-    sender: Sender<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>,
+    sender: Sender<Result<proto::world::SubscribeModelsResponse, tonic::Status>>,
 }
 
 #[derive(Default)]
-pub struct SubscriberManager {
-    subscribers: RwLock<HashMap<usize, Subscriber>>,
+pub struct StateDiffManager {
+    subscribers: RwLock<HashMap<usize, ModelDiffSubscriber>>,
 }
 
-impl SubscriberManager {
-    pub(super) async fn add_subscriber(
+impl StateDiffManager {
+    pub async fn add_subscriber(
         &self,
-        reqs: Vec<SubscribeRequest>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEntitiesResponse, tonic::Status>>, Error>
-    {
+        reqs: Vec<ModelDiffRequest>,
+    ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
 
         let (sender, receiver) = channel(1);
@@ -94,7 +80,10 @@ impl SubscriberManager {
             .flatten()
             .collect::<HashSet<FieldElement>>();
 
-        self.subscribers.write().await.insert(id, Subscriber { storage_addresses, sender });
+        self.subscribers
+            .write()
+            .await
+            .insert(id, ModelDiffSubscriber { storage_addresses, sender });
 
         Ok(receiver)
     }
@@ -114,7 +103,7 @@ pub struct Service<P: Provider> {
     block_num_rcv: Receiver<u64>,
     state_update_queue: VecDeque<u64>,
     state_update_req_fut: Option<BoxFuture<'static, (P, u64, RequestStateUpdateResult)>>,
-    subs_manager: Arc<SubscriberManager>,
+    subs_manager: Arc<StateDiffManager>,
     publish_fut: Option<BoxFuture<'static, PublishStateUpdateResult>>,
 }
 
@@ -122,11 +111,11 @@ impl<P> Service<P>
 where
     P: Provider + Send,
 {
-    pub(super) fn new_with_block_rcv(
+    pub fn new_with_block_rcv(
         block_num_rcv: Receiver<u64>,
         world_address: FieldElement,
         provider: P,
-        subs_manager: Arc<SubscriberManager>,
+        subs_manager: Arc<StateDiffManager>,
     ) -> Self {
         Self {
             subs_manager,
@@ -148,7 +137,7 @@ where
     }
 
     async fn publish_updates(
-        subs: Arc<SubscriberManager>,
+        subs: Arc<StateDiffManager>,
         contract_address: FieldElement,
         state_update: StateUpdate,
     ) -> PublishStateUpdateResult {
@@ -173,9 +162,9 @@ where
                 })
                 .collect::<Vec<proto::types::StorageEntry>>();
 
-            let entity_update = proto::types::EntityUpdate {
+            let model_update = proto::types::ModelUpdate {
                 block_hash: format!("{:#x}", state_update.block_hash),
-                entity_diff: Some(proto::types::EntityDiff {
+                model_diff: Some(proto::types::ModelDiff {
                     storage_diffs: vec![proto::types::StorageDiff {
                         address: format!("{contract_address:#x}"),
                         storage_entries: relevant_storage_entries,
@@ -183,8 +172,7 @@ where
                 }),
             };
 
-            let resp =
-                proto::world::SubscribeEntitiesResponse { entity_update: Some(entity_update) };
+            let resp = proto::world::SubscribeModelsResponse { model_update: Some(model_update) };
 
             if sub.sender.send(Ok(resp)).await.is_err() {
                 closed_stream.push(*idx);

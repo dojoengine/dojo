@@ -16,15 +16,16 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use torii_grpc::client::EntityUpdateStreaming;
+use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
 
-use self::error::{Error, ParseError};
-use self::storage::ModelStorage;
-use self::subscription::{SubscribedEntities, SubscriptionClientHandle};
-use crate::client::subscription::SubscriptionService;
+use crate::client::error::{Error, ParseError};
+use crate::client::storage::ModelStorage;
+use crate::client::subscription::{
+    SubscribedModels, SubscriptionClientHandle, SubscriptionService,
+};
 
 // TODO: remove reliance on RPC
 #[allow(unused)]
@@ -33,10 +34,10 @@ pub struct Client {
     metadata: Arc<RwLock<WorldMetadata>>,
     /// The grpc client.
     inner: AsyncRwLock<torii_grpc::client::WorldClient>,
-    /// Entity storage
+    /// Model storage
     storage: Arc<ModelStorage>,
-    /// Entities the client are subscribed to.
-    subscribed_entities: Arc<SubscribedEntities>,
+    /// Models the client are subscribed to.
+    subscribed_models: Arc<SubscribedModels>,
     /// The subscription client handle.
     sub_client_handle: OnceCell<SubscriptionClientHandle>,
     /// World contract reader.
@@ -49,7 +50,7 @@ impl Client {
         torii_url: String,
         rpc_url: String,
         world: FieldElement,
-        entities_keys: Option<Vec<KeysClause>>,
+        models_keys: Option<Vec<KeysClause>>,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
@@ -57,23 +58,23 @@ impl Client {
 
         let shared_metadata: Arc<_> = RwLock::new(metadata).into();
         let client_storage: Arc<_> = ModelStorage::new(shared_metadata.clone()).into();
-        let subbed_entities: Arc<_> = SubscribedEntities::new(shared_metadata.clone()).into();
+        let subbed_models: Arc<_> = SubscribedModels::new(shared_metadata.clone()).into();
 
         // initialize the entities to be synced with the latest values
         let rpc_url = url::Url::parse(&rpc_url).map_err(ParseError::Url)?;
         let provider = JsonRpcClient::new(HttpTransport::new(rpc_url));
         let world_reader = WorldContractReader::new(world, provider);
 
-        if let Some(keys) = entities_keys {
-            subbed_entities.add_entities(keys)?;
+        if let Some(keys) = models_keys {
+            subbed_models.add_models(keys)?;
 
             // TODO: change this to querying the gRPC url instead
-            let subbed_entities = subbed_entities.entities_keys.read().clone();
-            for keys in subbed_entities {
+            let subbed_models = subbed_models.models_keys.read().clone();
+            for keys in subbed_models {
                 let model_reader = world_reader.model(&keys.model).await?;
                 let values = model_reader.entity_storage(&keys.keys).await?;
 
-                client_storage.set_entity_storage(
+                client_storage.set_model_storage(
                     cairo_short_string_to_felt(&keys.model).unwrap(),
                     keys.keys,
                     values,
@@ -87,7 +88,7 @@ impl Client {
             metadata: shared_metadata,
             sub_client_handle: OnceCell::new(),
             inner: AsyncRwLock::new(grpc_client),
-            subscribed_entities: subbed_entities,
+            subscribed_models: subbed_models,
         })
     }
 
@@ -96,8 +97,8 @@ impl Client {
         self.metadata.read()
     }
 
-    pub fn subscribed_entities(&self) -> RwLockReadGuard<'_, HashSet<KeysClause>> {
-        self.subscribed_entities.entities_keys.read()
+    pub fn subscribed_models(&self) -> RwLockReadGuard<'_, HashSet<KeysClause>> {
+        self.subscribed_models.models_keys.read()
     }
 
     /// Retrieves entities matching query parameter.
@@ -112,25 +113,35 @@ impl Client {
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
-    /// Returns the model value of an entity.
+    /// A direct stream to grpc subscribe entities
+    pub async fn on_entity_updated(
+        &self,
+        ids: Vec<FieldElement>,
+    ) -> Result<EntityUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_entities(ids).await?;
+        Ok(stream)
+    }
+
+    /// Returns the value of a model.
     ///
-    /// This function will only return `None`, if `model` doesn't exist. If there is no entity with
+    /// This function will only return `None`, if `model` doesn't exist. If there is no model with
     /// the specified `keys`, it will return a [`Ty`] with the default values.
     ///
-    /// If the requested entity is not among the synced entities, it will attempt to fetch it from
+    /// If the requested model is not among the synced models, it will attempt to fetch it from
     /// the RPC.
-    pub async fn entity(&self, keys: &KeysClause) -> Result<Option<Ty>, Error> {
+    pub async fn model(&self, keys: &KeysClause) -> Result<Option<Ty>, Error> {
         let Some(mut schema) = self.metadata.read().model(&keys.model).map(|m| m.schema.clone())
         else {
             return Ok(None);
         };
 
-        if !self.subscribed_entities.is_synced(keys) {
+        if !self.subscribed_models.is_synced(keys) {
             let model = self.world_reader.model(&keys.model).await?;
             return Ok(Some(model.entity(&keys.keys).await?));
         }
 
-        let Ok(Some(raw_values)) = self.storage.get_entity_storage(
+        let Ok(Some(raw_values)) = self.storage.get_model_storage(
             cairo_short_string_to_felt(&keys.model).map_err(ParseError::CairoShortStringToFelt)?,
             &keys.keys,
         ) else {
@@ -152,17 +163,16 @@ impl Client {
         Ok(Some(schema))
     }
 
-    /// Initiate the entity subscriptions and returns a [SubscriptionService] which when await'ed
+    /// Initiate the model subscriptions and returns a [SubscriptionService] which when await'ed
     /// will execute the subscription service and starts the syncing process.
     pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
-        let entities_keys =
-            self.subscribed_entities.entities_keys.read().clone().into_iter().collect();
-        let sub_res_stream = self.initiate_subscription(entities_keys).await?;
+        let models_keys = self.subscribed_models.models_keys.read().clone().into_iter().collect();
+        let sub_res_stream = self.initiate_subscription(models_keys).await?;
 
         let (service, handle) = SubscriptionService::new(
             Arc::clone(&self.storage),
             Arc::clone(&self.metadata),
-            Arc::clone(&self.subscribed_entities),
+            Arc::clone(&self.subscribed_models),
             sub_res_stream,
         );
 
@@ -173,16 +183,16 @@ impl Client {
     /// Adds entities to the list of entities to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn add_entities_to_sync(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
-        for keys in &entities_keys {
-            self.initiate_entity(&keys.model, keys.keys.clone()).await?;
+    pub async fn add_models_to_sync(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+        for keys in &models_keys {
+            self.initiate_model(&keys.model, keys.keys.clone()).await?;
         }
 
-        self.subscribed_entities.add_entities(entities_keys)?;
+        self.subscribed_models.add_models(models_keys)?;
 
-        let updated_entities =
-            self.subscribed_entities.entities_keys.read().clone().into_iter().collect();
-        let sub_res_stream = self.initiate_subscription(updated_entities).await?;
+        let updated_models =
+            self.subscribed_models.models_keys.read().clone().into_iter().collect();
+        let sub_res_stream = self.initiate_subscription(updated_models).await?;
 
         match self.sub_client_handle.get() {
             Some(handle) => handle.update_subscription_stream(sub_res_stream),
@@ -191,17 +201,14 @@ impl Client {
         Ok(())
     }
 
-    /// Removes entities from the list of entities to be synced.
+    /// Removes models from the list of models to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn remove_entities_to_sync(
-        &self,
-        entities_keys: Vec<KeysClause>,
-    ) -> Result<(), Error> {
-        self.subscribed_entities.remove_entities(entities_keys)?;
+    pub async fn remove_models_to_sync(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+        self.subscribed_models.remove_models(models_keys)?;
 
         let updated_entities =
-            self.subscribed_entities.entities_keys.read().clone().into_iter().collect();
+            self.subscribed_models.models_keys.read().clone().into_iter().collect();
         let sub_res_stream = self.initiate_subscription(updated_entities).await?;
 
         match self.sub_client_handle.get() {
@@ -218,16 +225,16 @@ impl Client {
     async fn initiate_subscription(
         &self,
         keys: Vec<KeysClause>,
-    ) -> Result<EntityUpdateStreaming, Error> {
+    ) -> Result<ModelDiffsStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_entities(keys).await?;
+        let stream = grpc_client.subscribe_model_diffs(keys).await?;
         Ok(stream)
     }
 
-    async fn initiate_entity(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
+    async fn initiate_model(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
         let model_reader = self.world_reader.model(model).await?;
         let values = model_reader.entity_storage(&keys).await?;
-        self.storage.set_entity_storage(
+        self.storage.set_model_storage(
             cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,
             keys,
             values,
