@@ -100,11 +100,6 @@ where
         None => local_manifest.base.class_hash,
     };
 
-    // executor.address be updated
-    // if let Some(manifest) = remote_manifest {
-    //     local_manifest.executor.address = manifest.executor.address;
-    // }
-
     local_manifest.contracts.iter_mut().for_each(|c| {
         let salt = generate_salt(&c.name);
         c.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));

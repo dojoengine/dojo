@@ -357,9 +357,7 @@ fn get_dojo_computed_values(
     aux_data: &ComputedValuesAuxData,
     computed_values: &mut BTreeMap<SmolStr, Vec<ComputedValueEntrypoint>>,
 ) {
-    if let ModuleId::Submodule(submod_id) = module_id {
-        let _contract = submod_id.name(db);
-
+    if let ModuleId::Submodule(_) = module_id {
         let module_name = module_id.full_path(db);
         let module_name = SmolStr::from(module_name);
 
