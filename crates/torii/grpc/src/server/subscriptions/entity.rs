@@ -23,7 +23,7 @@ use crate::proto;
 
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
-    ids: HashSet<String>,
+    ids: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
@@ -36,7 +36,7 @@ pub struct EntityManager {
 impl EntityManager {
     pub async fn add_subscriber(
         &self,
-        ids: Vec<String>,
+        ids: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
@@ -85,8 +85,9 @@ impl Service {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
+            let felt_id = FieldElement::from_str(id).map_err(ParseError::FromStr)?;
             // publish all updates if ids is empty or only ids that are subscribed to
-            if sub.ids.is_empty() || sub.ids.contains(id) {
+            if sub.ids.is_empty() || sub.ids.contains(&felt_id) {
                 let models_query = r#"
                     SELECT group_concat(entity_model.model_id) as model_names
                     FROM entities
@@ -114,10 +115,7 @@ impl Service {
 
                 let resp = proto::world::SubscribeEntityResponse {
                     entity: Some(proto::types::Entity {
-                        id: FieldElement::from_str(id)
-                            .map_err(ParseError::FromStr)?
-                            .to_bytes_be()
-                            .to_vec(),
+                        id: felt_id.to_bytes_be().to_vec(),
                         models,
                     }),
                 };
