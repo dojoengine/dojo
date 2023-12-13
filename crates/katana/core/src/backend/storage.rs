@@ -4,6 +4,7 @@ use katana_primitives::block::{
     Block, BlockHash, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::{ContractClassWriter, ContractInfoProvider};
@@ -67,11 +68,12 @@ impl Blockchain {
     pub fn new_with_genesis(provider: impl Database, block_context: &BlockContext) -> Result<Self> {
         let header = PartialHeader {
             parent_hash: 0u8.into(),
+            version: CURRENT_STARKNET_VERSION,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
-            l1_gas_prices: GasPrices {
-                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            gas_prices: GasPrices {
+                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
             },
         };
 
@@ -100,12 +102,13 @@ impl Blockchain {
         let header = Header {
             state_root,
             parent_hash,
+            version: CURRENT_STARKNET_VERSION,
             number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: *SEQUENCER_ADDRESS,
-            l1_gas_prices: GasPrices {
-                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            gas_prices: GasPrices {
+                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
             },
         };
 
@@ -222,7 +225,7 @@ mod tests {
         assert_eq!(latest_number, 23);
         assert_eq!(latest_hash, felt!("1111"));
 
-        assert_eq!(header.l1_gas_prices.eth_l1_gas_price, 9090);
+        assert_eq!(header.gas_prices.eth_gas_price, 9090);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
         assert_eq!(header.state_root, felt!("1334"));

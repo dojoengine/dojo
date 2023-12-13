@@ -2,6 +2,7 @@ use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::transaction::{TxHash, TxWithHash};
+use crate::version::Version;
 use crate::FieldElement;
 
 pub type BlockIdOrTag = starknet::core::types::BlockId;
@@ -32,9 +33,10 @@ pub enum FinalityStatus {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
     pub parent_hash: FieldElement,
-    pub l1_gas_prices: GasPrices,
+    pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
+    pub version: Version,
 }
 
 /// The L1 gas prices.
@@ -42,14 +44,14 @@ pub struct PartialHeader {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
-    pub eth_l1_gas_price: u64,
+    pub eth_gas_price: u64,
     /// The price of one unit of the given resource, denominated in strk
-    pub strk_l1_gas_price: u64,
+    pub strk_gas_price: u64,
 }
 
 impl GasPrices {
-    pub fn new(eth_l1_gas_price: u64, strk_l1_gas_price: u64) -> Self {
-        Self { eth_l1_gas_price, strk_l1_gas_price }
+    pub fn new(eth_gas_price: u64, strk_gas_price: u64) -> Self {
+        Self { eth_gas_price, strk_gas_price }
     }
 }
 
@@ -59,10 +61,11 @@ impl GasPrices {
 pub struct Header {
     pub parent_hash: BlockHash,
     pub number: BlockNumber,
-    pub l1_gas_prices: GasPrices,
+    pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub state_root: FieldElement,
     pub sequencer_address: ContractAddress,
+    pub version: Version,
 }
 
 impl Header {
@@ -74,8 +77,9 @@ impl Header {
         Self {
             number,
             state_root,
-            l1_gas_prices: partial_header.l1_gas_prices,
+            version: partial_header.version,
             timestamp: partial_header.timestamp,
+            gas_prices: partial_header.gas_prices,
             parent_hash: partial_header.parent_hash,
             sequencer_address: partial_header.sequencer_address,
         }

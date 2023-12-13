@@ -12,8 +12,8 @@ pub struct BlockWithTxs(starknet::core::types::BlockWithTxs);
 impl BlockWithTxs {
     pub fn new(block_hash: BlockHash, block: Block, finality_status: FinalityStatus) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: block.header.l1_gas_prices.eth_l1_gas_price,
-            price_in_strk: Some(block.header.l1_gas_prices.strk_l1_gas_price),
+            price_in_wei: block.header.gas_prices.eth_gas_price,
+            price_in_strk: Some(block.header.gas_prices.strk_gas_price),
         };
 
         let transactions =
@@ -23,12 +23,11 @@ impl BlockWithTxs {
             block_hash,
             l1_gas_price,
             transactions,
-            /// TODO: not hardcode this
-            starknet_version: "0.5.1".into(),
             new_root: block.header.state_root,
             timestamp: block.header.timestamp,
             block_number: block.header.number,
             parent_hash: block.header.parent_hash,
+            starknet_version: block.header.version.to_string(),
             sequencer_address: block.header.sequencer_address.into(),
             status: match finality_status {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
@@ -48,8 +47,8 @@ impl PendingBlockWithTxs {
             transactions.into_iter().map(|tx| crate::transaction::Tx::from(tx).0).collect();
 
         let l1_gas_price = ResourcePrice {
-            price_in_wei: header.l1_gas_prices.eth_l1_gas_price,
-            price_in_strk: Some(header.l1_gas_prices.strk_l1_gas_price),
+            price_in_wei: header.gas_prices.eth_gas_price,
+            price_in_strk: Some(header.gas_prices.strk_gas_price),
         };
 
         Self(starknet::core::types::PendingBlockWithTxs {
@@ -57,8 +56,7 @@ impl PendingBlockWithTxs {
             l1_gas_price,
             timestamp: header.timestamp,
             parent_hash: header.parent_hash,
-            /// TODO: not hardcode this
-            starknet_version: "0.5.1".into(),
+            starknet_version: header.version.to_string(),
             sequencer_address: header.sequencer_address.into(),
         })
     }
@@ -82,20 +80,19 @@ impl BlockWithTxHashes {
         finality_status: FinalityStatus,
     ) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: block.header.l1_gas_prices.eth_l1_gas_price,
-            price_in_strk: Some(block.header.l1_gas_prices.strk_l1_gas_price),
+            price_in_wei: block.header.gas_prices.eth_gas_price,
+            price_in_strk: Some(block.header.gas_prices.strk_gas_price),
         };
 
         Self(starknet::core::types::BlockWithTxHashes {
             block_hash,
             l1_gas_price,
             transactions: block.body,
-            /// TODO: not hardcode this
-            starknet_version: "0.5.1".into(),
             new_root: block.header.state_root,
             timestamp: block.header.timestamp,
             block_number: block.header.number,
             parent_hash: block.header.parent_hash,
+            starknet_version: block.header.version.to_string(),
             sequencer_address: block.header.sequencer_address.into(),
             status: match finality_status {
                 FinalityStatus::AcceptedOnL1 => BlockStatus::AcceptedOnL1,
@@ -112,8 +109,8 @@ pub struct PendingBlockWithTxHashes(starknet::core::types::PendingBlockWithTxHas
 impl PendingBlockWithTxHashes {
     pub fn new(header: PartialHeader, transactions: Vec<TxHash>) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: header.l1_gas_prices.eth_l1_gas_price,
-            price_in_strk: Some(header.l1_gas_prices.strk_l1_gas_price),
+            price_in_wei: header.gas_prices.eth_gas_price,
+            price_in_strk: Some(header.gas_prices.strk_gas_price),
         };
 
         Self(starknet::core::types::PendingBlockWithTxHashes {
@@ -121,8 +118,7 @@ impl PendingBlockWithTxHashes {
             l1_gas_price,
             timestamp: header.timestamp,
             parent_hash: header.parent_hash,
-            /// TODO: not hardcode this
-            starknet_version: "0.5.1".into(),
+            starknet_version: header.version.to_string(),
             sequencer_address: header.sequencer_address.into(),
         })
     }

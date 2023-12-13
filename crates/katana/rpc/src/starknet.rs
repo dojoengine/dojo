@@ -11,6 +11,7 @@ use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, FinalityStatus, GasPrices, PartialHeader,
 };
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::transaction::{
@@ -124,14 +125,15 @@ impl StarknetApiServer for StarknetApi {
             let block_context = self.sequencer.backend.env.read().block.clone();
             let latest_hash = BlockHashProvider::latest_hash(provider)?;
 
-            let l1_gas_prices = GasPrices {
-                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            let gas_prices = GasPrices {
+                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
             };
 
             let header = PartialHeader {
-                l1_gas_prices,
+                gas_prices,
                 parent_hash: latest_hash,
+                version: CURRENT_STARKNET_VERSION,
                 timestamp: block_context.block_timestamp.0,
                 sequencer_address: block_context.sequencer_address.into(),
             };
@@ -197,14 +199,15 @@ impl StarknetApiServer for StarknetApi {
             let block_context = self.sequencer.backend.env.read().block.clone();
             let latest_hash = BlockHashProvider::latest_hash(provider)?;
 
-            let l1_gas_prices = GasPrices {
-                eth_l1_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_l1_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            let gas_prices = GasPrices {
+                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
             };
 
             let header = PartialHeader {
-                l1_gas_prices,
+                gas_prices,
                 parent_hash: latest_hash,
+                version: CURRENT_STARKNET_VERSION,
                 timestamp: block_context.block_timestamp.0,
                 sequencer_address: block_context.sequencer_address.into(),
             };
