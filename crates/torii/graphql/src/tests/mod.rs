@@ -254,7 +254,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     //  Execute `create` and insert 10 records into storage
-    let records_contract = "0x414e9776a1626963ba21c4f45ddd7b4d2ac907d20c230e9c6a2e6119c2e5d";
+
+    let records_contract = "0x7b44a597f4027588f226293105c77c99c436ab4016bbcb51f6711ab1ccfeeb0";
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],

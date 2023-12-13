@@ -6,7 +6,7 @@ test_compiler_cairo_v240
 //! > expected_manifest_file
 {
   "world": {
-    "name": "world",
+    "name": "dojo::world::world",
     "address": null,
     "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
     "abi": [
@@ -789,7 +789,7 @@ test_compiler_cairo_v240
     "computed": []
   },
   "executor": {
-    "name": "executor",
+    "name": "dojo::executor::executor",
     "address": null,
     "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
     "abi": [
@@ -850,7 +850,7 @@ test_compiler_cairo_v240
     "computed": []
   },
   "base": {
-    "name": "base",
+    "name": "dojo::base::base",
     "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
     "abi": [
       {
@@ -953,7 +953,7 @@ test_compiler_cairo_v240
   },
   "contracts": [
     {
-      "name": "cairo_v240",
+      "name": "cairo_v240::cairo_v240",
       "address": null,
       "class_hash": "0x714353d2a54cfd74820f89c19d8911a379214d5d4ccf369d74b5f5844dc565f",
       "abi": [

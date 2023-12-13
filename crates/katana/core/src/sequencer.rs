@@ -442,11 +442,8 @@ impl KatanaSequencer {
     //     contract_address: ContractAddress,
     //     storage_key: StorageKey,
     //     value: StorageValue,
-    // ) -> Result<(), SequencerError> {
-    //     if let Some(ref pending) = self.pending_state() {
-    //         StateWriter::set_storage(&pending.state, contract_address, storage_key, value)?;
-    //     }
-    //     Ok(())
+    // ) -> Result<(), SequencerError> { if let Some(ref pending) = self.pending_state() {
+    //   StateWriter::set_storage(&pending.state, contract_address, storage_key, value)?; } Ok(())
     // }
 }
 
