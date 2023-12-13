@@ -3,7 +3,6 @@ use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::{CallError, ErrorObject};
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
 use katana_primitives::transaction::TxHash;
-use katana_primitives::version::{Version, CURRENT_STARKNET_VERSION};
 use katana_primitives::FieldElement;
 use katana_rpc_types::block::{
     BlockHashAndNumber, BlockTxCount, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
@@ -92,8 +91,8 @@ pub trait StarknetApi {
     // Read API
 
     #[method(name = "specVersion")]
-    async fn spec_version(&self) -> Result<Version, Error> {
-        Ok(CURRENT_STARKNET_VERSION)
+    async fn spec_version(&self) -> Result<String, Error> {
+        Ok("0.5.1".into())
     }
 
     #[method(name = "chainId")]
