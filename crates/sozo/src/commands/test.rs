@@ -14,6 +14,7 @@ use cairo_lang_test_plugin::TestPlugin;
 use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig};
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
+use dojo_lang::inline_macros::delete::DeleteMacro;
 use dojo_lang::inline_macros::emit::EmitMacro;
 use dojo_lang::inline_macros::get::GetMacro;
 use dojo_lang::inline_macros::set::SetMacro;
@@ -98,6 +99,7 @@ pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase
     b.with_macro_plugin(Arc::new(BuiltinDojoPlugin));
     b.with_macro_plugin(Arc::new(StarkNetPlugin::default()));
 
+    b.with_inline_macro_plugin(DeleteMacro::NAME, Arc::new(DeleteMacro));
     b.with_inline_macro_plugin(EmitMacro::NAME, Arc::new(EmitMacro));
     b.with_inline_macro_plugin(GetMacro::NAME, Arc::new(GetMacro));
     b.with_inline_macro_plugin(SetMacro::NAME, Arc::new(SetMacro));

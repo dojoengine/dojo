@@ -8,6 +8,7 @@ use cairo_lang_starknet::plugin::StarkNetPlugin;
 use cairo_lang_test_plugin::TestPlugin;
 use cairo_lang_utils::logging::init_logging;
 use clap::Parser;
+use dojo_lang::inline_macros::delete::DeleteMacro;
 use dojo_lang::inline_macros::emit::EmitMacro;
 use dojo_lang::inline_macros::get::GetMacro;
 use dojo_lang::inline_macros::set::SetMacro;
@@ -37,6 +38,7 @@ async fn main() {
         .with_macro_plugin(Arc::new(BuiltinDojoPlugin))
         .with_macro_plugin(Arc::new(StarkNetPlugin::default()))
         .with_macro_plugin(Arc::new(TestPlugin::default()))
+        .with_inline_macro_plugin(DeleteMacro::NAME, Arc::new(DeleteMacro))
         .with_inline_macro_plugin(EmitMacro::NAME, Arc::new(EmitMacro))
         .with_inline_macro_plugin(GetMacro::NAME, Arc::new(GetMacro))
         .with_inline_macro_plugin(SetMacro::NAME, Arc::new(SetMacro))

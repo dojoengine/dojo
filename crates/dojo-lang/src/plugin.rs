@@ -23,6 +23,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::contract::DojoContract;
+use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
@@ -213,9 +214,10 @@ impl CairoPluginInstance for BuiltinDojoPluginInstance {
 
     fn inline_macro_plugins(&self) -> Vec<(String, Arc<dyn InlineMacroExprPlugin>)> {
         vec![
+            (DeleteMacro::NAME.into(), Arc::new(DeleteMacro)),
+            (EmitMacro::NAME.into(), Arc::new(EmitMacro)),
             (GetMacro::NAME.into(), Arc::new(GetMacro)),
             (SetMacro::NAME.into(), Arc::new(SetMacro)),
-            (EmitMacro::NAME.into(), Arc::new(EmitMacro)),
         ]
     }
 }
