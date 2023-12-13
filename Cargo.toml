@@ -132,3 +132,6 @@ blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "e6e9c90"
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
+
+[path.crates-io]
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "0df9ad3417a5f10d486348737fe75659ca4bcfdc" } # commit with RPC 0.6.0

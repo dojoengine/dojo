@@ -32,7 +32,6 @@ pub enum FinalityStatus {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
     pub parent_hash: FieldElement,
-    pub number: BlockNumber,
     pub l1_gas_prices: GasPrices,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
@@ -67,10 +66,14 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn new(partial_header: PartialHeader, state_root: FieldElement) -> Self {
+    pub fn new(
+        partial_header: PartialHeader,
+        number: BlockNumber,
+        state_root: FieldElement,
+    ) -> Self {
         Self {
+            number,
             state_root,
-            number: partial_header.number,
             l1_gas_prices: partial_header.l1_gas_prices,
             timestamp: partial_header.timestamp,
             parent_hash: partial_header.parent_hash,

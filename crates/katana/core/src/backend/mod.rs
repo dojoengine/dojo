@@ -149,7 +149,6 @@ impl Backend {
 
         let partial_header = PartialHeader {
             parent_hash: prev_hash,
-            number: block_context.block_number.0,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: block_context.sequencer_address.into(),
             l1_gas_prices: GasPrices {
@@ -159,8 +158,9 @@ impl Backend {
         };
 
         let tx_count = txs.len();
-        let block_number = partial_header.number;
-        let header = Header::new(partial_header, FieldElement::ZERO);
+        let block_number = block_context.block_number.0;
+
+        let header = Header::new(partial_header, block_number, FieldElement::ZERO);
         let block = Block { header, body: txs }.seal();
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 
