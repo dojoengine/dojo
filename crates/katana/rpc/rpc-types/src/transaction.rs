@@ -114,7 +114,7 @@ impl BroadcastedDeployAccountTx {
             self.0.contract_address_salt,
             self.0.class_hash,
             &self.0.constructor_calldata,
-            chain_id,
+            FieldElement::ZERO,
         );
 
         DeployAccountTx {
