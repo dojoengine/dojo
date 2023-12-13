@@ -22,6 +22,7 @@ use url::Url;
 
 use crate::contract::DojoContract;
 use crate::inline_macros::emit::EmitMacro;
+use crate::inline_macros::random::RandomMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
@@ -218,7 +219,8 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_plugin::<BuiltinDojoPlugin>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
-        .add_inline_macro_plugin::<EmitMacro>();
+        .add_inline_macro_plugin::<EmitMacro>()
+        .add_inline_macro_plugin::<RandomMacro>();
 
     suite
 }

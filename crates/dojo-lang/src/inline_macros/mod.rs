@@ -5,6 +5,7 @@ use smol_str::SmolStr;
 
 pub mod emit;
 pub mod get;
+pub mod random;
 pub mod set;
 pub mod utils;
 
