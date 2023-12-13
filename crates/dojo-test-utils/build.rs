@@ -5,9 +5,10 @@ fn main() {
     use camino::{Utf8Path, Utf8PathBuf};
     use dojo_lang::compiler::DojoCompiler;
     use dojo_lang::plugin::CairoPluginRepository;
+    use dojo_lang::scarb_internal::compile_workspace;
     use scarb::compiler::CompilerRepository;
     use scarb::core::{Config, TargetKind};
-    use scarb::ops::{self, CompileOpts};
+    use scarb::ops::CompileOpts;
     use scarb_ui::Verbosity;
 
     let project_paths = ["../../examples/spawn-and-move", "../torii/graphql/src/tests/types-test"];
@@ -39,12 +40,9 @@ fn main() {
             .build()
             .unwrap();
 
-        let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
-        let packages = ws.members().map(|p| p.id).collect();
-        ops::compile(
-            packages,
+        compile_workspace(
+            &config,
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-            &ws,
         )
         .unwrap();
     }

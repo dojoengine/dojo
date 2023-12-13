@@ -18,13 +18,14 @@ mod tests {
             cursor
             node {
               uri
+              worldAddress
               coverImg
               iconImg
               content {
                 name
                 description
-                cover_uri
-                icon_uri
+                coverUri
+                iconUri
                 website
                 socials {
                   name
@@ -69,6 +70,7 @@ mod tests {
         let value = result.get("metadatas").ok_or("metadatas not found").unwrap().clone();
         let connection: Connection<SqlMetadata> = serde_json::from_value(value).unwrap();
         let edge = connection.edges.first().unwrap();
+        assert_eq!(edge.node.world_address, "0x0");
         assert_eq!(connection.edges.len(), 1);
         assert_eq!(edge.node.cover_img, cover_img);
         assert_eq!(

@@ -46,14 +46,14 @@ struct Position {
 }
 
 #[cfg(test)]
-impl PositionPrintImpl of debug::PrintTrait<Position> {
+impl PositionPrintImpl of core::debug::PrintTrait<Position> {
     fn print(self: Position) {
-        debug::PrintTrait::print('id');
-        debug::PrintTrait::print(self.id);
-        debug::PrintTrait::print('x');
-        debug::PrintTrait::print(self.x);
-        debug::PrintTrait::print('y');
-        debug::PrintTrait::print(self.y);
+        core::debug::PrintTrait::print('id');
+        core::debug::PrintTrait::print(self.id);
+        core::debug::PrintTrait::print('x');
+        core::debug::PrintTrait::print(self.x);
+        core::debug::PrintTrait::print('y');
+        core::debug::PrintTrait::print(self.y);
     }
 }
 
@@ -64,10 +64,10 @@ struct Roles {
 }
 
 #[cfg(test)]
-impl RolesPrintImpl of debug::PrintTrait<Roles> {
+impl RolesPrintImpl of core::debug::PrintTrait<Roles> {
     fn print(self: Roles) {
-        debug::PrintTrait::print('role_ids');
-        debug::PrintTrait::print(self.role_ids);
+        core::debug::PrintTrait::print('role_ids');
+        core::debug::PrintTrait::print(self.role_ids);
     }
 }
 
@@ -85,14 +85,14 @@ struct Player {
     name: felt252, 
 }
 #[cfg(test)]
-impl PlayerPrintImpl of debug::PrintTrait<Player> {
+impl PlayerPrintImpl of core::debug::PrintTrait<Player> {
     fn print(self: Player) {
-        debug::PrintTrait::print('game');
-        debug::PrintTrait::print(self.game);
-        debug::PrintTrait::print('player');
-        debug::PrintTrait::print(self.player);
-        debug::PrintTrait::print('name');
-        debug::PrintTrait::print(self.name);
+        core::debug::PrintTrait::print('game');
+        core::debug::PrintTrait::print(self.game);
+        core::debug::PrintTrait::print('player');
+        core::debug::PrintTrait::print(self.player);
+        core::debug::PrintTrait::print('name');
+        core::debug::PrintTrait::print(self.name);
     }
 }
 
@@ -126,45 +126,45 @@ struct Player {
 
     name: felt252, 
 }
-impl PositionCopy of Copy::<Position>;
-impl PositionDrop of Drop::<Position>;
-impl PositionSerde of Serde::<Position> {
-    fn serialize(self: @Position, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.id, ref output);
-        serde::Serde::serialize(self.x, ref output);
-        serde::Serde::serialize(self.y, ref output)
+impl PositionCopy of core::traits::Copy::<Position>;
+impl PositionDrop of core::traits::Drop::<Position>;
+impl PositionSerde of core::serde::Serde::<Position> {
+    fn serialize(self: @Position, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.id, ref output);
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Position> {
-        Option::Some(Position {
-            id: serde::Serde::deserialize(ref serialized)?,
-            x: serde::Serde::deserialize(ref serialized)?,
-            y: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Position> {
+        core::option::Option::Some(Position {
+            id: core::serde::Serde::deserialize(ref serialized)?,
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }
-impl RolesSerde of Serde::<Roles> {
-    fn serialize(self: @Roles, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.role_ids, ref output)
+impl RolesSerde of core::serde::Serde::<Roles> {
+    fn serialize(self: @Roles, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.role_ids, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Roles> {
-        Option::Some(Roles {
-            role_ids: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Roles> {
+        core::option::Option::Some(Roles {
+            role_ids: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }
-impl PlayerCopy of Copy::<Player>;
-impl PlayerDrop of Drop::<Player>;
-impl PlayerSerde of Serde::<Player> {
-    fn serialize(self: @Player, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.game, ref output);
-        serde::Serde::serialize(self.player, ref output);
-        serde::Serde::serialize(self.name, ref output)
+impl PlayerCopy of core::traits::Copy::<Player>;
+impl PlayerDrop of core::traits::Drop::<Player>;
+impl PlayerSerde of core::serde::Serde::<Player> {
+    fn serialize(self: @Player, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.game, ref output);
+        core::serde::Serde::serialize(self.player, ref output);
+        core::serde::Serde::serialize(self.name, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Player> {
-        Option::Some(Player {
-            game: serde::Serde::deserialize(ref serialized)?,
-            player: serde::Serde::deserialize(ref serialized)?,
-            name: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Player> {
+        core::option::Option::Some(Player {
+            game: core::serde::Serde::deserialize(ref serialized)?,
+            player: core::serde::Serde::deserialize(ref serialized)?,
+            name: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }

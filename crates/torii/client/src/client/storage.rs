@@ -21,7 +21,7 @@ pub type StorageValue = FieldElement;
 pub struct ModelStorage {
     metadata: Arc<RwLock<WorldMetadata>>,
     storage: RwLock<HashMap<StorageKey, StorageValue>>,
-    // a map of model name to a set of entity keys.
+    // a map of model name to a set of model keys.
     model_index: RwLock<HashMap<FieldElement, HashSet<EntityKeys>>>,
 
     // listener for storage updates.
@@ -40,11 +40,11 @@ impl ModelStorage {
         }
     }
 
-    /// Listen to entity changes.
+    /// Listen to model changes.
     ///
     /// # Arguments
     /// * `model` - the model name.
-    /// * `keys` - the keys of the entity.
+    /// * `keys` - the keys of the model.
     ///
     /// # Returns
     /// A receiver that will receive updates for the specified storage keys.
@@ -53,7 +53,7 @@ impl ModelStorage {
         model: FieldElement,
         keys: &[FieldElement],
     ) -> Result<Receiver<()>, Error> {
-        let storage_addresses = self.get_entity_storage_addresses(model, keys)?;
+        let storage_addresses = self.get_model_storage_addresses(model, keys)?;
 
         let (sender, receiver) = channel(128);
         let listener_id = self.senders.lock().len() as u8;
@@ -66,21 +66,21 @@ impl ModelStorage {
         Ok(receiver)
     }
 
-    /// Retrieves the raw values of an entity.
-    pub fn get_entity_storage(
+    /// Retrieves the raw values of an model.
+    pub fn get_model_storage(
         &self,
         model: FieldElement,
         raw_keys: &[FieldElement],
     ) -> Result<Option<Vec<FieldElement>>, Error> {
-        let storage_addresses = self.get_entity_storage_addresses(model, raw_keys)?;
+        let storage_addresses = self.get_model_storage_addresses(model, raw_keys)?;
         Ok(storage_addresses
             .into_iter()
             .map(|storage_address| self.storage.read().get(&storage_address).copied())
             .collect::<Option<Vec<_>>>())
     }
 
-    /// Set the raw values of an entity.
-    pub fn set_entity_storage(
+    /// Set the raw values of an model.
+    pub fn set_model_storage(
         &self,
         model: FieldElement,
         raw_keys: Vec<FieldElement>,
@@ -108,18 +108,18 @@ impl ModelStorage {
             Ordering::Equal => {}
         }
 
-        let storage_addresses = self.get_entity_storage_addresses(model, &raw_keys)?;
+        let storage_addresses = self.get_model_storage_addresses(model, &raw_keys)?;
         self.set_storages_at(storage_addresses.into_iter().zip(raw_values).collect());
-        self.index_entity(model, raw_keys);
+        self.index_model(model, raw_keys);
 
         Ok(())
     }
 
     /// Set the value of storage slots in bulk
-    pub(super) fn set_storages_at(&self, storage_entries: Vec<(FieldElement, FieldElement)>) {
+    pub(super) fn set_storages_at(&self, storage_models: Vec<(FieldElement, FieldElement)>) {
         let mut senders: HashSet<u8> = Default::default();
 
-        for (key, _) in &storage_entries {
+        for (key, _) in &storage_models {
             if let Some(lists) = self.listeners.lock().get(key) {
                 for id in lists {
                     senders.insert(*id);
@@ -127,7 +127,7 @@ impl ModelStorage {
             }
         }
 
-        self.storage.write().extend(storage_entries);
+        self.storage.write().extend(storage_models);
 
         for sender_id in senders {
             self.notify_listener(sender_id);
@@ -140,7 +140,7 @@ impl ModelStorage {
         }
     }
 
-    fn get_entity_storage_addresses(
+    fn get_model_storage_addresses(
         &self,
         model: FieldElement,
         raw_keys: &[FieldElement],
@@ -158,7 +158,7 @@ impl ModelStorage {
         Ok(compute_all_storage_addresses(model, raw_keys, model_packed_size))
     }
 
-    fn index_entity(&self, model: FieldElement, raw_keys: Vec<FieldElement>) {
+    fn index_model(&self, model: FieldElement, raw_keys: Vec<FieldElement>) {
         self.model_index.write().entry(model).or_default().insert(raw_keys);
     }
 }
@@ -204,7 +204,7 @@ mod tests {
         let keys = vec![felt!("0x12345")];
         let values = vec![felt!("1"), felt!("2"), felt!("3"), felt!("4"), felt!("5")];
         let model = cairo_short_string_to_felt("Position").unwrap();
-        let result = storage.set_entity_storage(model, keys, values);
+        let result = storage.set_model_storage(model, keys, values);
 
         assert!(storage.storage.read().is_empty());
         matches!(
@@ -219,7 +219,7 @@ mod tests {
         let keys = vec![felt!("0x12345")];
         let values = vec![felt!("1"), felt!("2")];
         let model = cairo_short_string_to_felt("Position").unwrap();
-        let result = storage.set_entity_storage(model, keys, values);
+        let result = storage.set_model_storage(model, keys, values);
 
         assert!(storage.storage.read().is_empty());
         matches!(
@@ -229,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn set_and_get_entity_value() {
+    fn set_and_get_model_value() {
         let storage = create_dummy_storage();
         let keys = vec![felt!("0x12345")];
 
@@ -246,11 +246,11 @@ mod tests {
         let model_name_in_felt = cairo_short_string_to_felt("Position").unwrap();
 
         storage
-            .set_entity_storage(model_name_in_felt, keys.clone(), expected_values.clone())
+            .set_model_storage(model_name_in_felt, keys.clone(), expected_values.clone())
             .expect("set storage values");
 
         let actual_values = storage
-            .get_entity_storage(model_name_in_felt, &keys)
+            .get_model_storage(model_name_in_felt, &keys)
             .expect("model exist")
             .expect("values are set");
 
@@ -259,7 +259,7 @@ mod tests {
 
         assert!(
             storage.model_index.read().get(&model_name_in_felt).is_some_and(|e| e.contains(&keys)),
-            "entity keys must be indexed"
+            "model keys must be indexed"
         );
         assert!(actual_values == expected_values);
         assert!(storage.storage.read().len() == model.packed_size as usize);

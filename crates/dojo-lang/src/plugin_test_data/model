@@ -4,7 +4,7 @@
 test_expand_plugin
 
 //! > cairo_code
-use serde::Serde;
+use core::serde::Serde;
 
 #[derive(Introspect, Copy, Drop, Serde)]
 struct Vec3 {
@@ -56,7 +56,7 @@ struct Player {
 }
 
 //! > generated_cairo_code
-use serde::Serde;
+use core::serde::Serde;
 
 
 #[derive(Introspect, Copy, Drop, Serde)]
@@ -139,7 +139,7 @@ impl PositionModel of dojo::model::Model<Position> {
     #[inline(always)]
     fn values(self: @Position) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        serde::Serde::serialize(self.v, ref serialized);
+        core::serde::Serde::serialize(self.v, ref serialized);
         array::ArrayTrait::span(@serialized)
     }
 
@@ -284,7 +284,7 @@ impl RolesModel of dojo::model::Model<Roles> {
     #[inline(always)]
     fn values(self: @Roles) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
-        serde::Serde::serialize(self.role_ids, ref serialized);
+        core::serde::Serde::serialize(self.role_ids, ref serialized);
         array::ArrayTrait::span(@serialized)
     }
 
@@ -403,7 +403,7 @@ impl PlayerModel of dojo::model::Model<Player> {
     fn keys(self: @Player) -> Span<felt252> {
         let mut serialized = ArrayTrait::new();
         array::ArrayTrait::append(ref serialized, *self.game);
-        serde::Serde::serialize(self.player, ref serialized);
+        core::serde::Serde::serialize(self.player, ref serialized);
         array::ArrayTrait::span(@serialized)
     }
 
@@ -631,7 +631,7 @@ error: Unsupported attribute.
                 ^*************^
 
 //! > expanded_cairo_code
-use serde::Serde;
+use core::serde::Serde;
 
 #[derive(Introspect, Copy, Drop, Serde)]
 struct Vec3 {
@@ -681,19 +681,19 @@ struct Player {
 
     name: felt252, 
 }
-impl Vec3Copy of Copy::<Vec3>;
-impl Vec3Drop of Drop::<Vec3>;
-impl Vec3Serde of Serde::<Vec3> {
-    fn serialize(self: @Vec3, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.x, ref output);
-        serde::Serde::serialize(self.y, ref output);
-        serde::Serde::serialize(self.z, ref output)
+impl Vec3Copy of core::traits::Copy::<Vec3>;
+impl Vec3Drop of core::traits::Drop::<Vec3>;
+impl Vec3Serde of core::serde::Serde::<Vec3> {
+    fn serialize(self: @Vec3, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.x, ref output);
+        core::serde::Serde::serialize(self.y, ref output);
+        core::serde::Serde::serialize(self.z, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Vec3> {
-        Option::Some(Vec3 {
-            x: serde::Serde::deserialize(ref serialized)?,
-            y: serde::Serde::deserialize(ref serialized)?,
-            z: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Vec3> {
+        core::option::Option::Some(Vec3 {
+            x: core::serde::Serde::deserialize(ref serialized)?,
+            y: core::serde::Serde::deserialize(ref serialized)?,
+            z: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }
@@ -733,17 +733,17 @@ layout.append(8);
         })
     }
 }
-impl PositionCopy of Copy::<Position>;
-impl PositionDrop of Drop::<Position>;
-impl PositionSerde of Serde::<Position> {
-    fn serialize(self: @Position, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.id, ref output);
-        serde::Serde::serialize(self.v, ref output)
+impl PositionCopy of core::traits::Copy::<Position>;
+impl PositionDrop of core::traits::Drop::<Position>;
+impl PositionSerde of core::serde::Serde::<Position> {
+    fn serialize(self: @Position, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.id, ref output);
+        core::serde::Serde::serialize(self.v, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Position> {
-        Option::Some(Position {
-            id: serde::Serde::deserialize(ref serialized)?,
-            v: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Position> {
+        core::option::Option::Some(Position {
+            id: core::serde::Serde::deserialize(ref serialized)?,
+            v: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }
@@ -756,23 +756,23 @@ impl PositionSerde of Serde::<Position> {
 
                 #[inline(always)]
                 fn keys(self: @Position) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
-                    array::ArrayTrait::append(ref serialized, *self.id);
-                    array::ArrayTrait::span(@serialized)
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::ArrayTrait::append(ref serialized, *self.id);
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn values(self: @Position) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
-                    serde::Serde::serialize(self.v, ref serialized);
-                    array::ArrayTrait::span(@serialized)
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::serde::Serde::serialize(self.v, ref serialized);
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn layout(self: @Position) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[inline(always)]
@@ -838,7 +838,7 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Position>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
@@ -846,9 +846,9 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
@@ -856,13 +856,13 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
                     dojo::database::introspect::Introspect::<Position>::ty()
                 }
             }
-impl RolesSerde of Serde::<Roles> {
-    fn serialize(self: @Roles, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.role_ids, ref output)
+impl RolesSerde of core::serde::Serde::<Roles> {
+    fn serialize(self: @Roles, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.role_ids, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Roles> {
-        Option::Some(Roles {
-            role_ids: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Roles> {
+        core::option::Option::Some(Roles {
+            role_ids: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }
@@ -875,23 +875,23 @@ impl RolesSerde of Serde::<Roles> {
 
                 #[inline(always)]
                 fn keys(self: @Roles) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
+                    let mut serialized = core::array::ArrayTrait::new();
                     
-                    array::ArrayTrait::span(@serialized)
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn values(self: @Roles) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
-                    serde::Serde::serialize(self.role_ids, ref serialized);
-                    array::ArrayTrait::span(@serialized)
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::serde::Serde::serialize(self.role_ids, ref serialized);
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn layout(self: @Roles) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[inline(always)]
@@ -953,7 +953,7 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
@@ -961,9 +961,9 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
@@ -971,19 +971,19 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                     dojo::database::introspect::Introspect::<Roles>::ty()
                 }
             }
-impl PlayerCopy of Copy::<Player>;
-impl PlayerDrop of Drop::<Player>;
-impl PlayerSerde of Serde::<Player> {
-    fn serialize(self: @Player, ref output: array::Array<felt252>) {
-        serde::Serde::serialize(self.game, ref output);
-        serde::Serde::serialize(self.player, ref output);
-        serde::Serde::serialize(self.name, ref output)
+impl PlayerCopy of core::traits::Copy::<Player>;
+impl PlayerDrop of core::traits::Drop::<Player>;
+impl PlayerSerde of core::serde::Serde::<Player> {
+    fn serialize(self: @Player, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.game, ref output);
+        core::serde::Serde::serialize(self.player, ref output);
+        core::serde::Serde::serialize(self.name, ref output)
     }
-    fn deserialize(ref serialized: array::Span<felt252>) -> Option<Player> {
-        Option::Some(Player {
-            game: serde::Serde::deserialize(ref serialized)?,
-            player: serde::Serde::deserialize(ref serialized)?,
-            name: serde::Serde::deserialize(ref serialized)?,
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Player> {
+        core::option::Option::Some(Player {
+            game: core::serde::Serde::deserialize(ref serialized)?,
+            player: core::serde::Serde::deserialize(ref serialized)?,
+            name: core::serde::Serde::deserialize(ref serialized)?,
         })
     }
 }
@@ -996,23 +996,23 @@ impl PlayerSerde of Serde::<Player> {
 
                 #[inline(always)]
                 fn keys(self: @Player) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
-                    array::ArrayTrait::append(ref serialized, *self.game);serde::Serde::serialize(self.player, ref serialized);
-                    array::ArrayTrait::span(@serialized)
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::ArrayTrait::append(ref serialized, *self.game);core::serde::Serde::serialize(self.player, ref serialized);
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn values(self: @Player) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
-                    array::ArrayTrait::append(ref serialized, *self.name);
-                    array::ArrayTrait::span(@serialized)
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::ArrayTrait::append(ref serialized, *self.name);
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn layout(self: @Player) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[inline(always)]
@@ -1082,7 +1082,7 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Player>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
@@ -1090,9 +1090,9 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
+                    let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]

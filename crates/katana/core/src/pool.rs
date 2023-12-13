@@ -1,15 +1,14 @@
 // Code adapted from Foundry's Anvil
 
 use futures::channel::mpsc::{channel, Receiver, Sender};
+use katana_primitives::transaction::ExecutableTxWithHash;
 use parking_lot::RwLock;
 use starknet::core::types::FieldElement;
 use tracing::{info, warn};
 
-use crate::backend::storage::transaction::Transaction;
-
 #[derive(Debug, Default)]
 pub struct TransactionPool {
-    transactions: RwLock<Vec<Transaction>>,
+    transactions: RwLock<Vec<ExecutableTxWithHash>>,
     transaction_listeners: RwLock<Vec<Sender<FieldElement>>>,
 }
 
@@ -20,8 +19,8 @@ impl TransactionPool {
 }
 
 impl TransactionPool {
-    pub fn add_transaction(&self, transaction: Transaction) {
-        let hash = transaction.hash();
+    pub fn add_transaction(&self, transaction: ExecutableTxWithHash) {
+        let hash = transaction.hash;
         self.transactions.write().push(transaction);
 
         info!(target: "txpool", "Transaction received | Hash: {hash:#x}");
@@ -38,7 +37,7 @@ impl TransactionPool {
     }
 
     /// Get all the transaction from the pool and clear it.
-    pub fn get_transactions(&self) -> Vec<Transaction> {
+    pub fn get_transactions(&self) -> Vec<ExecutableTxWithHash> {
         let mut txs = self.transactions.write();
         let transactions = txs.clone();
         txs.clear();

@@ -24,6 +24,7 @@ cairo-lang-semantic.workspace = true
 cairo-lang-sierra-generator.workspace = true
 cairo-lang-starknet.workspace = true
 cairo-lang-syntax.workspace = true
+cairo-lang-test-plugin.workspace = true
 cairo-lang-utils.workspace = true
 camino.workspace = true
 convert_case.workspace = true

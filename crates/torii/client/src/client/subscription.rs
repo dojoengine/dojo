@@ -11,53 +11,53 @@ use parking_lot::{Mutex, RwLock};
 use starknet::core::types::{StateDiff, StateUpdate};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_crypto::FieldElement;
-use torii_grpc::client::EntityUpdateStreaming;
+use torii_grpc::client::ModelDiffsStreaming;
 use torii_grpc::types::KeysClause;
 
-use super::error::{Error, ParseError};
-use super::ModelStorage;
+use crate::client::error::{Error, ParseError};
+use crate::client::storage::ModelStorage;
 use crate::utils::compute_all_storage_addresses;
 
 pub enum SubscriptionEvent {
-    UpdateSubsciptionStream(EntityUpdateStreaming),
+    UpdateSubsciptionStream(ModelDiffsStreaming),
 }
 
-pub struct SubscribedEntities {
+pub struct SubscribedModels {
     metadata: Arc<RwLock<WorldMetadata>>,
-    pub(super) entities_keys: RwLock<HashSet<KeysClause>>,
-    /// All the relevant storage addresses derived from the subscribed entities
-    pub(super) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
+    pub(crate) models_keys: RwLock<HashSet<KeysClause>>,
+    /// All the relevant storage addresses derived from the subscribed models
+    pub(crate) subscribed_storage_addresses: RwLock<HashSet<FieldElement>>,
 }
 
-impl SubscribedEntities {
-    pub(super) fn is_synced(&self, keys: &KeysClause) -> bool {
-        self.entities_keys.read().contains(keys)
+impl SubscribedModels {
+    pub(crate) fn is_synced(&self, keys: &KeysClause) -> bool {
+        self.models_keys.read().contains(keys)
     }
 
-    pub(super) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
+    pub(crate) fn new(metadata: Arc<RwLock<WorldMetadata>>) -> Self {
         Self {
             metadata,
-            entities_keys: Default::default(),
+            models_keys: Default::default(),
             subscribed_storage_addresses: Default::default(),
         }
     }
 
-    pub(super) fn add_entities(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
-        for keys in entities_keys {
-            Self::add_entity(self, keys)?;
+    pub(crate) fn add_models(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+        for keys in models_keys {
+            Self::add_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(super) fn remove_entities(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub(crate) fn remove_models(&self, entities_keys: Vec<KeysClause>) -> Result<(), Error> {
         for keys in entities_keys {
-            Self::remove_entity(self, keys)?;
+            Self::remove_model(self, keys)?;
         }
         Ok(())
     }
 
-    pub(super) fn add_entity(&self, keys: KeysClause) -> Result<(), Error> {
-        if !self.entities_keys.write().insert(keys.clone()) {
+    pub(crate) fn add_model(&self, keys: KeysClause) -> Result<(), Error> {
+        if !self.models_keys.write().insert(keys.clone()) {
             return Ok(());
         }
 
@@ -83,8 +83,8 @@ impl SubscribedEntities {
         Ok(())
     }
 
-    pub(super) fn remove_entity(&self, keys: KeysClause) -> Result<(), Error> {
-        if !self.entities_keys.write().remove(&keys) {
+    pub(crate) fn remove_model(&self, keys: KeysClause) -> Result<(), Error> {
+        if !self.models_keys.write().remove(&keys) {
             return Ok(());
         }
 
@@ -119,7 +119,7 @@ impl SubscriptionClientHandle {
         Self(Mutex::new(sender))
     }
 
-    pub(crate) fn update_subscription_stream(&self, stream: EntityUpdateStreaming) {
+    pub(crate) fn update_subscription_stream(&self, stream: ModelDiffsStreaming) {
         let _ = self.0.lock().try_send(SubscriptionEvent::UpdateSubsciptionStream(stream));
     }
 }
@@ -127,37 +127,37 @@ impl SubscriptionClientHandle {
 #[must_use = "SubscriptionClient does nothing unless polled"]
 pub struct SubscriptionService {
     req_rcv: Receiver<SubscriptionEvent>,
-    /// The stream returned by the subscription server to receive the response
-    sub_res_stream: RefCell<Option<EntityUpdateStreaming>>,
+    /// Model Diff stream by subscription server to receive response
+    model_diffs_stream: RefCell<Option<ModelDiffsStreaming>>,
 
     /// Callback to be called on error
     err_callback: Option<Box<dyn Fn(tonic::Status) + Send + Sync>>,
 
-    // for processing the entity diff and updating the storage
+    // for processing the model diff and updating the storage
     storage: Arc<ModelStorage>,
     world_metadata: Arc<RwLock<WorldMetadata>>,
-    subscribed_entities: Arc<SubscribedEntities>,
+    subscribed_models: Arc<SubscribedModels>,
 }
 
 impl SubscriptionService {
-    pub(super) fn new(
+    pub(crate) fn new(
         storage: Arc<ModelStorage>,
         world_metadata: Arc<RwLock<WorldMetadata>>,
-        subscribed_entities: Arc<SubscribedEntities>,
-        sub_res_stream: EntityUpdateStreaming,
+        subscribed_models: Arc<SubscribedModels>,
+        model_diffs_stream: ModelDiffsStreaming,
     ) -> (Self, SubscriptionClientHandle) {
         let (req_sender, req_rcv) = mpsc::channel(128);
 
         let handle = SubscriptionClientHandle::new(req_sender);
-        let sub_res_stream = RefCell::new(Some(sub_res_stream));
+        let model_diffs_stream = RefCell::new(Some(model_diffs_stream));
 
         let client = Self {
             req_rcv,
             storage,
             world_metadata,
-            sub_res_stream,
+            model_diffs_stream,
             err_callback: None,
-            subscribed_entities,
+            subscribed_models,
         };
 
         (client, handle)
@@ -167,7 +167,7 @@ impl SubscriptionService {
     fn handle_event(&self, event: SubscriptionEvent) -> Result<(), Error> {
         match event {
             SubscriptionEvent::UpdateSubsciptionStream(stream) => {
-                self.sub_res_stream.replace(Some(stream));
+                self.model_diffs_stream.replace(Some(stream));
             }
         }
         Ok(())
@@ -177,7 +177,7 @@ impl SubscriptionService {
     fn handle_response(&mut self, response: Result<StateUpdate, tonic::Status>) {
         match response {
             Ok(update) => {
-                self.process_entity_diff(update.state_diff);
+                self.process_model_diff(update.state_diff);
             }
 
             Err(err) => {
@@ -188,7 +188,7 @@ impl SubscriptionService {
         }
     }
 
-    fn process_entity_diff(&mut self, diff: StateDiff) {
+    fn process_model_diff(&mut self, diff: StateDiff) {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
@@ -200,10 +200,10 @@ impl SubscriptionService {
         };
 
         let entries: Vec<(FieldElement, FieldElement)> = {
-            let subscribed_entities = self.subscribed_entities.subscribed_storage_addresses.read();
+            let subscribed_models = self.subscribed_models.subscribed_storage_addresses.read();
             entries
                 .into_iter()
-                .filter(|entry| subscribed_entities.contains(&entry.key))
+                .filter(|entry| subscribed_models.contains(&entry.key))
                 .map(|entry| (entry.key, entry.value))
                 .collect()
         };
@@ -226,7 +226,7 @@ impl Future for SubscriptionService {
                 let _ = pin.handle_event(req);
             }
 
-            if let Some(stream) = pin.sub_res_stream.get_mut() {
+            if let Some(stream) = pin.model_diffs_stream.get_mut() {
                 match stream.poll_next_unpin(cx) {
                     Poll::Ready(Some(res)) => pin.handle_response(res),
                     Poll::Ready(None) => return Poll::Ready(()),
@@ -268,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn add_and_remove_subscribed_entity() {
+    fn add_and_remove_subscribed_model() {
         let model_name = String::from("Position");
         let keys = vec![felt!("0x12345")];
         let packed_size: u32 = 1;
@@ -284,24 +284,24 @@ mod tests {
 
         let keys = KeysClause { model: model_name, keys };
 
-        let subscribed_entities = super::SubscribedEntities::new(Arc::new(RwLock::new(metadata)));
-        subscribed_entities.add_entities(vec![keys.clone()]).expect("able to add entity");
+        let subscribed_models = super::SubscribedModels::new(Arc::new(RwLock::new(metadata)));
+        subscribed_models.add_models(vec![keys.clone()]).expect("able to add model");
 
         let actual_storage_addresses_count =
-            subscribed_entities.subscribed_storage_addresses.read().len();
+            subscribed_models.subscribed_storage_addresses.read().len();
         let actual_storage_addresses =
-            subscribed_entities.subscribed_storage_addresses.read().clone();
+            subscribed_models.subscribed_storage_addresses.read().clone();
 
-        assert!(subscribed_entities.entities_keys.read().contains(&keys));
+        assert!(subscribed_models.models_keys.read().contains(&keys));
         assert_eq!(actual_storage_addresses_count, expected_storage_addresses.len());
         assert!(expected_storage_addresses.all(|addr| actual_storage_addresses.contains(&addr)));
 
-        subscribed_entities.remove_entities(vec![keys.clone()]).expect("able to remove entities");
+        subscribed_models.remove_models(vec![keys.clone()]).expect("able to remove entities");
 
         let actual_storage_addresses_count_after =
-            subscribed_entities.subscribed_storage_addresses.read().len();
+            subscribed_models.subscribed_storage_addresses.read().len();
 
         assert_eq!(actual_storage_addresses_count_after, 0);
-        assert!(!subscribed_entities.entities_keys.read().contains(&keys));
+        assert!(!subscribed_models.models_keys.read().contains(&keys));
     }
 }

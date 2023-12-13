@@ -1,6 +1,6 @@
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
+    InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{Expr, ItemModule};
@@ -11,11 +11,13 @@ use itertools::Itertools;
 use super::utils::{parent_of_kind, SYSTEM_READS};
 use super::{extract_models, unsupported_arg_diagnostic, CAIRO_ERR_MSG_LEN};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GetMacro;
-impl GetMacro {
-    pub const NAME: &'static str = "get";
+
+impl NamedPlugin for GetMacro {
+    const NAME: &'static str = "get";
 }
+
 impl InlineMacroExprPlugin for GetMacro {
     fn generate_code(
         &self,
@@ -28,10 +30,10 @@ impl InlineMacroExprPlugin for GetMacro {
         let mut builder = PatchBuilder::new(db);
         builder.add_str(
             "{
-                let mut __get_macro_keys__ = array::ArrayTrait::new();\n",
+                let mut __get_macro_keys__ = core::array::ArrayTrait::new();\n",
         );
 
-        let args = arg_list.args(db).elements(db);
+        let args = arg_list.arguments(db).elements(db);
 
         if args.len() != 3 {
             return InlinePluginResult {
@@ -76,8 +78,8 @@ impl InlineMacroExprPlugin for GetMacro {
         };
 
         builder.add_str(&format!(
-            "serde::Serde::serialize(@{args}, ref __get_macro_keys__);
-            let __get_macro_keys__ = array::ArrayTrait::span(@__get_macro_keys__);\n"
+            "core::serde::Serde::serialize(@{args}, ref __get_macro_keys__);
+            let __get_macro_keys__ = core::array::ArrayTrait::span(@__get_macro_keys__);\n"
         ));
 
         let mut system_reads = SYSTEM_READS.lock().unwrap();
@@ -105,20 +107,23 @@ impl InlineMacroExprPlugin for GetMacro {
             deser_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
             builder.add_str(&format!(
-                "\n            let mut __{model}_layout__ = array::ArrayTrait::new();
+                "\n            let mut __{model}_layout__ = core::array::ArrayTrait::new();
                  dojo::database::introspect::Introspect::<{model}>::layout(ref __{model}_layout__);
                  let mut __{model}_layout_clone__ = __{model}_layout__.clone();
-                 let mut __{model}_layout_span__ = array::ArrayTrait::span(@__{model}_layout__);
+                 let mut __{model}_layout_span__ = \
+                 core::array::ArrayTrait::span(@__{model}_layout__);
                  let mut __{model}_layout_clone_span__ = \
-                 array::ArrayTrait::span(@__{model}_layout_clone__);
+                 core::array::ArrayTrait::span(@__{model}_layout_clone__);
                  let mut __{model}_values__ = {}.entity('{model}', __get_macro_keys__, 0_u8,
                  dojo::packing::calculate_packed_size(ref __{model}_layout_clone_span__),
                  __{model}_layout_span__);
-                 let mut __{model}_model__ = array::ArrayTrait::new();
-                 array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);
-                 array::serialize_array_helper(__{model}_values__, ref __{model}_model__);
-                 let mut __{model}_model_span__ = array::ArrayTrait::span(@__{model}_model__);
-                 let __{model} = option::OptionTrait::expect(serde::Serde::<{model}>::deserialize(
+                 let mut __{model}_model__ = core::array::ArrayTrait::new();
+                 core::array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);
+                 core::array::serialize_array_helper(__{model}_values__, ref __{model}_model__);
+                 let mut __{model}_model_span__ = \
+                 core::array::ArrayTrait::span(@__{model}_model__);
+                 let __{model} = \
+                 core::option::OptionTrait::expect(core::serde::Serde::<{model}>::deserialize(
                     ref __{model}_model_span__
                 ), '{deser_err_msg}');\n",
                 world.as_syntax_node().get_text(db),

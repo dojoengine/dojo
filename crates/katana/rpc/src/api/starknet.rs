@@ -1,23 +1,22 @@
 use jsonrpsee::core::Error;
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::{CallError, ErrorObject};
-use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
-use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::{
-    BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
-    BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilterWithPage,
-    EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
-    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-    MsgFromL1, StateUpdate, Transaction,
+use katana_primitives::block::{BlockIdOrTag, BlockNumber};
+use katana_primitives::transaction::TxHash;
+use katana_primitives::FieldElement;
+use katana_rpc_types::block::{
+    BlockHashAndNumber, BlockTxCount, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
 };
+use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
+use katana_rpc_types::message::MsgFromL1;
+use katana_rpc_types::receipt::MaybePendingTxReceipt;
+use katana_rpc_types::state_update::StateUpdate;
+use katana_rpc_types::transaction::{
+    BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
+    DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
+};
+use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 
-#[serde_as]
-#[derive(Serialize, Deserialize)]
-pub struct Felt(#[serde_as(as = "UfeHex")] pub FieldElement);
-
-// TODO: implement From<SequencerError> for StarknetApiError
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum StarknetApiError {
     #[error("Failed to write transaction")]
@@ -91,28 +90,28 @@ pub trait StarknetApi {
     // Read API
 
     #[method(name = "chainId")]
-    async fn chain_id(&self) -> Result<String, Error>;
+    async fn chain_id(&self) -> Result<FeltAsHex, Error>;
 
     #[method(name = "getNonce")]
-    async fn nonce(&self, block_id: BlockId, contract_address: FieldElement)
-    -> Result<Felt, Error>;
+    async fn nonce(
+        &self,
+        block_id: BlockIdOrTag,
+        contract_address: FieldElement,
+    ) -> Result<FeltAsHex, Error>;
 
     #[method(name = "blockNumber")]
-    async fn block_number(&self) -> Result<u64, Error>;
+    async fn block_number(&self) -> Result<BlockNumber, Error>;
 
     #[method(name = "getTransactionByHash")]
-    async fn transaction_by_hash(
-        &self,
-        transaction_hash: FieldElement,
-    ) -> Result<Transaction, Error>;
+    async fn transaction_by_hash(&self, transaction_hash: TxHash) -> Result<Tx, Error>;
 
     #[method(name = "getBlockTransactionCount")]
-    async fn block_transaction_count(&self, block_id: BlockId) -> Result<u64, Error>;
+    async fn block_transaction_count(&self, block_id: BlockIdOrTag) -> Result<BlockTxCount, Error>;
 
     #[method(name = "getClassAt")]
     async fn class_at(
         &self,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
         contract_address: FieldElement,
     ) -> Result<ContractClass, Error>;
 
@@ -122,39 +121,42 @@ pub trait StarknetApi {
     #[method(name = "getBlockWithTxHashes")]
     async fn block_with_tx_hashes(
         &self,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
     ) -> Result<MaybePendingBlockWithTxHashes, Error>;
 
-    #[method(name = "getTransactionByBlockIdAndIndex")]
+    #[method(name = "getTransactionByBlockIdOrTagAndIndex")]
     async fn transaction_by_block_id_and_index(
         &self,
-        block_id: BlockId,
-        index: usize,
-    ) -> Result<Transaction, Error>;
+        block_id: BlockIdOrTag,
+        index: u64,
+    ) -> Result<Tx, Error>;
 
     #[method(name = "getBlockWithTxs")]
-    async fn block_with_txs(&self, block_id: BlockId) -> Result<MaybePendingBlockWithTxs, Error>;
+    async fn block_with_txs(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> Result<MaybePendingBlockWithTxs, Error>;
 
     #[method(name = "getStateUpdate")]
-    async fn state_update(&self, block_id: BlockId) -> Result<StateUpdate, Error>;
+    async fn state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdate, Error>;
 
     #[method(name = "getTransactionReceipt")]
     async fn transaction_receipt(
         &self,
-        transaction_hash: FieldElement,
-    ) -> Result<MaybePendingTransactionReceipt, Error>;
+        transaction_hash: TxHash,
+    ) -> Result<MaybePendingTxReceipt, Error>;
 
     #[method(name = "getClassHashAt")]
     async fn class_hash_at(
         &self,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
         contract_address: FieldElement,
-    ) -> Result<Felt, Error>;
+    ) -> Result<FeltAsHex, Error>;
 
     #[method(name = "getClass")]
     async fn class(
         &self,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
         class_hash: FieldElement,
     ) -> Result<ContractClass, Error>;
 
@@ -162,50 +164,54 @@ pub trait StarknetApi {
     async fn events(&self, filter: EventFilterWithPage) -> Result<EventsPage, Error>;
 
     #[method(name = "pendingTransactions")]
-    async fn pending_transactions(&self) -> Result<Vec<Transaction>, Error>;
+    async fn pending_transactions(&self) -> Result<Vec<Tx>, Error>;
 
     #[method(name = "estimateFee")]
     async fn estimate_fee(
         &self,
-        request: Vec<BroadcastedTransaction>,
-        block_id: BlockId,
+        request: Vec<BroadcastedTx>,
+        block_id: BlockIdOrTag,
     ) -> Result<Vec<FeeEstimate>, Error>;
 
     #[method(name = "estimateMessageFee")]
     async fn estimate_message_fee(
         &self,
         message: MsgFromL1,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
     ) -> Result<FeeEstimate, Error>;
 
     #[method(name = "call")]
-    async fn call(&self, request: FunctionCall, block_id: BlockId) -> Result<Vec<Felt>, Error>;
+    async fn call(
+        &self,
+        request: FunctionCall,
+        block_id: BlockIdOrTag,
+    ) -> Result<Vec<FeltAsHex>, Error>;
 
     #[method(name = "getStorageAt")]
     async fn storage_at(
         &self,
         contract_address: FieldElement,
         key: FieldElement,
-        block_id: BlockId,
-    ) -> Result<Felt, Error>;
+        block_id: BlockIdOrTag,
+    ) -> Result<FeltAsHex, Error>;
 
     // Write API
 
     #[method(name = "addDeployAccountTransaction")]
     async fn add_deploy_account_transaction(
         &self,
-        deploy_account_transaction: BroadcastedDeployAccountTransaction,
-    ) -> Result<DeployAccountTransactionResult, Error>;
+        deploy_account_transaction: BroadcastedDeployAccountTx,
+    ) -> Result<DeployAccountTxResult, Error>;
 
     #[method(name = "addDeclareTransaction")]
     async fn add_declare_transaction(
         &self,
-        declare_transaction: BroadcastedDeclareTransaction,
-    ) -> Result<DeclareTransactionResult, Error>;
+        declare_transaction: BroadcastedDeclareTx,
+    ) -> Result<DeclareTxResult, Error>;
 
     #[method(name = "addInvokeTransaction")]
     async fn add_invoke_transaction(
         &self,
-        invoke_transaction: BroadcastedInvokeTransaction,
-    ) -> Result<InvokeTransactionResult, Error>;
+        invoke_transaction: BroadcastedInvokeTx,
+    ) -> Result<InvokeTxResult, Error>;
 }

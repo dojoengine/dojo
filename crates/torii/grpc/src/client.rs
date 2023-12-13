@@ -3,14 +3,15 @@ use std::num::ParseIntError;
 
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use proto::world::{world_client, SubscribeEntitiesRequest};
 use starknet::core::types::{FromByteSliceError, FromStrError, StateUpdate};
 use starknet_crypto::FieldElement;
 
 use crate::proto::world::{
-    MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse, SubscribeEntitiesResponse,
+    world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeModelsRequest,
+    SubscribeModelsResponse,
 };
-use crate::proto::{self};
+use crate::types::schema::Entity;
 use crate::types::{KeysClause, Query};
 
 #[derive(Debug, thiserror::Error)]
@@ -82,36 +83,72 @@ impl WorldClient {
         self.inner.retrieve_entities(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
     }
 
-    /// Subscribe to the state diff for a set of entities of a World.
+    /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
-        entities_keys: Vec<KeysClause>,
+        ids: Vec<FieldElement>,
     ) -> Result<EntityUpdateStreaming, Error> {
+        let ids = ids.iter().map(|id| id.to_bytes_be().to_vec()).collect();
         let stream = self
             .inner
-            .subscribe_entities(SubscribeEntitiesRequest {
-                entities_keys: entities_keys.into_iter().map(|e| e.into()).collect(),
-            })
+            .subscribe_entities(SubscribeEntitiesRequest { ids })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
 
         Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
-            let update = res.entity_update.expect("qed; state update must exist");
+            let entity = res.entity.expect("entity must exist");
+            entity.try_into().expect("must able to serialize")
+        }))))
+    }
+
+    /// Subscribe to the model diff for a set of models of a World.
+    pub async fn subscribe_model_diffs(
+        &mut self,
+        models_keys: Vec<KeysClause>,
+    ) -> Result<ModelDiffsStreaming, Error> {
+        let stream = self
+            .inner
+            .subscribe_models(SubscribeModelsRequest {
+                models_keys: models_keys.into_iter().map(|e| e.into()).collect(),
+            })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?;
+
+        Ok(ModelDiffsStreaming(stream.map_ok(Box::new(|res| {
+            let update = res.model_update.expect("qed; state update must exist");
             TryInto::<StateUpdate>::try_into(update).expect("must able to serialize")
         }))))
     }
 }
 
-type MappedStream = MapOk<
-    tonic::Streaming<SubscribeEntitiesResponse>,
-    Box<dyn Fn(SubscribeEntitiesResponse) -> StateUpdate + Send>,
+type ModelDiffMappedStream = MapOk<
+    tonic::Streaming<SubscribeModelsResponse>,
+    Box<dyn Fn(SubscribeModelsResponse) -> StateUpdate + Send>,
 >;
 
-pub struct EntityUpdateStreaming(MappedStream);
+pub struct ModelDiffsStreaming(ModelDiffMappedStream);
+
+impl Stream for ModelDiffsStreaming {
+    type Item = <ModelDiffMappedStream as Stream>::Item;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
+    }
+}
+
+type EntityMappedStream = MapOk<
+    tonic::Streaming<SubscribeEntityResponse>,
+    Box<dyn Fn(SubscribeEntityResponse) -> Entity + Send>,
+>;
+
+pub struct EntityUpdateStreaming(EntityMappedStream);
 
 impl Stream for EntityUpdateStreaming {
-    type Item = <MappedStream as Stream>::Item;
+    type Item = <EntityMappedStream as Stream>::Item;
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
