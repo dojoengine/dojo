@@ -21,6 +21,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::contract::DojoContract;
+use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
@@ -216,6 +217,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
 
     suite
         .add_plugin::<BuiltinDojoPlugin>()
+        .add_inline_macro_plugin::<DeleteMacro>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
         .add_inline_macro_plugin::<EmitMacro>();
