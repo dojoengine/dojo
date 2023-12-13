@@ -13,9 +13,18 @@ use tokio::signal::ctrl_c;
 use tracing::info;
 
 mod args;
+mod prometheus_exporter;
+mod utils;
 
 use args::Commands::Completions;
 use args::KatanaArgs;
+#[cfg(all(feature = "jemalloc", unix))]
+use jemallocator as _;
+
+// We use jemalloc for performance reasons
+#[cfg(all(feature = "jemalloc", unix))]
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -63,6 +72,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 format!("{:#064x}", account_class_hash),
             );
         }
+    }
+
+    if let Some(listen_addr) = config.metrics {
+        let prometheus_handle = prometheus_exporter::install_recorder()?;
+
+        info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
+        prometheus_exporter::serve(
+            listen_addr,
+            prometheus_handle,
+            metrics_process::Collector::default(),
+        )
+        .await?;
     }
 
     // Wait until Ctrl + C is pressed, then shutdown
