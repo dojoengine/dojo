@@ -1,4 +1,5 @@
 use derive_more::{AsRef, Deref};
+use starknet::core::types::Hash256;
 
 use crate::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
@@ -211,13 +212,14 @@ impl DeclareTx {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTx {
     pub nonce: Nonce,
     pub chain_id: ChainId,
     pub paid_fee_on_l1: u128,
     pub version: FieldElement,
+    pub message_hash: Hash256,
     pub calldata: Vec<FieldElement>,
     pub contract_address: ContractAddress,
     pub entry_point_selector: FieldElement,

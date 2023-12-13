@@ -20,6 +20,9 @@ cairo-lang-starknet.workspace = true
 flate2.workspace = true
 starknet_api.workspace = true
 
+sha3 = { version = "0.10.7", default-features = false }
+ethers = "2.0.8"
+
 [features]
 default = [ "blockifier", "rpc", "serde" ]
 

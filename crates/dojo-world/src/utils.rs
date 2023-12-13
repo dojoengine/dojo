@@ -8,9 +8,7 @@ use starknet::core::types::{
     ExecutionResult, FieldElement, MaybePendingTransactionReceipt, PendingTransactionReceipt,
     StarknetError, TransactionFinalityStatus, TransactionReceipt,
 };
-use starknet::providers::{
-    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
-};
+use starknet::providers::{Provider, ProviderError};
 use tokio::time::{Instant, Interval};
 
 type GetReceiptResult = Result<MaybePendingTransactionReceipt, ProviderError>;
@@ -185,11 +183,9 @@ where
                             }
                         },
 
-                        Err(ProviderError::StarknetError(StarknetErrorWithMessage {
-                            code:
-                                MaybeUnknownErrorCode::Known(StarknetError::TransactionHashNotFound),
-                            ..
-                        })) => {}
+                        Err(ProviderError::StarknetError(
+                            StarknetError::TransactionHashNotFound,
+                        )) => {}
 
                         Err(e) => {
                             return Poll::Ready(Err(TransactionWaitingError::Provider(e)));
@@ -230,7 +226,6 @@ fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResu
 fn execution_status_from_pending_receipt(receipt: &PendingTransactionReceipt) -> &ExecutionResult {
     match receipt {
         PendingTransactionReceipt::Invoke(receipt) => &receipt.execution_result,
-        PendingTransactionReceipt::Deploy(receipt) => &receipt.execution_result,
         PendingTransactionReceipt::Declare(receipt) => &receipt.execution_result,
         PendingTransactionReceipt::L1Handler(receipt) => &receipt.execution_result,
         PendingTransactionReceipt::DeployAccount(receipt) => &receipt.execution_result,

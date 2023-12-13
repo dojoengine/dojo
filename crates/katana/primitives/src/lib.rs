@@ -4,6 +4,7 @@ pub mod env;
 pub mod event;
 pub mod receipt;
 pub mod transaction;
+pub mod version;
 
 pub mod conversion;
 #[cfg(feature = "serde")]

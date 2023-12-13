@@ -11,6 +11,10 @@ pub struct BlockEnv {
     pub timestamp: u64,
     /// The block gas price in wei.
     pub gas_price: u128,
+    /// The contract address of the sequencer.
+    pub sequencer_address: ContractAddress,
+    /// The contract address of the fee token.
+    pub fee_token_address: ContractAddress,
 }
 
 /// Starknet configuration values.
@@ -18,10 +22,6 @@ pub struct BlockEnv {
 pub struct CfgEnv {
     /// The chain id.
     pub chain_id: u64,
-    /// The contract address of the sequencer.
-    pub sequencer_address: ContractAddress,
-    /// The contract address of the fee token.
-    pub fee_token_address: ContractAddress,
     /// The fee cost of the VM resources.
     pub vm_resource_fee_cost: HashMap<String, f64>,
     /// The maximum number of steps allowed for an invoke transaction.

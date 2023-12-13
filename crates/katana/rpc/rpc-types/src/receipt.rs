@@ -36,6 +36,7 @@ impl TxReceipt {
                 events: rct.events,
                 messages_sent: rct.messages_sent,
                 actual_fee: rct.actual_fee.into(),
+                execution_resources: rct.execution_resources,
                 execution_result: if let Some(reason) = rct.revert_error {
                     ExecutionResult::Reverted { reason }
                 } else {
@@ -51,6 +52,7 @@ impl TxReceipt {
                 events: rct.events,
                 messages_sent: rct.messages_sent,
                 actual_fee: rct.actual_fee.into(),
+                execution_resources: rct.execution_resources,
                 execution_result: if let Some(reason) = rct.revert_error {
                     ExecutionResult::Reverted { reason }
                 } else {
@@ -64,8 +66,10 @@ impl TxReceipt {
                 finality_status,
                 transaction_hash,
                 events: rct.events,
+                message_hash: rct.message_hash,
                 messages_sent: rct.messages_sent,
                 actual_fee: rct.actual_fee.into(),
+                execution_resources: rct.execution_resources,
                 execution_result: if let Some(reason) = rct.revert_error {
                     ExecutionResult::Reverted { reason }
                 } else {
@@ -82,6 +86,7 @@ impl TxReceipt {
                     events: rct.events,
                     messages_sent: rct.messages_sent,
                     actual_fee: rct.actual_fee.into(),
+                    execution_resources: rct.execution_resources,
                     contract_address: rct.contract_address.into(),
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -109,6 +114,7 @@ impl PendingTxReceipt {
                     events: rct.events,
                     messages_sent: rct.messages_sent,
                     actual_fee: rct.actual_fee.into(),
+                    execution_resources: rct.execution_resources,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
                     } else {
@@ -123,6 +129,7 @@ impl PendingTxReceipt {
                     events: rct.events,
                     messages_sent: rct.messages_sent,
                     actual_fee: rct.actual_fee.into(),
+                    execution_resources: rct.execution_resources,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
                     } else {
@@ -135,8 +142,10 @@ impl PendingTxReceipt {
                 PendingTransactionReceipt::L1Handler(PendingL1HandlerTransactionReceipt {
                     transaction_hash,
                     events: rct.events,
+                    message_hash: rct.message_hash,
                     messages_sent: rct.messages_sent,
                     actual_fee: rct.actual_fee.into(),
+                    execution_resources: rct.execution_resources,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
                     } else {
@@ -151,6 +160,8 @@ impl PendingTxReceipt {
                     events: rct.events,
                     messages_sent: rct.messages_sent,
                     actual_fee: rct.actual_fee.into(),
+                    contract_address: rct.contract_address.into(),
+                    execution_resources: rct.execution_resources,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
                     } else {

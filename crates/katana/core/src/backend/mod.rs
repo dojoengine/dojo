@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use blockifier::block_context::BlockContext;
 use katana_primitives::block::{
-    Block, FinalityStatus, Header, PartialHeader, SealedBlockWithStatus,
+    Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -149,15 +150,19 @@ impl Backend {
 
         let partial_header = PartialHeader {
             parent_hash: prev_hash,
-            gas_price: block_context.gas_prices.eth_l1_gas_price,
-            number: block_context.block_number.0,
+            version: CURRENT_STARKNET_VERSION,
             timestamp: block_context.block_timestamp.0,
             sequencer_address: block_context.sequencer_address.into(),
+            gas_prices: GasPrices {
+                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
+                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+            },
         };
 
         let tx_count = txs.len();
-        let block_number = partial_header.number;
-        let header = Header::new(partial_header, FieldElement::ZERO);
+        let block_number = block_context.block_number.0;
+
+        let header = Header::new(partial_header, block_number, FieldElement::ZERO);
         let block = Block { header, body: txs }.seal();
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 

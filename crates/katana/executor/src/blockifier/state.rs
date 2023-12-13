@@ -105,7 +105,7 @@ impl<S: StateReader> CachedStateWrapper<S> {
         }
     }
 
-    pub fn reset_with_new_state(&self, db: S) {
+    pub(super) fn reset_with_new_state(&self, db: S) {
         *self.inner() = CachedState::new(db, GlobalContractCache::default());
         self.sierra_class_mut().clear();
     }

@@ -1,11 +1,6 @@
-use std::collections::HashMap;
-
-use starknet::core::types::{Event, MsgToL1};
+use starknet::core::types::{Event, ExecutionResources, Hash256, MsgToL1};
 
 use crate::contract::ContractAddress;
-
-/// A mapping of execution resource to the amount used.
-pub type ExecutionResources = HashMap<String, usize>;
 
 /// Receipt for a `Invoke` transaction.
 #[derive(Debug, Clone)]
@@ -20,7 +15,7 @@ pub struct InvokeTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
 }
 
 /// Receipt for a `Declare` transaction.
@@ -36,7 +31,7 @@ pub struct DeclareTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
 }
 
 /// Receipt for a `L1Handler` transaction.
@@ -47,12 +42,14 @@ pub struct L1HandlerTxReceipt {
     pub actual_fee: u128,
     /// Events emitted by contracts.
     pub events: Vec<Event>,
+    /// The hash of the L1 message
+    pub message_hash: Hash256,
     /// Messages sent to L1.
     pub messages_sent: Vec<MsgToL1>,
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
 }
 
 /// Receipt for a `DeployAccount` transaction.
@@ -68,7 +65,7 @@ pub struct DeployAccountTxReceipt {
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub actual_resources: ExecutionResources,
+    pub execution_resources: ExecutionResources,
     /// Contract address of the deployed account contract.
     pub contract_address: ContractAddress,
 }
@@ -84,6 +81,18 @@ pub enum Receipt {
 }
 
 impl Receipt {
+    /// Returns `true` if the transaction is reverted.
+    ///
+    /// A transaction is reverted if the `revert_error` field in the receipt is not `None`.
+    pub fn is_reverted(&self) -> bool {
+        match self {
+            Receipt::Invoke(rct) => rct.revert_error.is_some(),
+            Receipt::Declare(rct) => rct.revert_error.is_some(),
+            Receipt::L1Handler(rct) => rct.revert_error.is_some(),
+            Receipt::DeployAccount(rct) => rct.revert_error.is_some(),
+        }
+    }
+
     pub fn messages_sent(&self) -> &[MsgToL1] {
         match self {
             Receipt::Invoke(rct) => &rct.messages_sent,

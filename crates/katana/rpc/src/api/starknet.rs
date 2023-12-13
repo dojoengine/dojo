@@ -16,6 +16,7 @@ use katana_rpc_types::transaction::{
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
+use starknet::core::types::TransactionStatus;
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum StarknetApiError {
@@ -89,6 +90,11 @@ impl From<StarknetApiError> for Error {
 pub trait StarknetApi {
     // Read API
 
+    #[method(name = "specVersion")]
+    async fn spec_version(&self) -> Result<String, Error> {
+        Ok("0.5.1".into())
+    }
+
     #[method(name = "chainId")]
     async fn chain_id(&self) -> Result<FeltAsHex, Error>;
 
@@ -146,6 +152,12 @@ pub trait StarknetApi {
         transaction_hash: TxHash,
     ) -> Result<MaybePendingTxReceipt, Error>;
 
+    #[method(name = "getTransactionStatus")]
+    async fn transaction_status(
+        &self,
+        transaction_hash: TxHash,
+    ) -> Result<TransactionStatus, Error>;
+
     #[method(name = "getClassHashAt")]
     async fn class_hash_at(
         &self,
@@ -162,9 +174,6 @@ pub trait StarknetApi {
 
     #[method(name = "getEvents")]
     async fn events(&self, filter: EventFilterWithPage) -> Result<EventsPage, Error>;
-
-    #[method(name = "pendingTransactions")]
-    async fn pending_transactions(&self) -> Result<Vec<Tx>, Error>;
 
     #[method(name = "estimateFee")]
     async fn estimate_fee(

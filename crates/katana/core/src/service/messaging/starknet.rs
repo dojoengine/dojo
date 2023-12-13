@@ -4,6 +4,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use katana_primitives::transaction::L1HandlerTx;
+use katana_primitives::utils::transaction::compute_l1_message_hash;
 use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, MsgToL1};
 use starknet::core::utils::starknet_keccak;
@@ -325,10 +326,13 @@ fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: FieldElement) -> Res
     let mut calldata = vec![from_address];
     calldata.extend(&event.data[3..]);
 
+    let message_hash = compute_l1_message_hash(from_address, to_address, &calldata);
+
     Ok(L1HandlerTx {
         nonce,
         calldata,
         chain_id,
+        message_hash,
         // This is the min value paid on L1 for the message to be sent to L2.
         paid_fee_on_l1: 30000_u128,
         entry_point_selector,
@@ -439,10 +443,13 @@ mod tests {
             transaction_hash,
         };
 
+        let message_hash = compute_l1_message_hash(from_address, to_address, &calldata);
+
         let expected = L1HandlerTx {
             nonce,
             calldata,
             chain_id,
+            message_hash,
             paid_fee_on_l1: 30000_u128,
             version: FieldElement::ZERO,
             entry_point_selector: selector,

@@ -2,6 +2,7 @@ use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
 use crate::transaction::{TxHash, TxWithHash};
+use crate::version::Version;
 use crate::FieldElement;
 
 pub type BlockIdOrTag = starknet::core::types::BlockId;
@@ -32,10 +33,26 @@ pub enum FinalityStatus {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
     pub parent_hash: FieldElement,
-    pub number: BlockNumber,
-    pub gas_price: u128,
+    pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub sequencer_address: ContractAddress,
+    pub version: Version,
+}
+
+/// The L1 gas prices.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct GasPrices {
+    /// The price of one unit of the given resource, denominated in wei
+    pub eth_gas_price: u64,
+    /// The price of one unit of the given resource, denominated in strk
+    pub strk_gas_price: u64,
+}
+
+impl GasPrices {
+    pub fn new(eth_gas_price: u64, strk_gas_price: u64) -> Self {
+        Self { eth_gas_price, strk_gas_price }
+    }
 }
 
 /// Represents a block header.
@@ -44,19 +61,25 @@ pub struct PartialHeader {
 pub struct Header {
     pub parent_hash: BlockHash,
     pub number: BlockNumber,
-    pub gas_price: u128,
+    pub gas_prices: GasPrices,
     pub timestamp: u64,
     pub state_root: FieldElement,
     pub sequencer_address: ContractAddress,
+    pub version: Version,
 }
 
 impl Header {
-    pub fn new(partial_header: PartialHeader, state_root: FieldElement) -> Self {
+    pub fn new(
+        partial_header: PartialHeader,
+        number: BlockNumber,
+        state_root: FieldElement,
+    ) -> Self {
         Self {
+            number,
             state_root,
-            number: partial_header.number,
-            gas_price: partial_header.gas_price,
+            version: partial_header.version,
             timestamp: partial_header.timestamp,
+            gas_prices: partial_header.gas_prices,
             parent_hash: partial_header.parent_hash,
             sequencer_address: partial_header.sequencer_address,
         }

@@ -5,7 +5,7 @@ Content-Type: application/json
   "method": "starknet_getClassHashAt",
   "params": [
     "pending",
-    "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
+    "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
   ],
   "id": 1
 }
