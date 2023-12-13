@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use dojo_types::schema::Ty;
 use futures::Stream;
-use hex::encode;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     SubscribeModelsRequest, SubscribeModelsResponse,
@@ -282,7 +281,7 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        ids: Vec<String>,
+        ids: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         self.entity_manager.add_subscriber(ids).await
     }
@@ -379,7 +378,13 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { ids } = request.into_inner();
-        let ids = ids.iter().map(encode).collect();
+        let ids = ids
+            .iter()
+            .map(|id| {
+                FieldElement::from_byte_slice_be(id)
+                    .map_err(|e| Status::invalid_argument(e.to_string()))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         let rx = self.subscribe_entities(ids).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
