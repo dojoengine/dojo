@@ -33,7 +33,7 @@ struct Fizz {
 trait Ibar<TContractState> {
     fn set_foo(self: @TContractState, a: felt252, b: u128);
     fn delete_foo(self: @TContractState);
-    fn delete_foo_1(self: @TContractState);
+    fn delete_foo_macro(self: @TContractState, foo: Foo);
     fn set_char(self: @TContractState, a: felt252, b: u32);
 }
 
@@ -68,9 +68,9 @@ mod bar {
                 .delete_entity('Foo', array![get_caller_address().into()].span(), layout.span());
         }
 
-        fn delete_foo_1(self: @ContractState) {
-                    delete!(self.world.read(), (get_caller_address()));
-                }
+        fn delete_foo_macro(self: @ContractState, foo: Foo) {
+            delete!(self.world.read(), Foo { caller: foo.caller, a: foo.a, b: foo.b });
+        }
 
         fn set_char(self: @ContractState, a: felt252, b: u32) {
             set!(
@@ -156,7 +156,7 @@ fn test_delete() {
     assert(stored.b == 1337, 'data not stored');
 
     // delete model
-    bar_contract.delete_foo_1();
+    bar_contract.delete_foo_macro(stored);
 
     let deleted: Foo = get!(world, get_caller_address(), Foo);
     assert(deleted.a == 0, 'data not deleted');
