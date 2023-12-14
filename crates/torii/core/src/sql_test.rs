@@ -11,10 +11,12 @@ use scarb::ops;
 use sozo::ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
 
+use crate::computed_values::{call_computed_value, computed_value_entrypoints};
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
@@ -121,4 +123,43 @@ async fn test_load_from_remote() {
     assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
     assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
     assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE))
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_compute_entrypoints() {
+    let options =
+        SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+    let migration =
+        prepare_migration("../../../examples/spawn-and-move/target/dev".into()).unwrap();
+
+    let sequencer =
+        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+    let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
+
+    println!("{}", sequencer.url());
+
+    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+
+    let _ = bootstrap_engine(world, &mut db, &provider, migration, sequencer).await;
+
+    let computed_value_entrypoints = computed_value_entrypoints(Some(
+        "../../../examples/spawn-and-move/target/dev/manifest.json".into(),
+    ));
+
+    db.register_computed_value_entrypoints(computed_value_entrypoints).await.unwrap();
+
+    let values = call_computed_value(
+        "actions",
+        "tile_terrain",
+        vec![felt!("0"), felt!("0")],
+        pool,
+        &provider,
+    )
+    .await
+    .unwrap();
+
+    println!("Result:\n{values:?}");
 }
