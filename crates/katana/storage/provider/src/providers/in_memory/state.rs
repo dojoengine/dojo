@@ -220,7 +220,7 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
-    use crate::providers::in_memory::tests::create_mock_provider;
+    use crate::providers::in_memory::InMemoryProvider;
     use crate::traits::state::StateFactoryProvider;
 
     const STORAGE_KEY: StorageKey = felt!("0x1");
@@ -273,7 +273,7 @@ mod tests {
     fn latest_state_provider() {
         let state = create_mock_state();
 
-        let mut provider = create_mock_provider();
+        let mut provider = InMemoryProvider::new();
         provider.state = Arc::new(state);
 
         let latest_state_provider = StateFactoryProvider::latest(&provider).unwrap();
@@ -340,7 +340,7 @@ mod tests {
         state.contract_state.write().entry(ADDR_1).and_modify(|e| e.nonce = ADDR_1_NONCE_AT_3);
         state.contract_state.write().entry(ADDR_2).and_modify(|e| e.nonce = ADDR_2_NONCE_AT_3);
 
-        let mut provider = create_mock_provider();
+        let mut provider = InMemoryProvider::new();
         provider.state = Arc::new(state);
         provider.historical_states.write().insert(1, Box::new(snapshot_1));
         provider.historical_states.write().insert(2, Box::new(snapshot_2));
