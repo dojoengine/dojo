@@ -120,16 +120,47 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        let query = r#"
+        self.entities_by_ids(None, limit, offset).await
+    }
+
+    async fn entities_by_ids(
+        &self,
+        ids_clause: Option<proto::types::IdsClause>,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<proto::types::Entity>, Error> {
+        // TODO: use prepared statement for where clause
+        let filter_ids = match ids_clause {
+            Some(ids_clause) => {
+                let ids = ids_clause
+                    .ids
+                    .iter()
+                    .map(|id| {
+                        Ok(FieldElement::from_byte_slice_be(id)
+                            .map(|id| format!("entities.id = '{id:#x}'"))
+                            .map_err(ParseError::FromByteSliceError)?)
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?;
+
+                format!("WHERE {}", ids.join(" OR "))
+            }
+            None => String::new(),
+        };
+
+        let query = format!(
+            r#"
             SELECT entities.id, group_concat(entity_model.model_id) as model_names
             FROM entities
             JOIN entity_model ON entities.id = entity_model.entity_id
+            {filter_ids}
             GROUP BY entities.id
             ORDER BY entities.event_id DESC
             LIMIT ? OFFSET ?
-        "#;
+         "#
+        );
+
         let db_entities: Vec<(String, String)> =
-            sqlx::query_as(query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
         let mut entities = Vec::with_capacity(db_entities.len());
         for (entity_id, models_str) in db_entities {
@@ -297,6 +328,13 @@ impl DojoWorld {
                     clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
 
                 match clause_type {
+                    ClauseType::Ids(ids) => {
+                        if ids.ids.is_empty() {
+                            return Err(QueryError::MissingParam("ids".into()).into());
+                        }
+
+                        self.entities_by_ids(Some(ids), query.limit, query.offset).await?
+                    }
                     ClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
                             return Err(QueryError::MissingParam("keys".into()).into());
