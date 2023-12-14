@@ -495,20 +495,3 @@ impl StateWriter for InMemoryProvider {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use parking_lot::RwLock;
-
-    use super::cache::{CacheDb, CacheStateDb};
-    use super::InMemoryProvider;
-
-    pub(super) fn create_mock_provider() -> InMemoryProvider {
-        let storage = RwLock::new(CacheDb::new(()));
-        let state = Arc::new(CacheStateDb::new(()));
-        let historical_states = Default::default();
-        InMemoryProvider { storage, state, historical_states }
-    }
-}
