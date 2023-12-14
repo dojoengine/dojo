@@ -204,7 +204,7 @@ impl TransactionProvider for ForkedProvider {
             .iter()
             .enumerate()
             .skip(offset)
-            .take(offset + count)
+            .take(count)
             .map(|(n, tx)| {
                 let hash =
                     self.storage.read().transaction_hashes.get(&(n as u64)).cloned().unwrap();
