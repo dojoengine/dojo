@@ -40,7 +40,7 @@ pub struct PartialHeader {
 }
 
 /// The L1 gas prices.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
@@ -56,7 +56,7 @@ impl GasPrices {
 }
 
 /// Represents a block header.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Header {
     pub parent_hash: BlockHash,
@@ -107,7 +107,7 @@ impl Header {
 }
 
 /// Represents a Starknet full block.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Block {
     pub header: Header,
@@ -150,7 +150,15 @@ pub struct SealedBlock {
     pub body: Vec<TxWithHash>,
 }
 
+impl SealedBlock {
+    /// Unseal the block.
+    pub fn unseal(self) -> Block {
+        Block { header: self.header.header, body: self.body }
+    }
+}
+
 /// A sealed block along with its status.
+#[derive(Debug, Clone)]
 pub struct SealedBlockWithStatus {
     pub block: SealedBlock,
     /// The block status.

@@ -15,7 +15,7 @@ pub type TxHash = FieldElement;
 /// The sequential number for all the transactions..
 pub type TxNumber = u64;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Tx {
     Invoke(InvokeTx),
@@ -142,7 +142,7 @@ impl InvokeTx {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DeclareTx {
     V1(DeclareTxV1),
@@ -172,7 +172,7 @@ pub struct DeclareTxV1 {
 }
 
 /// Represents a declare transaction type.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV2 {
     pub nonce: Nonce,
@@ -239,7 +239,7 @@ impl L1HandlerTx {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTx {
     pub nonce: Nonce,
@@ -269,7 +269,7 @@ impl DeployAccountTx {
     }
 }
 
-#[derive(Debug, Clone, AsRef, Deref)]
+#[derive(Debug, Clone, AsRef, Deref, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxWithHash {
     /// The hash of the transaction.
