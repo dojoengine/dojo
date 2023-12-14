@@ -19,6 +19,7 @@ members = [
   "crates/katana/runner",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
+  "crates/metrics",
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
@@ -82,6 +83,7 @@ hex = "0.4.3"
 indoc = "1.0.7"
 itertools = "0.10.3"
 lazy_static = "1.4.0"
+metrics-process = "1.0.9"
 num-bigint = "0.4"
 once_cell = "1.0"
 parking_lot = "0.12.1"
