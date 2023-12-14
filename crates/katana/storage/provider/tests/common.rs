@@ -1,7 +1,8 @@
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, FinalityStatus, Header, SealedBlockWithStatus,
 };
-use katana_primitives::transaction::{Tx, TxWithHash};
+use katana_primitives::transaction::{Tx, TxHash, TxWithHash};
+use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -15,8 +16,11 @@ use fixtures::{fork_provider, in_memory_provider};
 
 fn generate_dummy_txs(count: u64) -> Vec<TxWithHash> {
     let mut txs = Vec::with_capacity(count as usize);
-    for i in 0..count {
-        txs.push(TxWithHash { hash: i.into(), transaction: Tx::Invoke(Default::default()) });
+    for _ in 0..count {
+        txs.push(TxWithHash {
+            hash: TxHash::from(rand::random::<u128>()),
+            transaction: Tx::Invoke(Default::default()),
+        });
     }
     txs
 }
@@ -28,7 +32,8 @@ fn generate_dummy_blocks(count: u64) -> Vec<SealedBlockWithStatus> {
     for i in 0..count {
         let body = generate_dummy_txs(rand::random::<u64>() % 10);
         let header = Header { parent_hash, number: i, ..Default::default() };
-        let block = Block { header, body }.seal();
+        let block =
+            Block { header, body }.seal_with_hash(FieldElement::from(rand::random::<u128>()));
         parent_hash = block.header.hash;
 
         blocks.push(SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 });
