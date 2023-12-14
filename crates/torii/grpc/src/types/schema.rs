@@ -8,7 +8,7 @@ use crate::proto::{self};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Entity {
-    pub key: FieldElement,
+    pub id: FieldElement,
     pub models: Vec<Model>,
 }
 
@@ -22,7 +22,7 @@ impl TryFrom<proto::types::Entity> for Entity {
     type Error = ClientError;
     fn try_from(entity: proto::types::Entity) -> Result<Self, Self::Error> {
         Ok(Self {
-            key: FieldElement::from_byte_slice_be(&entity.id).map_err(ClientError::SliceError)?,
+            id: FieldElement::from_byte_slice_be(&entity.id).map_err(ClientError::SliceError)?,
             models: entity
                 .models
                 .into_iter()
