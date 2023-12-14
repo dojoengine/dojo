@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use blockifier::transaction::objects::TransactionExecutionInfo;
 use katana_primitives::receipt::{
     DeclareTxReceipt, DeployAccountTxReceipt, InvokeTxReceipt, L1HandlerTxReceipt, Receipt,
+    TxExecutionResources,
 };
 use katana_primitives::transaction::Tx;
-use starknet::core::types::ExecutionResources;
 
 use super::utils::{events_from_exec_info, l2_to_l1_messages_from_exec_info};
 
@@ -64,29 +64,16 @@ impl TxReceiptWithExecInfo {
 
 /// Parse the `actual resources` field from the execution info into a more structured type,
 /// [`ExecutionResources`].
-fn parse_actual_resources(resources: &HashMap<String, usize>) -> ExecutionResources {
-    ExecutionResources {
+fn parse_actual_resources(resources: &HashMap<String, usize>) -> TxExecutionResources {
+    TxExecutionResources {
         steps: resources.get("n_steps").copied().unwrap_or_default() as u64,
         memory_holes: resources.get("memory_holes").map(|x| *x as u64),
-        ec_op_builtin_applications: resources.get("ec_op_builtin").copied().unwrap_or_default()
-            as u64,
-        ecdsa_builtin_applications: resources.get("ecdsa_builtin").copied().unwrap_or_default()
-            as u64,
-        keccak_builtin_applications: resources.get("keccak_builtin").copied().unwrap_or_default()
-            as u64,
-        bitwise_builtin_applications: resources.get("bitwise_builtin").copied().unwrap_or_default()
-            as u64,
-        pedersen_builtin_applications: resources
-            .get("pedersen_builtin")
-            .copied()
-            .unwrap_or_default() as u64,
-        poseidon_builtin_applications: resources
-            .get("poseidon_builtin")
-            .copied()
-            .unwrap_or_default() as u64,
-        range_check_builtin_applications: resources
-            .get("range_check_builtin")
-            .copied()
-            .unwrap_or_default() as u64,
+        ec_op_builtin: resources.get("ec_op_builtin").map(|x| *x as u64),
+        ecdsa_builtin: resources.get("ecdsa_builtin").map(|x| *x as u64),
+        keccak_builtin: resources.get("keccak_builtin").map(|x| *x as u64),
+        bitwise_builtin: resources.get("bitwise_builtin").map(|x| *x as u64),
+        pedersen_builtin: resources.get("pedersen_builtin").map(|x| *x as u64),
+        poseidon_builtin: resources.get("poseidon_builtin").map(|x| *x as u64),
+        range_check_builtin: resources.get("range_check_builtin").map(|x| *x as u64),
     }
 }

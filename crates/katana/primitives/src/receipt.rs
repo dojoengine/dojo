@@ -1,6 +1,30 @@
-use starknet::core::types::{Event, ExecutionResources, Hash256, MsgToL1};
+use ethers::types::H256;
 
 use crate::contract::ContractAddress;
+use crate::FieldElement;
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Event {
+    /// The contract address that emitted the event.
+    pub contract_address: ContractAddress,
+    /// The event keys.
+    pub keys: Vec<FieldElement>,
+    /// The event data.
+    pub data: Vec<FieldElement>,
+}
+
+/// Represents a message sent to L1.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct MessageToL1 {
+    /// The L2 contract address that sent the message.
+    pub from_address: ContractAddress,
+    /// The L1 contract address that the message is sent to.
+    pub to_address: FieldElement,
+    /// The payload of the message.
+    pub payload: Vec<FieldElement>,
+}
 
 /// Receipt for a `Invoke` transaction.
 #[derive(Debug, Clone)]
@@ -11,11 +35,11 @@ pub struct InvokeTxReceipt {
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// Messages sent to L1.
-    pub messages_sent: Vec<MsgToL1>,
+    pub messages_sent: Vec<MessageToL1>,
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: ExecutionResources,
+    pub execution_resources: TxExecutionResources,
 }
 
 /// Receipt for a `Declare` transaction.
@@ -27,11 +51,11 @@ pub struct DeclareTxReceipt {
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// Messages sent to L1.
-    pub messages_sent: Vec<MsgToL1>,
+    pub messages_sent: Vec<MessageToL1>,
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: ExecutionResources,
+    pub execution_resources: TxExecutionResources,
 }
 
 /// Receipt for a `L1Handler` transaction.
@@ -43,13 +67,13 @@ pub struct L1HandlerTxReceipt {
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// The hash of the L1 message
-    pub message_hash: Hash256,
+    pub message_hash: H256,
     /// Messages sent to L1.
-    pub messages_sent: Vec<MsgToL1>,
+    pub messages_sent: Vec<MessageToL1>,
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: ExecutionResources,
+    pub execution_resources: TxExecutionResources,
 }
 
 /// Receipt for a `DeployAccount` transaction.
@@ -61,11 +85,11 @@ pub struct DeployAccountTxReceipt {
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// Messages sent to L1.
-    pub messages_sent: Vec<MsgToL1>,
+    pub messages_sent: Vec<MessageToL1>,
     /// Revert error message if the transaction execution failed.
     pub revert_error: Option<String>,
     /// The execution resources used by the transaction.
-    pub execution_resources: ExecutionResources,
+    pub execution_resources: TxExecutionResources,
     /// Contract address of the deployed account contract.
     pub contract_address: ContractAddress,
 }
@@ -93,7 +117,7 @@ impl Receipt {
         }
     }
 
-    pub fn messages_sent(&self) -> &[MsgToL1] {
+    pub fn messages_sent(&self) -> &[MessageToL1] {
         match self {
             Receipt::Invoke(rct) => &rct.messages_sent,
             Receipt::Declare(rct) => &rct.messages_sent,
@@ -110,4 +134,30 @@ impl Receipt {
             Receipt::DeployAccount(rct) => &rct.events,
         }
     }
+}
+
+/// Transaction execution resources.
+///
+/// The resources consumed by a transaction during its execution.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct TxExecutionResources {
+    /// The number of cairo steps used
+    pub steps: u64,
+    /// The number of unused memory cells (each cell is roughly equivalent to a step)
+    pub memory_holes: Option<u64>,
+    /// The number of range_check builtin instances
+    pub range_check_builtin: Option<u64>,
+    /// The number of pedersen builtin instances
+    pub pedersen_builtin: Option<u64>,
+    /// The number of poseidon builtin instances
+    pub poseidon_builtin: Option<u64>,
+    /// The number of ec_op builtin instances
+    pub ec_op_builtin: Option<u64>,
+    /// The number of ecdsa builtin instances
+    pub ecdsa_builtin: Option<u64>,
+    /// The number of bitwise builtin instances
+    pub bitwise_builtin: Option<u64>,
+    /// The number of keccak builtin instances
+    pub keccak_builtin: Option<u64>,
 }

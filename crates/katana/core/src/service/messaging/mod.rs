@@ -39,12 +39,13 @@ mod starknet;
 
 use std::path::Path;
 
-use ::starknet::core::types::{FieldElement, MsgToL1};
+use ::starknet::core::types::FieldElement;
 use ::starknet::providers::ProviderError as StarknetProviderError;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethereum::EthereumMessaging;
 use ethers::providers::ProviderError as EthereumProviderError;
+use katana_primitives::receipt::MessageToL1;
 use serde::Deserialize;
 use tracing::{error, info};
 
@@ -155,7 +156,10 @@ pub trait Messenger {
     /// # Arguments
     ///
     /// * `messages` - Messages to settle.
-    async fn send_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<Self::MessageHash>>;
+    async fn send_messages(
+        &self,
+        messages: &[MessageToL1],
+    ) -> MessengerResult<Vec<Self::MessageHash>>;
 }
 
 pub enum MessengerMode {

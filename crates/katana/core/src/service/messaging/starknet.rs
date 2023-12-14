@@ -3,10 +3,11 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
 use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, MsgToL1};
+use starknet::core::types::{BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement};
 use starknet::core::utils::starknet_keccak;
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -212,7 +213,10 @@ impl Messenger for StarknetMessaging {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn send_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<Self::MessageHash>> {
+    async fn send_messages(
+        &self,
+        messages: &[MessageToL1],
+    ) -> MessengerResult<Vec<Self::MessageHash>> {
         if messages.is_empty() {
             return Ok(vec![]);
         }
@@ -241,7 +245,7 @@ impl Messenger for StarknetMessaging {
 ///
 /// Messages can also be labelled as EXE, which in this case generate a `Call`
 /// additionally to the hash.
-fn parse_messages(messages: &[MsgToL1]) -> MessengerResult<(Vec<FieldElement>, Vec<Call>)> {
+fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<FieldElement>, Vec<Call>)> {
     let mut hashes: Vec<FieldElement> = vec![];
     let mut calls: Vec<Call> = vec![];
 
@@ -358,8 +362,16 @@ mod tests {
         let payload_exe = vec![to_address, selector, FieldElement::ONE, FieldElement::TWO];
 
         let messages = vec![
-            MsgToL1 { from_address, to_address: MSG_MAGIC, payload: payload_msg },
-            MsgToL1 { from_address, to_address: EXE_MAGIC, payload: payload_exe.clone() },
+            MessageToL1 {
+                from_address: from_address.into(),
+                to_address: MSG_MAGIC,
+                payload: payload_msg,
+            },
+            MessageToL1 {
+                from_address: from_address.into(),
+                to_address: EXE_MAGIC,
+                payload: payload_exe.clone(),
+            },
         ];
 
         let (hashes, calls) = parse_messages(&messages).unwrap();
@@ -388,7 +400,11 @@ mod tests {
         let from_address = selector!("from_address");
         let payload_msg = vec![];
 
-        let messages = vec![MsgToL1 { from_address, to_address: MSG_MAGIC, payload: payload_msg }];
+        let messages = vec![MessageToL1 {
+            from_address: from_address.into(),
+            to_address: MSG_MAGIC,
+            payload: payload_msg,
+        }];
 
         parse_messages(&messages).unwrap();
     }
@@ -399,7 +415,11 @@ mod tests {
         let from_address = selector!("from_address");
         let payload_exe = vec![FieldElement::ONE];
 
-        let messages = vec![MsgToL1 { from_address, to_address: EXE_MAGIC, payload: payload_exe }];
+        let messages = vec![MessageToL1 {
+            from_address: from_address.into(),
+            to_address: EXE_MAGIC,
+            payload: payload_exe,
+        }];
 
         parse_messages(&messages).unwrap();
     }

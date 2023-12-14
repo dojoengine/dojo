@@ -1,5 +1,6 @@
 use std::fmt;
 
+use derive_more::Deref;
 use starknet::core::utils::normalize_address;
 
 use crate::FieldElement;
@@ -20,9 +21,10 @@ pub type Nonce = FieldElement;
 pub type SierraClass = starknet::core::types::FlattenedSierraClass;
 
 /// Represents a contract address.
-#[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ContractAddress(pub FieldElement);
+#[repr(transparent)]
+pub struct ContractAddress(#[deref] pub FieldElement);
 
 impl ContractAddress {
     pub fn new(address: FieldElement) -> Self {
