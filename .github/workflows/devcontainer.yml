@@ -76,13 +76,6 @@ jobs:
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
 
-      - name: Commit and push changes
-        run: |
-          git add .devcontainer/devcontainer.json
-          git commit -m "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
-          git checkout -b devcontainer-${{ needs.build-and-push.outputs.tag_name }}
-          git push --set-upstream origin devcontainer-${{ needs.build-and-push.outputs.tag_name }}
-
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
