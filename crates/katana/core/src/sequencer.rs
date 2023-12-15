@@ -381,7 +381,7 @@ impl KatanaSequencer {
                 );
 
                 filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
-                    from_address: e.contract_address.into(),
+                    from_address: e.from_address.into(),
                     keys: e.keys.clone(),
                     data: e.data.clone(),
                     block_hash,
@@ -460,7 +460,7 @@ fn filter_events_by_params(
     // Iterate on block events.
     for event in events {
         index += 1;
-        if !address.map_or(true, |addr| addr == event.contract_address) {
+        if !address.map_or(true, |addr| addr == event.from_address) {
             continue;
         }
 

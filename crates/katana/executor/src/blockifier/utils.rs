@@ -285,7 +285,7 @@ pub(super) fn events_from_exec_info(execution_info: &TransactionExecutionInfo) -
         let mut events: Vec<Event> = vec![];
 
         events.extend(call_info.execution.events.iter().map(|e| Event {
-            contract_address: call_info.call.storage_address.into(),
+            from_address: call_info.call.storage_address.into(),
             data: e.event.data.0.iter().map(|d| (*d).into()).collect(),
             keys: e.event.keys.iter().map(|k| k.0.into()).collect(),
         }));

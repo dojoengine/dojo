@@ -23,7 +23,6 @@ pub type SierraClass = starknet::core::types::FlattenedSierraClass;
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[repr(transparent)]
 pub struct ContractAddress(#[deref] pub FieldElement);
 
 impl ContractAddress {

@@ -63,7 +63,7 @@ impl TxReceiptWithExecInfo {
 }
 
 /// Parse the `actual resources` field from the execution info into a more structured type,
-/// [`ExecutionResources`].
+/// [`TxExecutionResources`].
 fn parse_actual_resources(resources: &HashMap<String, usize>) -> TxExecutionResources {
     TxExecutionResources {
         steps: resources.get("n_steps").copied().unwrap_or_default() as u64,

@@ -243,7 +243,7 @@ struct Event(starknet::core::types::Event);
 impl From<katana_primitives::receipt::Event> for Event {
     fn from(value: katana_primitives::receipt::Event) -> Self {
         Event(starknet::core::types::Event {
-            from_address: value.contract_address.into(),
+            from_address: value.from_address.into(),
             keys: value.keys,
             data: value.data,
         })

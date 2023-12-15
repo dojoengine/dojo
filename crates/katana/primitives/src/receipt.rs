@@ -7,7 +7,7 @@ use crate::FieldElement;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Event {
     /// The contract address that emitted the event.
-    pub contract_address: ContractAddress,
+    pub from_address: ContractAddress,
     /// The event keys.
     pub keys: Vec<FieldElement>,
     /// The event data.
