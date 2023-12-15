@@ -1,6 +1,6 @@
+use ethers::types::H256;
 use sha3::{Digest, Keccak256};
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::Hash256;
 
 use crate::FieldElement;
 
@@ -159,11 +159,13 @@ pub fn compute_l1_handler_tx_hash(
 }
 
 /// Computes the hash of a L1 message.
+///
+/// The hash that is used to consume the message in L1.
 pub fn compute_l1_message_hash(
     from_address: FieldElement,
     to_address: FieldElement,
     payload: &[FieldElement],
-) -> Hash256 {
+) -> H256 {
     let mut buf: Vec<u8> = vec![];
     buf.extend(from_address.to_bytes_be());
     buf.extend(to_address.to_bytes_be());
@@ -172,9 +174,8 @@ pub fn compute_l1_message_hash(
 
     let mut hasher = Keccak256::new();
     hasher.update(buf);
-    let hash = hasher.finalize();
 
-    Hash256::from_bytes(*AsRef::<[u8; 32]>::as_ref(&hash))
+    H256::from_slice(&hasher.finalize())
 }
 
 #[cfg(test)]

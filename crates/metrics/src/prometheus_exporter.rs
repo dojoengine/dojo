@@ -14,7 +14,7 @@ pub(crate) trait Hook: Fn() + Send + Sync {}
 impl<T: Fn() + Send + Sync> Hook for T {}
 
 /// Installs Prometheus as the metrics recorder.
-pub(crate) fn install_recorder() -> anyhow::Result<PrometheusHandle> {
+pub fn install_recorder() -> anyhow::Result<PrometheusHandle> {
     let recorder = PrometheusBuilder::new().build_recorder();
     let handle = recorder.handle();
 
@@ -73,7 +73,7 @@ async fn start_endpoint<F: Hook + 'static>(
 }
 
 /// Serves Prometheus metrics over HTTP with database and process metrics.
-pub(crate) async fn serve(
+pub async fn serve(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     process: metrics_process::Collector,

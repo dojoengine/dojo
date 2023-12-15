@@ -8,10 +8,10 @@ use ethers::prelude::*;
 use ethers::providers::{Http, Provider};
 use ethers::types::{Address, BlockNumber, Log};
 use k256::ecdsa::SigningKey;
+use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
 use katana_primitives::FieldElement;
-use starknet::core::types::MsgToL1;
 use tracing::{debug, error, trace, warn};
 
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
@@ -164,7 +164,10 @@ impl Messenger for EthereumMessaging {
         Ok((to_block, l1_handler_txs))
     }
 
-    async fn send_messages(&self, messages: &[MsgToL1]) -> MessengerResult<Vec<Self::MessageHash>> {
+    async fn send_messages(
+        &self,
+        messages: &[MessageToL1],
+    ) -> MessengerResult<Vec<Self::MessageHash>> {
         if messages.is_empty() {
             return Ok(vec![]);
         }
@@ -233,11 +236,13 @@ fn l1_handler_tx_from_log(log: Log, chain_id: FieldElement) -> MessengerResult<L
 }
 
 /// With Ethereum, the messages are following the conventional starknet messaging.
-fn parse_messages(messages: &[MsgToL1]) -> Vec<U256> {
+fn parse_messages(messages: &[MessageToL1]) -> Vec<U256> {
     messages
         .iter()
         .map(|msg| {
-            let hash = compute_l1_message_hash(msg.from_address, msg.to_address, &msg.payload);
+            let hash =
+                compute_l1_message_hash(msg.from_address.into(), msg.to_address, &msg.payload);
+
             U256::from_big_endian(hash.as_bytes())
         })
         .collect()
@@ -324,7 +329,7 @@ mod tests {
         let to_address = selector!("to_address");
         let payload = vec![FieldElement::ONE, FieldElement::TWO];
 
-        let messages = vec![MsgToL1 { from_address, to_address, payload }];
+        let messages = vec![MessageToL1 { from_address: from_address.into(), to_address, payload }];
 
         let hashes = parse_messages(&messages);
         assert_eq!(hashes.len(), 1);

@@ -20,7 +20,7 @@ RUN rustup toolchain install $(cat rust-toolchain.toml | grep channel | cut -d\"
     rustup component add clippy && \
     rustup component add rustfmt
 
-RUN cargo binstall cargo-nextest --secure -y
+RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
 
 # Install dojoup and scarb for vscode user
 USER vscode

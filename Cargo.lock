@@ -5294,23 +5294,16 @@ dependencies = [
 name = "katana"
 version = "0.4.1"
 dependencies = [
- "anyhow",
  "assert_matches",
  "clap",
  "clap_complete",
  "console",
- "hyper",
- "jemalloc-ctl",
- "jemallocator",
  "katana-core",
  "katana-rpc",
- "metrics",
- "metrics-exporter-prometheus",
+ "metrics 0.1.0",
  "metrics-process",
- "metrics-util",
  "serde_json",
  "starknet_api",
- "thiserror",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -5771,6 +5764,23 @@ dependencies = [
 
 [[package]]
 name = "metrics"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hyper",
+ "jemalloc-ctl",
+ "jemallocator",
+ "metrics 0.21.1",
+ "metrics-exporter-prometheus",
+ "metrics-process",
+ "metrics-util",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "metrics"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fde3af1a009ed76a778cb84fdef9e7dbbdf5775ae3e4cc1f434a6a307f6f76c5"
@@ -5782,15 +5792,15 @@ dependencies = [
 
 [[package]]
 name = "metrics-exporter-prometheus"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a4964177ddfdab1e3a2b37aec7cf320e14169abb0ed73999f558136409178d5"
+checksum = "1d4fa7ce7c4862db464a37b0b31d89bca874562f034bd7993895572783d02950"
 dependencies = [
  "base64 0.21.5",
  "hyper",
  "indexmap 1.9.3",
  "ipnet",
- "metrics",
+ "metrics 0.21.1",
  "metrics-util",
  "quanta",
  "thiserror",
@@ -5817,7 +5827,7 @@ checksum = "2674a02f6ad51326c2106d9aa5a07d1f759695b655c06df0bba5d5fb338ac0a4"
 dependencies = [
  "libproc",
  "mach2",
- "metrics",
+ "metrics 0.21.1",
  "once_cell",
  "procfs",
  "rlimit",
@@ -5835,7 +5845,7 @@ dependencies = [
  "crossbeam-utils",
  "hashbrown 0.13.1",
  "indexmap 1.9.3",
- "metrics",
+ "metrics 0.21.1",
  "num_cpus",
  "ordered-float 3.9.2",
  "quanta",
@@ -8817,9 +8827,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-ff"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7584bc732e4d2a8ccebdd1dda8236f7940a79a339e30ebf338d45c329659e36c"
+checksum = "067419451efdea1ee968df8438369960c167e0e905c05b84afd074f50e1d6f3d"
 dependencies = [
  "ark-ff",
  "bigdecimal",
@@ -9726,6 +9736,8 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
+ "metrics 0.1.0",
+ "metrics-process",
  "scarb",
  "serde",
  "serde_json",
