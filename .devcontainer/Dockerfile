@@ -29,4 +29,5 @@ RUN rustup toolchain install nightly && \
 RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
-RUN /root/.dojo/bin/dojoup
+ENV PATH=${PATH}:/root/.dojo/bin
+RUN dojoup
