@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
@@ -292,7 +293,8 @@ where
                 let addr = strategy.world_address()?;
                 let InvokeTransactionResult { transaction_hash } =
                     WorldContract::new(addr, &migrator)
-                        .set_executor(executor.contract_address)
+                        .set_executor(&executor.contract_address.into())
+                        .send()
                         .await?;
 
                 TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
@@ -343,9 +345,12 @@ where
             if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
                 match meta.upload().await {
                     Ok(hash) => {
+                        let encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+
                         let InvokeTransactionResult { transaction_hash } =
                             WorldContract::new(world.contract_address, migrator)
-                                .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
+                                .set_metadata_uri(&FieldElement::ZERO, &encoded_uri)
+                                .send()
                                 .await
                                 .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
 
@@ -459,9 +464,16 @@ where
     }
 
     let world_address = strategy.world_address()?;
+    let world = WorldContract::new(world_address, migrator);
 
-    let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_models(&models.iter().map(|c| c.diff.local).collect::<Vec<_>>())
+    let calls = models
+        .iter()
+        .map(|c| world.register_model_getcall(&c.diff.local.into()))
+        .collect::<Vec<_>>();
+
+    let InvokeTransactionResult { transaction_hash } = migrator
+        .execute(calls)
+        .send()
         .await
         .map_err(|e| anyhow!("Failed to register models to World: {e}"))?;
 

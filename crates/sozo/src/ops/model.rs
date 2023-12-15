@@ -15,7 +15,7 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let world = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
 
-            let model = world.model(&name).await?;
+            let model = world.model_reader(&name).await?;
 
             println!("{:#x}", model.class_hash());
         }
@@ -27,7 +27,7 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let world = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
 
-            let model = world.model(&name).await?;
+            let model = world.model_reader(&name).await?;
             let schema = model.schema().await?;
 
             if to_json {
@@ -44,7 +44,7 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let world = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
 
-            let model = world.model(&name).await?;
+            let model = world.model_reader(&name).await?;
             let entity = model.entity(&keys).await?;
 
             println!("{entity}")

@@ -1112,6 +1112,49 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a4f925191b4367301851c6d99b09890311d74b0d43f274c0b34c86d308a3663"
 
 [[package]]
+name = "cainome"
+version = "0.1.0"
+dependencies = [
+ "cainome-cairo-serde",
+ "cainome-parser",
+ "cainome-rs",
+]
+
+[[package]]
+name = "cainome-cairo-serde"
+version = "0.1.0"
+dependencies = [
+ "starknet",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-parser"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "serde_json",
+ "starknet",
+ "syn 2.0.41",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde",
+ "cainome-parser",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet",
+ "syn 2.0.41",
+ "thiserror",
+]
+
+[[package]]
 name = "cairo-felt"
 version = "0.8.2"
 source = "git+https://github.com/dojoengine/cairo-rs.git?rev=262b7eb4b11ab165a2a936a5f914e78aa732d4a2#262b7eb4b11ab165a2a936a5f914e78aa732d4a2"
@@ -2672,6 +2715,7 @@ dependencies = [
  "assert_fs",
  "assert_matches",
  "async-trait",
+ "cainome",
  "cairo-lang-filesystem",
  "cairo-lang-project",
  "cairo-lang-starknet",
