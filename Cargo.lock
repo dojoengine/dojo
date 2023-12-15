@@ -1856,6 +1856,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8191fa7302e03607ff0e237d4246cc043ff5b3cb9409d995172ba3bea16b807"
 
 [[package]]
+name = "cobs"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
+
+[[package]]
 name = "coins-bip32"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2756,6 +2762,12 @@ dependencies = [
  "subtle",
  "zeroize",
 ]
+
+[[package]]
+name = "embedded-io"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef1a6892d9eef45c8fa6b9e0086428a2cca8491aca8f787c534a3d6d0bcb3ced"
 
 [[package]]
 name = "ena"
@@ -5311,6 +5323,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-codecs"
+version = "0.4.1"
+dependencies = [
+ "bytes",
+ "katana-primitives",
+]
+
+[[package]]
+name = "katana-codecs-derive"
+version = "0.1.0"
+dependencies = [
+ "convert_case 0.6.0",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn 2.0.41",
+]
+
+[[package]]
 name = "katana-core"
 version = "0.4.1"
 dependencies = [
@@ -5350,12 +5381,18 @@ version = "0.4.1"
 dependencies = [
  "anyhow",
  "bincode 1.3.3",
- "flate2",
+ "blockifier",
+ "cairo-vm",
  "katana-primitives",
  "page_size",
  "parking_lot 0.12.1",
+ "postcard",
  "reth-libmdbx",
  "serde",
+ "serde_json",
+ "starknet",
+ "starknet_api",
+ "tempfile",
  "thiserror",
 ]
 
@@ -6819,6 +6856,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7170ef9988bc169ba16dd36a7fa041e5c4cbeb6a35b76d4c03daded371eae7c0"
 
 [[package]]
+name = "postcard"
+version = "1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a55c51ee6c0db07e68448e336cf8ea4131a620edefebf9893e759b2d793420f8"
+dependencies = [
+ "cobs",
+ "embedded-io",
+ "serde",
+]
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7386,7 +7434,7 @@ dependencies = [
 [[package]]
 name = "reth-libmdbx"
 version = "0.1.0-alpha.13"
-source = "git+https://github.com/paradigmxyz/reth.git#013b4c93db27e6c1926d3295319f9a4319d4f691"
+source = "git+https://github.com/paradigmxyz/reth.git?rev=b34b0d3#b34b0d3c8de2598b2976f7ee2fc1a166c50b1b94"
 dependencies = [
  "bitflags 2.4.1",
  "byteorder",
@@ -7401,7 +7449,7 @@ dependencies = [
 [[package]]
 name = "reth-mdbx-sys"
 version = "0.1.0-alpha.13"
-source = "git+https://github.com/paradigmxyz/reth.git#013b4c93db27e6c1926d3295319f9a4319d4f691"
+source = "git+https://github.com/paradigmxyz/reth.git?rev=b34b0d3#b34b0d3c8de2598b2976f7ee2fc1a166c50b1b94"
 dependencies = [
  "bindgen",
  "cc",

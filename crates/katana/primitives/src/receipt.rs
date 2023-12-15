@@ -27,7 +27,7 @@ pub struct MessageToL1 {
 }
 
 /// Receipt for a `Invoke` transaction.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxReceipt {
     /// Actual fee paid for the transaction.
@@ -139,7 +139,7 @@ impl Receipt {
 /// Transaction execution resources.
 ///
 /// The resources consumed by a transaction during its execution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxExecutionResources {
     /// The number of cairo steps used
