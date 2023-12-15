@@ -74,10 +74,15 @@ message Query {
 
 message Clause {
     oneof clause_type {
-        KeysClause keys = 1;
-        MemberClause member = 2;
-        CompositeClause composite = 3;
+        IdsClause ids = 1;
+        KeysClause keys = 2;
+        MemberClause member = 3;
+        CompositeClause composite = 4;
     }
+}
+
+message IdsClause {
+    repeated bytes ids = 1;
 }
 
 message KeysClause {
