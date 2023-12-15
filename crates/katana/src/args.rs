@@ -22,11 +22,10 @@ use katana_core::constants::{
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
+use metrics::utils::parse_socket_address;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
-
-use crate::utils::parse_socket_address;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

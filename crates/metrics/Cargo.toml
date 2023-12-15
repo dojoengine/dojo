@@ -1,0 +1,28 @@
+[package]
+edition = "2021"
+name = "metrics"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+hyper.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+# Metrics
+metrics = "0.21.1"
+metrics-exporter-prometheus = "0.12.1"
+metrics-process.workspace = true
+metrics-util = "0.15.0"
+
+[target.'cfg(not(windows))'.dependencies]
+jemalloc-ctl = { version = "0.5.0", optional = true }
+jemallocator = { version = "0.5.0", optional = true }
+
+[features]
+default = [ "jemalloc" ]
+jemalloc = [ "dep:jemalloc-ctl", "dep:jemallocator" ]
+jemalloc-prof = [ "jemalloc", "jemallocator?/profiling" ]
