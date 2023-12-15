@@ -18,12 +18,13 @@ use blockifier::transaction::objects::{
 };
 use convert_case::{Case, Casing};
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::receipt::{Event, MessageToL1};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
-use starknet::core::types::{Event, FeeEstimate, MsgToL1};
+use starknet::core::types::FeeEstimate;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::core::EntryPointSelector;
 use starknet_api::transaction::Calldata;
@@ -284,7 +285,7 @@ pub(super) fn events_from_exec_info(execution_info: &TransactionExecutionInfo) -
         let mut events: Vec<Event> = vec![];
 
         events.extend(call_info.execution.events.iter().map(|e| Event {
-            from_address: (*call_info.call.storage_address.0.key()).into(),
+            from_address: call_info.call.storage_address.into(),
             data: e.event.data.0.iter().map(|d| (*d).into()).collect(),
             keys: e.event.keys.iter().map(|k| k.0.into()).collect(),
         }));
@@ -313,16 +314,16 @@ pub(super) fn events_from_exec_info(execution_info: &TransactionExecutionInfo) -
 
 pub(super) fn l2_to_l1_messages_from_exec_info(
     execution_info: &TransactionExecutionInfo,
-) -> Vec<MsgToL1> {
+) -> Vec<MessageToL1> {
     let mut messages = vec![];
 
-    fn get_messages_recursively(info: &CallInfo) -> Vec<MsgToL1> {
+    fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToL1> {
         let mut messages = vec![];
 
-        messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MsgToL1 {
+        messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
             to_address:
                 FieldElement::from_byte_slice_be(m.message.to_address.0.as_bytes()).unwrap(),
-            from_address: (*info.call.caller_address.0.key()).into(),
+            from_address: info.call.caller_address.into(),
             payload: m.message.payload.0.iter().map(|p| (*p).into()).collect(),
         }));
 

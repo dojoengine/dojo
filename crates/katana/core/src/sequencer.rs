@@ -13,6 +13,7 @@ use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, Block
 use katana_primitives::contract::{
     ClassHash, CompiledContractClass, ContractAddress, Nonce, StorageKey, StorageValue,
 };
+use katana_primitives::receipt::Event;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::block::{
@@ -23,7 +24,7 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionsProviderExt,
 };
-use starknet::core::types::{BlockTag, EmittedEvent, Event, EventsPage, FeeEstimate};
+use starknet::core::types::{BlockTag, EmittedEvent, EventsPage, FeeEstimate};
 use starknet_api::core::ChainId;
 
 use crate::backend::config::StarknetConfig;
@@ -380,7 +381,7 @@ impl KatanaSequencer {
                 );
 
                 filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
-                    from_address: e.from_address,
+                    from_address: e.from_address.into(),
                     keys: e.keys.clone(),
                     data: e.data.clone(),
                     block_hash,
@@ -459,7 +460,7 @@ fn filter_events_by_params(
     // Iterate on block events.
     for event in events {
         index += 1;
-        if !address.map_or(true, |addr| addr == event.from_address.into()) {
+        if !address.map_or(true, |addr| addr == event.from_address) {
             continue;
         }
 

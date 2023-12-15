@@ -3,9 +3,10 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use ::starknet::core::types::{FieldElement, MsgToL1};
+use ::starknet::core::types::FieldElement;
 use futures::{Future, FutureExt, Stream};
 use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
 use katana_provider::traits::block::BlockNumberProvider;
 use katana_provider::traits::transaction::ReceiptProvider;
@@ -124,7 +125,7 @@ impl MessagingService {
             BlockHashOrNumber::Num(block_num),
         )
         .unwrap()
-        .map(|r| r.iter().flat_map(|r| r.messages_sent().to_vec()).collect::<Vec<MsgToL1>>()) else {
+        .map(|r| r.iter().flat_map(|r| r.messages_sent().to_vec()).collect::<Vec<MessageToL1>>()) else {
             return Ok(None);
         };
 
@@ -253,7 +254,7 @@ fn interval_from_seconds(secs: u64) -> Interval {
     interval
 }
 
-fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
+fn trace_msg_to_l1_sent(messages: &Vec<MessageToL1>, hashes: &Vec<String>) {
     assert_eq!(messages.len(), hashes.len());
 
     #[cfg(feature = "starknet-messaging")]
@@ -274,7 +275,7 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
             info!(
                 target: LOG_TARGET,
                 r"Message executed on settlement layer:
-| from_address | {:#x}
+| from_address | {}
 |  to_address  | {}
 |   selector   | {}
 |   payload    | [{}]
@@ -290,10 +291,10 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
         }
 
         // We check for magic value 'MSG' used only when we are doing L3-L2 messaging.
-        let (to_address, payload_str) = if format!("{:#x}", m.to_address) == "0x4d5347" {
+        let (to_address, payload_str) = if format!("{}", m.to_address) == "0x4d5347" {
             (payload_str[0].clone(), &payload_str[1..])
         } else {
-            (format!("{:#x}", m.to_address), &payload_str[..])
+            (format!("{}", m.to_address), &payload_str[..])
         };
 
         #[rustfmt::skip]
@@ -301,7 +302,7 @@ fn trace_msg_to_l1_sent(messages: &Vec<MsgToL1>, hashes: &Vec<String>) {
                 target: LOG_TARGET,
                 r#"Message sent to settlement layer:
 |     hash     | {}
-| from_address | {:#x}
+| from_address | {}
 |  to_address  | {}
 |   payload    | [{}]
 
