@@ -165,11 +165,7 @@ pub fn compute_l1_message_hash(
     to_address: FieldElement,
     payload: &[FieldElement],
 ) -> Hash256 {
-    let msg = MsgToL1 {
-        from_address,
-        to_address,
-        payload: payload.to_vec(),
-    };
+    let msg = MsgToL1 { from_address, to_address, payload: payload.to_vec() };
 
     msg.hash()
 }

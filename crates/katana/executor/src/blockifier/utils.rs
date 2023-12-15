@@ -331,7 +331,7 @@ pub(super) fn l2_to_l1_messages_from_exec_info(
 
         messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
             to_address:
-            FieldElement::from_byte_slice_be(m.message.to_address.0.as_bytes()).unwrap(),
+                FieldElement::from_byte_slice_be(m.message.to_address.0.as_bytes()).unwrap(),
             from_address: ContractAddress(from_address.into()),
             payload: m.message.payload.0.iter().map(|p| (*p).into()).collect(),
         }));
