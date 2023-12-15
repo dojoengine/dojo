@@ -1,3 +1,5 @@
+//! Serializable without using custome functions
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -16,26 +18,26 @@ use serde::{Deserialize, Serialize};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointOffset, EntryPointType};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum SerializableContractClass {
-    V0(SerializableContractClassV0),
-    V1(SerializableContractClassV1),
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum StoredContractClass {
+    V0(StoredContractClassV0),
+    V1(StoredContractClassV1),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SerializableContractClassV0 {
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StoredContractClassV0 {
     pub program: SerializableProgram,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<SerializableEntryPoint>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SerializableContractClassV1 {
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StoredContractClassV1 {
     pub program: SerializableProgram,
     pub hints: HashMap<String, Vec<u8>>,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<SerializableEntryPointV1>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableEntryPoint {
     pub selector: EntryPointSelector,
     pub offset: SerializableEntryPointOffset,
@@ -53,7 +55,7 @@ impl From<SerializableEntryPoint> for EntryPoint {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableEntryPointOffset(pub usize);
 
 impl From<EntryPointOffset> for SerializableEntryPointOffset {
@@ -68,7 +70,7 @@ impl From<SerializableEntryPointOffset> for EntryPointOffset {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableEntryPointV1 {
     pub selector: EntryPointSelector,
     pub offset: SerializableEntryPointOffset,
@@ -331,10 +333,10 @@ impl From<SerializableFlowTrackingData> for FlowTrackingData {
     }
 }
 
-impl From<SerializableContractClass> for blockifier::execution::contract_class::ContractClass {
-    fn from(value: SerializableContractClass) -> Self {
+impl From<StoredContractClass> for ContractClass {
+    fn from(value: StoredContractClass) -> Self {
         match value {
-            SerializableContractClass::V0(v0) => {
+            StoredContractClass::V0(v0) => {
                 ContractClass::V0(ContractClassV0(Arc::new(ContractClassV0Inner {
                     program: v0.program.into(),
                     entry_points_by_type: v0
@@ -344,7 +346,7 @@ impl From<SerializableContractClass> for blockifier::execution::contract_class::
                         .collect(),
                 })))
             }
-            SerializableContractClass::V1(v1) => {
+            StoredContractClass::V1(v1) => {
                 ContractClass::V1(ContractClassV1(Arc::new(ContractClassV1Inner {
                     hints: v1
                         .hints
@@ -373,20 +375,24 @@ impl From<SerializableContractClass> for blockifier::execution::contract_class::
     }
 }
 
-impl From<blockifier::execution::contract_class::ContractClass> for SerializableContractClass {
+impl From<ContractClass> for StoredContractClass {
     fn from(value: ContractClass) -> Self {
         match value {
-            ContractClass::V0(v0) => SerializableContractClass::V0(SerializableContractClassV0 {
-                program: v0.program.clone().into(),
-                entry_points_by_type: v0
+            ContractClass::V0(v0) => {
+                let entry_points_by_type = v0
                     .entry_points_by_type
                     .clone()
                     .into_iter()
-                    .map(|(k, v)| (k, v.into_iter().map(|h| h.into()).collect()))
-                    .collect(),
-            }),
+                    .map(|(k, v)| (k, v.into_iter().map(SerializableEntryPoint::from).collect()))
+                    .collect();
 
-            ContractClass::V1(v1) => SerializableContractClass::V1(SerializableContractClassV1 {
+                StoredContractClass::V0(StoredContractClassV0 {
+                    program: v0.program.clone().into(),
+                    entry_points_by_type,
+                })
+            }
+
+            ContractClass::V1(v1) => StoredContractClass::V1(StoredContractClassV1 {
                 program: v1.program.clone().into(),
                 entry_points_by_type: v1
                     .entry_points_by_type
@@ -409,5 +415,49 @@ impl From<blockifier::execution::contract_class::ContractClass> for Serializable
                     .collect(),
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet_api::hash::StarkFelt;
+    use starknet_api::stark_felt;
+
+    use super::*;
+
+    #[test]
+    fn serialize_deserialize_legacy_entry_points() {
+        let non_serde = vec![
+            EntryPoint {
+                offset: EntryPointOffset(0x25f),
+                selector: EntryPointSelector(stark_felt!(
+                    "0x289da278a8dc833409cabfdad1581e8e7d40e42dcaed693fa4008dcdb4963b3"
+                )),
+            },
+            EntryPoint {
+                offset: EntryPointOffset(0x1b2),
+                selector: EntryPointSelector(stark_felt!(
+                    "0x29e211664c0b63c79638fbea474206ca74016b3e9a3dc4f9ac300ffd8bdf2cd"
+                )),
+            },
+            EntryPoint {
+                offset: EntryPointOffset(0x285),
+                selector: EntryPointSelector(stark_felt!(
+                    "0x36fcbf06cd96843058359e1a75928beacfac10727dab22a3972f0af8aa92895"
+                )),
+            },
+        ];
+
+        // convert to serde and back
+        let serde: Vec<SerializableEntryPoint> =
+            non_serde.iter().map(|e| e.clone().into()).collect();
+
+        // convert to json
+        let json = serde_json::to_vec(&serde).unwrap();
+        let serde: Vec<SerializableEntryPoint> = serde_json::from_slice(&json).unwrap();
+
+        let same_non_serde: Vec<EntryPoint> = serde.iter().map(|e| e.clone().into()).collect();
+
+        assert_eq!(non_serde, same_non_serde);
     }
 }

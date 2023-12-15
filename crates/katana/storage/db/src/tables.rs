@@ -1,24 +1,20 @@
-use katana_primitives::block::{BlockHash, BlockNumber, Header};
+use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
-    StorageValue,
 };
 use katana_primitives::receipt::Receipt;
-use katana_primitives::serde::blockifier::SerializableContractClass;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
-use serde::{Deserialize, Serialize};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
+use crate::models::contract::StoredContractClass;
+use crate::models::storage::StorageEntry;
 
-pub trait Key:
-    Encode + Decode + Serialize + for<'a> Deserialize<'a> + Clone + std::fmt::Debug
-{
-}
+pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
 
-impl<T> Key for T where T: Serialize + for<'a> Deserialize<'a> + Clone + std::fmt::Debug {}
-impl<T> Value for T where T: Serialize + for<'a> Deserialize<'a> + std::fmt::Debug {}
+impl<T> Key for T where T: Encode + Decode + Clone + std::fmt::Debug {}
+impl<T> Value for T where T: Compress + Decompress + std::fmt::Debug {}
 
 /// An asbtraction for a table.
 pub trait Table {
@@ -47,7 +43,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 15;
+pub const NUM_TABLES: usize = 17;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -99,7 +95,7 @@ macro_rules! define_tables_enum {
                         return Ok(Tables::$table)
                     },)*
                     _ => {
-                        return Err("Unknown table".to_string())
+                        return Err(format!("unknown table `{s}`"))
                     }
                 }
             }
@@ -152,16 +148,18 @@ define_tables_enum! {[
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
     (BlockBodyIndices, TableType::Table),
+    (BlockStatusses, TableType::Table),
     (TxNumbers, TableType::Table),
+    (TxBlocks, TableType::Table),
     (TxHashes, TableType::Table),
     (Transactions, TableType::Table),
     (Receipts, TableType::Table),
-    (ClassDeclarations, TableType::Table),
-    (ContractDeployments, TableType::Table),
     (CompiledClassHashes, TableType::Table),
     (CompiledContractClasses, TableType::Table),
     (SierraClasses, TableType::Table),
     (ContractInfo, TableType::Table),
+    (ContractDeployments, TableType::DupSort),
+    (ClassDeclarations, TableType::DupSort),
     (ContractStorage, TableType::DupSort)
 ]}
 
@@ -172,6 +170,8 @@ tables! {
     BlockHashes: (BlockNumber) => BlockHash,
     /// Stores block numbers according to its block hash
     BlockNumbers: (BlockHash) => BlockNumber,
+    /// Stores block finality status according to its block number
+    BlockStatusses: (BlockNumber) => FinalityStatus,
     /// Block number to its body indices which stores the tx number of
     /// the first tx in the block and the number of txs in the block.
     BlockBodyIndices: (BlockNumber) => StoredBlockBodyIndices,
@@ -181,20 +181,22 @@ tables! {
     TxHashes: (TxNumber) => TxHash,
     /// Store canonical transactions
     Transactions: (TxNumber) => Tx,
+    /// Stores the block number of a transaction.
+    TxBlocks: (TxNumber) => BlockNumber,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
-    /// Stores the list of class hashes according to the block number it was declared in.
-    ClassDeclarations: (BlockNumber) => Vec<ClassHash>,
-    /// Store the list of contracts deployed in a block according to its block number.
-    ContractDeployments: (BlockNumber) => Vec<ContractAddress>,
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
     /// Store compiled contract classes according to its compiled class hash
-    CompiledContractClasses: (CompiledClassHash) => SerializableContractClass,
+    CompiledContractClasses: (ClassHash) => StoredContractClass,
     /// Store Sierra classes according to its class hash
     SierraClasses: (ClassHash) => SierraClass,
     /// Store contract information according to its contract address
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage
-    ContractStorage: (ContractAddress, StorageKey) => StorageValue
+    ContractStorage: (ContractAddress, StorageKey) => StorageEntry,
+    /// Stores the list of class hashes according to the block number it was declared in.
+    ClassDeclarations: (BlockNumber, ClassHash) => ClassHash,
+    /// Store the list of contracts deployed in a block according to its block number.
+    ContractDeployments: (BlockNumber, ContractAddress) => ContractAddress
 }
