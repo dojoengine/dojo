@@ -20,7 +20,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: Swatinem/rust-cache@v2
-      - run: dojoup
       - run: cargo nextest run --all-features
 
   ensure-wasm:

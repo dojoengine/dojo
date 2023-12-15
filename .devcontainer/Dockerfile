@@ -20,11 +20,10 @@ RUN rustup toolchain install $(cat rust-toolchain.toml | grep channel | cut -d\"
     rustup component add clippy && \
     rustup component add rustfmt
 
-RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
+RUN rustup target add x86_64-pc-windows-msvc && \
+    rustup target add wasm32-unknown-unknown
 
-# Install dojoup and scarb for vscode user
-USER vscode
+RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
-ENV PATH=${PATH}:/workspaces/dojo/target/release:/home/vscode/.dojo/bin
-RUN /home/vscode/.dojo/bin/dojoup
+RUN /root/.dojo/bin/dojoup
