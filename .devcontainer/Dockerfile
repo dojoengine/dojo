@@ -23,6 +23,9 @@ RUN rustup toolchain install $(cat rust-toolchain.toml | grep channel | cut -d\"
 RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
 
+RUN rustup toolchain install nightly && \
+    rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly
+
 RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash

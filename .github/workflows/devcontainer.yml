@@ -80,6 +80,6 @@ jobs:
           token: ${{ secrets.CREATE_PR_TOKEN }}
           title: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
           commit-message: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
-          branch: devcontainer-${{ needs.build-and-push.outputs.tag_name }}
+          branch: bump-devcontainer
           base: main
           delete-branch: true
