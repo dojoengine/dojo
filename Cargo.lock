@@ -5332,9 +5332,8 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.1.0"
+version = "0.4.1"
 dependencies = [
- "convert_case 0.6.0",
  "proc-macro2",
  "quote",
  "serde",

@@ -49,7 +49,7 @@ macro_rules! impl_encode_and_decode_for_uints {
     }
 }
 
-macro_rules! impl_encod_and_decode_for_felts {
+macro_rules! impl_encode_and_decode_for_felts {
     ($($ty:ty),*) => {
         $(
             impl Encode for $ty {
@@ -70,7 +70,7 @@ macro_rules! impl_encod_and_decode_for_felts {
 }
 
 impl_encode_and_decode_for_uints!(u64);
-impl_encod_and_decode_for_felts!(FieldElement, ContractAddress);
+impl_encode_and_decode_for_felts!(FieldElement, ContractAddress);
 
 impl Compress for FinalityStatus {
     type Compressed = [u8; 1];
