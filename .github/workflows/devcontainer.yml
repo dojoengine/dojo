@@ -71,15 +71,13 @@ jobs:
       - name: Update devcontainer.json
         run: sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .devcontainer/devcontainer.json
 
-      - name: Setup Git credentials
-        run: |
-          git config user.name "GitHub Action"
-          git config user.email "action@github.com"
+      - name: Update ci devcontainers
+        run: sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .github/workflows/ci.yml
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.CREATE_PR_TOKEN }}
           title: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
           commit-message: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
           branch: devcontainer-${{ needs.build-and-push.outputs.tag_name }}
