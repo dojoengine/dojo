@@ -71,7 +71,7 @@ impl Client {
             // TODO: change this to querying the gRPC url instead
             let subbed_models = subbed_models.models_keys.read().clone();
             for keys in subbed_models {
-                let model_reader = world_reader.model(&keys.model).await?;
+                let model_reader = world_reader.model_reader(&keys.model).await?;
                 let values = model_reader.entity_storage(&keys.keys).await?;
 
                 client_storage.set_model_storage(
@@ -137,7 +137,7 @@ impl Client {
         };
 
         if !self.subscribed_models.is_synced(keys) {
-            let model = self.world_reader.model(&keys.model).await?;
+            let model = self.world_reader.model_reader(&keys.model).await?;
             return Ok(Some(model.entity(&keys.keys).await?));
         }
 
@@ -232,7 +232,7 @@ impl Client {
     }
 
     async fn initiate_model(&self, model: &str, keys: Vec<FieldElement>) -> Result<(), Error> {
-        let model_reader = self.world_reader.model(model).await?;
+        let model_reader = self.world_reader.model_reader(model).await?;
         let values = model_reader.entity_storage(&keys).await?;
         self.storage.set_model_storage(
             cairo_short_string_to_felt(model).map_err(ParseError::CairoShortStringToFelt)?,

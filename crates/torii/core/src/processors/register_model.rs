@@ -45,7 +45,7 @@ where
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[0])?;
 
-        let model = world.model(&name).await?;
+        let model = world.model_reader(&name).await?;
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 
