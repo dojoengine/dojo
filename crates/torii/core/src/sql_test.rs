@@ -109,9 +109,9 @@ async fn test_load_from_remote() {
             data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
         },
         FieldElement::THREE,
-    );
-
-    db.execute().await.unwrap();
+    )
+    .await
+    .unwrap();
 
     let query =
         format!("SELECT keys, data, transaction_hash FROM events WHERE id = '{}'", event_id);

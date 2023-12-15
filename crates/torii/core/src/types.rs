@@ -57,3 +57,16 @@ pub struct Event {
     pub transaction_hash: String,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Transaction {
+    pub id: String,
+    pub transaction_hash: String,
+    pub sender_address: String,
+    pub calldata: String,
+    pub max_fee: String,
+    pub signature: String,
+    pub nonce: String,
+    pub created_at: DateTime<Utc>,
+}

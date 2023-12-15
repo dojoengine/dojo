@@ -20,7 +20,7 @@ impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
         transaction: &InvokeTransactionV1,
         transaction_id: &str,
     ) -> Result<(), Error> {
-        db.store_transaction(transaction, transaction_id);
+        db.store_transaction(transaction, transaction_id).await?;
 
         Ok(())
     }

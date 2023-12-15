@@ -2,20 +2,19 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
-use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
+use starknet::core::types::{Event as StarknetEvent, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
-use crate::types::{Entity as EntityUpdated, Event as EventEmitted, Model as ModelRegistered};
+use crate::types::{Entity, Event, Model, Transaction};
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -92,7 +91,7 @@ impl Sql {
                              SET class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
                              packed_size=EXCLUDED.packed_size, \
                              unpacked_size=EXCLUDED.unpacked_size RETURNING *";
-        let model_registered: ModelRegistered = sqlx::query_as(insert_models)
+        let model_registered: Model = sqlx::query_as(insert_models)
             .bind(model.name())
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
@@ -133,7 +132,7 @@ impl Sql {
         let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
                                CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
-        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+        let entity_updated: Entity = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
@@ -234,40 +233,48 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    pub fn store_transaction(&mut self, transaction: &InvokeTransactionV1, transaction_id: &str) {
-        let id = Argument::String(transaction_id.to_string());
-        let transaction_hash = Argument::FieldElement(transaction.transaction_hash);
-        let sender_address = Argument::FieldElement(transaction.sender_address);
-        let calldata = Argument::String(felts_sql_string(&transaction.calldata));
-        let max_fee = Argument::FieldElement(transaction.max_fee);
-        let signature = Argument::String(felts_sql_string(&transaction.signature));
-        let nonce = Argument::FieldElement(transaction.nonce);
+    pub async fn store_transaction(
+        &mut self,
+        transaction: &InvokeTransactionV1,
+        transaction_id: &str,
+    ) -> Result<()> {
+        let query = "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, \
+                     calldata, max_fee, signature, nonce) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *";
+        let transaction: Transaction = sqlx::query_as(query)
+            .bind(transaction_id)
+            .bind(format!("{:#x}", transaction.transaction_hash))
+            .bind(format!("{:#x}", transaction.sender_address))
+            .bind(felts_sql_string(&transaction.calldata))
+            .bind(format!("{:#x}", transaction.max_fee))
+            .bind(felts_sql_string(&transaction.signature))
+            .bind(format!("{:#x}", transaction.nonce))
+            .fetch_one(&self.pool)
+            .await?;
 
-        self.query_queue.enqueue(
-            "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            vec![id, transaction_hash, sender_address, calldata, max_fee, signature, nonce],
-        );
+        SimpleBroker::publish(transaction);
+
+        Ok(())
     }
 
-    pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {
-        let id = Argument::String(event_id.to_string());
-        let keys = Argument::String(felts_sql_string(&event.keys));
-        let data = Argument::String(felts_sql_string(&event.data));
-        let hash = Argument::FieldElement(transaction_hash);
+    pub async fn store_event(
+        &mut self,
+        event_id: &str,
+        event: &StarknetEvent,
+        transaction_hash: FieldElement,
+    ) -> Result<()> {
+        let query = "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES (?, \
+                     ?, ?, ?) RETURNING *";
+        let event: Event = sqlx::query_as(query)
+            .bind(event_id)
+            .bind(felts_sql_string(&event.keys))
+            .bind(felts_sql_string(&event.data))
+            .bind(format!("{transaction_hash:#x}"))
+            .fetch_one(&self.pool)
+            .await?;
 
-        self.query_queue.enqueue(
-            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES (?, ?, ?, ?)",
-            vec![id, keys, data, hash],
-        );
+        SimpleBroker::publish(event);
 
-        SimpleBroker::publish(EventEmitted {
-            id: event_id.to_string(),
-            keys: felts_sql_string(&event.keys),
-            data: felts_sql_string(&event.data),
-            transaction_hash: format!("{:#x}", transaction_hash),
-            created_at: Utc::now(),
-        });
+        Ok(())
     }
 
     fn build_register_queries_recursive(

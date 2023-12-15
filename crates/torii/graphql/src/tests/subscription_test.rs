@@ -356,7 +356,9 @@ mod tests {
                     ],
                 },
                 FieldElement::ZERO,
-            );
+            )
+            .await
+            .unwrap();
 
             tx.send(()).await.unwrap();
         });
