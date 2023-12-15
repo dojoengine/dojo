@@ -31,6 +31,8 @@ package = "reth-libmdbx"
 rev = "b34b0d3"
 
 [dev-dependencies]
+cairo-lang-starknet.workspace = true
+criterion = "0.5.1"
 starknet.workspace = true
 tempfile = "3.8.1"
 
@@ -38,3 +40,7 @@ tempfile = "3.8.1"
 default = [ "postcard" ]
 postcard = [ "dep:postcard" ]
 test-utils = [ "dep:tempfile" ]
+
+[[bench]]
+harness = false
+name = "codec"
