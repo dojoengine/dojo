@@ -4,9 +4,9 @@ use starknet::core::types::FieldElement;
 use starknet::core::utils::cairo_short_string_to_felt;
 
 pub fn str_to_felt(string: &str) -> Result<FieldElement> {
-    Ok(cairo_short_string_to_felt(string).map_err(|e| {
+    cairo_short_string_to_felt(string).map_err(|e| {
         anyhow!(format!("Failed to convert string `{}` to cairo short string: {}", string, e))
-    })?)
+    })
 }
 
 pub fn encode_uri(uri: &str) -> Result<Vec<FieldElement>> {

@@ -27,7 +27,7 @@ impl<P> WorldContractReader<P>
 where
     P: Provider + Sync + Send,
 {
-    pub async fn model_reader(&self, name: &str) -> Result<ModelRPCReader<P>, ModelError> {
+    pub async fn model_reader(&self, name: &str) -> Result<ModelRPCReader<'_, P>, ModelError> {
         ModelRPCReader::new(name, self).await
     }
 }
