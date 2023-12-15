@@ -1,6 +1,8 @@
 # Compiler files
 cache/
 out/
+logs/
+lib/forge-std/
 
 # Ignores development broadcast logs
 !/broadcast
@@ -12,4 +14,3 @@ docs/
 
 # Dotenv file
 .env
-logs

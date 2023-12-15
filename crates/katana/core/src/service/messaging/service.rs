@@ -294,7 +294,7 @@ fn trace_msg_to_l1_sent(messages: &Vec<MessageToL1>, hashes: &Vec<String>) {
         let (to_address, payload_str) = if format!("{}", m.to_address) == "0x4d5347" {
             (payload_str[0].clone(), &payload_str[1..])
         } else {
-            (format!("{}", m.to_address), &payload_str[..])
+            (format!("{:#64x}", m.to_address), &payload_str[..])
         };
 
         #[rustfmt::skip]

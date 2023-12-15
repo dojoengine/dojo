@@ -320,10 +320,19 @@ pub(super) fn l2_to_l1_messages_from_exec_info(
     fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToL1> {
         let mut messages = vec![];
 
+        // By default, `from_address` must correspond to the contract address that
+        // is sending the message. In the case of library calls, `code_address` is `None`,
+        // we then use the `caller_address` instead (which can also be an account).
+        let from_address = if let Some(code_address) = info.call.code_address {
+            *code_address.0.key()
+        } else {
+            *info.call.caller_address.0.key()
+        };
+
         messages.extend(info.execution.l2_to_l1_messages.iter().map(|m| MessageToL1 {
             to_address:
                 FieldElement::from_byte_slice_be(m.message.to_address.0.as_bytes()).unwrap(),
-            from_address: info.call.caller_address.into(),
+            from_address: ContractAddress(from_address.into()),
             payload: m.message.payload.0.iter().map(|p| (*p).into()).collect(),
         }));
 
