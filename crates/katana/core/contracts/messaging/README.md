@@ -8,6 +8,12 @@ Please before starting, install:
 -   [starkli](https://github.com/xJonathanLEI/starkli) to interact with Katana.
 -   [foundry](https://book.getfoundry.sh/getting-started/installation) to interact with Anvil.
 
+If it's the first time you run the example file, please install forge dependencies:
+```bash
+cd ~/dojo/crates/katana/core/contracts/messaging/solidity
+forge install
+```
+
 ## Contracts
 
 In this folder you will find smart contracts ready to be declared / deployed
@@ -32,8 +38,8 @@ To test this scenario, you can use the associated Makefiles. But the flow is the
 
 How to run the scripts:
 
--   Starts Anvil in a terminal.
--   Starts Katana in an other terminal on default port 5050 with the messaging configuration that is inside the:
+-   Start Anvil in a terminal.
+-   Start Katana in an other terminal on default port 5050 with the messaging configuration that is inside the:
     `katana --messaging ~/dojo/crates/katana/core/contracts/messaging/anvil.messaging.json`
 -   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
@@ -57,7 +63,16 @@ make -sC solidity/ send_msg selector_str=msg_handler_struct payload="[1,2]"
 
 # Send message L2 -> L1 to be manually consumed.
 make -sC cairo/ send_msg_value_l1 value=2
-
+```
+Then you've to wait the message to be sent to L1, Katana will display it:
+```
+2023-12-15T15:16:18.435370Z  INFO messaging: Message sent to settlement layer:
+|     hash     | 0x62c7475daef517f6858a6f539bb4d2aa7eb1e23a7e8b1bc6a0834256d995e49d
+| from_address | 0x4231f608ea4a233136f6cdfcd10eaad2e46362bbc4e5d5aa88d0d574ea120d8
+|  to_address  | 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
+|   payload    | [0x2]
+```
+```
 # Consume the messag previously sent. You can try to call it once and see the second one reverting.
 make -sC solidity/ consume_msg payload="[2]"
 ```
