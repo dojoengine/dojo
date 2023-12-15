@@ -1,66 +1,30 @@
 ## Foundry
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Please install [foundry](https://github.com/foundry-rs/foundry) before starting.
 
-Foundry consists of:
+To deploy contracts please consider the following:
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+0. Run anvil: `anvil`.
+1. Copy `.anvil.env` into `.env`.
+2. `source .env`
+3. `forge script --broadcast --rpc-url ${ETH_RPC_URL} script/LocalTesting.s.sol:LocalSetup`
 
-## Documentation
+You should now have a json file into `logs` folder with the deployed addresses.
 
-https://book.getfoundry.sh/
+To interact with the node, you can use the Makefile for better UX.
+If you need more customization, please check the Makefile to see the commands.
 
-## Usage
+If a command in the makefile requires argument, please use the associated `*_usage`.
 
-### Build
+If you want to check the logs emitted by the contracts, run `cast logs`.
 
-```shell
-$ forge build
+Note, starknet core contract is expected at least 30k wei to work. So you must
+always send a value when calling a function that will send a message to L2.
+
+If the message is not ready yet to be consumed, you should see an error like this
+using:
+
+```
+(code: 3, message: execution reverted: INVALID_MESSAGE_TO_CONSUME, data: Some(String("0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001a494e56414c49445f4d4553534147455f544f5f434f4e53554d45000000000000")))
 ```
 
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
