@@ -1,5 +1,6 @@
+use ethers::types::H256;
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::{Hash256, MsgToL1};
+use starknet::core::types::MsgToL1;
 
 use crate::FieldElement;
 
@@ -164,10 +165,10 @@ pub fn compute_l1_message_hash(
     from_address: FieldElement,
     to_address: FieldElement,
     payload: &[FieldElement],
-) -> Hash256 {
+) -> H256 {
     let msg = MsgToL1 { from_address, to_address, payload: payload.to_vec() };
 
-    msg.hash()
+    H256::from_slice(msg.hash().as_bytes())
 }
 
 #[cfg(test)]
