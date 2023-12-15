@@ -37,3 +37,4 @@ tempfile = "3.8.1"
 [features]
 default = [ "postcard" ]
 postcard = [ "dep:postcard" ]
+test-utils = [ "dep:tempfile" ]
