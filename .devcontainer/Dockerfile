@@ -31,3 +31,6 @@ RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
 RUN dojoup
+
+RUN chown -R root:root /usr/local/cargo
+RUN chmod -R 700 /usr/local/cargo
