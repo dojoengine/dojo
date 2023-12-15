@@ -1,5 +1,5 @@
 use derive_more::{AsRef, Deref};
-use ethers::types::H256;
+use starknet::core::types::Hash256;
 
 use crate::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
@@ -219,7 +219,7 @@ pub struct L1HandlerTx {
     pub chain_id: ChainId,
     pub paid_fee_on_l1: u128,
     pub version: FieldElement,
-    pub message_hash: H256,
+    pub message_hash: Hash256,
     pub calldata: Vec<FieldElement>,
     pub contract_address: ContractAddress,
     pub entry_point_selector: FieldElement,

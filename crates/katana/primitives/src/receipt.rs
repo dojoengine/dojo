@@ -1,4 +1,4 @@
-use ethers::types::H256;
+use starknet::core::types::Hash256;
 
 use crate::contract::ContractAddress;
 use crate::FieldElement;
@@ -67,7 +67,7 @@ pub struct L1HandlerTxReceipt {
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// The hash of the L1 message
-    pub message_hash: H256,
+    pub message_hash: Hash256,
     /// Messages sent to L1.
     pub messages_sent: Vec<MessageToL1>,
     /// Revert error message if the transaction execution failed.

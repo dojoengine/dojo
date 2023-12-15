@@ -3,7 +3,7 @@ use katana_primitives::receipt::{MessageToL1, Receipt, TxExecutionResources};
 use katana_primitives::transaction::TxHash;
 use serde::Serialize;
 use starknet::core::types::{
-    DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult, Hash256,
+    DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult,
     InvokeTransactionReceipt, L1HandlerTransactionReceipt, PendingDeclareTransactionReceipt,
     PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
     PendingL1HandlerTransactionReceipt, PendingTransactionReceipt, TransactionFinalityStatus,
@@ -86,7 +86,7 @@ impl TxReceipt {
                     transaction_hash,
                     actual_fee: rct.actual_fee.into(),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
-                    message_hash: Hash256::from_bytes(rct.message_hash.to_fixed_bytes()),
+                    message_hash: rct.message_hash,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
                     } else {
@@ -179,7 +179,7 @@ impl PendingTxReceipt {
                     messages_sent,
                     actual_fee: rct.actual_fee.into(),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
-                    message_hash: Hash256::from_bytes(rct.message_hash.0),
+                    message_hash: rct.message_hash,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
                     } else {

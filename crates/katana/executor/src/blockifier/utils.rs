@@ -320,8 +320,9 @@ pub(super) fn l2_to_l1_messages_from_exec_info(
     fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToL1> {
         let mut messages = vec![];
 
-        // In the case of library calls, `code_address` is `None`, we then use
-        // the `caller_address`.
+        // By default, `from_address` must correspond to the contract address that
+        // is sending the message. In the case of library calls, `code_address` is `None`,
+        // we then use the `caller_address` instead (which can also be an account).
         let from_address = if let Some(code_address) = info.call.code_address {
             *code_address.0.key()
         } else {

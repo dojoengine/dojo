@@ -1,6 +1,5 @@
-use ethers::types::H256;
-use sha3::{Digest, Keccak256};
 use starknet::core::crypto::compute_hash_on_elements;
+use starknet::core::types::{Hash256, MsgToL1};
 
 use crate::FieldElement;
 
@@ -165,17 +164,14 @@ pub fn compute_l1_message_hash(
     from_address: FieldElement,
     to_address: FieldElement,
     payload: &[FieldElement],
-) -> H256 {
-    let mut buf: Vec<u8> = vec![];
-    buf.extend(from_address.to_bytes_be());
-    buf.extend(to_address.to_bytes_be());
-    buf.extend(FieldElement::from(payload.len()).to_bytes_be());
-    payload.iter().for_each(|p| buf.extend(p.to_bytes_be()));
+) -> Hash256 {
+    let msg = MsgToL1 {
+        from_address,
+        to_address,
+        payload: payload.to_vec(),
+    };
 
-    let mut hasher = Keccak256::new();
-    hasher.update(buf);
-
-    H256::from_slice(&hasher.finalize())
+    msg.hash()
 }
 
 #[cfg(test)]
