@@ -86,12 +86,12 @@ impl WorldClient {
     /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
-        ids: Vec<FieldElement>,
+        hashed_keys: Vec<FieldElement>,
     ) -> Result<EntityUpdateStreaming, Error> {
-        let ids = ids.iter().map(|id| id.to_bytes_be().to_vec()).collect();
+        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
         let stream = self
             .inner
-            .subscribe_entities(SubscribeEntitiesRequest { ids })
+            .subscribe_entities(SubscribeEntitiesRequest { hashed_keys })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
