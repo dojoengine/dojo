@@ -9,8 +9,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-#cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.1.1", features = ["abigen-rs"] }
-cainome = { path = "/mnt/g/glihm/cainome", features = ["abigen-rs"] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.1.3", features = ["abigen-rs"] }
 cairo-lang-filesystem.workspace = true
 cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true

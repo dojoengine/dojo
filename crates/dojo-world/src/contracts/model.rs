@@ -141,21 +141,15 @@ where
     async fn schema(&self) -> Result<Ty, ModelError> {
         let entrypoint = get_selector_from_name(SCHEMA_SELECTOR_STR).unwrap();
 
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, entrypoint, vec![FieldElement::ZERO])
-            .await?;
+        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
 
-        Ok(parse_ty(&res[1..])?)
+        Ok(parse_ty(&res)?)
     }
 
     async fn packed_size(&self) -> Result<FieldElement, ModelError> {
         let entrypoint = get_selector_from_name(PACKED_SIZE_SELECTOR_STR).unwrap();
 
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, entrypoint, vec![FieldElement::ZERO])
-            .await?;
+        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
 
         Ok(res[1])
     }
@@ -163,10 +157,7 @@ where
     async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
         let entrypoint = get_selector_from_name(UNPACKED_SIZE_SELECTOR_STR).unwrap();
 
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, entrypoint, vec![FieldElement::ZERO])
-            .await?;
+        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
 
         Ok(res[1])
     }
@@ -174,10 +165,7 @@ where
     async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
         let entrypoint = get_selector_from_name(LAYOUT_SELECTOR_STR).unwrap();
 
-        let res = self
-            .world_reader
-            .executor_call(self.class_hash, entrypoint, vec![FieldElement::ZERO])
-            .await?;
+        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
 
         Ok(res[2..].into())
     }
