@@ -16,7 +16,7 @@ use katana_rpc_types::transaction::{
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
-use starknet::core::types::TransactionStatus;
+use starknet::core::types::{ContractErrorData, TransactionStatus};
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum StarknetApiError {
@@ -84,6 +84,11 @@ impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
         Error::Call(CallError::Custom(ErrorObject::owned(err as i32, err.to_string(), None::<()>)))
     }
+}
+
+pub fn contract_error_with_data(data: ContractErrorData) -> Error {
+    let err = StarknetApiError::ContractError;
+    Error::Call(CallError::Custom(ErrorObject::owned(err as i32, err.to_string(), Some(data))))
 }
 
 #[rpc(server, namespace = "starknet")]
