@@ -2,6 +2,8 @@
 
 # [Choice] Debian OS version (use bookworm on local arm64/Apple Silicon): buster, bullseye, bookworm
 ARG VARIANT
+ARG TARGETPLATFORM
+
 FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
 
 # Install additional packages
@@ -27,6 +29,12 @@ RUN rustup toolchain install nightly && \
     rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly
 
 RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
+    rustup component add llvm-tools-preview --toolchain 1.70.0-aarch64-unknown-linux-gnu; \
+    elif [ "$TARGETPLATFORM" = "linux/amd64" ] ; then \
+    rustup component add llvm-tools-preview --toolchain 1.70.0-x86_64-unknown-linux-gnu; \
+    fi
+
 RUN curl -L https://install.dojoengine.org | bash
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash
 ENV PATH=${PATH}:/root/.dojo/bin
