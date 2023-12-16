@@ -31,9 +31,11 @@ use katana_rpc_types::transaction::{
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use katana_rpc_types_builder::ReceiptBuilder;
-use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
+use starknet::core::types::{
+    BlockTag, ContractErrorData, TransactionExecutionStatus, TransactionStatus,
+};
 
-use crate::api::starknet::{StarknetApiError, StarknetApiServer};
+use crate::api::starknet::{contract_error_with_data, StarknetApiError, StarknetApiServer};
 
 pub struct StarknetApi {
     sequencer: Arc<KatanaSequencer>,
@@ -365,10 +367,12 @@ impl StarknetApiServer for StarknetApi {
         };
 
         let res = self.sequencer.call(request, block_id).map_err(|e| match e {
-            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
-            SequencerError::EntryPointExecution(_) => StarknetApiError::ContractError,
-            _ => StarknetApiError::UnexpectedError,
+            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound.into(),
+            SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound.into(),
+            SequencerError::EntryPointExecution(e) => {
+                contract_error_with_data(ContractErrorData { revert_error: e.to_string() })
+            }
+            _ => StarknetApiError::UnexpectedError.into(),
         })?;
 
         Ok(res.into_iter().map(|v| v.into()).collect())
@@ -448,9 +452,11 @@ impl StarknetApiServer for StarknetApi {
             .collect::<Result<Vec<_>, _>>()?;
 
         let res = self.sequencer.estimate_fee(transactions, block_id).map_err(|e| match e {
-            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,
-            _ => StarknetApiError::UnexpectedError,
+            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound.into(),
+            SequencerError::TransactionExecution(e) => {
+                contract_error_with_data(ContractErrorData { revert_error: e.to_string() })
+            }
+            _ => StarknetApiError::UnexpectedError.into(),
         })?;
 
         Ok(res)
@@ -472,9 +478,11 @@ impl StarknetApiServer for StarknetApi {
             .sequencer
             .estimate_fee(vec![tx], block_id)
             .map_err(|e| match e {
-                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-                SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,
-                _ => StarknetApiError::UnexpectedError,
+                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound.into(),
+                SequencerError::TransactionExecution(e) => {
+                    contract_error_with_data(ContractErrorData { revert_error: e.to_string() })
+                }
+                _ => StarknetApiError::UnexpectedError.into(),
             })?
             .pop()
             .expect("should have estimate result");
