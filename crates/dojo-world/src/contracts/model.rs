@@ -151,7 +151,7 @@ where
 
         let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
 
-        Ok(res[1])
+        Ok(res[0])
     }
 
     async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
@@ -159,7 +159,7 @@ where
 
         let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
 
-        Ok(res[1])
+        Ok(res[0])
     }
 
     async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
@@ -167,6 +167,11 @@ where
 
         let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
 
-        Ok(res[2..].into())
+        // Layout entrypoint expanded by the #[model] attribute returns a
+        // `Span`. So cainome generated code will deserialize the result
+        // of `executor.call()` which is a Vec<FieldElement>.
+        // So inside the vec, we skip the first element, which is the length
+        // of the span returned by `layout` entrypoint of the model code.
+        Ok(res[1..].into())
     }
 }
