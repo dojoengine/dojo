@@ -40,11 +40,10 @@ where
         &self,
         class_hash: FieldElement,
         entry_point: FieldElement,
-        mut calldata: Vec<FieldElement>,
+        calldata: Vec<FieldElement>,
     ) -> CainomeResult<Vec<FieldElement>> {
-        calldata.insert(0, class_hash);
-
         let executor_address = self.executor().block_id(self.block_id).call().await?;
+
         let executor =
             abigen::executor::ExecutorContractReader::new(executor_address.into(), &self.provider);
 
