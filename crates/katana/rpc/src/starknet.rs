@@ -31,11 +31,9 @@ use katana_rpc_types::transaction::{
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use katana_rpc_types_builder::ReceiptBuilder;
-use starknet::core::types::{
-    BlockTag, ContractErrorData, TransactionExecutionStatus, TransactionStatus,
-};
+use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
 
-use crate::api::starknet::{contract_error_with_data, StarknetApiError, StarknetApiServer};
+use crate::api::starknet::{StarknetApiError, StarknetApiServer};
 
 pub struct StarknetApi {
     sequencer: Arc<KatanaSequencer>,
@@ -370,7 +368,7 @@ impl StarknetApiServer for StarknetApi {
             SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound.into(),
             SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound.into(),
             SequencerError::EntryPointExecution(e) => {
-                contract_error_with_data(ContractErrorData { revert_error: e.to_string() })
+                StarknetApiError::ContractError { revert_error: e.to_string() }
             }
             _ => StarknetApiError::UnexpectedError.into(),
         })?;
@@ -454,7 +452,7 @@ impl StarknetApiServer for StarknetApi {
         let res = self.sequencer.estimate_fee(transactions, block_id).map_err(|e| match e {
             SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound.into(),
             SequencerError::TransactionExecution(e) => {
-                contract_error_with_data(ContractErrorData { revert_error: e.to_string() })
+                StarknetApiError::ContractError { revert_error: e.to_string() }
             }
             _ => StarknetApiError::UnexpectedError.into(),
         })?;
@@ -480,7 +478,7 @@ impl StarknetApiServer for StarknetApi {
             .map_err(|e| match e {
                 SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound.into(),
                 SequencerError::TransactionExecution(e) => {
-                    contract_error_with_data(ContractErrorData { revert_error: e.to_string() })
+                    StarknetApiError::ContractError { revert_error: e.to_string() }
                 }
                 _ => StarknetApiError::UnexpectedError.into(),
             })?

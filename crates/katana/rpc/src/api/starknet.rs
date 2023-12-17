@@ -18,77 +18,109 @@ use katana_rpc_types::transaction::{
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use starknet::core::types::{ContractErrorData, TransactionStatus};
 
-#[derive(thiserror::Error, Clone, Copy, Debug)]
+#[derive(thiserror::Error, Clone, Debug)]
+#[repr(i32)]
 pub enum StarknetApiError {
     #[error("Failed to write transaction")]
-    FailedToReceiveTxn = 1,
+    FailedToReceiveTxn,
     #[error("Contract not found")]
-    ContractNotFound = 20,
+    ContractNotFound,
     #[error("Invalid message selector")]
-    InvalidMessageSelector = 21,
+    InvalidMessageSelector,
     #[error("Invalid call data")]
-    InvalidCallData = 22,
+    InvalidCallData,
     #[error("Block not found")]
-    BlockNotFound = 24,
+    BlockNotFound,
     #[error("Transaction hash not found")]
-    TxnHashNotFound = 29,
+    TxnHashNotFound,
     #[error("Invalid transaction index in a block")]
-    InvalidTxnIndex = 27,
+    InvalidTxnIndex,
     #[error("Class hash not found")]
-    ClassHashNotFound = 28,
+    ClassHashNotFound,
     #[error("Requested page size is too big")]
-    PageSizeTooBig = 31,
+    PageSizeTooBig,
     #[error("There are no blocks")]
-    NoBlocks = 32,
+    NoBlocks,
     #[error("The supplied continuation token is invalid or unknown")]
-    InvalidContinuationToken = 33,
+    InvalidContinuationToken,
     #[error("Contract error")]
-    ContractError = 40,
+    ContractError { revert_error: String },
     #[error("Invalid contract class")]
-    InvalidContractClass = 50,
+    InvalidContractClass,
     #[error("Class already declared")]
-    ClassAlreadyDeclared = 51,
+    ClassAlreadyDeclared,
     #[error("Invalid transaction nonce")]
-    InvalidTransactionNonce = 52,
+    InvalidTransactionNonce,
     #[error("Max fee is smaller than the minimal transaction cost (validation plus fee transfer)")]
-    InsufficientMaxFee = 53,
+    InsufficientMaxFee,
     #[error("Account balance is smaller than the transaction's max_fee")]
-    InsufficientAccountBalance = 54,
+    InsufficientAccountBalance,
     #[error("Account validation failed")]
-    ValidationFailure = 55,
+    ValidationFailure,
     #[error("Compilation failed")]
-    CompilationFailed = 56,
+    CompilationFailed,
     #[error("Contract class size is too large")]
-    ContractClassSizeIsTooLarge = 57,
+    ContractClassSizeIsTooLarge,
     #[error("Sender address in not an account contract")]
-    NonAccount = 58,
+    NonAccount,
     #[error("A transaction with the same hash already exists in the mempool")]
-    DuplicateTransaction = 59,
+    DuplicateTransaction,
     #[error("The compiled class hash did not match the one supplied in the transaction")]
-    CompiledClassHashMismatch = 60,
+    CompiledClassHashMismatch,
     #[error("The transaction version is not supported")]
-    UnsupportedTransactionVersion = 61,
+    UnsupportedTransactionVersion,
     #[error("The contract class version is not supported")]
-    UnsupportedContractClassVersion = 62,
+    UnsupportedContractClassVersion,
     #[error("An unexpected error occured")]
-    UnexpectedError = 63,
+    UnexpectedError,
     #[error("Too many storage keys requested")]
-    ProofLimitExceeded = 10000,
+    ProofLimitExceeded,
     #[error("Too many keys provided in a filter")]
-    TooManyKeysInFilter = 34,
+    TooManyKeysInFilter,
     #[error("Failed to fetch pending transactions")]
-    FailedToFetchPendingTransactions = 38,
+    FailedToFetchPendingTransactions,
 }
 
 impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
-        Error::Call(CallError::Custom(ErrorObject::owned(err as i32, err.to_string(), None::<()>)))
-    }
-}
+        let message = err.to_string();
 
-pub fn contract_error_with_data(data: ContractErrorData) -> Error {
-    let err = StarknetApiError::ContractError;
-    Error::Call(CallError::Custom(ErrorObject::owned(err as i32, err.to_string(), Some(data))))
+        let (code, data) = match err {
+            StarknetApiError::FailedToReceiveTxn => (1, None),
+            StarknetApiError::ContractNotFound => (20, None),
+            StarknetApiError::InvalidMessageSelector => (21, None),
+            StarknetApiError::InvalidCallData => (22, None),
+            StarknetApiError::BlockNotFound => (24, None),
+            StarknetApiError::TxnHashNotFound => (29, None),
+            StarknetApiError::InvalidTxnIndex => (27, None),
+            StarknetApiError::ClassHashNotFound => (28, None),
+            StarknetApiError::PageSizeTooBig => (31, None),
+            StarknetApiError::NoBlocks => (32, None),
+            StarknetApiError::InvalidContinuationToken => (33, None),
+            StarknetApiError::ContractError { revert_error } => {
+                (40, Some(ContractErrorData { revert_error }))
+            }
+            StarknetApiError::InvalidContractClass => (50, None),
+            StarknetApiError::ClassAlreadyDeclared => (51, None),
+            StarknetApiError::InvalidTransactionNonce => (52, None),
+            StarknetApiError::InsufficientMaxFee => (53, None),
+            StarknetApiError::InsufficientAccountBalance => (54, None),
+            StarknetApiError::ValidationFailure => (55, None),
+            StarknetApiError::CompilationFailed => (56, None),
+            StarknetApiError::ContractClassSizeIsTooLarge => (57, None),
+            StarknetApiError::NonAccount => (58, None),
+            StarknetApiError::DuplicateTransaction => (59, None),
+            StarknetApiError::CompiledClassHashMismatch => (60, None),
+            StarknetApiError::UnsupportedTransactionVersion => (61, None),
+            StarknetApiError::UnsupportedContractClassVersion => (62, None),
+            StarknetApiError::UnexpectedError => (63, None),
+            StarknetApiError::ProofLimitExceeded => (10000, None),
+            StarknetApiError::TooManyKeysInFilter => (34, None),
+            StarknetApiError::FailedToFetchPendingTransactions => (38, None),
+        };
+
+        Error::Call(CallError::Custom(ErrorObject::owned(code, message, data)))
+    }
 }
 
 #[rpc(server, namespace = "starknet")]
