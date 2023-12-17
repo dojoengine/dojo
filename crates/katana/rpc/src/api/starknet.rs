@@ -81,43 +81,54 @@ pub enum StarknetApiError {
     FailedToFetchPendingTransactions,
 }
 
+impl From<StarknetApiError> for i32 {
+    fn from(err: StarknetApiError) -> Self {
+        match err {
+            StarknetApiError::FailedToReceiveTxn => 1,
+            StarknetApiError::ContractNotFound => 20,
+            StarknetApiError::InvalidMessageSelector => 21,
+            StarknetApiError::InvalidCallData => 22,
+            StarknetApiError::BlockNotFound => 24,
+            StarknetApiError::TxnHashNotFound => 29,
+            StarknetApiError::InvalidTxnIndex => 27,
+            StarknetApiError::ClassHashNotFound => 28,
+            StarknetApiError::PageSizeTooBig => 31,
+            StarknetApiError::NoBlocks => 32,
+            StarknetApiError::InvalidContinuationToken => 33,
+            StarknetApiError::TooManyKeysInFilter => 34,
+            StarknetApiError::FailedToFetchPendingTransactions => 38,
+            StarknetApiError::ContractError { .. } => 40,
+            StarknetApiError::InvalidContractClass => 50,
+            StarknetApiError::ClassAlreadyDeclared => 51,
+            StarknetApiError::InvalidTransactionNonce => 52,
+            StarknetApiError::InsufficientMaxFee => 53,
+            StarknetApiError::InsufficientAccountBalance => 54,
+            StarknetApiError::ValidationFailure => 55,
+            StarknetApiError::CompilationFailed => 56,
+            StarknetApiError::ContractClassSizeIsTooLarge => 57,
+            StarknetApiError::NonAccount => 58,
+            StarknetApiError::DuplicateTransaction => 59,
+            StarknetApiError::CompiledClassHashMismatch => 60,
+            StarknetApiError::UnsupportedTransactionVersion => 61,
+            StarknetApiError::UnsupportedContractClassVersion => 62,
+            StarknetApiError::UnexpectedError => 63,
+            StarknetApiError::ProofLimitExceeded => 10000,
+        }
+    }
+}
+
 impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
         let message = err.to_string();
 
-        let (code, data) = match err {
-            StarknetApiError::FailedToReceiveTxn => (1, None),
-            StarknetApiError::ContractNotFound => (20, None),
-            StarknetApiError::InvalidMessageSelector => (21, None),
-            StarknetApiError::InvalidCallData => (22, None),
-            StarknetApiError::BlockNotFound => (24, None),
-            StarknetApiError::TxnHashNotFound => (29, None),
-            StarknetApiError::InvalidTxnIndex => (27, None),
-            StarknetApiError::ClassHashNotFound => (28, None),
-            StarknetApiError::PageSizeTooBig => (31, None),
-            StarknetApiError::NoBlocks => (32, None),
-            StarknetApiError::InvalidContinuationToken => (33, None),
+        let data = match &err {
             StarknetApiError::ContractError { revert_error } => {
-                (40, Some(ContractErrorData { revert_error }))
+                Some(ContractErrorData { revert_error: revert_error.clone() })
             }
-            StarknetApiError::InvalidContractClass => (50, None),
-            StarknetApiError::ClassAlreadyDeclared => (51, None),
-            StarknetApiError::InvalidTransactionNonce => (52, None),
-            StarknetApiError::InsufficientMaxFee => (53, None),
-            StarknetApiError::InsufficientAccountBalance => (54, None),
-            StarknetApiError::ValidationFailure => (55, None),
-            StarknetApiError::CompilationFailed => (56, None),
-            StarknetApiError::ContractClassSizeIsTooLarge => (57, None),
-            StarknetApiError::NonAccount => (58, None),
-            StarknetApiError::DuplicateTransaction => (59, None),
-            StarknetApiError::CompiledClassHashMismatch => (60, None),
-            StarknetApiError::UnsupportedTransactionVersion => (61, None),
-            StarknetApiError::UnsupportedContractClassVersion => (62, None),
-            StarknetApiError::UnexpectedError => (63, None),
-            StarknetApiError::ProofLimitExceeded => (10000, None),
-            StarknetApiError::TooManyKeysInFilter => (34, None),
-            StarknetApiError::FailedToFetchPendingTransactions => (38, None),
+            _ => None,
         };
+
+        let code: i32 = err.into();
 
         Error::Call(CallError::Custom(ErrorObject::owned(code, message, data)))
     }
