@@ -81,9 +81,9 @@ pub enum StarknetApiError {
     FailedToFetchPendingTransactions,
 }
 
-impl From<StarknetApiError> for i32 {
-    fn from(err: StarknetApiError) -> Self {
-        match err {
+impl StarknetApiError {
+    fn code(&self) -> i32 {
+        match self {
             StarknetApiError::FailedToReceiveTxn => 1,
             StarknetApiError::ContractNotFound => 20,
             StarknetApiError::InvalidMessageSelector => 21,
@@ -119,15 +119,15 @@ impl From<StarknetApiError> for i32 {
 
 impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
-        let data = match &err {
+        let code = err.code();
+        let message = err.to_string();
+
+        let data = match err {
             StarknetApiError::ContractError { revert_error } => {
-                Some(ContractErrorData { revert_error: revert_error.clone() })
+                Some(ContractErrorData { revert_error })
             }
             _ => None,
         };
-
-        let message = err.to_string();
-        let code: i32 = err.into();
 
         Error::Call(CallError::Custom(ErrorObject::owned(code, message, data)))
     }
