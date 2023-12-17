@@ -119,8 +119,6 @@ impl From<StarknetApiError> for i32 {
 
 impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
-        let message = err.to_string();
-
         let data = match &err {
             StarknetApiError::ContractError { revert_error } => {
                 Some(ContractErrorData { revert_error: revert_error.clone() })
@@ -128,6 +126,7 @@ impl From<StarknetApiError> for Error {
             _ => None,
         };
 
+        let message = err.to_string();
         let code: i32 = err.into();
 
         Error::Call(CallError::Custom(ErrorObject::owned(code, message, data)))
