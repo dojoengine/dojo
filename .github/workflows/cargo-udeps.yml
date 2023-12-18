@@ -1,4 +1,4 @@
-name: Unused dependencies
+name: cargo-udeps
 
 on:
   schedule:
