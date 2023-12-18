@@ -801,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.1.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "clap_builder",
@@ -5401,7 +5401,7 @@ dependencies = [
  "console",
  "katana-core",
  "katana-rpc",
- "metrics 0.1.0",
+ "metrics 0.4.1",
  "metrics-process",
  "serde_json",
  "starknet_api",
@@ -5598,7 +5598,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.1.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "home",
@@ -5889,7 +5889,7 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.1.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "hyper",
@@ -9910,7 +9910,7 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.1.0",
+ "metrics 0.4.1",
  "metrics-process",
  "scarb",
  "serde",
