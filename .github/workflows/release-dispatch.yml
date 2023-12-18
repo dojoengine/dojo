@@ -16,6 +16,8 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:f6a4b8a
     steps:
+      # Workaround described here: https://github.com/actions/checkout/issues/760
+      - run: git config --global --add safe.directory /__w/dojo/dojo/
       - uses: actions/checkout@v3
       - run: cargo release ${{ inputs.version }} --no-publish --no-verify --execute
       - uses: peter-evans/create-pull-request@v3
