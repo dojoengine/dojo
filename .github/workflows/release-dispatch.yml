@@ -1,0 +1,24 @@
+name: Test release-rust
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release
+        required: true
+        type: string
+
+jobs:
+  release:
+    permissions:
+      id-token: write # Enable OIDC
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:f6a4b8a
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cargo-bins/release-pr@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ inputs.version }}
