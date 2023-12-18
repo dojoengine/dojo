@@ -24,8 +24,9 @@ RUN rustup toolchain install $(cat rust-toolchain.toml | grep channel | cut -d\"
 RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
 
-RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
+RUN cargo binstall cargo-nextest cargo-llvm-cov cargo-release --secure -y
 
+# Platform specific tooling
 ARG TARGETPLATFORM
 RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     echo "Running arm64 branch" && \
