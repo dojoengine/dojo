@@ -40,7 +40,7 @@ message SubscribeModelsResponse {
 }
 
 message SubscribeEntitiesRequest {
-    repeated bytes ids = 1;
+    repeated bytes hashed_keys = 1;
 }
 
 message SubscribeEntityResponse {

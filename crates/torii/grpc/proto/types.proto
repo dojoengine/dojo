@@ -35,9 +35,10 @@ message Model {
     string name = 1;
     repeated Member members = 2;
 }
+
 message Entity {
-    // The entity id
-    bytes id = 1;
+    // The entity's hashed keys
+    bytes hashed_keys = 1;
     // Models of the entity
     repeated Model models = 2;
 }
@@ -74,15 +75,15 @@ message Query {
 
 message Clause {
     oneof clause_type {
-        IdsClause ids = 1;
+        HashedKeysClause hashed_keys = 1;
         KeysClause keys = 2;
         MemberClause member = 3;
         CompositeClause composite = 4;
     }
 }
 
-message IdsClause {
-    repeated bytes ids = 1;
+message HashedKeysClause {
+    repeated bytes hashed_keys = 1;
 }
 
 message KeysClause {
