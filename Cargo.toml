@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
   "crates/benches",
+  "crates/dojo-core",
   "crates/dojo-lang",
   "crates/dojo-language-server",
   "crates/dojo-signers",
@@ -25,6 +26,7 @@ members = [
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
+  "examples/spawn-and-move",
 ]
 
 [workspace.package]
