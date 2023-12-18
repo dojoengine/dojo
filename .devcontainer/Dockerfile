@@ -1,9 +1,8 @@
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/rust/.devcontainer/base.Dockerfile
 
 # [Choice] Debian OS version (use bookworm on local arm64/Apple Silicon): buster, bullseye, bookworm
-ARG VARIANT
-ARG TARGETPLATFORM
 
+ARG VARIANT
 FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
 
 # Install additional packages
@@ -25,14 +24,17 @@ RUN rustup toolchain install $(cat rust-toolchain.toml | grep channel | cut -d\"
 RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
 
-RUN rustup toolchain install nightly && \
-    rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly
-
 RUN cargo binstall cargo-nextest cargo-llvm-cov --secure -y
+
+ARG TARGETPLATFORM
 RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
+    echo "Running arm64 branch" && \
     rustup component add llvm-tools-preview --toolchain 1.70.0-aarch64-unknown-linux-gnu; \
     elif [ "$TARGETPLATFORM" = "linux/amd64" ] ; then \
-    rustup component add llvm-tools-preview --toolchain 1.70.0-x86_64-unknown-linux-gnu; \
+    echo "Running amd64 branch" && \
+    rustup component add llvm-tools-preview --toolchain 1.70.0-x86_64-unknown-linux-gnu && \
+    rustup toolchain install nightly && \
+    rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly; \
     fi
 
 RUN curl -L https://install.dojoengine.org | bash
