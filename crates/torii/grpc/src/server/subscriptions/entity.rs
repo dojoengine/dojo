@@ -116,7 +116,7 @@ impl Service {
 
                 let resp = proto::world::SubscribeEntityResponse {
                     entity: Some(proto::types::Entity {
-                        key: hashed.to_bytes_be().to_vec(),
+                        hashed_keys: hashed.to_bytes_be().to_vec(),
                         models,
                     }),
                 };

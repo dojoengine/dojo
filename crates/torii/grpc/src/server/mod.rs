@@ -180,8 +180,11 @@ impl DojoWorld {
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
 
-            let key = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
-            entities.push(proto::types::Entity { key: key.to_bytes_be().to_vec(), models })
+            let hashed_keys = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
+            entities.push(proto::types::Entity {
+                hashed_keys: hashed_keys.to_bytes_be().to_vec(),
+                models,
+            })
         }
 
         Ok(entities)
@@ -361,7 +364,7 @@ impl DojoWorld {
     }
 
     fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
-        let id =
+        let hashed_keys =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
         let models = schemas
             .iter()
@@ -373,7 +376,7 @@ impl DojoWorld {
             })
             .collect::<Result<Vec<_>, Error>>()?;
 
-        Ok(proto::types::Entity { key: id.to_bytes_be().to_vec(), models })
+        Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
     }
 }
 
