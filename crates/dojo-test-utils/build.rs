@@ -11,7 +11,7 @@ fn main() {
     use scarb::ops::CompileOpts;
     use scarb_ui::Verbosity;
 
-    let project_paths = ["../../examples/spawn-and-move", "../torii/graphql/src/tests/types-test"];
+    let project_paths = ["../../examples/spawn-and-move", "../torii/types-test"];
 
     project_paths.iter().for_each(|path| compile(path));
 
