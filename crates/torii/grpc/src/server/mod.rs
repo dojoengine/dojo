@@ -1,5 +1,6 @@
 pub mod logger;
 pub mod subscriptions;
+pub mod tests;
 
 use std::future::Future;
 use std::net::SocketAddr;

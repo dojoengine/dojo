@@ -5,11 +5,10 @@ mod tests {
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
+    use types_test::spinup_types_test;
 
     use crate::schema::build_schema;
-    use crate::tests::{
-        run_graphql_query, spinup_types_test, Connection, Entity, Record, Subrecord,
-    };
+    use crate::tests::{run_graphql_query, Connection, Entity, Record, Subrecord};
 
     async fn entities_query(schema: &Schema, arg: &str) -> Value {
         let query = format!(
@@ -58,7 +57,7 @@ mod tests {
                   type_u256
                   type_bool
                   type_felt
-                  type_class_hash
+                  type_class_hash 
                   type_contract_address
                   random_u8
                   random_u128

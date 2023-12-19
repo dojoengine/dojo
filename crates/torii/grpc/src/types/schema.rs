@@ -2,9 +2,30 @@ use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde::{Deserialize, Serialize};
 use starknet_crypto::FieldElement;
+use starknet::core::types::{FromByteSliceError, FromStrError};
+use std::num::ParseIntError;
 
-use crate::client::Error as ClientError;
 use crate::proto::{self};
+
+#[derive(Debug, thiserror::Error)]
+pub enum ClientError {
+    #[error(transparent)]
+    Grpc(tonic::Status),
+    #[error("Missing expected data")]
+    MissingExpectedData,
+    #[error("Unsupported type")]
+    UnsupportedType,
+    #[error(transparent)]
+    ParseStr(FromStrError),
+    #[error(transparent)]
+    SliceError(FromByteSliceError),
+    #[error(transparent)]
+    ParseInt(ParseIntError),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[error(transparent)]
+    Transport(tonic::transport::Error),
+}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Entity {

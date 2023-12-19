@@ -6,9 +6,10 @@ mod tests {
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
     use starknet_crypto::FieldElement;
+    use types_test::spinup_types_test;
 
     use crate::schema::build_schema;
-    use crate::tests::{run_graphql_query, spinup_types_test, Connection, Record};
+    use crate::tests::{run_graphql_query, Connection, Record};
 
     async fn records_model_query(schema: &Schema, arg: &str) -> Value {
         let query = format!(

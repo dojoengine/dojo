@@ -30,6 +30,10 @@ serde_json.workspace = true
 tower = "0.4.13"
 tracing.workspace = true
 
+[dev-dependencies]
+anyhow.workspace = true
+types-test = { path = "../types-test" }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true
 wasm-prost.workspace = true

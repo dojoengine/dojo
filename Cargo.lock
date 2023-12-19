@@ -9849,6 +9849,7 @@ dependencies = [
  "toml 0.7.8",
  "torii-core",
  "tracing",
+ "types-test",
  "url",
  "warp",
 ]
@@ -9857,6 +9858,7 @@ dependencies = [
 name = "torii-grpc"
 version = "0.4.1"
 dependencies = [
+ "anyhow",
  "bytes",
  "crypto-bigint",
  "dojo-types",
@@ -9889,6 +9891,7 @@ dependencies = [
  "torii-core",
  "tower",
  "tracing",
+ "types-test",
  "url",
 ]
 
@@ -10182,6 +10185,24 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "types-test"
 version = "0.4.1"
+dependencies = [
+ "anyhow",
+ "dojo-test-utils",
+ "dojo-world",
+ "scarb",
+ "scarb-ui",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sozo",
+ "sqlx",
+ "starknet",
+ "starknet-crypto 0.6.1",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "torii-core",
+]
 
 [[package]]
 name = "ucd-trie"

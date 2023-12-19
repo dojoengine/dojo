@@ -13,3 +13,21 @@ pre-release-replacements = [
 
 [lib]
 path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace = true
+scarb-ui.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples" ] }
+dojo-world = { path = "../../dojo-world" }
+torii-core = { path = "../core" }
+scarb.workspace = true
+serial_test = "2.0.0"
+sozo = { path = "../../sozo" }
+starknet-crypto.workspace = true
+starknet.workspace = true
+tokio-stream = "0.1.11"
+tokio-util = "0.7.7"
+tokio.workspace = true
