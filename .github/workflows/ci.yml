@@ -17,8 +17,6 @@ jobs:
       image: ghcr.io/dojoengine/dojo-dev:448ffda
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: Swatinem/rust-cache@v2
       - run: cargo llvm-cov nextest --all-features --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v3
@@ -84,8 +82,6 @@ jobs:
       image: ghcr.io/dojoengine/dojo-dev:448ffda
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: Swatinem/rust-cache@v2
       - run: scripts/clippy.sh
 
@@ -104,8 +100,6 @@ jobs:
       image: ghcr.io/dojoengine/dojo-dev:448ffda
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: Swatinem/rust-cache@v2
       - run: >
           scripts/docs.sh
