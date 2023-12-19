@@ -26,6 +26,7 @@ members = [
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
+  "crates/torii/types-test",
   "examples/spawn-and-move",
 ]
 
