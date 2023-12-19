@@ -18,19 +18,19 @@ use serde::{Deserialize, Serialize};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointOffset, EntryPointType};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum StoredContractClass {
     V0(StoredContractClassV0),
     V1(StoredContractClassV1),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct StoredContractClassV0 {
     pub program: SerializableProgram,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<SerializableEntryPoint>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct StoredContractClassV1 {
     pub program: SerializableProgram,
     pub hints: HashMap<String, Vec<u8>>,
@@ -420,10 +420,13 @@ impl From<ContractClass> for StoredContractClass {
 
 #[cfg(test)]
 mod tests {
+    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+    use katana_primitives::contract::CompiledContractClass;
     use starknet_api::hash::StarkFelt;
     use starknet_api::stark_felt;
 
     use super::*;
+    use crate::codecs::{Compress, Decompress};
 
     #[test]
     fn serialize_deserialize_legacy_entry_points() {
@@ -459,5 +462,22 @@ mod tests {
         let same_non_serde: Vec<EntryPoint> = serde.iter().map(|e| e.clone().into()).collect();
 
         assert_eq!(non_serde, same_non_serde);
+    }
+
+    #[test]
+    fn compress_and_decompress_contract_class() {
+        let class =
+            serde_json::from_slice(include_bytes!("../../benches/artifacts/dojo_world_240.json"))
+                .unwrap();
+
+        let class = CasmContractClass::from_contract_class(class, true).unwrap();
+        let class = CompiledContractClass::V1(ContractClassV1::try_from(class).unwrap());
+
+        let compressed = StoredContractClass::from(class.clone()).compress();
+        let decompressed = <StoredContractClass as Decompress>::decompress(&compressed).unwrap();
+
+        let actual_class = CompiledContractClass::from(decompressed);
+
+        assert_eq!(class, actual_class);
     }
 }
