@@ -71,12 +71,14 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Update devcontainer.json
-        run: sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]+|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .devcontainer/devcontainer.json
+        run: sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .devcontainer/devcontainer.json
 
       - name: Update github action devcontainers
         run: |
           for file in .github/workflows/*.yml; do
-            sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]+|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" "$file"
+            if [[ $file != ".github/workflows/devcontainer.yml" ]]; then
+              sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" "$file"
+            fi
           done
 
       - uses: peter-evans/create-pull-request@v5
