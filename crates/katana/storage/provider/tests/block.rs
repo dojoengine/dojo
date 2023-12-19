@@ -1,4 +1,5 @@
 use katana_primitives::block::BlockHashOrNumber;
+use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -9,7 +10,7 @@ use rstest_reuse::{self, *};
 mod fixtures;
 mod utils;
 
-use fixtures::{fork_provider, in_memory_provider};
+use fixtures::{db_provider, fork_provider, in_memory_provider};
 use utils::generate_dummy_blocks_and_receipts;
 
 #[template]
@@ -31,6 +32,14 @@ fn insert_block_with_in_memory_provider(
 #[apply(insert_block_cases)]
 fn insert_block_with_fork_provider(
     #[from(fork_provider)] provider: BlockchainProvider<ForkedProvider>,
+    #[case] block_count: u64,
+) -> anyhow::Result<()> {
+    insert_block_test_impl(provider, block_count)
+}
+
+#[apply(insert_block_cases)]
+fn insert_block_with_db_provider(
+    #[from(db_provider)] provider: BlockchainProvider<DbProvider>,
     #[case] block_count: u64,
 ) -> anyhow::Result<()> {
     insert_block_test_impl(provider, block_count)
