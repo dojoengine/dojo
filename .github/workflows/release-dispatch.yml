@@ -19,15 +19,25 @@ jobs:
       # Workaround described here: https://github.com/actions/checkout/issues/760
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - id: current_release_info
+        run: |
+          cargo install cargo-get
+          echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - run: cargo release version ${{ inputs.version }} --execute --no-confirm && cargo release replace --execute --no-confirm
       - id: changelog
         uses: mikepenz/release-changelog-builder-action@v4.1.0
+        with:
+          fromTag: v${{ steps.current_release_info.outputs.version }}
+      - id: next_release_info
+        run: |
+          cargo install cargo-get
+          echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - uses: peter-evans/create-pull-request@v5
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "Prepare release: ${{ inputs.version }}"
-          commit-message: "Prepare release: ${{ inputs.version }}"
+          title: "Prepare release: ${{ steps.next_release_info.outputs.version }}"
+          commit-message: "Prepare release: ${{ steps.next_release_info.outputs.version }}"
           branch: prepare-release
           base: main
           delete-branch: true
