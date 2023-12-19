@@ -23,7 +23,10 @@ fn assert_state_provider_class(
 }
 
 mod latest {
+    use katana_provider::providers::db::DbProvider;
+
     use super::*;
+    use crate::fixtures::db_provider;
 
     fn assert_latest_class<Db: StateFactoryProvider>(
         provider: BlockchainProvider<Db>,
@@ -65,10 +68,21 @@ mod latest {
     ) -> Result<()> {
         assert_latest_class(provider, expected_class)
     }
+
+    #[apply(test_latest_class_read)]
+    fn read_class_from_db_provider(
+        #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
+        #[case] expected_class: Vec<(ClassHash, Option<CompiledClassHash>)>,
+    ) -> Result<()> {
+        assert_latest_class(provider, expected_class)
+    }
 }
 
 mod historical {
+    use katana_provider::providers::db::DbProvider;
+
     use super::*;
+    use crate::fixtures::db_provider;
 
     fn assert_historical_class<Db: StateFactoryProvider>(
         provider: BlockchainProvider<Db>,
@@ -138,6 +152,15 @@ mod historical {
         #[with(fork_provider_with_spawned_fork_network::default())] provider: BlockchainProvider<
             ForkedProvider,
         >,
+        #[case] block_num: BlockNumber,
+        #[case] expected_class: Vec<(ClassHash, Option<CompiledClassHash>)>,
+    ) -> Result<()> {
+        assert_historical_class(provider, block_num, expected_class)
+    }
+
+    #[apply(test_historical_class_read)]
+    fn read_class_from_db_provider(
+        #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
         #[case] block_num: BlockNumber,
         #[case] expected_class: Vec<(ClassHash, Option<CompiledClassHash>)>,
     ) -> Result<()> {

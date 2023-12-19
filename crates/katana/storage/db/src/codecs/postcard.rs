@@ -1,4 +1,4 @@
-use katana_primitives::block::Header;
+use katana_primitives::block::{BlockNumber, Header};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, SierraClass};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::Tx;
@@ -7,7 +7,8 @@ use katana_primitives::FieldElement;
 use super::{Compress, Decompress};
 use crate::error::CodecError;
 use crate::models::block::StoredBlockBodyIndices;
-use crate::models::contract::StoredContractClass;
+use crate::models::class::StoredContractClass;
+use crate::models::contract::ContractInfoChangeList;
 
 macro_rules! impl_compress_and_decompress_for_table_values {
     ($($name:ty),*) => {
@@ -36,7 +37,9 @@ impl_compress_and_decompress_for_table_values!(
     SierraClass,
     FieldElement,
     ContractAddress,
+    Vec<BlockNumber>,
     StoredContractClass,
     GenericContractInfo,
-    StoredBlockBodyIndices
+    StoredBlockBodyIndices,
+    ContractInfoChangeList
 );

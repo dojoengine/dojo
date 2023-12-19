@@ -29,6 +29,11 @@ pub trait TransactionProvider: Send + Sync {
         &self,
         hash: TxHash,
     ) -> Result<Option<(BlockNumber, BlockHash)>>;
+
+    /// Retrieves all the transactions at the given range.
+    fn transaction_in_range(&self, _range: Range<TxNumber>) -> Result<Vec<TxWithHash>> {
+        todo!()
+    }
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]

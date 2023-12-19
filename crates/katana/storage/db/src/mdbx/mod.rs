@@ -112,18 +112,17 @@ impl DbEnv {
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils {
     use std::path::Path;
-    use std::sync::Arc;
 
     use super::{DbEnv, DbEnvKind};
 
     const ERROR_DB_CREATION: &str = "Not able to create the mdbx file.";
 
     /// Create database for testing
-    pub fn create_test_db(kind: DbEnvKind) -> Arc<DbEnv> {
-        Arc::new(create_test_db_with_path(
+    pub fn create_test_db(kind: DbEnvKind) -> DbEnv {
+        create_test_db_with_path(
             kind,
             &tempfile::TempDir::new().expect("Failed to create temp dir.").into_path(),
-        ))
+        )
     }
 
     /// Create database for testing with specified path

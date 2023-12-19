@@ -7,8 +7,11 @@ use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
-use crate::models::contract::StoredContractClass;
-use crate::models::storage::StorageEntry;
+use crate::models::class::StoredContractClass;
+use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
+use crate::models::storage::{
+    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChange,
+};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -43,7 +46,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 17;
+pub const NUM_TABLES: usize = 22;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -158,9 +161,14 @@ define_tables_enum! {[
     (CompiledContractClasses, TableType::Table),
     (SierraClasses, TableType::Table),
     (ContractInfo, TableType::Table),
-    (ContractDeployments, TableType::DupSort),
+    (ContractStorage, TableType::DupSort),
+    (ClassDeclarationBlock, TableType::Table),
     (ClassDeclarations, TableType::DupSort),
-    (ContractStorage, TableType::DupSort)
+    (ContractInfoChangeSet, TableType::Table),
+    (NonceChanges, TableType::DupSort),
+    (ContractClassChanges, TableType::DupSort),
+    (StorageChanges, TableType::DupSort),
+    (StorageChangeSet, TableType::DupSort)
 ]}
 
 tables! {
@@ -195,8 +203,26 @@ tables! {
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage
     ContractStorage: (ContractAddress, StorageKey) => StorageEntry,
+
+
+    /// Stores the block number where the class hash was declared.
+    ClassDeclarationBlock: (ClassHash) => BlockNumber,
     /// Stores the list of class hashes according to the block number it was declared in.
     ClassDeclarations: (BlockNumber, ClassHash) => ClassHash,
-    /// Store the list of contracts deployed in a block according to its block number.
-    ContractDeployments: (BlockNumber, ContractAddress) => ContractAddress
+
+    /// Generic contract info change set.
+    ///
+    /// Stores the list of blocks where the contract info (nonce / class hash) has changed.
+    ContractInfoChangeSet: (ContractAddress) => ContractInfoChangeList,
+
+    /// Contract nonce changes by block.
+    NonceChanges: (BlockNumber, ContractAddress) => ContractNonceChange,
+    /// Contract class hash changes by block.
+    ContractClassChanges: (BlockNumber, ContractAddress) => ContractClassChange,
+
+    /// storage change set
+    StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChange,
+    /// Account storage change set
+    StorageChanges: (BlockNumber, ContractStorageKey) => ContractStorageEntry
+
 }

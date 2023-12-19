@@ -2,7 +2,7 @@ use blockifier::execution::contract_class::ContractClassV1;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use katana_db::codecs::{Compress, Decompress};
-use katana_db::models::contract::StoredContractClass;
+use katana_db::models::class::StoredContractClass;
 use katana_primitives::contract::CompiledContractClass;
 
 fn compress_contract(contract: CompiledContractClass) -> Vec<u8> {

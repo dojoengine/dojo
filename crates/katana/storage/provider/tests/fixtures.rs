@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use katana_db::mdbx;
 use katana_primitives::block::{
     BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
@@ -47,6 +49,12 @@ pub fn fork_provider_with_spawned_fork_network(
     let provider =
         ForkedProvider::new(FORKED_PROVIDER.1.clone(), BlockHashOrNumber::Num(block_num));
     BlockchainProvider::new(provider)
+}
+
+#[rstest::fixture]
+pub fn db_provider() -> BlockchainProvider<DbProvider> {
+    let env = mdbx::test_utils::create_test_db(mdbx::DbEnvKind::RW);
+    BlockchainProvider::new(DbProvider::new(env))
 }
 
 #[rstest::fixture]

@@ -23,7 +23,10 @@ fn assert_state_provider_storage(
 }
 
 mod latest {
+    use katana_provider::providers::db::DbProvider;
+
     use super::*;
+    use crate::fixtures::db_provider;
 
     fn assert_latest_storage_value<Db: StateFactoryProvider>(
         provider: BlockchainProvider<Db>,
@@ -67,10 +70,21 @@ mod latest {
     ) -> Result<()> {
         assert_latest_storage_value(provider, expected_storage_entry)
     }
+
+    #[apply(test_latest_storage_read)]
+    fn read_storage_from_db_provider(
+        #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
+        #[case] expected_storage_entry: Vec<(ContractAddress, StorageKey, Option<StorageValue>)>,
+    ) -> Result<()> {
+        assert_latest_storage_value(provider, expected_storage_entry)
+    }
 }
 
 mod historical {
+    use katana_provider::providers::db::DbProvider;
+
     use super::*;
+    use crate::fixtures::db_provider;
 
     fn assert_historical_storage_value<Db: StateFactoryProvider>(
         provider: BlockchainProvider<Db>,
@@ -145,6 +159,15 @@ mod historical {
         #[with(fork_provider_with_spawned_fork_network::default())] provider: BlockchainProvider<
             ForkedProvider,
         >,
+        #[case] block_num: BlockNumber,
+        #[case] expected_storage_entry: Vec<(ContractAddress, StorageKey, Option<StorageValue>)>,
+    ) -> Result<()> {
+        assert_historical_storage_value(provider, block_num, expected_storage_entry)
+    }
+
+    #[apply(test_historical_storage_read)]
+    fn read_storage_from_db_provider(
+        #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
         #[case] block_num: BlockNumber,
         #[case] expected_storage_entry: Vec<(ContractAddress, StorageKey, Option<StorageValue>)>,
     ) -> Result<()> {
