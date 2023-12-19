@@ -24,14 +24,15 @@ jobs:
           cargo install cargo-get
           echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - run: cargo release version ${{ inputs.version }} --execute --no-confirm && cargo release replace --execute --no-confirm
-      - id: changelog
-        uses: mikepenz/release-changelog-builder-action@v4.1.0
-        with:
-          fromTag: v${{ steps.current_release_info.outputs.version }}
       - id: next_release_info
         run: |
           cargo install cargo-get
           echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
+      - id: changelog
+        uses: mikepenz/release-changelog-builder-action@v4.1.0
+        with:
+          fromTag: v${{ steps.current_release_info.outputs.version }}
+          toTag: main
       - uses: peter-evans/create-pull-request@v5
         with:
           # We have to use a PAT in order to trigger ci
