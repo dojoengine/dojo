@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -8,6 +9,7 @@ use starknet::core::types::{
     ContractStorageDiffItem, FromByteSliceError, FromStrError, StateDiff, StateUpdate, StorageEntry,
 };
 use starknet_crypto::FieldElement;
+use strum_macros::{AsRefStr, EnumIter, FromRepr};
 
 use crate::proto::{self};
 
@@ -48,13 +50,19 @@ pub struct CompositeClause {
     pub clauses: Vec<Clause>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+#[derive(
+    Debug, AsRefStr, Serialize, Deserialize, EnumIter, FromRepr, PartialEq, Hash, Eq, Clone,
+)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum LogicalOperator {
     And,
     Or,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+#[derive(
+    Debug, AsRefStr, Serialize, Deserialize, EnumIter, FromRepr, PartialEq, Hash, Eq, Clone,
+)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum ComparisonOperator {
     Eq,
     Neq,
@@ -62,6 +70,32 @@ pub enum ComparisonOperator {
     Gte,
     Lt,
     Lte,
+}
+
+impl fmt::Display for ComparisonOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ComparisonOperator::Gt => write!(f, ">"),
+            ComparisonOperator::Gte => write!(f, ">="),
+            ComparisonOperator::Lt => write!(f, "<"),
+            ComparisonOperator::Lte => write!(f, "<="),
+            ComparisonOperator::Neq => write!(f, "!="),
+            ComparisonOperator::Eq => write!(f, "="),
+        }
+    }
+}
+
+impl From<proto::types::ComparisonOperator> for ComparisonOperator {
+    fn from(operator: proto::types::ComparisonOperator) -> Self {
+        match operator {
+            proto::types::ComparisonOperator::Eq => ComparisonOperator::Eq,
+            proto::types::ComparisonOperator::Gte => ComparisonOperator::Gte,
+            proto::types::ComparisonOperator::Gt => ComparisonOperator::Gt,
+            proto::types::ComparisonOperator::Lt => ComparisonOperator::Lt,
+            proto::types::ComparisonOperator::Lte => ComparisonOperator::Lte,
+            proto::types::ComparisonOperator::Neq => ComparisonOperator::Neq,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]

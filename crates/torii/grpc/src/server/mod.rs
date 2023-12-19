@@ -34,6 +34,7 @@ use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
+use crate::types::ComparisonOperator;
 
 #[derive(Clone)]
 pub struct DojoWorld {
@@ -242,14 +243,62 @@ impl DojoWorld {
         db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
     }
 
-    async fn entities_by_attribute(
+    async fn entities_by_member(
         &self,
-        _attribute: proto::types::MemberClause,
+        member_clause: proto::types::MemberClause,
         _limit: u32,
         _offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        // TODO: Implement
-        Err(QueryError::UnsupportedQuery.into())
+        let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
+            .expect("invalid comparison operator");
+
+        let value_type = member_clause
+            .value
+            .ok_or(QueryError::MissingParam("value".into()))?
+            .value_type
+            .ok_or(QueryError::MissingParam("value_type".into()))?;
+
+        let comparison_value = match value_type {
+            proto::types::value::ValueType::StringValue(string) => string,
+            proto::types::value::ValueType::IntValue(int) => int.to_string(),
+            proto::types::value::ValueType::UintValue(uint) => uint.to_string(),
+            proto::types::value::ValueType::BoolValue(bool) => {
+                if bool {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                }
+            }
+            _ => return Err(QueryError::UnsupportedQuery.into()),
+        };
+
+        let models_query = format!(
+            r#"
+            SELECT group_concat(entity_model.model_id) as model_names
+            FROM entities
+            JOIN entity_model ON entities.id = entity_model.entity_id
+            GROUP BY entities.id
+            HAVING model_names REGEXP '(^|,){}(,|$)'
+            LIMIT 1
+        "#,
+            member_clause.model
+        );
+        let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
+
+        let model_names = models_str.split(',').collect::<Vec<&str>>();
+        let schemas = self.model_cache.schemas(model_names).await?;
+
+        let table_name = member_clause.model;
+        let column_name = format!("external_{}", member_clause.member);
+        let member_query = format!(
+            "{} WHERE {table_name}.{column_name} {comparison_operator} ?",
+            build_sql_query(&schemas)?
+        );
+
+        let db_entities =
+            sqlx::query(&member_query).bind(comparison_value).fetch_all(&self.pool).await?;
+
+        db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
     }
 
     async fn entities_by_composite(
@@ -350,8 +399,8 @@ impl DojoWorld {
 
                         self.entities_by_keys(keys, query.limit, query.offset).await?
                     }
-                    ClauseType::Member(attribute) => {
-                        self.entities_by_attribute(attribute, query.limit, query.offset).await?
+                    ClauseType::Member(member) => {
+                        self.entities_by_member(member, query.limit, query.offset).await?
                     }
                     ClauseType::Composite(composite) => {
                         self.entities_by_composite(composite, query.limit, query.offset).await?
