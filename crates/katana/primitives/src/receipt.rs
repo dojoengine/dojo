@@ -3,7 +3,7 @@ use ethers::types::H256;
 use crate::contract::ContractAddress;
 use crate::FieldElement;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Event {
     /// The contract address that emitted the event.
@@ -15,7 +15,7 @@ pub struct Event {
 }
 
 /// Represents a message sent to L1.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MessageToL1 {
     /// The L2 contract address that sent the message.
@@ -27,7 +27,7 @@ pub struct MessageToL1 {
 }
 
 /// Receipt for a `Invoke` transaction.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvokeTxReceipt {
     /// Actual fee paid for the transaction.
@@ -43,7 +43,7 @@ pub struct InvokeTxReceipt {
 }
 
 /// Receipt for a `Declare` transaction.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxReceipt {
     /// Actual fee paid for the transaction.
@@ -59,7 +59,7 @@ pub struct DeclareTxReceipt {
 }
 
 /// Receipt for a `L1Handler` transaction.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTxReceipt {
     /// Actual fee paid for the transaction.
@@ -77,7 +77,7 @@ pub struct L1HandlerTxReceipt {
 }
 
 /// Receipt for a `DeployAccount` transaction.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTxReceipt {
     /// Actual fee paid for the transaction.
@@ -95,7 +95,7 @@ pub struct DeployAccountTxReceipt {
 }
 
 /// The receipt of a transaction containing the outputs of its execution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Receipt {
     Invoke(InvokeTxReceipt),
@@ -139,7 +139,7 @@ impl Receipt {
 /// Transaction execution resources.
 ///
 /// The resources consumed by a transaction during its execution.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxExecutionResources {
     /// The number of cairo steps used
