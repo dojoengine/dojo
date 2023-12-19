@@ -27,7 +27,7 @@ RUN rustup toolchain install nightly && \
 RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
 
-RUN cargo binstall cargo-nextest cargo-llvm-cov cargo-release --secure -y
+RUN cargo binstall cargo-get cargo-nextest cargo-llvm-cov cargo-release --secure -y
 
 # Platform specific tooling
 ARG TARGETPLATFORM

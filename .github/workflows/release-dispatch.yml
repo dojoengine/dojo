@@ -8,7 +8,7 @@ on:
         type: string
 
 jobs:
-  release:
+  propose-release:
     permissions:
       pull-requests: write
       contents: write
@@ -22,7 +22,8 @@ jobs:
       - run: cargo release version ${{ inputs.version }} --execute --no-confirm && cargo release replace --execute --no-confirm
       - uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # We have to use a PAT in order to trigger ci
+          token: ${{ secrets.CREATE_PR_TOKEN }}
           title: "Prepare release: ${{ inputs.version }}"
           commit-message: "Prepare release: ${{ inputs.version }}"
           branch: prepare-release
