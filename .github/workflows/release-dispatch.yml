@@ -28,11 +28,6 @@ jobs:
         run: |
           cargo install cargo-get
           echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
-      - id: changelog
-        uses: mikepenz/release-changelog-builder-action@v4.1.0
-        with:
-          fromTag: v${{ steps.current_release_info.outputs.version }}
-          toTag: main
       - uses: peter-evans/create-pull-request@v5
         with:
           # We have to use a PAT in order to trigger ci
@@ -42,4 +37,3 @@ jobs:
           branch: prepare-release
           base: main
           delete-branch: true
-          body: ${{steps.changelog.outputs.changelog}}

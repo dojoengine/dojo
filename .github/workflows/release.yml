@@ -118,19 +118,8 @@ jobs:
           fi
         shell: bash
 
-      # Creates the release for this specific version
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: ${{ github.event.pull_request.title }}
-          tag_name: ${{ needs.prepare.outputs.tag_name }}
-          body: ${{ github.event.pull_request.body }}
-          files: |
-            ${{ steps.artifacts.outputs.file_name }}
-
       # We move binaries so they match $TARGETPLATFORM in the Docker build
       - name: Move Binaries
-        if: ${{ env.PLATFORM_NAME == 'linux' }}
         run: |
           mkdir -p $PLATFORM_NAME/$ARCH
           mv target/$TARGET/release/katana $PLATFORM_NAME/$ARCH
@@ -146,8 +135,24 @@ jobs:
           path: ${{ env.PLATFORM_NAME }}
           retention-days: 1
 
+  create-draft-release:
+    runs-on: ubuntu-latest-4-cores
+    needs: [prepare, release]
+    env:
+      GITHUB_USER: ${{ github.repository_owner }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v3
+        with:
+          name: binaries
+          path: artifacts
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+      - run: gh release create --generate-notes --draft ./artifacts
+
   docker-build-and-push:
-    name: Build and push docker image
     runs-on: ubuntu-latest-4-cores
     needs: [prepare, release]
 
@@ -159,7 +164,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: binaries
-          path: artifacts/linux
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
