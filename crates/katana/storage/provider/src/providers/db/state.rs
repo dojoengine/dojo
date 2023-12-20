@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use anyhow::Result;
-use katana_db::mdbx::{self, DbEnv};
+use katana_db::mdbx::{self};
 use katana_db::models::contract::{
     ContractClassChange, ContractInfoChangeList, ContractNonceChange,
 };
@@ -17,12 +17,13 @@ use katana_primitives::contract::{
     Nonce, SierraClass, StorageKey, StorageValue,
 };
 
+use super::DbProvider;
 use crate::traits::contract::{ContractClassProvider, ContractClassWriter};
 use crate::traits::state::{StateProvider, StateWriter};
 
-impl StateWriter for DbEnv {
+impl StateWriter for DbProvider {
     fn set_nonce(&self, address: ContractAddress, nonce: Nonce) -> Result<()> {
-        self.update(move |db_tx| -> Result<()> {
+        self.0.update(move |db_tx| -> Result<()> {
             let value = if let Some(info) = db_tx.get::<ContractInfo>(address)? {
                 GenericContractInfo { nonce, ..info }
             } else {
@@ -39,7 +40,7 @@ impl StateWriter for DbEnv {
         storage_key: StorageKey,
         storage_value: StorageValue,
     ) -> Result<()> {
-        self.update(move |db_tx| -> Result<()> {
+        self.0.update(move |db_tx| -> Result<()> {
             let mut cursor = db_tx.cursor::<ContractStorage>()?;
             let entry = cursor.seek_by_key_subkey(address, storage_key)?;
 
@@ -60,7 +61,7 @@ impl StateWriter for DbEnv {
         address: ContractAddress,
         class_hash: ClassHash,
     ) -> Result<()> {
-        self.update(move |db_tx| -> Result<()> {
+        self.0.update(move |db_tx| -> Result<()> {
             let value = if let Some(info) = db_tx.get::<ContractInfo>(address)? {
                 GenericContractInfo { class_hash, ..info }
             } else {
@@ -72,9 +73,9 @@ impl StateWriter for DbEnv {
     }
 }
 
-impl ContractClassWriter for DbEnv {
+impl ContractClassWriter for DbProvider {
     fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> Result<()> {
-        self.update(move |db_tx| -> Result<()> {
+        self.0.update(move |db_tx| -> Result<()> {
             db_tx.put::<CompiledContractClasses>(hash, class.into())?;
             Ok(())
         })?
@@ -85,14 +86,14 @@ impl ContractClassWriter for DbEnv {
         hash: ClassHash,
         compiled_hash: CompiledClassHash,
     ) -> Result<()> {
-        self.update(move |db_tx| -> Result<()> {
+        self.0.update(move |db_tx| -> Result<()> {
             db_tx.put::<CompiledClassHashes>(hash, compiled_hash)?;
             Ok(())
         })?
     }
 
     fn set_sierra_class(&self, hash: ClassHash, sierra: SierraClass) -> Result<()> {
-        self.update(move |db_tx| -> Result<()> {
+        self.0.update(move |db_tx| -> Result<()> {
             db_tx.put::<SierraClasses>(hash, sierra)?;
             Ok(())
         })?

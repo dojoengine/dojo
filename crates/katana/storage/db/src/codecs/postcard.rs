@@ -22,7 +22,7 @@ macro_rules! impl_compress_and_decompress_for_table_values {
 
             impl Decompress for $name {
                 fn decompress<B: AsRef<[u8]>>(bytes: B) -> Result<Self, crate::error::CodecError> {
-                    postcard::from_bytes(bytes.as_ref()).map_err(|e| CodecError::Decode(e.to_string()))
+                    postcard::from_bytes(bytes.as_ref()).map_err(|e| CodecError::Decompress(e.to_string()))
                 }
             }
         )*

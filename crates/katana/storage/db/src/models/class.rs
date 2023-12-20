@@ -480,4 +480,21 @@ mod tests {
 
         assert_eq!(class, actual_class);
     }
+
+    #[test]
+    fn compress_and_decompress_legacy_contract_class() {
+        let class: ContractClassV0 = serde_json::from_slice(include_bytes!(
+            "../../../../core/contracts/compiled/account.json"
+        ))
+        .unwrap();
+
+        let class = CompiledContractClass::V0(class);
+
+        let compressed = StoredContractClass::from(class.clone()).compress();
+        let decompressed = <StoredContractClass as Decompress>::decompress(compressed).unwrap();
+
+        let actual_class = CompiledContractClass::from(decompressed);
+
+        assert_eq!(class, actual_class);
+    }
 }
