@@ -1,9 +1,12 @@
 pub mod state;
 
+use std::collections::HashMap;
+use std::fmt::Debug;
 use std::ops::{Range, RangeInclusive};
 
 use anyhow::Result;
-use katana_db::mdbx::DbEnv;
+use katana_db::error::DatabaseError;
+use katana_db::mdbx::{self, DbEnv};
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_db::models::contract::{
     ContractClassChange, ContractInfoChangeList, ContractNonceChange,
@@ -14,14 +17,19 @@ use katana_db::models::storage::{
 use katana_db::tables::{
     BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatusses, ClassDeclarationBlock,
     ClassDeclarations, CompiledClassHashes, CompiledContractClasses, ContractClassChanges,
-    ContractInfo, ContractInfoChangeSet, ContractStorage, Headers, NonceChanges, Receipts,
-    SierraClasses, StorageChangeSet, StorageChanges, Transactions, TxBlocks, TxHashes, TxNumbers,
+    ContractInfo, ContractInfoChangeSet, ContractStorage, DupSort, Headers, NonceChanges, Receipts,
+    SierraClasses, StorageChangeSet, StorageChanges, Table, Transactions, TxBlocks, TxHashes,
+    TxNumbers,
 };
+use katana_db::utils::KeyValue;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
-use katana_primitives::contract::GenericContractInfo;
+use katana_primitives::contract::{
+    ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, Nonce, StorageKey,
+    StorageValue,
+};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
@@ -238,8 +246,88 @@ impl StateRootProvider for DbProvider {
 }
 
 impl StateUpdateProvider for DbProvider {
-    fn state_update(&self, _block_id: BlockHashOrNumber) -> Result<Option<StateUpdates>> {
-        unimplemented!()
+    fn state_update(&self, block_id: BlockHashOrNumber) -> Result<Option<StateUpdates>> {
+        // A helper function that iterates over all entries in a dupsort table and collects the
+        // results into `V`. If `key` is not found, `V::default()` is returned.
+        fn dup_entries<Tb, V, T>(
+            db_tx: &mdbx::tx::TxRO,
+            key: <Tb as Table>::Key,
+            f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> Result<T, DatabaseError>,
+        ) -> Result<V, DatabaseError>
+        where
+            Tb: DupSort + Debug,
+            V: FromIterator<T> + Default,
+        {
+            Ok(db_tx
+                .cursor::<Tb>()?
+                .walk_dup(Some(key), None)?
+                .map(|walker| walker.map(f).collect::<Result<V, DatabaseError>>())
+                .transpose()?
+                .unwrap_or_default())
+        }
+
+        let db_tx = self.0.tx()?;
+        let block_num = self.block_number_by_id(block_id)?;
+
+        if let Some(block_num) = block_num {
+            let nonce_updates = dup_entries::<NonceChanges, HashMap<ContractAddress, Nonce>, _>(
+                &db_tx,
+                block_num,
+                |entry| {
+                    let (_, ContractNonceChange { contract_address, nonce }) = entry?;
+                    Ok((contract_address, nonce))
+                },
+            )?;
+
+            let contract_updates = dup_entries::<
+                ContractClassChanges,
+                HashMap<ContractAddress, ClassHash>,
+                _,
+            >(&db_tx, block_num, |entry| {
+                let (_, ContractClassChange { contract_address, class_hash }) = entry?;
+                Ok((contract_address, class_hash))
+            })?;
+
+            let declared_classes = dup_entries::<
+                ClassDeclarations,
+                HashMap<ClassHash, CompiledClassHash>,
+                _,
+            >(&db_tx, block_num, |entry| {
+                let (_, class_hash) = entry?;
+                let compiled_hash =
+                    db_tx.get::<CompiledClassHashes>(class_hash)?.expect("qed; must exist");
+                Ok((class_hash, compiled_hash))
+            })?;
+
+            let storage_updates = {
+                let entries = dup_entries::<
+                    StorageChanges,
+                    Vec<(ContractAddress, (StorageKey, StorageValue))>,
+                    _,
+                >(&db_tx, block_num, |entry| {
+                    let (_, ContractStorageEntry { key, value }) = entry?;
+                    Ok::<_, DatabaseError>((key.contract_address, (key.key, value)))
+                })?;
+
+                let mut map: HashMap<_, HashMap<StorageKey, StorageValue>> = HashMap::new();
+
+                entries.into_iter().for_each(|(addr, (key, value))| {
+                    map.entry(addr).or_default().insert(key, value);
+                });
+
+                map
+            };
+
+            db_tx.commit()?;
+            Ok(Some(StateUpdates {
+                nonce_updates,
+                storage_updates,
+                contract_updates,
+                declared_classes,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
 

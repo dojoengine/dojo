@@ -1,9 +1,12 @@
-use katana_primitives::block::{BlockHashOrNumber, FinalityStatus};
+use anyhow::Result;
+use katana_primitives::block::{BlockHashOrNumber, BlockNumber, FinalityStatus};
+use katana_primitives::state::StateUpdates;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockStatusProvider, BlockWriter};
 use katana_provider::traits::state::StateRootProvider;
+use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
@@ -13,7 +16,10 @@ use rstest_reuse::{self, *};
 mod fixtures;
 mod utils;
 
-use fixtures::{db_provider, fork_provider, in_memory_provider};
+use fixtures::{
+    db_provider, fork_provider, fork_provider_with_spawned_fork_network, in_memory_provider,
+    mock_state_updates, provider_with_states,
+};
 use utils::generate_dummy_blocks_and_receipts;
 
 #[template]
@@ -28,7 +34,7 @@ fn insert_block_cases(#[case] block_count: u64) {}
 fn insert_block_with_in_memory_provider(
     #[from(in_memory_provider)] provider: BlockchainProvider<InMemoryProvider>,
     #[case] block_count: u64,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     insert_block_test_impl(provider, block_count)
 }
 
@@ -36,7 +42,7 @@ fn insert_block_with_in_memory_provider(
 fn insert_block_with_fork_provider(
     #[from(fork_provider)] provider: BlockchainProvider<ForkedProvider>,
     #[case] block_count: u64,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     insert_block_test_impl(provider, block_count)
 }
 
@@ -44,11 +50,11 @@ fn insert_block_with_fork_provider(
 fn insert_block_with_db_provider(
     #[from(db_provider)] provider: BlockchainProvider<DbProvider>,
     #[case] block_count: u64,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     insert_block_test_impl(provider, block_count)
 }
 
-fn insert_block_test_impl<Db>(provider: BlockchainProvider<Db>, count: u64) -> anyhow::Result<()>
+fn insert_block_test_impl<Db>(provider: BlockchainProvider<Db>, count: u64) -> Result<()>
 where
     Db: BlockProvider
         + BlockWriter
@@ -109,5 +115,60 @@ where
         assert_eq!(actual_block, Some(expected_block));
     }
 
+    Ok(())
+}
+
+#[template]
+#[rstest::rstest]
+#[case::state_update_at_block_1(1, mock_state_updates().0)]
+#[case::state_update_at_block_2(2, mock_state_updates().1)]
+#[case::state_update_at_block_3(3, StateUpdates::default())]
+#[case::state_update_at_block_5(5, mock_state_updates().2)]
+fn test_read_state_update<Db>(
+    #[from(provider_with_states)] provider: BlockchainProvider<Db>,
+    #[case] block_num: BlockNumber,
+    #[case] expected_state_update: StateUpdates,
+) {
+}
+
+#[apply(test_read_state_update)]
+fn test_read_state_update_with_in_memory_provider(
+    #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
+    #[case] block_num: BlockNumber,
+    #[case] expected_state_update: StateUpdates,
+) -> Result<()> {
+    test_read_state_update_impl(provider, block_num, expected_state_update)
+}
+
+#[apply(test_read_state_update)]
+fn test_read_state_update_with_fork_provider(
+    #[with(fork_provider_with_spawned_fork_network::default())] provider: BlockchainProvider<
+        ForkedProvider,
+    >,
+    #[case] block_num: BlockNumber,
+    #[case] expected_state_update: StateUpdates,
+) -> Result<()> {
+    test_read_state_update_impl(provider, block_num, expected_state_update)
+}
+
+#[apply(test_read_state_update)]
+fn test_read_state_update_with_db_provider(
+    #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
+    #[case] block_num: BlockNumber,
+    #[case] expected_state_update: StateUpdates,
+) -> Result<()> {
+    test_read_state_update_impl(provider, block_num, expected_state_update)
+}
+
+fn test_read_state_update_impl<Db>(
+    provider: BlockchainProvider<Db>,
+    block_num: BlockNumber,
+    expected_state_update: StateUpdates,
+) -> Result<()>
+where
+    Db: StateUpdateProvider,
+{
+    let actual_state_update = provider.state_update(BlockHashOrNumber::from(block_num))?;
+    assert_eq!(actual_state_update, Some(expected_state_update));
     Ok(())
 }

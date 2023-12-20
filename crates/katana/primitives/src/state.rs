@@ -8,7 +8,7 @@ use crate::contract::{
 /// State updates.
 ///
 /// Represents all the state updates after performing some executions on a state.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StateUpdates {
     /// A mapping of contract addresses to their updated nonces.

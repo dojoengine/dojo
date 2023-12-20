@@ -391,7 +391,7 @@ mod tests {
         {
             let tx = env.tx().expect(ERROR_INIT_TX);
             let mut cursor = tx.cursor::<ContractStorage>().unwrap();
-            let mut walker = cursor.walk_dup(Some(key), Some(felt!("1"))).unwrap();
+            let mut walker = cursor.walk_dup(Some(key), Some(felt!("1"))).unwrap().unwrap();
 
             assert_eq!(
                 (key, value11),
