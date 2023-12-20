@@ -474,7 +474,7 @@ mod tests {
         let class = CompiledContractClass::V1(ContractClassV1::try_from(class).unwrap());
 
         let compressed = StoredContractClass::from(class.clone()).compress();
-        let decompressed = <StoredContractClass as Decompress>::decompress(&compressed).unwrap();
+        let decompressed = <StoredContractClass as Decompress>::decompress(compressed).unwrap();
 
         let actual_class = CompiledContractClass::from(decompressed);
 
