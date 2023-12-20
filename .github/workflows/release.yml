@@ -1,7 +1,6 @@
 name: release
 
 on:
-  workflow_dispatch:
   pull_request:
     types: [closed]
     branches:
@@ -14,7 +13,7 @@ env:
 
 jobs:
   prepare:
-    if: (github.event_name == 'workflow_dispatch') || (github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'prepare-release')
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'prepare-release'
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.release_info.outputs.tag_name }}

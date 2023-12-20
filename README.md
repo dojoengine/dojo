@@ -38,3 +38,9 @@ We welcome contributions of all kinds from anyone. See our [Contribution Guide](
 ## ✏️ Enviroment
 
 See our [Enviroment setup](https://book.dojoengine.org/getting-started/setup.html) for more information.
+
+## Releasing
+
+Propose a new release by manually triggering the `release-dispatch` github action. The version value can be an semver or a level: `[patch, minor, major]`.
+
+Once run, the workflow will create a PR with the versioned repo which will trigger the release flow and the creation of a draft release on merge.
