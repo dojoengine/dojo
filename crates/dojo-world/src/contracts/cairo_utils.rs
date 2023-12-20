@@ -20,7 +20,7 @@ pub fn encode_uri(uri: &str) -> Result<Vec<FieldElement>> {
         .chunks(31)
         .map(|chunk| {
             let s: String = chunk.iter().collect();
-            cairo_short_string_to_felt(&s).unwrap()
+            cairo_short_string_to_felt(&s)
         })
-        .collect::<Vec<_>>())
+        .collect::<Result<Vec<_>, _>>()?)
 }

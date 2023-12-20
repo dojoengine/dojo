@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<'a, P> WorldContractReader<P>
+impl<P> WorldContractReader<P>
 where
     P: Provider + Sync + Send,
 {
