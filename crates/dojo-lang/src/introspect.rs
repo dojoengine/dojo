@@ -279,6 +279,14 @@ fn handle_introspect_internal(
         size.push(format!("{}", size_precompute));
     }
 
+    if size.is_empty() {
+        panic!(
+            "The model `{}` has only keys, ensure you have at least one field without the #[key] \
+             attribute.",
+            name
+        );
+    }
+
     RewriteNode::interpolate_patched(
         "
 impl $name$Introspect<$generics$> of \
