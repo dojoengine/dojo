@@ -106,7 +106,11 @@ impl InlineMacroExprPlugin for GetMacro {
             // Currently, the main reason to have a deserialization to fail is by having
             // the user providing the wrong keys length, which causes an invalid offset
             // in the model deserialization.
-            let deser_err_msg = format!("\"Model `{}` deserialization failed, ensure the length of the keys tuple is matching the number of #[key] fields in the model struct.\"", model.to_string());
+            let deser_err_msg = format!(
+                "\"Model `{}` deserialization failed, ensure the length of the keys tuple is \
+                 matching the number of #[key] fields in the model struct.\"",
+                model.to_string()
+            );
 
             builder.add_str(&format!(
                 "\n            let mut __{model}_layout__ = core::array::ArrayTrait::new();
@@ -126,8 +130,8 @@ impl InlineMacroExprPlugin for GetMacro {
                  core::array::ArrayTrait::span(@__{model}_model__);
                  let __{model} = core::serde::Serde::<{model}>::deserialize(
                     ref __{model}_model_span__
-                ); \
-                if __{model}.is_none() {{ panic!({deser_err_msg}); }} let __{model} = __{model}.unwrap();\n",
+                ); if __{model}.is_none() {{ panic!({deser_err_msg}); }}; let __{model} = \
+                 __{model}.unwrap();\n",
                 world.as_syntax_node().get_text(db),
             ));
         }
