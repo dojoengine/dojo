@@ -94,7 +94,6 @@ impl BlockHashProvider for DbProvider {
     fn latest_hash(&self) -> Result<BlockHash> {
         let db_tx = self.0.tx()?;
         let total_blocks = db_tx.entries::<BlockNumbers>()? as u64;
-        dbg!(total_blocks);
         let latest_block = if total_blocks == 0 { 0 } else { total_blocks - 1 };
         let latest_hash = db_tx.get::<BlockHashes>(latest_block)?.expect("block hash should exist");
         db_tx.commit()?;
@@ -149,20 +148,10 @@ impl BlockProvider for DbProvider {
     fn block(&self, id: BlockHashOrNumber) -> Result<Option<Block>> {
         let db_tx = self.0.tx()?;
 
-        let block_num = match id {
-            BlockHashOrNumber::Num(num) => Some(num),
-            BlockHashOrNumber::Hash(hash) => db_tx.get::<BlockNumbers>(hash)?,
-        };
-
-        let Some(block_num) = block_num else { return Ok(None) };
-
-        if let Some(header) = db_tx.get::<Headers>(block_num)? {
+        if let Some(header) = self.header(id)? {
             let body = self.transactions_by_block(id)?.expect("should exist");
-            let block = Block { header, body };
-
             db_tx.commit()?;
-
-            Ok(Some(block))
+            Ok(Some(Block { header, body }))
         } else {
             Ok(None)
         }
