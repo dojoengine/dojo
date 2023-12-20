@@ -355,8 +355,9 @@ impl TransactionsProviderExt for DbProvider {
 impl TransactionStatusProvider for DbProvider {
     fn transaction_status(&self, hash: TxHash) -> Result<Option<FinalityStatus>> {
         let db_tx = self.0.tx()?;
-        if let Some(num) = db_tx.get::<TxNumbers>(hash)? {
-            let status = db_tx.get::<BlockStatusses>(num)?.expect("should exist");
+        if let Some(tx_num) = db_tx.get::<TxNumbers>(hash)? {
+            let block_num = db_tx.get::<TxBlocks>(tx_num)?.expect("should exist");
+            let status = db_tx.get::<BlockStatusses>(block_num)?.expect("should exist");
             db_tx.commit()?;
             Ok(Some(status))
         } else {
