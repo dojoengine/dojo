@@ -1,10 +1,14 @@
 use anyhow::Result;
-use katana_primitives::block::{BlockHashOrNumber, BlockNumber, FinalityStatus};
+use katana_primitives::block::{
+    Block, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus,
+};
 use katana_primitives::state::StateUpdates;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
-use katana_provider::traits::block::{BlockProvider, BlockStatusProvider, BlockWriter};
+use katana_provider::traits::block::{
+    BlockHashProvider, BlockProvider, BlockStatusProvider, BlockWriter,
+};
 use katana_provider::traits::state::StateRootProvider;
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
@@ -72,11 +76,22 @@ where
         )?;
     }
 
+    let actual_blocks_in_range = provider.blocks_in_range(0..=count)?;
+
+    assert_eq!(actual_blocks_in_range.len(), count as usize);
+    assert_eq!(
+        actual_blocks_in_range,
+        blocks.clone().into_iter().map(|b| b.0.block.unseal()).collect::<Vec<Block>>()
+    );
+
     for (block, receipts) in blocks {
         let block_id = BlockHashOrNumber::Hash(block.block.header.hash);
 
+        let expected_block_num = block.block.header.header.number;
         let expected_block_hash = block.block.header.hash;
         let expected_block = block.block.unseal();
+
+        let actual_block_hash = provider.block_hash_by_num(expected_block_num)?;
 
         let actual_block = provider.block(block_id)?;
         let actual_block_txs = provider.transactions_by_block(block_id)?;
@@ -86,7 +101,15 @@ where
         let actual_block_tx_count = provider.transaction_count_by_block(block_id)?;
         let actual_receipts = provider.receipts_by_block(block_id)?;
 
+        let expected_block_with_tx_hashes = BlockWithTxHashes {
+            header: expected_block.header.clone(),
+            body: expected_block.body.clone().into_iter().map(|t| t.hash).collect(),
+        };
+
+        let actual_block_with_tx_hashes = provider.block_with_tx_hashes(block_id)?;
+
         assert_eq!(actual_status, Some(FinalityStatus::AcceptedOnL2));
+        assert_eq!(actual_block_with_tx_hashes, Some(expected_block_with_tx_hashes));
 
         for (idx, tx) in expected_block.body.iter().enumerate() {
             let actual_receipt = provider.receipt_by_hash(tx.hash)?;
@@ -96,10 +119,7 @@ where
             let actual_tx_by_block_idx =
                 provider.transaction_by_block_and_idx(block_id, idx as u64)?;
 
-            assert_eq!(
-                actual_tx_block_num_hash,
-                Some((expected_block.header.number, expected_block_hash))
-            );
+            assert_eq!(actual_tx_block_num_hash, Some((expected_block_num, expected_block_hash)));
             assert_eq!(actual_tx_status, Some(FinalityStatus::AcceptedOnL2));
             assert_eq!(actual_receipt, Some(receipts[idx].clone()));
             assert_eq!(actual_tx_by_block_idx, Some(tx.clone()));
@@ -112,6 +132,7 @@ where
         assert_eq!(actual_block_tx_count, Some(expected_block.body.len() as u64));
         assert_eq!(actual_state_root, Some(expected_block.header.state_root));
         assert_eq!(actual_block_txs, Some(expected_block.body.clone()));
+        assert_eq!(actual_block_hash, Some(expected_block_hash));
         assert_eq!(actual_block, Some(expected_block));
     }
 
