@@ -8,6 +8,6 @@ To build them, consider the following:
 3. Extract the ABI key only for `world` and `executor`:
 ```
 sozo build
-jq .abi ./target/dev/dojo_example-world.json > crates/dojo-world/src/contract/abi/world.json
-jq .abi ./target/dev/dojo_example-executor.json > crates/dojo-world/src/contract/abi/executor.json
+jq .abi ./target/dev/dojo\:\:world\:\:world.json > ../../crates/dojo-world/src/contracts/abi/world.json
+jq .abi ./target/dev/dojo\:\:executor\:\:executor.json > ../../crates/dojo-world/src/contracts/abi/executor.json
 ```
