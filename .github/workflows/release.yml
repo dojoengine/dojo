@@ -100,7 +100,7 @@ jobs:
       - name: Archive binaries
         id: artifacts
         env:
-          VERSION_NAME: ${{ needs.prepare.outputs.tag_name }}
+          VERSION_NAME: v${{ needs.prepare.outputs.tag_name }}
         run: |
           if [ "$PLATFORM_NAME" == "linux" ]; then
             tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana sozo torii dojo-language-server
@@ -192,7 +192,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:v${{ needs.prepare.outputs.tag_name }}
           platforms: linux/amd64,linux/arm64
           build-contexts: |
             artifacts=artifacts
