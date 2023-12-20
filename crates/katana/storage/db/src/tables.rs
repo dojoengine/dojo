@@ -10,7 +10,7 @@ use crate::models::block::StoredBlockBodyIndices;
 use crate::models::class::StoredContractClass;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::storage::{
-    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChange,
+    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
 };
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
@@ -221,8 +221,40 @@ tables! {
     ContractClassChanges: (BlockNumber, ContractAddress) => ContractClassChange,
 
     /// storage change set
-    StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChange,
+    StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChangeList,
     /// Account storage change set
     StorageChanges: (BlockNumber, ContractStorageKey) => ContractStorageEntry
 
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_tables() {
+        use super::*;
+
+        assert_eq!(Tables::ALL.len(), NUM_TABLES);
+        assert_eq!(Tables::ALL[0].name(), Headers::NAME);
+        assert_eq!(Tables::ALL[1].name(), BlockHashes::NAME);
+        assert_eq!(Tables::ALL[2].name(), BlockNumbers::NAME);
+        assert_eq!(Tables::ALL[3].name(), BlockBodyIndices::NAME);
+        assert_eq!(Tables::ALL[4].name(), BlockStatusses::NAME);
+        assert_eq!(Tables::ALL[5].name(), TxNumbers::NAME);
+        assert_eq!(Tables::ALL[6].name(), TxBlocks::NAME);
+        assert_eq!(Tables::ALL[7].name(), TxHashes::NAME);
+        assert_eq!(Tables::ALL[8].name(), Transactions::NAME);
+        assert_eq!(Tables::ALL[9].name(), Receipts::NAME);
+        assert_eq!(Tables::ALL[10].name(), CompiledClassHashes::NAME);
+        assert_eq!(Tables::ALL[11].name(), CompiledContractClasses::NAME);
+        assert_eq!(Tables::ALL[12].name(), SierraClasses::NAME);
+        assert_eq!(Tables::ALL[13].name(), ContractInfo::NAME);
+        assert_eq!(Tables::ALL[14].name(), ContractStorage::NAME);
+        assert_eq!(Tables::ALL[15].name(), ClassDeclarationBlock::NAME);
+        assert_eq!(Tables::ALL[16].name(), ClassDeclarations::NAME);
+        assert_eq!(Tables::ALL[17].name(), ContractInfoChangeSet::NAME);
+        assert_eq!(Tables::ALL[18].name(), NonceChanges::NAME);
+        assert_eq!(Tables::ALL[19].name(), ContractClassChanges::NAME);
+        assert_eq!(Tables::ALL[20].name(), StorageChanges::NAME);
+        assert_eq!(Tables::ALL[21].name(), StorageChangeSet::NAME);
+    }
 }

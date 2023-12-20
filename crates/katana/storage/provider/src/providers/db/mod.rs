@@ -9,7 +9,7 @@ use katana_db::models::contract::{
     ContractClassChange, ContractInfoChangeList, ContractNonceChange,
 };
 use katana_db::models::storage::{
-    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChange,
+    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
 };
 use katana_db::tables::{
     BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatusses, ClassDeclarationBlock,
@@ -157,8 +157,7 @@ impl BlockProvider for DbProvider {
         let Some(block_num) = block_num else { return Ok(None) };
 
         if let Some(header) = db_tx.get::<Headers>(block_num)? {
-            let body_indices = db_tx.get::<BlockBodyIndices>(block_num)?.expect("should exist");
-            let body = self.transaction_in_range(Range::from(body_indices))?;
+            let body = self.transactions_by_block(id)?.expect("should exist");
             let block = Block { header, body };
 
             db_tx.commit()?;
@@ -481,7 +480,7 @@ impl BlockWriter for DbProvider {
                         let mut change_set_cursor = db_tx.cursor::<StorageChangeSet>()?;
                         let new_block_list =
                             match change_set_cursor.seek_by_key_subkey(addr, entry.key)? {
-                                Some(StorageEntryChange { mut block_list, key })
+                                Some(StorageEntryChangeList { mut block_list, key })
                                     if key == entry.key =>
                                 {
                                     change_set_cursor.delete_current()?;
@@ -498,7 +497,7 @@ impl BlockWriter for DbProvider {
 
                         change_set_cursor.upsert(
                             addr,
-                            StorageEntryChange { key: entry.key, block_list: new_block_list },
+                            StorageEntryChangeList { key: entry.key, block_list: new_block_list },
                         )?;
                         storage_cursor.upsert(addr, entry)?;
 

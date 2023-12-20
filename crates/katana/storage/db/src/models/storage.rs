@@ -36,12 +36,12 @@ impl Decompress for StorageEntry {
 }
 
 #[derive(Debug)]
-pub struct StorageEntryChange {
+pub struct StorageEntryChangeList {
     pub key: StorageKey,
     pub block_list: Vec<BlockNumber>,
 }
 
-impl Compress for StorageEntryChange {
+impl Compress for StorageEntryChangeList {
     type Compressed = Vec<u8>;
     fn compress(self) -> Self::Compressed {
         let mut buf = Vec::new();
@@ -51,7 +51,7 @@ impl Compress for StorageEntryChange {
     }
 }
 
-impl Decompress for StorageEntryChange {
+impl Decompress for StorageEntryChangeList {
     fn decompress<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
         let bytes = bytes.as_ref();
         let key = StorageKey::decode(&bytes[0..32])?;
