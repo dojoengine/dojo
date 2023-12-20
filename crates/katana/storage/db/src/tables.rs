@@ -7,8 +7,11 @@ use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
-use crate::models::contract::StoredContractClass;
-use crate::models::storage::StorageEntry;
+use crate::models::class::StoredContractClass;
+use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
+use crate::models::storage::{
+    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
+};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -43,7 +46,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 17;
+pub const NUM_TABLES: usize = 22;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -158,9 +161,14 @@ define_tables_enum! {[
     (CompiledContractClasses, TableType::Table),
     (SierraClasses, TableType::Table),
     (ContractInfo, TableType::Table),
-    (ContractDeployments, TableType::DupSort),
+    (ContractStorage, TableType::DupSort),
+    (ClassDeclarationBlock, TableType::Table),
     (ClassDeclarations, TableType::DupSort),
-    (ContractStorage, TableType::DupSort)
+    (ContractInfoChangeSet, TableType::Table),
+    (NonceChanges, TableType::DupSort),
+    (ContractClassChanges, TableType::DupSort),
+    (StorageChanges, TableType::DupSort),
+    (StorageChangeSet, TableType::DupSort)
 ]}
 
 tables! {
@@ -195,8 +203,58 @@ tables! {
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage
     ContractStorage: (ContractAddress, StorageKey) => StorageEntry,
+
+
+    /// Stores the block number where the class hash was declared.
+    ClassDeclarationBlock: (ClassHash) => BlockNumber,
     /// Stores the list of class hashes according to the block number it was declared in.
     ClassDeclarations: (BlockNumber, ClassHash) => ClassHash,
-    /// Store the list of contracts deployed in a block according to its block number.
-    ContractDeployments: (BlockNumber, ContractAddress) => ContractAddress
+
+    /// Generic contract info change set.
+    ///
+    /// Stores the list of blocks where the contract info (nonce / class hash) has changed.
+    ContractInfoChangeSet: (ContractAddress) => ContractInfoChangeList,
+
+    /// Contract nonce changes by block.
+    NonceChanges: (BlockNumber, ContractAddress) => ContractNonceChange,
+    /// Contract class hash changes by block.
+    ContractClassChanges: (BlockNumber, ContractAddress) => ContractClassChange,
+
+    /// storage change set
+    StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChangeList,
+    /// Account storage change set
+    StorageChanges: (BlockNumber, ContractStorageKey) => ContractStorageEntry
+
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_tables() {
+        use super::*;
+
+        assert_eq!(Tables::ALL.len(), NUM_TABLES);
+        assert_eq!(Tables::ALL[0].name(), Headers::NAME);
+        assert_eq!(Tables::ALL[1].name(), BlockHashes::NAME);
+        assert_eq!(Tables::ALL[2].name(), BlockNumbers::NAME);
+        assert_eq!(Tables::ALL[3].name(), BlockBodyIndices::NAME);
+        assert_eq!(Tables::ALL[4].name(), BlockStatusses::NAME);
+        assert_eq!(Tables::ALL[5].name(), TxNumbers::NAME);
+        assert_eq!(Tables::ALL[6].name(), TxBlocks::NAME);
+        assert_eq!(Tables::ALL[7].name(), TxHashes::NAME);
+        assert_eq!(Tables::ALL[8].name(), Transactions::NAME);
+        assert_eq!(Tables::ALL[9].name(), Receipts::NAME);
+        assert_eq!(Tables::ALL[10].name(), CompiledClassHashes::NAME);
+        assert_eq!(Tables::ALL[11].name(), CompiledContractClasses::NAME);
+        assert_eq!(Tables::ALL[12].name(), SierraClasses::NAME);
+        assert_eq!(Tables::ALL[13].name(), ContractInfo::NAME);
+        assert_eq!(Tables::ALL[14].name(), ContractStorage::NAME);
+        assert_eq!(Tables::ALL[15].name(), ClassDeclarationBlock::NAME);
+        assert_eq!(Tables::ALL[16].name(), ClassDeclarations::NAME);
+        assert_eq!(Tables::ALL[17].name(), ContractInfoChangeSet::NAME);
+        assert_eq!(Tables::ALL[18].name(), NonceChanges::NAME);
+        assert_eq!(Tables::ALL[19].name(), ContractClassChanges::NAME);
+        assert_eq!(Tables::ALL[20].name(), StorageChanges::NAME);
+        assert_eq!(Tables::ALL[21].name(), StorageChangeSet::NAME);
+    }
 }

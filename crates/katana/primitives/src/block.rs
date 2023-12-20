@@ -115,7 +115,7 @@ pub struct Block {
 }
 
 /// A block with only the transaction hashes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BlockWithTxHashes {
     pub header: Header,
     pub body: Vec<TxHash>,

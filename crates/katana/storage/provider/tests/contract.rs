@@ -1,7 +1,9 @@
 mod fixtures;
 
 use anyhow::Result;
-use fixtures::{fork_provider_with_spawned_fork_network, in_memory_provider, provider_with_states};
+use fixtures::{
+    db_provider, fork_provider_with_spawned_fork_network, in_memory_provider, provider_with_states,
+};
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
 use katana_primitives::contract::{ClassHash, ContractAddress, Nonce};
 use katana_provider::providers::fork::ForkedProvider;
@@ -27,6 +29,8 @@ fn assert_state_provider_contract_info(
 }
 
 mod latest {
+    use katana_provider::providers::db::DbProvider;
+
     use super::*;
 
     fn assert_latest_contract_info<Db: StateFactoryProvider>(
@@ -68,9 +72,19 @@ mod latest {
     ) -> Result<()> {
         assert_latest_contract_info(provider, expected_contract_info)
     }
+
+    #[apply(test_latest_contract_info_read)]
+    fn read_storage_from_db_provider(
+        #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
+        #[case] expected_contract_info: Vec<(ContractAddress, Option<ClassHash>, Option<Nonce>)>,
+    ) -> Result<()> {
+        assert_latest_contract_info(provider, expected_contract_info)
+    }
 }
 
 mod historical {
+    use katana_provider::providers::db::DbProvider;
+
     use super::*;
 
     fn assert_historical_contract_info<Db: StateFactoryProvider>(
@@ -137,6 +151,15 @@ mod historical {
         #[with(fork_provider_with_spawned_fork_network::default())] provider: BlockchainProvider<
             ForkedProvider,
         >,
+        #[case] block_num: BlockNumber,
+        #[case] expected_contract_info: Vec<(ContractAddress, Option<ClassHash>, Option<Nonce>)>,
+    ) -> Result<()> {
+        assert_historical_contract_info(provider, block_num, expected_contract_info)
+    }
+
+    #[apply(test_historical_storage_read)]
+    fn read_storage_from_db_provider(
+        #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
         #[case] block_num: BlockNumber,
         #[case] expected_contract_info: Vec<(ContractAddress, Option<ClassHash>, Option<Nonce>)>,
     ) -> Result<()> {
