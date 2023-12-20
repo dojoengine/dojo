@@ -14,7 +14,7 @@ pub mod store_transaction;
 #[async_trait]
 pub trait EventProcessor<P>
 where
-    P: Provider,
+    P: Provider + Sync,
 {
     fn event_key(&self) -> String;
 

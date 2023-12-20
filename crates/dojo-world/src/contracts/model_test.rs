@@ -24,7 +24,7 @@ async fn test_model() {
     .await;
 
     let world = WorldContractReader::new(world_address, provider);
-    let position = world.model("Position").await.unwrap();
+    let position = world.model_reader("Position").await.unwrap();
     let schema = position.schema().await.unwrap();
 
     assert_eq!(
@@ -68,7 +68,7 @@ async fn test_model() {
         .unwrap()
     );
 
-    let moves = world.model("Moves").await.unwrap();
+    let moves = world.model_reader("Moves").await.unwrap();
     let schema = moves.schema().await.unwrap();
 
     assert_eq!(

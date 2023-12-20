@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::metadata::Environment;
 
@@ -14,7 +15,8 @@ pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) ->
             let world = WorldContract::new(world_address, &account);
 
             let res = world
-                .grant_writer(&model, contract)
+                .grant_writer(&cairo_utils::str_to_felt(&model)?, &contract.into())
+                .send()
                 .await
                 .with_context(|| "Failed to send transaction")?;
 
