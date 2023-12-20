@@ -31,11 +31,9 @@ use katana_rpc_types::transaction::{
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use katana_rpc_types_builder::ReceiptBuilder;
-use starknet::core::types::{
-    BlockTag, ContractErrorData, TransactionExecutionStatus, TransactionStatus,
-};
+use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
 
-use crate::api::starknet::{contract_error_with_data, StarknetApiError, StarknetApiServer};
+use crate::api::starknet::{StarknetApiError, StarknetApiServer};
 
 pub struct StarknetApi {
     sequencer: Arc<KatanaSequencer>,

@@ -133,11 +133,6 @@ impl From<StarknetApiError> for Error {
     }
 }
 
-pub fn contract_error_with_data(data: ContractErrorData) -> Error {
-    let err = StarknetApiError::ContractError;
-    Error::Call(CallError::Custom(ErrorObject::owned(err as i32, err.to_string(), Some(data))))
-}
-
 #[rpc(server, namespace = "starknet")]
 pub trait StarknetApi {
     // Read API
