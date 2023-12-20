@@ -1,13 +1,13 @@
 [package]
 cairo-version = "2.4.0"
 name = "types_test"
-version = "0.1.0"
+version = "0.4.2"
 
 [cairo]
 sierra-replace-ids = true
 
 [dependencies]
-dojo = { path = "../../../../../dojo-core" }
+dojo = { path = "../../dojo-core" }
 
 [[target.dojo]]
 build-external-contracts = []

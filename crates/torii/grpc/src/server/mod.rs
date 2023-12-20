@@ -120,20 +120,20 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        self.entities_by_ids(None, limit, offset).await
+        self.entities_by_hashed_keys(None, limit, offset).await
     }
 
-    async fn entities_by_ids(
+    async fn entities_by_hashed_keys(
         &self,
-        ids_clause: Option<proto::types::IdsClause>,
+        hashed_keys: Option<proto::types::HashedKeysClause>,
         limit: u32,
         offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // TODO: use prepared statement for where clause
-        let filter_ids = match ids_clause {
-            Some(ids_clause) => {
-                let ids = ids_clause
-                    .ids
+        let filter_ids = match hashed_keys {
+            Some(hashed_keys) => {
+                let ids = hashed_keys
+                    .hashed_keys
                     .iter()
                     .map(|id| {
                         Ok(FieldElement::from_byte_slice_be(id)
@@ -180,8 +180,11 @@ impl DojoWorld {
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
 
-            let id = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
-            entities.push(proto::types::Entity { id: id.to_bytes_be().to_vec(), models })
+            let hashed_keys = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
+            entities.push(proto::types::Entity {
+                hashed_keys: hashed_keys.to_bytes_be().to_vec(),
+                models,
+            })
         }
 
         Ok(entities)
@@ -312,9 +315,9 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        ids: Vec<FieldElement>,
+        hashed_keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(ids).await
+        self.entity_manager.add_subscriber(hashed_keys).await
     }
 
     async fn retrieve_entities(
@@ -328,12 +331,13 @@ impl DojoWorld {
                     clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
 
                 match clause_type {
-                    ClauseType::Ids(ids) => {
-                        if ids.ids.is_empty() {
+                    ClauseType::HashedKeys(hashed_keys) => {
+                        if hashed_keys.hashed_keys.is_empty() {
                             return Err(QueryError::MissingParam("ids".into()).into());
                         }
 
-                        self.entities_by_ids(Some(ids), query.limit, query.offset).await?
+                        self.entities_by_hashed_keys(Some(hashed_keys), query.limit, query.offset)
+                            .await?
                     }
                     ClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
@@ -360,7 +364,7 @@ impl DojoWorld {
     }
 
     fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
-        let id =
+        let hashed_keys =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
         let models = schemas
             .iter()
@@ -372,7 +376,7 @@ impl DojoWorld {
             })
             .collect::<Result<Vec<_>, Error>>()?;
 
-        Ok(proto::types::Entity { id: id.to_bytes_be().to_vec(), models })
+        Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
     }
 }
 
@@ -415,15 +419,18 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { ids } = request.into_inner();
-        let ids = ids
+        let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
+        let hashed_keys = hashed_keys
             .iter()
             .map(|id| {
                 FieldElement::from_byte_slice_be(id)
                     .map_err(|e| Status::invalid_argument(e.to_string()))
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let rx = self.subscribe_entities(ids).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rx = self
+            .subscribe_entities(hashed_keys)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }

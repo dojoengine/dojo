@@ -23,7 +23,7 @@ use crate::proto;
 
 pub struct EntitiesSubscriber {
     /// Entity ids that the subscriber is interested in
-    ids: HashSet<FieldElement>,
+    hashed_keys: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
     sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
@@ -36,15 +36,15 @@ pub struct EntityManager {
 impl EntityManager {
     pub async fn add_subscriber(
         &self,
-        ids: Vec<FieldElement>,
+        hashed_keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
         let (sender, receiver) = channel(1);
 
-        self.subscribers
-            .write()
-            .await
-            .insert(id, EntitiesSubscriber { ids: ids.iter().cloned().collect(), sender });
+        self.subscribers.write().await.insert(
+            id,
+            EntitiesSubscriber { hashed_keys: hashed_keys.iter().cloned().collect(), sender },
+        );
 
         Ok(receiver)
     }
@@ -80,14 +80,14 @@ impl Service {
         subs: Arc<EntityManager>,
         cache: Arc<ModelCache>,
         pool: Pool<Sqlite>,
-        id: &str,
+        hashed_keys: &str,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            let felt_id = FieldElement::from_str(id).map_err(ParseError::FromStr)?;
+            let hashed = FieldElement::from_str(hashed_keys).map_err(ParseError::FromStr)?;
             // publish all updates if ids is empty or only ids that are subscribed to
-            if sub.ids.is_empty() || sub.ids.contains(&felt_id) {
+            if sub.hashed_keys.is_empty() || sub.hashed_keys.contains(&hashed) {
                 let models_query = r#"
                     SELECT group_concat(entity_model.model_id) as model_names
                     FROM entities
@@ -96,11 +96,12 @@ impl Service {
                     GROUP BY entities.id
                 "#;
                 let (model_names,): (String,) =
-                    sqlx::query_as(models_query).bind(id).fetch_one(&pool).await?;
+                    sqlx::query_as(models_query).bind(hashed_keys).fetch_one(&pool).await?;
                 let model_names: Vec<&str> = model_names.split(',').collect();
                 let schemas = cache.schemas(model_names).await?;
+
                 let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
-                let row = sqlx::query(&entity_query).bind(id).fetch_one(&pool).await?;
+                let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
 
                 let models = schemas
                     .iter()
@@ -115,7 +116,7 @@ impl Service {
 
                 let resp = proto::world::SubscribeEntityResponse {
                     entity: Some(proto::types::Entity {
-                        id: felt_id.to_bytes_be().to_vec(),
+                        hashed_keys: hashed.to_bytes_be().to_vec(),
                         models,
                     }),
                 };

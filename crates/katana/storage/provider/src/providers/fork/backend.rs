@@ -179,7 +179,7 @@ impl Future for Backend {
     }
 }
 
-/// A thread safe handler to the [`ForkedBackend`]. This is the primary interface for sending
+/// A thread safe handler to the [`Backend`]. This is the primary interface for sending
 /// request to the backend thread to fetch data from the forked provider.
 pub struct ForkedBackend(Mutex<Sender<BackendRequest>>);
 
@@ -190,6 +190,9 @@ impl Clone for ForkedBackend {
 }
 
 impl ForkedBackend {
+    /// Create a new [`ForkedBackend`] with a dedicated backend thread.
+    ///
+    /// This method will spawn a new thread that will run the [`Backend`].
     pub fn new_with_backend_thread(
         provider: Arc<JsonRpcClient<HttpTransport>>,
         block_id: BlockHashOrNumber,
@@ -412,10 +415,18 @@ impl ContractClassProvider for SharedStateProvider {
             return Ok(hash.cloned());
         }
 
-        let compiled_hash = self.0.do_get_compiled_class_hash(hash)?;
-        self.0.compiled_class_hashes.write().insert(hash, compiled_hash);
-
-        Ok(Some(hash))
+        if let Some(hash) =
+            handle_contract_or_class_not_found_err(self.0.do_get_compiled_class_hash(hash))
+                .map_err(|e| {
+                    error!(target: "forked_backend", "error while fetching compiled class hash for class hash {hash:#x}: {e}");
+                    e
+                })?
+        {
+            self.0.compiled_class_hashes.write().insert(hash, hash);
+            Ok(Some(hash))
+        } else {
+            Ok(None)
+        }
     }
 
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
