@@ -1374,7 +1374,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::position",
       "address": null,
-      "class_hash": "0x2b233bba9a232a5e891c85eca9f67beedca7a12f9768729ff017bcb62d25c9d",
+      "class_hash": "0x4cd20d231b04405a77b184c115dc60637e186504fad7f0929bd76cbd09c10b",
       "abi": [
         {
           "type": "function",

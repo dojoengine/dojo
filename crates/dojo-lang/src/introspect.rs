@@ -275,17 +275,7 @@ fn handle_introspect_internal(
         }
     });
 
-    if size_precompute > 0 {
-        size.push(format!("{}", size_precompute));
-    }
-
-    if size.is_empty() {
-        // If the introspected node has only keys,
-        // the expected size in database is 0 as keys are
-        // not stored. Only models are affected by this,
-        // and `model.rs` already handle this situation.
-        size.push(format!("{}", 0));
-    }
+    size.push(format!("{}", size_precompute));
 
     RewriteNode::interpolate_patched(
         "

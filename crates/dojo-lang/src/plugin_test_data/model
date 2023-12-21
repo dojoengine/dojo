@@ -786,7 +786,7 @@ impl PositionSerde of core::serde::Serde::<Position> {
 impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::introspect::Introspect::<Vec3>::size()
+        dojo::database::introspect::Introspect::<Vec3>::size() + 0
     }
 
     #[inline(always)]
@@ -905,7 +905,7 @@ impl RolesSerde of core::serde::Serde::<Roles> {
 impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::introspect::Introspect::<Array<u8>>::size()
+        dojo::database::introspect::Introspect::<Array<u8>>::size() + 0
     }
 
     #[inline(always)]
