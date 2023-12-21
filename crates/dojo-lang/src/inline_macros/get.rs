@@ -130,8 +130,9 @@ impl InlineMacroExprPlugin for GetMacro {
                  core::array::ArrayTrait::span(@__{model}_model__);
                  let __{model} = core::serde::Serde::<{model}>::deserialize(
                     ref __{model}_model_span__
-                ); if __{model}.is_none() {{ panic!({deser_err_msg}); }}; let __{model} = \
-                 __{model}.unwrap();\n",
+                ); if core::option::OptionTrait::<{model}>::is_none(@__{model}) {{ \
+                 panic!({deser_err_msg}); }}; let __{model} = \
+                 core::option::OptionTrait::<{model}>::unwrap(__{model});\n",
                 world.as_syntax_node().get_text(db),
             ));
         }
