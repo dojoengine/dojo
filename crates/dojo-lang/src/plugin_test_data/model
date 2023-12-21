@@ -520,7 +520,7 @@ mod player {
 }
 
 //! > expected_diagnostics
-error: Model `Roles` must define at least one #[key] attribute
+error: Model must define at least one #[key] attribute
  --> test_src/lib.cairo:36:8
 struct Roles {
        ^***^
