@@ -24,6 +24,8 @@ pub fn handle_model_struct(
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
+    let struct_name: String = struct_ast.name(db).text(db).into();
+
     let elements = struct_ast.members(db).elements(db);
     let members: &Vec<_> = &elements
         .iter()
@@ -38,7 +40,16 @@ pub fn handle_model_struct(
 
     if keys.is_empty() {
         diagnostics.push(PluginDiagnostic {
-            message: "Model must define atleast one #[key] attribute".into(),
+            message: format!("Model `{struct_name}` must define at least one #[key] attribute"),
+            stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
+        });
+    }
+
+    if keys.len() == members.len() {
+        diagnostics.push(PluginDiagnostic {
+            message: format!(
+                "Model `{struct_name}` must define at least one member that is not a key"
+            ),
             stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
         });
     }

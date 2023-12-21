@@ -280,11 +280,11 @@ fn handle_introspect_internal(
     }
 
     if size.is_empty() {
-        panic!(
-            "The model `{}` has only keys, ensure you have at least one field without the #[key] \
-             attribute.",
-            name
-        );
+        // If the introspected node has only keys,
+        // the expected size in database is 0 as keys are
+        // not stored. Only models are affected by this,
+        // and `model.rs` already handle this situation.
+        size.push(format!("{}", 0));
     }
 
     RewriteNode::interpolate_patched(
