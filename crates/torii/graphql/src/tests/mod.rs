@@ -86,7 +86,9 @@ pub struct Record {
     pub type_contract_address: String,
     pub random_u8: u8,
     pub random_u128: String,
-    pub type_nested: Option<Nested>,
+    pub type_deeply_nested: Option<Nested>,
+    pub type_nested_one: Option<NestedMost>,
+    pub type_nested_two: Option<NestedMost>,
     pub entity: Option<Entity>,
 }
 
@@ -105,11 +107,11 @@ pub struct NestedMore {
     pub depth: String,
     pub type_number: u8,
     pub type_string: String,
-    pub type_nested_more_more: NestedMoreMore,
+    pub type_nested_most: NestedMost,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
-pub struct NestedMoreMore {
+pub struct NestedMost {
     pub __typename: String,
     pub depth: String,
     pub type_number: u8,
