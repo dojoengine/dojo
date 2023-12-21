@@ -104,8 +104,8 @@ pub fn raw_call(
     let limit_steps_by_resources = true;
 
     // Now, the max step is not given directly to this function.
-    // It's computed by a new function max_steps, and it tooks the values
-    // from teh block context itself instead of the input give.
+    // It's computed by a new function max_steps, and it took the values
+    // from the block context itself instead of the input give.
     // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/execution/entry_point.rs#L165
     // The blockifier patch must be adjusted to modify this function to return
     // the limit we have into the block context without min applied:

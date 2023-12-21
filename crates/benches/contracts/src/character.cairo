@@ -5,7 +5,7 @@ use starknet::{ContractAddress, get_caller_address};
 struct Character {
     #[key]
     caller: ContractAddress,
-    heigth: felt252,
+    height: felt252,
     abilities: Abilities,
     stats: Stats,
     weapon: Weapon,
@@ -30,7 +30,7 @@ struct Stats {
     hits: u64,
     blocks: u32,
     walked: felt252,
-    runned: felt252,
+    ran: felt252,
     finished: bool,
     romances: u16,
 }

@@ -268,7 +268,7 @@ mod tests {
             tx.send(()).await.unwrap();
         });
 
-        // 2. The subscription is executed and it is listeing, waiting for publish() to be executed
+        // 2. The subscription is executed and it is listening, waiting for publish() to be executed
         let response_value = run_graphql_subscription(
             &pool,
             r#"
@@ -279,7 +279,7 @@ mod tests {
                 }"#,
         )
         .await;
-        // 4. The subcription has received the message from publish()
+        // 4. The subscription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
         rx.recv().await.unwrap();
@@ -316,7 +316,7 @@ mod tests {
             tx.send(()).await.unwrap();
         });
 
-        // 2. The subscription is executed and it is listeing, waiting for publish() to be executed
+        // 2. The subscription is executed and it is listening, waiting for publish() to be executed
         let response_value = run_graphql_subscription(
             &pool,
             r#"
@@ -327,7 +327,7 @@ mod tests {
                 }"#,
         )
         .await;
-        // 4. The subcription has received the message from publish()
+        // 4. The subscription has received the message from publish()
         // 5. Compare values
         assert_eq!(expected_value, response_value);
         rx.recv().await.unwrap();

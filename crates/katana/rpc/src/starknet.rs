@@ -570,7 +570,7 @@ impl StarknetApiServer for StarknetApi {
             let state = pending_state.ok_or(StarknetApiError::TxnHashNotFound)?;
             let executed_txs = state.executed_txs.read();
 
-            // attemps to find in the valid transactions list first (executed_txs)
+            // attempts to find in the valid transactions list first (executed_txs)
             // if not found, then search in the rejected transactions list (rejected_txs)
             if let Some(is_reverted) = executed_txs
                 .iter()

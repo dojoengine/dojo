@@ -51,7 +51,7 @@ pub enum ModelCommands {
 
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
-        #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
+        #[arg(help = "Comma separated values e.g., 0x12345,0x69420,...")]
         keys: Vec<FieldElement>,
 
         #[command(flatten)]

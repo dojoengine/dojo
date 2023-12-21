@@ -106,7 +106,7 @@ impl BlockStatusProvider for InMemoryProvider {
                 }
             }
         };
-        Ok(self.storage.read().block_statusses.get(&num).cloned())
+        Ok(self.storage.read().block_statuses.get(&num).cloned())
     }
 }
 
@@ -417,7 +417,7 @@ impl BlockWriter for InMemoryProvider {
         storage.block_numbers.insert(block_hash, block_number);
         storage.block_hashes.insert(block_number, block_hash);
         storage.block_headers.insert(block_number, block_header);
-        storage.block_statusses.insert(block_number, block.status);
+        storage.block_statuses.insert(block_number, block.status);
         storage.block_body_indices.insert(block_number, block_body_indices);
 
         storage.transactions.extend(txs);

@@ -367,7 +367,7 @@ fn parse_contracts_events(
 
             let _ = data.next().expect("salt is missing from event");
             let mut class_hash = data.next().expect("class hash is missing from event");
-            let address = data.next().expect("addresss is missing from event");
+            let address = data.next().expect("address is missing from event");
 
             if let Some(upgrade) = upgradeds.get(&address) {
                 class_hash = *upgrade;

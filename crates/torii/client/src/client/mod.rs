@@ -106,7 +106,7 @@ impl Client {
     /// The query param includes an optional clause for filtering. Without clause, it fetches ALL
     /// entities, this is less efficient as it requires an additional query for each entity's
     /// model data. Specifying a clause can optimize the query by limiting the retrieval to specific
-    /// type of entites matching keys and/or models.
+    /// type of entities matching keys and/or models.
     pub async fn entities(&self, query: Query) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEntitiesResponse { entities } = grpc_client.retrieve_entities(query).await?;

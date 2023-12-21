@@ -109,7 +109,7 @@ impl Tx<RW> {
         self.inner.del(self.get_dbi::<T>()?, key.encode(), value).map_err(DatabaseError::Delete)
     }
 
-    /// Clears all entries in the given database. This will emtpy the database.
+    /// Clears all entries in the given database. This will empty the database.
     pub fn clear<T: Table>(&self) -> Result<(), DatabaseError> {
         self.inner.clear_db(self.get_dbi::<T>()?).map_err(DatabaseError::Clear)
     }

@@ -452,7 +452,7 @@ fn bench_nested_struct() {
 struct Character {
     #[key]
     caller: ContractAddress,
-    heigth: felt252,
+    height: felt252,
     abilities: Abilities,
     stats: Stats,
     weapon: Weapon,
@@ -477,7 +477,7 @@ struct Stats {
     hits: u64,
     blocks: u32,
     walked: felt252,
-    runned: felt252,
+    ran: felt252,
     finished: bool,
     romances: u16,
 }
@@ -496,7 +496,7 @@ fn bench_complex_struct() {
 
     let char = Character {
         caller: starknet::contract_address_const::<0x42>(),
-        heigth: 0x123456789abcdef,
+        height: 0x123456789abcdef,
         abilities: Abilities {
             strength: 0x12,
             dexterity: 0x34,
@@ -512,7 +512,7 @@ fn bench_complex_struct() {
             hits: 0x123456789abcdef,
             blocks: 0x12345678,
             walked: 0x123456789abcdef,
-            runned: 0x123456789abcdef,
+            ran: 0x123456789abcdef,
             finished: true,
             romances: 0x1234,
         },

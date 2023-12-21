@@ -1,4 +1,4 @@
-//! Serializable without using custome functions
+//! Serializable without using custom functions
 
 use std::collections::HashMap;
 use std::sync::Arc;

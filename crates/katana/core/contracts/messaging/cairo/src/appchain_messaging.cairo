@@ -42,7 +42,7 @@ trait IAppchainMessaging<T> {
 
     /// Consumes a message registered as consumable by the appchain.
     /// This is the traditional consuming as done on ethereum.
-    /// Returnes the message hash on success.
+    /// Returns the message hash on success.
     fn consume_message_from_appchain(
         ref self: T, from_address: starknet::ContractAddress, payload: Span<felt252>,
     ) -> felt252;

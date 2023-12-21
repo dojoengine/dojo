@@ -77,7 +77,7 @@ mod bar {
                 self.world.read(),
                 Character {
                     caller: get_caller_address(),
-                    heigth: a,
+                    height: a,
                     abilities: Abilities {
                         strength: 0x12,
                         dexterity: 0x34,
@@ -93,7 +93,7 @@ mod bar {
                         hits: 0x123456789abcdef,
                         blocks: 0x12345678,
                         walked: 0x123456789abcdef,
-                        runned: 0x123456789abcdef,
+                        ran: 0x123456789abcdef,
                         finished: true,
                         romances: 0x1234,
                     },
@@ -485,7 +485,7 @@ fn bench_execute_complex() {
     let data = get!(world, alice, Character);
     end(gas, 'char get macro');
 
-    assert(data.heigth == 1337, 'data not stored');
+    assert(data.height == 1337, 'data not stored');
 }
 
 

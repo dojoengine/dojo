@@ -80,7 +80,7 @@ impl Future for NodeService {
 
 /// The type which takes the transaction from the pool and feeds them to the block producer.
 pub struct TransactionMiner {
-    /// stores whether there are pending transacions (if known)
+    /// stores whether there are pending transactions (if known)
     has_pending_txs: Option<bool>,
     /// Receives hashes of transactions that are ready from the pool
     rx: Fuse<Receiver<FieldElement>>,

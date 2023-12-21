@@ -159,7 +159,7 @@ impl MessagingService {
 pub enum MessagingOutcome {
     Gather {
         /// The latest block number of the settlement chain from which messages were gathered.
-        lastest_block: u64,
+        latest_block: u64,
         /// The number of settlement chain messages gathered up until `latest_block`.
         msg_count: usize,
     },
@@ -206,7 +206,7 @@ impl Stream for MessagingService {
                 Poll::Ready(Ok((last_block, msg_count))) => {
                     pin.gather_from_block = last_block + 1;
                     return Poll::Ready(Some(MessagingOutcome::Gather {
-                        lastest_block: last_block,
+                        latest_block: last_block,
                         msg_count,
                     }));
                 }

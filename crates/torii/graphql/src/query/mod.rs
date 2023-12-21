@@ -162,7 +162,7 @@ fn fetch_value(
                 row.try_get::<String, &str>(&column_name).map(Value::from)?,
             )),
         },
-        // fetch everything else as non-formated string
+        // fetch everything else as non-formatted string
         _ => Ok(row.try_get::<String, &str>(&column_name).map(Value::from)?),
     }
 }

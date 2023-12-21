@@ -19,7 +19,7 @@ pub trait Value: Compress + Decompress + std::fmt::Debug {}
 impl<T> Key for T where T: Encode + Decode + Clone + std::fmt::Debug {}
 impl<T> Value for T where T: Compress + Decompress + std::fmt::Debug {}
 
-/// An asbtraction for a table.
+/// An abstraction for a table.
 pub trait Table {
     /// The name of the table.
     const NAME: &'static str;
@@ -151,7 +151,7 @@ define_tables_enum! {[
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
     (BlockBodyIndices, TableType::Table),
-    (BlockStatusses, TableType::Table),
+    (BlockStatuses, TableType::Table),
     (TxNumbers, TableType::Table),
     (TxBlocks, TableType::Table),
     (TxHashes, TableType::Table),
@@ -179,7 +179,7 @@ tables! {
     /// Stores block numbers according to its block hash
     BlockNumbers: (BlockHash) => BlockNumber,
     /// Stores block finality status according to its block number
-    BlockStatusses: (BlockNumber) => FinalityStatus,
+    BlockStatuses: (BlockNumber) => FinalityStatus,
     /// Block number to its body indices which stores the tx number of
     /// the first tx in the block and the number of txs in the block.
     BlockBodyIndices: (BlockNumber) => StoredBlockBodyIndices,
@@ -238,7 +238,7 @@ mod tests {
         assert_eq!(Tables::ALL[1].name(), BlockHashes::NAME);
         assert_eq!(Tables::ALL[2].name(), BlockNumbers::NAME);
         assert_eq!(Tables::ALL[3].name(), BlockBodyIndices::NAME);
-        assert_eq!(Tables::ALL[4].name(), BlockStatusses::NAME);
+        assert_eq!(Tables::ALL[4].name(), BlockStatuses::NAME);
         assert_eq!(Tables::ALL[5].name(), TxNumbers::NAME);
         assert_eq!(Tables::ALL[6].name(), TxBlocks::NAME);
         assert_eq!(Tables::ALL[7].name(), TxHashes::NAME);

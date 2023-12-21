@@ -28,13 +28,13 @@ contract StarknetMessaging is IStarknetMessaging {
     /*
       Random slot storage elements and accessors.
     */
-    string constant L1L2_MESSAGE_MAP_TAG = "STARKNET_1.0_MSGING_L1TOL2_MAPPPING_V2";
-    string constant L2L1_MESSAGE_MAP_TAG = "STARKNET_1.0_MSGING_L2TOL1_MAPPPING";
+    string constant L1L2_MESSAGE_MAP_TAG = "STARKNET_1.0_MSGING_L1TOL2_MAPPING_V2";
+    string constant L2L1_MESSAGE_MAP_TAG = "STARKNET_1.0_MSGING_L2TOL1_MAPPING";
 
     string constant L1L2_MESSAGE_NONCE_TAG = "STARKNET_1.0_MSGING_L1TOL2_NONCE";
 
     string constant L1L2_MESSAGE_CANCELLATION_MAP_TAG = (
-        "STARKNET_1.0_MSGING_L1TOL2_CANCELLATION_MAPPPING"
+        "STARKNET_1.0_MSGING_L1TOL2_CANCELLATION_MAPPING"
     );
 
     string constant L1L2_MESSAGE_CANCELLATION_DELAY_TAG = (

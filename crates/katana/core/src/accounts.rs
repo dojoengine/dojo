@@ -71,7 +71,7 @@ impl Account {
             get_storage_var_address("Account_public_key", &[]).unwrap(),
             self.public_key,
         )?;
-        // initialze account nonce
+        // initialize account nonce
         state.set_nonce(address, 1u128.into())?;
         Ok(())
     }

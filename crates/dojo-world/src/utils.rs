@@ -25,7 +25,7 @@ pub enum TransactionWaitingError {
 }
 
 /// A type that waits for a transaction to achieve the desired status. The waiter will poll for the
-/// transaction receipt every `interval` miliseconds until it achieves the desired status or until
+/// transaction receipt every `interval` milliseconds until it achieves the desired status or until
 /// `timeout` is reached.
 ///
 /// The waiter can be configured to wait for a specific finality status (e.g, `ACCEPTED_ON_L2`), by
@@ -35,7 +35,7 @@ pub enum TransactionWaitingError {
 /// # Examples
 ///
 /// ```ignore
-/// ues url::Url;
+/// use url::Url;
 /// use starknet::providers::jsonrpc::HttpTransport;
 /// use starknet::providers::JsonRpcClient;
 /// use starknet::core::types::TransactionFinalityStatus;
@@ -62,7 +62,7 @@ pub struct TransactionWaiter<'a, P: Provider> {
     /// be considered when waiting for the transaction, meaning `REVERTED` transaction will not
     /// return an error.
     must_succeed: bool,
-    /// Poll the transaction every `interval` miliseconds. Miliseconds are used so that
+    /// Poll the transaction every `interval` milliseconds. Milliseconds are used so that
     /// we can be more precise with the polling interval. Defaults to 250ms.
     interval: Interval,
     /// The maximum amount of time to wait for the transaction to achieve the desired status. An
@@ -100,8 +100,8 @@ where
         }
     }
 
-    pub fn with_interval(self, milisecond: u64) -> Self {
-        let interval = Duration::from_millis(milisecond);
+    pub fn with_interval(self, millisecond: u64) -> Self {
+        let interval = Duration::from_millis(millisecond);
         Self { interval: tokio::time::interval_at(Instant::now() + interval, interval), ..self }
     }
 
@@ -267,7 +267,7 @@ mod tests {
     use super::{Duration, TransactionWaiter};
 
     #[tokio::test]
-    async fn should_timeout_on_nonexistant_transaction() {
+    async fn should_timeout_on_nonexistent_transaction() {
         let sequencer =
             TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
                 .await;

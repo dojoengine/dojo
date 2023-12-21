@@ -147,7 +147,7 @@ impl InlineMacroExprPlugin for SetMacro {
                         ));
                     }
                     _ => eprintln!(
-                        "Unsupport component value type {} for semantic writer analysis",
+                        "Unsupported component value type {} for semantic writer analysis",
                         syntax_node.kind(db)
                     ),
                 }

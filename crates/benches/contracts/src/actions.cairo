@@ -167,7 +167,7 @@ mod actions {
 
             set!(world, Character {
                 caller: get_caller_address(),
-                heigth: 170,
+                height: 170,
                 abilities: Abilities {
                     strength: 8,
                     dexterity: 8,
@@ -183,7 +183,7 @@ mod actions {
                     hits: 0,
                     blocks: 0,
                     walked: 0,
-                    runned: 0,
+                    ran: 0,
                     finished: false,
                     romances: 0,
                 },
@@ -207,7 +207,7 @@ mod actions {
 
             set!(world, Character {
                 caller: get_caller_address(),
-                heigth: 170,
+                height: 170,
                 abilities,
                 stats: Stats {
                     kills: 0,
@@ -216,7 +216,7 @@ mod actions {
                     hits: 0,
                     blocks: 0,
                     walked: 0,
-                    runned: 0,
+                    ran: 0,
                     finished: false,
                     romances: 0,
                 },
@@ -242,7 +242,7 @@ mod actions {
 
             set!(world, Character {
                 caller: get_caller_address(),
-                heigth: char.heigth,
+                height: char.height,
                 abilities: char.abilities,
                 stats: char.stats,
                 weapon: char.weapon,
@@ -263,14 +263,14 @@ mod actions {
                 hits: char.stats.hits + if which == 3 { 0 } else { 1 },
                 blocks: char.stats.blocks + if which == 4 { 0 } else { 1 },
                 walked: char.stats.walked + if which == 5 { 0 } else { 1 },
-                runned: char.stats.runned + if which == 6 { 0 } else { 1 },
+                ran: char.stats.ran + if which == 6 { 0 } else { 1 },
                 finished: char.stats.finished || if which == 7 { false } else { true },
                 romances: char.stats.romances + if which == 8 { 0 } else { 1 },
             };
 
             set!(world, Character {
                 caller: get_caller_address(),
-                heigth: char.heigth,
+                height: char.height,
                 abilities: char.abilities,
                 stats: Stats {
                     kills: char.stats.kills + 1,
@@ -279,7 +279,7 @@ mod actions {
                     hits: char.stats.hits,
                     blocks: char.stats.blocks,
                     walked: char.stats.walked,
-                    runned: char.stats.runned,
+                    ran: char.stats.ran,
                     finished: char.stats.finished,
                     romances: char.stats.romances,
                 },

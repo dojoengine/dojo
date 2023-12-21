@@ -55,7 +55,7 @@ impl StateDiffManager {
 
         let (sender, receiver) = channel(1);
 
-        // convert the list of entites into a list storage addresses
+        // convert the list of entities into a list storage addresses
         let storage_addresses = reqs
             .into_iter()
             .map(|req| {

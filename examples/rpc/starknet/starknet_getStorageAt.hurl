@@ -38,7 +38,7 @@ jsonpath "$.error" not exists
 jsonpath "$.result" equals "0x0"
 
 
-# Fetching storage slot of non-existant contract should fail.
+# Fetching storage slot of non-existent contract should fail.
 POST http://0.0.0.0:5050
 Content-Type: application/json
 {

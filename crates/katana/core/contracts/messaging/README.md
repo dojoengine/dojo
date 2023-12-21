@@ -73,7 +73,7 @@ Then you've to wait the message to be sent to L1, Katana will display it:
 |   payload    | [0x2]
 ```
 ```
-# Consume the messag previously sent. You can try to call it once and see the second one reverting.
+# Consume the message previously sent. You can try to call it once and see the second one reverting.
 make -sC solidity/ consume_msg payload="[2]"
 ```
 

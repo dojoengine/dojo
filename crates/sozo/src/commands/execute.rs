@@ -20,7 +20,7 @@ pub struct ExecuteArgs {
 
     #[arg(short, long)]
     #[arg(value_delimiter = ',')]
-    #[arg(help = "The calldata to be passed to the system. Comma seperated values e.g., \
+    #[arg(help = "The calldata to be passed to the system. Comma separated values e.g., \
                   0x12345,0x69420.")]
     pub calldata: Vec<FieldElement>,
 

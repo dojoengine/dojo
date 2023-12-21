@@ -71,7 +71,7 @@ pub enum StarknetApiError {
     UnsupportedTransactionVersion,
     #[error("The contract class version is not supported")]
     UnsupportedContractClassVersion,
-    #[error("An unexpected error occured")]
+    #[error("An unexpected error occurred")]
     UnexpectedError,
     #[error("Too many storage keys requested")]
     ProofLimitExceeded,

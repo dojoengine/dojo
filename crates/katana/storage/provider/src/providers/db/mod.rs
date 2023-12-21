@@ -15,7 +15,7 @@ use katana_db::models::storage::{
     ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
 };
 use katana_db::tables::{
-    BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatusses, ClassDeclarationBlock,
+    BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatuses, ClassDeclarationBlock,
     ClassDeclarations, CompiledClassHashes, CompiledContractClasses, ContractClassChanges,
     ContractInfo, ContractInfoChangeSet, ContractStorage, DupSort, Headers, NonceChanges, Receipts,
     SierraClasses, StorageChangeSet, StorageChanges, Table, Transactions, TxBlocks, TxHashes,
@@ -217,7 +217,7 @@ impl BlockStatusProvider for DbProvider {
         };
 
         if let Some(block_num) = block_num {
-            let status = db_tx.get::<BlockStatusses>(block_num)?.expect("should exist");
+            let status = db_tx.get::<BlockStatuses>(block_num)?.expect("should exist");
             db_tx.commit()?;
             Ok(Some(status))
         } else {
@@ -445,7 +445,7 @@ impl TransactionStatusProvider for DbProvider {
         let db_tx = self.0.tx()?;
         if let Some(tx_num) = db_tx.get::<TxNumbers>(hash)? {
             let block_num = db_tx.get::<TxBlocks>(tx_num)?.expect("should exist");
-            let status = db_tx.get::<BlockStatusses>(block_num)?.expect("should exist");
+            let status = db_tx.get::<BlockStatuses>(block_num)?.expect("should exist");
             db_tx.commit()?;
             Ok(Some(status))
         } else {
@@ -506,7 +506,7 @@ impl BlockWriter for DbProvider {
 
             db_tx.put::<BlockHashes>(block_number, block_hash)?;
             db_tx.put::<BlockNumbers>(block_hash, block_number)?;
-            db_tx.put::<BlockStatusses>(block_number, block.status)?;
+            db_tx.put::<BlockStatuses>(block_number, block.status)?;
 
             db_tx.put::<Headers>(block_number, block_header)?;
             db_tx.put::<BlockBodyIndices>(block_number, block_body_indices)?;

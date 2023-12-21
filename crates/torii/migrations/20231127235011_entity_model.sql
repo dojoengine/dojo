@@ -1,4 +1,4 @@
--- NOTE: sqlite does not support deleteing columns. Workaround is to create new table, copy, and delete old.
+-- NOTE: sqlite does not support deleting columns. Workaround is to create new table, copy, and delete old.
 
 -- Create new table without model_names column
 CREATE TABLE entities_new (

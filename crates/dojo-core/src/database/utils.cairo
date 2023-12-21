@@ -9,7 +9,7 @@ const OFFSET: felt252 = 0x10000000000000000000000000000000000;
 // finds only those entities that have same IDs across all provided entities and 
 // returns these entities, obeying the order of IDs of the first ID array
 //
-// the function takes two aruments:
+// the function takes two arguments:
 // * `ids` is a list of lists of entity IDs; each inner list is an ID of an entity
 //    at the same index in the corresponding `entities` list
 // * `entities` is a list of lists of deserialized entities; each list of entities
@@ -94,7 +94,7 @@ fn find_matching(
     // an array into which we append those entities who's IDs are found across
     // every ID array; the entities are appended sequentially, e.g.
     // [entity1_id1, entity2_id1, entity3_id1, entity1_id2, entity2_id2, entity3_id2]
-    // perserving the ID order from the first ID array
+    // preserving the ID order from the first ID array
     let mut entities_with_matching_ids: Array<Span<felt252>> = ArrayTrait::new();
 
     let found_in_all: u8 = entity_type_counter - 1;

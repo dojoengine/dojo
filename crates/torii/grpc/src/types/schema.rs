@@ -56,7 +56,7 @@ impl TryFrom<Ty> for proto::types::Ty {
             }
             Ty::Enum(r#enum) => Some(proto::types::ty::TyType::Enum(r#enum.into())),
             Ty::Struct(r#struct) => Some(proto::types::ty::TyType::Struct(r#struct.try_into()?)),
-            Ty::Tuple(_) => unimplemented!("unimplemented typle type"),
+            Ty::Tuple(_) => unimplemented!("unimplemented tuple type"),
         };
 
         Ok(proto::types::Ty { ty_type })
