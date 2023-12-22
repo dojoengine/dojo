@@ -11,6 +11,7 @@ pub struct OrderInputObject {
 
 impl OrderInputObject {
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
+        println!("1{}Order", type_name);
         Self { type_name: format!("{}Order", type_name), type_mapping: object_types.clone() }
     }
 }
@@ -26,17 +27,23 @@ impl InputObjectTrait for OrderInputObject {
 
     fn input_object(&self) -> InputObject {
         // direction and field values are required (not null)
-        InputObject::new(self.type_name())
-            .field(InputValue::new("direction", TypeRef::named_nn("OrderDirection")))
+        let mut input_object =  InputObject::new(self.type_name())
             .field(InputValue::new(
                 "field",
                 TypeRef::named_nn(format!("{}Field", self.type_name())),
-            ))
+            ));
+        if &self.type_name != "World__ModelOrder" {
+            input_object = input_object.field(InputValue::new(
+                "direction",
+                TypeRef::named_nn("OrderDirection"),
+            ));
+        }
+        input_object
     }
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {
-        // Direction enum has only two members ASC and DESC
-        let direction = Enum::new("OrderDirection").item("ASC").item("DESC");
+        // empty vec
+        let mut vec = Vec::new();
 
         // Field Order enum consist of all members of a model
         let field_order = self
@@ -45,12 +52,20 @@ impl InputObjectTrait for OrderInputObject {
             .fold(Enum::new(format!("{}Field", self.type_name())), |acc, (ty_name, _)| {
                 acc.item(ty_name.to_uppercase())
             });
+        vec.push(field_order);
 
-        Some(vec![direction, field_order])
+        if &self.type_name != "World__ModelOrder" {
+            // Direction enum has only two members ASC and DESC
+            let direction = Enum::new("OrderDirection").item("ASC").item("DESC");
+            vec.push(direction);
+        }
+
+        Some(vec)
     }
 }
 
 pub fn order_argument(field: Field, type_name: &str) -> Field {
+    println!("2{}Order", type_name);
     field.argument(InputValue::new("order", TypeRef::named(format!("{}Order", type_name))))
 }
 
