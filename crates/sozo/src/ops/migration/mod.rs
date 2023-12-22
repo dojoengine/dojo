@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
@@ -25,9 +26,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 mod migration_test;
 mod ui;
 
-use starknet::providers::{
-    JsonRpcClient, MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
-};
+use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer};
 use ui::MigrationUi;
 
@@ -52,7 +51,7 @@ where
     // Load local and remote World manifests.
 
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&target_dir, &account, world_address, ui).await?;
+        load_world_manifests(&target_dir, &account, world_address, &ui).await?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -129,7 +128,7 @@ where
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
-    let strategy = prepare_migration(target_dir, diff, name, world_address, ui)?;
+    let strategy = prepare_migration(target_dir, diff, name, world_address, &ui)?;
 
     println!("  ");
 
@@ -187,10 +186,9 @@ pub(crate) async fn setup_env(
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
             Ok(_) => Ok(account),
-            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
-                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
-                ..
-            })) => Err(anyhow!("Account with address {:#x} doesn't exist.", account.address())),
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
+            }
             Err(e) => Err(e.into()),
         }
     }
@@ -288,14 +286,15 @@ where
     match &strategy.executor {
         Some(executor) => {
             ui.print_header("# Executor");
-            deploy_contract(executor, "executor", vec![], migrator, ui, &txn_config).await?;
+            deploy_contract(executor, "executor", vec![], migrator, &ui, &txn_config).await?;
 
             // There is no world migration, so it exists already.
             if strategy.world.is_none() {
                 let addr = strategy.world_address()?;
                 let InvokeTransactionResult { transaction_hash } =
                     WorldContract::new(addr, &migrator)
-                        .set_executor(executor.contract_address)
+                        .set_executor(&executor.contract_address.into())
+                        .send()
                         .await?;
 
                 TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
@@ -336,29 +335,39 @@ where
                 strategy.executor.as_ref().unwrap().contract_address,
                 strategy.base.as_ref().unwrap().diff.local,
             ];
-            deploy_contract(world, "world", calldata.clone(), migrator, ui, &txn_config).await?;
+            deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
+                .await
+                .map_err(|e| anyhow!("Failed to deploy world: {e}"))?;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
             let metadata = dojo_metadata_from_workspace(ws);
             if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
-                let hash = meta.upload().await?;
+                match meta.upload().await {
+                    Ok(hash) => {
+                        let encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
 
-                let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(world.contract_address, migrator)
-                        .set_metadata_uri(FieldElement::ZERO, format!("ipfs://{hash}"))
-                        .await
-                        .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
+                        let InvokeTransactionResult { transaction_hash } =
+                            WorldContract::new(world.contract_address, migrator)
+                                .set_metadata_uri(&FieldElement::ZERO, &encoded_uri)
+                                .send()
+                                .await
+                                .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
 
-                ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
-                ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+                        ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
+                        ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+                    }
+                    Err(err) => {
+                        ui.print_sub(format!("Failed to set World metadata:\n{err}"));
+                    }
+                }
             }
         }
         None => {}
     };
 
-    register_models(strategy, migrator, ui, txn_config.clone()).await?;
-    deploy_contracts(strategy, migrator, ui, txn_config).await?;
+    register_models(strategy, migrator, &ui, txn_config.clone()).await?;
+    deploy_contracts(strategy, migrator, &ui, txn_config).await?;
 
     // This gets current block numder if helpful
     // let block_height = migrator.provider().block_number().await.ok();
@@ -455,9 +464,16 @@ where
     }
 
     let world_address = strategy.world_address()?;
+    let world = WorldContract::new(world_address, migrator);
 
-    let InvokeTransactionResult { transaction_hash } = WorldContract::new(world_address, migrator)
-        .register_models(&models.iter().map(|c| c.diff.local).collect::<Vec<_>>())
+    let calls = models
+        .iter()
+        .map(|c| world.register_model_getcall(&c.diff.local.into()))
+        .collect::<Vec<_>>();
+
+    let InvokeTransactionResult { transaction_hash } = migrator
+        .execute(calls)
+        .send()
         .await
         .map_err(|e| anyhow!("Failed to register models to World: {e}"))?;
 

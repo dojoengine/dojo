@@ -12,5 +12,8 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.error" not exists
-# jsonpath "$.result.block_hash" matches /^0x[A-Fa-f0-9]+$/
 jsonpath "$.result.transactions" isCollection
+jsonpath "$.result.block_number" isInteger
+jsonpath "$.result.block_hash" matches /^0x[A-Fa-f0-9]+$/
+jsonpath "$.result.parent_hash" matches /^0x[A-Fa-f0-9]+$/
+jsonpath "$.result.starknet_version" matches /^[0-9]+.[0-9]+.[0-9]+$/

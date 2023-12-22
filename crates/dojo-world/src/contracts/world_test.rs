@@ -4,7 +4,7 @@ use camino::Utf8PathBuf;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use starknet::accounts::ConnectedAccount;
+use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::FieldElement;
 
 use super::{WorldContract, WorldContractReader};
@@ -26,9 +26,9 @@ async fn test_world_contract_reader() {
     .await;
 
     let world = WorldContractReader::new(world_address, provider);
-    let executor = world.executor().await.unwrap();
+    let executor = world.executor().call().await.unwrap();
 
-    assert_eq!(executor, executor_address);
+    assert_eq!(FieldElement::from(executor), executor_address);
 }
 
 pub async fn deploy_world(
@@ -82,10 +82,14 @@ pub async fn deploy_world(
     // wait for the tx to be mined
     tokio::time::sleep(Duration::from_millis(250)).await;
 
-    let _ = WorldContract::new(world_address, &account)
-        .register_models(&declare_output.iter().map(|o| o.class_hash).collect::<Vec<_>>())
-        .await
-        .unwrap();
+    let world = WorldContract::new(world_address, &account);
+
+    let calls = declare_output
+        .iter()
+        .map(|o| world.register_model_getcall(&o.class_hash.into()))
+        .collect::<Vec<_>>();
+
+    let _ = account.execute(calls).send().await.unwrap();
 
     // wait for the tx to be mined
     tokio::time::sleep(Duration::from_millis(250)).await;

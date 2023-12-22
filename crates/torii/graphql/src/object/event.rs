@@ -49,7 +49,7 @@ impl ObjectTrait for EventObject {
                     let connection = parse_connection_arguments(&ctx)?;
                     let keys = parse_keys_argument(&ctx)?;
                     let total_count = count_rows(&mut conn, EVENT_TABLE, &keys, &None).await?;
-                    let data = fetch_multiple_rows(
+                    let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
                         EVENT_TABLE,
                         ID_COLUMN,
@@ -57,6 +57,7 @@ impl ObjectTrait for EventObject {
                         &None,
                         &None,
                         &connection,
+                        total_count,
                     )
                     .await?;
                     let results = connection_output(
@@ -66,6 +67,7 @@ impl ObjectTrait for EventObject {
                         ID_COLUMN,
                         total_count,
                         false,
+                        page_info,
                     )?;
 
                     Ok(Some(Value::Object(results)))
@@ -100,9 +102,9 @@ impl EventObject {
             (Name::new("id"), Value::from(event.id)),
             (Name::new("keys"), Value::from(keys)),
             (Name::new("data"), Value::from(data)),
-            (Name::new("transaction_hash"), Value::from(event.transaction_hash)),
+            (Name::new("transactionHash"), Value::from(event.transaction_hash)),
             (
-                Name::new("created_at"),
+                Name::new("createdAt"),
                 Value::from(event.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])

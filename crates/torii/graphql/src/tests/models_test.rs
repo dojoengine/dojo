@@ -15,7 +15,7 @@ mod tests {
             r#"
           {{
              recordModels {} {{
-              total_count
+              totalCount
               edges {{
                 cursor
                 node {{
@@ -54,9 +54,14 @@ mod tests {
                     }}
                     entity {{
                         keys
-                        model_names
                     }}
                 }}
+              }}
+              pageInfo {{
+                hasPreviousPage
+                hasNextPage
+                startCursor
+                endCursor
               }}
             }}
           }}
@@ -86,7 +91,6 @@ mod tests {
         assert_eq!(connection.total_count, 10);
         assert_eq!(connection.edges.len(), 10);
         assert_eq!(&record.node.__typename, "Record");
-        assert_eq!(&entity.model_names, "Record");
         assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
         assert_eq!(record.node.depth, "Zero");
         assert_eq!(nested.depth, "One");
@@ -119,16 +123,16 @@ mod tests {
         let first_record = connection.edges.first().unwrap();
         assert_eq!(first_record.node.type_u64, 3);
 
-        // NOTE: output leading zeros on hex strings are trimmed, however, we don't do this yet on
-        // input hex strings
-        let felt_str_0x5 = format!("0x{:064x}", 5);
+        // NOTE: Server side is gonna parse "0x5" and "5" to hexadecimal format
+        let felt_str_0x5 = "0x5";
+        let felt_int_5 = "5";
 
         // where filter EQ on class_hash and contract_address
         let records = records_model_query(
             &schema,
             &format!(
                 "(where: {{ type_class_hash: \"{}\", type_contract_address: \"{}\" }})",
-                felt_str_0x5, felt_str_0x5
+                felt_str_0x5, felt_int_5
             ),
         )
         .await;
@@ -152,7 +156,7 @@ mod tests {
         // where filter LT on u256 (string)
         let records = records_model_query(
             &schema,
-            &format!("(where: {{ type_u256LT: \"{}\" }})", felt_str_0x5),
+            &format!("(where: {{ type_u256LT: \"{}\" }})", felt_int_5),
         )
         .await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
@@ -163,15 +167,14 @@ mod tests {
         assert_eq!(last_record.node.type_u256, "0x0");
 
         // where filter on true bool
-        // TODO: use bool values on input instead of 0 or 1
-        let records = records_model_query(&schema, "(where: { type_bool: 1 })").await;
+        let records = records_model_query(&schema, "(where: { type_bool: true })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 5);
         assert!(first_record.node.type_bool, "should be true");
 
         // where filter on false bool
-        let records = records_model_query(&schema, "(where: { type_bool: 0 })").await;
+        let records = records_model_query(&schema, "(where: { type_bool: false })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 5);
@@ -221,7 +224,7 @@ mod tests {
 
         let records = records_model_query(&schema, "(where: { type_u8GTE: 5 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
-        let one = connection.edges.get(0).unwrap();
+        let one = connection.edges.first().unwrap();
         let two = connection.edges.get(1).unwrap();
         let three = connection.edges.get(2).unwrap();
         let four = connection.edges.get(3).unwrap();

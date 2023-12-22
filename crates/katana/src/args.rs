@@ -1,3 +1,16 @@
+//! Katana binary executable.
+//!
+//! ## Feature Flags
+//!
+//! - `jemalloc`: Uses [jemallocator](https://github.com/tikv/jemallocator) as the global allocator.
+//!   This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
+//!   for more info.
+//! - `jemalloc-prof`: Enables [jemallocator's](https://github.com/tikv/jemallocator) heap profiling
+//!   and leak detection functionality. See [jemalloc's opt.prof](https://jemalloc.net/jemalloc.3.html#opt.prof)
+//!   documentation for usage details. This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
+//!   for more info.
+
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
@@ -6,10 +19,10 @@ use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
-use katana_core::db::serde::state::SerializableState;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
+use metrics::utils::parse_socket_address;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -51,17 +64,17 @@ pub struct KatanaArgs {
     #[arg(help = "Output logs in JSON format.")]
     pub json_log: bool,
 
+    /// Enable Prometheus metrics.
+    ///
+    /// The metrics will be served at the given interface and port.
+    #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
+    pub metrics: Option<SocketAddr>,
+
     #[arg(long)]
     #[arg(requires = "rpc_url")]
     #[arg(value_name = "BLOCK_NUMBER")]
     #[arg(help = "Fork the network at a specific block.")]
     pub fork_block_number: Option<u64>,
-
-    #[arg(long)]
-    #[arg(value_name = "PATH")]
-    #[arg(value_parser = SerializableState::parse)]
-    #[arg(help = "Initialize the chain from a previously saved state snapshot.")]
-    pub load_state: Option<SerializableState>,
 
     #[cfg(feature = "messaging")]
     #[arg(long)]
@@ -70,7 +83,7 @@ pub struct KatanaArgs {
     #[arg(help = "Configure the messaging with an other chain.")]
     #[arg(long_help = "Configure the messaging to allow Katana listening/sending messages on a \
                        settlement chain that can be Ethereum or an other Starknet sequencer. \
-                       The configuration file details and examples can be found here: TODO.")]
+                       The configuration file details and examples can be found here: https://book.dojoengine.org/toolchain/katana/reference.html#messaging")]
     pub messaging: Option<katana_core::service::messaging::MessagingConfig>,
 
     #[command(flatten)]
@@ -152,9 +165,9 @@ pub struct EnvironmentOptions {
 
 impl KatanaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,server=debug,katana_core=trace,\
-                                          blockifier=off,jsonrpsee_server=off,hyper=off,\
-                                          messaging=debug";
+        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forked_backend=trace,server=debug,\
+                                          katana_core=trace,blockifier=off,jsonrpsee_server=off,\
+                                          hyper=off,messaging=debug";
 
         let builder = fmt::Subscriber::builder().with_env_filter(
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
@@ -198,7 +211,6 @@ impl KatanaArgs {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
             disable_fee: self.starknet.disable_fee,
-            init_state: self.load_state.clone(),
             fork_rpc_url: self.rpc_url.clone(),
             fork_block_number: self.fork_block_number,
             env: Environment {
@@ -239,7 +251,7 @@ mod test {
     fn default_block_context_from_args() {
         let args = KatanaArgs::parse_from(["katana"]);
         let block_context = args.starknet_config().block_context();
-        assert_eq!(block_context.gas_price, DEFAULT_GAS_PRICE);
+        assert_eq!(block_context.gas_prices.eth_l1_gas_price, DEFAULT_GAS_PRICE);
         assert_eq!(block_context.chain_id.0, "KATANA".to_string());
         assert_eq!(block_context.validate_max_n_steps, DEFAULT_VALIDATE_MAX_STEPS);
         assert_eq!(block_context.invoke_tx_max_n_steps, DEFAULT_INVOKE_MAX_STEPS);
@@ -261,7 +273,7 @@ mod test {
 
         let block_context = args.starknet_config().block_context();
 
-        assert_eq!(block_context.gas_price, 10);
+        assert_eq!(block_context.gas_prices.eth_l1_gas_price, 10);
         assert_eq!(block_context.chain_id.0, "SN_GOERLI".to_string());
         assert_eq!(block_context.validate_max_n_steps, 100);
         assert_eq!(block_context.invoke_tx_max_n_steps, 200);

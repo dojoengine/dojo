@@ -1,25 +1,22 @@
 use std::fmt::Display;
 use std::sync::Arc;
 
-use blockifier::abi::abi_utils::get_storage_var_address;
+use anyhow::Result;
 use blockifier::execution::contract_class::ContractClass;
-use blockifier::state::state_api::StateResult;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::FieldElement;
+use katana_provider::traits::state::StateWriter;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use serde::Serialize;
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::FieldElement;
-use starknet::core::utils::get_contract_address;
+use starknet::core::utils::{get_contract_address, get_storage_var_address};
 use starknet::signers::SigningKey;
-use starknet_api::core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey};
-use starknet_api::hash::StarkHash;
-use starknet_api::patricia_key;
 
 use crate::constants::{
-    DEFAULT_ACCOUNT_CONTRACT, DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS,
+    FEE_TOKEN_ADDRESS, OZ_V0_ACCOUNT_CONTRACT, OZ_V0_ACCOUNT_CONTRACT_CLASS_HASH,
 };
-use crate::db::Database;
 
 #[serde_as]
 #[derive(Debug, Clone, Serialize)]
@@ -58,45 +55,34 @@ impl Account {
     }
 
     // TODO: separate fund logic from this struct - implement FeeToken type
-    pub fn deploy_and_fund(&self, state: &mut dyn Database) -> StateResult<()> {
-        self.declare(state)?;
+    pub fn deploy_and_fund(&self, state: &dyn StateWriter) -> Result<()> {
         self.deploy(state)?;
-        self.fund(state);
+        self.fund(state)?;
         Ok(())
     }
 
-    fn deploy(&self, state: &mut dyn Database) -> StateResult<()> {
-        let address = ContractAddress(patricia_key!(self.address));
+    fn deploy(&self, state: &dyn StateWriter) -> Result<()> {
+        let address: ContractAddress = self.address.into();
         // set the class hash at the account address
-        state.set_class_hash_at(address, ClassHash(self.class_hash.into()))?;
+        state.set_class_hash_of_contract(address, self.class_hash)?;
         // set the public key in the account contract
-        state.set_storage_at(
+        state.set_storage(
             address,
             get_storage_var_address("Account_public_key", &[]).unwrap(),
-            self.public_key.into(),
-        );
+            self.public_key,
+        )?;
         // initialze account nonce
-        state.set_nonce(address, Nonce(1u128.into()));
+        state.set_nonce(address, 1u128.into())?;
         Ok(())
     }
 
-    fn fund(&self, state: &mut dyn Database) {
-        state.set_storage_at(
-            ContractAddress(patricia_key!(*FEE_TOKEN_ADDRESS)),
-            get_storage_var_address("ERC20_balances", &[self.address.into()]).unwrap(),
-            self.balance.into(),
-        );
-    }
-
-    fn declare(&self, state: &mut dyn Database) -> StateResult<()> {
-        let class_hash = ClassHash(self.class_hash.into());
-
-        if state.get_compiled_contract_class(&class_hash).is_ok() {
-            return Ok(());
-        }
-
-        state.set_contract_class(&class_hash, (*self.contract_class).clone())?;
-        state.set_compiled_class_hash(class_hash, CompiledClassHash(self.class_hash.into()))
+    fn fund(&self, state: &dyn StateWriter) -> Result<()> {
+        state.set_storage(
+            *FEE_TOKEN_ADDRESS,
+            get_storage_var_address("ERC20_balances", &[self.address]).unwrap(),
+            self.balance,
+        )?;
+        Ok(())
     }
 }
 
@@ -128,8 +114,8 @@ impl DevAccountGenerator {
             total,
             seed: [0u8; 32],
             balance: FieldElement::ZERO,
-            class_hash: (*DEFAULT_ACCOUNT_CONTRACT_CLASS_HASH).into(),
-            contract_class: Arc::new((*DEFAULT_ACCOUNT_CONTRACT).clone()),
+            class_hash: (*OZ_V0_ACCOUNT_CONTRACT_CLASS_HASH),
+            contract_class: Arc::new((*OZ_V0_ACCOUNT_CONTRACT).clone()),
         }
     }
 

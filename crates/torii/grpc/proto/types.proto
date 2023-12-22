@@ -1,6 +1,8 @@
 syntax = "proto3";
 package types;
 
+import "schema.proto";
+
 message WorldMetadata {
     // The hex-encoded address of the world.
     string world_address = 1;
@@ -29,6 +31,18 @@ message ModelMetadata {
     bytes schema = 6;
 }
 
+message Model {
+    string name = 1;
+    repeated Member members = 2;
+}
+
+message Entity {
+    // The entity's hashed keys
+    bytes hashed_keys = 1;
+    // Models of the entity
+    repeated Model models = 2;
+}
+
 message StorageEntry {
     // The key of the changed value
     string key = 1;
@@ -43,42 +57,51 @@ message StorageDiff {
     repeated StorageEntry storage_entries = 2;
 }
 
-message EntityDiff {
+message ModelDiff {
     // Storage diffs
     repeated StorageDiff storage_diffs = 1;
 }
 
-message EntityUpdate {
+message ModelUpdate {
     string block_hash = 1;
-    EntityDiff entity_diff = 2;
+    ModelDiff model_diff = 2;
 }
 
-message EntityQuery {
-    string model = 1;
-    Clause clause = 2;
+message Query {
+    Clause clause = 1;
+    uint32 limit = 2;
+    uint32 offset = 3;
 }
 
 message Clause {
     oneof clause_type {
-        KeysClause keys = 1;
-        AttributeClause attribute = 2;
-        CompositeClause composite = 3;
+        HashedKeysClause hashed_keys = 1;
+        KeysClause keys = 2;
+        MemberClause member = 3;
+        CompositeClause composite = 4;
     }
 }
 
-message KeysClause {
-    repeated bytes keys = 1;
+message HashedKeysClause {
+    repeated bytes hashed_keys = 1;
 }
 
-message AttributeClause {
-    string attribute = 1;
-    ComparisonOperator operator = 2;
-    Value value = 3;
+message KeysClause {
+    string model = 1;
+    repeated bytes keys = 2;
+}
+
+message MemberClause {
+    string model = 1;
+    string member = 2;
+    ComparisonOperator operator = 3;
+    Value value = 4;
 }
 
 message CompositeClause {
-    LogicalOperator operator = 1;
-    repeated Clause clauses = 2;
+    string model = 1;
+    LogicalOperator operator = 2;
+    repeated Clause clauses = 3;
 }
 
 enum LogicalOperator {
@@ -93,14 +116,4 @@ enum ComparisonOperator {
     GTE = 3;
     LT = 4;
     LTE = 5;
-}
-
-message Value {
-    oneof value_type {
-        string string_value = 1;
-        int64 int_value = 2;
-        uint64 uint_value = 3;
-        bool bool_value = 4;
-        bytes byte_value = 5;
-    }
 }

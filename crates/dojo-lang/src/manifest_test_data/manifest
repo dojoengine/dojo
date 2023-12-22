@@ -6,9 +6,9 @@ test_manifest_file
 //! > expected_manifest_file
 {
   "world": {
-    "name": "world",
+    "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x6441e7fc96d795ec94fca66634e6d87edf84362e564ef80eb13f459914b8b",
+    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
     "abi": [
       {
         "type": "impl",
@@ -357,6 +357,10 @@ test_manifest_file
               {
                 "name": "keys",
                 "type": "core::array::Span::<core::felt252>"
+              },
+              {
+                "name": "layout",
+                "type": "core::array::Span::<core::integer::u8>"
               }
             ],
             "outputs": [],
@@ -469,6 +473,29 @@ test_manifest_file
         ]
       },
       {
+        "type": "impl",
+        "name": "UpgradeableWorld",
+        "interface_name": "dojo::world::IUpgradeableWorld"
+      },
+      {
+        "type": "interface",
+        "name": "dojo::world::IUpgradeableWorld",
+        "items": [
+          {
+            "type": "function",
+            "name": "upgrade",
+            "inputs": [
+              {
+                "name": "new_class_hash",
+                "type": "core::starknet::class_hash::ClassHash"
+              }
+            ],
+            "outputs": [],
+            "state_mutability": "external"
+          }
+        ]
+      },
+      {
         "type": "constructor",
         "name": "constructor",
         "inputs": [
@@ -534,6 +561,18 @@ test_manifest_file
           {
             "name": "address",
             "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
+        "name": "dojo::world::world::WorldUpgraded",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
             "kind": "data"
           }
         ]
@@ -703,6 +742,11 @@ test_manifest_file
             "kind": "nested"
           },
           {
+            "name": "WorldUpgraded",
+            "type": "dojo::world::world::WorldUpgraded",
+            "kind": "nested"
+          },
+          {
             "name": "MetadataUpdate",
             "type": "dojo::world::world::MetadataUpdate",
             "kind": "nested"
@@ -745,9 +789,9 @@ test_manifest_file
     "computed": []
   },
   "executor": {
-    "name": "executor",
+    "name": "dojo::executor::executor",
     "address": null,
-    "class_hash": "0x54ee9d99457d82d53e21030920f7e6f43509b98ea62282b5c2520050264a28c",
+    "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
     "abi": [
       {
         "type": "impl",
@@ -806,17 +850,49 @@ test_manifest_file
     "computed": []
   },
   "base": {
-    "name": "base",
-    "class_hash": "0x5a2c567ed06c8059c8d1199684796a0a0ef614f9a2ab628700e804524816b5c",
+    "name": "dojo::base::base",
+    "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
     "abi": [
       {
         "type": "impl",
-        "name": "Upgradeable",
-        "interface_name": "dojo::upgradable::IUpgradeable"
+        "name": "WorldProviderImpl",
+        "interface_name": "dojo::world::IWorldProvider"
+      },
+      {
+        "type": "struct",
+        "name": "dojo::world::IWorldDispatcher",
+        "members": [
+          {
+            "name": "contract_address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ]
       },
       {
         "type": "interface",
-        "name": "dojo::upgradable::IUpgradeable",
+        "name": "dojo::world::IWorldProvider",
+        "items": [
+          {
+            "type": "function",
+            "name": "world",
+            "inputs": [],
+            "outputs": [
+              {
+                "type": "dojo::world::IWorldDispatcher"
+              }
+            ],
+            "state_mutability": "view"
+          }
+        ]
+      },
+      {
+        "type": "impl",
+        "name": "UpgradableImpl",
+        "interface_name": "dojo::components::upgradeable::IUpgradeable"
+      },
+      {
+        "type": "interface",
+        "name": "dojo::components::upgradeable::IUpgradeable",
         "items": [
           {
             "type": "function",
@@ -838,60 +914,78 @@ test_manifest_file
         "inputs": []
       },
       {
-        "type": "struct",
-        "name": "dojo::world::IWorldDispatcher",
+        "type": "event",
+        "name": "dojo::components::upgradeable::upgradeable::Upgraded",
+        "kind": "struct",
         "members": [
           {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress"
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
           }
         ]
       },
       {
-        "type": "function",
-        "name": "world",
-        "inputs": [],
-        "outputs": [
+        "type": "event",
+        "name": "dojo::components::upgradeable::upgradeable::Event",
+        "kind": "enum",
+        "variants": [
           {
-            "type": "dojo::world::IWorldDispatcher"
+            "name": "Upgraded",
+            "type": "dojo::components::upgradeable::upgradeable::Upgraded",
+            "kind": "nested"
           }
-        ],
-        "state_mutability": "view"
+        ]
       },
       {
         "type": "event",
         "name": "dojo::base::base::Event",
         "kind": "enum",
-        "variants": []
+        "variants": [
+          {
+            "name": "UpgradeableEvent",
+            "type": "dojo::components::upgradeable::upgradeable::Event",
+            "kind": "nested"
+          }
+        ]
       }
     ]
   },
   "contracts": [
     {
-      "name": "actions",
+      "name": "dojo_examples::actions::actions",
       "address": null,
-      "class_hash": "0x308ad5fcd288ea5ded168bbc502261d75458c13fa1df552bd41ca3d86347dfe",
+      "class_hash": "0x69c6bec7de74fc2404fe6b68ad8ece7be81ad6d861b38a8ba8fa583bfc3666b",
       "abi": [
         {
           "type": "impl",
-          "name": "Upgradeable",
-          "interface_name": "dojo::upgradable::IUpgradeable"
+          "name": "WorldProviderImpl",
+          "interface_name": "dojo::world::IWorldProvider"
+        },
+        {
+          "type": "struct",
+          "name": "dojo::world::IWorldDispatcher",
+          "members": [
+            {
+              "name": "contract_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ]
         },
         {
           "type": "interface",
-          "name": "dojo::upgradable::IUpgradeable",
+          "name": "dojo::world::IWorldProvider",
           "items": [
             {
               "type": "function",
-              "name": "upgrade",
-              "inputs": [
+              "name": "world",
+              "inputs": [],
+              "outputs": [
                 {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
+                  "type": "dojo::world::IWorldDispatcher"
                 }
               ],
-              "outputs": [],
-              "state_mutability": "external"
+              "state_mutability": "view"
             }
           ]
         },
@@ -948,6 +1042,29 @@ test_manifest_file
               ],
               "outputs": [],
               "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "UpgradableImpl",
+          "interface_name": "dojo::components::upgradeable::IUpgradeable"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::components::upgradeable::IUpgradeable",
+          "items": [
+            {
+              "type": "function",
+              "name": "upgrade",
+              "inputs": [
+                {
+                  "name": "new_class_hash",
+                  "type": "core::starknet::class_hash::ClassHash"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1024,6 +1141,30 @@ test_manifest_file
         },
         {
           "type": "event",
+          "name": "dojo::components::upgradeable::upgradeable::Upgraded",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "class_hash",
+              "type": "core::starknet::class_hash::ClassHash",
+              "kind": "data"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo::components::upgradeable::upgradeable::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "Upgraded",
+              "type": "dojo::components::upgradeable::upgradeable::Upgraded",
+              "kind": "nested"
+            }
+          ]
+        },
+        {
+          "type": "event",
           "name": "dojo_examples::actions::actions::Moved",
           "kind": "struct",
           "members": [
@@ -1045,6 +1186,11 @@ test_manifest_file
           "kind": "enum",
           "variants": [
             {
+              "name": "UpgradeableEvent",
+              "type": "dojo::components::upgradeable::upgradeable::Event",
+              "kind": "nested"
+            },
+            {
               "name": "Moved",
               "type": "dojo_examples::actions::actions::Moved",
               "kind": "nested"
@@ -1052,49 +1198,14 @@ test_manifest_file
           ]
         }
       ],
-      "reads": [
-        "Moves",
-        "Position"
-      ],
-      "writes": [
-        "Moves",
-        "Position"
-      ],
-      "computed": [
-        {
-          "contract": "actions",
-          "entrypoint": "tile_terrain",
-          "model": null
-        },
-        {
-          "contract": "actions",
-          "entrypoint": "quadrant",
-          "model": "Position"
-        }
-      ]
-    }
-  ],
-  "models": [
+      "reads": [],
+      "writes": [],
+      "computed": []
+    },
     {
-      "name": "Moves",
-      "members": [
-        {
-          "name": "player",
-          "type": "ContractAddress",
-          "key": true
-        },
-        {
-          "name": "remaining",
-          "type": "u8",
-          "key": false
-        },
-        {
-          "name": "last_direction",
-          "type": "Direction",
-          "key": false
-        }
-      ],
-      "class_hash": "0x2e5174b54aef0b99d4685827ffa51488447e1f5607908293d5c715d6bd22433",
+      "name": "dojo_examples::models::moves",
+      "address": null,
+      "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
       "abi": [
         {
           "type": "function",
@@ -1172,7 +1283,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::schema::Struct",
+          "name": "dojo::database::introspect::Struct",
           "members": [
             {
               "name": "name",
@@ -1200,7 +1311,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::schema::Enum",
+          "name": "dojo::database::introspect::Enum",
           "members": [
             {
               "name": "name",
@@ -1218,7 +1329,7 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo::database::schema::Ty",
+          "name": "dojo::database::introspect::Ty",
           "variants": [
             {
               "name": "Primitive",
@@ -1226,11 +1337,11 @@ test_manifest_file
             },
             {
               "name": "Struct",
-              "type": "dojo::database::schema::Struct"
+              "type": "dojo::database::introspect::Struct"
             },
             {
               "name": "Enum",
-              "type": "dojo::database::schema::Enum"
+              "type": "dojo::database::introspect::Enum"
             },
             {
               "name": "Tuple",
@@ -1244,7 +1355,7 @@ test_manifest_file
           "inputs": [],
           "outputs": [
             {
-              "type": "dojo::database::schema::Ty"
+              "type": "dojo::database::introspect::Ty"
             }
           ],
           "state_mutability": "view"
@@ -1255,23 +1366,15 @@ test_manifest_file
           "kind": "enum",
           "variants": []
         }
-      ]
+      ],
+      "reads": [],
+      "writes": [],
+      "computed": []
     },
     {
-      "name": "Position",
-      "members": [
-        {
-          "name": "player",
-          "type": "ContractAddress",
-          "key": true
-        },
-        {
-          "name": "vec",
-          "type": "Vec2",
-          "key": false
-        }
-      ],
-      "class_hash": "0x6a11b5b3003a3aa0ae7f8f443e48314cc0bc51eaea7c3ed1c19beb909f5dda3",
+      "name": "dojo_examples::models::position",
+      "address": null,
+      "class_hash": "0x2b233bba9a232a5e891c85eca9f67beedca7a12f9768729ff017bcb62d25c9d",
       "abi": [
         {
           "type": "function",
@@ -1349,7 +1452,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::schema::Struct",
+          "name": "dojo::database::introspect::Struct",
           "members": [
             {
               "name": "name",
@@ -1377,7 +1480,7 @@ test_manifest_file
         },
         {
           "type": "struct",
-          "name": "dojo::database::schema::Enum",
+          "name": "dojo::database::introspect::Enum",
           "members": [
             {
               "name": "name",
@@ -1395,7 +1498,7 @@ test_manifest_file
         },
         {
           "type": "enum",
-          "name": "dojo::database::schema::Ty",
+          "name": "dojo::database::introspect::Ty",
           "variants": [
             {
               "name": "Primitive",
@@ -1403,11 +1506,11 @@ test_manifest_file
             },
             {
               "name": "Struct",
-              "type": "dojo::database::schema::Struct"
+              "type": "dojo::database::introspect::Struct"
             },
             {
               "name": "Enum",
-              "type": "dojo::database::schema::Enum"
+              "type": "dojo::database::introspect::Enum"
             },
             {
               "name": "Tuple",
@@ -1421,7 +1524,7 @@ test_manifest_file
           "inputs": [],
           "outputs": [
             {
-              "type": "dojo::database::schema::Ty"
+              "type": "dojo::database::introspect::Ty"
             }
           ],
           "state_mutability": "view"
@@ -1432,7 +1535,11 @@ test_manifest_file
           "kind": "enum",
           "variants": []
         }
-      ]
+      ],
+      "reads": [],
+      "writes": [],
+      "computed": []
     }
-  ]
+  ],
+  "models": []
 }

@@ -1,6 +1,6 @@
-use sqlx::pool::PoolConnection;
+use async_graphql::connection::PageInfo;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Result, Sqlite};
+use sqlx::{Result, Row, SqliteConnection};
 
 use super::filter::{Filter, FilterValue};
 use super::order::{CursorDirection, Direction, Order};
@@ -8,7 +8,7 @@ use crate::constants::DEFAULT_LIMIT;
 use crate::object::connection::{cursor, ConnectionArguments};
 
 pub async fn count_rows(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut SqliteConnection,
     table_name: &str,
     keys: &Option<Vec<String>>,
     filters: &Option<Vec<Filter>>,
@@ -24,8 +24,14 @@ pub async fn count_rows(
     Ok(result.0)
 }
 
+pub async fn fetch_world_address(conn: &mut SqliteConnection) -> Result<String> {
+    let query = "SELECT world_address FROM worlds".to_string();
+    let res: (String,) = sqlx::query_as(&query).fetch_one(conn).await?;
+    Ok(res.0)
+}
+
 pub async fn fetch_single_row(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut SqliteConnection,
     table_name: &str,
     id_column: &str,
     id: &str,
@@ -34,22 +40,26 @@ pub async fn fetch_single_row(
     sqlx::query(&query).fetch_one(conn).await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn fetch_multiple_rows(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut SqliteConnection,
     table_name: &str,
     id_column: &str,
     keys: &Option<Vec<String>>,
     order: &Option<Order>,
     filters: &Option<Vec<Filter>>,
     connection: &ConnectionArguments,
-) -> Result<Vec<SqliteRow>> {
+    total_count: i64,
+) -> Result<(Vec<SqliteRow>, PageInfo)> {
     let mut conditions = build_conditions(keys, filters);
 
+    let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
         conditions.push(handle_cursor(after_cursor, order, CursorDirection::After, id_column)?);
     }
 
     if let Some(before_cursor) = &connection.before {
+        cursor_param = &connection.before;
         conditions.push(handle_cursor(before_cursor, order, CursorDirection::Before, id_column)?);
     }
 
@@ -58,7 +68,18 @@ pub async fn fetch_multiple_rows(
         query.push_str(&format!(" WHERE {}", conditions.join(" AND ")));
     }
 
-    let limit = connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT);
+    let is_cursor_based = connection.first.or(connection.last).is_some() || cursor_param.is_some();
+
+    let data_limit =
+        connection.first.or(connection.last).or(connection.limit).unwrap_or(DEFAULT_LIMIT);
+    let limit = if is_cursor_based {
+        match &cursor_param {
+            Some(_) => data_limit + 2,
+            None => data_limit + 1, // prev page does not exist
+        }
+    } else {
+        data_limit
+    };
 
     // NOTE: Order is determined by the `order` param if provided, otherwise it's inferred from the
     // `first` or `last` param. Explicit ordering take precedence
@@ -89,7 +110,72 @@ pub async fn fetch_multiple_rows(
         query.push_str(&format!(" OFFSET {}", offset));
     }
 
-    sqlx::query(&query).fetch_all(conn).await
+    let mut data = sqlx::query(&query).fetch_all(conn).await?;
+    let mut page_info = PageInfo {
+        has_previous_page: false,
+        has_next_page: false,
+        start_cursor: None,
+        end_cursor: None,
+    };
+
+    if data.is_empty() {
+        Ok((data, page_info))
+    } else if is_cursor_based {
+        let order_field = match order {
+            Some(order) => format!("external_{}", order.field),
+            None => id_column.to_string(),
+        };
+
+        match cursor_param {
+            Some(cursor_query) => {
+                let first_cursor = cursor::encode(
+                    &data[0].try_get::<String, &str>(id_column)?,
+                    &data[0].try_get_unchecked::<String, &str>(&order_field)?,
+                );
+
+                if &first_cursor == cursor_query && data.len() != 1 {
+                    data.remove(0);
+                    page_info.has_previous_page = true;
+                } else {
+                    data.pop();
+                }
+
+                if data.len() as u64 == limit - 1 {
+                    page_info.has_next_page = true;
+                    data.pop();
+                }
+            }
+            None => {
+                if data.len() as u64 == limit {
+                    page_info.has_next_page = true;
+                    data.pop();
+                }
+            }
+        }
+
+        if !data.is_empty() {
+            page_info.start_cursor = Some(cursor::encode(
+                &data[0].try_get::<String, &str>(id_column)?,
+                &data[0].try_get_unchecked::<String, &str>(&order_field)?,
+            ));
+            page_info.end_cursor = Some(cursor::encode(
+                &data[data.len() - 1].try_get::<String, &str>(id_column)?,
+                &data[data.len() - 1].try_get_unchecked::<String, &str>(&order_field)?,
+            ));
+        }
+
+        Ok((data, page_info))
+    } else {
+        let offset = connection.offset.unwrap_or(0);
+        if 1 < offset && offset < total_count as u64 {
+            page_info.has_previous_page = true;
+        }
+        if limit + offset < total_count as u64 {
+            page_info.has_next_page = true;
+        }
+
+        Ok((data, page_info))
+    }
 }
 
 fn handle_cursor(

@@ -4,26 +4,32 @@ use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blockifier::execution::contract_class::ContractClass;
-use blockifier::state::state_api::{State, StateReader};
-use starknet::core::types::{
-    BlockId, BlockTag, EmittedEvent, Event, EventsPage, FeeEstimate, FieldElement,
-    MaybePendingTransactionReceipt, StateUpdate,
+use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
+use blockifier::transaction::errors::TransactionExecutionError;
+use katana_executor::blockifier::state::StateRefDb;
+use katana_executor::blockifier::utils::EntryPointCall;
+use katana_executor::blockifier::PendingState;
+use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
+use katana_primitives::contract::{
+    ClassHash, CompiledContractClass, ContractAddress, Nonce, StorageKey, StorageValue,
 };
-use starknet_api::core::{ChainId, ClassHash, ContractAddress, Nonce};
-use starknet_api::hash::StarkFelt;
-use starknet_api::state::StorageKey;
+use katana_primitives::receipt::Event;
+use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
+use katana_primitives::FieldElement;
+use katana_provider::traits::block::{
+    BlockHashProvider, BlockIdReader, BlockNumberProvider, BlockProvider,
+};
+use katana_provider::traits::contract::ContractClassProvider;
+use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
+use katana_provider::traits::transaction::{
+    ReceiptProvider, TransactionProvider, TransactionsProviderExt,
+};
+use starknet::core::types::{BlockTag, EmittedEvent, EventsPage, FeeEstimate};
+use starknet_api::core::ChainId;
 
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
-use crate::backend::storage::block::{ExecutedBlock, PartialBlock, PartialHeader};
-use crate::backend::storage::transaction::{
-    DeclareTransaction, DeployAccountTransaction, InvokeTransaction, KnownTransaction,
-    PendingTransaction, Transaction,
-};
-use crate::backend::{Backend, ExternalFunctionCall};
-use crate::db::{AsStateRefDb, StateExtRef, StateRefDb};
-use crate::execution::{MaybeInvalidExecutedTransaction, PendingState};
+use crate::backend::Backend;
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
 use crate::service::block_producer::{BlockProducer, BlockProducerMode};
@@ -57,15 +63,14 @@ impl KatanaSequencer {
 
         let pool = Arc::new(TransactionPool::new());
         let miner = TransactionMiner::new(pool.add_listener());
+        let state = StateFactoryProvider::latest(backend.blockchain.provider())
+            .map(StateRefDb::new)
+            .unwrap();
 
         let block_producer = if let Some(block_time) = config.block_time {
-            BlockProducer::interval(
-                Arc::clone(&backend),
-                backend.state.read().await.as_ref_db(),
-                block_time,
-            )
+            BlockProducer::interval(Arc::clone(&backend), state, block_time)
         } else if config.no_mining {
-            BlockProducer::on_demand(Arc::clone(&backend), backend.state.read().await.as_ref_db())
+            BlockProducer::on_demand(Arc::clone(&backend), state)
         } else {
             BlockProducer::instant(Arc::clone(&backend))
         };
@@ -96,18 +101,6 @@ impl KatanaSequencer {
         }
     }
 
-    async fn verify_contract_exists(
-        &self,
-        block_id: &BlockId,
-        contract_address: &ContractAddress,
-    ) -> bool {
-        self.state(block_id)
-            .await
-            .unwrap()
-            .get_class_hash_at(*contract_address)
-            .is_ok_and(|c| c != ClassHash::default())
-    }
-
     pub fn block_producer(&self) -> &BlockProducer {
         &self.block_producer
     }
@@ -116,261 +109,213 @@ impl KatanaSequencer {
         &self.backend
     }
 
-    pub async fn state(&self, block_id: &BlockId) -> SequencerResult<StateRefDb> {
+    pub fn state(&self, block_id: &BlockIdOrTag) -> SequencerResult<Box<dyn StateProvider>> {
+        let provider = self.backend.blockchain.provider();
+
         match block_id {
-            BlockId::Tag(BlockTag::Latest) => Ok(self.backend.state.read().await.as_ref_db()),
+            BlockIdOrTag::Tag(BlockTag::Latest) => {
+                let state = StateFactoryProvider::latest(provider)?;
+                Ok(state)
+            }
 
-            BlockId::Tag(BlockTag::Pending) => {
+            BlockIdOrTag::Tag(BlockTag::Pending) => {
                 if let Some(state) = self.pending_state() {
-                    Ok(state.state.read().as_ref_db())
+                    Ok(Box::new(state.state.clone()))
                 } else {
-                    Ok(self.backend.state.read().await.as_ref_db())
+                    let state = StateFactoryProvider::latest(provider)?;
+                    Ok(state)
                 }
             }
 
-            _ => {
-                if let Some(hash) = self.backend.blockchain.block_hash(*block_id) {
-                    self.backend
-                        .states
-                        .read()
-                        .await
-                        .get(&hash)
-                        .cloned()
-                        .ok_or(SequencerError::StateNotFound(*block_id))
-                } else {
-                    Err(SequencerError::BlockNotFound(*block_id))
-                }
+            BlockIdOrTag::Hash(hash) => {
+                StateFactoryProvider::historical(provider, BlockHashOrNumber::Hash(*hash))?
+                    .ok_or(SequencerError::BlockNotFound(*block_id))
+            }
+
+            BlockIdOrTag::Number(num) => {
+                StateFactoryProvider::historical(provider, BlockHashOrNumber::Num(*num))?
+                    .ok_or(SequencerError::BlockNotFound(*block_id))
             }
         }
     }
 
-    pub async fn add_deploy_account_transaction(
+    pub fn add_transaction_to_pool(&self, tx: ExecutableTxWithHash) {
+        self.pool.add_transaction(tx);
+    }
+
+    pub fn estimate_fee(
         &self,
-        transaction: DeployAccountTransaction,
-    ) -> (FieldElement, FieldElement) {
-        let transaction_hash = transaction.inner.transaction_hash.0.into();
-        let contract_address = transaction.contract_address;
-
-        self.pool.add_transaction(Transaction::DeployAccount(transaction));
-
-        (transaction_hash, contract_address)
-    }
-
-    pub fn add_declare_transaction(&self, transaction: DeclareTransaction) {
-        self.pool.add_transaction(Transaction::Declare(transaction))
-    }
-
-    pub fn add_invoke_transaction(&self, transaction: InvokeTransaction) {
-        self.pool.add_transaction(Transaction::Invoke(transaction))
-    }
-
-    pub async fn estimate_fee(
-        &self,
-        transactions: Vec<Transaction>,
-        block_id: BlockId,
+        transactions: Vec<ExecutableTxWithHash>,
+        block_id: BlockIdOrTag,
     ) -> SequencerResult<Vec<FeeEstimate>> {
-        let state = self.state(&block_id).await?;
-        self.backend.estimate_fee(transactions, state).map_err(SequencerError::TransactionExecution)
+        let state = self.state(&block_id)?;
+        let block_context = self.backend.env.read().block.clone();
+        katana_executor::blockifier::utils::estimate_fee(
+            transactions.into_iter(),
+            block_context,
+            state,
+        )
+        .map_err(SequencerError::TransactionExecution)
     }
 
-    pub async fn block_hash_and_number(&self) -> (FieldElement, u64) {
-        let hash = self.backend.blockchain.storage.read().latest_hash;
-        let number = self.backend.blockchain.storage.read().latest_number;
-        (hash, number)
+    pub fn block_hash_and_number(&self) -> SequencerResult<(BlockHash, BlockNumber)> {
+        let provider = self.backend.blockchain.provider();
+        let hash = BlockHashProvider::latest_hash(provider)?;
+        let number = BlockNumberProvider::latest_number(provider)?;
+        Ok((hash, number))
     }
 
-    pub async fn class_hash_at(
+    pub fn class_hash_at(
         &self,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> SequencerResult<ClassHash> {
-        if !self.verify_contract_exists(&block_id, &contract_address).await {
-            return Err(SequencerError::ContractNotFound(contract_address));
-        }
-
-        let mut state = self.state(&block_id).await?;
-        state.get_class_hash_at(contract_address).map_err(SequencerError::State)
+    ) -> SequencerResult<Option<ClassHash>> {
+        let state = self.state(&block_id)?;
+        let class_hash = StateProvider::class_hash_of_contract(&state, contract_address)?;
+        Ok(class_hash)
     }
 
-    pub async fn class(
+    pub fn class(
         &self,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
         class_hash: ClassHash,
-    ) -> SequencerResult<StarknetContract> {
-        let mut state = self.state(&block_id).await?;
+    ) -> SequencerResult<Option<StarknetContract>> {
+        let state = self.state(&block_id)?;
 
-        if let ContractClass::V0(c) =
-            state.get_compiled_contract_class(&class_hash).map_err(SequencerError::State)?
-        {
-            Ok(StarknetContract::Legacy(c))
-        } else {
-            state
-                .get_sierra_class(&class_hash)
-                .map(StarknetContract::Sierra)
-                .map_err(SequencerError::State)
+        let Some(class) = ContractClassProvider::class(&state, class_hash)? else {
+            return Ok(None);
+        };
+
+        match class {
+            CompiledContractClass::V0(class) => Ok(Some(StarknetContract::Legacy(class))),
+            CompiledContractClass::V1(_) => {
+                let class = ContractClassProvider::sierra_class(&state, class_hash)?
+                    .map(StarknetContract::Sierra);
+                Ok(class)
+            }
         }
     }
 
-    pub async fn storage_at(
+    pub fn storage_at(
         &self,
         contract_address: ContractAddress,
         storage_key: StorageKey,
-        block_id: BlockId,
-    ) -> SequencerResult<StarkFelt> {
-        if !self.verify_contract_exists(&block_id, &contract_address).await {
-            return Err(SequencerError::ContractNotFound(contract_address));
-        }
+        block_id: BlockIdOrTag,
+    ) -> SequencerResult<StorageValue> {
+        let state = self.state(&block_id)?;
 
-        let mut state = self.state(&block_id).await?;
-        state.get_storage_at(contract_address, storage_key).map_err(SequencerError::State)
+        // check that contract exist by checking the class hash of the contract
+        let Some(_) = StateProvider::class_hash_of_contract(&state, contract_address)? else {
+            return Err(SequencerError::ContractNotFound(contract_address));
+        };
+
+        let value = StateProvider::storage(&state, contract_address, storage_key)?;
+        Ok(value.unwrap_or_default())
     }
 
-    pub async fn chain_id(&self) -> ChainId {
+    pub fn chain_id(&self) -> ChainId {
         self.backend.env.read().block.chain_id.clone()
     }
 
-    pub async fn block_number(&self) -> u64 {
-        self.backend.blockchain.storage.read().latest_number
+    pub fn block_number(&self) -> BlockNumber {
+        BlockNumberProvider::latest_number(&self.backend.blockchain.provider()).unwrap()
     }
 
-    pub async fn block(&self, block_id: BlockId) -> Option<ExecutedBlock> {
-        let block_id = match block_id {
-            BlockId::Tag(BlockTag::Pending) if self.block_producer.is_instant_mining() => {
-                BlockId::Tag(BlockTag::Latest)
+    pub fn block_tx_count(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<u64>> {
+        let provider = self.backend.blockchain.provider();
+
+        let count = match block_id {
+            BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_state() {
+                Some(state) => Some(state.executed_txs.read().len() as u64),
+                None => {
+                    let hash = BlockHashProvider::latest_hash(provider)?;
+                    TransactionProvider::transaction_count_by_block(provider, hash.into())?
+                }
+            },
+
+            BlockIdOrTag::Tag(BlockTag::Latest) => {
+                let num = BlockNumberProvider::latest_number(provider)?;
+                TransactionProvider::transaction_count_by_block(provider, num.into())?
             }
-            _ => block_id,
+
+            BlockIdOrTag::Number(num) => {
+                TransactionProvider::transaction_count_by_block(provider, num.into())?
+            }
+
+            BlockIdOrTag::Hash(hash) => {
+                TransactionProvider::transaction_count_by_block(provider, hash.into())?
+            }
         };
 
-        match block_id {
-            BlockId::Tag(BlockTag::Pending) => {
-                let state = self.pending_state().expect("pending state should exist");
-
-                let block_context = self.backend.env.read().block.clone();
-                let latest_hash = self.backend.blockchain.storage.read().latest_hash;
-
-                let header = PartialHeader {
-                    parent_hash: latest_hash,
-                    gas_price: block_context.gas_price,
-                    number: block_context.block_number.0,
-                    timestamp: block_context.block_timestamp.0,
-                    sequencer_address: (*block_context.sequencer_address.0.key()).into(),
-                };
-
-                let (transactions, outputs) = {
-                    state
-                        .executed_transactions
-                        .read()
-                        .iter()
-                        .filter_map(|tx| match tx {
-                            MaybeInvalidExecutedTransaction::Valid(tx) => {
-                                Some((tx.clone(), tx.output.clone()))
-                            }
-                            _ => None,
-                        })
-                        .unzip()
-                };
-
-                Some(ExecutedBlock::Pending(PartialBlock { header, transactions, outputs }))
-            }
-
-            _ => {
-                let hash = self.backend.blockchain.block_hash(block_id)?;
-                self.backend.blockchain.storage.read().blocks.get(&hash).map(|b| b.clone().into())
-            }
-        }
+        Ok(count)
     }
 
     pub async fn nonce_at(
         &self,
-        block_id: BlockId,
+        block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> SequencerResult<Nonce> {
-        if !self.verify_contract_exists(&block_id, &contract_address).await {
-            return Err(SequencerError::ContractNotFound(contract_address));
-        }
-
-        let mut state = self.state(&block_id).await?;
-        state.get_nonce_at(contract_address).map_err(SequencerError::State)
+    ) -> SequencerResult<Option<Nonce>> {
+        let state = self.state(&block_id)?;
+        let nonce = StateProvider::nonce(&state, contract_address)?;
+        Ok(nonce)
     }
 
-    pub async fn call(
+    pub fn call(
         &self,
-        block_id: BlockId,
-        function_call: ExternalFunctionCall,
-    ) -> SequencerResult<Vec<StarkFelt>> {
-        if !self.verify_contract_exists(&block_id, &function_call.contract_address).await {
-            return Err(SequencerError::ContractNotFound(function_call.contract_address));
-        }
+        request: EntryPointCall,
+        block_id: BlockIdOrTag,
+    ) -> SequencerResult<Vec<FieldElement>> {
+        let state = self.state(&block_id)?;
+        let block_context = self.backend.env.read().block.clone();
 
-        let state = self.state(&block_id).await?;
+        let retdata = katana_executor::blockifier::utils::call(request, block_context, state)
+            .map_err(|e| match e {
+                TransactionExecutionError::ExecutionError(exe) => match exe {
+                    EntryPointExecutionError::PreExecutionError(
+                        PreExecutionError::UninitializedStorageAddress(addr),
+                    ) => SequencerError::ContractNotFound(addr.into()),
+                    _ => SequencerError::EntryPointExecution(exe),
+                },
+                _ => SequencerError::TransactionExecution(e),
+            })?;
 
-        self.backend
-            .call(function_call, state)
-            .map_err(SequencerError::EntryPointExecution)
-            .map(|execution_info| execution_info.execution.retdata.0)
+        Ok(retdata)
     }
 
-    pub async fn transaction_receipt(
-        &self,
-        hash: &FieldElement,
-    ) -> Option<MaybePendingTransactionReceipt> {
-        let transaction = self.transaction(hash).await?;
+    pub fn transaction(&self, hash: &TxHash) -> SequencerResult<Option<TxWithHash>> {
+        let tx =
+            TransactionProvider::transaction_by_hash(self.backend.blockchain.provider(), *hash)?;
 
-        match transaction {
-            KnownTransaction::Rejected(_) => None,
-            KnownTransaction::Pending(tx) => {
-                Some(MaybePendingTransactionReceipt::PendingReceipt(tx.receipt()))
-            }
-            KnownTransaction::Included(tx) => {
-                Some(MaybePendingTransactionReceipt::Receipt(tx.receipt()))
-            }
-        }
-    }
+        let tx @ Some(_) = tx else {
+            return Ok(self.pending_state().as_ref().and_then(|state| {
+                state
+                    .executed_txs
+                    .read()
+                    .iter()
+                    .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
+            }));
+        };
 
-    pub async fn transaction(&self, hash: &FieldElement) -> Option<KnownTransaction> {
-        let tx = self.backend.blockchain.storage.read().transactions.get(hash).cloned();
-        match tx {
-            Some(tx) => Some(tx),
-            // If the requested transaction is not available in the storage then
-            // check if it is available in the pending block.
-            None => self.pending_state().as_ref().and_then(|state| {
-                state.executed_transactions.read().iter().find_map(|tx| match tx {
-                    MaybeInvalidExecutedTransaction::Valid(tx) if tx.inner.hash() == *hash => {
-                        Some(PendingTransaction(tx.clone()).into())
-                    }
-                    MaybeInvalidExecutedTransaction::Invalid(tx) if tx.inner.hash() == *hash => {
-                        Some(tx.as_ref().clone().into())
-                    }
-                    _ => None,
-                })
-            }),
-        }
+        Ok(tx)
     }
 
     pub async fn events(
         &self,
-        from_block: BlockId,
-        to_block: BlockId,
-        address: Option<FieldElement>,
+        from_block: BlockIdOrTag,
+        to_block: BlockIdOrTag,
+        address: Option<ContractAddress>,
         keys: Option<Vec<Vec<FieldElement>>>,
         continuation_token: Option<String>,
         chunk_size: u64,
     ) -> SequencerResult<EventsPage> {
+        let provider = self.backend.blockchain.provider();
         let mut current_block = 0;
 
         let (mut from_block, to_block) = {
-            let storage = &self.backend.blockchain;
-
-            let from = storage
-                .block_hash(from_block)
-                .and_then(|hash| storage.storage.read().blocks.get(&hash).map(|b| b.header.number))
-                .ok_or(SequencerError::BlockNotFound(from_block))?;
-
-            let to = storage
-                .block_hash(to_block)
-                .and_then(|hash| storage.storage.read().blocks.get(&hash).map(|b| b.header.number))
+            let from = BlockIdReader::convert_block_id(provider, from_block)?
                 .ok_or(SequencerError::BlockNotFound(to_block))?;
-
+            let to = BlockIdReader::convert_block_id(provider, to_block)?
+                .ok_or(SequencerError::BlockNotFound(to_block))?;
             (from, to)
         };
 
@@ -385,39 +330,30 @@ impl KatanaSequencer {
         let mut filtered_events = Vec::with_capacity(chunk_size as usize);
 
         for i in from_block..=to_block {
-            let block = self
-                .backend
-                .blockchain
-                .storage
-                .read()
-                .block_by_number(i)
-                .cloned()
-                .ok_or(SequencerError::BlockNotFound(BlockId::Number(i)))?;
+            let block_hash = BlockHashProvider::block_hash_by_num(provider, i)?
+                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
 
-            // to get the current block hash we need to get the parent hash of the next block
-            // if the current block is the latest block then we use the latest hash
-            let block_hash = self
-                .backend
-                .blockchain
-                .storage
-                .read()
-                .block_by_number(i + 1)
-                .map(|b| b.header.parent_hash)
-                .unwrap_or(self.backend.blockchain.storage.read().latest_hash);
+            let receipts = ReceiptProvider::receipts_by_block(provider, BlockHashOrNumber::Num(i))?
+                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
 
-            let block_number = i;
+            let tx_range = BlockProvider::block_body_indices(provider, BlockHashOrNumber::Num(i))?
+                .ok_or(SequencerError::BlockNotFound(BlockIdOrTag::Number(i)))?;
+            let tx_hashes =
+                TransactionsProviderExt::transaction_hashes_in_range(provider, tx_range.into())?;
 
-            let txn_n = block.transactions.len();
+            let txn_n = receipts.len();
             if (txn_n as u64) < continuation_token.txn_n {
                 return Err(SequencerError::ContinuationToken(
                     ContinuationTokenError::InvalidToken,
                 ));
             }
 
-            for (txn_output, txn) in
-                block.outputs.iter().zip(block.transactions).skip(continuation_token.txn_n as usize)
+            for (tx_hash, events) in tx_hashes
+                .into_iter()
+                .zip(receipts.iter().map(|r| r.events()))
+                .skip(continuation_token.txn_n as usize)
             {
-                let txn_events_len: usize = txn_output.events.len();
+                let txn_events_len: usize = events.len();
 
                 // check if continuation_token.event_n is correct
                 match (txn_events_len as u64).cmp(&continuation_token.event_n) {
@@ -435,7 +371,7 @@ impl KatanaSequencer {
                 }
 
                 // skip events
-                let txn_events = txn_output.events.iter().skip(continuation_token.event_n as usize);
+                let txn_events = events.iter().skip(continuation_token.event_n as usize);
 
                 let (new_filtered_events, continuation_index) = filter_events_by_params(
                     txn_events,
@@ -445,12 +381,12 @@ impl KatanaSequencer {
                 );
 
                 filtered_events.extend(new_filtered_events.iter().map(|e| EmittedEvent {
-                    from_address: e.from_address,
+                    from_address: e.from_address.into(),
                     keys: e.keys.clone(),
                     data: e.data.clone(),
                     block_hash,
-                    block_number,
-                    transaction_hash: txn.inner.hash(),
+                    block_number: i,
+                    transaction_hash: tx_hash,
                 }));
 
                 if filtered_events.len() >= chunk_size as usize {
@@ -478,68 +414,43 @@ impl KatanaSequencer {
         Ok(EventsPage { events: filtered_events, continuation_token: None })
     }
 
-    pub async fn state_update(&self, block_id: BlockId) -> SequencerResult<StateUpdate> {
-        let block_number = self
-            .backend
-            .blockchain
-            .block_hash(block_id)
-            .ok_or(SequencerError::BlockNotFound(block_id))?;
-
-        self.backend
-            .blockchain
-            .storage
-            .read()
-            .state_update
-            .get(&block_number)
-            .cloned()
-            .ok_or(SequencerError::StateUpdateNotFound(block_id))
-    }
-
-    pub async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
-        if self.has_pending_transactions().await {
+    pub fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
+        if self.has_pending_transactions() {
             return Err(SequencerError::PendingTransactions);
         }
         self.backend().block_context_generator.write().next_block_start_time = timestamp;
         Ok(())
     }
 
-    pub async fn increase_next_block_timestamp(
-        &self,
-        timestamp: u64,
-    ) -> Result<(), SequencerError> {
-        if self.has_pending_transactions().await {
+    pub fn increase_next_block_timestamp(&self, timestamp: u64) -> Result<(), SequencerError> {
+        if self.has_pending_transactions() {
             return Err(SequencerError::PendingTransactions);
         }
         self.backend().block_context_generator.write().block_timestamp_offset += timestamp as i64;
         Ok(())
     }
 
-    pub async fn has_pending_transactions(&self) -> bool {
+    pub fn has_pending_transactions(&self) -> bool {
         if let Some(ref pending) = self.pending_state() {
-            !pending.executed_transactions.read().is_empty()
+            !pending.executed_txs.read().is_empty()
         } else {
             false
         }
     }
 
-    pub async fn set_storage_at(
-        &self,
-        contract_address: ContractAddress,
-        storage_key: StorageKey,
-        value: StarkFelt,
-    ) -> Result<(), SequencerError> {
-        if let Some(ref pending) = self.pending_state() {
-            pending.state.write().set_storage_at(contract_address, storage_key, value);
-        } else {
-            self.backend().state.write().await.set_storage_at(contract_address, storage_key, value);
-        }
-        Ok(())
-    }
+    // pub async fn set_storage_at(
+    //     &self,
+    //     contract_address: ContractAddress,
+    //     storage_key: StorageKey,
+    //     value: StorageValue,
+    // ) -> Result<(), SequencerError> { if let Some(ref pending) = self.pending_state() {
+    //   StateWriter::set_storage(&pending.state, contract_address, storage_key, value)?; } Ok(())
+    // }
 }
 
 fn filter_events_by_params(
     events: Skip<Iter<'_, Event>>,
-    address: Option<FieldElement>,
+    address: Option<ContractAddress>,
     filter_keys: Option<Vec<Vec<FieldElement>>>,
     max_results: Option<usize>,
 ) -> (Vec<Event>, usize) {

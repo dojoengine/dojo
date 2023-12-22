@@ -1,23 +1,17 @@
 //! Compiles and runs tests for a Dojo project.
-
-use std::sync::Arc;
-
 use anyhow::{bail, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
 use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_filesystem::ids::Directory;
-use cairo_lang_starknet::inline_macros::selector::SelectorMacro;
-use cairo_lang_starknet::plugin::StarkNetPlugin;
-use cairo_lang_test_plugin::TestPlugin;
+use cairo_lang_starknet::starknet_plugin_suite;
+use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig};
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
-use dojo_lang::inline_macros::emit::EmitMacro;
-use dojo_lang::inline_macros::get::GetMacro;
-use dojo_lang::inline_macros::set::SetMacro;
-use dojo_lang::plugin::BuiltinDojoPlugin;
+use dojo_lang::plugin::dojo_plugin_suite;
+use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
 use scarb::compiler::CompilationUnit;
 use scarb::core::Config;
@@ -46,7 +40,11 @@ impl TestArgs {
         });
 
         let resolve = ops::resolve_workspace(&ws)?;
-        let compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
+        // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
+        // version of Scarb.
+        let mut compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
+        compilation_units.sort_by_key(|unit| unit.main_package_id);
+        compilation_units.dedup_by_key(|unit| unit.main_package_id);
 
         for unit in compilation_units {
             let props: Props = unit.target().props()?;
@@ -90,14 +88,9 @@ pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase
     b.with_project_config(build_project_config(unit)?);
     b.with_cfg(CfgSet::from_iter([Cfg::name("test")]));
 
-    b.with_macro_plugin(Arc::new(TestPlugin::default()));
-    b.with_macro_plugin(Arc::new(BuiltinDojoPlugin));
-    b.with_macro_plugin(Arc::new(StarkNetPlugin::default()));
-
-    b.with_inline_macro_plugin(EmitMacro::NAME, Arc::new(EmitMacro));
-    b.with_inline_macro_plugin(GetMacro::NAME, Arc::new(GetMacro));
-    b.with_inline_macro_plugin(SetMacro::NAME, Arc::new(SetMacro));
-    b.with_inline_macro_plugin(SelectorMacro::NAME, Arc::new(SelectorMacro));
+    b.with_plugin_suite(test_plugin_suite());
+    b.with_plugin_suite(dojo_plugin_suite());
+    b.with_plugin_suite(starknet_plugin_suite());
 
     b.build()
 }
@@ -111,8 +104,9 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
         .collect();
 
     let corelib = Some(Directory::Real(unit.core_package_component().target.source_root().into()));
+    let crates_config = crates_config_for_compilation_unit(unit);
 
-    let content = ProjectConfigContent { crate_roots };
+    let content = ProjectConfigContent { crate_roots, crates_config };
 
     let project_config =
         ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };

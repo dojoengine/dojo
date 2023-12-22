@@ -3,7 +3,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
-use convert_case::{Case, Casing};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
@@ -99,7 +98,7 @@ where
             continue;
         }
 
-        let name = file_name_str.split('-').last().unwrap().trim_end_matches(".json").to_string();
+        let name = file_name_str.trim_end_matches(".json").to_string();
 
         artifact_paths.insert(name, entry.path());
     }
@@ -165,8 +164,7 @@ fn evaluate_class_to_migrate(
     match class.remote {
         Some(remote) if remote == class.local && !world_contract_will_migrate => Ok(None),
         _ => {
-            let path =
-                find_artifact_path(class.name.to_case(Case::Snake).as_str(), artifact_paths)?;
+            let path = find_artifact_path(class.name.as_str(), artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
         }
     }
@@ -183,8 +181,7 @@ fn evaluate_contracts_to_migrate(
         match c.remote {
             Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
             _ => {
-                let path =
-                    find_artifact_path(c.name.to_case(Case::Snake).as_str(), artifact_paths)?;
+                let path = find_artifact_path(c.name.as_str(), artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),

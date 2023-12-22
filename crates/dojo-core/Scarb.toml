@@ -1,9 +1,9 @@
 [package]
-cairo-version = "2.3.1"
+cairo-version = "2.4.0"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
-version = "0.3.7"
+version = "0.4.2"
 
 [dependencies]
-dojo_plugin = "0.3.7"
-starknet = "2.3.1"
+dojo_plugin = { git = "https://github.com/dojoengine/dojo", tag = "v0.3.11" }
+starknet = "2.4.0"

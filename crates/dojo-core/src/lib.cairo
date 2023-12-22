@@ -14,10 +14,11 @@ mod packing_test;
 mod world;
 #[cfg(test)]
 mod world_test;
-mod upgradable;
 
 #[cfg(test)]
 mod test_utils;
 
 #[cfg(test)]
 mod benchmarks;
+
+mod components;

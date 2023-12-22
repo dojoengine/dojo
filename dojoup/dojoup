@@ -88,8 +88,6 @@ main() {
         | tr -d '"' \
         | head -n 1)
       DOJOUP_VERSION=$DOJOUP_TAG
-    elif [[ "$DOJOUP_VERSION" == nightly* ]]; then
-      DOJOUP_VERSION="nightly"
     elif [[ "$DOJOUP_VERSION" == [[:digit:]]* ]]; then
       # Add v prefix
       DOJOUP_VERSION="v${DOJOUP_VERSION}"
@@ -288,8 +286,9 @@ banner() {
 
 
               Repo : https://github.com/dojoengine/dojo
-              Book : https://book.dojoengine.org/                  
-              Chat : https://t.me/+DJxNYR3rsfJmZTg1                     
+              Book : https://book.dojoengine.org/
+              Chat : https://discord.gg/dojoengine
+                     https://t.me/dojoengine
 
 ═════════════════════════════════════════════════════════════════════════
 

@@ -9,7 +9,7 @@ use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::server::conn::AddrStream;
 use hyper::service::make_service_fn;
-use hyper::{Body, Request, Response, Server, StatusCode};
+use hyper::{Body, Client, Request, Response, Server, StatusCode};
 use hyper_reverse_proxy::ReverseProxy;
 use serde_json::json;
 use tokio::sync::RwLock;
@@ -36,9 +36,18 @@ const DEFAULT_EXPOSED_HEADERS: [&str; 3] =
 const DEFAULT_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 
 lazy_static::lazy_static! {
-    static ref  PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
+    static ref GRAPHQL_PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
         ReverseProxy::new(
-            hyper::Client::new(),
+            Client::builder()
+             .build_http(),
+        )
+    };
+
+    static ref GRPC_PROXY_CLIENT: ReverseProxy<HttpConnector<GaiResolver>> = {
+        ReverseProxy::new(
+            Client::builder()
+             .http2_only(true)
+             .build_http(),
         )
     };
 }
@@ -132,7 +141,7 @@ async fn handle(
     if req.uri().path().starts_with("/graphql") {
         if let Some(graphql_addr) = graphql_addr {
             let graphql_addr = format!("http://{}", graphql_addr);
-            return match PROXY_CLIENT.call(client_ip, &graphql_addr, req).await {
+            return match GRAPHQL_PROXY_CLIENT.call(client_ip, &graphql_addr, req).await {
                 Ok(response) => Ok(response),
                 Err(_error) => {
                     error!("{:?}", _error);
@@ -154,7 +163,7 @@ async fn handle(
         if content_type.to_str().unwrap().starts_with("application/grpc") {
             if let Some(grpc_addr) = grpc_addr {
                 let grpc_addr = format!("http://{}", grpc_addr);
-                return match PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
+                return match GRPC_PROXY_CLIENT.call(client_ip, &grpc_addr, req).await {
                     Ok(response) => Ok(response),
                     Err(_error) => {
                         error!("{:?}", _error);

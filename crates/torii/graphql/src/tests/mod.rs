@@ -10,6 +10,7 @@ use dojo_test_utils::sequencer::{
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::WorldContractReader;
+use dojo_world::manifest::Manifest;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use serde::Deserialize;
@@ -37,9 +38,11 @@ mod subscription_test;
 use crate::schema::build_schema;
 
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Connection<T> {
     pub total_count: i64,
     pub edges: Vec<Edge<T>>,
+    pub page_info: PageInfo,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -49,31 +52,21 @@ pub struct Edge<T> {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Entity {
-    pub model_names: String,
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Moves {
-    pub __typename: String,
-    pub remaining: u32,
-    pub last_direction: String,
-    pub entity: Option<Entity>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Vec2 {
-    pub x: u32,
-    pub y: u32,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Position {
-    pub __typename: String,
-    pub vec: Vec2,
-    pub entity: Option<Entity>,
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+// same as type from `async-graphql` but derive necessary traits
+// https://docs.rs/async-graphql/6.0.10/async_graphql/types/connection/struct.PageInfo.html
+pub struct PageInfo {
+    pub has_previous_page: bool,
+    pub has_next_page: bool,
+    pub start_cursor: Option<String>,
+    pub end_cursor: Option<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -140,6 +133,7 @@ pub struct Social {
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Content {
     pub name: Option<String>,
     pub description: Option<String>,
@@ -150,8 +144,10 @@ pub struct Content {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Metadata {
     pub uri: String,
+    pub world_address: String,
     pub icon_img: String,
     pub cover_img: String,
     pub content: Content,
@@ -178,75 +174,56 @@ pub async fn run_graphql_subscription(
 pub async fn model_fixtures(db: &mut Sql) {
     db.register_model(
         Ty::Struct(Struct {
-            name: "Moves".to_string(),
+            name: "Record".to_string(),
             children: vec![
                 Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "remaining".to_string(),
-                    key: false,
-                    ty: Ty::Primitive(Primitive::U8(None)),
-                },
-                Member {
-                    name: "last_direction".to_string(),
+                    name: "depth".to_string(),
                     key: false,
                     ty: Ty::Enum(Enum {
-                        name: "Direction".to_string(),
+                        name: "Depth".to_string(),
                         option: None,
                         options: vec![
-                            EnumOption { name: "None".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Left".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Right".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Up".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "Down".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Zero".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "One".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Two".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption { name: "Three".to_string(), ty: Ty::Tuple(vec![]) },
                         ],
                     }),
+                },
+                Member {
+                    name: "record_id".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::U32(None)),
+                },
+                Member {
+                    name: "typeU16".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U16(None)),
+                },
+                Member {
+                    name: "type_u64".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::U64(None)),
+                },
+                Member {
+                    name: "typeBool".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Bool(None)),
+                },
+                Member {
+                    name: "type_felt".to_string(),
+                    key: false,
+                    ty: Ty::Primitive(Primitive::Felt252(None)),
+                },
+                Member {
+                    name: "typeContractAddress".to_string(),
+                    key: true,
+                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
                 },
             ],
         }),
         vec![],
         FieldElement::ONE,
-        0,
-        0,
-    )
-    .await
-    .unwrap();
-
-    db.register_model(
-        Ty::Struct(Struct {
-            name: "Position".to_string(),
-            children: vec![
-                Member {
-                    name: "player".to_string(),
-                    key: true,
-                    ty: Ty::Primitive(Primitive::ContractAddress(None)),
-                },
-                Member {
-                    name: "vec".to_string(),
-                    key: false,
-                    ty: Ty::Struct(Struct {
-                        name: "Vec2".to_string(),
-                        children: vec![
-                            Member {
-                                name: "x".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                            Member {
-                                name: "y".to_string(),
-                                key: false,
-                                ty: Ty::Primitive(Primitive::U32(None)),
-                            },
-                        ],
-                    }),
-                },
-            ],
-        }),
-        vec![],
-        FieldElement::TWO,
         0,
         0,
     )
@@ -260,8 +237,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    let migration = prepare_migration("./src/tests/types-test/target/dev".into()).unwrap();
-    let config = build_test_config("./src/tests/types-test/Scarb.toml").unwrap();
+    let migration = prepare_migration("../types-test/target/dev".into()).unwrap();
+    let config = build_test_config("../types-test/Scarb.toml").unwrap();
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
     let sequencer =
@@ -277,12 +254,16 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
+    let manifest =
+        Manifest::load_from_remote(&provider, migration.world_address().unwrap()).await.unwrap();
+
     //  Execute `create` and insert 10 records into storage
-    let records_contract = "0x2753d30656b393ecea156189bf0acf5e1063f3ac978fb5c3cebe7a4570bbc78";
+    let records_contract =
+        manifest.contracts.iter().find(|contract| contract.name.eq("records")).unwrap();
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],
-            to: FieldElement::from_str(records_contract).unwrap(),
+            to: records_contract.address.unwrap(),
             selector: selector!("create"),
         }])
         .send()

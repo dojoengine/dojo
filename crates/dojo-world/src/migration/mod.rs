@@ -16,9 +16,7 @@ use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
 };
 use starknet::macros::{felt, selector};
-use starknet::providers::{
-    MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage,
-};
+use starknet::providers::{Provider, ProviderError};
 use starknet::signers::Signer;
 use thiserror::Error;
 
@@ -106,11 +104,7 @@ pub trait Declarable {
             .get_class(BlockId::Tag(BlockTag::Pending), flattened_class.class_hash())
             .await
         {
-            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
-                code: MaybeUnknownErrorCode::Known(StarknetError::ClassHashNotFound),
-                ..
-            })) => {}
-
+            Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
             Ok(_) => return Err(MigrationError::ClassAlreadyDeclared),
             Err(e) => return Err(MigrationError::Provider(e)),
         }
@@ -162,7 +156,7 @@ pub trait Deployable: Declarable + Sync {
                     calldata: vec![],
                     entry_point_selector: get_selector_from_name("base").unwrap(),
                 },
-                BlockId::Tag(BlockTag::Latest),
+                BlockId::Tag(BlockTag::Pending),
             )
             .await
             .map_err(MigrationError::Provider)?;
@@ -181,10 +175,7 @@ pub trait Deployable: Declarable + Sync {
                 to: world_address,
             },
 
-            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
-                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
-                ..
-            })) => Call {
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Call {
                 calldata: vec![self.salt(), class_hash],
                 selector: selector!("deploy_contract"),
                 to: world_address,
@@ -251,11 +242,7 @@ pub trait Deployable: Declarable + Sync {
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
         {
-            Err(ProviderError::StarknetError(StarknetErrorWithMessage {
-                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
-                ..
-            })) => {}
-
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {}
             Ok(_) => return Err(MigrationError::ContractAlreadyDeployed(contract_address)),
             Err(e) => return Err(MigrationError::Provider(e)),
         }

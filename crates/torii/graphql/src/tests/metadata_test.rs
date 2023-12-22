@@ -13,18 +13,19 @@ mod tests {
     const QUERY: &str = r#"
       {
         metadatas {
-          total_count
+          totalCount
           edges {
             cursor
             node {
               uri
-              cover_img
-              icon_img
+              worldAddress
+              coverImg
+              iconImg
               content {
                 name
                 description
-                cover_uri
-                icon_uri
+                coverUri
+                iconUri
                 website
                 socials {
                   name
@@ -32,6 +33,12 @@ mod tests {
                 }
               }
             }
+          }
+          pageInfo {
+            hasPreviousPage
+            hasNextPage
+            startCursor
+            endCursor
           }
         }
       }
@@ -54,7 +61,6 @@ mod tests {
           "#,
         )
         .unwrap();
-
         let world_metadata = dojo_metadata.world.unwrap();
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .await
@@ -64,6 +70,7 @@ mod tests {
         let value = result.get("metadatas").ok_or("metadatas not found").unwrap().clone();
         let connection: Connection<SqlMetadata> = serde_json::from_value(value).unwrap();
         let edge = connection.edges.first().unwrap();
+        assert_eq!(edge.node.world_address, "0x0");
         assert_eq!(connection.edges.len(), 1);
         assert_eq!(edge.node.cover_img, cover_img);
         assert_eq!(
