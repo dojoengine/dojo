@@ -55,8 +55,8 @@ pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNod
         .iter()
         .map(|m| {
             format!(
-                "{}::{}(value) => {{ debug::PrintTrait::print('{}'); \
-                 debug::PrintTrait::print(value); }}",
+                "{}::{}(value) => {{ core::debug::PrintTrait::print('{}'); \
+                 core::debug::PrintTrait::print(value); }}",
                 enum_name,
                 m.name(db).text(db).to_string(),
                 m.name(db).text(db).to_string()
@@ -66,7 +66,7 @@ pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNod
 
     RewriteNode::interpolate_patched(
         "#[cfg(test)]
-            impl $type_name$EnumPrintImpl of debug::PrintTrait<$type_name$> {
+            impl $type_name$EnumPrintImpl of core::debug::PrintTrait<$type_name$> {
                 fn print(self: $type_name$) {
                     match self {
                         $print$
@@ -75,7 +75,7 @@ pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNod
             }",
         &UnorderedHashMap::from([
             ("type_name".to_string(), RewriteNode::new_trimmed(enum_ast.name(db).as_syntax_node())),
-            ("print".to_string(), RewriteNode::Text(prints.join("\n"))),
+            ("print".to_string(), RewriteNode::Text(prints.join(",\n"))),
         ]),
     )
 }
