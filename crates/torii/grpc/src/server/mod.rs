@@ -34,6 +34,7 @@ use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
+use crate::types::ComparisonOperator;
 
 #[derive(Clone)]
 pub struct DojoWorld {
@@ -120,20 +121,20 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        self.entities_by_ids(None, limit, offset).await
+        self.entities_by_hashed_keys(None, limit, offset).await
     }
 
-    async fn entities_by_ids(
+    async fn entities_by_hashed_keys(
         &self,
-        ids_clause: Option<proto::types::IdsClause>,
+        hashed_keys: Option<proto::types::HashedKeysClause>,
         limit: u32,
         offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
         // TODO: use prepared statement for where clause
-        let filter_ids = match ids_clause {
-            Some(ids_clause) => {
-                let ids = ids_clause
-                    .ids
+        let filter_ids = match hashed_keys {
+            Some(hashed_keys) => {
+                let ids = hashed_keys
+                    .hashed_keys
                     .iter()
                     .map(|id| {
                         Ok(FieldElement::from_byte_slice_be(id)
@@ -180,8 +181,11 @@ impl DojoWorld {
                 })
                 .collect::<Result<Vec<_>, Error>>()?;
 
-            let id = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
-            entities.push(proto::types::Entity { id: id.to_bytes_be().to_vec(), models })
+            let hashed_keys = FieldElement::from_str(&entity_id).map_err(ParseError::FromStr)?;
+            entities.push(proto::types::Entity {
+                hashed_keys: hashed_keys.to_bytes_be().to_vec(),
+                models,
+            })
         }
 
         Ok(entities)
@@ -239,14 +243,62 @@ impl DojoWorld {
         db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
     }
 
-    async fn entities_by_attribute(
+    async fn entities_by_member(
         &self,
-        _attribute: proto::types::MemberClause,
+        member_clause: proto::types::MemberClause,
         _limit: u32,
         _offset: u32,
     ) -> Result<Vec<proto::types::Entity>, Error> {
-        // TODO: Implement
-        Err(QueryError::UnsupportedQuery.into())
+        let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
+            .expect("invalid comparison operator");
+
+        let value_type = member_clause
+            .value
+            .ok_or(QueryError::MissingParam("value".into()))?
+            .value_type
+            .ok_or(QueryError::MissingParam("value_type".into()))?;
+
+        let comparison_value = match value_type {
+            proto::types::value::ValueType::StringValue(string) => string,
+            proto::types::value::ValueType::IntValue(int) => int.to_string(),
+            proto::types::value::ValueType::UintValue(uint) => uint.to_string(),
+            proto::types::value::ValueType::BoolValue(bool) => {
+                if bool {
+                    "1".to_string()
+                } else {
+                    "0".to_string()
+                }
+            }
+            _ => return Err(QueryError::UnsupportedQuery.into()),
+        };
+
+        let models_query = format!(
+            r#"
+            SELECT group_concat(entity_model.model_id) as model_names
+            FROM entities
+            JOIN entity_model ON entities.id = entity_model.entity_id
+            GROUP BY entities.id
+            HAVING model_names REGEXP '(^|,){}(,|$)'
+            LIMIT 1
+        "#,
+            member_clause.model
+        );
+        let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
+
+        let model_names = models_str.split(',').collect::<Vec<&str>>();
+        let schemas = self.model_cache.schemas(model_names).await?;
+
+        let table_name = member_clause.model;
+        let column_name = format!("external_{}", member_clause.member);
+        let member_query = format!(
+            "{} WHERE {table_name}.{column_name} {comparison_operator} ?",
+            build_sql_query(&schemas)?
+        );
+
+        let db_entities =
+            sqlx::query(&member_query).bind(comparison_value).fetch_all(&self.pool).await?;
+
+        db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
     }
 
     async fn entities_by_composite(
@@ -312,9 +364,9 @@ impl DojoWorld {
 
     async fn subscribe_entities(
         &self,
-        ids: Vec<FieldElement>,
+        hashed_keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(ids).await
+        self.entity_manager.add_subscriber(hashed_keys).await
     }
 
     async fn retrieve_entities(
@@ -328,12 +380,13 @@ impl DojoWorld {
                     clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
 
                 match clause_type {
-                    ClauseType::Ids(ids) => {
-                        if ids.ids.is_empty() {
+                    ClauseType::HashedKeys(hashed_keys) => {
+                        if hashed_keys.hashed_keys.is_empty() {
                             return Err(QueryError::MissingParam("ids".into()).into());
                         }
 
-                        self.entities_by_ids(Some(ids), query.limit, query.offset).await?
+                        self.entities_by_hashed_keys(Some(hashed_keys), query.limit, query.offset)
+                            .await?
                     }
                     ClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
@@ -346,8 +399,8 @@ impl DojoWorld {
 
                         self.entities_by_keys(keys, query.limit, query.offset).await?
                     }
-                    ClauseType::Member(attribute) => {
-                        self.entities_by_attribute(attribute, query.limit, query.offset).await?
+                    ClauseType::Member(member) => {
+                        self.entities_by_member(member, query.limit, query.offset).await?
                     }
                     ClauseType::Composite(composite) => {
                         self.entities_by_composite(composite, query.limit, query.offset).await?
@@ -360,7 +413,7 @@ impl DojoWorld {
     }
 
     fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
-        let id =
+        let hashed_keys =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
         let models = schemas
             .iter()
@@ -372,7 +425,7 @@ impl DojoWorld {
             })
             .collect::<Result<Vec<_>, Error>>()?;
 
-        Ok(proto::types::Entity { id: id.to_bytes_be().to_vec(), models })
+        Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
     }
 }
 
@@ -415,15 +468,18 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { ids } = request.into_inner();
-        let ids = ids
+        let SubscribeEntitiesRequest { hashed_keys } = request.into_inner();
+        let hashed_keys = hashed_keys
             .iter()
             .map(|id| {
                 FieldElement::from_byte_slice_be(id)
                     .map_err(|e| Status::invalid_argument(e.to_string()))
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let rx = self.subscribe_entities(ids).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rx = self
+            .subscribe_entities(hashed_keys)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }

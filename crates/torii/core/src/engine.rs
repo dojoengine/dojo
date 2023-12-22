@@ -178,7 +178,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
 
             let mut world_event = false;
             for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
-                if event.from_address != self.world.address() {
+                if event.from_address != self.world.address {
                     continue;
                 }
 

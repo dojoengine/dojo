@@ -367,7 +367,9 @@ impl StarknetApiServer for StarknetApi {
         let res = self.sequencer.call(request, block_id).map_err(|e| match e {
             SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
             SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
-            SequencerError::EntryPointExecution(_) => StarknetApiError::ContractError,
+            SequencerError::EntryPointExecution(e) => {
+                StarknetApiError::ContractError { revert_error: e.to_string() }
+            }
             _ => StarknetApiError::UnexpectedError,
         })?;
 
@@ -449,7 +451,9 @@ impl StarknetApiServer for StarknetApi {
 
         let res = self.sequencer.estimate_fee(transactions, block_id).map_err(|e| match e {
             SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,
+            SequencerError::TransactionExecution(e) => {
+                StarknetApiError::ContractError { revert_error: e.to_string() }
+            }
             _ => StarknetApiError::UnexpectedError,
         })?;
 
@@ -473,7 +477,9 @@ impl StarknetApiServer for StarknetApi {
             .estimate_fee(vec![tx], block_id)
             .map_err(|e| match e {
                 SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-                SequencerError::TransactionExecution(_) => StarknetApiError::ContractError,
+                SequencerError::TransactionExecution(e) => {
+                    StarknetApiError::ContractError { revert_error: e.to_string() }
+                }
                 _ => StarknetApiError::UnexpectedError,
             })?
             .pop()

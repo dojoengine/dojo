@@ -141,7 +141,7 @@ impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
         &mut self,
         key: Option<T::Key>,
         subkey: Option<T::SubKey>,
-    ) -> Result<DupWalker<'_, K, T>, DatabaseError> {
+    ) -> Result<Option<DupWalker<'_, K, T>>, DatabaseError> {
         let start = match (key, subkey) {
             (Some(key), Some(subkey)) => {
                 // encode key and decode it after.
@@ -154,10 +154,17 @@ impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
 
             (Some(key), None) => {
                 let key: Vec<u8> = key.encode().into();
-                self.inner
+
+                let Some(start) = self
+                    .inner
                     .set(key.as_ref())
                     .map_err(DatabaseError::Read)?
                     .map(|val| decoder::<T>((Cow::Owned(key), val)))
+                else {
+                    return Ok(None);
+                };
+
+                Some(start)
             }
 
             (None, Some(subkey)) => {
@@ -175,7 +182,7 @@ impl<K: TransactionKind, T: DupSort> Cursor<K, T> {
             (None, None) => self.first().transpose(),
         };
 
-        Ok(DupWalker::new(self, start))
+        Ok(Some(DupWalker::new(self, start)))
     }
 }
 

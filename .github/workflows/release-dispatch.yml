@@ -1,0 +1,35 @@
+name: release-dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release
+        required: true
+        type: string
+
+jobs:
+  propose-release:
+    permissions:
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:448ffda
+    steps:
+      # Workaround described here: https://github.com/actions/checkout/issues/760
+      - uses: actions/checkout@v3
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - run: cargo release version ${{ inputs.version }} --execute --no-confirm && cargo release replace --execute --no-confirm
+      - id: version_info
+        run: |
+          cargo install cargo-get
+          echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
+      - uses: peter-evans/create-pull-request@v5
+        with:
+          # We have to use a PAT in order to trigger ci
+          token: ${{ secrets.CREATE_PR_TOKEN }}
+          title: "Prepare release: v${{ steps.version_info.outputs.version }}"
+          commit-message: "Prepare release: v${{ steps.version_info.outputs.version }}"
+          branch: prepare-release
+          base: main
+          delete-branch: true

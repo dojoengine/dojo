@@ -10,7 +10,6 @@ version.workspace = true
 katana-primitives = { path = "../../primitives" }
 
 anyhow.workspace = true
-bincode = "1.3.3"
 page_size = "0.6.0"
 parking_lot.workspace = true
 serde.workspace = true
@@ -23,7 +22,11 @@ cairo-vm.workspace = true
 starknet_api.workspace = true
 
 # codecs
-postcard = { version = "1.0.8", optional = true, default-features = false, features = [ "use-std" ] }
+[dependencies.postcard]
+default-features = false
+features = [ "use-std" ]
+optional = true
+version = "1.0.8"
 
 [dependencies.libmdbx]
 git = "https://github.com/paradigmxyz/reth.git"
@@ -31,6 +34,8 @@ package = "reth-libmdbx"
 rev = "b34b0d3"
 
 [dev-dependencies]
+cairo-lang-starknet.workspace = true
+criterion = "0.5.1"
 starknet.workspace = true
 tempfile = "3.8.1"
 
@@ -38,3 +43,7 @@ tempfile = "3.8.1"
 default = [ "postcard" ]
 postcard = [ "dep:postcard" ]
 test-utils = [ "dep:tempfile" ]
+
+[[bench]]
+harness = false
+name = "codec"

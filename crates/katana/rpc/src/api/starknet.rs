@@ -16,73 +16,120 @@ use katana_rpc_types::transaction::{
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
-use starknet::core::types::TransactionStatus;
+use starknet::core::types::{ContractErrorData, TransactionStatus};
 
-#[derive(thiserror::Error, Clone, Copy, Debug)]
+#[derive(thiserror::Error, Clone, Debug)]
+#[repr(i32)]
 pub enum StarknetApiError {
     #[error("Failed to write transaction")]
-    FailedToReceiveTxn = 1,
+    FailedToReceiveTxn,
     #[error("Contract not found")]
-    ContractNotFound = 20,
+    ContractNotFound,
     #[error("Invalid message selector")]
-    InvalidMessageSelector = 21,
+    InvalidMessageSelector,
     #[error("Invalid call data")]
-    InvalidCallData = 22,
+    InvalidCallData,
     #[error("Block not found")]
-    BlockNotFound = 24,
+    BlockNotFound,
     #[error("Transaction hash not found")]
-    TxnHashNotFound = 29,
+    TxnHashNotFound,
     #[error("Invalid transaction index in a block")]
-    InvalidTxnIndex = 27,
+    InvalidTxnIndex,
     #[error("Class hash not found")]
-    ClassHashNotFound = 28,
+    ClassHashNotFound,
     #[error("Requested page size is too big")]
-    PageSizeTooBig = 31,
+    PageSizeTooBig,
     #[error("There are no blocks")]
-    NoBlocks = 32,
+    NoBlocks,
     #[error("The supplied continuation token is invalid or unknown")]
-    InvalidContinuationToken = 33,
+    InvalidContinuationToken,
     #[error("Contract error")]
-    ContractError = 40,
+    ContractError { revert_error: String },
     #[error("Invalid contract class")]
-    InvalidContractClass = 50,
+    InvalidContractClass,
     #[error("Class already declared")]
-    ClassAlreadyDeclared = 51,
+    ClassAlreadyDeclared,
     #[error("Invalid transaction nonce")]
-    InvalidTransactionNonce = 52,
+    InvalidTransactionNonce,
     #[error("Max fee is smaller than the minimal transaction cost (validation plus fee transfer)")]
-    InsufficientMaxFee = 53,
+    InsufficientMaxFee,
     #[error("Account balance is smaller than the transaction's max_fee")]
-    InsufficientAccountBalance = 54,
+    InsufficientAccountBalance,
     #[error("Account validation failed")]
-    ValidationFailure = 55,
+    ValidationFailure,
     #[error("Compilation failed")]
-    CompilationFailed = 56,
+    CompilationFailed,
     #[error("Contract class size is too large")]
-    ContractClassSizeIsTooLarge = 57,
+    ContractClassSizeIsTooLarge,
     #[error("Sender address in not an account contract")]
-    NonAccount = 58,
+    NonAccount,
     #[error("A transaction with the same hash already exists in the mempool")]
-    DuplicateTransaction = 59,
+    DuplicateTransaction,
     #[error("The compiled class hash did not match the one supplied in the transaction")]
-    CompiledClassHashMismatch = 60,
+    CompiledClassHashMismatch,
     #[error("The transaction version is not supported")]
-    UnsupportedTransactionVersion = 61,
+    UnsupportedTransactionVersion,
     #[error("The contract class version is not supported")]
-    UnsupportedContractClassVersion = 62,
+    UnsupportedContractClassVersion,
     #[error("An unexpected error occured")]
-    UnexpectedError = 63,
+    UnexpectedError,
     #[error("Too many storage keys requested")]
-    ProofLimitExceeded = 10000,
+    ProofLimitExceeded,
     #[error("Too many keys provided in a filter")]
-    TooManyKeysInFilter = 34,
+    TooManyKeysInFilter,
     #[error("Failed to fetch pending transactions")]
-    FailedToFetchPendingTransactions = 38,
+    FailedToFetchPendingTransactions,
+}
+
+impl StarknetApiError {
+    fn code(&self) -> i32 {
+        match self {
+            StarknetApiError::FailedToReceiveTxn => 1,
+            StarknetApiError::ContractNotFound => 20,
+            StarknetApiError::InvalidMessageSelector => 21,
+            StarknetApiError::InvalidCallData => 22,
+            StarknetApiError::BlockNotFound => 24,
+            StarknetApiError::InvalidTxnIndex => 27,
+            StarknetApiError::ClassHashNotFound => 28,
+            StarknetApiError::TxnHashNotFound => 29,
+            StarknetApiError::PageSizeTooBig => 31,
+            StarknetApiError::NoBlocks => 32,
+            StarknetApiError::InvalidContinuationToken => 33,
+            StarknetApiError::TooManyKeysInFilter => 34,
+            StarknetApiError::FailedToFetchPendingTransactions => 38,
+            StarknetApiError::ContractError { .. } => 40,
+            StarknetApiError::InvalidContractClass => 50,
+            StarknetApiError::ClassAlreadyDeclared => 51,
+            StarknetApiError::InvalidTransactionNonce => 52,
+            StarknetApiError::InsufficientMaxFee => 53,
+            StarknetApiError::InsufficientAccountBalance => 54,
+            StarknetApiError::ValidationFailure => 55,
+            StarknetApiError::CompilationFailed => 56,
+            StarknetApiError::ContractClassSizeIsTooLarge => 57,
+            StarknetApiError::NonAccount => 58,
+            StarknetApiError::DuplicateTransaction => 59,
+            StarknetApiError::CompiledClassHashMismatch => 60,
+            StarknetApiError::UnsupportedTransactionVersion => 61,
+            StarknetApiError::UnsupportedContractClassVersion => 62,
+            StarknetApiError::UnexpectedError => 63,
+            StarknetApiError::ProofLimitExceeded => 10000,
+        }
+    }
 }
 
 impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
-        Error::Call(CallError::Custom(ErrorObject::owned(err as i32, err.to_string(), None::<()>)))
+        let code = err.code();
+        let message = err.to_string();
+
+        let data = match err {
+            StarknetApiError::ContractError { revert_error } => {
+                Some(ContractErrorData { revert_error })
+            }
+            _ => None,
+        };
+
+        Error::Call(CallError::Custom(ErrorObject::owned(code, message, data)))
     }
 }
 

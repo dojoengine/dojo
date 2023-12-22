@@ -63,20 +63,27 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      pull-requests: write
+      contents: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
       - name: Update devcontainer.json
         run: sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .devcontainer/devcontainer.json
 
-      - name: Update ci devcontainers
-        run: sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" .github/workflows/ci.yml
+      - name: Update github action devcontainers
+        run: |
+          for file in .github/workflows/*.yml; do
+            if [[ $file != ".github/workflows/devcontainer.yml" ]]; then
+              sed -i "s|ghcr.io/dojoengine/dojo-dev:[a-zA-Z0-9._-]*|ghcr.io/dojoengine/dojo-dev:${{ needs.build-and-push.outputs.tag_name }}|" "$file"
+            fi
+          done
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v3
+      - uses: peter-evans/create-pull-request@v5
         with:
+          # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
           title: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
           commit-message: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"

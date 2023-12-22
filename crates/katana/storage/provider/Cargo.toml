@@ -22,13 +22,16 @@ starknet.workspace = true
 tokio.workspace = true
 
 [features]
-default = ["fork", "in-memory"]
-fork = ["in-memory"]
-in-memory = []
+default = [ "fork", "in-memory" ]
+fork = [ "in-memory" ]
+in-memory = [  ]
 
 [dev-dependencies]
+katana-runner = { path = "../../runner" }
+lazy_static.workspace = true
 rand = "0.8.5"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 starknet.workspace = true
+tempfile = "3.8.1"
 url.workspace = true
