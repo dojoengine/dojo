@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fs;
 use std::iter::zip;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_compiler::db::RootDatabase;
@@ -14,6 +15,7 @@ use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
 use cairo_lang_starknet::contract_class::{compile_prepared_db, ContractClass};
 use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_utils::UpcastMut;
+use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
     Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME,
@@ -114,27 +116,11 @@ impl Compiler for DojoCompiler {
             let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
                 format!("problem computing class hash for contract `{contract_full_path}`")
             })?;
-            compiled_classes.insert(contract_full_path.into(), (class_hash, class.abi));
+            compiled_classes
+                .insert(contract_full_path.clone().into(), (class_hash, class.abi.clone()));
         }
 
-        let mut manifest = target_dir
-            .open_ro("manifest.json", "output file", ws.config())
-            .map(|file| dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default())
-            .unwrap_or_default();
-
-        update_manifest(
-            &mut manifest,
-            db,
-            &main_crate_ids,
-            compiled_classes,
-            props.build_external_contracts,
-        )?;
-
-        manifest.write_to_path(
-            target_dir.open_rw("manifest.json", "output file", ws.config())?.path(),
-        )?;
-
-        Ok(())
+        update_manifests(db, ws, &main_crate_ids, compiled_classes, props.build_external_contracts)
     }
 }
 
@@ -209,14 +195,16 @@ pub fn collect_external_crate_ids(
         .collect::<Vec<_>>()
 }
 
-fn update_manifest(
-    manifest: &mut dojo_world::manifest::Manifest,
+fn update_manifests(
     db: &RootDatabase,
+    ws: &Workspace<'_>,
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
-    fn get_compiled_artifact_from_map<'a>(
+    let manifests_dir = ws.manifest_path().parent().unwrap().join("manifests/base");
+
+    fn compiled_artifact<'a>(
         artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
         artifact_name: &str,
     ) -> anyhow::Result<&'a (FieldElement, Option<abi::Contract>)> {
@@ -225,33 +213,36 @@ fn update_manifest(
         ))
     }
 
+    fn write_manifest(base: &Utf8PathBuf, class: &Class) -> anyhow::Result<()> {
+        let yaml = serde_yaml::to_string(class)?;
+        let parts: Vec<&str> = class.name.split("::").collect();
+        let path: Utf8PathBuf = parts.last().unwrap().into();
+        let full_path = base.join(path).with_extension("yml");
+
+        // Create the directory if it doesn't exist
+        if let Some(parent) = full_path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
+        fs::write(full_path, yaml).expect("Unable to write file");
+        Ok(())
+    }
+
     let mut crate_ids = crate_ids.to_vec();
 
-    let world = {
-        let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
-        Contract {
-            name: WORLD_CONTRACT_NAME.into(),
-            abi: abi.clone(),
-            class_hash: *hash,
-            ..Default::default()
-        }
-    };
+    let (hash, _) = compiled_artifact(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
+    write_manifest(&manifests_dir, &Class { name: WORLD_CONTRACT_NAME.into(), class_hash: *hash })?;
 
-    let executor = {
-        let (hash, abi) =
-            get_compiled_artifact_from_map(&compiled_artifacts, EXECUTOR_CONTRACT_NAME)?;
-        Contract {
-            name: EXECUTOR_CONTRACT_NAME.into(),
-            abi: abi.clone(),
-            class_hash: *hash,
-            ..Default::default()
-        }
-    };
+    let (hash, _) = compiled_artifact(&compiled_artifacts, EXECUTOR_CONTRACT_NAME)?;
+    write_manifest(
+        &manifests_dir,
+        &Class { name: EXECUTOR_CONTRACT_NAME.into(), class_hash: *hash },
+    )?;
 
-    let base = {
-        let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
-        Class { name: BASE_CONTRACT_NAME.into(), abi: abi.clone(), class_hash: *hash }
-    };
+    let (hash, _) = compiled_artifact(&compiled_artifacts, BASE_CONTRACT_NAME)?;
+    write_manifest(&manifests_dir, &Class { name: BASE_CONTRACT_NAME.into(), class_hash: *hash })?;
 
     let mut models = BTreeMap::new();
     let mut contracts = BTreeMap::new();
@@ -305,7 +296,21 @@ fn update_manifest(
         contracts.remove(model.0.as_str());
     }
 
-    do_update_manifest(manifest, world, executor, base, models, contracts)?;
+    for (name, model) in models {
+        write_manifest(
+            &manifests_dir.join("models"),
+            &Class { name: name.into(), class_hash: model.class_hash },
+        )?;
+    }
+
+    for (name, contract) in contracts {
+        write_manifest(
+            &manifests_dir.join("contracts"),
+            &Class { name: name.into(), class_hash: contract.class_hash },
+        )?;
+    }
+
+    // do_update_manifest(manifest, world, executor, base, models, contracts)?;
 
     Ok(())
 }
@@ -422,40 +427,4 @@ fn get_dojo_contract_artifacts(
             ))
         })
         .collect::<anyhow::Result<_>>()
-}
-
-fn do_update_manifest(
-    current_manifest: &mut dojo_world::manifest::Manifest,
-    world: dojo_world::manifest::Contract,
-    executor: dojo_world::manifest::Contract,
-    base: dojo_world::manifest::Class,
-    models: BTreeMap<String, dojo_world::manifest::Model>,
-    contracts: BTreeMap<SmolStr, dojo_world::manifest::Contract>,
-) -> anyhow::Result<()> {
-    if current_manifest.world.class_hash != world.class_hash {
-        current_manifest.world = world;
-    }
-
-    if current_manifest.executor.class_hash != executor.class_hash {
-        current_manifest.executor = executor;
-    }
-
-    if current_manifest.base.class_hash != base.class_hash {
-        current_manifest.base = base;
-    }
-
-    let mut contracts_to_add = vec![];
-    for (name, mut contract) in contracts {
-        if let Some(existing_contract) =
-            current_manifest.contracts.iter_mut().find(|c| c.name == name)
-        {
-            contract.address = existing_contract.address;
-        }
-        contracts_to_add.push(contract);
-    }
-
-    current_manifest.contracts = contracts_to_add;
-    current_manifest.models = models.into_values().collect();
-
-    Ok(())
 }

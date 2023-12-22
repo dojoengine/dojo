@@ -3,7 +3,7 @@ use std::fmt::Display;
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::{Manifest, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use crate::manifest::{World, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -20,7 +20,7 @@ pub struct WorldDiff {
 }
 
 impl WorldDiff {
-    pub fn compute(local: Manifest, remote: Option<Manifest>) -> WorldDiff {
+    pub fn compute(local: World, remote: Option<World>) -> WorldDiff {
         let models = local
             .models
             .iter()

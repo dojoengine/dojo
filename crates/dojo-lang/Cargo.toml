@@ -41,6 +41,7 @@ semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with = "2.3.1"
+serde_yaml = "0.9"
 smol_str.workspace = true
 starknet.workspace = true
 thiserror = "1.0.32"

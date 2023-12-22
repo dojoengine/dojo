@@ -408,7 +408,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the contract.
+        /// * `salt` - The name of the contract.
         /// * `class_hash` - The class_hash of the contract.
         ///
         /// # Returns
