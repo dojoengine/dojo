@@ -125,9 +125,11 @@ impl ObjectTrait for ModelDataObject {
     }
 
     fn objects(&self) -> Vec<Object> {
-        let mut path_array = vec![self.type_name().to_string()];
-        let mut objects =
-            data_objects_recursion(self.type_name(), self.type_mapping(), &mut path_array);
+        let mut objects = data_objects_recursion(
+            self.type_name(),
+            self.type_mapping(),
+            vec![self.type_name().to_string()],
+        );
 
         // root object requires entity_field association
         let mut root = objects.pop().unwrap();
@@ -141,36 +143,44 @@ impl ObjectTrait for ModelDataObject {
 fn data_objects_recursion(
     type_name: &str,
     type_mapping: &TypeMapping,
-    path_array: &mut Vec<String>,
+    path_array: Vec<String>,
 ) -> Vec<Object> {
-    let mut objects = Vec::<Object>::new();
+    let mut objects: Vec<Object> = type_mapping
+        .iter()
+        .filter_map(|(field_name, type_data)| {
+            if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
+                let mut nested_path = path_array.clone();
+                nested_path.push(field_name.to_string());
+                let nested_objects =
+                    data_objects_recursion(&nested_type.to_string(), nested_mapping, nested_path);
 
-    for (_, type_data) in type_mapping {
-        if let TypeData::Nested((nested_type, nested_mapping)) = type_data {
-            path_array.push(nested_type.to_string());
-            objects.extend(data_objects_recursion(
-                &nested_type.to_string(),
-                nested_mapping,
-                &mut path_array.clone(),
-            ));
-        }
-    }
+                Some(nested_objects)
+            } else {
+                None
+            }
+        })
+        .flatten()
+        .collect();
 
     objects.push(object(type_name, type_mapping, path_array));
     objects
 }
 
-pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: &[String]) -> Object {
+pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<String>) -> Object {
     let mut object = Object::new(type_name);
 
     for (field_name, type_data) in type_mapping.clone() {
-        // For nested types, we need to remove prefix in path array
-        let namespace = format!("{}_", path_array[0]);
-        let table_name = path_array.join("$").replace(&namespace, "");
+        let path_array = path_array.clone();
+
         let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
             let field_name = field_name.clone();
             let type_data = type_data.clone();
-            let table_name = table_name.clone();
+            let mut path_array = path_array.clone();
+
+            // For nested types, we need to remove prefix in path array
+            let namespace = format!("{}_", path_array[0]);
+            path_array.push(field_name.to_string());
+            let table_name = path_array.join("$").replace(&namespace, "");
 
             return FieldFuture::new(async move {
                 if let Some(value) = ctx.parent_value.as_value() {
