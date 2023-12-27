@@ -3,10 +3,9 @@ use blockifier::state::errors::StateError;
 use blockifier::transaction::errors::TransactionExecutionError;
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::event::ContinuationTokenError;
 use katana_primitives::transaction::TxHash;
 use starknet_api::StarknetApiError;
-
-use crate::utils::event::ContinuationTokenError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SequencerError {

@@ -5,11 +5,11 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::sequencer::KatanaSequencer;
 use katana_core::sequencer_error::SequencerError;
-use katana_core::utils::contract::legacy_inner_to_rpc_class;
 use katana_executor::blockifier::utils::EntryPointCall;
 use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, FinalityStatus, GasPrices, PartialHeader,
 };
+use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
