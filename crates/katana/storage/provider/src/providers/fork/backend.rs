@@ -393,7 +393,15 @@ impl ContractClassProvider for SharedStateProvider {
             return Ok(class.cloned());
         }
 
-        let class = self.0.do_get_class_at(hash)?;
+        let Some(class) = handle_contract_or_class_not_found_err(self.0.do_get_class_at(hash))
+            .map_err(|e| {
+                error!(target: "forked_backend", "error while fetching sierra class {hash:#x}: {e}");
+                e
+            })?
+        else {
+            return Ok(None);
+        };
+
         match class {
             starknet::core::types::ContractClass::Legacy(_) => Ok(None),
             starknet::core::types::ContractClass::Sierra(sierra_class) => {

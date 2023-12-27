@@ -212,24 +212,28 @@ impl ContractClassProvider for HistoricalStateProvider {
         hash: ClassHash,
     ) -> Result<Option<CompiledClassHash>> {
         // check that the requested class hash was declared before the pinned block number
-        if !self.tx.get::<ClassDeclarationBlock>(hash)?.is_some_and(|num| num <= self.block_number)
-        {
-            return Ok(None);
-        };
-
-        Ok(self.tx.get::<CompiledClassHashes>(hash)?)
+        if self.tx.get::<ClassDeclarationBlock>(hash)?.is_some_and(|num| num <= self.block_number) {
+            Ok(self.tx.get::<CompiledClassHashes>(hash)?)
+        } else {
+            Ok(None)
+        }
     }
 
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        self.compiled_class_hash_of_class_hash(hash).and_then(|_| {
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
             let contract = self.tx.get::<CompiledContractClasses>(hash)?;
             Ok(contract.map(CompiledContractClass::from))
-        })
+        } else {
+            Ok(None)
+        }
     }
 
     fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        self.compiled_class_hash_of_class_hash(hash)
-            .and_then(|_| self.tx.get::<SierraClasses>(hash).map_err(|e| e.into()))
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+            self.tx.get::<SierraClasses>(hash).map_err(|e| e.into())
+        } else {
+            Ok(None)
+        }
     }
 }
 
