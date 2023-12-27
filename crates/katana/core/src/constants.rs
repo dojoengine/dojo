@@ -1,6 +1,5 @@
-use katana_primitives::contract::{
-    CompiledContractClass, CompiledContractClassV0, ContractAddress, StorageKey,
-};
+use katana_primitives::contract::{CompiledContractClass, ContractAddress, StorageKey};
+use katana_primitives::utils::class::parse_compiled_class;
 use katana_primitives::FieldElement;
 use lazy_static::lazy_static;
 use starknet::macros::felt;
@@ -9,11 +8,6 @@ pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of
 
 pub const DEFAULT_INVOKE_MAX_STEPS: u32 = 1_000_000;
 pub const DEFAULT_VALIDATE_MAX_STEPS: u32 = 1_000_000;
-
-fn parse_legacy_contract_class(content: impl AsRef<str>) -> CompiledContractClass {
-    let class: CompiledContractClassV0 = serde_json::from_str(content.as_ref()).unwrap();
-    CompiledContractClass::V0(class)
-}
 
 lazy_static! {
 
@@ -35,9 +29,9 @@ lazy_static! {
 
     // Predefined contract classes
 
-    pub static ref ERC20_CONTRACT: CompiledContractClass = parse_legacy_contract_class(include_str!("../contracts/compiled/erc20.json"));
-    pub static ref UDC_CONTRACT: CompiledContractClass = parse_legacy_contract_class(include_str!("../contracts/compiled/universal_deployer.json"));
-    pub static ref OZ_V0_ACCOUNT_CONTRACT: CompiledContractClass = parse_legacy_contract_class(include_str!("../contracts/compiled/account.json"));
+    pub static ref ERC20_CONTRACT: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/erc20.json")).unwrap();
+    pub static ref UDC_CONTRACT: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/universal_deployer.json")).unwrap();
+    pub static ref OZ_V0_ACCOUNT_CONTRACT: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/account.json")).unwrap();
 
     pub static ref DEFAULT_PREFUNDED_ACCOUNT_BALANCE: FieldElement = felt!("0x3635c9adc5dea00000"); // 10^21
 
