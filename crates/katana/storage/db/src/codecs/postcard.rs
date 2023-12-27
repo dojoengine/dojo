@@ -1,5 +1,5 @@
 use katana_primitives::block::{BlockNumber, Header};
-use katana_primitives::contract::{ContractAddress, GenericContractInfo, SierraClass};
+use katana_primitives::contract::{ContractAddress, GenericContractInfo};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
@@ -34,7 +34,6 @@ impl_compress_and_decompress_for_table_values!(
     Tx,
     Header,
     Receipt,
-    SierraClass,
     FieldElement,
     ContractAddress,
     Vec<BlockNumber>,
