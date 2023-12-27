@@ -11,7 +11,7 @@ pub struct OrderInputObject {
 
 impl OrderInputObject {
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
-        println!("1{}Order", type_name);
+        println!("OrderInputObject {}", type_name);
         Self { type_name: format!("{}Order", type_name), type_mapping: object_types.clone() }
     }
 }
@@ -65,7 +65,7 @@ impl InputObjectTrait for OrderInputObject {
 }
 
 pub fn order_argument(field: Field, type_name: &str) -> Field {
-    println!("2{}Order", type_name);
+    println!("order_argument {}", type_name);
     field.argument(InputValue::new("order", TypeRef::named(format!("{}Order", type_name))))
 }
 

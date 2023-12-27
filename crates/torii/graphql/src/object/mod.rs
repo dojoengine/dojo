@@ -17,7 +17,6 @@ use self::connection::edge::EdgeObject;
 use self::connection::{
     connection_arguments, connection_output, parse_connection_arguments, ConnectionObject,
 };
-use self::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
 use crate::constants::ID_COLUMN;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
@@ -95,7 +94,6 @@ pub trait ObjectTrait: Send + Sync {
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let order = parse_order_argument(&ctx);
                     let connection = parse_connection_arguments(&ctx)?;
                     let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
                     let (data, page_info) = fetch_multiple_rows(
@@ -103,7 +101,7 @@ pub trait ObjectTrait: Send + Sync {
                         &table_name,
                         ID_COLUMN,
                         &None,
-                        &order,
+                        &None,
                         &None,
                         &connection,
                         total_count,
@@ -112,7 +110,7 @@ pub trait ObjectTrait: Send + Sync {
                     let results = connection_output(
                         &data,
                         &type_mapping,
-                        &order,
+                        &None,
                         ID_COLUMN,
                         total_count,
                         false,
@@ -125,7 +123,6 @@ pub trait ObjectTrait: Send + Sync {
         );
 
         field = connection_arguments(field);
-        field = order_argument(field, self.type_name());
 
         Some(field)
     }
