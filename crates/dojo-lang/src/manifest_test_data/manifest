@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x321cb43cd72738a640fb8b8835210447a41a3ceb68fffe850dc4352fe91757e",
+    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
     "abi": [
       {
         "type": "impl",
@@ -791,7 +791,7 @@ test_manifest_file
   "executor": {
     "name": "dojo::executor::executor",
     "address": null,
-    "class_hash": "0x5c910c90840a13cb36250d544a14814998302232dbbaac6543cd49abea77ca9",
+    "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
     "abi": [
       {
         "type": "impl",
@@ -851,7 +851,7 @@ test_manifest_file
   },
   "base": {
     "name": "dojo::base::base",
-    "class_hash": "0x36fb77a433211ad304a5666016332b6f6747b1b01231e11de40f3ff2466eeb3",
+    "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
     "abi": [
       {
         "type": "impl",
@@ -955,7 +955,7 @@ test_manifest_file
     {
       "name": "dojo_examples::actions::actions",
       "address": null,
-      "class_hash": "0x463eb17594801378cf71b525680485a4bd9731d3a90b80b8080eabb4d1f5d06",
+      "class_hash": "0x69c6bec7de74fc2404fe6b68ad8ece7be81ad6d861b38a8ba8fa583bfc3666b",
       "abi": [
         {
           "type": "impl",
@@ -1205,7 +1205,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::moves",
       "address": null,
-      "class_hash": "0x61674a1abc7204bb0321b9e3e9678e5a84a093c70f86c6ee6ea2c607641de15",
+      "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
       "abi": [
         {
           "type": "function",
@@ -1374,7 +1374,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::position",
       "address": null,
-      "class_hash": "0x27d0df00eeb5bd0af3adf7dd8409182c28a20efe90a878adc2a3653db9f8dbb",
+      "class_hash": "0x4cd20d231b04405a77b184c115dc60637e186504fad7f0929bd76cbd09c10b",
       "abi": [
         {
           "type": "function",

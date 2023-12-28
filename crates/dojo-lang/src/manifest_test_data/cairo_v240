@@ -8,7 +8,7 @@ test_compiler_cairo_v240
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x321cb43cd72738a640fb8b8835210447a41a3ceb68fffe850dc4352fe91757e",
+    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
     "abi": [
       {
         "type": "impl",
@@ -791,7 +791,7 @@ test_compiler_cairo_v240
   "executor": {
     "name": "dojo::executor::executor",
     "address": null,
-    "class_hash": "0x5c910c90840a13cb36250d544a14814998302232dbbaac6543cd49abea77ca9",
+    "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
     "abi": [
       {
         "type": "impl",
@@ -851,7 +851,7 @@ test_compiler_cairo_v240
   },
   "base": {
     "name": "dojo::base::base",
-    "class_hash": "0x36fb77a433211ad304a5666016332b6f6747b1b01231e11de40f3ff2466eeb3",
+    "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
     "abi": [
       {
         "type": "impl",
@@ -955,7 +955,7 @@ test_compiler_cairo_v240
     {
       "name": "cairo_v240::cairo_v240",
       "address": null,
-      "class_hash": "0x2705e820f6aa420ced600da04b374c4cf014e5584dbf857b90be787c80554d6",
+      "class_hash": "0x714353d2a54cfd74820f89c19d8911a379214d5d4ccf369d74b5f5844dc565f",
       "abi": [
         {
           "type": "event",
