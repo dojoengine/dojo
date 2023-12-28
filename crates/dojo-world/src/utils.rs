@@ -499,22 +499,6 @@ mod tests {
 
         {
             let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
-                TransactionFinalityStatus::AcceptedOnL2,
-                ExecutionResult::Reverted { reason: Default::default() },
-            ));
-
-            assert!(
-                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
-                    receipt,
-                    Some(TransactionFinalityStatus::AcceptedOnL1),
-                    true,
-                )
-                .is_none()
-            );
-        }
-
-        {
-            let receipt = MaybePendingTransactionReceipt::Receipt(mock_receipt(
                 TransactionFinalityStatus::AcceptedOnL1,
                 ExecutionResult::Succeeded,
             ));
@@ -537,16 +521,66 @@ mod tests {
                 ExecutionResult::Reverted { reason: Default::default() },
             ));
 
+            let err =
+                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
+                    receipt,
+                    Some(TransactionFinalityStatus::AcceptedOnL1),
+                    true,
+                )
+                .unwrap()
+                .unwrap_err();
+
+            assert!(err.to_string().contains("transaction reverted"))
+        }
+    }
+
+    #[test]
+    fn wait_for_pending_tx() {
+        {
+            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
+                ExecutionResult::Succeeded,
+            ));
+
+            assert!(
+                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
+                    receipt,
+                    Some(TransactionFinalityStatus::AcceptedOnL2),
+                    true
+                )
+                .is_none()
+            )
+        }
+
+        {
+            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
+                ExecutionResult::Reverted { reason: Default::default() },
+            ));
+
             assert_eq!(
                 TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
                     receipt.clone(),
-                    Some(TransactionFinalityStatus::AcceptedOnL1),
-                    true
+                    None,
+                    false
                 )
                 .unwrap()
                 .unwrap(),
                 receipt
             )
+        }
+
+        {
+            let receipt = MaybePendingTransactionReceipt::PendingReceipt(mock_pending_receipt(
+                ExecutionResult::Reverted { reason: Default::default() },
+            ));
+
+            let err =
+                TransactionWaiter::<JsonRpcClient<HttpTransport>>::evaluate_receipt_from_params(
+                    receipt, None, true,
+                )
+                .unwrap()
+                .unwrap_err();
+
+            assert!(err.to_string().contains("transaction reverted"))
         }
     }
 }
