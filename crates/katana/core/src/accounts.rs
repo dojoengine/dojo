@@ -15,7 +15,7 @@ use starknet::core::utils::{get_contract_address, get_storage_var_address};
 use starknet::signers::SigningKey;
 
 use crate::constants::{
-    FEE_TOKEN_ADDRESS, OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH, OZ_V1_ACCOUNT_CONTRACT_COMPILED,
+    FEE_TOKEN_ADDRESS, OZ_V1_ACCOUNT_CONTRACT_COMPILED, OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
 };
 
 #[serde_as]
@@ -114,7 +114,7 @@ impl DevAccountGenerator {
             total,
             seed: [0u8; 32],
             balance: FieldElement::ZERO,
-            class_hash: (*OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH),
+            class_hash: (*OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH),
             contract_class: Arc::new((*OZ_V1_ACCOUNT_CONTRACT_COMPILED).clone()),
         }
     }
