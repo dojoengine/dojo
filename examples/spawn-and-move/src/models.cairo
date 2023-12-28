@@ -1,4 +1,4 @@
-use array::ArrayTrait;
+use core::array::ArrayTrait;
 use core::debug::PrintTrait;
 use starknet::ContractAddress;
 
@@ -64,7 +64,7 @@ impl Vec2Impl of Vec2Trait {
 
 #[cfg(test)]
 mod tests {
-    use debug::PrintTrait;
+    use core::debug::PrintTrait;
     use super::{Position, Vec2, Vec2Trait};
 
     #[test]

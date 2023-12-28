@@ -13,6 +13,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 base64.workspace = true
 chrono.workspace = true
+crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 dojo-types = { path = "../../dojo-types" }
 dojo-world = { path = "../../dojo-world", features = [ "contracts", "manifest" ] }
 futures-channel = "0.3.0"

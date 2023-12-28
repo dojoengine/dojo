@@ -1,3 +1,15 @@
+//! Torii binary executable.
+//!
+//! ## Feature Flags
+//!
+//! - `jemalloc`: Uses [jemallocator](https://github.com/tikv/jemallocator) as the global allocator.
+//!   This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
+//!   for more info.
+//! - `jemalloc-prof`: Enables [jemallocator's](https://github.com/tikv/jemallocator) heap profiling
+//!   and leak detection functionality. See [jemalloc's opt.prof](https://jemalloc.net/jemalloc.3.html#opt.prof)
+//!   documentation for usage details. This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
+//!   for more info.
+
 mod proxy;
 
 use std::net::SocketAddr;
@@ -6,14 +18,13 @@ use std::sync::Arc;
 
 use clap::Parser;
 use dojo_world::contracts::world::WorldContractReader;
+use metrics::prometheus_exporter;
+use metrics::utils::parse_socket_address;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tokio::signal::ctrl_c;
-#[cfg(target_family = "unix")]
-use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
@@ -38,31 +49,44 @@ struct Args {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
     world_address: FieldElement,
+
     /// The rpc endpoint to use
     #[arg(long, default_value = "http://localhost:5050")]
     rpc: String,
+
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
     #[arg(short, long, default_value = ":memory:")]
     database: String,
+
     /// Specify a block to start indexing from, ignored if stored head exists
     #[arg(short, long, default_value = "0")]
     start_block: u64,
+
     /// Host address for api endpoints
     #[arg(long, default_value = "0.0.0.0")]
     host: String,
+
     /// Port number for api endpoints
     #[arg(long, default_value = "8080")]
     port: u16,
+
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
     #[arg(long, default_value = "*")]
     #[arg(value_delimiter = ',')]
     allowed_origins: Vec<String>,
+
     /// The external url of the server, used for configuring the GraphQL Playground in a hosted
     /// environment
     #[arg(long)]
     external_url: Option<Url>,
+
+    /// Enable Prometheus metrics.
+    ///
+    /// The metrics will be served at the given interface and port.
+    #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
+    pub metrics: Option<SocketAddr>,
 }
 
 #[tokio::main]
@@ -80,15 +104,15 @@ async fn main() -> anyhow::Result<()> {
     // Setup cancellation for graceful shutdown
     let (shutdown_tx, _) = broadcast::channel(1);
 
-    let sigint = ctrl_c();
-
-    #[cfg(target_family = "unix")]
-    let mut sigterm = signal(SignalKind::terminate())?;
-    #[cfg(target_family = "windows")]
-    let (_, sigterm) = futures::channel::mpsc::unbounded::<()>();
+    let shutdown_tx_clone = shutdown_tx.clone();
+    ctrlc::set_handler(move || {
+        let _ = shutdown_tx_clone.send(());
+    })
+    .expect("Error setting Ctrl-C handler");
 
     let database_url = format!("sqlite:{}", &args.database);
-    let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
+    let options =
+        SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true).with_regexp();
     let pool = SqlitePoolOptions::new()
         .min_connections(1)
         .max_connections(5)
@@ -146,17 +170,22 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    info!("🚀 Torii listening at {}", format!("http://{}", addr));
-    info!("Graphql playground: {}\n", format!("http://{}/graphql", addr));
+    info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", addr));
+    info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", addr));
+
+    if let Some(listen_addr) = args.metrics {
+        let prometheus_handle = prometheus_exporter::install_recorder()?;
+
+        info!(target: "torii::cli", addr = %listen_addr, "Starting metrics endpoint");
+        prometheus_exporter::serve(
+            listen_addr,
+            prometheus_handle,
+            metrics_process::Collector::default(),
+        )
+        .await?;
+    }
 
     tokio::select! {
-        _ = sigterm.recv() => {
-            let _ = shutdown_tx.send(());
-        }
-        _ = sigint => {
-            let _ = shutdown_tx.send(());
-        }
-
         _ = engine.start() => {},
         _ = proxy_server.start(shutdown_tx.subscribe()) => {},
         _ = graphql_server => {},

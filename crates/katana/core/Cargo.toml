@@ -7,6 +7,10 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+katana-executor = { path = "../executor" }
+katana-primitives = { path = "../primitives" }
+katana-provider = { path = "../storage/provider" }
+
 anyhow.workspace = true
 async-trait.workspace = true
 blockifier.workspace = true
@@ -14,7 +18,7 @@ cairo-lang-casm = "2.3.1"
 cairo-lang-starknet = "2.3.1"
 cairo-vm.workspace = true
 convert_case.workspace = true
-ethers = { version = "2.0.8", optional = true }
+ethers = { version = "2.0.11", optional = true }
 flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"
@@ -23,7 +27,6 @@ rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-sha3 = { version = "0.10.7", default-features = false, optional = true }
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
@@ -36,5 +39,5 @@ assert_matches.workspace = true
 hex = "0.4.3"
 
 [features]
-messaging = [ "ethers", "sha3" ]
+messaging = [ "ethers" ]
 starknet-messaging = [  ]

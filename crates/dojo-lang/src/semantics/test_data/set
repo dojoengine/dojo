@@ -29,14 +29,9 @@ Missing(
 
 //! > semantic_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
- --> lib.cairo:11:1
+ --> lib.cairo:11:6
 set!()
-^****^
-
-error: Inline macro `set` failed.
- --> lib.cairo:11:1
-set!()
-^****^
+     ^
 
 //! > ==========================================================================
 
@@ -71,14 +66,9 @@ Missing(
 
 //! > semantic_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
- --> lib.cairo:11:1
+ --> lib.cairo:11:6
 set!(world)
-^*********^
-
-error: Inline macro `set` failed.
- --> lib.cairo:11:1
-set!(world)
-^*********^
+     ^***^
 
 //! > ==========================================================================
 

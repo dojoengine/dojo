@@ -35,7 +35,7 @@ trait IWorld<T> {
     fn set_executor(ref self: T, contract_address: ContractAddress);
     fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
-    fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>);
+    fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
     fn is_owner(self: @T, address: ContractAddress, resource: felt252) -> bool;
     fn grant_owner(ref self: T, address: ContractAddress, resource: felt252);
     fn revoke_owner(ref self: T, address: ContractAddress, resource: felt252);
@@ -44,6 +44,17 @@ trait IWorld<T> {
     fn grant_writer(ref self: T, model: felt252, system: ContractAddress);
     fn revoke_writer(ref self: T, model: felt252, system: ContractAddress);
 }
+
+#[starknet::interface]
+trait IUpgradeableWorld<T> {
+    fn upgrade(ref self: T, new_class_hash : ClassHash);
+}
+
+#[starknet::interface]
+trait IWorldProvider<T> {
+    fn world(self: @T) -> IWorldDispatcher;
+}
+
 
 #[starknet::contract]
 mod world {
@@ -59,16 +70,16 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::{deploy_syscall, emit_event_syscall}, SyscallResult, SyscallResultTrait,
+        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult, SyscallResultTrait,
         SyscallResultTraitImpl
     };
 
     use dojo::database;
     use dojo::database::index::WhereCondition;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::upgradable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
-    use dojo::world::{IWorldDispatcher, IWorld};
-
+    use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
+    
+    use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
@@ -81,6 +92,7 @@ mod world {
         WorldSpawned: WorldSpawned,
         ContractDeployed: ContractDeployed,
         ContractUpgraded: ContractUpgraded,
+        WorldUpgraded: WorldUpgraded,
         MetadataUpdate: MetadataUpdate,
         ModelRegistered: ModelRegistered,
         StoreSetRecord: StoreSetRecord,
@@ -96,6 +108,11 @@ mod world {
         creator: ContractAddress
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct WorldUpgraded {
+        class_hash: ClassHash,
+    }
+   
     #[derive(Drop, starknet::Event)]
     struct ContractDeployed {
         salt: felt252,
@@ -247,9 +264,7 @@ mod world {
                         self.metadata_uri.write(i, *item);
                         i += 1;
                     },
-                    Option::None(_) => {
-                        break;
-                    }
+                    Option::None(_) => { break; }
                 };
             };
         }
@@ -406,8 +421,8 @@ mod world {
                 self.contract_base.read(), salt, array![].span(), false
             )
                 .unwrap_syscall();
-            let upgradable_dispatcher = IUpgradeableDispatcher { contract_address };
-            upgradable_dispatcher.upgrade(class_hash);
+            let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
+            upgradeable_dispatcher.upgrade(class_hash);
 
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
@@ -491,12 +506,27 @@ mod world {
         ///
         /// * `model` - The name of the model to be deleted.
         /// * `query` - The query to be used to find the entity.
-        fn delete_entity(ref self: ContractState, model: felt252, keys: Span<felt252>) {
-            let system = get_caller_address();
-            assert(system.is_non_zero(), 'must be called thru system');
-            assert_can_write(@self, model, system);
+        fn delete_entity(
+            ref self: ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
+        ) {
+            assert_can_write(@self, model, get_caller_address());
+
+            let model_class_hash = self.models.read(model);
+
+            let mut empty_values = ArrayTrait::new();
+            let mut i = 0;
+
+            loop {
+                if (i == layout.len()) {
+                    break;
+                }
+                empty_values.append(0);
+                i += 1;
+            };
 
             let key = poseidon::poseidon_hash_span(keys);
+            database::set(model, key, 0, empty_values.span(), layout);
+            // this deletes the index
             database::del(model, key);
 
             EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
@@ -597,9 +627,31 @@ mod world {
         ///
         /// # Returns
         ///
-        /// * `ContractAddress` - The address of the contract_base contract.
+        /// * `ClassHash` - The class_hash of the contract_base contract.
         fn base(self: @ContractState) -> ClassHash {
             self.contract_base.read()
+        }
+    }
+
+
+    #[external(v0)]
+    impl UpgradeableWorld of IUpgradeableWorld<ContractState> {
+        /// Upgrade world with new_class_hash
+        ///
+        /// # Arguments
+        ///
+        /// * `new_class_hash` - The new world class hash.
+        fn upgrade(ref self: ContractState, new_class_hash : ClassHash){
+            assert(new_class_hash.is_non_zero(), 'invalid class_hash');
+            assert(IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD), 'only owner can upgrade');
+
+            // upgrade to new_class_hash
+            replace_class_syscall(new_class_hash).unwrap();
+
+            // emit Upgrade Event
+            EventEmitter::emit(
+                ref self, WorldUpgraded {class_hash: new_class_hash }
+            );
         }
     }
 

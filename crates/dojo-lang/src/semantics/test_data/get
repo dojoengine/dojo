@@ -34,11 +34,6 @@ error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models
 get!()
 ^****^
 
-error: Inline macro `get` failed.
- --> lib.cairo:12:1
-get!()
-^****^
-
 //! > ==========================================================================
 
 //! > Test wrong params
@@ -73,11 +68,6 @@ Missing(
 
 //! > semantic_diagnostics
 error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models,))"
- --> lib.cairo:12:1
-get!(world)
-^*********^
-
-error: Inline macro `get` failed.
  --> lib.cairo:12:1
 get!(world)
 ^*********^
@@ -199,7 +189,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: test::HealthSchemaIntrospection::layout,
+                            function: test::HealthIntrospect::layout,
                             args: [
                                 Reference(
                                     LocalVarId(test::__Health_layout__),

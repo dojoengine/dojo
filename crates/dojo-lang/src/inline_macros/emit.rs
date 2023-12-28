@@ -1,15 +1,17 @@
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
+    InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EmitMacro;
-impl EmitMacro {
-    pub const NAME: &'static str = "emit";
+
+impl NamedPlugin for EmitMacro {
+    const NAME: &'static str = "emit";
 }
+
 impl InlineMacroExprPlugin for EmitMacro {
     fn generate_code(
         &self,
@@ -22,17 +24,17 @@ impl InlineMacroExprPlugin for EmitMacro {
         let mut builder = PatchBuilder::new(db);
         builder.add_str(
             "{
-                let mut keys = Default::<array::Array>::default();
-                let mut data = Default::<array::Array>::default();",
+                let mut keys = Default::<core::array::Array>::default();
+                let mut data = Default::<core::array::Array>::default();",
         );
 
-        let args = arg_list.args(db).elements(db);
+        let args = arg_list.arguments(db).elements(db);
 
         if args.len() != 2 {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
-                    stable_ptr: arg_list.args(db).stable_ptr().untyped(),
+                    stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     message: "Invalid arguments. Expected \"emit!(world, event)\"".to_string(),
                 }],
             };
@@ -42,7 +44,8 @@ impl InlineMacroExprPlugin for EmitMacro {
         let event = &args[1];
 
         builder.add_str(
-            "\n            starknet::Event::append_keys_and_data(@traits::Into::<_, Event>::into(",
+            "\n            starknet::Event::append_keys_and_data(@core::traits::Into::<_, \
+             Event>::into(",
         );
         builder.add_node(event.as_syntax_node());
         builder.add_str("), ref keys, ref data);");

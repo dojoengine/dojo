@@ -52,7 +52,7 @@ impl ObjectTrait for EntityObject {
                     let connection = parse_connection_arguments(&ctx)?;
                     let keys = parse_keys_argument(&ctx)?;
                     let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
-                    let data = fetch_multiple_rows(
+                    let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
                         ENTITY_TABLE,
                         EVENT_ID_COLUMN,
@@ -60,6 +60,7 @@ impl ObjectTrait for EntityObject {
                         &None,
                         &None,
                         &connection,
+                        total_count,
                     )
                     .await?;
                     let results = connection_output(
@@ -69,6 +70,7 @@ impl ObjectTrait for EntityObject {
                         EVENT_ID_COLUMN,
                         total_count,
                         false,
+                        page_info,
                     )?;
 
                     Ok(Some(Value::Object(results)))
@@ -113,14 +115,13 @@ impl EntityObject {
         IndexMap::from([
             (Name::new("id"), Value::from(entity.id)),
             (Name::new("keys"), Value::from(keys)),
-            (Name::new("model_names"), Value::from(entity.model_names)),
-            (Name::new("event_id"), Value::from(entity.event_id)),
+            (Name::new("eventId"), Value::from(entity.event_id)),
             (
-                Name::new("created_at"),
+                Name::new("createdAt"),
                 Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
             (
-                Name::new("updated_at"),
+                Name::new("updatedAt"),
                 Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
@@ -133,20 +134,21 @@ fn model_union_field() -> Field {
             match ctx.parent_value.try_to_value()? {
                 Value::Object(indexmap) => {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let model_names: Vec<String> = extract::<String>(indexmap, "model_names")?
-                        .split(',')
-                        .map(|s| s.to_string())
-                        .collect();
 
                     let entity_id = extract::<String>(indexmap, "id")?;
+                    let model_ids: Vec<(String,)> =
+                        sqlx::query_as("SELECT model_id from entity_model WHERE entity_id = ?")
+                            .bind(&entity_id)
+                            .fetch_all(&mut *conn)
+                            .await?;
+
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for name in model_names {
+                    for (name,) in model_ids {
                         let type_mapping = type_mapping_query(&mut conn, &name).await?;
-                        let mut path_array = vec![name.clone()];
 
                         let data = model_data_recursive_query(
                             &mut conn,
-                            &mut path_array,
+                            vec![name.clone()],
                             &entity_id,
                             &type_mapping,
                         )
@@ -167,7 +169,7 @@ fn model_union_field() -> Field {
 #[async_recursion]
 pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
-    path_array: &mut Vec<String>,
+    path_array: Vec<String>,
     entity_id: &str,
     type_mapping: &TypeMapping,
 ) -> sqlx::Result<ValueMapping> {
@@ -179,11 +181,12 @@ pub async fn model_data_recursive_query(
     let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
 
     for (field_name, type_data) in type_mapping {
-        if let TypeData::Nested((nested_type_ref, nested_mapping)) = type_data {
-            path_array.push(nested_type_ref.to_string());
+        if let TypeData::Nested((_, nested_mapping)) = type_data {
+            let mut nested_path = path_array.clone();
+            nested_path.push(field_name.to_string());
 
             let nested_values =
-                model_data_recursive_query(conn, path_array, entity_id, nested_mapping).await?;
+                model_data_recursive_query(conn, nested_path, entity_id, nested_mapping).await?;
 
             value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
         }

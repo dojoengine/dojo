@@ -6,7 +6,7 @@ use strum_macros::AsRefStr;
 use crate::primitive::{Primitive, PrimitiveError};
 
 /// Represents a model member.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Member {
     pub name: String,
     #[serde(rename = "member_type")]
@@ -20,62 +20,6 @@ impl Member {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct EntityQuery {
-    pub model: String,
-    pub clause: Clause,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub enum Clause {
-    Keys(KeysClause),
-    Attribute(AttributeClause),
-    Composite(CompositeClause),
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct KeysClause {
-    pub keys: Vec<FieldElement>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct AttributeClause {
-    pub attribute: String,
-    pub operator: ComparisonOperator,
-    pub value: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct CompositeClause {
-    pub operator: LogicalOperator,
-    pub clauses: Vec<Clause>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub enum LogicalOperator {
-    And,
-    Or,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub enum ComparisonOperator {
-    Eq,
-    Neq,
-    Gt,
-    Gte,
-    Lt,
-    Lte,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub enum Value {
-    String(String),
-    Int(i64),
-    UInt(u64),
-    Bool(bool),
-    Bytes(Vec<u8>),
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMetadata {
     pub schema: Ty,
@@ -87,7 +31,7 @@ pub struct ModelMetadata {
 }
 
 /// Represents all possible types in Cairo
-#[derive(AsRefStr, Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(AsRefStr, Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 #[serde(tag = "type", content = "content")]
 #[serde(rename_all = "lowercase")]
 pub enum Ty {
@@ -272,7 +216,7 @@ impl std::fmt::Display for Ty {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Struct {
     pub name: String,
     pub children: Vec<Member>,
@@ -297,14 +241,14 @@ pub enum EnumError {
     OptionInvalid,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct Enum {
     pub name: String,
     pub option: Option<u8>,
     pub options: Vec<EnumOption>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct EnumOption {
     pub name: String,
     pub ty: Ty,
@@ -323,6 +267,16 @@ impl Enum {
         }
 
         Ok(self.options[option].name.clone())
+    }
+
+    pub fn set_option(&mut self, name: &str) -> Result<(), EnumError> {
+        match self.options.iter().position(|option| option.name == name) {
+            Some(index) => {
+                self.option = Some(index as u8);
+                Ok(())
+            }
+            None => Err(EnumError::OptionInvalid),
+        }
     }
 
     pub fn to_sql_value(&self) -> Result<String, EnumError> {

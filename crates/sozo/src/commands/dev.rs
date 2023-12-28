@@ -8,6 +8,7 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
+use dojo_lang::scarb_internal::build_scarb_root_database;
 use dojo_world::manifest::Manifest;
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
@@ -23,7 +24,6 @@ use tracing_log::log;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use super::scarb_internal::build_scarb_root_database;
 use crate::ops::migration;
 
 #[derive(Args)]
@@ -85,9 +85,11 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
         .into_iter()
         .filter(|cu| packages.contains(&cu.main_package_id))
         .collect::<Vec<_>>();
+
     // we have only 1 unit in projects
-    let unit = compilation_units.get(0).unwrap();
-    let db = build_scarb_root_database(unit, &ws).unwrap();
+    // TODO: double check if we always have one with the new version and the order if many.
+    let unit = compilation_units.first().unwrap();
+    let db = build_scarb_root_database(unit).unwrap();
     Ok(DevContext { db, unit: unit.clone(), ws })
 }
 

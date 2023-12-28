@@ -1,0 +1,39 @@
+[package]
+description = "Katana storage provider"
+edition.workspace = true
+name = "katana-provider"
+version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+katana-db = { path = "../db", features = [ "test-utils" ] }
+katana-primitives = { path = "../../primitives" }
+
+anyhow.workspace = true
+auto_impl = "1.1.0"
+parking_lot.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+# fork provider deps
+futures.workspace = true
+starknet.workspace = true
+tokio.workspace = true
+
+[features]
+default = [ "fork", "in-memory" ]
+fork = [ "in-memory" ]
+in-memory = [  ]
+
+[dev-dependencies]
+katana-core = { path = "../../core" }
+katana-runner = { path = "../../runner" }
+lazy_static.workspace = true
+rand = "0.8.5"
+rstest = "0.18.2"
+rstest_reuse = "0.6.0"
+serde_json.workspace = true
+starknet.workspace = true
+tempfile = "3.8.1"
+url.workspace = true

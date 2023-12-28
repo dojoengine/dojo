@@ -1,4 +1,4 @@
-name: Unused dependencies
+name: cargo-udeps
 
 on:
   schedule:
@@ -21,6 +21,8 @@ jobs:
         with:
           # cargo-udeps require nightly to run
           toolchain: nightly
+
+      - uses: arduino/setup-protoc@v2
 
       - name: Install cargo-udeps
         run: cargo install --locked cargo-udeps

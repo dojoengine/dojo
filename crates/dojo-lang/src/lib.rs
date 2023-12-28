@@ -12,3 +12,7 @@ pub mod plugin;
 pub mod print;
 pub mod semantics;
 pub(crate) mod version;
+
+// Copy of non pub functions from scarb + extension.
+// Also used by `sozo`.
+pub mod scarb_internal;

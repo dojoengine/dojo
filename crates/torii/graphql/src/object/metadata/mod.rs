@@ -1,15 +1,18 @@
+use async_graphql::connection::PageInfo;
 use async_graphql::dynamic::{Field, FieldFuture, TypeRef};
 use async_graphql::{Name, Value};
+use convert_case::{Case, Casing};
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 
+use super::connection::page_info::PageInfoObject;
 use super::connection::{connection_arguments, cursor, parse_connection_arguments};
 use super::ObjectTrait;
 use crate::constants::{
     ID_COLUMN, JSON_COLUMN, METADATA_NAMES, METADATA_TABLE, METADATA_TYPE_NAME,
 };
 use crate::mapping::METADATA_TYPE_MAPPING;
-use crate::query::data::{count_rows, fetch_multiple_rows};
+use crate::query::data::{count_rows, fetch_multiple_rows, fetch_world_address};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 
@@ -17,6 +20,14 @@ pub mod content;
 pub mod social;
 
 pub struct MetadataObject;
+
+impl MetadataObject {
+    fn row_types(&self) -> TypeMapping {
+        let mut row_types = self.type_mapping().clone();
+        row_types.remove("worldAddress");
+        row_types
+    }
+}
 
 impl ObjectTrait for MetadataObject {
     fn name(&self) -> (&str, &str) {
@@ -40,21 +51,21 @@ impl ObjectTrait for MetadataObject {
     }
 
     fn resolve_many(&self) -> Option<Field> {
-        let type_mapping = self.type_mapping().clone();
         let table_name = self.table_name().unwrap().to_string();
+        let row_types = self.row_types();
 
         let mut field = Field::new(
             self.name().1,
             TypeRef::named(format!("{}Connection", self.type_name())),
             move |ctx| {
-                let type_mapping = type_mapping.clone();
+                let row_types = row_types.clone();
                 let table_name = table_name.to_string();
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let connection = parse_connection_arguments(&ctx)?;
                     let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
-                    let data = fetch_multiple_rows(
+                    let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
                         &table_name,
                         ID_COLUMN,
@@ -62,11 +73,19 @@ impl ObjectTrait for MetadataObject {
                         &None,
                         &None,
                         &connection,
+                        total_count,
                     )
                     .await?;
+                    let world_address = fetch_world_address(&mut conn).await?;
 
                     // convert json field to value_mapping expected by content object
-                    let results = metadata_connection_output(&data, &type_mapping, total_count)?;
+                    let results = metadata_connection_output(
+                        &data,
+                        &row_types,
+                        total_count,
+                        page_info,
+                        &world_address,
+                    )?;
 
                     Ok(Some(Value::Object(results)))
                 })
@@ -83,15 +102,18 @@ impl ObjectTrait for MetadataObject {
 // objects AND dynamic model objects
 fn metadata_connection_output(
     data: &[SqliteRow],
-    types: &TypeMapping,
+    row_types: &TypeMapping,
     total_count: i64,
+    page_info: PageInfo,
+    world_address: &String,
 ) -> sqlx::Result<ValueMapping> {
     let edges = data
         .iter()
         .map(|row| {
             let order = row.try_get::<String, &str>(ID_COLUMN)?;
             let cursor = cursor::encode(&order, &order);
-            let mut value_mapping = value_mapping_from_row(row, types, false)?;
+            let mut value_mapping = value_mapping_from_row(row, row_types, false)?;
+            value_mapping.insert(Name::new("worldAddress"), Value::from(world_address));
 
             let json_str = row.try_get::<String, &str>(JSON_COLUMN)?;
             let serde_value = serde_json::from_str(&json_str).unwrap_or_default();
@@ -107,26 +129,29 @@ fn metadata_connection_output(
 
             value_mapping.insert(Name::new("content"), Value::Object(content));
 
-            let mut edge = ValueMapping::new();
-            edge.insert(Name::new("node"), Value::Object(value_mapping));
-            edge.insert(Name::new("cursor"), Value::String(cursor));
+            let edge = ValueMapping::from([
+                (Name::new("node"), Value::Object(value_mapping)),
+                (Name::new("cursor"), Value::String(cursor)),
+            ]);
 
             Ok(Value::Object(edge))
         })
         .collect::<sqlx::Result<Vec<Value>>>();
 
     Ok(ValueMapping::from([
-        (Name::new("total_count"), Value::from(total_count)),
+        (Name::new("totalCount"), Value::from(total_count)),
         (Name::new("edges"), Value::List(edges?)),
+        (Name::new("pageInfo"), PageInfoObject::value(page_info)),
     ]))
 }
 
 fn extract_str_mapping(name: &str, serde_value: &serde_json::Value) -> (Name, Value) {
+    let name_lower_camel = name.to_case(Case::Camel);
     if let Some(serde_json::Value::String(str)) = serde_value.get(name) {
-        return (Name::new(name), Value::String(str.to_owned()));
+        (Name::new(name_lower_camel), Value::String(str.to_owned()))
+    } else {
+        (Name::new(name_lower_camel), Value::Null)
     }
-
-    (Name::new(name), Value::Null)
 }
 
 fn extract_socials_mapping(name: &str, serde_value: &serde_json::Value) -> (Name, Value) {

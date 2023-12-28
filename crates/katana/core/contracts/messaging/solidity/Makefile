@@ -31,5 +31,5 @@ consume_msg_usage:
 consume_msg:
 	cast send ${C_MSG_L2_ADDR} \
 	"consumeMessage(uint256,uint256[])" \
-	${L2_ACCOUNT} $(payload) \
+	${L2_CONTRACT_ADDR} $(payload) \
 	--private-key ${ACCOUNT_PRIVATE_KEY}

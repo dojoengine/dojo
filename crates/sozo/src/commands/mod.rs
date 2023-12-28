@@ -16,9 +16,6 @@ pub(crate) mod options;
 pub(crate) mod register;
 pub(crate) mod test;
 
-// copy of non pub functions from scarb
-pub(crate) mod scarb_internal;
-
 pub fn run(command: Commands, config: &Config) -> Result<()> {
     match command {
         Commands::Init(args) => args.run(config),

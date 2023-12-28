@@ -1,0 +1,49 @@
+[package]
+description = "Katana database implementation"
+edition.workspace = true
+name = "katana-db"
+version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+katana-primitives = { path = "../../primitives" }
+
+anyhow.workspace = true
+page_size = "0.6.0"
+parking_lot.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile = { version = "3.8.1", optional = true }
+thiserror.workspace = true
+
+blockifier.workspace = true
+cairo-vm.workspace = true
+starknet_api.workspace = true
+
+# codecs
+[dependencies.postcard]
+default-features = false
+features = [ "use-std" ]
+optional = true
+version = "1.0.8"
+
+[dependencies.libmdbx]
+git = "https://github.com/paradigmxyz/reth.git"
+package = "reth-libmdbx"
+rev = "b34b0d3"
+
+[dev-dependencies]
+cairo-lang-starknet.workspace = true
+criterion = "0.5.1"
+starknet.workspace = true
+tempfile = "3.8.1"
+
+[features]
+default = [ "postcard" ]
+postcard = [ "dep:postcard" ]
+test-utils = [ "dep:tempfile" ]
+
+[[bench]]
+harness = false
+name = "codec"

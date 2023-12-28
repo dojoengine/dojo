@@ -36,7 +36,7 @@ impl TestSequencer {
             Arc::clone(&sequencer),
             ServerConfig {
                 port: 0,
-                host: "0.0.0.0".into(),
+                host: "127.0.0.1".into(),
                 max_connections: 100,
                 apis: vec![ApiKind::Starknet, ApiKind::Katana],
             },

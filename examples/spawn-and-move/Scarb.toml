@@ -1,7 +1,10 @@
 [package]
-cairo-version = "2.3.1"
+cairo-version = "2.4.0"
 name = "dojo_examples"
-version = "0.3.10"
+version = "0.4.2"
+# Use the prelude with the less imports as possible
+# from corelib.
+edition = "2023_10"
 
 [cairo]
 sierra-replace-ids = true
@@ -22,3 +25,4 @@ rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x295e01fd0ec0e8b5781e0cb0aa9544e4615a3434c95cf1ff4c6b64ca42248ad"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
+world_address = "0x5010c31f127114c6198df8a5239e2b7a5151e1156fb43791e37e7385faa8138"

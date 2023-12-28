@@ -38,7 +38,14 @@ pub fn handle_model_struct(
 
     if keys.is_empty() {
         diagnostics.push(PluginDiagnostic {
-            message: "Model must define atleast one #[key] attribute".into(),
+            message: "Model must define at least one #[key] attribute".into(),
+            stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
+        });
+    }
+
+    if keys.len() == members.len() {
+        diagnostics.push(PluginDiagnostic {
+            message: "Model must define at least one member that is not a key".into(),
             stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
         });
     }
@@ -50,13 +57,13 @@ pub fn handle_model_struct(
 
         if m.ty == "felt252" {
             return Some(RewriteNode::Text(format!(
-                "array::ArrayTrait::append(ref serialized, *self.{});",
+                "core::array::ArrayTrait::append(ref serialized, *self.{});",
                 m.name
             )));
         }
 
         Some(RewriteNode::Text(format!(
-            "serde::Serde::serialize(self.{}, ref serialized);",
+            "core::serde::Serde::serialize(self.{}, ref serialized);",
             m.name
         )))
     };
@@ -81,23 +88,23 @@ pub fn handle_model_struct(
 
                 #[inline(always)]
                 fn keys(self: @$type_name$) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
+                    let mut serialized = core::array::ArrayTrait::new();
                     $serialized_keys$
-                    array::ArrayTrait::span(@serialized)
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn values(self: @$type_name$) -> Span<felt252> {
-                    let mut serialized = ArrayTrait::new();
+                    let mut serialized = core::array::ArrayTrait::new();
                     $serialized_values$
-                    array::ArrayTrait::span(@serialized)
+                    core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
                 fn layout(self: @$type_name$) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    let mut layout = core::array::ArrayTrait::new();
+                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[inline(always)]
@@ -128,27 +135,27 @@ pub fn handle_model_struct(
 
                 #[external(v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::size()
+                    dojo::database::introspect::Introspect::<$type_name$>::size()
                 }
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
-                    let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
+                    let mut layout = core::array::ArrayTrait::new();
+                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
 
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
-                    let mut layout = ArrayTrait::new();
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::layout(ref layout);
-                    array::ArrayTrait::span(@layout)
+                    let mut layout = core::array::ArrayTrait::new();
+                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+                    core::array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
-                fn schema(self: @ContractState) -> dojo::database::schema::Ty {
-                    dojo::database::schema::SchemaIntrospection::<$type_name$>::ty()
+                fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                    dojo::database::introspect::Introspect::<$type_name$>::ty()
                 }
             }
         ",

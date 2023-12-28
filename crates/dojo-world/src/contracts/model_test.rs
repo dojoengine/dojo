@@ -24,7 +24,7 @@ async fn test_model() {
     .await;
 
     let world = WorldContractReader::new(world_address, provider);
-    let position = world.model("Position").await.unwrap();
+    let position = world.model_reader("Position").await.unwrap();
     let schema = position.schema().await.unwrap();
 
     assert_eq!(
@@ -63,12 +63,12 @@ async fn test_model() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x06a11b5b3003a3aa0ae7f8f443e48314cc0bc51eaea7c3ed1c19beb909f5dda3"
+            "0x004cd20d231b04405a77b184c115dc60637e186504fad7f0929bd76cbd09c10b"
         )
         .unwrap()
     );
 
-    let moves = world.model("Moves").await.unwrap();
+    let moves = world.model_reader("Moves").await.unwrap();
     let schema = moves.schema().await.unwrap();
 
     assert_eq!(

@@ -2,10 +2,10 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
+use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
-use sqlx::pool::PoolConnection;
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Row, Sqlite};
+use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
 
 use crate::constants::{BOOLEAN_TRUE, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
@@ -17,7 +17,7 @@ pub mod filter;
 pub mod order;
 
 pub async fn type_mapping_query(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut SqliteConnection,
     model_id: &str,
 ) -> sqlx::Result<TypeMapping> {
     let model_members = fetch_model_members(conn, model_id).await?;
@@ -28,7 +28,7 @@ pub async fn type_mapping_query(
 }
 
 async fn fetch_model_members(
-    conn: &mut PoolConnection<Sqlite>,
+    conn: &mut SqliteConnection,
     model_id: &str,
 ) -> sqlx::Result<Vec<ModelMember>> {
     sqlx::query_as(
@@ -70,19 +70,20 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
     match member.type_enum.as_str() {
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
         "Enum" => TypeData::Simple(TypeRef::named("Enum")),
-        _ => parse_nested_type(&member.model_id, &member.ty, nested_members),
+        _ => parse_nested_type(&member.model_id, &member.name, &member.ty, nested_members),
     }
 }
 
 fn parse_nested_type(
-    target_id: &str,
-    target_type: &str,
+    model_id: &str,
+    member_name: &str,
+    member_type: &str,
     nested_members: &[&ModelMember],
 ) -> TypeData {
     let nested_mapping: TypeMapping = nested_members
         .iter()
         .filter_map(|&member| {
-            if target_id == member.model_id && member.id.ends_with(target_type) {
+            if model_id == member.model_id && member.id.ends_with(member_name) {
                 let type_data = member_to_type_data(member, nested_members);
                 Some((Name::new(&member.name), type_data))
             } else {
@@ -90,7 +91,7 @@ fn parse_nested_type(
             }
         })
         .collect();
-    let namespaced = format!("{}_{}", target_id, target_type);
+    let namespaced = format!("{}_{}", model_id, member_type);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 
@@ -144,8 +145,11 @@ fn fetch_value(
     type_name: &str,
     is_external: bool,
 ) -> sqlx::Result<Value> {
-    let column_name =
-        if is_external { format!("external_{}", field_name) } else { field_name.to_string() };
+    let column_name = if is_external {
+        format!("external_{}", field_name)
+    } else {
+        field_name.to_string().to_case(Case::Snake)
+    };
 
     match Primitive::from_str(type_name) {
         // fetch boolean

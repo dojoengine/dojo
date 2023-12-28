@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    InlineMacroExprPlugin, InlinePluginResult, PluginDiagnostic, PluginGeneratedFile,
+    InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule};
@@ -12,10 +12,11 @@ use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use super::unsupported_arg_diagnostic;
 use super::utils::{parent_of_kind, SystemRWOpRecord, SYSTEM_WRITES};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SetMacro;
-impl SetMacro {
-    pub const NAME: &'static str = "set";
+
+impl NamedPlugin for SetMacro {
+    const NAME: &'static str = "set";
     // Parents of set!()
     // -----------------
     // StatementExpr
@@ -31,6 +32,7 @@ impl SetMacro {
     // ItemList
     // SyntaxFile
 }
+
 impl InlineMacroExprPlugin for SetMacro {
     fn generate_code(
         &self,
@@ -43,13 +45,13 @@ impl InlineMacroExprPlugin for SetMacro {
         let mut builder = PatchBuilder::new(db);
         builder.add_str("{");
 
-        let args = arg_list.args(db).elements(db);
+        let args = arg_list.arguments(db).elements(db);
 
         if args.len() != 2 {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
-                    stable_ptr: arg_list.args(db).stable_ptr().untyped(),
+                    stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
                 }],
             };
@@ -83,7 +85,7 @@ impl InlineMacroExprPlugin for SetMacro {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
                         message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
-                        stable_ptr: arg_list.args(db).stable_ptr().untyped(),
+                        stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     }],
                 };
             }
@@ -94,7 +96,7 @@ impl InlineMacroExprPlugin for SetMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     message: "Invalid arguments: No models provided.".to_string(),
-                    stable_ptr: arg_list.args(db).stable_ptr().untyped(),
+                    stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                 }],
             };
         }

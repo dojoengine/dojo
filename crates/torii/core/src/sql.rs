@@ -53,7 +53,7 @@ impl Sql {
         let indexer_query = sqlx::query_as::<_, (i64,)>("SELECT head FROM indexers WHERE id = ?")
             .bind(format!("{:#x}", self.world_address));
 
-        let indexer: (i64,) = indexer_query.fetch_one(&mut conn).await?;
+        let indexer: (i64,) = indexer_query.fetch_one(&mut *conn).await?;
         Ok(indexer.0.try_into().expect("doesn't fit in u64"))
     }
 
@@ -68,7 +68,7 @@ impl Sql {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let meta: World = sqlx::query_as("SELECT * FROM worlds WHERE id = ?")
             .bind(format!("{:#x}", self.world_address))
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
 
         Ok(meta)
@@ -123,29 +123,19 @@ impl Sql {
         };
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let existing: Option<(String,)> =
-            sqlx::query_as("SELECT model_names FROM entities WHERE id = ?")
-                .bind(&entity_id)
-                .fetch_optional(&self.pool)
-                .await?;
-
-        let model_names = match existing {
-            Some((existing_names,)) if existing_names.contains(&entity.name()) => {
-                existing_names.to_string()
-            }
-            Some((existing_names,)) => format!("{},{}", existing_names, entity.name()),
-            None => entity.name().to_string(),
-        };
+        self.query_queue.enqueue(
+            "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING",
+            vec![Argument::String(entity_id.clone()), Argument::String(entity.name())],
+        );
 
         let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO entities (id, keys, model_names, event_id) VALUES (?, \
-                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                               model_names=EXCLUDED.model_names, updated_at=CURRENT_TIMESTAMP, \
+        let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
+                               CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
-            .bind(&model_names)
             .bind(event_id)
             .fetch_one(&self.pool)
             .await?;
@@ -233,14 +223,14 @@ impl Sql {
             .bind(format!("{:#x}", key));
 
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let row: (i32, String, String) = query.fetch_one(&mut conn).await?;
+        let row: (i32, String, String) = query.fetch_one(&mut *conn).await?;
         Ok(serde_json::from_str(&row.2).unwrap())
     }
 
     pub async fn entities(&self, model: String) -> Result<Vec<Vec<FieldElement>>> {
         let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ?").bind(model);
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let mut rows = query.fetch_all(&mut conn).await?;
+        let mut rows = query.fetch_all(&mut *conn).await?;
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
@@ -300,7 +290,7 @@ impl Sql {
                 }
 
                 let mut path_clone = path.clone();
-                path_clone.push(member.ty.name());
+                path_clone.push(member.name.clone());
 
                 self.build_register_queries_recursive(
                     &member.ty,
@@ -347,12 +337,13 @@ impl Sql {
                     columns.join(","),
                     placeholders.join(",")
                 );
+
                 self.query_queue.enqueue(statement, arguments);
 
                 for member in s.children.iter() {
                     if let Ty::Struct(_) = &member.ty {
                         let mut path_clone = path.clone();
-                        path_clone.push(member.ty.name());
+                        path_clone.push(member.name.clone());
 
                         self.build_set_entity_queries_recursive(
                             path_clone, event_id, entity_id, &member.ty,
@@ -363,7 +354,7 @@ impl Sql {
             Ty::Enum(e) => {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
-                    path_clone.push(child.ty.name());
+                    path_clone.push(child.name.clone());
                     self.build_set_entity_queries_recursive(
                         path_clone, event_id, entity_id, &child.ty,
                     );
