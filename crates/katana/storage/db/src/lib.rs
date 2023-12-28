@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn open_db_with_malformed_version_file() {
+    fn initialize_db_with_malformed_version_file() {
         let path = tempfile::tempdir().unwrap();
         let version_file_path = default_version_file_path(path.path());
         fs::write(version_file_path, b"malformed").unwrap();
@@ -103,12 +103,24 @@ mod tests {
     }
 
     #[test]
-    fn open_db_with_mismatch_version() {
+    fn initialize_db_with_mismatch_version() {
         let path = tempfile::tempdir().unwrap();
         let version_file_path = default_version_file_path(path.path());
         fs::write(version_file_path, 99u32.to_be_bytes()).unwrap();
 
         let err = init_db(path.path()).unwrap_err();
         assert!(err.to_string().contains("Database version mismatch"));
+    }
+
+    #[test]
+    fn initialize_db_with_missing_version_file() {
+        let path = tempfile::tempdir().unwrap();
+        init_db(path.path()).unwrap();
+
+        fs::remove_file(default_version_file_path(path.path())).unwrap();
+
+        init_db(path.path()).unwrap();
+        let actual_version = get_db_version(path.path()).unwrap();
+        assert_eq!(actual_version, CURRENT_DB_VERSION);
     }
 }
