@@ -38,7 +38,14 @@ pub fn handle_model_struct(
 
     if keys.is_empty() {
         diagnostics.push(PluginDiagnostic {
-            message: "Model must define atleast one #[key] attribute".into(),
+            message: "Model must define at least one #[key] attribute".into(),
+            stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
+        });
+    }
+
+    if keys.len() == members.len() {
+        diagnostics.push(PluginDiagnostic {
+            message: "Model must define at least one member that is not a key".into(),
             stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
         });
     }

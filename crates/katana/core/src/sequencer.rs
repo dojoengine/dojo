@@ -13,6 +13,7 @@ use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, Block
 use katana_primitives::contract::{
     ClassHash, CompiledContractClass, ContractAddress, Nonce, StorageKey, StorageValue,
 };
+use katana_primitives::event::{ContinuationToken, ContinuationTokenError};
 use katana_primitives::receipt::Event;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::FieldElement;
@@ -38,7 +39,6 @@ use crate::service::messaging::MessagingConfig;
 #[cfg(feature = "messaging")]
 use crate::service::messaging::MessagingService;
 use crate::service::{NodeService, TransactionMiner};
-use crate::utils::event::{ContinuationToken, ContinuationTokenError};
 
 type SequencerResult<T> = Result<T, SequencerError>;
 

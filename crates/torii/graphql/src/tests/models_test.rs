@@ -34,7 +34,7 @@ mod tests {
                     type_contract_address
                     random_u8
                     random_u128
-                    type_nested {{
+                    type_deeply_nested {{
                         __typename
                         depth
                         type_number
@@ -44,13 +44,25 @@ mod tests {
                             depth
                             type_number
                             type_string
-                            type_nested_more_more {{
+                            type_nested_most {{
                                 __typename
                                 depth
                                 type_number
                                 type_string
                             }}
                         }}
+                    }}
+                    type_nested_one {{
+                        __typename
+                        depth
+                        type_number
+                        type_string
+                    }}
+                    type_nested_two {{
+                        __typename
+                        depth
+                        type_number
+                        type_string
                     }}
                     entity {{
                         keys
@@ -80,22 +92,26 @@ mod tests {
         let pool = spinup_types_test().await?;
         let schema = build_schema(&pool).await.unwrap();
 
-        // default params, test entity relationship, test deeply nested types
+        // default params, test entity relationship, test nested types
         let records = records_model_query(&schema, "").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let record = connection.edges.last().unwrap();
         let entity = record.node.entity.as_ref().unwrap();
-        let nested = record.node.type_nested.as_ref().unwrap();
-        let nested_more = &nested.type_nested_more;
-        let nested_more_more = &nested_more.type_nested_more_more;
+        let deeply_nested = record.node.type_deeply_nested.as_ref().unwrap();
+        let deeply_nested_more = &deeply_nested.type_nested_more;
+        let deeply_nested_most = &deeply_nested_more.type_nested_most;
+        let nested_one = record.node.type_nested_one.as_ref().unwrap();
+        let nested_two = record.node.type_nested_two.as_ref().unwrap();
         assert_eq!(connection.total_count, 10);
         assert_eq!(connection.edges.len(), 10);
         assert_eq!(&record.node.__typename, "Record");
         assert_eq!(entity.keys.clone().unwrap(), vec!["0x0"]);
         assert_eq!(record.node.depth, "Zero");
-        assert_eq!(nested.depth, "One");
-        assert_eq!(nested_more.depth, "Two");
-        assert_eq!(nested_more_more.depth, "Three");
+        assert_eq!(deeply_nested.depth, "One");
+        assert_eq!(deeply_nested_more.depth, "Two");
+        assert_eq!(deeply_nested_most.depth, "Three");
+        assert_eq!(nested_one.type_number, 1);
+        assert_eq!(nested_two.type_number, 2);
 
         // *** WHERE FILTER TESTING ***
 

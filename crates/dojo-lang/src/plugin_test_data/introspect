@@ -423,7 +423,7 @@ impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> o
 impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<GenericStruct<T>> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::introspect::Introspect::<T>::size()
+        dojo::database::introspect::Introspect::<T>::size() + 0
     }
 
     #[inline(always)]
