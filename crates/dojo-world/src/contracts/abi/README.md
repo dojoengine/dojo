@@ -11,3 +11,6 @@ sozo build
 jq .abi ./target/dev/dojo\:\:world\:\:world.json > ../../crates/dojo-world/src/contracts/abi/world.json
 jq .abi ./target/dev/dojo\:\:executor\:\:executor.json > ../../crates/dojo-world/src/contracts/abi/executor.json
 ```
+4. Copy and paste the ABI in the rust module, this avoids path issue when crates are used in third party project.
+
+In the future, Cainome will have a CLI tool to auto-generate those files with one command.

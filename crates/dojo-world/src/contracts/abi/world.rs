@@ -1,3 +1,8 @@
+use cainome::rs::abigen;
+
+abigen!(
+    WorldContract,
+    r#"
 [
   {
     "type": "impl",
@@ -773,3 +778,5 @@
     ]
   }
 ]
+"#,
+);

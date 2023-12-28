@@ -1,3 +1,8 @@
+use cainome::rs::abigen;
+
+abigen!(
+    ExecutorContract,
+    r#"
 [
   {
     "type": "impl",
@@ -51,3 +56,5 @@
     "variants": []
   }
 ]
+"#,
+);
