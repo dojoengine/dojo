@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use dojo_world::metadata::Environment;
 use dojo_world::migration::strategy::generate_salt;
+use dojo_world::utils::TransactionWaiter;
 use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall};
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
@@ -10,7 +11,7 @@ use starknet::providers::Provider;
 use crate::commands::execute::ExecuteArgs;
 
 pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Result<()> {
-    let ExecuteArgs { contract, entrypoint, calldata, starknet, account } = args;
+    let ExecuteArgs { contract, entrypoint, calldata, starknet, account, transaction } = args;
 
     let provider = starknet.provider(env_metadata.as_ref())?;
 
@@ -42,19 +43,24 @@ pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Re
         )
     };
 
-    let account = account.account(provider, env_metadata.as_ref()).await?;
+    let account = account.account(&provider, env_metadata.as_ref()).await?;
 
     let res = account
         .execute(vec![Call {
             calldata,
             to: contract_address,
-            selector: get_selector_from_name(&entrypoint).unwrap(),
+            selector: get_selector_from_name(&entrypoint)?,
         }])
         .send()
         .await
         .with_context(|| "Failed to send transaction")?;
 
-    println!("Transaction: {:#x}", res.transaction_hash);
+    if transaction.wait {
+        let receipt = TransactionWaiter::new(res.transaction_hash, &provider).await?;
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        println!("Transaction hash: {:#x}", res.transaction_hash);
+    }
 
     Ok(())
 }
