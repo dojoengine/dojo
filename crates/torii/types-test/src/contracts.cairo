@@ -40,7 +40,7 @@ mod records {
                 }
 
                 let type_felt: felt252 = record_idx.into();
-                let random_u8: u8 = random(pedersen::pedersen(seed(), record_idx.into()), 0, 100)
+                let random_u8 = random(pedersen::pedersen(seed(), record_idx.into()), 0, 100)
                     .try_into()
                     .unwrap();
                 let random_u128 = random(
@@ -48,6 +48,10 @@ mod records {
                     0,
                     0xffffffffffffffffffffffffffffffff_u128
                 );
+                let composite_u256 = u256 {
+                    low: random_u128,
+                    high: random_u128
+                };
 
                 let record_id = world.uuid();
                 let subrecord_id = world.uuid();
@@ -98,7 +102,8 @@ mod records {
                                 type_string: 2,
                             },
                             random_u8,
-                            random_u128
+                            random_u128,
+                            composite_u256
                         },
                         RecordSibling {
                             record_id, random_u8
