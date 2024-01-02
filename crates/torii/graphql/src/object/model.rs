@@ -37,10 +37,6 @@ impl ObjectTrait for ModelObject {
         &MODEL_TYPE_MAPPING
     }
 
-    fn enum_objects(&self) -> Option<Vec<Enum>> {
-        self.order_input.enum_objects()
-    }
-
     fn table_name(&self) -> Option<&str> {
         Some(MODEL_TABLE)
     }
@@ -134,54 +130,6 @@ impl ObjectTrait for ModelObject {
             })
             .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
         ])
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        let type_mapping = self.type_mapping().clone();
-        let table_name = self.table_name().unwrap().to_string();
-
-        let mut field = Field::new(
-            self.name().1,
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            move |ctx| {
-                let type_mapping = type_mapping.clone();
-                let table_name = table_name.to_string();
-
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let order = parse_order_argument(&ctx);
-                    let connection = parse_connection_arguments(&ctx)?;
-                    let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
-                    let (data, page_info) = fetch_multiple_rows(
-                        &mut conn,
-                        &table_name,
-                        ID_COLUMN,
-                        &None,
-                        &order,
-                        &None,
-                        &connection,
-                        total_count,
-                    )
-                    .await?;
-                    let results = connection_output(
-                        &data,
-                        &type_mapping,
-                        &order,
-                        ID_COLUMN,
-                        total_count,
-                        false,
-                        page_info,
-                    )?;
-
-                    Ok(Some(Value::Object(results)))
-                })
-            },
-        );
-
-        field = connection_arguments(field);
-        println!("Name {}", MODEL_NAMES.1);
-        field = order_argument(field, self.type_name());
-        Some(field)
     }
 }
 
