@@ -42,7 +42,7 @@ impl AccountOptions {
         env_metadata: Option<&Environment>,
     ) -> Result<SingleOwnerAccount<P, LocalWallet>>
     where
-        P: Provider + Send + Sync + 'static,
+        P: Provider + Send + Sync,
     {
         let account_address = self.account_address(env_metadata)?;
         let signer = self.signer(env_metadata)?;
