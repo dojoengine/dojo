@@ -16,7 +16,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use tonic::transport::{Channel, ClientTlsConfig};
+use tonic::transport::{ClientTlsConfig, Endpoint};
 use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
@@ -54,7 +54,7 @@ impl Client {
         models_keys: Option<Vec<KeysClause>>,
     ) -> Result<Self, Error> {
         let tls = ClientTlsConfig::default();
-        let torii_url = Channel::from_shared(torii_url).unwrap()..tls_config(tls).map_err(torii_grpc::client::Error::Transport)?;
+        let torii_url = Endpoint::new(torii_url).unwrap().tls_config(tls).unwrap();
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
         let metadata = grpc_client.metadata().await?;
