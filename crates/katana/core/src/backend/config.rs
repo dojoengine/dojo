@@ -1,6 +1,6 @@
 use blockifier::block_context::{BlockContext, FeeTokenAddresses, GasPrices};
+use katana_primitives::chain::ChainId;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::ChainId;
 use url::Url;
 
 use crate::constants::{
@@ -23,7 +23,7 @@ impl StarknetConfig {
     pub fn block_context(&self) -> BlockContext {
         BlockContext {
             block_number: BlockNumber::default(),
-            chain_id: ChainId(self.env.chain_id.clone()),
+            chain_id: self.env.chain_id.into(),
             block_timestamp: BlockTimestamp::default(),
             sequencer_address: (*SEQUENCER_ADDRESS).into(),
             // As the fee has two currencies, we also have to adjust their addresses.
@@ -65,7 +65,7 @@ impl Default for StarknetConfig {
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    pub chain_id: String,
+    pub chain_id: ChainId,
     pub gas_price: u128,
     pub invoke_max_steps: u32,
     pub validate_max_steps: u32,
@@ -75,7 +75,7 @@ impl Default for Environment {
     fn default() -> Self {
         Self {
             gas_price: DEFAULT_GAS_PRICE,
-            chain_id: "KATANA".to_string(),
+            chain_id: ChainId::parse("KATANA").unwrap(),
             invoke_max_steps: DEFAULT_INVOKE_MAX_STEPS,
             validate_max_steps: DEFAULT_VALIDATE_MAX_STEPS,
         }

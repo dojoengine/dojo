@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
@@ -47,8 +46,7 @@ impl StarknetApi {
 #[async_trait]
 impl StarknetApiServer for StarknetApi {
     async fn chain_id(&self) -> Result<FeltAsHex, Error> {
-        let chain_id = self.sequencer.chain_id().as_hex();
-        Ok(FieldElement::from_str(&chain_id).map_err(|_| StarknetApiError::UnexpectedError)?.into())
+        Ok(FieldElement::from(self.sequencer.chain_id()).into())
     }
 
     async fn nonce(
@@ -401,8 +399,7 @@ impl StarknetApiServer for StarknetApi {
             return Err(StarknetApiError::UnsupportedTransactionVersion.into());
         }
 
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let tx = deploy_account_transaction.into_tx_with_chain_id(chain_id);
         let contract_address = tx.contract_address;
@@ -420,8 +417,7 @@ impl StarknetApiServer for StarknetApi {
         request: Vec<BroadcastedTx>,
         block_id: BlockIdOrTag,
     ) -> Result<Vec<FeeEstimate>, Error> {
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let transactions = request
             .into_iter()
@@ -465,8 +461,7 @@ impl StarknetApiServer for StarknetApi {
         message: MsgFromL1,
         block_id: BlockIdOrTag,
     ) -> Result<FeeEstimate, Error> {
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let tx = message.into_tx_with_chain_id(chain_id);
         let hash = tx.calculate_hash();
@@ -496,8 +491,7 @@ impl StarknetApiServer for StarknetApi {
             return Err(StarknetApiError::UnsupportedTransactionVersion.into());
         }
 
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         // // validate compiled class hash
         // let is_valid = declare_transaction
@@ -529,8 +523,7 @@ impl StarknetApiServer for StarknetApi {
             return Err(StarknetApiError::UnsupportedTransactionVersion.into());
         }
 
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let tx = invoke_transaction.into_tx_with_chain_id(chain_id);
         let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));

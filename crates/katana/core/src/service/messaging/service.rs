@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use ::starknet::core::types::FieldElement;
 use futures::{Future, FutureExt, Stream};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::receipt::MessageToL1;
@@ -76,9 +75,6 @@ impl MessagingService {
         backend: Arc<Backend>,
         from_block: u64,
     ) -> MessengerResult<(u64, usize)> {
-        let chain_id = FieldElement::from_hex_be(&backend.env.read().block.chain_id.as_hex())
-            .expect("failed to parse katana chain id");
-
         // 200 avoids any possible rejection from RPC with possibly lot's of messages.
         // TODO: May this be configurable?
         let max_block = 200;
@@ -86,7 +82,7 @@ impl MessagingService {
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, chain_id).await?;
+                    inner.gather_messages(from_block, max_block, backend.chain_id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -101,7 +97,7 @@ impl MessagingService {
             #[cfg(feature = "starknet-messaging")]
             MessengerMode::Starknet(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, chain_id).await?;
+                    inner.gather_messages(from_block, max_block, backend.chain_id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {

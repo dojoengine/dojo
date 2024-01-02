@@ -20,6 +20,7 @@ use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::sequencer::SequencerConfig;
+use katana_primitives::chain::ChainId;
 use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
 use metrics::utils::parse_socket_address;
@@ -148,7 +149,8 @@ pub struct EnvironmentOptions {
     #[arg(long)]
     #[arg(help = "The chain ID.")]
     #[arg(default_value = "KATANA")]
-    pub chain_id: String,
+    #[arg(value_parser = ChainId::parse)]
+    pub chain_id: ChainId,
 
     #[arg(long)]
     #[arg(help = "The gas price.")]
@@ -214,7 +216,7 @@ impl KatanaArgs {
             fork_rpc_url: self.rpc_url.clone(),
             fork_block_number: self.fork_block_number,
             env: Environment {
-                chain_id: self.starknet.environment.chain_id.clone(),
+                chain_id: self.starknet.environment.chain_id,
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
                 invoke_max_steps: self
                     .starknet

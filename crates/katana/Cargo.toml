@@ -11,6 +11,7 @@ clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
 katana-core = { path = "core" }
+katana-primitives = { path = "primitives" }
 katana-rpc = { path = "rpc" }
 metrics = { path = "../metrics" }
 metrics-process.workspace = true
