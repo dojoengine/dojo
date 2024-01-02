@@ -6,7 +6,9 @@ use katana_db::mdbx;
 use katana_primitives::block::{
     BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
-use katana_primitives::contract::{CompiledContractClass, ContractAddress, SierraClass};
+use katana_primitives::contract::{
+    CompiledContractClass, ContractAddress, FlattenedSierraClass, SierraClass,
+};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::utils::class::parse_compiled_class;
 use katana_provider::providers::db::DbProvider;
@@ -30,8 +32,8 @@ lazy_static! {
     pub static ref DOJO_WORLD_COMPILED_CLASS: CompiledContractClass =
         parse_compiled_class(include_str!("../../db/benches/artifacts/dojo_world_240.json"))
             .unwrap();
-    pub static ref DOJO_WORLD_SIERRA_CLASS: SierraClass = {
-        let sierra_class: starknet::core::types::contract::SierraClass =
+    pub static ref DOJO_WORLD_SIERRA_CLASS: FlattenedSierraClass = {
+        let sierra_class: SierraClass =
             serde_json::from_str(include_str!("../../db/benches/artifacts/dojo_world_240.json"))
                 .unwrap();
         sierra_class.flatten().unwrap()

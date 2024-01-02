@@ -1,6 +1,7 @@
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, SierraClass, StorageKey,
+    ClassHash, CompiledClassHash, ContractAddress, FlattenedSierraClass, GenericContractInfo,
+    StorageKey,
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
@@ -198,7 +199,7 @@ tables! {
     /// Store compiled contract classes according to its compiled class hash
     CompiledContractClasses: (ClassHash) => StoredContractClass,
     /// Store Sierra classes according to its class hash
-    SierraClasses: (ClassHash) => SierraClass,
+    SierraClasses: (ClassHash) => FlattenedSierraClass,
     /// Store contract information according to its contract address
     ContractInfo: (ContractAddress) => GenericContractInfo,
     /// Store contract storage

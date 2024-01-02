@@ -13,8 +13,8 @@ use katana_db::tables::{
 };
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::DbProvider;
@@ -92,7 +92,7 @@ impl ContractClassWriter for DbProvider {
         })?
     }
 
-    fn set_sierra_class(&self, hash: ClassHash, sierra: SierraClass) -> Result<()> {
+    fn set_sierra_class(&self, hash: ClassHash, sierra: FlattenedSierraClass) -> Result<()> {
         self.0.update(move |db_tx| -> Result<()> {
             db_tx.put::<SierraClasses>(hash, sierra)?;
             Ok(())
@@ -123,7 +123,7 @@ impl ContractClassProvider for LatestStateProvider {
         Ok(hash)
     }
 
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         let class = self.0.get::<SierraClasses>(hash)?;
         Ok(class)
     }
@@ -228,7 +228,7 @@ impl ContractClassProvider for HistoricalStateProvider {
         }
     }
 
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
             self.tx.get::<SierraClasses>(hash).map_err(|e| e.into())
         } else {

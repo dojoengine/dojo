@@ -7,8 +7,8 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, StorageKey, StorageValue,
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -228,7 +228,7 @@ where
         self.provider.class(hash)
     }
 
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         self.provider.sierra_class(hash)
     }
 }
@@ -289,7 +289,7 @@ where
         self.provider.set_compiled_class_hash_of_class_hash(hash, compiled_hash)
     }
 
-    fn set_sierra_class(&self, hash: ClassHash, sierra: SierraClass) -> Result<()> {
+    fn set_sierra_class(&self, hash: ClassHash, sierra: FlattenedSierraClass) -> Result<()> {
         self.provider.set_sierra_class(hash, sierra)
     }
 }

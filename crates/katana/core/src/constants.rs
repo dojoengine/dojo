@@ -1,7 +1,7 @@
 use katana_primitives::contract::{
-    CompiledContractClass, ContractAddress, SierraClassRaw, StorageKey,
+    CompiledContractClass, ContractAddress, SierraClass, StorageKey,
 };
-use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class_raw};
+use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::FieldElement;
 use lazy_static::lazy_static;
 use starknet::macros::felt;
@@ -33,7 +33,7 @@ lazy_static! {
 
     pub static ref ERC20_CONTRACT: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/erc20.json")).unwrap();
     pub static ref UDC_CONTRACT: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/universal_deployer.json")).unwrap();
-    pub static ref OZ_V1_ACCOUNT_CONTRACT: SierraClassRaw = parse_sierra_class_raw(include_str!("../contracts/compiled/oz_account_080.json")).unwrap();
+    pub static ref OZ_V1_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../contracts/compiled/oz_account_080.json")).unwrap();
     pub static ref OZ_V1_ACCOUNT_CONTRACT_COMPILED: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/oz_account_080.json")).unwrap();
 
     pub static ref DEFAULT_PREFUNDED_ACCOUNT_BALANCE: FieldElement = felt!("0x3635c9adc5dea00000"); // 10^21
