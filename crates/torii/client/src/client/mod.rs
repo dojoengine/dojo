@@ -16,7 +16,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
-use tonic::transport::{ClientTlsConfig, Endpoint};
+use tonic::transport::{ClientTlsConfig, Endpoint, Channel};
 use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
@@ -53,10 +53,10 @@ impl Client {
         world: FieldElement,
         models_keys: Option<Vec<KeysClause>>,
     ) -> Result<Self, Error> {
-        let tls = ClientTlsConfig::new().domain_name("cartridge.gg");
-        let torii_url = Endpoint::new(torii_url)
+        let tls = ClientTlsConfig::new().domain_name("dojoengine.org");
+        let torii_url = Channel::from_shared(torii_url)
             .unwrap()
-            .origin("https://cartridge.gg".parse().unwrap())
+            .origin("https://dojoengine.org".parse().unwrap())
             .tls_config(tls)
             .unwrap();
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
