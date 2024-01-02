@@ -29,7 +29,7 @@ impl InputObjectTrait for OrderInputObject {
     fn input_object(&self) -> InputObject {
         // direction and field values are required (not null)
         InputObject::new(self.type_name())
-            .field(InputValue::new("direction", TypeRef::named_nn("OrderDirection")))
+            .field(InputValue::new("direction", TypeRef::named_nn(ORDER_DIR_TYPE_NAME)))
             .field(InputValue::new(
                 "field",
                 TypeRef::named_nn(format!("{}Field", self.type_name())),
@@ -38,7 +38,7 @@ impl InputObjectTrait for OrderInputObject {
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {
         // Direction enum has only two members ASC and DESC
-        let direction = Enum::new("OrderDirection").item("ASC").item("DESC");
+        let direction = Enum::new(ORDER_DIR_TYPE_NAME).item(ORDER_ASC).item(ORDER_DESC);
 
         // Field Order enum consist of all members of a model
         let field_order = self
