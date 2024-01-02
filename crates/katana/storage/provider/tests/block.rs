@@ -2,7 +2,7 @@ use anyhow::Result;
 use katana_primitives::block::{
     Block, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus,
 };
-use katana_primitives::state::StateUpdates;
+use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -141,14 +141,14 @@ where
 
 #[template]
 #[rstest::rstest]
-#[case::state_update_at_block_1(1, mock_state_updates().0)]
-#[case::state_update_at_block_2(2, mock_state_updates().1)]
-#[case::state_update_at_block_3(3, StateUpdates::default())]
-#[case::state_update_at_block_5(5, mock_state_updates().2)]
+#[case::state_update_at_block_1(1, mock_state_updates()[0].clone())]
+#[case::state_update_at_block_2(2, mock_state_updates()[1].clone())]
+#[case::state_update_at_block_3(3, StateUpdatesWithDeclaredClasses::default())]
+#[case::state_update_at_block_5(5, mock_state_updates()[2].clone())]
 fn test_read_state_update<Db>(
     #[from(provider_with_states)] provider: BlockchainProvider<Db>,
     #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdates,
+    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
 ) {
 }
 
@@ -156,7 +156,7 @@ fn test_read_state_update<Db>(
 fn test_read_state_update_with_in_memory_provider(
     #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
     #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdates,
+    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
 ) -> Result<()> {
     test_read_state_update_impl(provider, block_num, expected_state_update)
 }
@@ -167,7 +167,7 @@ fn test_read_state_update_with_fork_provider(
         ForkedProvider,
     >,
     #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdates,
+    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
 ) -> Result<()> {
     test_read_state_update_impl(provider, block_num, expected_state_update)
 }
@@ -176,7 +176,7 @@ fn test_read_state_update_with_fork_provider(
 fn test_read_state_update_with_db_provider(
     #[with(db_provider())] provider: BlockchainProvider<DbProvider>,
     #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdates,
+    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
 ) -> Result<()> {
     test_read_state_update_impl(provider, block_num, expected_state_update)
 }
@@ -184,12 +184,12 @@ fn test_read_state_update_with_db_provider(
 fn test_read_state_update_impl<Db>(
     provider: BlockchainProvider<Db>,
     block_num: BlockNumber,
-    expected_state_update: StateUpdates,
+    expected_state_update: StateUpdatesWithDeclaredClasses,
 ) -> Result<()>
 where
     Db: StateUpdateProvider,
 {
     let actual_state_update = provider.state_update(BlockHashOrNumber::from(block_num))?;
-    assert_eq!(actual_state_update, Some(expected_state_update));
+    assert_eq!(actual_state_update, Some(expected_state_update.state_updates));
     Ok(())
 }

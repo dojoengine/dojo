@@ -88,7 +88,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
             &ws,
             &migration,
             &account,
-            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64) }),
+            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
         )
         .await
         .is_err()
