@@ -8,7 +8,6 @@ use sqlx::{Pool, Sqlite};
 use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
-use sqlx::{Pool, Sqlite};
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::{ObjectTrait, TypeMapping, ValueMapping};

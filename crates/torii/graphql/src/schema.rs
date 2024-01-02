@@ -12,7 +12,6 @@ use super::object::model_data::ModelDataObject;
 use super::object::ObjectTrait;
 use super::types::ScalarType;
 use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
-use crate::constants::{MODEL_NAMES, MODEL_TYPE_NAME};
 use crate::object::metadata::content::ContentObject;
 use crate::object::metadata::social::SocialObject;
 use crate::object::metadata::MetadataObject;
