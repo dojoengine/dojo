@@ -114,7 +114,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, 
         Box::new(SocialObject),
         Box::new(ContentObject),
         Box::new(MetadataObject),
-        Box::new(ModelObject::new(MODEL_NAMES.1.to_string(), MODEL_TYPE_NAME.to_string())),
+        Box::new(ModelObject),
         Box::new(PageInfoObject),
         Box::new(TransactionObject),
     ];
