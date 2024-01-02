@@ -21,9 +21,28 @@ impl From<ContractAddress> for crate::contract::ContractAddress {
 
 impl From<ChainId> for starknet_api::core::ChainId {
     fn from(chain_id: ChainId) -> Self {
-        match chain_id {
-            ChainId::Named(named) => Self(named.to_string()),
-            ChainId::Id(id) => Self(parse_cairo_short_string(&id).expect("valid cairo string")),
-        }
+        let id = match chain_id {
+            ChainId::Named(named) => named.id(),
+            ChainId::Id(id) => id,
+        };
+        Self(parse_cairo_short_string(&id).expect("valid cairo string"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet::core::utils::parse_cairo_short_string;
+
+    use crate::chain::{ChainId, NamedChainId};
+
+    #[test]
+    fn convert_chain_id() {
+        let mainnet = starknet_api::core::ChainId::from(ChainId::Named(NamedChainId::Mainnet));
+        let goerli = starknet_api::core::ChainId::from(ChainId::Named(NamedChainId::Goerli));
+        let sepolia = starknet_api::core::ChainId::from(ChainId::Named(NamedChainId::Sepolia));
+
+        assert_eq!(mainnet.0, parse_cairo_short_string(&NamedChainId::Mainnet.id()).unwrap());
+        assert_eq!(goerli.0, parse_cairo_short_string(&NamedChainId::Goerli.id()).unwrap());
+        assert_eq!(sepolia.0, parse_cairo_short_string(&NamedChainId::Sepolia.id()).unwrap());
     }
 }
