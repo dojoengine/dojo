@@ -925,7 +925,7 @@ dependencies = [
  "ark-secp256k1",
  "ark-secp256r1",
  "cached",
- "cairo-felt",
+ "cairo-felt 0.8.7",
  "cairo-lang-casm",
  "cairo-lang-runner",
  "cairo-lang-starknet",
@@ -1159,6 +1159,19 @@ dependencies = [
 name = "cairo-felt"
 version = "0.8.2"
 source = "git+https://github.com/dojoengine/cairo-rs.git?rev=262b7eb4b11ab165a2a936a5f914e78aa732d4a2#262b7eb4b11ab165a2a936a5f914e78aa732d4a2"
+dependencies = [
+ "lazy_static",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.17",
+ "serde",
+]
+
+[[package]]
+name = "cairo-felt"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5972097b8800ca5dffb458040e74c724a2ac4fa4b5b480b50f5b96c7e67d6427"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1419,7 +1432,7 @@ dependencies = [
  "ark-secp256k1",
  "ark-secp256r1",
  "ark-std",
- "cairo-felt",
+ "cairo-felt 0.8.7",
  "cairo-lang-casm",
  "cairo-lang-sierra",
  "cairo-lang-sierra-ap-change",
@@ -1546,7 +1559,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc16661a7a78f885f6b5a4fdb3c7463d9ee3f6bca83266b4f2b956e65579ec72"
 dependencies = [
  "assert_matches",
- "cairo-felt",
+ "cairo-felt 0.8.7",
  "cairo-lang-casm",
  "cairo-lang-sierra",
  "cairo-lang-sierra-ap-change",
@@ -1577,7 +1590,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac5523d9c5b8e7c98afb2907c2cf4821a251d94fc42d37940063a9f2adbea05f"
 dependencies = [
  "anyhow",
- "cairo-felt",
+ "cairo-felt 0.8.7",
  "cairo-lang-casm",
  "cairo-lang-compiler",
  "cairo-lang-defs",
@@ -1640,7 +1653,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed848115b9422014027b4c352ed6589a886e767efb4a11667de32a45be8edd52"
 dependencies = [
  "anyhow",
- "cairo-felt",
+ "cairo-felt 0.8.7",
  "cairo-lang-compiler",
  "cairo-lang-debug",
  "cairo-lang-defs",
@@ -1667,7 +1680,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb0cc6ebdae7e2d1aaf5a032e41b42a77090aa3c1568a4339c9f0af449eb0d07"
 dependencies = [
  "anyhow",
- "cairo-felt",
+ "cairo-felt 0.8.7",
  "cairo-lang-compiler",
  "cairo-lang-filesystem",
  "cairo-lang-runner",
@@ -1720,7 +1733,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "bitvec",
- "cairo-felt",
+ "cairo-felt 0.8.2",
  "generic-array",
  "hashbrown 0.14.3",
  "hex",
@@ -9702,7 +9715,11 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "prost 0.12.3",
+ "rustls 0.21.10",
+ "rustls-native-certs",
+ "rustls-pemfile",
  "tokio",
+ "tokio-rustls 0.24.1",
  "tokio-stream",
  "tower",
  "tower-layer",
