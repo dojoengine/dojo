@@ -54,10 +54,7 @@ impl Client {
         models_keys: Option<Vec<KeysClause>>,
     ) -> Result<Self, Error> {
         let tls = ClientTlsConfig::default();
-        let torii_url = Channel::from_shared(torii_url)
-            .map_err(|_| Error::Parse(ParseError::Url))?
-            .tls_config(tls)
-            .map_err(|_| Error::Parse(ParseError::Url))?;
+        let torii_url = Channel::from_shared(torii_url).unwrap()..tls_config(tls).map_err(torii_grpc::client::Error::Transport)?;
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
         let metadata = grpc_client.metadata().await?;
