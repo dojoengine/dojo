@@ -42,7 +42,7 @@ pub(super) fn get_genesis_states_for_testing() -> StateUpdatesWithDeclaredClasse
     ]);
 
     let declared_sierra_classes = HashMap::from([(
-        *OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH,
+        *OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
         OZ_V1_ACCOUNT_CONTRACT.clone().flatten().unwrap(),
     )]);
 
