@@ -41,11 +41,11 @@ jobs:
           # The target is used by Cargo
           # The arch is either 386, arm64 or amd64
           # The svm target platform to use for the binary https://github.com/roynalnaruto/svm-rs/blob/84cbe0ac705becabdc13168bae28a45ad2299749/svm-builds/build.rs#L4-L24
-          - os: ubuntu-latest-4-cores
+          - os: ubuntu-20.04-4-cores
             platform: linux
             target: x86_64-unknown-linux-gnu
             arch: amd64
-          - os: ubuntu-latest-8-cores
+          - os: ubuntu-20.04-8-cores
             platform: linux
             target: aarch64-unknown-linux-gnu
             arch: arm64
@@ -144,7 +144,7 @@ jobs:
           retention-days: 1
 
   create-draft-release:
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-20.04-4-cores
     needs: [prepare, release]
     env:
       GITHUB_USER: ${{ github.repository_owner }}
@@ -165,7 +165,7 @@ jobs:
       - run: gh release create v${{ steps.version_info.outputs.version }} ./artifacts/*.gz --generate-notes --draft
 
   docker-build-and-push:
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-20.04-4-cores
     needs: [prepare, release]
 
     steps:
