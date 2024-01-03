@@ -2812,7 +2812,6 @@ dependencies = [
  "http",
  "ipfs-api-backend-hyper",
  "scarb",
- "scarb-ui",
  "serde",
  "serde_json",
  "serde_with",
@@ -2824,6 +2823,18 @@ dependencies = [
  "toml 0.7.8",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "dojo-world-abigen"
+version = "0.1.0"
+dependencies = [
+ "cairo-lang-starknet",
+ "camino",
+ "scarb",
+ "scarb-ui",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

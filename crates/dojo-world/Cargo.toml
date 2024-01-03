@@ -45,11 +45,3 @@ contracts = [ "dep:dojo-types", "dep:http" ]
 manifest = [ "contracts", "dep:dojo-types", "dep:url" ]
 metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
 migration = [ "dep:tokio" ]
-
-[build-dependencies]
-camino.workspace = true
-scarb-ui.workspace = true
-scarb.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-cairo-lang-starknet.workspace = true
