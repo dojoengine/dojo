@@ -2812,6 +2812,7 @@ dependencies = [
  "http",
  "ipfs-api-backend-hyper",
  "scarb",
+ "scarb-ui",
  "serde",
  "serde_json",
  "serde_with",
