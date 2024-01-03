@@ -38,7 +38,8 @@ fn main() {
 fn rename_file(old_path: &str, new_path: &str) {
     let o = Path::new(old_path);
     let n = Path::new(new_path);
-    fs::rename(o, n).unwrap_or_else(|_| panic!("Could not rename file {old_path} into {new_path}"));
+    fs::rename(o, n)
+        .unwrap_or_else(|e| panic!("Could not rename file {old_path} into {new_path}: {e}"));
 }
 
 /// Writes a binding file using cainome inlined ABI for the given contract.
@@ -46,7 +47,7 @@ fn write_binding_file(file_name: &str, contract_name: &str, contract_class: Cont
     let mut file = File::create(file_name).expect("Could not create file");
     writeln!(
         file,
-        "use cainome::rs::abigen;\n\nabigen!(\n{},\nr#\"{}\"#);\n",
+        "use cainome::rs::abigen;\n\nabigen!(\n    {},\n    r#\"{}\"#\n);",
         contract_name,
         serde_json::to_string(&contract_class.abi).unwrap()
     )
