@@ -4,7 +4,7 @@ use sqlx::{Result, Row, SqliteConnection};
 
 use super::filter::{Filter, FilterValue};
 use super::order::{CursorDirection, Direction, Order};
-use crate::constants::DEFAULT_LIMIT;
+use crate::constants::{DEFAULT_LIMIT, MODEL_TABLE};
 use crate::object::connection::{cursor, ConnectionArguments};
 
 pub async fn count_rows(
@@ -85,7 +85,11 @@ pub async fn fetch_multiple_rows(
     // `first` or `last` param. Explicit ordering take precedence
     match order {
         Some(order) => {
-            let column_name = format!("external_{}", order.field);
+            let mut column_name = order.field.clone();
+            if table_name != MODEL_TABLE{
+                column_name = format!("external_{}", column_name);
+            }
+            println!("fetch_multiple_rows column_name {}", column_name);
             query.push_str(&format!(
                 " ORDER BY {column_name} {}, {id_column} {} LIMIT {limit}",
                 order.direction.as_ref(),
@@ -125,7 +129,7 @@ pub async fn fetch_multiple_rows(
             Some(order) => format!("external_{}", order.field),
             None => id_column.to_string(),
         };
-
+        println!("fetch_multiple_rows order_field {}", order_field);
         match cursor_param {
             Some(cursor_query) => {
                 let first_cursor = cursor::encode(
@@ -188,6 +192,7 @@ fn handle_cursor(
         Ok((event_id, field_value)) => match order {
             Some(order) => {
                 let field_name = format!("external_{}", order.field);
+                println!("handle_cursor field_name {}", field_name);
                 Ok(format!(
                     "(({} {} '{}' AND {} = '{}') OR {} {} '{}')",
                     id_column,

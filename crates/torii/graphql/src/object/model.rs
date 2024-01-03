@@ -9,6 +9,7 @@ use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 
+use super::inputs::order_input::parse_order_argument;
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::{
@@ -69,6 +70,7 @@ impl ObjectTrait for ModelObject {
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                    let order = parse_order_argument(&ctx);
                     let connection = parse_connection_arguments(&ctx)?;
                     let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
                     let (data, page_info) = fetch_multiple_rows(
@@ -76,7 +78,7 @@ impl ObjectTrait for ModelObject {
                         &table_name,
                         ID_COLUMN,
                         &None,
-                        &None,
+                        &order,
                         &None,
                         &connection,
                         total_count,
@@ -85,7 +87,7 @@ impl ObjectTrait for ModelObject {
                     let results = connection_output(
                         &data,
                         &type_mapping,
-                        &None,
+                        &order,
                         ID_COLUMN,
                         total_count,
                         false,
@@ -99,8 +101,6 @@ impl ObjectTrait for ModelObject {
 
         field = connection_arguments(field);
         field = field.argument(InputValue::new("order", TypeRef::named(MODEL_ORDER_TYPE_NAME)));
-        field =
-            field.argument(InputValue::new("field", TypeRef::named(MODEL_ORDER_FIELD_TYPE_NAME)));
 
         Some(field)
     }
