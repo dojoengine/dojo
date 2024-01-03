@@ -148,6 +148,9 @@ pub struct StarknetOptions {
 pub struct EnvironmentOptions {
     #[arg(long)]
     #[arg(help = "The chain ID.")]
+    #[arg(long_help = "The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd \
+                       used as the actual chain ID. Otherwise, it's represented as the raw \
+                       ASCII values. It must be a valid Cairo short string.")]
     #[arg(default_value = "KATANA")]
     #[arg(value_parser = ChainId::parse)]
     pub chain_id: ChainId,

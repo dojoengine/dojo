@@ -12,7 +12,7 @@ pub enum NamedChainId {
 
 impl NamedChainId {
     /// `SN_MAIN` in ASCII
-    const SN_MAIN: FieldElement = FieldElement::from_mont([
+    pub const SN_MAIN: FieldElement = FieldElement::from_mont([
         0xf596341657d6d657,
         0xffffffffffffffff,
         0xffffffffffffffff,
@@ -20,7 +20,7 @@ impl NamedChainId {
     ]);
 
     /// `SN_GOERLI` in ASCII
-    const SN_GOERLI: FieldElement = FieldElement::from_mont([
+    pub const SN_GOERLI: FieldElement = FieldElement::from_mont([
         0x3417161755cc97b2,
         0xfffffffffffff596,
         0xffffffffffffffff,
@@ -28,7 +28,7 @@ impl NamedChainId {
     ]);
 
     /// `SN_SEPOLIA` in ASCII
-    const SN_SEPOLIA: FieldElement = FieldElement::from_mont([
+    pub const SN_SEPOLIA: FieldElement = FieldElement::from_mont([
         0x159755f62c97a933,
         0xfffffffffff59634,
         0xffffffffffffffff,
@@ -85,8 +85,11 @@ pub enum ParseChainIdError {
 }
 
 impl ChainId {
+    /// Chain id of the Starknet mainnet.
     pub const MAINNET: Self = Self::Named(NamedChainId::Mainnet);
+    /// Chain id of the Starknet goerli testnet.
     pub const GOERLI: Self = Self::Named(NamedChainId::Goerli);
+    /// Chain id of the Starknet sepolia testnet.
     pub const SEPOLIA: Self = Self::Named(NamedChainId::Sepolia);
 
     /// Parse a [`ChainId`] from a [`str`].
