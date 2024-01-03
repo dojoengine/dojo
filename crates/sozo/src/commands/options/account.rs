@@ -55,10 +55,6 @@ impl AccountOptions {
             signer,
             account_address,
             chain_id,
-            // This is made under the assumption that the accounts used with `sozo` commands would
-            // be one of the `katana` dev accounts. The dev accounts deployed on `katana` are
-            // legacy accounts (Cairo 0).
-            // TODO: Make this configurable
             ExecutionEncoding::New,
         ))
     }

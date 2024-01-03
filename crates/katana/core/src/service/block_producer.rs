@@ -220,7 +220,7 @@ impl IntervalBlockProducer {
                 &self.state.state,
                 &self.backend.env.read().block,
                 !self.backend.config.read().disable_fee,
-                !self.backend.config.read().no_validate,
+                !self.backend.config.read().disable_validate,
                 transactions.clone().into_iter(),
             )
             .with_error_log()
@@ -331,7 +331,7 @@ impl InstantBlockProducer {
             &state,
             &block_context,
             !backend.config.read().disable_fee,
-            !backend.config.read().no_validate,
+            !backend.config.read().disable_validate,
             transactions.clone().into_iter(),
         )
         .with_error_log()
