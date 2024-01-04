@@ -1111,7 +1111,7 @@ checksum = "3a4f925191b4367301851c6d99b09890311d74b0d43f274c0b34c86d308a3663"
 [[package]]
 name = "cainome"
 version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
+source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
 dependencies = [
  "cainome-cairo-serde",
  "cainome-parser",
@@ -1121,7 +1121,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
+source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
 dependencies = [
  "starknet",
  "thiserror",
@@ -1130,7 +1130,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
+source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
 dependencies = [
  "quote",
  "serde_json",
@@ -1142,7 +1142,7 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
+source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -2823,6 +2823,18 @@ dependencies = [
  "toml 0.7.8",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "dojo-world-abigen"
+version = "0.1.0"
+dependencies = [
+ "cairo-lang-starknet",
+ "camino",
+ "scarb",
+ "scarb-ui",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
