@@ -2827,7 +2827,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.1.0"
+version = "0.4.4"
 dependencies = [
  "cairo-lang-starknet",
  "camino",
@@ -7596,7 +7596,7 @@ dependencies = [
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams",
+ "wasm-streams 0.3.0",
  "web-sys",
  "webpki-roots",
  "winreg",
@@ -9783,9 +9783,8 @@ dependencies = [
 
 [[package]]
 name = "tonic-web-wasm-client"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac5987e92915a51a4b05e69a0ef903a7b76f16674f7ee66534f87fd3323e2d3a"
+version = "0.5.0"
+source = "git+https://github.com/Larkooo/tonic-web-wasm-client.git#32e4a1930df3d9d49cb7e6e581054c8065a32dad"
 dependencies = [
  "base64 0.21.5",
  "byteorder",
@@ -9797,11 +9796,11 @@ dependencies = [
  "js-sys",
  "pin-project",
  "thiserror",
- "tonic 0.9.2",
+ "tonic 0.10.2",
  "tower-service",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm-streams",
+ "wasm-streams 0.4.0",
  "web-sys",
 ]
 
@@ -10571,6 +10570,18 @@ name = "wasm-streams"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4609d447824375f43e1ffbc051b50ad8f4b3ae8219680c94452ea05eb240ac7"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.4.0"
+source = "git+https://github.com/Larkooo/wasm-streams.git#d46731245517306b6f0bcec670b826f21809e6e6"
 dependencies = [
  "futures-util",
  "js-sys",
