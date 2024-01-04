@@ -11,7 +11,7 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, SierraClass,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -446,7 +446,7 @@ impl ContractClassWriter for ForkedProvider {
         Ok(())
     }
 
-    fn set_sierra_class(&self, hash: ClassHash, sierra: SierraClass) -> Result<()> {
+    fn set_sierra_class(&self, hash: ClassHash, sierra: FlattenedSierraClass) -> Result<()> {
         self.state.shared_contract_classes.sierra_classes.write().insert(hash, sierra);
         Ok(())
     }

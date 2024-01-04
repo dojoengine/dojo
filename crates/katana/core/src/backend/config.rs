@@ -17,6 +17,7 @@ pub struct StarknetConfig {
     pub env: Environment,
     pub fork_rpc_url: Option<Url>,
     pub fork_block_number: Option<u64>,
+    pub disable_validate: bool,
 }
 
 impl StarknetConfig {
@@ -59,6 +60,7 @@ impl Default for StarknetConfig {
             fork_rpc_url: None,
             fork_block_number: None,
             env: Environment::default(),
+            disable_validate: false,
         }
     }
 }

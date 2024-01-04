@@ -14,7 +14,8 @@ use starknet::core::types::{
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
 use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, CompiledContractClassV0, SierraClass,
+    ClassHash, CompiledClassHash, CompiledContractClass, CompiledContractClassV0,
+    FlattenedSierraClass,
 };
 use crate::FieldElement;
 
@@ -70,10 +71,10 @@ pub fn legacy_inner_to_rpc_class(
     }))
 }
 
-/// Convert the given [`SierraClass`] into the inner compiled class type [`CompiledContractClass`]
-/// along with its class hashes.
-pub fn sierra_to_compiled_class(
-    contract_class: &SierraClass,
+/// Convert the given [`FlattenedSierraClass`] into the inner compiled class type
+/// [`CompiledContractClass`] along with its class hashes.
+pub fn flattened_sierra_to_compiled_class(
+    contract_class: &FlattenedSierraClass,
 ) -> Result<(ClassHash, CompiledClassHash, CompiledContractClass)> {
     let class_hash = contract_class.class_hash();
 
@@ -91,9 +92,9 @@ pub fn sierra_to_compiled_class(
     ))
 }
 
-/// Compute the compiled class hash from the given [`SierraClass`].
+/// Compute the compiled class hash from the given [`FlattenedSierraClass`].
 pub fn compiled_class_hash_from_flattened_sierra_class(
-    contract_class: &SierraClass,
+    contract_class: &FlattenedSierraClass,
 ) -> Result<FieldElement> {
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
     let casm = CasmContractClass::from_contract_class(contract_class, true)?;
@@ -122,10 +123,10 @@ pub fn legacy_rpc_to_inner_compiled_class(
     Ok((class_hash, CompiledContractClass::V0(contract_class)))
 }
 
-/// Converts `starknet-rs` RPC [SierraClass] type to Cairo's
+/// Converts `starknet-rs` RPC [FlattenedSierraClass] type to Cairo's
 /// [ContractClass](cairo_lang_starknet::contract_class::ContractClass) type.
 fn rpc_to_cairo_contract_class(
-    contract_class: &SierraClass,
+    contract_class: &FlattenedSierraClass,
 ) -> Result<cairo_lang_starknet::contract_class::ContractClass, std::io::Error> {
     let value = serde_json::to_value(contract_class)?;
 

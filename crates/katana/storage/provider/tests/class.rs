@@ -8,7 +8,7 @@ use fixtures::{
 use katana_core::constants::{ERC20_CONTRACT, UDC_CONTRACT};
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, SierraClass,
+    ClassHash, CompiledClassHash, CompiledContractClass, FlattenedSierraClass,
 };
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -17,8 +17,12 @@ use katana_provider::BlockchainProvider;
 use rstest_reuse::{self, *};
 use starknet::macros::felt;
 
-type ClassHashAndClasses =
-    (ClassHash, Option<CompiledClassHash>, Option<CompiledContractClass>, Option<SierraClass>);
+type ClassHashAndClasses = (
+    ClassHash,
+    Option<CompiledClassHash>,
+    Option<CompiledContractClass>,
+    Option<FlattenedSierraClass>,
+);
 
 fn assert_state_provider_class(
     state_provider: Box<dyn StateProvider>,
