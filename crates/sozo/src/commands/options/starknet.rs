@@ -79,6 +79,6 @@ mod tests {
             ..Default::default()
         };
         let cmd = Command::parse_from([""]);
-        assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), METADATA_RPC);
+        assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_RPC);
     }
 }
