@@ -84,7 +84,7 @@ fn get_bindings_file_content(contract_name: &str, contract_class: ContractClass)
          --bin dojo-world-abigen` instead.\nuse cainome::rs::abigen;\n\nabigen!(\n    {},\n    \
          r#\"{}\"#\n);",
         contract_name,
-        serde_json::to_string(&contract_class.abi).unwrap()
+        serde_json::to_string_pretty(&contract_class.abi).unwrap()
     )
 }
 
