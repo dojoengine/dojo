@@ -32,7 +32,8 @@ use torii_core::sql::Sql;
 
 // mod entities_test;
 // mod metadata_test;
-mod models_test;
+// mod models_test;
+mod models_ordering_test;
 // mod subscription_test;
 
 use crate::schema::build_schema;
@@ -67,6 +68,16 @@ pub struct PageInfo {
     pub has_next_page: bool,
     pub start_cursor: Option<String>,
     pub end_cursor: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldModel {
+    pub id: String,
+    pub name: String,
+    pub class_hash: String,
+    pub transaction_hash: String,
+    pub created_at: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
