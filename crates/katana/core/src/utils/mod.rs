@@ -6,9 +6,9 @@ use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use crate::constants::{
     ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, ERC20_CONTRACT_COMPILED_CLASS_HASH,
     ERC20_DECIMALS_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
-    FEE_TOKEN_ADDRESS, OZ_V0_ACCOUNT_CONTRACT, OZ_V0_ACCOUNT_CONTRACT_CLASS_HASH,
-    OZ_V0_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH, UDC_ADDRESS, UDC_CLASS_HASH,
-    UDC_COMPILED_CLASS_HASH, UDC_CONTRACT,
+    FEE_TOKEN_ADDRESS, OZ_V1_ACCOUNT_CONTRACT, OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH,
+    OZ_V1_ACCOUNT_CONTRACT_COMPILED, OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH, UDC_ADDRESS,
+    UDC_CLASS_HASH, UDC_COMPILED_CLASS_HASH, UDC_CONTRACT,
 };
 
 pub(super) fn get_current_timestamp() -> std::time::Duration {
@@ -38,15 +38,18 @@ pub(super) fn get_genesis_states_for_testing() -> StateUpdatesWithDeclaredClasse
     let declared_classes = HashMap::from([
         (*UDC_CLASS_HASH, *UDC_COMPILED_CLASS_HASH),
         (*ERC20_CONTRACT_CLASS_HASH, *ERC20_CONTRACT_COMPILED_CLASS_HASH),
-        (*OZ_V0_ACCOUNT_CONTRACT_CLASS_HASH, *OZ_V0_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH),
+        (*OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH, *OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH),
     ]);
 
-    let declared_sierra_classes = HashMap::from([]);
+    let declared_sierra_classes = HashMap::from([(
+        *OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
+        OZ_V1_ACCOUNT_CONTRACT.clone().flatten().unwrap(),
+    )]);
 
     let declared_compiled_classes = HashMap::from([
         (*UDC_COMPILED_CLASS_HASH, (*UDC_CONTRACT).clone()),
         (*ERC20_CONTRACT_COMPILED_CLASS_HASH, (*ERC20_CONTRACT).clone()),
-        (*OZ_V0_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH, (*OZ_V0_ACCOUNT_CONTRACT).clone()),
+        (*OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH, (*OZ_V1_ACCOUNT_CONTRACT_COMPILED).clone()),
     ]);
 
     StateUpdatesWithDeclaredClasses {

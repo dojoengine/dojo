@@ -154,6 +154,7 @@ impl KatanaSequencer {
             transactions.into_iter(),
             block_context,
             state,
+            !self.backend.config.read().disable_validate,
         )
         .map_err(SequencerError::TransactionExecution)
     }

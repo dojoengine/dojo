@@ -42,6 +42,8 @@ pub struct TransactionExecutor<'a, S: StateReader, T> {
     transactions: T,
     /// The state the transactions will be executed on.
     state: &'a CachedStateWrapper<S>,
+    /// A flag to enable/disable transaction validation.
+    validate: bool,
 
     // logs flags
     error_log: bool,
@@ -58,6 +60,7 @@ where
         state: &'a CachedStateWrapper<S>,
         block_context: &'a BlockContext,
         charge_fee: bool,
+        validate: bool,
         transactions: T,
     ) -> Self {
         Self {
@@ -65,6 +68,7 @@ where
             charge_fee,
             transactions,
             block_context,
+            validate,
             error_log: false,
             events_log: false,
             resources_log: false,
@@ -97,10 +101,9 @@ where
     type Item = TxExecutionResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let res = self
-            .transactions
-            .next()
-            .map(|tx| execute_tx(tx, self.state, self.block_context, self.charge_fee))?;
+        let res = self.transactions.next().map(|tx| {
+            execute_tx(tx, self.state, self.block_context, self.charge_fee, self.validate)
+        })?;
 
         match res {
             Ok(ref info) => {
@@ -142,10 +145,8 @@ fn execute_tx<S: StateReader>(
     state: &CachedStateWrapper<S>,
     block_context: &BlockContext,
     charge_fee: bool,
+    validate: bool,
 ) -> TxExecutionResult {
-    // TODO: check how this value must be controlled.
-    let validate = true;
-
     let sierra = if let ExecutableTx::Declare(DeclareTxWithClass {
         transaction,
         sierra_class: Some(sierra_class),

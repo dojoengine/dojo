@@ -12,12 +12,12 @@ use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::conversion::rpc::{
-    compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_inner_compiled_class,
-    sierra_to_compiled_class,
+    compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
+    legacy_rpc_to_inner_compiled_class,
 };
 use katana_primitives::FieldElement;
 use parking_lot::Mutex;
@@ -389,7 +389,7 @@ impl StateProvider for SharedStateProvider {
 }
 
 impl ContractClassProvider for SharedStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         if let class @ Some(_) = self.0.shared_contract_classes.sierra_classes.read().get(&hash) {
             return Ok(class.cloned());
         }
@@ -463,7 +463,7 @@ impl ContractClassProvider for SharedStateProvider {
             }
 
             ContractClass::Sierra(sierra_class) => {
-                let (_, compiled_class_hash, compiled_class) = sierra_to_compiled_class(&sierra_class).map_err(|e|{
+                let (_, compiled_class_hash, compiled_class) = flattened_sierra_to_compiled_class(&sierra_class).map_err(|e|{
                     error!(target: "forked_backend", "error while parsing sierra class {hash:#x}: {e}");
                     e
                 })?;
