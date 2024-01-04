@@ -59,8 +59,9 @@ mod tests {
 
         // *** ORDER TESTING ***
 
-        // order on name string ASC (number) 
-        let world_model = world_model_query(&schema, "(order: {field: NAME, direction: ASC})").await;
+        // order on name string ASC (number)
+        let world_model =
+            world_model_query(&schema, "(order: {field: NAME, direction: ASC})").await;
         let connection: Connection<WorldModel> = serde_json::from_value(world_model).unwrap();
         let first_model = connection.edges.first().unwrap();
         let second_model = connection.edges.get(1).unwrap();

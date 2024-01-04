@@ -123,11 +123,13 @@ pub fn connection_output(
         .iter()
         .map(|row| {
             let order_field = match order {
-                Some(order) => if is_external {
-                    format!("external_{}", order.field)
-                } else {
-                    order.field.to_string()
-                },
+                Some(order) => {
+                    if is_external {
+                        format!("external_{}", order.field)
+                    } else {
+                        order.field.to_string()
+                    }
+                }
                 None => id_column.to_string(),
             };
             println!("connection_output order_field {}", order_field);

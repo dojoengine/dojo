@@ -86,7 +86,7 @@ pub async fn fetch_multiple_rows(
     match order {
         Some(order) => {
             let mut column_name = order.field.clone();
-            if table_name != MODEL_TABLE{
+            if table_name != MODEL_TABLE {
                 column_name = format!("external_{}", column_name);
             }
             println!("fetch_multiple_rows column_name {}", column_name);

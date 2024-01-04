@@ -9,8 +9,8 @@ use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Model;
 
-use super::inputs::order_input::parse_order_argument;
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
+use super::inputs::order_input::parse_order_argument;
 use super::{ObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::{
     ID_COLUMN, MODEL_NAMES, MODEL_ORDER_FIELD_TYPE_NAME, MODEL_ORDER_TYPE_NAME, MODEL_TABLE,
