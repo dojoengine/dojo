@@ -150,7 +150,6 @@ fn fetch_value(
     } else {
         field_name.to_string().to_case(Case::Snake)
     };
-    println!("fetch_value column_name {}", column_name);
 
     match Primitive::from_str(type_name) {
         // fetch boolean

@@ -132,8 +132,6 @@ pub fn connection_output(
                 }
                 None => id_column.to_string(),
             };
-            println!("connection_output order_field {}", order_field);
-
             let primary_order = row.try_get::<String, &str>(id_column)?;
             let secondary_order = row.try_get_unchecked::<String, &str>(&order_field)?;
             let cursor = cursor::encode(&primary_order, &secondary_order);

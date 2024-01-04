@@ -43,7 +43,6 @@ impl ModelDataObject {
         let where_input = WhereInputObject::new(type_name.as_str(), &type_mapping);
         let order_input = OrderInputObject::new(type_name.as_str(), &type_mapping);
         let plural_name = format!("{}Models", name);
-        println!("ModelDataObject {}", name);
         Self { name, plural_name, type_name, type_mapping, where_input, order_input }
     }
 }
@@ -120,7 +119,6 @@ impl ObjectTrait for ModelDataObject {
         // Add relay connection fields (first, last, before, after, where)
         field = connection_arguments(field);
         field = where_argument(field, self.type_name());
-        println!("Name {}", self.name().1);
         field = order_argument(field, self.type_name());
 
         Some(field)

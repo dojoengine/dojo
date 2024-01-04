@@ -89,7 +89,6 @@ pub async fn fetch_multiple_rows(
             if table_name != MODEL_TABLE {
                 column_name = format!("external_{}", column_name);
             }
-            println!("fetch_multiple_rows column_name {}", column_name);
             query.push_str(&format!(
                 " ORDER BY {column_name} {}, {id_column} {} LIMIT {limit}",
                 order.direction.as_ref(),
@@ -129,7 +128,6 @@ pub async fn fetch_multiple_rows(
             Some(order) => format!("external_{}", order.field),
             None => id_column.to_string(),
         };
-        println!("fetch_multiple_rows order_field {}", order_field);
         match cursor_param {
             Some(cursor_query) => {
                 let first_cursor = cursor::encode(
@@ -192,7 +190,6 @@ fn handle_cursor(
         Ok((event_id, field_value)) => match order {
             Some(order) => {
                 let field_name = format!("external_{}", order.field);
-                println!("handle_cursor field_name {}", field_name);
                 Ok(format!(
                     "(({} {} '{}' AND {} = '{}') OR {} {} '{}')",
                     id_column,
