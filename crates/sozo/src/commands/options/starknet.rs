@@ -5,15 +5,15 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use url::Url;
 
-const STARKNET_RPC_URL_ENV_VAR: &str = "STARKNET_RPC_URL";
+use super::STARKNET_RPC_URL_ENV_VAR;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Starknet options")]
 pub struct StarknetOptions {
-    #[arg(long, env = STARKNET_RPC_URL_ENV_VAR, default_value = "http://localhost:5050")]
+    #[arg(long, env = STARKNET_RPC_URL_ENV_VAR)]
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC endpoint.")]
-    pub rpc_url: Url,
+    pub rpc_url: Option<Url>,
 }
 
 impl StarknetOptions {
@@ -26,11 +26,13 @@ impl StarknetOptions {
 
     // we dont check the env var because that would be handled by `clap`
     fn url(&self, env_metadata: Option<&Environment>) -> Result<Url> {
-        Ok(if let Some(url) = env_metadata.and_then(|env| env.rpc_url()) {
-            Url::parse(url)?
+        if let Some(url) = self.rpc_url.as_ref() {
+            Ok(url.clone())
+        } else if let Some(url) = env_metadata.and_then(|env| env.rpc_url()) {
+            Ok(Url::parse(url)?)
         } else {
-            self.rpc_url.clone()
-        })
+            Ok(Url::parse("http://localhost:5050").unwrap())
+        }
     }
 }
 
@@ -39,7 +41,7 @@ mod tests {
     use clap::Parser;
 
     use super::StarknetOptions;
-    use crate::commands::options::starknet::STARKNET_RPC_URL_ENV_VAR;
+    use crate::commands::options::STARKNET_RPC_URL_ENV_VAR;
 
     const ENV_RPC: &str = "http://localhost:7474/";
     const METADATA_RPC: &str = "http://localhost:6060/";
