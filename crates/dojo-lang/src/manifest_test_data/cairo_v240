@@ -8,7 +8,7 @@ test_compiler_cairo_v240
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
+    "class_hash": "0x439034396f2e01cf02122b1816378fddfa33b92109f80642306a3bcddd18d8e",
     "abi": [
       {
         "type": "impl",
@@ -114,7 +114,7 @@ test_compiler_cairo_v240
             "name": "model",
             "inputs": [
               {
-                "name": "name",
+                "name": "name_hash",
                 "type": "core::felt252"
               }
             ],
@@ -130,6 +130,10 @@ test_compiler_cairo_v240
             "name": "register_model",
             "inputs": [
               {
+                "name": "name",
+                "type": "core::array::Span::<core::felt252>"
+              },
+              {
                 "name": "class_hash",
                 "type": "core::starknet::class_hash::ClassHash"
               }
@@ -142,8 +146,8 @@ test_compiler_cairo_v240
             "name": "deploy_contract",
             "inputs": [
               {
-                "name": "salt",
-                "type": "core::felt252"
+                "name": "name",
+                "type": "core::array::Span::<core::felt252>"
               },
               {
                 "name": "class_hash",
@@ -532,8 +536,8 @@ test_compiler_cairo_v240
         "kind": "struct",
         "members": [
           {
-            "name": "salt",
-            "type": "core::felt252",
+            "name": "name",
+            "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           },
           {
@@ -601,7 +605,7 @@ test_compiler_cairo_v240
         "members": [
           {
             "name": "name",
-            "type": "core::felt252",
+            "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           },
           {

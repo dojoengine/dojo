@@ -109,7 +109,7 @@ abigen!(
         "name": "model",
         "inputs": [
           {
-            "name": "name",
+            "name": "name_hash",
             "type": "core::felt252"
           }
         ],
@@ -125,6 +125,10 @@ abigen!(
         "name": "register_model",
         "inputs": [
           {
+            "name": "name",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
             "name": "class_hash",
             "type": "core::starknet::class_hash::ClassHash"
           }
@@ -137,8 +141,8 @@ abigen!(
         "name": "deploy_contract",
         "inputs": [
           {
-            "name": "salt",
-            "type": "core::felt252"
+            "name": "name",
+            "type": "core::array::Span::<core::felt252>"
           },
           {
             "name": "class_hash",
@@ -527,8 +531,8 @@ abigen!(
     "kind": "struct",
     "members": [
       {
-        "name": "salt",
-        "type": "core::felt252",
+        "name": "name",
+        "type": "core::array::Span::<core::felt252>",
         "kind": "data"
       },
       {
@@ -596,7 +600,7 @@ abigen!(
     "members": [
       {
         "name": "name",
-        "type": "core::felt252",
+        "type": "core::array::Span::<core::felt252>",
         "kind": "data"
       },
       {

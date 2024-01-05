@@ -41,7 +41,7 @@ fn deploy_world() -> IWorldDispatcher {
 fn test_upgrade_from_world() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world.deploy_contract(array!['base'].span(), base::TEST_CLASS_HASH.try_into().unwrap());
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     world.upgrade_contract(base_address, new_class_hash);
@@ -56,7 +56,7 @@ fn test_upgrade_from_world() {
 fn test_upgrade_direct() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let base_address = world.deploy_contract(array!['base'].span(), base::TEST_CLASS_HASH.try_into().unwrap());
     let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
 
     let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };

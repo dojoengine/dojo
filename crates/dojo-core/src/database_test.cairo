@@ -8,7 +8,6 @@ use traits::{Into, TryInto};
 use starknet::syscalls::deploy_syscall;
 use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
 use dojo::world::{IWorldDispatcher};
-use dojo::executor::executor;
 use dojo::database::{get, set, set_with_index, del, scan};
 use dojo::database::index::WhereCondition;
 

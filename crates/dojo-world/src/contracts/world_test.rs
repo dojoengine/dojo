@@ -8,6 +8,7 @@ use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::FieldElement;
 
 use super::{WorldContract, WorldContractReader};
+use crate::contracts::cairo_utils::str_to_felts;
 use crate::manifest::Manifest;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
@@ -76,7 +77,7 @@ pub async fn deploy_world(
     let mut declare_output = vec![];
     for model in strategy.models {
         let res = model.declare(&account, Default::default()).await.unwrap();
-        declare_output.push(res);
+        declare_output.push((model, res));
     }
 
     // wait for the tx to be mined
@@ -86,7 +87,12 @@ pub async fn deploy_world(
 
     let calls = declare_output
         .iter()
-        .map(|o| world.register_model_getcall(&o.class_hash.into()))
+        .map(|(model, declare)| {
+            world.register_model_getcall(
+                &str_to_felts(&model.diff.name).unwrap(),
+                &declare.class_hash.into(),
+            )
+        })
         .collect::<Vec<_>>();
 
     let _ = account.execute(calls).send().await.unwrap();

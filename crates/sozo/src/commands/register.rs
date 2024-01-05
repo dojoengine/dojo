@@ -1,3 +1,6 @@
+use anyhow::Error;
+use std::str::FromStr;
+
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use dojo_world::metadata::dojo_metadata_from_workspace;
@@ -10,6 +13,29 @@ use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::ops::register;
 
+#[derive(Clone, Debug)]
+pub struct Model {
+    pub name: String,
+    pub class_hash: FieldElement,
+}
+
+impl FromStr for Model {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(',').collect();
+        if parts.len() != 2 {
+            return Err(Error::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Invalid input",
+            )));
+        }
+        let name = parts[0].to_string();
+        let class_hash = parts[1].parse()?;
+        Ok(Model { name, class_hash })
+    }
+}
+
 #[derive(Debug, Args)]
 pub struct RegisterArgs {
     #[command(subcommand)]
@@ -20,11 +46,11 @@ pub struct RegisterArgs {
 pub enum RegisterCommand {
     #[command(about = "Register a model to a world.")]
     Model {
-        #[arg(num_args = 1..)]
+        // #[arg(num_args = 1..)]
         #[arg(required = true)]
-        #[arg(value_name = "CLASS_HASH")]
-        #[arg(help = "The class hash of the models to register.")]
-        models: Vec<FieldElement>,
+        #[arg(value_name = "MODEL")]
+        #[arg(help = "A (name, class hash) tuple of the models to register.")]
+        models: Vec<Model>,
 
         #[command(flatten)]
         world: WorldOptions,

@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use dojo_world::metadata::Environment;
-use dojo_world::migration::strategy::generate_salt;
+use dojo_world::migration::strategy::poseidon_hash_str;
 use dojo_world::utils::TransactionWaiter;
 use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall};
@@ -36,7 +36,7 @@ pub async fn execute(args: ExecuteArgs, env_metadata: Option<Environment>) -> Re
             .await?;
 
         get_contract_address(
-            generate_salt(&contract),
+            poseidon_hash_str(&contract),
             contract_class_hash[0],
             &[],
             FieldElement::from_hex_be(&world_address).unwrap(),

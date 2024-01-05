@@ -47,6 +47,7 @@ fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
         executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
     )
         .unwrap();
+
     // deploy world
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
@@ -63,7 +64,7 @@ fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
         if index == models.len() {
             break ();
         }
-        world.register_model((*models[index]).try_into().unwrap());
+        world.register_model(array![index.into()].span(), (*models[index]).try_into().unwrap());
         index += 1;
     };
 

@@ -7,6 +7,7 @@ use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
+use dojo_world::migration::strategy::poseidon_hash_str;
 
 use crate::introspect::handle_introspect_struct;
 use crate::plugin::{DojoAuxData, Model};
@@ -75,40 +76,41 @@ pub fn handle_model_struct(
         members.iter().filter_map(|m| serialize_member(m, false)).collect::<_>();
 
     let name = struct_ast.name(db).text(db);
+    let name_hash = format!("0x{:x}", poseidon_hash_str(name.as_str()));
     aux_data.models.push(Model { name: name.to_string(), members: members.to_vec() });
 
     (
         RewriteNode::interpolate_patched(
             "
-            impl $type_name$Model of dojo::model::Model<$type_name$> {
+            impl $name$Model of dojo::model::Model<$name$> {
                 #[inline(always)]
-                fn name(self: @$type_name$) -> felt252 {
-                    '$type_name$'
+                fn name_hash(self: @$name$) -> felt252 {
+                    '$name$'
                 }
 
                 #[inline(always)]
-                fn keys(self: @$type_name$) -> Span<felt252> {
+                fn keys(self: @$name$) -> Span<felt252> {
                     let mut serialized = core::array::ArrayTrait::new();
                     $serialized_keys$
                     core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
-                fn values(self: @$type_name$) -> Span<felt252> {
+                fn values(self: @$name$) -> Span<felt252> {
                     let mut serialized = core::array::ArrayTrait::new();
                     $serialized_values$
                     core::array::ArrayTrait::span(@serialized)
                 }
 
                 #[inline(always)]
-                fn layout(self: @$type_name$) -> Span<u8> {
+                fn layout(self: @$name$) -> Span<u8> {
                     let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<$name$>::layout(ref layout);
                     core::array::ArrayTrait::span(@layout)
                 }
 
                 #[inline(always)]
-                fn packed_size(self: @$type_name$) -> usize {
+                fn packed_size(self: @$name$) -> usize {
                     let mut layout = self.layout();
                     dojo::packing::calculate_packed_size(ref layout)
                 }
@@ -117,31 +119,31 @@ pub fn handle_model_struct(
             $schema_introspection$
 
             #[starknet::interface]
-            trait I$type_name$<T> {
+            trait I$name$<T> {
                 fn name(self: @T) -> felt252;
             }
 
             #[starknet::contract]
             mod $contract_name$ {
-                use super::$type_name$;
+                use super::$name$;
 
                 #[storage]
                 struct Storage {}
 
                 #[external(v0)]
-                fn name(self: @ContractState) -> felt252 {
-                    '$type_name$'
+                fn name_hash(self: @ContractState) -> felt252 {
+                    $name_hash$
                 }
 
                 #[external(v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
-                    dojo::database::introspect::Introspect::<$type_name$>::size()
+                    dojo::database::introspect::Introspect::<$name$>::size()
                 }
 
                 #[external(v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<$name$>::layout(ref layout);
                     let mut layout_span = layout.span();
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
@@ -149,22 +151,20 @@ pub fn handle_model_struct(
                 #[external(v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+                    dojo::database::introspect::Introspect::<$name$>::layout(ref layout);
                     core::array::ArrayTrait::span(@layout)
                 }
 
                 #[external(v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                    dojo::database::introspect::Introspect::<$type_name$>::ty()
+                    dojo::database::introspect::Introspect::<$name$>::ty()
                 }
             }
         ",
             &UnorderedHashMap::from([
                 ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
-                (
-                    "type_name".to_string(),
-                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-                ),
+                ("name".to_string(), RewriteNode::Text(name.to_string())),
+                ("name_hash".to_string(), RewriteNode::Text(name_hash.to_string())),
                 ("schema_introspection".to_string(), handle_introspect_struct(db, struct_ast)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),

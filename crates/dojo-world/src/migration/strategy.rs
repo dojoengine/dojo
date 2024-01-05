@@ -4,8 +4,10 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use starknet::core::types::FieldElement;
-use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
-use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
+use starknet::core::utils::get_contract_address;
+use starknet_crypto::poseidon_hash_single;
+
+use crate::contracts::cairo_utils::poseidon_hash_str;
 
 use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
@@ -185,7 +187,7 @@ fn evaluate_contracts_to_migrate(
                 comps_to_migrate.push(ContractMigration {
                     diff: c.clone(),
                     artifact_path: path.clone(),
-                    salt: generate_salt(&c.name),
+                    salt: poseidon_hash_str(&c.name)?,
                     ..Default::default()
                 });
             }
@@ -223,18 +225,4 @@ fn find_artifact_path<'a>(
     artifact_paths
         .get(contract_name)
         .with_context(|| anyhow!("missing contract artifact for `{}` contract", contract_name))
-}
-
-pub fn generate_salt(value: &str) -> FieldElement {
-    poseidon_hash_many(
-        &value
-            .chars()
-            .collect::<Vec<_>>()
-            .chunks(31)
-            .map(|chunk| {
-                let s: String = chunk.iter().collect();
-                cairo_short_string_to_felt(&s).unwrap()
-            })
-            .collect::<Vec<_>>(),
-    )
 }

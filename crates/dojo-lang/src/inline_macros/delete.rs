@@ -142,7 +142,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
             builder.add_str(&format!(
                 "
                 let __delete_macro_value__ = {};
-                {}.delete_entity(dojo::model::Model::name(@__delete_macro_value__),
+                {}.delete_entity(dojo::model::Model::name_hash(@__delete_macro_value__),
                  dojo::model::Model::keys(@__delete_macro_value__),
                  dojo::model::Model::layout(@__delete_macro_value__));",
                 entity,

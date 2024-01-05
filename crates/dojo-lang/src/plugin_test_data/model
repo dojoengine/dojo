@@ -802,7 +802,7 @@ impl PositionSerde of core::serde::Serde::<Position> {
 
             impl PositionModel of dojo::model::Model<Position> {
                 #[inline(always)]
-                fn name(self: @Position) -> felt252 {
+                fn name_hash(self: @Position) -> felt252 {
                     'Position'
                 }
 
@@ -879,8 +879,8 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
                 struct Storage {}
 
                 #[external(v0)]
-                fn name(self: @ContractState) -> felt252 {
-                    'Position'
+                fn name_hash(self: @ContractState) -> felt252 {
+                    0x7b7bd4fefed73494631bcd45cf49e26b9c08d0cf2eef498e296ae6a76c106e4
                 }
 
                 #[external(v0)]
@@ -921,7 +921,7 @@ impl RolesSerde of core::serde::Serde::<Roles> {
 
             impl RolesModel of dojo::model::Model<Roles> {
                 #[inline(always)]
-                fn name(self: @Roles) -> felt252 {
+                fn name_hash(self: @Roles) -> felt252 {
                     'Roles'
                 }
 
@@ -994,8 +994,8 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                 struct Storage {}
 
                 #[external(v0)]
-                fn name(self: @ContractState) -> felt252 {
-                    'Roles'
+                fn name_hash(self: @ContractState) -> felt252 {
+                    0xe7952dd4a6d8cadc01c549ea1f202191a0371fde8260f06166932e8b366c4a
                 }
 
                 #[external(v0)]
@@ -1036,7 +1036,7 @@ impl OnlyKeyModelSerde of core::serde::Serde::<OnlyKeyModel> {
 
             impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
                 #[inline(always)]
-                fn name(self: @OnlyKeyModel) -> felt252 {
+                fn name_hash(self: @OnlyKeyModel) -> felt252 {
                     'OnlyKeyModel'
                 }
 
@@ -1108,8 +1108,8 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
                 struct Storage {}
 
                 #[external(v0)]
-                fn name(self: @ContractState) -> felt252 {
-                    'OnlyKeyModel'
+                fn name_hash(self: @ContractState) -> felt252 {
+                    0xadf5de5b7ca949565c1ab1e99d5c3501b0f2694b919bf9df06177fca2daa3e
                 }
 
                 #[external(v0)]
@@ -1156,7 +1156,7 @@ impl PlayerSerde of core::serde::Serde::<Player> {
 
             impl PlayerModel of dojo::model::Model<Player> {
                 #[inline(always)]
-                fn name(self: @Player) -> felt252 {
+                fn name_hash(self: @Player) -> felt252 {
                     'Player'
                 }
 
@@ -1237,8 +1237,8 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
                 struct Storage {}
 
                 #[external(v0)]
-                fn name(self: @ContractState) -> felt252 {
-                    'Player'
+                fn name_hash(self: @ContractState) -> felt252 {
+                    0x3ef60e19d392fb1385879854ee6baf68dae43234ef5932a2c8087825dd75585
                 }
 
                 #[external(v0)]

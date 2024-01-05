@@ -6,9 +6,9 @@ use option::OptionTrait;
 trait IWorld<T> {
     fn metadata_uri(self: @T, resource: felt252) -> Span<felt252>;
     fn set_metadata_uri(ref self: T, resource: felt252, uri: Span<felt252>);
-    fn model(self: @T, name: felt252) -> ClassHash;
-    fn register_model(ref self: T, class_hash: ClassHash);
-    fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
+    fn model(self: @T, name_hash: felt252) -> ClassHash;
+    fn register_model(ref self: T, name: Span<felt252>, class_hash: ClassHash);
+    fn deploy_contract(ref self: T, name: Span<felt252>, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
@@ -47,7 +47,7 @@ trait IWorld<T> {
 
 #[starknet::interface]
 trait IUpgradeableWorld<T> {
-    fn upgrade(ref self: T, new_class_hash : ClassHash);
+    fn upgrade(ref self: T, new_class_hash: ClassHash);
 }
 
 #[starknet::interface]
@@ -70,19 +70,16 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult, SyscallResultTrait,
-        SyscallResultTraitImpl
+        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult,
+        SyscallResultTrait, SyscallResultTraitImpl
     };
 
     use dojo::database;
     use dojo::database::index::WhereCondition;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
-    
-    use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
-    const NAME_ENTRYPOINT: felt252 =
-        0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
+    use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
     const WORLD: felt252 = 0;
 
@@ -112,10 +109,10 @@ mod world {
     struct WorldUpgraded {
         class_hash: ClassHash,
     }
-   
+
     #[derive(Drop, starknet::Event)]
     struct ContractDeployed {
-        salt: felt252,
+        name: Span<felt252>,
         class_hash: ClassHash,
         address: ContractAddress,
     }
@@ -134,7 +131,7 @@ mod world {
 
     #[derive(Drop, starknet::Event)]
     struct ModelRegistered {
-        name: felt252,
+        name: Span<felt252>,
         class_hash: ClassHash,
         prev_class_hash: ClassHash
     }
@@ -173,7 +170,6 @@ mod world {
         prev_address: ContractAddress,
     }
 
-
     #[storage]
     struct Storage {
         executor_dispatcher: IExecutorDispatcher,
@@ -193,24 +189,6 @@ mod world {
         self.owners.write((WORLD, creator), true);
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
-    }
-
-    /// Call Helper,
-    /// Call the provided `entrypoint` method on the given `class_hash`.
-    ///
-    /// # Arguments
-    ///
-    /// * `class_hash` - Class Hash to call.
-    /// * `entrypoint` - Entrypoint to call.
-    /// * `calldata` - The calldata to pass.
-    ///
-    /// # Returns
-    ///
-    /// The return value of the call.
-    fn class_call(
-        self: @ContractState, class_hash: ClassHash, entrypoint: felt252, calldata: Span<felt252>
-    ) -> Span<felt252> {
-        self.executor_dispatcher.read().call(class_hash, entrypoint, calldata)
     }
 
     #[external(v0)]
@@ -372,22 +350,21 @@ mod world {
         /// # Arguments
         ///
         /// * `class_hash` - The class hash of the model to be registered.
-        fn register_model(ref self: ContractState, class_hash: ClassHash) {
+        fn register_model(ref self: ContractState, name: Span<felt252>, class_hash: ClassHash) {
             let caller = get_caller_address();
-            let calldata = ArrayTrait::new();
-            let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, calldata.span())[0];
+            let name_hash = poseidon::poseidon_hash_span(name);
             let mut prev_class_hash = starknet::class_hash::ClassHashZeroable::zero();
 
             // If model is already registered, validate permission to update.
-            let current_class_hash = self.models.read(name);
+            let current_class_hash = self.models.read(name_hash);
             if current_class_hash.is_non_zero() {
-                assert(self.is_owner(caller, name), 'only owner can update');
+                assert(self.is_owner(caller, name_hash), 'only owner can update');
                 prev_class_hash = current_class_hash;
             } else {
-                self.owners.write((name, caller), true);
+                self.owners.write((name_hash, caller), true);
             };
 
-            self.models.write(name, class_hash);
+            self.models.write(name_hash, class_hash);
             EventEmitter::emit(ref self, ModelRegistered { name, class_hash, prev_class_hash });
         }
 
@@ -395,13 +372,13 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the model.
+        /// * `name_hash` - The has of the model name.
         ///
         /// # Returns
         ///
         /// * `ClassHash` - The class hash of the model.
-        fn model(self: @ContractState, name: felt252) -> ClassHash {
-            self.models.read(name)
+        fn model(self: @ContractState, name_hash: felt252) -> ClassHash {
+            self.models.read(name_hash)
         }
 
         /// Deploys a contract associated with the world.
@@ -415,10 +392,11 @@ mod world {
         ///
         /// * `ContractAddress` - The address of the newly deployed contract.
         fn deploy_contract(
-            ref self: ContractState, salt: felt252, class_hash: ClassHash
+            ref self: ContractState, name: Span<felt252>, class_hash: ClassHash
         ) -> ContractAddress {
+            let name_hash = poseidon::poseidon_hash_span(name);
             let (contract_address, _) = deploy_syscall(
-                self.contract_base.read(), salt, array![].span(), false
+                self.contract_base.read(), name_hash, array![].span(), false
             )
                 .unwrap_syscall();
             let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address };
@@ -427,7 +405,7 @@ mod world {
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
             EventEmitter::emit(
-                ref self, ContractDeployed { salt, class_hash, address: contract_address }
+                ref self, ContractDeployed { name, class_hash, address: contract_address }
             );
 
             contract_address
@@ -641,17 +619,18 @@ mod world {
         /// # Arguments
         ///
         /// * `new_class_hash` - The new world class hash.
-        fn upgrade(ref self: ContractState, new_class_hash : ClassHash){
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
-            assert(IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD), 'only owner can upgrade');
+            assert(
+                IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD),
+                'only owner can upgrade'
+            );
 
             // upgrade to new_class_hash
             replace_class_syscall(new_class_hash).unwrap();
 
             // emit Upgrade Event
-            EventEmitter::emit(
-                ref self, WorldUpgraded {class_hash: new_class_hash }
-            );
+            EventEmitter::emit(ref self, WorldUpgraded { class_hash: new_class_hash });
         }
     }
 

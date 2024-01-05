@@ -67,7 +67,6 @@ mod actions {
         name: felt252,
     }
 
-
     #[external(v0)]
     impl ActionsImpl of IActions<ContractState> {
         fn spawn(self: @ContractState) {

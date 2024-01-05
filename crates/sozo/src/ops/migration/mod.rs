@@ -1,12 +1,12 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
-use dojo_world::contracts::cairo_utils;
+use dojo_world::contracts::cairo_utils::{self, str_to_felts};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
-use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
+use dojo_world::migration::strategy::{poseidon_hash_str, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
@@ -102,7 +102,7 @@ where
     };
 
     local_manifest.contracts.iter_mut().for_each(|c| {
-        let salt = generate_salt(&c.name);
+        let salt = poseidon_hash_str(&c.name);
         c.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
 
@@ -468,7 +468,9 @@ where
 
     let calls = models
         .iter()
-        .map(|c| world.register_model_getcall(&c.diff.local.into()))
+        .map(|c| {
+            world.register_model_getcall(&str_to_felts(&c.diff.name).unwrap(), &c.diff.local.into())
+        })
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } = migrator

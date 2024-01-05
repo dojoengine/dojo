@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
+    "class_hash": "0x439034396f2e01cf02122b1816378fddfa33b92109f80642306a3bcddd18d8e",
     "abi": [
       {
         "type": "impl",
@@ -114,7 +114,7 @@ test_manifest_file
             "name": "model",
             "inputs": [
               {
-                "name": "name",
+                "name": "name_hash",
                 "type": "core::felt252"
               }
             ],
@@ -130,6 +130,10 @@ test_manifest_file
             "name": "register_model",
             "inputs": [
               {
+                "name": "name",
+                "type": "core::array::Span::<core::felt252>"
+              },
+              {
                 "name": "class_hash",
                 "type": "core::starknet::class_hash::ClassHash"
               }
@@ -142,8 +146,8 @@ test_manifest_file
             "name": "deploy_contract",
             "inputs": [
               {
-                "name": "salt",
-                "type": "core::felt252"
+                "name": "name",
+                "type": "core::array::Span::<core::felt252>"
               },
               {
                 "name": "class_hash",
@@ -532,8 +536,8 @@ test_manifest_file
         "kind": "struct",
         "members": [
           {
-            "name": "salt",
-            "type": "core::felt252",
+            "name": "name",
+            "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           },
           {
@@ -601,7 +605,7 @@ test_manifest_file
         "members": [
           {
             "name": "name",
-            "type": "core::felt252",
+            "type": "core::array::Span::<core::felt252>",
             "kind": "data"
           },
           {
@@ -1205,11 +1209,11 @@ test_manifest_file
     {
       "name": "dojo_examples::models::moves",
       "address": null,
-      "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
+      "class_hash": "0x268a4fa3b20c32f89ca204c679e5b1080950aa07ab81f5735abb2fa1db7187c",
       "abi": [
         {
           "type": "function",
-          "name": "name",
+          "name": "name_hash",
           "inputs": [],
           "outputs": [
             {
@@ -1374,11 +1378,11 @@ test_manifest_file
     {
       "name": "dojo_examples::models::position",
       "address": null,
-      "class_hash": "0x4cd20d231b04405a77b184c115dc60637e186504fad7f0929bd76cbd09c10b",
+      "class_hash": "0x165b41f5633015dc37f000b24019e8cb32c06570d4b2baf026ca5b6b707940f",
       "abi": [
         {
           "type": "function",
-          "name": "name",
+          "name": "name_hash",
           "inputs": [],
           "outputs": [
             {

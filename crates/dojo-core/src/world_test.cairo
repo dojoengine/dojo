@@ -8,8 +8,10 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
-use dojo::executor::executor;
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait };
+use dojo::world::{
+    IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
+    IUpgradeableWorldDispatcherTrait
+};
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
@@ -115,7 +117,7 @@ mod bar {
 fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
     // Spawn empty world
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(array!['foo'].span(), foo::TEST_CLASS_HASH.try_into().unwrap());
 
     // System contract
     let bar_contract = IbarDispatcher {
@@ -129,7 +131,7 @@ fn deploy_world_and_bar() -> (IWorldDispatcher, IbarDispatcher) {
 #[available_gas(2000000)]
 fn test_model() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(array!['foo'].span(), foo::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
@@ -167,9 +169,10 @@ fn test_delete() {
 #[available_gas(6000000)]
 fn test_model_class_hash_getter() {
     let world = deploy_world();
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    let name = array!['foo'].span();
+    world.register_model(name, foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let foo = world.model('Foo');
+    let foo = world.model(poseidon::poseidon_hash_span(name));
     assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
 }
 
@@ -212,7 +215,7 @@ fn test_set_entity_unauthorized() {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
-    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+    world.register_model(array!['foo'].span(), foo::TEST_CLASS_HASH.try_into().unwrap());
 
     let caller = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_account_contract_address(caller);
@@ -502,10 +505,10 @@ mod worldupgrade {
     struct Storage {
         world: IWorldDispatcher,
     }
-    
+
     #[external(v0)]
     impl IWorldUpgradeImpl of super::IWorldUpgrade<ContractState> {
-        fn hello(self: @ContractState) -> felt252{
+        fn hello(self: @ContractState) -> felt252 {
             'dojo'
         }
     }
@@ -515,7 +518,6 @@ mod worldupgrade {
 #[test]
 #[available_gas(60000000)]
 fn test_upgradeable_world() {
-    
     // Deploy world contract
     let world = deploy_world();
 
@@ -524,18 +526,15 @@ fn test_upgradeable_world() {
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
 
-    let res = (IWorldUpgradeDispatcher {
-        contract_address: world.contract_address
-    }).hello();
+    let res = (IWorldUpgradeDispatcher { contract_address: world.contract_address }).hello();
 
     assert(res == 'dojo', 'should return dojo');
 }
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic(expected:('invalid class_hash', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('invalid class_hash', 'ENTRYPOINT_FAILED'))]
 fn test_upgradeable_world_with_class_hash_zero() {
-    
     // Deploy world contract
     let world = deploy_world();
 
@@ -549,9 +548,8 @@ fn test_upgradeable_world_with_class_hash_zero() {
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic( expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
 fn test_upgradeable_world_from_non_owner() {
-    
     // Deploy world contract
     let world = deploy_world();
 

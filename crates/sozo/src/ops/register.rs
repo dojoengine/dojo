@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use dojo_world::contracts::cairo_utils::str_to_felts;
 use dojo_world::contracts::WorldContract;
 use dojo_world::metadata::Environment;
 use dojo_world::utils::TransactionWaiter;
@@ -17,7 +18,12 @@ pub async fn execute(command: RegisterCommand, env_metadata: Option<Environment>
 
             let calls = models
                 .iter()
-                .map(|c| world.register_model_getcall(&(*c).into()))
+                .map(|m| {
+                    world.register_model_getcall(
+                        &str_to_felts(&m.name).unwrap(),
+                        &m.class_hash.into(),
+                    )
+                })
                 .collect::<Vec<_>>();
 
             let res = account
