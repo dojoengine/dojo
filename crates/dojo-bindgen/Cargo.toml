@@ -1,0 +1,18 @@
+[package]
+description = "Dojo specific bindings generator based on Cainome."
+edition.workspace = true
+license-file.workspace = true
+name = "dojo-bindgen"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+camino.workspace = true
+starknet.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+#cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.1.8" }
+cainome = { path = "/mnt/g/cgg/cainome" }

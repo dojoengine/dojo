@@ -24,6 +24,7 @@ clap-verbosity-flag = "2.0.1"
 clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
+dojo-bindgen = { path = "../dojo-bindgen" }
 dojo-lang = { path = "../dojo-lang" }
 dojo-types = { path = "../dojo-types" }
 dojo-world = { path = "../dojo-world", features = [ "contracts", "metadata", "migration" ] }
