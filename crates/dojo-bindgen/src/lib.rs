@@ -12,6 +12,7 @@ use error::{BindgenResult, Error};
 
 mod backends;
 use backends::typescript::TypescriptBuilder;
+use backends::unity::UnityBuilder;
 pub use backends::Backend;
 
 #[async_trait]
@@ -48,13 +49,13 @@ impl BindingManager {
             return Ok(());
         }
 
-        println!("GENERATE {:?}", self);
+        println!("Generating bindings with {:?}", self);
 
         for backend in &self.backends {
             // Get the backend builder from the backend enum.
-            let builder = match backend {
-                Backend::Typescript => TypescriptBuilder::new(),
-                Backend::Unity => todo!(),
+            let builder: Box<dyn BackendBuilder> = match backend {
+                Backend::Typescript => Box::new(TypescriptBuilder::new()),
+                Backend::Unity => Box::new(UnityBuilder::new()),
             };
 
             // TODO: types aliases: For now they are empty, we can expect them to be passed
