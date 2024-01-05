@@ -18,17 +18,14 @@ use backends::BackendBuilder;
 // TODO: include the manifest to have more metadata?
 #[derive(Debug)]
 pub struct BindingManager {
+    /// Path of contracts artifacts.
     pub artifacts_path: Utf8PathBuf,
+    /// A list of backends for which bindings must be generated.
     pub backends: Vec<Backend>,
 }
 
 impl BindingManager {
     /// Generates the bindings for all the given [`Backend`].
-    ///
-    /// # Arguments
-    ///
-    /// * `artifacts_path` - Path of contracts artifacts.
-    /// * `backends` - A list of backends for which bindings must be generated.
     pub async fn generate(&self) -> BindgenResult<()> {
         if self.backends.is_empty() {
             return Ok(());
@@ -74,6 +71,11 @@ impl BindingManager {
 /// For now the identification is very naive and don't use the manifest
 /// as the manifest format will change soon.
 /// TODO: use the new manifest files once available.
+///
+/// # Arguments
+///
+/// * `file_name` - Name of the contract file.
+/// * `file_content` - Content of the contract artifact.
 fn is_systems_contract(file_name: &str, file_content: &str) -> bool {
     if file_name.starts_with("dojo") || file_name == "manifest.json" {
         return false;
@@ -92,8 +94,8 @@ fn is_systems_contract(file_name: &str, file_content: &str) -> bool {
 ///
 /// # Arguments
 ///
-/// * `abi` - A string representing the ABI
-/// * `type_aliases` - Types to be renamed to avoid name clashing of generated types
+/// * `abi` - A string representing the ABI.
+/// * `type_aliases` - Types to be renamed to avoid name clashing of generated types.
 fn tokens_from_abi_string(
     abi: &str,
     type_aliases: &HashMap<String, String>,
@@ -115,7 +117,7 @@ fn tokens_from_abi_string(
 ///
 /// # Arguments
 ///
-/// * `abi` - A string representing the ABI
+/// * `abi` - A string representing the ABI.
 fn parse_abi_string(abi: &str) -> BindgenResult<Vec<AbiEntry>> {
     let entries = if let Ok(sierra) = serde_json::from_str::<SierraClass>(abi) {
         sierra.abi
