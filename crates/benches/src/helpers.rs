@@ -83,7 +83,7 @@ pub fn parse_calls(entrypoints_and_calldata: Vec<BenchCall>) -> Vec<Call> {
         .collect()
 }
 
-pub async fn execute_calls(calls: Vec<Call>) -> Result<u64> {
+pub async fn estimate_calls(calls: Vec<Call>) -> Result<u64> {
     let fee = account()
         .await
         .execute(calls)
@@ -94,4 +94,10 @@ pub async fn execute_calls(calls: Vec<Call>) -> Result<u64> {
         .unwrap();
 
     Ok(fee.gas_consumed)
+}
+
+pub async fn execute_calls(calls: Vec<Call>, nonce: FieldElement) -> Result<()> {
+    account().await.execute(calls).nonce(nonce).send().await.context("Failed to execute").unwrap();
+
+    Ok(())
 }

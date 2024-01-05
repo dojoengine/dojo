@@ -36,7 +36,7 @@ pub fn estimate_gas_last(calls: Vec<BenchCall>) -> Result<u64> {
     let _rt = RUNTIME.enter();
     block_on(async move {
         let (whole_gas, before_gas) =
-            future::try_join(execute_calls(all), execute_calls(calls)).await?;
+            future::try_join(estimate_calls(all), estimate_calls(calls)).await?;
         Ok(whole_gas - before_gas)
     })
 }
@@ -44,22 +44,24 @@ pub fn estimate_gas_last(calls: Vec<BenchCall>) -> Result<u64> {
 pub fn estimate_gas(call: BenchCall) -> Result<u64> {
     let calls = parse_calls(vec![call]);
     let _rt = RUNTIME.enter();
-    block_on(async move { execute_calls(calls).await })
+    block_on(async move { estimate_calls(calls).await })
 }
 
 pub fn estimate_gas_multiple(calls: Vec<BenchCall>) -> Result<u64> {
     let calls = parse_calls(calls);
     let _rt = RUNTIME.enter();
-    block_on(async move { execute_calls(calls).await })
+    block_on(async move { estimate_calls(calls).await })
 }
 
 pub async fn estimate_gas_async(calls: Vec<BenchCall>) -> Result<u64> {
     let calls = parse_calls(calls);
-    execute_calls(calls).await
+    estimate_calls(calls).await
 }
 
 #[cfg(test)]
 mod tests {
+
+    use futures::future::join_all;
     use proptest::prelude::*;
 
     use super::*;
@@ -71,6 +73,26 @@ mod tests {
         let fee = estimate_gas(BenchCall("spawn", vec![])).unwrap();
 
         log("bench_spawn", fee, "");
+    }
+
+    #[tokio::test]
+    #[ignore] // needs a running katana
+    async fn bench_katana() {
+        let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
+
+        let nonce = nonce().await;
+        execute_calls(
+            parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
+            nonce,
+        )
+        .await
+        .unwrap();
+
+        let calls = (0..1).map(move |i: u64| {
+            execute_calls(parse_calls(vec![BenchCall("move", args.clone())]), nonce + i.into())
+        });
+
+        join_all(calls).await.into_iter().for_each(|r| r.unwrap());
     }
 
     proptest! {
