@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
 
-use async_trait::async_trait;
 use cainome::parser::tokens::Token;
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
@@ -14,21 +13,7 @@ mod backends;
 use backends::typescript::TypescriptBuilder;
 use backends::unity::UnityBuilder;
 pub use backends::Backend;
-
-#[async_trait]
-pub trait BackendBuilder {
-    /// Generates the bindings for all the systems found in the given contract.
-    ///
-    /// # Arguments
-    ///
-    /// * `contract_name` - Fully qualified name (with modules) of the contract.
-    /// * `tokens` - Tokens extracted from the ABI of the contract.
-    async fn generate_systems_bindings(
-        &self,
-        contract_name: &str,
-        tokens: HashMap<String, Vec<Token>>,
-    ) -> BindgenResult<()>;
-}
+use backends::BackendBuilder;
 
 // TODO: include the manifest to have more metadata?
 #[derive(Debug)]
