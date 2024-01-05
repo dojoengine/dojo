@@ -16,7 +16,7 @@ use tokio::runtime::Runtime;
 type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
 const KATANA_ENDPOINT: &str = "http://localhost:5050";
-const CONTRACT_ADDRESS: &str = "0x6c27e3b47f88abca376261ad4f0ffbe3461b9d08477f9e10953829603184e13";
+const CONTRACT_ADDRESS: &str = "0x297bde19ca499fd8a39dd9bedbcd881a47f7b8f66c19478ce97d7de89e6112e";
 
 const ACCOUNT_ADDRESS: &str = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973";
 const PRIVATE_KEY: &str = "0x1800000000300000180000000000030000000000003006001800006600";
@@ -93,7 +93,7 @@ mod tests {
                 BenchCall("move", vec![FieldElement::from_hex_be(&c).unwrap()])
             ]).unwrap();
 
-            log("bench_move", fee, &c);
+            log("bench_spawn_move", fee, &c);
         }
     }
 }

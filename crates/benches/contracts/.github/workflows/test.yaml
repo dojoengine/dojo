@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sozo-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: curl -L https://install.dojoengine.org | bash
+      - run: /home/runner/.config/.dojo/bin/dojoup -v v0.4.4
+      - run: |
+          /home/runner/.config/.dojo/bin/sozo build
+          /home/runner/.config/.dojo/bin/sozo test
