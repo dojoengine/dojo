@@ -45,6 +45,7 @@ mod tests {
 
     const ENV_RPC: &str = "http://localhost:7474/";
     const METADATA_RPC: &str = "http://localhost:6060/";
+    const DEFAULT_RPC: &str = "http://localhost:5050/";
 
     #[derive(clap::Parser)]
     struct Command {
@@ -80,5 +81,12 @@ mod tests {
         };
         let cmd = Command::parse_from([""]);
         assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_RPC);
+    }
+
+    #[test]
+    fn exists_in_neither() {
+        let env_metadata = dojo_world::metadata::Environment::default();
+        let cmd = Command::parse_from([""]);
+        assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), DEFAULT_RPC);
     }
 }
