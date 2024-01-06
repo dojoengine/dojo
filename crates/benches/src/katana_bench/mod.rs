@@ -1,6 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use starknet::{accounts::Account, core::types::FieldElement};
+    use anyhow::Context;
+    use starknet::{
+        accounts::{Account, ConnectedAccount},
+        core::types::FieldElement,
+    };
 
     use crate::*;
 
@@ -8,25 +12,45 @@ mod tests {
     #[ignore] // needs a running katana
     async fn bench_katana() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
+        let account_manager = account_manager().await;
 
-        let nonce = cached_nonce().await;
+        for i in 0..50u32 {
+            let account = account_manager.next().await;
 
-        let a = account_manager().await.shared();
-        let a = a.chain_id();
+            let nonce = account.get_nonce().await.unwrap();
+            let calls =
+                parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]);
 
-        execute_calls(
-            parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
-            nonce,
-        )
-        .await
-        .unwrap();
+            account.execute(calls).nonce(nonce).send().await.context("Failed to execute").unwrap();
+        }
 
-        execute_calls(
-            parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
-            nonce + FieldElement::ONE,
-        )
-        .await
-        .unwrap();
+        // for account in account_manager().await {
+        //     let calls =
+        //         parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]);
+
+        //     account
+        //         .execute(calls)
+        //         .nonce(account.get_nonce().await.unwrap())
+        //         .send()
+        //         .await
+        //         .context("Failed to execute")
+        //         .unwrap();
+        // }
+
+        // let nonce = cached_nonce().await;
+        // execute_calls(
+        //     parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
+        //     nonce,
+        // )
+        // .await
+        // .unwrap();
+
+        // execute_calls(
+        //     parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
+        //     nonce + FieldElement::ONE,
+        // )
+        // .await
+        // .unwrap();
 
         // let calls = (1..3).map(move |i: u64| {
         //     execute_calls(parse_calls(vec![BenchCall("move", args.clone())]), nonce + i.into())
