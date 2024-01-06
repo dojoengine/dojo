@@ -26,7 +26,7 @@ pub async fn chain_id() -> FieldElement {
 
 // Because no calls are actually executed in the benchmark, we can use the same nonce for all of
 // them
-pub async fn nonce() -> FieldElement {
+pub async fn cached_nonce() -> FieldElement {
     static NONCE: OnceCell<FieldElement> = OnceCell::const_new();
 
     *NONCE
@@ -87,7 +87,7 @@ pub async fn estimate_calls(calls: Vec<Call>) -> Result<u64> {
     let fee = account()
         .await
         .execute(calls)
-        .nonce(nonce().await)
+        .nonce(cached_nonce().await)
         .estimate_fee()
         .await
         .context("Failed to estimate fee")

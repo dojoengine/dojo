@@ -1,10 +1,9 @@
-mod helpers;
+pub(crate) mod helpers;
+mod katana_bench;
 
 use anyhow::Result;
 use futures::executor::block_on;
 use futures::future;
-pub use helpers::log;
-use helpers::*;
 use lazy_static::lazy_static;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
@@ -13,7 +12,8 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
 use tokio::runtime::Runtime;
 
-type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
+pub(crate) use helpers::*;
+pub(crate) type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
 const KATANA_ENDPOINT: &str = "http://localhost:5050";
 const CONTRACT_ADDRESS: &str = "0x297bde19ca499fd8a39dd9bedbcd881a47f7b8f66c19478ce97d7de89e6112e";
@@ -60,8 +60,8 @@ pub async fn estimate_gas_async(calls: Vec<BenchCall>) -> Result<u64> {
 
 #[cfg(test)]
 mod tests {
-
     use futures::future::join_all;
+    use helpers::log;
     use proptest::prelude::*;
 
     use super::*;
@@ -80,7 +80,7 @@ mod tests {
     async fn bench_katana() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
 
-        let nonce = nonce().await;
+        let nonce = cached_nonce().await;
         execute_calls(
             parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
             nonce,
