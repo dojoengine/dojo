@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use starknet::core::types::FieldElement;
+    use starknet::{accounts::Account, core::types::FieldElement};
 
     use crate::*;
 
@@ -10,6 +10,9 @@ mod tests {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
 
         let nonce = cached_nonce().await;
+
+        let a = account_manager().await.shared();
+        let a = a.chain_id();
 
         execute_calls(
             parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),

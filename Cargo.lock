@@ -894,6 +894,7 @@ dependencies = [
  "clap_builder",
  "futures",
  "hex",
+ "katana-core",
  "lazy_static",
  "proptest",
  "reqwest",

@@ -1,19 +1,16 @@
-pub(crate) mod helpers;
+pub mod account_manager;
+mod helpers;
 mod katana_bench;
 
 use anyhow::Result;
 use futures::executor::block_on;
 use futures::future;
 use lazy_static::lazy_static;
-use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-use starknet::signers::LocalWallet;
 use tokio::runtime::Runtime;
 
+pub(crate) use account_manager::*;
 pub(crate) use helpers::*;
-pub(crate) type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 
 const KATANA_ENDPOINT: &str = "http://localhost:5050";
 const CONTRACT_ADDRESS: &str = "0x297bde19ca499fd8a39dd9bedbcd881a47f7b8f66c19478ce97d7de89e6112e";

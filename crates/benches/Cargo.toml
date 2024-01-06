@@ -10,6 +10,8 @@ clap_builder = "4.4.6"
 proptest = "1.3.1"
 reqwest = { version = "0.11.18", features = [ "blocking", "json", "rustls-tls" ], default-features = false }
 
+katana-core = { path = "../katana/core" }
+
 anyhow.workspace = true
 futures.workspace = true
 hex.workspace = true
