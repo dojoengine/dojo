@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use futures::future::join_all;
 use katana_core::accounts::DevAccountGenerator;
 use starknet::{
-    accounts::{Account, ExecutionEncoding, SingleOwnerAccount},
+    accounts::{Account, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount},
+    core::types::FieldElement,
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
-    signers::{LocalWallet, SigningKey}, core::types::FieldElement,
+    signers::{LocalWallet, SigningKey},
 };
 use tokio::sync::{Mutex, OnceCell};
 
@@ -21,7 +23,10 @@ pub async fn account_manager() -> Arc<AccountManager> {
             let mut accounts = AccountManager::generate().await;
 
             let shared = accounts.remove(0); // remove the first account (it's the default account)
-            debug_assert_eq!(shared.address(), FieldElement::from_hex_be(ACCOUNT_ADDRESS).unwrap());
+            debug_assert_eq!(
+                shared.0.address(),
+                FieldElement::from_hex_be(ACCOUNT_ADDRESS).unwrap()
+            );
 
             Arc::new(AccountManager { head: Arc::default(), shared, accounts })
         })
@@ -30,23 +35,24 @@ pub async fn account_manager() -> Arc<AccountManager> {
 }
 
 pub type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
+pub type AccountWithNonce = (Arc<OwnerAccount>, Mutex<FieldElement>);
 
-#[derive(Clone)]
 pub struct AccountManager {
-    shared: Arc<OwnerAccount>,
-    accounts: Vec<Arc<OwnerAccount>>,
+    shared: AccountWithNonce,
+    accounts: Vec<AccountWithNonce>,
     head: Arc<Mutex<usize>>,
 }
 
 impl AccountManager {
-    async fn generate() -> Vec<Arc<OwnerAccount>> {
+    async fn generate() -> Vec<AccountWithNonce> {
         let mut seed = [0; 32];
         seed[0] = 48;
 
         let accounts = DevAccountGenerator::new(255).with_seed(seed).generate();
-        let chain_id = chain_id().await;
 
-        accounts
+        let chain_id: FieldElement = chain_id().await;
+
+        let account_futures = accounts
             .into_iter()
             .map(|account| {
                 let private_key = SigningKey::from_secret_scalar(account.private_key);
@@ -58,19 +64,25 @@ impl AccountManager {
                     chain_id,
                     ExecutionEncoding::Legacy,
                 );
-                Arc::new(account)
+
+                async move {
+                    let nonce = account.get_nonce().await.expect("Failed to get nonce");
+                    (Arc::new(account), Mutex::new(nonce))
+                }
             })
-            .collect()
+            .collect::<Vec<_>>();
+
+        join_all(account_futures).await
     }
 
-    pub fn shared(&self) -> Arc<OwnerAccount> {
-        self.shared.clone()
-    }
-
-    pub async fn next(&self) -> Arc<OwnerAccount> {
+    pub async fn next(&self) -> (Arc<OwnerAccount>, FieldElement) {
         let mut head = self.head.lock().await;
-        let next = self.accounts[*head].clone();
         *head = (*head + 1) % self.accounts.len();
-        next
+
+        let mut nonce_lock = self.accounts[*head].1.lock().await;
+        let nonce = nonce_lock.clone();
+        *nonce_lock += FieldElement::ONE;
+
+        (self.accounts[*head].0.clone(), nonce)
     }
 }

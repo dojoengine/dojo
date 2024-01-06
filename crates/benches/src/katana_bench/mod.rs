@@ -1,10 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use anyhow::Context;
-    use starknet::{
-        accounts::{Account, ConnectedAccount},
-        core::types::FieldElement,
-    };
+    use std::time::Instant;
+
+    use futures::future::join_all;
+    use starknet::{accounts::Account, core::types::FieldElement};
 
     use crate::*;
 
@@ -14,48 +13,21 @@ mod tests {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
         let account_manager = account_manager().await;
 
-        for i in 0..50u32 {
-            let account = account_manager.next().await;
+        let calls = parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]);
+        let max_fee = FieldElement::from_hex_be("0x100000000000000000").unwrap();
 
-            let nonce = account.get_nonce().await.unwrap();
-            let calls =
-                parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]);
+        let accounts = join_all((0..1000u32).into_iter().map(|_| account_manager.next())).await;
+        let transactions = accounts
+            .iter()
+            .map(|(account, nonce)| account.execute(calls.clone()).nonce(*nonce).max_fee(max_fee))
+            .collect::<Vec<_>>();
 
-            account.execute(calls).nonce(nonce).send().await.context("Failed to execute").unwrap();
-        }
+        let before = Instant::now();
+        let transaction_hashes = join_all(transactions.iter().map(|t| t.send())).await;
+        println!("duration: {:?}", Instant::now() - before);
 
-        // for account in account_manager().await {
-        //     let calls =
-        //         parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]);
-
-        //     account
-        //         .execute(calls)
-        //         .nonce(account.get_nonce().await.unwrap())
-        //         .send()
-        //         .await
-        //         .context("Failed to execute")
-        //         .unwrap();
-        // }
-
-        // let nonce = cached_nonce().await;
-        // execute_calls(
-        //     parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
-        //     nonce,
-        // )
-        // .await
-        // .unwrap();
-
-        // execute_calls(
-        //     parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
-        //     nonce + FieldElement::ONE,
-        // )
-        // .await
-        // .unwrap();
-
-        // let calls = (1..3).map(move |i: u64| {
-        //     execute_calls(parse_calls(vec![BenchCall("move", args.clone())]), nonce + i.into())
-        // });
-
-        // let transaction_hashes = join_all(calls).await.into_iter().map(|r| r.unwrap());
+        transaction_hashes.into_iter().for_each(|r| {
+            r.unwrap();
+        });
     }
 }
