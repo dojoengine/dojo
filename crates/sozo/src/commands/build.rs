@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Args;
-use dojo_bindgen::{Backend, BindingManager};
+use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
@@ -23,16 +23,21 @@ impl BuildArgs {
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
         )?;
 
-        let mut backends = vec![];
+        let mut builtin_plugins = vec![];
         if self.typescript {
-            backends.push(Backend::Typescript);
+            builtin_plugins.push(BuiltinPlugins::Typescript);
         }
 
         if self.unity {
-            backends.push(Backend::Unity);
+            builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
-        let bindgen = BindingManager { artifacts_path: compile_info.target_dir, backends };
+        // Custom plugins are always empty for now.
+        let bindgen = PluginManager {
+            artifacts_path: compile_info.target_dir,
+            plugins: vec![],
+            builtin_plugins,
+        };
 
         tokio::runtime::Runtime::new()
             .unwrap()

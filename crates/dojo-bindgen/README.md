@@ -4,15 +4,15 @@ This crate contains the Dojo bindings generator modules which leverage [cainome]
 
 ## Architecture
 
-Cainome exposes the `parser` crate, which contains common functions to work with Cairo ABI. This is not (yet) a pure plugin system like protobuf can propose. However, `dojo-bindgen` is implemented with plugin fashion in mind, where modularity allow easy evolution of each backend for which code generation can be very different.
+`dojo-bindgen` aims at decoupling at most the knowledge required by `sozo` to output bindings along the contract artifacts. Cainome exposes the `parser` crate, which contains common functions to work with Cairo ABI and generate a list of tokens to have a intermediate representation of the ABI usable at runtime and build logic on top of it to generate the bindings.
 
-`dojo-bindgen` aims at decoupling at most the knowledge required by `sozo` to output bindings along the contract artifacts.
+[PluginManager](./src/lib.rs): The `PluginManager` is the top level interface that `sozo` uses to request code generation. By providing the artifacts path and the list of plugins (more params in the future), `sozo` indicates which plugin must be invoke to generate the bindings.
 
-[BindingManager](./src/lib.rs): The `BindingManager` is the top level interface that `sozo` uses to request code generation. By providing the artifacts path and the list of backends (more params in the future), `sozo` indicates which backend must be processed.
+[BuiltinPlugin](./src/plugins/mod.rs): The `BuiltinPlugin` are a first lightweight and integrated plugins that are written in rust directly inside this crate.
 
-[BindingBuilder](./src/backends/mod.rs): The `BindingBuilder` is responsible of generating the code for a specific backend, in a totally independent fashion. The `BindingManager` provides the required inputs like the contract name and the list of tokens for this.
+In the future, `dojo-bindgen` will expose a `Plugin` interface similar to protobuf to communicate with a user defined plugin using `stdin` for greater flexibility.
 
-## Backends
+## Builin Plugins
 
-[Typescript](./src/backends/typescript/mod.rs)
-[Unity](./src/backends/unity/mod.rs)
+[Typescript](./src/plugins/typescript/mod.rs)
+[Unity](./src/plugins/unity/mod.rs)

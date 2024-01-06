@@ -9,13 +9,13 @@ pub mod typescript;
 pub mod unity;
 
 #[derive(Debug)]
-pub enum Backend {
+pub enum BuiltinPlugins {
     Typescript,
     Unity,
 }
 
 #[async_trait]
-pub trait BackendBuilder {
+pub trait BuiltinPlugin {
     /// Generates the bindings for all the systems found in the given contract.
     ///
     /// # Arguments
@@ -28,3 +28,7 @@ pub trait BackendBuilder {
         tokens: HashMap<String, Vec<Token>>,
     ) -> BindgenResult<()>;
 }
+
+// TODO: define the Plugin interface communicating data via stdin.
+// Data must be easily serializable to be deserialized on the plugin side.
+// We need to define one PluginInput struct and one PluginOutput struct.

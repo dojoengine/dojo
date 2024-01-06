@@ -9,35 +9,37 @@ use starknet::core::types::contract::{AbiEntry, SierraClass};
 pub mod error;
 use error::{BindgenResult, Error};
 
-mod backends;
-use backends::typescript::TypescriptBuilder;
-use backends::unity::UnityBuilder;
-pub use backends::Backend;
-use backends::BackendBuilder;
+mod plugins;
+use plugins::typescript::TypescriptPlugin;
+use plugins::unity::UnityPlugin;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 
-// TODO: include the manifest to have more metadata?
+// TODO: include the manifest to have more metadata when new manifest is available.
 #[derive(Debug)]
-pub struct BindingManager {
+pub struct PluginManager {
     /// Path of contracts artifacts.
     pub artifacts_path: Utf8PathBuf,
-    /// A list of backends for which bindings must be generated.
-    pub backends: Vec<Backend>,
+    /// A list of builtin plugins to invoke.
+    pub builtin_plugins: Vec<BuiltinPlugins>,
+    /// A list of custom plugins to invoke.
+    pub plugins: Vec<String>,
 }
 
-impl BindingManager {
-    /// Generates the bindings for all the given [`Backend`].
+impl PluginManager {
+    /// Generates the bindings for all the given [`Plugin`].
     pub async fn generate(&self) -> BindgenResult<()> {
-        if self.backends.is_empty() {
+        if self.builtin_plugins.is_empty() && self.plugins.is_empty() {
             return Ok(());
         }
 
-        println!("Generating bindings with {:?}", self);
+        println!("Generating bindings {:?}", self);
 
-        for backend in &self.backends {
-            // Get the backend builder from the backend enum.
-            let builder: Box<dyn BackendBuilder> = match backend {
-                Backend::Typescript => Box::new(TypescriptBuilder::new()),
-                Backend::Unity => Box::new(UnityBuilder::new()),
+        for plugin in &self.builtin_plugins {
+            // Get the plugin builder from the plugin enum.
+            let builder: Box<dyn BuiltinPlugin> = match plugin {
+                BuiltinPlugins::Typescript => Box::new(TypescriptPlugin::new()),
+                BuiltinPlugins::Unity => Box::new(UnityPlugin::new()),
             };
 
             // TODO: types aliases: For now they are empty, we can expect them to be passed
@@ -61,6 +63,11 @@ impl BindingManager {
                 }
             }
         }
+
+        // TODO: invoke the custom plugins via stdin.
+        // TODO: define the interface to pass the data to the plugin. JSON? Protobuf?
+        // (cf. mod.rs in plugins module).
+        // The plugin executable (same name as the plugin name) MUST be in the path.
 
         Ok(())
     }
