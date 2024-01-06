@@ -12,7 +12,8 @@ This crate contains the Dojo bindings generator modules which leverage [cainome]
 
 In the future, `dojo-bindgen` will expose a `Plugin` interface similar to protobuf to communicate with a user defined plugin using `stdin` for greater flexibility.
 
-## Builin Plugins
+## Builtin Plugins
 
 [Typescript](./src/plugins/typescript/mod.rs)
+
 [Unity](./src/plugins/unity/mod.rs)
