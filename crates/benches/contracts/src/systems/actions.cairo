@@ -62,8 +62,8 @@ mod actions {
             set!(
                 world,
                 (
-                    Moves { player, remaining: 10000, last_direction: Direction::None },
-                    Position { player, vec: Vec2 { x: 10, y: 10 } },
+                    Moves { player, remaining: 1_000_000, last_direction: Direction::None },
+                    Position { player, vec: Vec2 { x: 1_000_000, y: 1_000_000 } },
                 )
             );
         }

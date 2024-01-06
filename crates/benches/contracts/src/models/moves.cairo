@@ -4,7 +4,7 @@ use starknet::ContractAddress;
 struct Moves {
     #[key]
     player: ContractAddress,
-    remaining: u16,
+    remaining: u32,
     last_direction: Direction
 }
 

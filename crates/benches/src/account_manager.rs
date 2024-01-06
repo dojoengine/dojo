@@ -28,7 +28,7 @@ pub async fn account_manager() -> Arc<AccountManager> {
                 FieldElement::from_hex_be(ACCOUNT_ADDRESS).unwrap()
             );
 
-            Arc::new(AccountManager { head: Arc::default(), shared, accounts })
+            Arc::new(AccountManager { head: Arc::default(), accounts })
         })
         .await
         .clone()
@@ -38,7 +38,6 @@ pub type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWa
 pub type AccountWithNonce = (Arc<OwnerAccount>, Mutex<FieldElement>);
 
 pub struct AccountManager {
-    shared: AccountWithNonce,
     accounts: Vec<AccountWithNonce>,
     head: Arc<Mutex<usize>>,
 }
