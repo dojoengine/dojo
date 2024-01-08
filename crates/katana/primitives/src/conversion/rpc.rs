@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::{self, Read, Write};
 use std::mem;
 use std::str::FromStr;
@@ -10,10 +10,15 @@ use cairo_vm::felt::Felt252;
 use cairo_vm::serde::deserialize_program::{ApTracking, OffsetValue, ProgramJson, ValueAddress};
 use cairo_vm::types::instruction::Register;
 use cairo_vm::types::program::Program;
-use ethers::core::k256::elliptic_curve::PrimeField;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use serde_json::{json, Number};
+use serde_with::serde_as;
+use starknet::core::serde::unsigned_field_element::UfeHex;
 pub use starknet::core::types::contract::legacy::{LegacyContractClass, LegacyProgram};
+use starknet::core::types::contract::legacy::{
+    LegacyDebugInfo, LegacyFlowTrackingData, LegacyHint, LegacyIdentifier, LegacyReferenceManager,
+    RawLegacyAbiEntry, RawLegacyEntryPoints,
+};
 pub use starknet::core::types::contract::CompiledClass;
 use starknet::core::types::{
     CompressedLegacyContractClass, ContractClass, LegacyContractEntryPoint, LegacyEntryPointsByType,
@@ -31,6 +36,11 @@ mod primitives {
     pub use crate::transaction::{DeclareTx, DeployAccountTx, InvokeTx, L1HandlerTx, Tx};
     pub use crate::FieldElement;
 }
+
+use cairo_vm::serde::deserialize_program::{
+    serialize_program_data, Attribute, BuiltinName, DebugInfo, HintParams, Member,
+};
+use cairo_vm::types::relocatable::MaybeRelocatable;
 
 /// Converts the legacy inner compiled class type [CompiledContractClassV0] into its RPC equivalent
 /// [`ContractClass`].
@@ -111,24 +121,61 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
 pub fn legacy_rpc_to_inner_compiled_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
 ) -> Result<(ClassHash, CompiledContractClass)> {
-    let program = decompress_legacy_program_data(&compressed_legacy_contract.program)?;
-    // std::fs::write("bruh.json", &raw_json)?;
-    // let program: ProgramJson = serde_json::from_slice(&raw_json)?;
-
-    // let jd = &mut serde_json::Deserializer::from_slice(&raw_json);
-    // let program: ProgramJson = serde_path_to_error::deserialize(jd)?;
-
     let class_json = json!({
-        "program": program,
-        "abi": compressed_legacy_contract.abi,
+        "abi": compressed_legacy_contract.abi.clone().unwrap_or_default(),
         "entry_points_by_type": compressed_legacy_contract.entry_points_by_type,
+        "program": decompress_legacy_program_data(&compressed_legacy_contract.program)?,
     });
 
-    let legacy_contract_class: LegacyContractClass = serde_json::from_value(class_json.clone())?;
-    let class_hash = legacy_contract_class.class_hash()?;
+    #[allow(unused)]
+    #[derive(Deserialize)]
+    struct LegacyAttribute {
+        #[serde(default)]
+        accessible_scopes: Vec<String>,
+        end_pc: u64,
+        flow_tracking_data: Option<LegacyFlowTrackingData>,
+        name: String,
+        start_pc: u64,
+        value: String,
+    }
 
-    let class: ContractClassV0 = serde_json::from_value(class_json)?;
-    Ok((class_hash, CompiledContractClass::V0(class)))
+    #[allow(unused)]
+    #[serde_as]
+    #[derive(Deserialize)]
+    pub struct LegacyProgram {
+        attributes: Option<Vec<LegacyAttribute>>,
+        builtins: Vec<String>,
+        compiler_version: Option<String>,
+        #[serde_as(as = "Vec<UfeHex>")]
+        data: Vec<FieldElement>,
+        debug_info: Option<LegacyDebugInfo>,
+        hints: BTreeMap<u64, Vec<LegacyHint>>,
+        identifiers: BTreeMap<String, LegacyIdentifier>,
+        main_scope: String,
+        prime: String,
+        reference_manager: LegacyReferenceManager,
+    }
+
+    #[allow(unused)]
+    #[derive(Deserialize)]
+    struct LegacyContractClassJson {
+        abi: Vec<RawLegacyAbiEntry>,
+        entry_points_by_type: RawLegacyEntryPoints,
+        program: LegacyProgram,
+    }
+
+    // SAFETY: `LegacyContractClassJson` MUST maintain same memory layout as `LegacyContractClass`.
+    // This would only work if the fields are in the same order and have the same size. Though,
+    // both types are using default Rust repr, which means there is no guarantee by the compiler
+    // that the memory layout of both types will be the same despite comprised of the same
+    // fields and types.
+    let class: LegacyContractClassJson = serde_json::from_value(class_json.clone())?;
+    let class: LegacyContractClass = unsafe { mem::transmute(class) };
+
+    let inner_class: ContractClassV0 = serde_json::from_value(class_json)?;
+    let class_hash = class.class_hash()?;
+
+    Ok((class_hash, CompiledContractClass::V0(inner_class)))
 }
 
 /// Converts `starknet-rs` RPC [FlattenedSierraClass] type to Cairo's
@@ -151,12 +198,6 @@ fn rpc_to_cairo_contract_class(
 }
 
 fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::Error> {
-    use cairo_vm::felt::Felt252;
-    use cairo_vm::serde::deserialize_program::{
-        serialize_program_data, Attribute, BuiltinName, DebugInfo, HintParams, Member,
-    };
-    use cairo_vm::types::relocatable::MaybeRelocatable;
-
     fn felt_as_dec_str<S: Serializer>(
         value: &Option<Felt252>,
         serializer: S,
@@ -173,6 +214,10 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
         serializer.serialize_str(&parse_value_address_to_str(value_address.clone()))
     }
 
+    fn zero_if_none<S: Serializer>(pc: &Option<usize>, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u64(pc.as_ref().map_or(0, |x| *x as u64))
+    }
+
     #[derive(Serialize)]
     struct Identifier {
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -181,7 +226,6 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
         #[serde(skip_serializing_if = "Option::is_none")]
         type_: Option<String>,
         #[serde(serialize_with = "felt_as_dec_str")]
-        #[serde(deserialize_with = "felt_from_number")]
         #[serde(skip_serializing_if = "Option::is_none")]
         value: Option<Felt252>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -195,6 +239,7 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
     #[derive(Serialize)]
     struct Reference {
         ap_tracking_data: ApTracking,
+        #[serde(serialize_with = "zero_if_none")]
         pc: Option<usize>,
         #[serde(rename(serialize = "value"))]
         #[serde(serialize_with = "value_address_in_str_format")]
@@ -211,6 +256,7 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
         prime: String,
         builtins: Vec<BuiltinName>,
         #[serde(serialize_with = "serialize_program_data")]
+        #[serde(deserialize_with = "deserialize_array_of_bigint_hex")]
         data: Vec<MaybeRelocatable>,
         identifiers: HashMap<String, Identifier>,
         hints: HashMap<usize, Vec<HintParams>>,
@@ -219,55 +265,74 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
         debug_info: Option<DebugInfo>,
     }
 
-    let program: ProgramJson = ProgramJson::from(legacy_program);
     // SAFETY: `SerializableProgramJson` MUST maintain same memory layout as `ProgramJson`. This
-    // would only work if the fields are in the same order and have the same size.
+    // would only work if the fields are in the same order and have the same size. Though, both
+    // types are using default Rust repr, which means there is no guarantee by the compiler that the
+    // memory layout of both types will be the same despite comprised of the same fields and
+    // types.
+    let program: ProgramJson = ProgramJson::from(legacy_program);
     let program: SerializableProgramJson = unsafe { mem::transmute(program) };
+
     let buffer = serde_json::to_vec(&program)?;
-
-    std::fs::write("account.json", &buffer)?;
-
     let mut gzip_encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
     Write::write_all(&mut gzip_encoder, &buffer)?;
     gzip_encoder.finish()
 }
 
-fn decompress_legacy_program_data(data: &[u8]) -> Result<ProgramJson, io::Error> {
-    use cairo_vm::serde::deserialize_program::{
-        serialize_program_data, Attribute, BuiltinName, DebugInfo, HintParams, Identifier,
-    };
-    use cairo_vm::types::relocatable::MaybeRelocatable;
-
-    #[derive(Serialize)]
-    struct Reference {
-        ap_tracking_data: ApTracking,
-        pc: Option<usize>,
-        #[serde(rename(deserialize = "value"))]
-        value_address: ValueAddress,
+fn decompress_legacy_program_data(data: &[u8]) -> Result<LegacyProgram, io::Error> {
+    #[derive(Deserialize)]
+    #[allow(unused)]
+    struct LegacyAttribute {
+        #[serde(default)]
+        accessible_scopes: Vec<String>,
+        end_pc: u64,
+        flow_tracking_data: Option<LegacyFlowTrackingData>,
+        name: String,
+        start_pc: u64,
+        value: String,
     }
 
-    #[derive(Serialize)]
-    struct ReferenceManager {
-        references: Vec<Reference>,
+    #[repr(transparent)]
+    #[derive(Deserialize)]
+    struct MainScope(String);
+
+    impl Default for MainScope {
+        fn default() -> Self {
+            Self(String::from("__main__"))
+        }
     }
 
-    #[derive(Serialize)]
-    struct SerializableProgramJson {
+    #[serde_as]
+    #[allow(unused)]
+    #[derive(Deserialize)]
+    struct LegacyProgramJson {
+        attributes: Option<Vec<LegacyAttribute>>,
+        builtins: Vec<String>,
+        compiler_version: Option<String>,
+        #[serde_as(as = "Vec<UfeHex>")]
+        data: Vec<FieldElement>,
+        debug_info: Option<LegacyDebugInfo>,
+        hints: BTreeMap<u64, Vec<LegacyHint>>,
+        identifiers: BTreeMap<String, LegacyIdentifier>,
+        #[serde(default)]
+        main_scope: MainScope,
         prime: String,
-        builtins: Vec<BuiltinName>,
-        #[serde(serialize_with = "serialize_program_data")]
-        data: Vec<MaybeRelocatable>,
-        identifiers: HashMap<String, Identifier>,
-        hints: HashMap<usize, Vec<HintParams>>,
-        reference_manager: ReferenceManager,
-        attributes: Vec<Attribute>,
-        debug_info: Option<DebugInfo>,
+        reference_manager: LegacyReferenceManager,
     }
 
     let mut decoder = flate2::read::GzDecoder::new(data);
     let mut decoded = Vec::new();
     Read::read_to_end(&mut decoder, &mut decoded)?;
-    Ok(serde_json::from_slice(&decoded)?)
+
+    // SAFETY: `LegacyProgramJson` MUST maintain same memory layout as `LegacyProgram`. This
+    // would only work if the fields are in the same order and have the same size. Though, both
+    // types are using default Rust repr, which means there is no guarantee by the compiler that the
+    // memory layout of both types will be the same despite comprised of the same fields and
+    // types.
+    let program: LegacyProgramJson = serde_json::from_slice(&decoded)?;
+    let program: LegacyProgram = unsafe { mem::transmute(program) };
+
+    Ok(program)
 }
 
 fn parse_value_address_to_str(value_address: ValueAddress) -> String {
@@ -277,11 +342,7 @@ fn parse_value_address_to_str(value_address: ValueAddress) -> String {
         }
 
         str.push_str(" + ");
-        str.push_str(&if offset.is_negative() {
-            format!("({})", offset.to_string())
-        } else {
-            offset.to_string()
-        })
+        str.push_str(&if offset.is_negative() { format!("({offset})") } else { offset.to_string() })
     }
 
     fn handle_offset_val(value: OffsetValue, str: &mut String) {
@@ -324,19 +385,17 @@ fn parse_value_address_to_str(value_address: ValueAddress) -> String {
     }
 
     handle_offset_val(value_address.offset1, &mut str);
-    println!("{}", str);
     handle_offset_val(value_address.offset2, &mut str);
 
     str.push_str(", ");
     str.push_str(&value_address.value_type);
 
     if is_value {
-        str.push_str("*");
+        str.push('*');
     }
 
     str = format!("cast({str})");
 
-    // do this last
     if value_address.dereference {
         str = format!("[{str}]");
     }
@@ -351,6 +410,10 @@ mod tests {
     use super::{legacy_inner_to_rpc_class, legacy_rpc_to_inner_compiled_class};
     use crate::utils::class::parse_compiled_class_v0;
 
+    // There are some discrepancies between the legacy RPC and the inner compiled class types which
+    // results in some data lost during the conversion. Therefore, we are unable to assert for
+    // equality between the original and the converted class. Instead, we assert that the conversion
+    // is successful and that the converted class can be converted back
     #[test]
     fn legacy_rpc_to_inner_and_back() {
         let class_json = include_str!("../../../core/contracts/compiled/account.json");
