@@ -45,6 +45,14 @@ impl NamedChainId {
             NamedChainId::Sepolia => Self::SN_SEPOLIA,
         }
     }
+
+    pub const fn name(&self) -> &'static str {
+        match self {
+            NamedChainId::Mainnet => "SN_MAIN",
+            NamedChainId::Goerli => "SN_GOERLI",
+            NamedChainId::Sepolia => "SN_SEPOLIA",
+        }
+    }
 }
 
 /// This `struct` is created by the [`NamedChainId::try_from<u128>`] method.
