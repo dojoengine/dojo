@@ -23,6 +23,7 @@ members = [
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
   "crates/metrics",
+  "crates/metrics/derive",
   "crates/sozo",
   "crates/torii/client",
   "crates/torii/server",
@@ -115,6 +116,9 @@ toml = "0.7.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = "2.4.0"
+metrics = "0.21.1"
+dojo-metrics = { path = "crates/metrics" }
+dojo-metrics-derive = { path = "crates/metrics/derive" }
 
 # server
 hyper = "0.14.27"

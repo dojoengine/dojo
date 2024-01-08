@@ -13,7 +13,6 @@ pub mod utils;
 
 use mdbx::{DbEnv, DbEnvKind};
 use utils::is_database_empty;
-
 /// Initialize the database at the given path and returning a handle to the its
 /// environment.
 ///

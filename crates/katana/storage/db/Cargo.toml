@@ -21,6 +21,12 @@ blockifier.workspace = true
 cairo-vm.workspace = true
 starknet_api.workspace = true
 
+metrics = "0.21.1"
+metrics-exporter-prometheus = "0.12.1"
+metrics-process.workspace = true
+metrics-util = "0.15.0"
+eyre = "0.6"
+
 # codecs
 [dependencies.postcard]
 default-features = false

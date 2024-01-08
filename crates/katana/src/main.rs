@@ -9,7 +9,8 @@ use katana_core::constants::{
 };
 use katana_core::sequencer::KatanaSequencer;
 use katana_rpc::{spawn, NodeHandle};
-use metrics::prometheus_exporter;
+use katana_db::init_db;
+use dojo_metrics::prometheus_exporter;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
@@ -68,14 +69,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(listen_addr) = config.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder()?;
-
         info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
-        prometheus_exporter::serve(
-            listen_addr,
-            prometheus_handle,
-            metrics_process::Collector::default(),
-        )
-        .await?;
+//        prometheus_exporter::serve(
+//            listen_addr,
+//            prometheus_handle,
+//            metrics_process::Collector::default(),
+//        )
+//        .await?;
     }
 
     // Wait until Ctrl + C is pressed, then shutdown

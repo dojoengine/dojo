@@ -33,11 +33,16 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
+metrics.workspace = true
+dojo-metrics.workspace = true
+dojo-metrics-derive.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true
 hex = "0.4.3"
 
 [features]
+default = [ "jemalloc", "messaging" ]
+jemalloc = [ "dojo-metrics/jemalloc" ]
 messaging = [ "ethers" ]
 starknet-messaging = [  ]

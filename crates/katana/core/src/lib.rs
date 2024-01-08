@@ -6,5 +6,6 @@ pub mod pool;
 pub mod sequencer;
 pub mod service;
 pub mod utils;
+pub mod metrics;
 
 pub mod sequencer_error;

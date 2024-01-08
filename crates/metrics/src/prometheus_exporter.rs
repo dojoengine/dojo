@@ -9,6 +9,7 @@ use hyper::{Body, Request, Response, Server};
 use metrics::{describe_gauge, gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use metrics_util::layers::{PrefixLayer, Stack};
+use katana_db::models::database_metrics::DbMetrics;
 
 pub(crate) trait Hook: Fn() + Send + Sync {}
 impl<T: Fn() + Send + Sync> Hook for T {}
@@ -39,7 +40,7 @@ pub(crate) async fn serve_with_hooks<F: Hook + 'static>(
     let hooks: Vec<_> = hooks.into_iter().collect();
 
     // Start endpoint
-    start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook| hook())))
+    start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook: &F| hook())))
         .await
         .map_err(|e| anyhow::anyhow!("Could not start Prometheus endpoint: {}", e))?;
 
@@ -73,15 +74,22 @@ async fn start_endpoint<F: Hook + 'static>(
 }
 
 /// Serves Prometheus metrics over HTTP with database and process metrics.
-pub async fn serve(
+pub async fn serve<Metrics>(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
+    db: Metrics,
     process: metrics_process::Collector,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<()>
+    where
+        Metrics: DbMetrics + 'static + Send + Sync,
+    {
+        let db_metrics_hook = move || db.report_metrics();
     // Clone `process` to move it into the hook and use the original `process` for describe below.
     let cloned_process = process.clone();
-    let hooks: Vec<Box<dyn Hook<Output = ()>>> =
-        vec![Box::new(move || cloned_process.collect()), Box::new(collect_memory_stats)];
+    let hooks: Vec<Box<dyn Hook<Output = ()>>> = vec![
+        Box::new(move || cloned_process.collect()),
+        Box::new(db_metrics_hook), 
+        Box::new(collect_memory_stats)];
     serve_with_hooks(listen_addr, handle, hooks).await?;
 
     process.describe();

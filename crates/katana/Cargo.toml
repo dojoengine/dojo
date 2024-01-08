@@ -12,7 +12,10 @@ clap_complete.workspace = true
 console.workspace = true
 katana-core = { path = "core" }
 katana-rpc = { path = "rpc" }
-metrics = { path = "../metrics" }
+katana-db = { path = "storage/db" }
+metrics.workspace = true
+dojo-metrics.workspace = true
+dojo-metrics-derive.workspace = true
 metrics-process.workspace = true
 serde_json.workspace = true
 starknet_api.workspace = true
@@ -26,6 +29,6 @@ assert_matches = "1.5.0"
 
 [features]
 default = [ "jemalloc", "messaging" ]
-jemalloc = [ "metrics/jemalloc" ]
+jemalloc = [ "dojo-metrics/jemalloc" ]
 messaging = [ "katana-core/messaging" ]
 starknet-messaging = [ "katana-core/starknet-messaging", "messaging" ]

@@ -1,15 +1,17 @@
-// Code adapted from Foundry's Anvil
 
+// Code adapted from Foundry's Anvil
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use parking_lot::RwLock;
 use starknet::core::types::FieldElement;
 use tracing::{info, warn};
+use crate::metrics::TxPoolMetrics;
 
 #[derive(Debug, Default)]
 pub struct TransactionPool {
     transactions: RwLock<Vec<ExecutableTxWithHash>>,
     transaction_listeners: RwLock<Vec<Sender<FieldElement>>>,
+    metrics: TxPoolMetrics,
 }
 
 impl TransactionPool {
@@ -22,9 +24,8 @@ impl TransactionPool {
     pub fn add_transaction(&self, transaction: ExecutableTxWithHash) {
         let hash = transaction.hash;
         self.transactions.write().push(transaction);
-
+        self.metrics.inserted_transactions.increment(1);
         info!(target: "txpool", "Transaction received | Hash: {hash:#x}");
-
         // notify listeners of new tx added to the pool
         self.notify_listener(hash)
     }
