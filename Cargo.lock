@@ -5552,7 +5552,6 @@ dependencies = [
  "derive_more",
  "ethers",
  "flate2",
- "hex",
  "serde",
  "serde_json",
  "starknet",

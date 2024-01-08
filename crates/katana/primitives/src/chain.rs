@@ -46,6 +46,8 @@ impl NamedChainId {
         }
     }
 
+    /// Returns the predefined string constant of the chain id.
+    #[inline]
     pub const fn name(&self) -> &'static str {
         match self {
             NamedChainId::Mainnet => "SN_MAIN",
