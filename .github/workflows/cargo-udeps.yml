@@ -16,7 +16,9 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v3
-
+      
+      - run: rustup update stable
+      
       - uses: dtolnay/rust-toolchain@master
         with:
           # cargo-udeps require nightly to run
