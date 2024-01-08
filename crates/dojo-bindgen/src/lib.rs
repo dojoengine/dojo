@@ -23,7 +23,7 @@ pub struct DojoModel {
 
 #[derive(Debug)]
 pub struct DojoMetadata {
-    pub models: Vec<DojoModel>,
+    pub models: HashMap<String, DojoModel>,
 }
 
 // TODO: include the manifest to have more metadata when new manifest is available.
@@ -115,8 +115,8 @@ fn is_systems_contract(file_name: &str, file_content: &str) -> bool {
 /// # Arguments
 ///
 /// * `artifacts_path` - Artifacts path where model contracts were generated.
-fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<Vec<DojoModel>> {
-    let mut models = vec![];
+fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<HashMap<String, DojoModel>> {
+    let mut models = HashMap::new();
 
     for entry in fs::read_dir(artifacts_path)? {
         let entry = entry?;
@@ -139,7 +139,7 @@ fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<Vec<DojoModel>> 
                                     .to_string(),
                             };
 
-                            models.push(model);
+                            models.insert(model_pascal_case, model);
                         } else {
                             return Err(Error::Format(format!(
                                 "Could not extract model name from file name `{file_name}`"
