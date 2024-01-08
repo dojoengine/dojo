@@ -21,11 +21,11 @@ impl From<ContractAddress> for crate::contract::ContractAddress {
 
 impl From<ChainId> for starknet_api::core::ChainId {
     fn from(chain_id: ChainId) -> Self {
-        let id = match chain_id {
-            ChainId::Named(named) => named.id(),
-            ChainId::Id(id) => id,
+        let name: String = match chain_id {
+            ChainId::Named(named) => named.to_string(),
+            ChainId::Id(id) => parse_cairo_short_string(&id).expect("valid cairo string"),
         };
-        Self(parse_cairo_short_string(&id).expect("valid cairo string"))
+        Self(name)
     }
 }
 
