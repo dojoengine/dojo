@@ -105,3 +105,93 @@ impl AccountOptions {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AccountOptions;
+    use super::{
+        DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR,
+    };
+    use clap::Parser;
+    use starknet_crypto::FieldElement;
+
+    #[derive(clap::Parser, Debug)]
+    struct Command {
+        #[clap(flatten)]
+        pub account: AccountOptions,
+    }
+
+    #[test]
+    fn account_address_read_from_env_variable() {
+        std::env::set_var(DOJO_ACCOUNT_ADDRESS_ENV_VAR, "0x0");
+
+        let cmd = Command::parse_from([""]);
+        assert_eq!(cmd.account.account_address, Some(FieldElement::from_hex_be("0x0").unwrap()));
+    }
+
+    #[test]
+    fn private_key_read_from_env_variable() {
+        std::env::set_var(DOJO_PRIVATE_KEY_ENV_VAR, "private_key");
+
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
+        assert_eq!(cmd.account.private_key, Some("private_key".to_owned()));
+    }
+
+    #[test]
+    fn keystore_path_read_from_env_variable() {
+        std::env::set_var(DOJO_KEYSTORE_PASSWORD_ENV_VAR, "keystore_password");
+
+        let cmd = Command::parse_from(["sozo", "--keystore", "./some/path"]);
+        assert_eq!(cmd.account.keystore_password, Some("keystore_password".to_owned()));
+    }
+
+    #[test]
+    fn address_from_args() {
+        let env_metadata = dojo_world::metadata::Environment::default();
+
+        let cmd = Command::parse_from(["sozo", "--address", "0x0"]);
+        assert_eq!(
+            cmd.account.account_address(Some(&env_metadata)).unwrap(),
+            FieldElement::from_hex_be("0x0").unwrap()
+        );
+    }
+
+    #[test]
+    fn address_from_env_metadata() {
+        let env_metadata = dojo_world::metadata::Environment {
+            account_address: Some("0x0".to_owned()),
+            ..Default::default()
+        };
+
+        let cmd = Command::parse_from([""]);
+
+        assert_eq!(
+            cmd.account.account_address(Some(&env_metadata)).unwrap(),
+            FieldElement::from_hex_be("0x0").unwrap()
+        );
+    }
+
+    #[test]
+    fn address_from_both() {
+        let env_metadata = dojo_world::metadata::Environment {
+            account_address: Some("0x0".to_owned()),
+            ..Default::default()
+        };
+
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x1"]);
+
+        assert_eq!(
+            cmd.account.account_address(Some(&env_metadata)).unwrap(),
+            FieldElement::from_hex_be("0x1").unwrap()
+        );
+    }
+
+    #[test]
+    fn address_from_neither() {
+        let env_metadata = dojo_world::metadata::Environment::default();
+
+        let cmd = Command::parse_from([""]);
+
+        assert!(cmd.account.account_address(Some(&env_metadata)).is_err(),);
+    }
+}
