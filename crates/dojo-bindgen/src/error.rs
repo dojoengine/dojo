@@ -9,6 +9,8 @@ pub enum Error {
     SerdeJson(#[from] serde_json::Error),
     #[error(transparent)]
     Cainome(#[from] CainomeError),
+    #[error("Format error: {0}")]
+    Format(String),
 }
 
 pub type BindgenResult<T, E = Error> = Result<T, E>;

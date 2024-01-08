@@ -24,6 +24,13 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
 }
 
 #[derive(Model, Copy, Drop, Serde)]
+struct mySss {
+    #[key]
+    player: ContractAddress,
+    remaining: u8,
+}
+
+#[derive(Model, Copy, Drop, Serde)]
 struct Moves {
     #[key]
     player: ContractAddress,

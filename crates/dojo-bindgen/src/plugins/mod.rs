@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use cainome::parser::tokens::Token;
 
 use crate::error::BindgenResult;
+use crate::DojoMetadata;
 
 pub mod typescript;
 pub mod unity;
@@ -26,6 +27,7 @@ pub trait BuiltinPlugin {
         &self,
         contract_name: &str,
         tokens: HashMap<String, Vec<Token>>,
+        metadata: &DojoMetadata,
     ) -> BindgenResult<()>;
 }
 

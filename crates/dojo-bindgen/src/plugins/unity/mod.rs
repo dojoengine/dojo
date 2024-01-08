@@ -5,6 +5,7 @@ use cainome::parser::tokens::Token;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
+use crate::DojoMetadata;
 
 pub struct UnityPlugin;
 
@@ -20,8 +21,9 @@ impl BuiltinPlugin for UnityPlugin {
         &self,
         contract_name: &str,
         tokens: HashMap<String, Vec<Token>>,
+        metadata: &DojoMetadata,
     ) -> BindgenResult<()> {
-        println!("Unity bindings for {}\n{:?}", contract_name, tokens);
+        println!("Unity bindings for {}\n{:?}\n{:?}", contract_name, metadata, tokens);
 
         Ok(())
     }
