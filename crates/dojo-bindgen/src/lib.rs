@@ -84,7 +84,7 @@ impl PluginManager {
 /// * `file_name` - Name of the contract file.
 /// * `file_content` - Content of the contract artifact.
 fn is_systems_contract(file_name: &str, file_content: &str) -> bool {
-    if file_name.starts_with("dojo") || file_name == "manifest.json" {
+    if file_name.starts_with("dojo::") || file_name == "manifest.json" {
         return false;
     }
 
