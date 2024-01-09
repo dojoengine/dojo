@@ -1,6 +1,5 @@
 pub mod account_manager;
 mod helpers;
-#[cfg(test)]
 mod katana_bench;
 
 use anyhow::Result;

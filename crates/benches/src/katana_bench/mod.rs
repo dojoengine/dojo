@@ -1,10 +1,11 @@
+#[cfg(test)]
 mod timings_stats;
 
 use std::time::Duration;
 
 const ENOUGH_GAS: &str = "0x100000000000000000";
 pub const BLOCK_TIME: Duration = Duration::from_secs(3);
-pub const N_TRANSACTIONS: usize = 1000;
+pub const N_TRANSACTIONS: usize = 2000;
 
 #[cfg(test)]
 mod tests {
@@ -17,9 +18,8 @@ mod tests {
     use crate::{katana_bench::timings_stats::timetable_stats, *};
 
     #[tokio::test]
-    #[ignore] // needs a running katana
+    #[ignore] // needs a running katana --max-connections 10000 -b 3000
     async fn bench_katana() {
-        send_spawn().await;
         let account_manager = account_manager().await;
         let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
         let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])]);
@@ -71,18 +71,5 @@ mod tests {
         // printing some minimal stats
         let max = timetable_stats(times);
         assert!(max > 500);
-    }
-
-    async fn send_spawn() {
-        let account_manager = account_manager().await;
-
-        let (account, nonce) = account_manager.next().await;
-        account
-            .execute(parse_calls(vec![BenchCall("spawn", vec![])]))
-            .nonce(nonce)
-            .max_fee(FieldElement::from_hex_be(ENOUGH_GAS).unwrap())
-            .send()
-            .await
-            .unwrap();
     }
 }

@@ -12,6 +12,7 @@ use tokio::sync::{Mutex, OnceCell};
 
 use crate::{
     helpers::{chain_id, provider},
+    katana_bench::N_TRANSACTIONS,
     ACCOUNT_ADDRESS,
 };
 
@@ -47,7 +48,8 @@ impl AccountManager {
         let mut seed = [0; 32];
         seed[0] = 48;
 
-        let accounts = DevAccountGenerator::new(1000).with_seed(seed).generate();
+        let accounts =
+            DevAccountGenerator::new(N_TRANSACTIONS.try_into().unwrap()).with_seed(seed).generate();
 
         let chain_id: FieldElement = chain_id().await;
 
