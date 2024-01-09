@@ -161,7 +161,7 @@ mod tests {
     fn address_from_args() {
         let env_metadata = dojo_world::metadata::Environment::default();
 
-        let cmd = Command::parse_from(["sozo", "--address", "0x0"]);
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
         assert_eq!(
             cmd.account.account_address(Some(&env_metadata)).unwrap(),
             FieldElement::from_hex_be("0x0").unwrap()
