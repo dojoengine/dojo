@@ -4,6 +4,7 @@ use jsonrpsee::core::Error;
 pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::KatanaSequencer;
 pub use katana_core::sequencer::SequencerConfig;
+use katana_primitives::chain::ChainId;
 use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
 use katana_rpc::{spawn, NodeHandle};
@@ -79,7 +80,7 @@ impl TestSequencer {
 pub fn get_default_test_starknet_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
-        env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
+        env: Environment { chain_id: ChainId::GOERLI, ..Default::default() },
         ..Default::default()
     }
 }

@@ -2753,6 +2753,7 @@ dependencies = [
  "dojo-world",
  "jsonrpsee",
  "katana-core",
+ "katana-primitives",
  "katana-rpc",
  "scarb",
  "scarb-ui",
@@ -5442,6 +5443,7 @@ dependencies = [
  "clap_complete",
  "console",
  "katana-core",
+ "katana-primitives",
  "katana-rpc",
  "metrics 0.5.0",
  "metrics-process",
@@ -5558,6 +5560,8 @@ dependencies = [
  "serde_with",
  "starknet",
  "starknet_api",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
  "thiserror",
 ]
 
