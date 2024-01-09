@@ -1,13 +1,20 @@
+mod timings_stats;
+
+use std::time::Duration;
+
+const ENOUGH_GAS: &str = "0x100000000000000000";
+pub const BLOCK_TIME: Duration = Duration::from_secs(3);
+pub const N_TRANSACTIONS: usize = 1000;
+
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, Instant};
 
     use futures::future::join_all;
     use starknet::{accounts::Account, core::types::FieldElement};
+    use tokio::time::{sleep, Instant};
 
-    use crate::*;
-
-    const ENOUGH_GAS: &str = "0x100000000000000000";
+    use super::*;
+    use crate::{katana_bench::timings_stats::timetable_stats, *};
 
     #[tokio::test]
     #[ignore] // needs a running katana
@@ -15,25 +22,40 @@ mod tests {
         send_spawn().await;
         let account_manager = account_manager().await;
         let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
-        let calldata = parse_calls(vec![BenchCall(
+        let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])]);
+        let calldata_move = parse_calls(vec![BenchCall(
             "move",
-            vec![FieldElement::from_hex_be("0x1").unwrap()].clone(),
+            vec![FieldElement::from_hex_be("0x3").unwrap()].clone(),
         )]);
 
-        let accounts = join_all((0..500u32).into_iter().map(|_| account_manager.next())).await;
-        let transactions = accounts
+        // generating all needed accounds
+        let accounts =
+            join_all((0..N_TRANSACTIONS).into_iter().map(|_| account_manager.next())).await;
+        let (spawn_txs, move_txs): (Vec<_>, Vec<_>) = accounts
             .iter()
             .map(|(account, nonce)| {
-                account.execute(calldata.clone()).nonce(*nonce).max_fee(max_fee)
+                let spawn_call =
+                    account.execute(calldata_spawn.clone()).nonce(*nonce).max_fee(max_fee);
+                let move_call = account
+                    .execute(calldata_move.clone())
+                    .nonce(*nonce + 1u8.into())
+                    .max_fee(max_fee);
+                (spawn_call, move_call)
             })
-            .collect::<Vec<_>>();
+            // .collect::<Vec<_>>();
+            .unzip();
 
-        let transaction_hashes = join_all(transactions.iter().map(|t| async {
+        // running a spawn for each account
+        join_all(spawn_txs.iter().map(|t| t.send())).await;
+        sleep(BLOCK_TIME).await;
+
+        let transaction_hashes = join_all(move_txs.iter().map(|t| async {
             let r = t.send().await;
             (r, Instant::now())
         }))
         .await;
 
+        // Unwraping and extracting the times
         let mut times = transaction_hashes
             .into_iter()
             .map(|r| {
@@ -43,9 +65,12 @@ mod tests {
             .collect::<Vec<_>>();
         times.sort();
 
+        // time difference between first and last transaction
         println!("duration: {:?}", *times.last().unwrap() - *times.first().unwrap());
 
-        timetable_stats(times);
+        // printing some minimal stats
+        let max = timetable_stats(times);
+        assert!(max > 500);
     }
 
     async fn send_spawn() {
@@ -59,40 +84,5 @@ mod tests {
             .send()
             .await
             .unwrap();
-    }
-
-    fn timetable_stats(times: Vec<Instant>) {
-        let time_window = Duration::from_secs(3);
-        let mut left = 0;
-        let mut right = 0;
-        let mut initial_phase = true;
-        let mut max = 0;
-        let mut min_after_initial = 0;
-
-        loop {
-            if right == times.len() {
-                break;
-            }
-
-            if times[right] - times[left] > time_window {
-                left += 1;
-                initial_phase = false;
-            } else {
-                right += 1;
-                let current = right - left;
-                if current > max {
-                    max = current;
-                }
-
-                if !initial_phase {
-                    if current < min_after_initial {
-                        min_after_initial = current;
-                    }
-                }
-            }
-        }
-
-        println!("max: {}", max);
-        println!("min_after_initial: {}", min_after_initial);
     }
 }
