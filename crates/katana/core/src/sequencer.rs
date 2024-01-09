@@ -10,6 +10,7 @@ use katana_executor::blockifier::state::StateRefDb;
 use katana_executor::blockifier::utils::EntryPointCall;
 use katana_executor::blockifier::PendingState;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
+use katana_primitives::chain::ChainId;
 use katana_primitives::contract::{
     ClassHash, CompiledContractClass, ContractAddress, Nonce, StorageKey, StorageValue,
 };
@@ -26,7 +27,6 @@ use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionsProviderExt,
 };
 use starknet::core::types::{BlockTag, EmittedEvent, EventsPage, FeeEstimate};
-use starknet_api::core::ChainId;
 
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
@@ -215,7 +215,7 @@ impl KatanaSequencer {
     }
 
     pub fn chain_id(&self) -> ChainId {
-        self.backend.env.read().block.chain_id.clone()
+        self.backend.chain_id
     }
 
     pub fn block_number(&self) -> BlockNumber {

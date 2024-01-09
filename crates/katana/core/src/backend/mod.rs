@@ -4,6 +4,7 @@ use blockifier::block_context::BlockContext;
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
+use katana_primitives::chain::ChainId;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
@@ -20,7 +21,6 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::ChainId;
 use tracing::{info, trace};
 
 pub mod config;
@@ -40,6 +40,8 @@ pub struct Backend {
     pub config: RwLock<StarknetConfig>,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
+    /// The chain id.
+    pub chain_id: ChainId,
     /// The chain environment values.
     pub env: Arc<RwLock<Env>>,
     pub block_context_generator: RwLock<BlockContextGenerator>,
@@ -57,7 +59,9 @@ impl Backend {
             .with_balance(*DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
             .generate();
 
-        let blockchain: Blockchain = if let Some(forked_url) = &config.fork_rpc_url {
+        let (blockchain, chain_id): (Blockchain, ChainId) = if let Some(forked_url) =
+            &config.fork_rpc_url
+        {
             let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
             let forked_chain_id = provider.chain_id().await.unwrap();
 
@@ -79,7 +83,8 @@ impl Backend {
             block_context.block_number = BlockNumber(block.block_number);
             block_context.block_timestamp = BlockTimestamp(block.timestamp);
             block_context.sequencer_address = ContractAddress(block.sequencer_address).into();
-            block_context.chain_id = ChainId(parse_cairo_short_string(&forked_chain_id).unwrap());
+            block_context.chain_id =
+                starknet_api::core::ChainId(parse_cairo_short_string(&forked_chain_id).unwrap());
 
             trace!(
                 target: "backend",
@@ -89,7 +94,7 @@ impl Backend {
                 forked_url
             );
 
-            Blockchain::new_from_forked(
+            let blockchain = Blockchain::new_from_forked(
                 ForkedProvider::new(provider, forked_block_num.into()),
                 block.block_hash,
                 block.parent_hash,
@@ -101,10 +106,14 @@ impl Backend {
                     _ => panic!("unable to fork for non-accepted block"),
                 },
             )
-            .expect("able to create forked blockchain")
+            .expect("able to create forked blockchain");
+
+            (blockchain, forked_chain_id.into())
         } else {
-            Blockchain::new_with_genesis(InMemoryProvider::new(), &block_context)
-                .expect("able to create blockchain from genesis block")
+            let blockchain = Blockchain::new_with_genesis(InMemoryProvider::new(), &block_context)
+                .expect("able to create blockchain from genesis block");
+
+            (blockchain, config.env.chain_id)
         };
 
         let env = Env { block: block_context };
@@ -115,6 +124,7 @@ impl Backend {
         }
 
         Self {
+            chain_id,
             accounts,
             blockchain,
             config: RwLock::new(config),

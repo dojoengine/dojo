@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::chain::ChainId;
 use crate::contract::ContractAddress;
 
 /// Block environment values.
@@ -21,7 +22,7 @@ pub struct BlockEnv {
 #[derive(Debug, Clone)]
 pub struct CfgEnv {
     /// The chain id.
-    pub chain_id: u64,
+    pub chain_id: ChainId,
     /// The fee cost of the VM resources.
     pub vm_resource_fee_cost: HashMap<String, f64>,
     /// The maximum number of steps allowed for an invoke transaction.
