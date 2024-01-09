@@ -12,7 +12,7 @@ pub trait TransactionProvider: Send + Sync {
 
     /// Returns all the transactions for a given block.
     fn transactions_by_block(&self, block_id: BlockHashOrNumber)
-    -> Result<Option<Vec<TxWithHash>>>;
+        -> Result<Option<Vec<TxWithHash>>>;
 
     /// Returns the transaction at the given block and its exact index in the block.
     fn transaction_by_block_and_idx(

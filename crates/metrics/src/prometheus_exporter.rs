@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
+use katana_db::models::database_metrics::DbMetrics;
 use metrics::{describe_gauge, gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use metrics_util::layers::{PrefixLayer, Stack};
-use katana_db::models::database_metrics::DbMetrics;
 
 pub(crate) trait Hook: Fn() + Send + Sync {}
 impl<T: Fn() + Send + Sync> Hook for T {}
@@ -80,16 +80,17 @@ pub async fn serve<Metrics>(
     db: Metrics,
     process: metrics_process::Collector,
 ) -> anyhow::Result<()>
-    where
-        Metrics: DbMetrics + 'static + Send + Sync,
-    {
-        let db_metrics_hook = move || db.report_metrics();
+where
+    Metrics: DbMetrics + 'static + Send + Sync,
+{
+    let db_metrics_hook = move || db.report_metrics();
     // Clone `process` to move it into the hook and use the original `process` for describe below.
     let cloned_process = process.clone();
     let hooks: Vec<Box<dyn Hook<Output = ()>>> = vec![
         Box::new(move || cloned_process.collect()),
-        Box::new(db_metrics_hook), 
-        Box::new(collect_memory_stats)];
+        Box::new(db_metrics_hook),
+        Box::new(collect_memory_stats),
+    ];
     serve_with_hooks(listen_addr, handle, hooks).await?;
 
     process.describe();

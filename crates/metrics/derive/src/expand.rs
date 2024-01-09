@@ -244,14 +244,14 @@ fn parse_metrics_attr(node: &DeriveInput) -> Result<MetricsAttr> {
         };
         if kv.path.is_ident("scope") {
             if scope.is_some() {
-                return Err(Error::new_spanned(kv, "Duplicate `scope` value provided."))
+                return Err(Error::new_spanned(kv, "Duplicate `scope` value provided."));
             }
             let scope_lit = parse_str_lit(lit)?;
             validate_metric_name(&scope_lit)?;
             scope = Some(scope_lit);
         } else if kv.path.is_ident("separator") {
             if separator.is_some() {
-                return Err(Error::new_spanned(kv, "Duplicate `separator` value provided."))
+                return Err(Error::new_spanned(kv, "Duplicate `separator` value provided."));
             }
             let separator_lit = parse_str_lit(lit)?;
             if !SUPPORTED_SEPARATORS.contains(&&*separator_lit.value()) {
@@ -265,16 +265,16 @@ fn parse_metrics_attr(node: &DeriveInput) -> Result<MetricsAttr> {
                             .collect::<Vec<_>>()
                             .join(", ")
                     ),
-                ))
+                ));
             }
             separator = Some(separator_lit);
         } else if kv.path.is_ident("dynamic") {
             if dynamic.is_some() {
-                return Err(Error::new_spanned(kv, "Duplicate `dynamic` flag provided."))
+                return Err(Error::new_spanned(kv, "Duplicate `dynamic` flag provided."));
             }
             dynamic = Some(parse_bool_lit(lit)?.value);
         } else {
-            return Err(Error::new_spanned(kv, "Unsupported attribute entry."))
+            return Err(Error::new_spanned(kv, "Unsupported attribute entry."));
         }
     }
 
@@ -319,7 +319,7 @@ fn parse_metric_fields(node: &DeriveInput) -> Result<Vec<MetricField<'_>>> {
                                 return Err(Error::new_spanned(
                                     kv,
                                     "Duplicate `describe` value provided.",
-                                ))
+                                ));
                             }
                             describe = Some(parse_str_lit(lit)?);
                         } else if kv.path.is_ident("rename") {
@@ -327,13 +327,13 @@ fn parse_metric_fields(node: &DeriveInput) -> Result<Vec<MetricField<'_>>> {
                                 return Err(Error::new_spanned(
                                     kv,
                                     "Duplicate `rename` value provided.",
-                                ))
+                                ));
                             }
                             let rename_lit = parse_str_lit(lit)?;
                             validate_metric_name(&rename_lit)?;
                             rename = Some(rename_lit)
                         } else {
-                            return Err(Error::new_spanned(kv, "Unsupported attribute entry."))
+                            return Err(Error::new_spanned(kv, "Unsupported attribute entry."));
                         }
                     }
                     _ => return Err(Error::new_spanned(meta, "Unsupported attribute entry.")),
@@ -343,7 +343,7 @@ fn parse_metric_fields(node: &DeriveInput) -> Result<Vec<MetricField<'_>>> {
 
         if skip {
             metrics.push(MetricField::Skipped(field));
-            continue
+            continue;
         }
 
         let description = match describe {

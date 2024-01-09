@@ -9,13 +9,12 @@ use std::path::Path;
 
 use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
 
-
 use self::tx::Tx;
-use crate::models::database_metrics::{DbMetadata, DbMetadataValue, DbMetrics};
-use metrics::gauge;
 use crate::error::DatabaseError;
+use crate::models::database_metrics::{DbMetadata, DbMetadataValue, DbMetrics};
 use crate::tables::{TableType, Tables};
 use crate::utils;
+use metrics::gauge;
 
 const GIGABYTE: usize = 1024 * 1024 * 1024;
 const TERABYTE: usize = GIGABYTE * 1024;

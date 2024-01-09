@@ -82,15 +82,17 @@ impl ObjectTrait for EventObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("eventEmitted", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "eventEmitted",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let input_keys = parse_keys_argument(&ctx)?;
                     Ok(EventObject::subscription_stream(input_keys))
                 })
-            })
-            .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING))),
-        ])
+            },
+        )
+        .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))])
     }
 }
 

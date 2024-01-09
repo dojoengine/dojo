@@ -20,7 +20,7 @@ pub trait DbMetrics {
             histogram!(name, value, labels);
         }
     }
-    
+
     /// Returns a list of [Gauge](metrics::Gauge) metrics for the database.
     fn gauge_metrics(&self) -> Vec<(&'static str, f64, Vec<Label>)> {
         vec![]

@@ -35,7 +35,7 @@ impl<'a> Metric<'a> {
                     _ => return Err(Error::new_spanned(path_ty, "Unsupported metric type")),
                 };
 
-                return Ok(quote! { #registrar })
+                return Ok(quote! { #registrar });
             }
         }
 
@@ -52,7 +52,7 @@ impl<'a> Metric<'a> {
                     _ => return Err(Error::new_spanned(path_ty, "Unsupported metric type")),
                 };
 
-                return Ok(quote! { #descriptor })
+                return Ok(quote! { #descriptor });
             }
         }
 

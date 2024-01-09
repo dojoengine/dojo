@@ -15,6 +15,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
+use dojo_metrics::utils::parse_socket_address;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
@@ -22,7 +23,6 @@ use katana_core::constants::{
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
-use dojo_metrics::utils::parse_socket_address;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;

@@ -184,7 +184,11 @@ impl HistoricalStateProvider {
         // then that means there is no change happening before the pinned block number.
         let pos = {
             if let Some(pos) = block_list.last().and_then(|num| {
-                if block_number >= *num { Some(block_list.len() - 1) } else { None }
+                if block_number >= *num {
+                    Some(block_list.len() - 1)
+                } else {
+                    None
+                }
             }) {
                 Some(pos)
             } else {

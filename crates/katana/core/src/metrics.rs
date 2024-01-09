@@ -1,9 +1,6 @@
 //! Transaction pool metrics.
 
-use dojo_metrics::{
-    metrics::Counter,
-    Metrics,
-};
+use dojo_metrics::{metrics::Counter, Metrics};
 
 #[derive(Metrics)]
 #[metrics(scope = "core")]

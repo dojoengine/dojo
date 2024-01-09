@@ -1,11 +1,10 @@
-
 // Code adapted from Foundry's Anvil
+use crate::metrics::TxPoolMetrics;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use parking_lot::RwLock;
 use starknet::core::types::FieldElement;
 use tracing::{info, warn};
-use crate::metrics::TxPoolMetrics;
 
 #[derive(Debug, Default)]
 pub struct TransactionPool {
