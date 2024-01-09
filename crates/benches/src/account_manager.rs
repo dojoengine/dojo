@@ -47,7 +47,7 @@ impl AccountManager {
         let mut seed = [0; 32];
         seed[0] = 48;
 
-        let accounts = DevAccountGenerator::new(255).with_seed(seed).generate();
+        let accounts = DevAccountGenerator::new(1000).with_seed(seed).generate();
 
         let chain_id: FieldElement = chain_id().await;
 
