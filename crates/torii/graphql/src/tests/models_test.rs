@@ -302,6 +302,21 @@ mod tests {
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         assert_eq!(connection.edges.len(), 0);
 
+        let query = r#"
+          {{
+             recordSiblingModels {{
+              edges {{
+                cursor
+                node {{
+                    __typename
+                }}
+              }}
+            }}
+          }}
+        "#;
+        let result = run_graphql_query(&schema, query).await;
+        assert!(result.get("recordSiblingsModels").is_some());
+
         Ok(())
     }
 }
