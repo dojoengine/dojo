@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
@@ -163,7 +164,7 @@ impl Messenger for StarknetMessaging {
         &self,
         from_block: u64,
         max_blocks: u64,
-        chain_id: FieldElement,
+        chain_id: ChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = match self.provider.block_number().await {
             Ok(n) => n,
@@ -306,7 +307,7 @@ fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<FieldElement
     Ok((hashes, calls))
 }
 
-fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: FieldElement) -> Result<L1HandlerTx> {
+fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L1HandlerTx> {
     if event.keys[0] != selector!("MessageSentToAppchain") {
         debug!(
             target: LOG_TARGET,
@@ -429,7 +430,7 @@ mod tests {
         let from_address = selector!("from_address");
         let to_address = selector!("to_address");
         let selector = selector!("selector");
-        let chain_id = selector!("KATANA");
+        let chain_id = ChainId::parse("KATANA").unwrap();
         let nonce = FieldElement::ONE;
         let calldata = vec![from_address, FieldElement::THREE];
 
@@ -438,7 +439,7 @@ mod tests {
             to_address,
             selector,
             &calldata,
-            chain_id,
+            chain_id.into(),
             nonce,
         );
 
@@ -512,7 +513,7 @@ mod tests {
             transaction_hash,
         };
 
-        let _tx = l1_handler_tx_from_event(&event, FieldElement::ZERO).unwrap();
+        let _tx = l1_handler_tx_from_event(&event, ChainId::default()).unwrap();
     }
 
     #[test]
@@ -536,6 +537,6 @@ mod tests {
             transaction_hash,
         };
 
-        let _tx = l1_handler_tx_from_event(&event, FieldElement::ZERO).unwrap();
+        let _tx = l1_handler_tx_from_event(&event, ChainId::default()).unwrap();
     }
 }
