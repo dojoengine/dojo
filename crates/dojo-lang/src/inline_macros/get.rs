@@ -107,7 +107,7 @@ impl InlineMacroExprPlugin for GetMacro {
             // the user providing the wrong keys length, which causes an invalid offset
             // in the model deserialization.
             let deser_err_msg = format!(
-                "\"Model `{}` deserialization failed, ensure the length of the keys tuple is \
+                "\"Model `{}`: deserialization failed. Ensure the length of the keys tuple is \
                  matching the number of #[key] fields in the model struct.\"",
                 model.to_string()
             );
