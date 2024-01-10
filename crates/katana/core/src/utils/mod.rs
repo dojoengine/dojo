@@ -42,14 +42,14 @@ pub(super) fn get_genesis_states_for_testing() -> StateUpdatesWithDeclaredClasse
     ]);
 
     let declared_sierra_classes = HashMap::from([(
-        *OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
+        *OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH,
         OZ_V1_ACCOUNT_CONTRACT.clone().flatten().unwrap(),
     )]);
 
     let declared_compiled_classes = HashMap::from([
-        (*UDC_COMPILED_CLASS_HASH, (*UDC_CONTRACT).clone()),
-        (*ERC20_CONTRACT_COMPILED_CLASS_HASH, (*ERC20_CONTRACT).clone()),
-        (*OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH, (*OZ_V1_ACCOUNT_CONTRACT_COMPILED).clone()),
+        (*UDC_CLASS_HASH, (*UDC_CONTRACT).clone()),
+        (*ERC20_CONTRACT_CLASS_HASH, (*ERC20_CONTRACT).clone()),
+        (*OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH, (*OZ_V1_ACCOUNT_CONTRACT_COMPILED).clone()),
     ]);
 
     StateUpdatesWithDeclaredClasses {
