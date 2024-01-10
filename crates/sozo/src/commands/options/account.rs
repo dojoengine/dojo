@@ -14,12 +14,16 @@ use super::{
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Account options")]
+// INVARIANT:
+// - For commandline: we can either specify `private_key` or `keystore_path` along with
+//   `keystore_password`. This is enforced by Clap.
+// - For `Scarb.toml`: if both private_key and keystore are specified in `Scarb.toml` private_key
+//   will take priority
 pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
     pub account_address: Option<FieldElement>,
 
     #[arg(long, env = DOJO_PRIVATE_KEY_ENV_VAR)]
-    #[arg(requires = "account_address")]
     #[arg(conflicts_with = "keystore_path")]
     #[arg(help_heading = "Signer options - RAW")]
     #[arg(help = "The raw private key associated with the account contract.")]
@@ -63,9 +67,6 @@ impl AccountOptions {
     }
 
     fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {
-        // INVARIANT: We assume that from commandline we can either specify `private_key` along with
-        // `account_address` or `keystore_path` along with `keystore_password`.
-        //
         // This is enforced by clap.
         // TODO: See if there is any way to test it.
         if let Some(private_key) =
@@ -158,7 +159,7 @@ mod tests {
     }
 
     #[test]
-    fn address_from_args() {
+    fn account_address_from_args() {
         let env_metadata = dojo_world::metadata::Environment::default();
 
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
@@ -169,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn address_from_env_metadata() {
+    fn account_address_from_env_metadata() {
         let env_metadata = dojo_world::metadata::Environment {
             account_address: Some("0x0".to_owned()),
             ..Default::default()
@@ -183,7 +184,7 @@ mod tests {
     }
 
     #[test]
-    fn address_from_both() {
+    fn account_address_from_both() {
         let env_metadata = dojo_world::metadata::Environment {
             account_address: Some("0x0".to_owned()),
             ..Default::default()
@@ -197,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn address_from_neither() {
+    fn account_address_from_neither() {
         let env_metadata = dojo_world::metadata::Environment::default();
 
         let cmd = Command::parse_from([""]);
@@ -306,5 +307,19 @@ mod tests {
         let result_public_key = result_wallet.get_public_key().await.unwrap();
         let expected_public_key = expected_wallet.get_public_key().await.unwrap();
         assert!(result_public_key.scalar() == expected_public_key.scalar());
+    }
+
+    #[test]
+    fn dont_allow_both_private_key_and_keystore() {
+        let keystore_path = "./tests/test_data/keystore/test.json";
+        let private_key = "0x1";
+        assert!(Command::try_parse_from([
+            "sozo",
+            "--keystore",
+            keystore_path,
+            "--private_key",
+            private_key,
+        ])
+        .is_err());
     }
 }
