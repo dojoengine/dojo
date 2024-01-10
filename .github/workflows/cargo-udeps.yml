@@ -16,7 +16,7 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v3
-      
+
       - uses: dtolnay/rust-toolchain@master
         with:
           # cargo-udeps require nightly to run

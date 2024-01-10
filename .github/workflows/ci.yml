@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: stable
+  RUST_VERSION: 1.74.0
 
 jobs:
   test:
