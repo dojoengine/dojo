@@ -1,49 +1,52 @@
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
+mod utils;
+
 use std::path::Path;
-use std::process::{Child, ChildStdout, Command, Stdio};
-use std::sync::mpsc::{self, Sender};
+use std::process::{Child, Command, Stdio};
+use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use katana_core::accounts::DevAccountGenerator;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
+use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-#[cfg(test)]
-use starknet::providers::Provider;
+use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
-use runner_macro::katana_test;
+pub use runner_macro::katana_test;
+use utils::find_free_port;
 
 #[derive(Debug)]
 pub struct KatanaRunner {
     child: Child,
-}
-
-fn find_free_port() -> u16 {
-    TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port() // This might need to me mutexed
+    provider: JsonRpcClient<HttpTransport>,
+    accounts: Vec<katana_core::accounts::Account>,
 }
 
 impl KatanaRunner {
-    pub fn new() -> Result<(Self, JsonRpcClient<HttpTransport>)> {
+    pub fn new() -> Result<Self> {
         Self::new_with_port(find_free_port())
     }
 
-    pub fn new_with_name(name: &str) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
-        Self::new_with_port_and_filename(find_free_port(), format!("logs/katana-{}.log", name))
+    pub fn new_with_name(name: &str) -> Result<Self> {
+        Self::new_with_port_and_filename(find_free_port(), format!("logs/katana-{}.log", name), 2)
     }
 
-    pub fn new_with_port(port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
-        Self::new_with_port_and_filename(port, format!("logs/katana-{}.log", port))
+    pub fn new_with_port(port: u16) -> Result<Self> {
+        Self::new_with_port_and_filename(port, format!("logs/katana-{}.log", port), 2)
     }
     fn new_with_port_and_filename(
         port: u16,
         log_filename: String,
-    ) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
+        n_accounts: u16,
+    ) -> Result<Self> {
         let mut child = Command::new("katana")
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
+            .args(["--max-connections", &format!("{}", 10000)])
+            .args(["--accounts", &format!("{}", n_accounts)])
             .stdout(Stdio::piped())
             .spawn()
             .context("failed to start subprocess")?;
@@ -52,15 +55,8 @@ impl KatanaRunner {
 
         let (sender, receiver) = mpsc::channel();
 
-        let mut temp_dir = std::env::temp_dir();
-        temp_dir.push("dojo");
-        temp_dir.push("logs");
-        temp_dir.push(format!("katana-{}.log", port));
-
-        eprintln!("Writing katana logs to {}", temp_dir.to_str().unwrap());
-
         thread::spawn(move || {
-            KatanaRunner::wait_for_server_started_and_signal(temp_dir.as_path(), stdout, sender);
+            utils::wait_for_server_started_and_signal(Path::new(&log_filename), stdout, sender);
         });
 
         receiver
@@ -71,27 +67,39 @@ impl KatanaRunner {
             Url::parse(&format!("http://127.0.0.1:{}/", port)).context("Failed to parse url")?;
         let provider = JsonRpcClient::new(HttpTransport::new(url));
 
-        Ok((KatanaRunner { child }, provider))
+        let mut seed = [0; 32];
+        seed[0] = 48;
+        let accounts = DevAccountGenerator::new(n_accounts).with_seed(seed).generate();
+
+        Ok(KatanaRunner { child, provider, accounts })
     }
 
-    fn wait_for_server_started_and_signal(path: &Path, stdout: ChildStdout, sender: Sender<()>) {
-        let reader = BufReader::new(stdout);
+    pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
+        &self.provider
+    }
 
-        if let Some(dir_path) = path.parent() {
-            if !dir_path.exists() {
-                fs::create_dir_all(dir_path).unwrap();
-            }
-        }
-        let mut log_writer = File::create(path).expect("failed to create log file");
+    pub fn accounts(&self) -> &[katana_core::accounts::Account] {
+        &self.accounts
+    }
 
-        for line in reader.lines() {
-            let line = line.expect("failed to read line from subprocess stdout");
-            writeln!(log_writer, "{}", line).expect("failed to write to log file");
+    pub fn account(
+        &self,
+        index: usize,
+    ) -> SingleOwnerAccount<&JsonRpcClient<HttpTransport>, LocalWallet> {
+        let account = &self.accounts[index];
+        let private_key = SigningKey::from_secret_scalar(account.private_key);
+        let signer = LocalWallet::from_signing_key(private_key);
 
-            if line.contains(r#""target":"katana""#) {
-                sender.send(()).expect("failed to send start signal");
-            }
-        }
+        debug_assert_eq!(katana_core::backend::config::Environment::default().chain_id, "Katana");
+        let chain_id = felt!("82743958523457");
+
+        SingleOwnerAccount::new(
+            self.provider(),
+            signer,
+            account.address,
+            chain_id,
+            ExecutionEncoding::Legacy,
+        )
     }
 }
 
@@ -103,17 +111,5 @@ impl Drop for KatanaRunner {
         if let Err(e) = self.child.wait() {
             eprintln!("Failed to wait for katana subprocess: {}", e);
         }
-    }
-}
-
-#[katana_test]
-async fn test_run() {
-    for _ in 0..10 {
-        let (_katana_guard, provider) =
-            KatanaRunner::new().expect("failed to start another katana");
-
-        let _block_number = provider.block_number().await.unwrap();
-        // created by the macro at the beginning of the test
-        let _other_block_number = katana_provider.block_number().await.unwrap();
     }
 }

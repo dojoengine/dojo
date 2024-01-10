@@ -1,5 +1,5 @@
 [package]
-name = "runner_macro"
+name = "runner-macro"
 version = "0.1.0"
 edition = "2021"
 

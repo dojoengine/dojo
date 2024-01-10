@@ -895,6 +895,7 @@ dependencies = [
  "futures",
  "hex",
  "katana-core",
+ "katana-runner",
  "lazy_static",
  "proptest",
  "reqwest",
@@ -6338,8 +6339,9 @@ version = "0.5.1-alpha.2"
 dependencies = [
  "anyhow",
  "home",
+ "katana-core",
  "lazy_static",
- "runner_macro",
+ "runner-macro",
  "starknet",
  "tokio",
  "url",

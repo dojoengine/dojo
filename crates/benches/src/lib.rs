@@ -71,8 +71,7 @@ mod tests {
         log("bench_spawn", fee, "");
     }
 
-    #[tokio::test]
-    #[ignore] // needs a running katana
+    #[katana_runner::katana_test]
     async fn bench_katana() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
 

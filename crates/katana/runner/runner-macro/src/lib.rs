@@ -9,11 +9,10 @@ pub fn katana_test(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     let function_name = test_function.sig.ident.to_string();
 
     let header: Stmt = parse_quote! {
-        let (__katana_guard, katana_provider) =
-            KatanaRunner::new_with_name(#function_name).expect("failed to start katana");
+        let runner = katana_runner::KatanaRunner::new_with_name(#function_name).expect("failed to start katana");
     };
-    let stmts = &mut test_function.block.stmts;
-    stmts.insert(0, header);
+
+    test_function.block.stmts.insert(0, header);
 
     TokenStream::from(quote! {
         #[tokio::test]

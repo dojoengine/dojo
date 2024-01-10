@@ -6,7 +6,8 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-runner_macro = { path = "./runner-macro" }
+runner-macro = { path = "./runner-macro" }
+katana-core = { path = "../core" }
 anyhow.workspace = true
 home = "0.5.5"
 lazy_static.workspace = true
