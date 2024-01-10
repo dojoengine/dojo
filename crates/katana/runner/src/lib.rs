@@ -30,18 +30,17 @@ impl KatanaRunner {
         Self::new_with_port(find_free_port())
     }
 
-    pub fn new_from_macro(_name: &str, port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
-        Self::new_with_port(port)
+    pub fn new_with_name(name: &str) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
+        Self::new_with_port_and_filename(find_free_port(), format!("logs/katana-{}.log", name))
     }
 
     pub fn new_with_port(port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
-        let mut temp_dir = std::env::temp_dir();
-        temp_dir.push("dojo");
-        temp_dir.push("logs");
-        temp_dir.push(format!("katana-{}.log", port));
-
-        eprintln!("Writing katana logs to {}", temp_dir.to_str().unwrap());
-
+        Self::new_with_port_and_filename(port, format!("logs/katana-{}.log", port))
+    }
+    fn new_with_port_and_filename(
+        port: u16,
+        log_filename: String,
+    ) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
         let mut child = Command::new("katana")
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
@@ -52,6 +51,13 @@ impl KatanaRunner {
         let stdout = child.stdout.take().context("failed to take subprocess stdout")?;
 
         let (sender, receiver) = mpsc::channel();
+
+        let mut temp_dir = std::env::temp_dir();
+        temp_dir.push("dojo");
+        temp_dir.push("logs");
+        temp_dir.push(format!("katana-{}.log", port));
+
+        eprintln!("Writing katana logs to {}", temp_dir.to_str().unwrap());
 
         thread::spawn(move || {
             KatanaRunner::wait_for_server_started_and_signal(temp_dir.as_path(), stdout, sender);

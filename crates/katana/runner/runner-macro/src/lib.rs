@@ -10,7 +10,7 @@ pub fn katana_test(_metadata: TokenStream, input: TokenStream) -> TokenStream {
 
     let header: Stmt = parse_quote! {
         let (__katana_guard, katana_provider) =
-            KatanaRunner::new_from_macro(#function_name, 21370).expect("failed to start katana");
+            KatanaRunner::new_with_name(#function_name).expect("failed to start katana");
     };
     let stmts = &mut test_function.block.stmts;
     stmts.insert(0, header);
