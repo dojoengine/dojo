@@ -22,6 +22,7 @@ members = [
   "crates/katana/rpc/rpc-types",
   "crates/katana/rpc/rpc-types-builder",
   "crates/katana/runner",
+  "crates/katana/runner/runner-macro",
   "crates/katana/storage/codecs",
   "crates/katana/storage/codecs/derive",
   "crates/katana/storage/db",

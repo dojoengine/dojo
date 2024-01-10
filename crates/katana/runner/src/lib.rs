@@ -14,6 +14,8 @@ use starknet::providers::JsonRpcClient;
 use starknet::providers::Provider;
 use url::Url;
 
+use runner_macro::katana_test;
+
 #[derive(Debug)]
 pub struct KatanaRunner {
     child: Child,
@@ -94,7 +96,7 @@ impl Drop for KatanaRunner {
     }
 }
 
-#[tokio::test]
+#[katana_test]
 async fn test_run() {
     let (_katana_guard, long_lived_provider) =
         KatanaRunner::new_with_port(21370).expect("failed to start katana");
