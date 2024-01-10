@@ -30,6 +30,10 @@ impl KatanaRunner {
         Self::new_with_port(find_free_port())
     }
 
+    pub fn new_from_macro(_name: &str, port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
+        Self::new_with_port(port)
+    }
+
     pub fn new_with_port(port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
         let mut temp_dir = std::env::temp_dir();
         temp_dir.push("dojo");
@@ -98,14 +102,12 @@ impl Drop for KatanaRunner {
 
 #[katana_test]
 async fn test_run() {
-    let (_katana_guard, long_lived_provider) =
-        KatanaRunner::new_with_port(21370).expect("failed to start katana");
-
     for _ in 0..10 {
         let (_katana_guard, provider) =
             KatanaRunner::new().expect("failed to start another katana");
 
         let _block_number = provider.block_number().await.unwrap();
-        let _other_block_number = long_lived_provider.block_number().await.unwrap();
+        // created by the macro at the beginning of the test
+        let _other_block_number = katana_provider.block_number().await.unwrap();
     }
 }
