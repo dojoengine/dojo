@@ -1,12 +1,16 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use katana_core::constants::{ERC20_CONTRACT, UDC_CONTRACT};
 use katana_db::mdbx;
 use katana_primitives::block::{
     BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::contract::{
+    CompiledContractClass, ContractAddress, FlattenedSierraClass, SierraClass,
+};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::utils::class::parse_compiled_class;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -24,6 +28,15 @@ lazy_static! {
     pub static ref FORKED_PROVIDER: (KatanaRunner, Arc<JsonRpcClient<HttpTransport>>) = {
         let (runner, provider) = katana_runner::KatanaRunner::new().unwrap();
         (runner, Arc::new(provider))
+    };
+    pub static ref DOJO_WORLD_COMPILED_CLASS: CompiledContractClass =
+        parse_compiled_class(include_str!("../../db/benches/artifacts/dojo_world_240.json"))
+            .unwrap();
+    pub static ref DOJO_WORLD_SIERRA_CLASS: FlattenedSierraClass = {
+        let sierra_class: SierraClass =
+            serde_json::from_str(include_str!("../../db/benches/artifacts/dojo_world_240.json"))
+                .unwrap();
+        sierra_class.flatten().unwrap()
     };
 }
 
@@ -58,7 +71,7 @@ pub fn db_provider() -> BlockchainProvider<DbProvider> {
 }
 
 #[rstest::fixture]
-pub fn mock_state_updates() -> (StateUpdates, StateUpdates, StateUpdates) {
+pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
     let address_1 = ContractAddress::from(felt!("1"));
     let address_2 = ContractAddress::from(felt!("2"));
 
@@ -71,64 +84,82 @@ pub fn mock_state_updates() -> (StateUpdates, StateUpdates, StateUpdates) {
     let class_hash_3 = felt!("33");
     let compiled_class_hash_3 = felt!("3000");
 
-    let state_update_1 = StateUpdates {
-        nonce_updates: HashMap::from([(address_1, 1u8.into()), (address_2, 1u8.into())]),
-        storage_updates: HashMap::from([
-            (address_1, HashMap::from([(1u8.into(), 100u32.into()), (2u8.into(), 101u32.into())])),
-            (address_2, HashMap::from([(1u8.into(), 200u32.into()), (2u8.into(), 201u32.into())])),
-        ]),
-        declared_classes: HashMap::from([(class_hash_1, compiled_class_hash_1)]),
-        contract_updates: HashMap::from([(address_1, class_hash_1), (address_2, class_hash_1)]),
+    let state_update_1 = StateUpdatesWithDeclaredClasses {
+        state_updates: StateUpdates {
+            nonce_updates: HashMap::from([(address_1, 1u8.into()), (address_2, 1u8.into())]),
+            storage_updates: HashMap::from([
+                (
+                    address_1,
+                    HashMap::from([(1u8.into(), 100u32.into()), (2u8.into(), 101u32.into())]),
+                ),
+                (
+                    address_2,
+                    HashMap::from([(1u8.into(), 200u32.into()), (2u8.into(), 201u32.into())]),
+                ),
+            ]),
+            declared_classes: HashMap::from([(class_hash_1, compiled_class_hash_1)]),
+            contract_updates: HashMap::from([(address_1, class_hash_1), (address_2, class_hash_1)]),
+        },
+        declared_compiled_classes: HashMap::from([(class_hash_1, (*ERC20_CONTRACT).clone())]),
+        ..Default::default()
     };
 
-    let state_update_2 = StateUpdates {
-        nonce_updates: HashMap::from([(address_1, 2u8.into())]),
-        storage_updates: HashMap::from([(
-            address_1,
-            HashMap::from([(felt!("1"), felt!("111")), (felt!("2"), felt!("222"))]),
+    let state_update_2 = StateUpdatesWithDeclaredClasses {
+        state_updates: StateUpdates {
+            nonce_updates: HashMap::from([(address_1, 2u8.into())]),
+            storage_updates: HashMap::from([(
+                address_1,
+                HashMap::from([(felt!("1"), felt!("111")), (felt!("2"), felt!("222"))]),
+            )]),
+            declared_classes: HashMap::from([(class_hash_2, compiled_class_hash_2)]),
+            contract_updates: HashMap::from([(address_2, class_hash_2)]),
+        },
+        declared_compiled_classes: HashMap::from([(class_hash_2, (*UDC_CONTRACT).clone())]),
+        ..Default::default()
+    };
+
+    let state_update_3 = StateUpdatesWithDeclaredClasses {
+        state_updates: StateUpdates {
+            nonce_updates: HashMap::from([(address_1, 3u8.into()), (address_2, 2u8.into())]),
+            storage_updates: HashMap::from([
+                (address_1, HashMap::from([(3u8.into(), 77u32.into())])),
+                (
+                    address_2,
+                    HashMap::from([(1u8.into(), 12u32.into()), (2u8.into(), 13u32.into())]),
+                ),
+            ]),
+            contract_updates: HashMap::from([(address_1, class_hash_2), (address_2, class_hash_3)]),
+            declared_classes: HashMap::from([(class_hash_3, compiled_class_hash_3)]),
+        },
+        declared_compiled_classes: HashMap::from([(
+            class_hash_3,
+            (*DOJO_WORLD_COMPILED_CLASS).clone(),
         )]),
-        declared_classes: HashMap::from([(class_hash_2, compiled_class_hash_2)]),
-        contract_updates: HashMap::from([(address_2, class_hash_2)]),
+        declared_sierra_classes: HashMap::from([(
+            class_hash_3,
+            (*DOJO_WORLD_SIERRA_CLASS).clone(),
+        )]),
     };
 
-    let state_update_3 = StateUpdates {
-        nonce_updates: HashMap::from([(address_1, 3u8.into()), (address_2, 2u8.into())]),
-        storage_updates: HashMap::from([
-            (address_1, HashMap::from([(3u8.into(), 77u32.into())])),
-            (address_2, HashMap::from([(1u8.into(), 12u32.into()), (2u8.into(), 13u32.into())])),
-        ]),
-        contract_updates: HashMap::from([(address_1, class_hash_2), (address_2, class_hash_3)]),
-        declared_classes: HashMap::from([(class_hash_3, compiled_class_hash_3)]),
-    };
-
-    (state_update_1, state_update_2, state_update_3)
+    [state_update_1, state_update_2, state_update_3]
 }
 
 #[rstest::fixture]
 #[default(BlockchainProvider<InMemoryProvider>)]
 pub fn provider_with_states<Db>(
     #[default(in_memory_provider())] provider: BlockchainProvider<Db>,
-    #[from(mock_state_updates)] state_updates: (StateUpdates, StateUpdates, StateUpdates),
+    #[from(mock_state_updates)] state_updates: [StateUpdatesWithDeclaredClasses; 3],
 ) -> BlockchainProvider<Db>
 where
     Db: BlockWriter + StateFactoryProvider,
 {
-    let state_update_at_block_1 =
-        StateUpdatesWithDeclaredClasses { state_updates: state_updates.0, ..Default::default() };
-    let state_update_at_block_2 =
-        StateUpdatesWithDeclaredClasses { state_updates: state_updates.1, ..Default::default() };
-    let state_update_at_block_5 =
-        StateUpdatesWithDeclaredClasses { state_updates: state_updates.2, ..Default::default() };
-
-    // Fill provider with states.
-
     for i in 0..=5 {
         let block_id = BlockHashOrNumber::from(i);
 
         let state_update = match block_id {
-            BlockHashOrNumber::Num(1) => state_update_at_block_1.clone(),
-            BlockHashOrNumber::Num(2) => state_update_at_block_2.clone(),
-            BlockHashOrNumber::Num(5) => state_update_at_block_5.clone(),
+            BlockHashOrNumber::Num(1) => state_updates[0].clone(),
+            BlockHashOrNumber::Num(2) => state_updates[1].clone(),
+            BlockHashOrNumber::Num(5) => state_updates[2].clone(),
             _ => StateUpdatesWithDeclaredClasses::default(),
         };
 

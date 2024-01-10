@@ -11,29 +11,13 @@ use super::model::{ModelError, ModelRPCReader};
 #[path = "world_test.rs"]
 pub(crate) mod test;
 
-#[cfg(not(doctest))]
 pub mod abigen {
     pub mod world {
-        use cainome::rs::abigen;
-        abigen!(WorldContract, "crates/dojo-world/src/contracts/abi/world.json");
+        pub use crate::contracts::abi::world::*;
     }
 
     pub mod executor {
-        use cainome::rs::abigen;
-        abigen!(ExecutorContract, "crates/dojo-world/src/contracts/abi/executor.json");
-    }
-}
-
-#[cfg(doctest)]
-pub mod abigen {
-    pub mod world {
-        use cainome::rs::abigen;
-        abigen!(WorldContract, "src/contracts/abi/world.json");
-    }
-
-    pub mod executor {
-        use cainome::rs::abigen;
-        abigen!(ExecutorContract, "src/contracts/abi/executor.json");
+        pub use crate::contracts::abi::executor::*;
     }
 }
 

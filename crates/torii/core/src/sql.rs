@@ -290,7 +290,7 @@ impl Sql {
                 }
 
                 let mut path_clone = path.clone();
-                path_clone.push(member.ty.name());
+                path_clone.push(member.name.clone());
 
                 self.build_register_queries_recursive(
                     &member.ty,
@@ -337,12 +337,13 @@ impl Sql {
                     columns.join(","),
                     placeholders.join(",")
                 );
+
                 self.query_queue.enqueue(statement, arguments);
 
                 for member in s.children.iter() {
                     if let Ty::Struct(_) = &member.ty {
                         let mut path_clone = path.clone();
-                        path_clone.push(member.ty.name());
+                        path_clone.push(member.name.clone());
 
                         self.build_set_entity_queries_recursive(
                             path_clone, event_id, entity_id, &member.ty,
@@ -353,7 +354,7 @@ impl Sql {
             Ty::Enum(e) => {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
-                    path_clone.push(child.ty.name());
+                    path_clone.push(child.name.clone());
                     self.build_set_entity_queries_recursive(
                         path_clone, event_id, entity_id, &child.ty,
                     );

@@ -123,10 +123,15 @@ pub fn connection_output(
         .iter()
         .map(|row| {
             let order_field = match order {
-                Some(order) => format!("external_{}", order.field),
+                Some(order) => {
+                    if is_external {
+                        format!("external_{}", order.field)
+                    } else {
+                        order.field.to_string()
+                    }
+                }
                 None => id_column.to_string(),
             };
-
             let primary_order = row.try_get::<String, &str>(id_column)?;
             let secondary_order = row.try_get_unchecked::<String, &str>(&order_field)?;
             let cursor = cursor::encode(&primary_order, &secondary_order);

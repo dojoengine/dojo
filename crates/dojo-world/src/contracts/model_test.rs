@@ -63,7 +63,7 @@ async fn test_model() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x02b233bba9a232a5e891c85eca9f67beedca7a12f9768729ff017bcb62d25c9d"
+            "0x004cd20d231b04405a77b184c115dc60637e186504fad7f0929bd76cbd09c10b"
         )
         .unwrap()
     );

@@ -169,7 +169,6 @@ pub trait ObjectTrait: Send + Sync {
                 object = object.field(field);
             }
         }
-
         vec![object]
     }
 }

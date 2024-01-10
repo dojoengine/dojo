@@ -43,6 +43,12 @@ struct Roles {
     role_ids: Array<u8>
 }
 
+#[derive(Model, Serde)]
+struct OnlyKeyModel {
+    #[key]
+    id: felt252
+}
+
 use starknet::ContractAddress;
 
 #[derive(Model, Copy, Drop, Serde)]
@@ -520,10 +526,15 @@ mod player {
 }
 
 //! > expected_diagnostics
-error: Model must define atleast one #[key] attribute
+error: Model must define at least one #[key] attribute
  --> test_src/lib.cairo:36:8
 struct Roles {
        ^***^
+
+error: Model must define at least one member that is not a key
+ --> test_src/lib.cairo:41:8
+struct OnlyKeyModel {
+       ^**********^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:73:13
@@ -532,6 +543,11 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:69:13
+            #[starknet::contract]
+            ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:68:13
             #[starknet::contract]
             ^*******************^
 
@@ -597,6 +613,36 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:101:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:72:17
+                #[storage]
+                ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:75:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:80:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:85:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:93:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:100:17
                 #[external(v0)]
                 ^*************^
 
@@ -668,6 +714,12 @@ impl PositionImpl of PositionTrait {
 #[derive(Model, Serde)]
 struct Roles {
     role_ids: Array<u8>
+}
+
+#[derive(Model, Serde)]
+struct OnlyKeyModel {
+    #[key]
+    id: felt252
 }
 
 use starknet::ContractAddress;
@@ -786,7 +838,7 @@ impl PositionSerde of core::serde::Serde::<Position> {
 impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::introspect::Introspect::<Vec3>::size()
+        dojo::database::introspect::Introspect::<Vec3>::size() + 0
     }
 
     #[inline(always)]
@@ -905,7 +957,7 @@ impl RolesSerde of core::serde::Serde::<Roles> {
 impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
     #[inline(always)]
     fn size() -> usize {
-        dojo::database::introspect::Introspect::<Array<u8>>::size()
+        dojo::database::introspect::Introspect::<Array<u8>>::size() + 0
     }
 
     #[inline(always)]
@@ -969,6 +1021,120 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                 #[external(v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<Roles>::ty()
+                }
+            }
+impl OnlyKeyModelSerde of core::serde::Serde::<OnlyKeyModel> {
+    fn serialize(self: @OnlyKeyModel, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.id, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<OnlyKeyModel> {
+        core::option::Option::Some(OnlyKeyModel {
+            id: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+            impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
+                #[inline(always)]
+                fn name(self: @OnlyKeyModel) -> felt252 {
+                    'OnlyKeyModel'
+                }
+
+                #[inline(always)]
+                fn keys(self: @OnlyKeyModel) -> Span<felt252> {
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::ArrayTrait::append(ref serialized, *self.id);
+                    core::array::ArrayTrait::span(@serialized)
+                }
+
+                #[inline(always)]
+                fn values(self: @OnlyKeyModel) -> Span<felt252> {
+                    let mut serialized = core::array::ArrayTrait::new();
+                    
+                    core::array::ArrayTrait::span(@serialized)
+                }
+
+                #[inline(always)]
+                fn layout(self: @OnlyKeyModel) -> Span<u8> {
+                    let mut layout = core::array::ArrayTrait::new();
+                    dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
+                    core::array::ArrayTrait::span(@layout)
+                }
+
+                #[inline(always)]
+                fn packed_size(self: @OnlyKeyModel) -> usize {
+                    let mut layout = self.layout();
+                    dojo::packing::calculate_packed_size(ref layout)
+                }
+            }
+
+            
+impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyModel<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        0
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'OnlyKeyModel',
+            attrs: array![].span(),
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'id',
+                ty: dojo::database::introspect::Ty::Primitive('felt252'),
+                attrs: array!['key'].span()
+            })].span()
+        })
+    }
+}
+        
+
+            #[starknet::interface]
+            trait IOnlyKeyModel<T> {
+                fn name(self: @T) -> felt252;
+            }
+
+            #[starknet::contract]
+            mod only_key_model {
+                use super::OnlyKeyModel;
+
+                #[storage]
+                struct Storage {}
+
+                #[external(v0)]
+                fn name(self: @ContractState) -> felt252 {
+                    'OnlyKeyModel'
+                }
+
+                #[external(v0)]
+                fn unpacked_size(self: @ContractState) -> usize {
+                    dojo::database::introspect::Introspect::<OnlyKeyModel>::size()
+                }
+
+                #[external(v0)]
+                fn packed_size(self: @ContractState) -> usize {
+                    let mut layout = core::array::ArrayTrait::new();
+                    dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
+                    let mut layout_span = layout.span();
+                    dojo::packing::calculate_packed_size(ref layout_span)
+                }
+
+                #[external(v0)]
+                fn layout(self: @ContractState) -> Span<u8> {
+                    let mut layout = core::array::ArrayTrait::new();
+                    dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
+                    core::array::ArrayTrait::span(@layout)
+                }
+
+                #[external(v0)]
+                fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                    dojo::database::introspect::Introspect::<OnlyKeyModel>::ty()
                 }
             }
 impl PlayerCopy of core::traits::Copy::<Player>;

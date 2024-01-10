@@ -13,7 +13,10 @@ use starknet::core::types::{
 };
 use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
-use crate::contract::{ClassHash, CompiledClassHash, CompiledContractClass, SierraClass};
+use crate::contract::{
+    ClassHash, CompiledClassHash, CompiledContractClass, CompiledContractClassV0,
+    FlattenedSierraClass,
+};
 use crate::FieldElement;
 
 mod primitives {
@@ -22,7 +25,37 @@ mod primitives {
     pub use crate::FieldElement;
 }
 
-pub fn legacy_inner_to_rpc_class(legacy_contract_class: ContractClassV0) -> Result<ContractClass> {
+/// Converts the legacy inner compiled class type [CompiledContractClassV0] into its RPC equivalent
+/// [`ContractClass`].
+pub fn legacy_inner_to_rpc_class(
+    legacy_contract_class: CompiledContractClassV0,
+) -> Result<ContractClass> {
+    // Convert [EntryPointType] (blockifier type) into [LegacyEntryPointsByType] (RPC type)
+    fn to_rpc_legacy_entry_points_by_type(
+        entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
+    ) -> Result<LegacyEntryPointsByType> {
+        fn collect_entry_points(
+            entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
+            entry_point_type: &EntryPointType,
+        ) -> Result<Vec<LegacyContractEntryPoint>> {
+            Ok(entries
+                .get(entry_point_type)
+                .ok_or(anyhow!("Missing {entry_point_type:?} entry point",))?
+                .iter()
+                .map(|e| LegacyContractEntryPoint {
+                    offset: e.offset.0 as u64,
+                    selector: FieldElement::from(e.selector.0),
+                })
+                .collect::<Vec<_>>())
+        }
+
+        Ok(LegacyEntryPointsByType {
+            external: collect_entry_points(entries, &EntryPointType::External)?,
+            l1_handler: collect_entry_points(entries, &EntryPointType::L1Handler)?,
+            constructor: collect_entry_points(entries, &EntryPointType::Constructor)?,
+        })
+    }
+
     let entry_points_by_type =
         to_rpc_legacy_entry_points_by_type(&legacy_contract_class.entry_points_by_type)?;
 
@@ -38,8 +71,10 @@ pub fn legacy_inner_to_rpc_class(legacy_contract_class: ContractClassV0) -> Resu
     }))
 }
 
-pub fn rpc_to_inner_class(
-    contract_class: &SierraClass,
+/// Convert the given [`FlattenedSierraClass`] into the inner compiled class type
+/// [`CompiledContractClass`] along with its class hashes.
+pub fn flattened_sierra_to_compiled_class(
+    contract_class: &FlattenedSierraClass,
 ) -> Result<(ClassHash, CompiledClassHash, CompiledContractClass)> {
     let class_hash = contract_class.class_hash();
 
@@ -57,28 +92,9 @@ pub fn rpc_to_inner_class(
     ))
 }
 
-/// Converts `starknet-rs` RPC [SierraClass] type to Cairo's
-/// [ContractClass](cairo_lang_starknet::contract_class::ContractClass) type.
-pub fn rpc_to_cairo_contract_class(
-    contract_class: &SierraClass,
-) -> Result<cairo_lang_starknet::contract_class::ContractClass, std::io::Error> {
-    let value = serde_json::to_value(contract_class)?;
-
-    Ok(cairo_lang_starknet::contract_class::ContractClass {
-        abi: serde_json::from_value(value["abi"].clone()).ok(),
-        sierra_program: serde_json::from_value(value["sierra_program"].clone())?,
-        entry_points_by_type: serde_json::from_value(value["entry_points_by_type"].clone())?,
-        contract_class_version: serde_json::from_value(value["contract_class_version"].clone())?,
-        sierra_program_debug_info: serde_json::from_value(
-            value["sierra_program_debug_info"].clone(),
-        )
-        .ok(),
-    })
-}
-
-/// Compute the compiled class hash from the given [`SierraClass`].
+/// Compute the compiled class hash from the given [`FlattenedSierraClass`].
 pub fn compiled_class_hash_from_flattened_sierra_class(
-    contract_class: &SierraClass,
+    contract_class: &FlattenedSierraClass,
 ) -> Result<FieldElement> {
     let contract_class = rpc_to_cairo_contract_class(contract_class)?;
     let casm = CasmContractClass::from_contract_class(contract_class, true)?;
@@ -86,7 +102,9 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
     Ok(compiled_class.class_hash()?)
 }
 
-pub fn legacy_rpc_to_inner_class(
+/// Converts a legacy RPC compiled contract class [CompressedLegacyContractClass] type to the inner
+/// compiled class type [CompiledContractClass] along with its class hash.
+pub fn legacy_rpc_to_inner_compiled_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
 ) -> Result<(ClassHash, CompiledContractClass)> {
     let legacy_program_json = decompress(&compressed_legacy_contract.program)?;
@@ -105,30 +123,23 @@ pub fn legacy_rpc_to_inner_class(
     Ok((class_hash, CompiledContractClass::V0(contract_class)))
 }
 
-/// Returns a [LegacyEntryPointsByType] (RPC type) from a [EntryPointType] (blockifier type)
-fn to_rpc_legacy_entry_points_by_type(
-    entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
-) -> Result<LegacyEntryPointsByType> {
-    fn collect_entry_points(
-        entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
-        entry_point_type: &EntryPointType,
-    ) -> Result<Vec<LegacyContractEntryPoint>> {
-        Ok(entries
-            .get(entry_point_type)
-            .ok_or(anyhow!("Missing {entry_point_type:?} entry point",))?
-            .iter()
-            .map(|e| LegacyContractEntryPoint {
-                offset: e.offset.0 as u64,
-                selector: FieldElement::from(e.selector.0),
-            })
-            .collect::<Vec<_>>())
-    }
+/// Converts `starknet-rs` RPC [FlattenedSierraClass] type to Cairo's
+/// [ContractClass](cairo_lang_starknet::contract_class::ContractClass) type.
+fn rpc_to_cairo_contract_class(
+    contract_class: &FlattenedSierraClass,
+) -> Result<cairo_lang_starknet::contract_class::ContractClass, std::io::Error> {
+    let value = serde_json::to_value(contract_class)?;
 
-    let constructor = collect_entry_points(entries, &EntryPointType::Constructor)?;
-    let external = collect_entry_points(entries, &EntryPointType::External)?;
-    let l1_handler = collect_entry_points(entries, &EntryPointType::L1Handler)?;
-
-    Ok(LegacyEntryPointsByType { constructor, external, l1_handler })
+    Ok(cairo_lang_starknet::contract_class::ContractClass {
+        abi: serde_json::from_value(value["abi"].clone()).ok(),
+        sierra_program: serde_json::from_value(value["sierra_program"].clone())?,
+        entry_points_by_type: serde_json::from_value(value["entry_points_by_type"].clone())?,
+        contract_class_version: serde_json::from_value(value["contract_class_version"].clone())?,
+        sierra_program_debug_info: serde_json::from_value(
+            value["sierra_program_debug_info"].clone(),
+        )
+        .ok(),
+    })
 }
 
 fn compress(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {

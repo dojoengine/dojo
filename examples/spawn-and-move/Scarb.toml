@@ -1,7 +1,7 @@
 [package]
 cairo-version = "2.4.0"
 name = "dojo_examples"
-version = "0.4.2"
+version = "0.4.4"
 # Use the prelude with the less imports as possible
 # from corelib.
 edition = "2023_10"
@@ -23,6 +23,6 @@ name = "example"
 rpc_url = "http://localhost:5050/"
 
 # Default account for katana with seed = 0
-account_address = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973"
+account_address = "0x9238c8ca6b3c6ab45a793593b13d98797ccd3bda179d313553e51fee114624"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
 world_address = "0x5010c31f127114c6198df8a5239e2b7a5151e1156fb43791e37e7385faa8138"

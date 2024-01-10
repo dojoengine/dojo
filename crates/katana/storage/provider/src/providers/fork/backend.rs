@@ -12,11 +12,12 @@ use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::conversion::rpc::{
-    compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
+    compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
+    legacy_rpc_to_inner_compiled_class,
 };
 use katana_primitives::FieldElement;
 use parking_lot::Mutex;
@@ -388,12 +389,20 @@ impl StateProvider for SharedStateProvider {
 }
 
 impl ContractClassProvider for SharedStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         if let class @ Some(_) = self.0.shared_contract_classes.sierra_classes.read().get(&hash) {
             return Ok(class.cloned());
         }
 
-        let class = self.0.do_get_class_at(hash)?;
+        let Some(class) = handle_contract_or_class_not_found_err(self.0.do_get_class_at(hash))
+            .map_err(|e| {
+                error!(target: "forked_backend", "error while fetching sierra class {hash:#x}: {e}");
+                e
+            })?
+        else {
+            return Ok(None);
+        };
+
         match class {
             starknet::core::types::ContractClass::Legacy(_) => Ok(None),
             starknet::core::types::ContractClass::Sierra(sierra_class) => {
@@ -445,7 +454,7 @@ impl ContractClassProvider for SharedStateProvider {
 
         let (class_hash, compiled_class_hash, casm, sierra) = match class {
             ContractClass::Legacy(class) => {
-                let (_, compiled_class) = legacy_rpc_to_inner_class(&class).map_err(|e| {
+                let (_, compiled_class) = legacy_rpc_to_inner_compiled_class(&class).map_err(|e| {
                     error!(target: "forked_backend", "error while parsing legacy class {hash:#x}: {e}");
                     e
                 })?;
@@ -454,7 +463,7 @@ impl ContractClassProvider for SharedStateProvider {
             }
 
             ContractClass::Sierra(sierra_class) => {
-                let (_, compiled_class_hash, compiled_class) = rpc_to_inner_class(&sierra_class).map_err(|e|{
+                let (_, compiled_class_hash, compiled_class) = flattened_sierra_to_compiled_class(&sierra_class).map_err(|e|{
                     error!(target: "forked_backend", "error while parsing sierra class {hash:#x}: {e}");
                     e
                 })?;

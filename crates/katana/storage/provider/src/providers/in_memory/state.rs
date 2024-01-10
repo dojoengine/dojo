@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
@@ -13,6 +13,8 @@ use crate::traits::state::StateProvider;
 use crate::Result;
 
 pub struct StateSnapshot<Db> {
+    // because the classes are shared between snapshots, when trying to fetch check the compiled
+    // hash first and then the sierra class to ensure the class should be present in the snapshot.
     pub(crate) classes: Arc<SharedContractClasses>,
     pub(crate) inner: CacheSnapshotWithoutClasses<Db>,
 }
@@ -144,14 +146,20 @@ impl StateProvider for InMemorySnapshot {
 }
 
 impl ContractClassProvider for InMemorySnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        let class = self.classes.sierra_classes.read().get(&hash).cloned();
-        Ok(class)
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+            Ok(self.classes.sierra_classes.read().get(&hash).cloned())
+        } else {
+            Ok(None)
+        }
     }
 
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        let class = self.classes.compiled_classes.read().get(&hash).cloned();
-        Ok(class)
+        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+            Ok(self.classes.compiled_classes.read().get(&hash).cloned())
+        } else {
+            Ok(None)
+        }
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -194,7 +202,7 @@ impl StateProvider for LatestStateProvider {
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
         Ok(class)
     }

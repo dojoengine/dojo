@@ -275,17 +275,7 @@ fn handle_introspect_internal(
         }
     });
 
-    if size_precompute > 0 {
-        size.push(format!("{}", size_precompute));
-    }
-
-    if size.is_empty() {
-        panic!(
-            "The model `{}` has only keys, ensure you have at least one field without the #[key] \
-             attribute.",
-            name
-        );
-    }
+    size.push(format!("{}", size_precompute));
 
     RewriteNode::interpolate_patched(
         "

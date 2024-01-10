@@ -18,6 +18,8 @@ use starknet::core::types::{
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
 
+const WAIT_TX_DELAY_MILLIS: u64 = 1000;
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_declare_and_deploy_contract() {
     let sequencer =
@@ -31,7 +33,7 @@ async fn test_send_declare_and_deploy_contract() {
     let res = account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
 
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
@@ -81,7 +83,7 @@ async fn test_send_declare_and_deploy_contract() {
         .unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
 
     assert_eq!(
         account
@@ -110,7 +112,7 @@ async fn test_send_declare_and_deploy_legacy_contract() {
     let class_hash = contract_class.class_hash().unwrap();
     let res = account.declare_legacy(contract_class).send().await.unwrap();
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
 
     let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
 
@@ -160,7 +162,7 @@ async fn test_send_declare_and_deploy_legacy_contract() {
         .unwrap();
 
     // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
 
     assert_eq!(
         account

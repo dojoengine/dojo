@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::backend::SharedStateProvider;
@@ -63,7 +63,7 @@ impl StateProvider for ForkedStateDb {
 }
 
 impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         if let class @ Some(_) = self.shared_contract_classes.sierra_classes.read().get(&hash) {
             return Ok(class.cloned());
         }
@@ -115,7 +115,7 @@ impl StateProvider for LatestStateProvider {
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         ContractClassProvider::sierra_class(&self.0, hash)
     }
 
@@ -172,11 +172,12 @@ impl StateProvider for ForkedSnapshot {
 }
 
 impl ContractClassProvider for ForkedSnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
-        if let class @ Some(_) = self.classes.sierra_classes.read().get(&hash).cloned() {
-            return Ok(class);
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
+        if self.inner.compiled_class_hashes.get(&hash).is_some() {
+            Ok(self.classes.sierra_classes.read().get(&hash).cloned())
+        } else {
+            ContractClassProvider::sierra_class(&self.inner.db, hash)
         }
-        ContractClassProvider::sierra_class(&self.inner.db, hash)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -190,9 +191,10 @@ impl ContractClassProvider for ForkedSnapshot {
     }
 
     fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
-        if let class @ Some(_) = self.classes.compiled_classes.read().get(&hash).cloned() {
-            return Ok(class);
+        if self.inner.compiled_class_hashes.get(&hash).is_some() {
+            Ok(self.classes.compiled_classes.read().get(&hash).cloned())
+        } else {
+            ContractClassProvider::class(&self.inner.db, hash)
         }
-        ContractClassProvider::class(&self.inner.db, hash)
     }
 }

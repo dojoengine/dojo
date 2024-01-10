@@ -145,11 +145,10 @@ fn model_union_field() -> Field {
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
                     for (name,) in model_ids {
                         let type_mapping = type_mapping_query(&mut conn, &name).await?;
-                        let mut path_array = vec![name.clone()];
 
                         let data = model_data_recursive_query(
                             &mut conn,
-                            &mut path_array,
+                            vec![name.clone()],
                             &entity_id,
                             &type_mapping,
                         )
@@ -170,7 +169,7 @@ fn model_union_field() -> Field {
 #[async_recursion]
 pub async fn model_data_recursive_query(
     conn: &mut PoolConnection<Sqlite>,
-    path_array: &mut Vec<String>,
+    path_array: Vec<String>,
     entity_id: &str,
     type_mapping: &TypeMapping,
 ) -> sqlx::Result<ValueMapping> {
@@ -182,11 +181,12 @@ pub async fn model_data_recursive_query(
     let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
 
     for (field_name, type_data) in type_mapping {
-        if let TypeData::Nested((nested_type_ref, nested_mapping)) = type_data {
-            path_array.push(nested_type_ref.to_string());
+        if let TypeData::Nested((_, nested_mapping)) = type_data {
+            let mut nested_path = path_array.clone();
+            nested_path.push(field_name.to_string());
 
             let nested_values =
-                model_data_recursive_query(conn, path_array, entity_id, nested_mapping).await?;
+                model_data_recursive_query(conn, nested_path, entity_id, nested_mapping).await?;
 
             value_mapping.insert(Name::new(field_name), Value::Object(nested_values));
         }

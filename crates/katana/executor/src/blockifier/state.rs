@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use blockifier::state::cached_state::{CachedState, GlobalContractCache};
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::StateReader;
-use katana_primitives::contract::SierraClass;
+use katana_primitives::contract::FlattenedSierraClass;
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
@@ -94,7 +94,7 @@ impl StateReader for StateRefDb {
 
 pub struct CachedStateWrapper<S: StateReader> {
     inner: Mutex<CachedState<S>>,
-    sierra_class: RwLock<HashMap<katana_primitives::contract::ClassHash, SierraClass>>,
+    sierra_class: RwLock<HashMap<katana_primitives::contract::ClassHash, FlattenedSierraClass>>,
 }
 
 impl<S: StateReader> CachedStateWrapper<S> {
@@ -118,7 +118,7 @@ impl<S: StateReader> CachedStateWrapper<S> {
         &self,
     ) -> parking_lot::RwLockReadGuard<
         '_,
-        HashMap<katana_primitives::contract::ClassHash, SierraClass>,
+        HashMap<katana_primitives::contract::ClassHash, FlattenedSierraClass>,
     > {
         self.sierra_class.read()
     }
@@ -127,7 +127,7 @@ impl<S: StateReader> CachedStateWrapper<S> {
         &self,
     ) -> parking_lot::RwLockWriteGuard<
         '_,
-        HashMap<katana_primitives::contract::ClassHash, SierraClass>,
+        HashMap<katana_primitives::contract::ClassHash, FlattenedSierraClass>,
     > {
         self.sierra_class.write()
     }
@@ -160,7 +160,7 @@ where
     fn sierra_class(
         &self,
         hash: katana_primitives::contract::ClassHash,
-    ) -> anyhow::Result<Option<SierraClass>> {
+    ) -> anyhow::Result<Option<FlattenedSierraClass>> {
         let class @ Some(_) = self.sierra_class().get(&hash).cloned() else {
             return Ok(None);
         };

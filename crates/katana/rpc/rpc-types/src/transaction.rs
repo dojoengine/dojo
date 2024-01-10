@@ -4,7 +4,8 @@ use anyhow::Result;
 use derive_more::Deref;
 use katana_primitives::contract::{ClassHash, ContractAddress};
 use katana_primitives::conversion::rpc::{
-    compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
+    compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
+    legacy_rpc_to_inner_compiled_class,
 };
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, InvokeTx, TxHash,
@@ -59,7 +60,8 @@ impl BroadcastedDeclareTx {
     pub fn try_into_tx_with_chain_id(self, chain_id: FieldElement) -> Result<DeclareTxWithClass> {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
-                let (class_hash, compiled_class) = legacy_rpc_to_inner_class(&tx.contract_class)?;
+                let (class_hash, compiled_class) =
+                    legacy_rpc_to_inner_compiled_class(&tx.contract_class)?;
 
                 Ok(DeclareTxWithClass {
                     compiled_class,
@@ -77,7 +79,8 @@ impl BroadcastedDeclareTx {
 
             BroadcastedDeclareTransaction::V2(tx) => {
                 // TODO: avoid computing the class hash again
-                let (class_hash, _, compiled_class) = rpc_to_inner_class(&tx.contract_class)?;
+                let (class_hash, _, compiled_class) =
+                    flattened_sierra_to_compiled_class(&tx.contract_class)?;
 
                 Ok(DeclareTxWithClass {
                     compiled_class,

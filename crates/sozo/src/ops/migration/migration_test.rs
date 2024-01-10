@@ -80,7 +80,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         )),
         sequencer.raw_account().account_address,
         chain_id::TESTNET,
-        ExecutionEncoding::Legacy,
+        ExecutionEncoding::New,
     );
 
     assert!(
@@ -88,7 +88,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
             &ws,
             &migration,
             &account,
-            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64) }),
+            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
         )
         .await
         .is_err()
@@ -125,7 +125,7 @@ async fn migration_from_remote() {
         )),
         sequencer.raw_account().account_address,
         chain_id::TESTNET,
-        ExecutionEncoding::Legacy,
+        ExecutionEncoding::New,
     );
 
     let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();

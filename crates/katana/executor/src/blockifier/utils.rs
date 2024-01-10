@@ -60,9 +60,10 @@ pub fn estimate_fee(
     transactions: impl Iterator<Item = ExecutableTxWithHash>,
     block_context: BlockContext,
     state: Box<dyn StateProvider>,
+    validate: bool,
 ) -> Result<Vec<FeeEstimate>, TransactionExecutionError> {
     let state = CachedStateWrapper::new(StateRefDb::from(state));
-    let results = TransactionExecutor::new(&state, &block_context, false, transactions)
+    let results = TransactionExecutor::new(&state, &block_context, false, validate, transactions)
         .with_error_log()
         .execute();
 

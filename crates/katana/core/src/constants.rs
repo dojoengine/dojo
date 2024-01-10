@@ -1,6 +1,7 @@
 use katana_primitives::contract::{
-    CompiledContractClass, CompiledContractClassV0, ContractAddress, StorageKey,
+    CompiledContractClass, ContractAddress, SierraClass, StorageKey,
 };
+use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::FieldElement;
 use lazy_static::lazy_static;
 use starknet::macros::felt;
@@ -9,11 +10,6 @@ pub const DEFAULT_GAS_PRICE: u128 = 100 * u128::pow(10, 9); // Given in units of
 
 pub const DEFAULT_INVOKE_MAX_STEPS: u32 = 1_000_000;
 pub const DEFAULT_VALIDATE_MAX_STEPS: u32 = 1_000_000;
-
-fn parse_legacy_contract_class(content: impl AsRef<str>) -> CompiledContractClass {
-    let class: CompiledContractClassV0 = serde_json::from_str(content.as_ref()).unwrap();
-    CompiledContractClass::V0(class)
-}
 
 lazy_static! {
 
@@ -25,19 +21,20 @@ lazy_static! {
 
     // Predefined class hashes
 
-    pub static ref OZ_V0_ACCOUNT_CONTRACT_CLASS_HASH: FieldElement = felt!("0x04d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f");
+    pub static ref OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH: FieldElement = felt!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
     pub static ref ERC20_CONTRACT_CLASS_HASH: FieldElement = felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
     pub static ref UDC_CLASS_HASH: FieldElement = felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
 
-    pub static ref OZ_V0_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: FieldElement = felt!("0x04d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f");
+    pub static ref OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: FieldElement = felt!("0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc");
     pub static ref ERC20_CONTRACT_COMPILED_CLASS_HASH: FieldElement = felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
     pub static ref UDC_COMPILED_CLASS_HASH: FieldElement = felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
 
     // Predefined contract classes
 
-    pub static ref ERC20_CONTRACT: CompiledContractClass = parse_legacy_contract_class(include_str!("../contracts/compiled/erc20.json"));
-    pub static ref UDC_CONTRACT: CompiledContractClass = parse_legacy_contract_class(include_str!("../contracts/compiled/universal_deployer.json"));
-    pub static ref OZ_V0_ACCOUNT_CONTRACT: CompiledContractClass = parse_legacy_contract_class(include_str!("../contracts/compiled/account.json"));
+    pub static ref ERC20_CONTRACT: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/erc20.json")).unwrap();
+    pub static ref UDC_CONTRACT: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/universal_deployer.json")).unwrap();
+    pub static ref OZ_V1_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../contracts/compiled/oz_account_080.json")).unwrap();
+    pub static ref OZ_V1_ACCOUNT_CONTRACT_COMPILED: CompiledContractClass = parse_compiled_class(include_str!("../contracts/compiled/oz_account_080.json")).unwrap();
 
     pub static ref DEFAULT_PREFUNDED_ACCOUNT_BALANCE: FieldElement = felt!("0x3635c9adc5dea00000"); // 10^21
 
