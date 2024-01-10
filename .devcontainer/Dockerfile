@@ -37,14 +37,14 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     mv hurl-4.1.0-aarch64-unknown-linux-gnu/hurl /usr/local/bin/ && \
     rm -r hurl-4.1.0-aarch64-unknown-linux-gnu && \
     rm hurl.tar.gz && \
-    rustup component add llvm-tools-preview --toolchain 1.70.0-aarch64-unknown-linux-gnu; \
+    rustup component add llvm-tools-preview --toolchain 1.74.0-aarch64-unknown-linux-gnu; \
     elif [ "$TARGETPLATFORM" = "linux/amd64" ] ; then \
     curl -L https://github.com/Orange-OpenSource/hurl/releases/download/4.1.0/hurl-4.1.0-x86_64-unknown-linux-gnu.tar.gz -o hurl.tar.gz && \
     tar -xzf hurl.tar.gz && \
     mv hurl-4.1.0-x86_64-unknown-linux-gnu/hurl /usr/local/bin/ && \
     rm -r hurl-4.1.0-x86_64-unknown-linux-gnu && \
     rm hurl.tar.gz && \
-    rustup component add llvm-tools-preview --toolchain 1.70.0-x86_64-unknown-linux-gnu && \
+    rustup component add llvm-tools-preview --toolchain 1.74.0-x86_64-unknown-linux-gnu && \
     rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly; \
     fi
 
