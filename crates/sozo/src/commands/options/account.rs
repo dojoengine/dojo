@@ -311,13 +311,15 @@ mod tests {
     fn dont_allow_both_private_key_and_keystore() {
         let keystore_path = "./tests/test_data/keystore/test.json";
         let private_key = "0x1";
-        assert!(Command::try_parse_from([
-            "sozo",
-            "--keystore",
-            keystore_path,
-            "--private_key",
-            private_key,
-        ])
-        .is_err());
+        assert!(
+            Command::try_parse_from([
+                "sozo",
+                "--keystore",
+                keystore_path,
+                "--private_key",
+                private_key,
+            ])
+            .is_err()
+        );
     }
 }
