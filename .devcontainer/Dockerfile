@@ -18,14 +18,14 @@ RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/ca
 
 RUN rustup toolchain install $(cat rust-toolchain.toml | grep channel | cut -d\" -f2) && \
     rustup default $(cat rust-toolchain.toml | grep channel | cut -d\" -f2) && \
-    rustup component add clippy --toolchain $(cat rust-toolchain.toml | grep channel | cut -d\" -f2) && \
-    rustup component add rustfmt --toolchain $(cat rust-toolchain.toml | grep channel | cut -d\" -f2)
+    rustup component add clippy && \
+    rustup component add rustfmt
 
 RUN rustup toolchain install nightly && \
     rustup component add rustfmt --toolchain nightly
 
 RUN rustup target add x86_64-pc-windows-msvc && \
-    rustup target add wasm32-unknown-unknown --toolchain $(cat rust-toolchain.toml | grep channel | cut -d\" -f2)
+    rustup target add wasm32-unknown-unknown
 
 RUN cargo binstall cargo-get cargo-nextest cargo-llvm-cov cargo-release --secure -y
 
