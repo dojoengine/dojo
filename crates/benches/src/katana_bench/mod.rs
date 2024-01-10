@@ -3,7 +3,7 @@ mod timings_stats;
 
 use std::time::Duration;
 
-const ENOUGH_GAS: &str = "0x100000000000000000";
+pub const ENOUGH_GAS: &str = "0x100000000000000000";
 pub const BLOCK_TIME: Duration = Duration::from_secs(3);
 pub const N_TRANSACTIONS: usize = 2000;
 
@@ -11,11 +11,13 @@ pub const N_TRANSACTIONS: usize = 2000;
 mod tests {
 
     use futures::future::join_all;
-    use starknet::{accounts::Account, core::types::FieldElement};
+    use starknet::accounts::Account;
+    use starknet::core::types::FieldElement;
     use tokio::time::{sleep, Instant};
 
     use super::*;
-    use crate::{katana_bench::timings_stats::timetable_stats, *};
+    use crate::katana_bench::timings_stats::timetable_stats;
+    use crate::*;
 
     #[tokio::test]
     #[ignore] // needs a running katana --max-connections 10000 -b 3000
@@ -23,14 +25,11 @@ mod tests {
         let account_manager = account_manager().await;
         let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
         let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])]);
-        let calldata_move = parse_calls(vec![BenchCall(
-            "move",
-            vec![FieldElement::from_hex_be("0x3").unwrap()].clone(),
-        )]);
+        let calldata_move =
+            parse_calls(vec![BenchCall("move", vec![FieldElement::from_hex_be("0x3").unwrap()])]);
 
         // generating all needed accounds
-        let accounts =
-            join_all((0..N_TRANSACTIONS).into_iter().map(|_| account_manager.next())).await;
+        let accounts = join_all((0..N_TRANSACTIONS).map(|_| account_manager.next())).await;
         let (spawn_txs, move_txs): (Vec<_>, Vec<_>) = accounts
             .iter()
             .map(|(account, nonce)| {

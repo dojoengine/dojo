@@ -1,16 +1,15 @@
 pub mod account_manager;
-mod helpers;
-mod katana_bench;
+pub mod helpers;
+pub mod katana_bench;
 
+pub use account_manager::*;
 use anyhow::Result;
 use futures::executor::block_on;
 use futures::future;
+pub use helpers::*;
 use lazy_static::lazy_static;
 use starknet::core::types::FieldElement;
 use tokio::runtime::Runtime;
-
-pub(crate) use account_manager::*;
-pub(crate) use helpers::*;
 
 const KATANA_ENDPOINT: &str = "http://localhost:5050";
 const CONTRACT_ADDRESS: &str = "0x297bde19ca499fd8a39dd9bedbcd881a47f7b8f66c19478ce97d7de89e6112e";

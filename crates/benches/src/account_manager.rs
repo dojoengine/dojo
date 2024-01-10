@@ -2,19 +2,16 @@ use std::sync::Arc;
 
 use futures::future::join_all;
 use katana_core::accounts::DevAccountGenerator;
-use starknet::{
-    accounts::{Account, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount},
-    core::types::FieldElement,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient},
-    signers::{LocalWallet, SigningKey},
-};
+use starknet::accounts::{Account, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
+use starknet::signers::{LocalWallet, SigningKey};
 use tokio::sync::{Mutex, OnceCell};
 
-use crate::{
-    helpers::{chain_id, provider},
-    katana_bench::N_TRANSACTIONS,
-    ACCOUNT_ADDRESS,
-};
+use crate::helpers::{chain_id, provider};
+use crate::katana_bench::N_TRANSACTIONS;
+use crate::ACCOUNT_ADDRESS;
 
 pub async fn account_manager() -> Arc<AccountManager> {
     static CHAIN_ID: OnceCell<Arc<AccountManager>> = OnceCell::const_new();
@@ -80,10 +77,7 @@ impl AccountManager {
         let mut head = self.head.lock().await;
         *head = (*head + 1) % self.accounts.len();
 
-        let mut nonce_lock = self.accounts[*head].1.lock().await;
-        let nonce = nonce_lock.clone();
-        *nonce_lock += FieldElement::ONE;
-
-        (self.accounts[*head].0.clone(), nonce)
+        let nonce_lock = self.accounts[*head].1.lock().await;
+        (self.accounts[*head].0.clone(), *nonce_lock + 1u8.into())
     }
 }
