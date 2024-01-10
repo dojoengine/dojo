@@ -54,7 +54,15 @@ mod tests {
     }
 
     #[test]
-    fn url_exist_in_env_metadata_but_env_doesnt() {
+    fn url_read_from_env_variable() {
+        std::env::set_var(STARKNET_RPC_URL_ENV_VAR, ENV_RPC);
+
+        let cmd = Command::parse_from([""]);
+        assert_eq!(cmd.options.url(None).unwrap().as_str(), ENV_RPC);
+    }
+
+    #[test]
+    fn url_exist_in_env_but_not_in_args() {
         let env_metadata = dojo_world::metadata::Environment {
             rpc_url: Some(METADATA_RPC.into()),
             ..Default::default()
@@ -65,26 +73,26 @@ mod tests {
     }
 
     #[test]
-    fn url_doesnt_exist_in_env_metadata_but_env_does() {
-        std::env::set_var(STARKNET_RPC_URL_ENV_VAR, ENV_RPC);
+    fn url_doesnt_exist_in_env_but_exist_in_args() {
         let env_metadata = dojo_world::metadata::Environment::default();
-        let cmd = Command::parse_from([""]);
+        let cmd = Command::parse_from(["sozo", "--rpc-url", ENV_RPC]);
+
         assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_RPC);
     }
 
     #[test]
-    fn exists_in_both() {
-        std::env::set_var(STARKNET_RPC_URL_ENV_VAR, ENV_RPC);
+    fn url_exists_in_both() {
         let env_metadata = dojo_world::metadata::Environment {
             rpc_url: Some(METADATA_RPC.into()),
             ..Default::default()
         };
-        let cmd = Command::parse_from([""]);
+
+        let cmd = Command::parse_from(["sozo", "--rpc-url", ENV_RPC]);
         assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), ENV_RPC);
     }
 
     #[test]
-    fn exists_in_neither() {
+    fn url_exists_in_neither() {
         let env_metadata = dojo_world::metadata::Environment::default();
         let cmd = Command::parse_from([""]);
         assert_eq!(cmd.options.url(Some(&env_metadata)).unwrap().as_str(), DEFAULT_RPC);
