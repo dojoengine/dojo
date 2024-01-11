@@ -72,7 +72,7 @@ mod tests {
         log("bench_spawn", fee, "");
     }
 
-    #[katana_runner::katana_test(11)]
+    #[katana_runner::katana_test(11, ../../target/release/katana)]
     async fn bench_katana() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
         let prefunded = runner.account(10);

@@ -9,12 +9,17 @@ pub fn katana_test(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let function_name = test_function.sig.ident.to_string();
 
     let metadata = metadata.to_string();
+    let args = metadata.split(",").collect::<Vec<&str>>();
+    let n_accounts = if args.len() != 0 { args[0].parse::<u16>().unwrap() } else { 1 };
 
-    let n_accounts = if metadata.len() != 0 { metadata.parse::<u16>().unwrap() } else { 1 };
+    let executable =
+        if args.len() == 2 { args[1].trim().to_string() } else { "katana".to_string() };
+
+    println!("executable: {}", executable);
 
     let header: Stmt = parse_quote! {
         let runner =
-            katana_runner::KatanaRunner::new_with_name_and_accounts(#function_name, #n_accounts)
+            katana_runner::KatanaRunner::new_with_args(#executable, #function_name, #n_accounts)
                 .expect("failed to start katana");
     };
 

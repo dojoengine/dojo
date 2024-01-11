@@ -33,11 +33,17 @@ impl KatanaRunner {
     }
 
     pub fn new_with_name(name: &str) -> Result<Self> {
-        Self::new_with_port_and_filename(find_free_port(), format!("logs/katana-{}.log", name), 2)
+        Self::new_with_port_and_filename(
+            "katana",
+            find_free_port(),
+            format!("logs/katana-{}.log", name),
+            2,
+        )
     }
 
-    pub fn new_with_name_and_accounts(name: &str, n_accounts: u16) -> Result<Self> {
+    pub fn new_with_args(program: &str, name: &str, n_accounts: u16) -> Result<Self> {
         Self::new_with_port_and_filename(
+            program,
             find_free_port(),
             format!("katana-logs/katana-{}.log", name),
             n_accounts,
@@ -45,14 +51,20 @@ impl KatanaRunner {
     }
 
     pub fn new_with_port(port: u16) -> Result<Self> {
-        Self::new_with_port_and_filename(port, format!("katana-logs/katana-{}.log", port), 2)
+        Self::new_with_port_and_filename(
+            "katana",
+            port,
+            format!("katana-logs/katana-{}.log", port),
+            2,
+        )
     }
     fn new_with_port_and_filename(
+        program: &str,
         port: u16,
         log_filename: String,
         n_accounts: u16,
     ) -> Result<Self> {
-        let mut child = Command::new("katana")
+        let mut child = Command::new(program)
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
             .args(["--max-connections", &format!("{}", 10000)])
