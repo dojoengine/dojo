@@ -1,4 +1,114 @@
-{"timestamp":"2024-01-11T16:36:47.256493Z","level":"INFO","fields":{"message":"{\"accounts\":[{\"address\":\"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973\",\"balance\":\"0x3635c9adc5dea00000\",\"class_hash\":\"0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f\",\"private_key\":\"0x1800000000300000180000000000030000000000003006001800006600\",\"public_key\":\"0x2b191c2f3ecf685a91af7cf72a43e7b90e2e41220175de5c4f7498981b10053\"},{\"address\":\"0x5686a647a9cdd63ade617e0baf3b364856b813b508f03903eb58a7e622d5855\",\"balance\":\"0x3635c9adc5dea00000\",\"class_hash\":\"0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f\",\"private_key\":\"0x33003003001800009900180300d206308b0070db00121318d17b5e6262150b\",\"public_key\":\"0x4c0f884b8e5b4f00d97a3aad26b2e5de0c0c76a555060c837da2e287403c01d\"}],\"address\":\"0.0.0.0:43359\",\"seed\":\"0\"}"},"target":"katana"}
-{"timestamp":"2024-01-11T16:36:47.307308Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
-{"timestamp":"2024-01-11T16:36:47.324309Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
-{"timestamp":"2024-01-11T16:36:47.327529Z","level":"WARN","fields":{"message":"Transaction execution error: \"Error in the called contract (0x0517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973):\nError at pc=0:81:\nGot an exception while executing a hint: Custom Hint Error: Requested contract address ContractAddress(PatriciaKey(StarkFelt(\\\"0x0297bde19ca499fd8a39dd9bedbcd881a47f7b8f66c19478ce97d7de89e6112e\\\"))) is not deployed.\nCairo traceback (most recent call last):\nUnknown location (pc=0:731)\nUnknown location (pc=0:677)\nUnknown location (pc=0:291)\nUnknown location (pc=0:314)\n\""},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:40.332458Z","level":"INFO","fields":{"message":"{\"accounts\":[{\"address\":\"0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973\",\"balance\":\"0x3635c9adc5dea00000\",\"class_hash\":\"0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f\",\"private_key\":\"0x1800000000300000180000000000030000000000003006001800006600\",\"public_key\":\"0x2b191c2f3ecf685a91af7cf72a43e7b90e2e41220175de5c4f7498981b10053\"},{\"address\":\"0x5686a647a9cdd63ade617e0baf3b364856b813b508f03903eb58a7e622d5855\",\"balance\":\"0x3635c9adc5dea00000\",\"class_hash\":\"0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f\",\"private_key\":\"0x33003003001800009900180300d206308b0070db00121318d17b5e6262150b\",\"public_key\":\"0x4c0f884b8e5b4f00d97a3aad26b2e5de0c0c76a555060c837da2e287403c01d\"}],\"address\":\"0.0.0.0:34519\",\"seed\":\"0\"}"},"target":"katana"}
+{"timestamp":"2024-01-11T17:14:40.398337Z","level":"DEBUG","fields":{"method":"\"starknet_chainId\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:40.398893Z","level":"DEBUG","fields":{"method":"\"starknet_getClassHashAt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:40.501004Z","level":"DEBUG","fields":{"method":"\"starknet_getClass\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:40.501317Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:40.505822Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:40.548391Z","level":"DEBUG","fields":{"method":"\"starknet_addDeclareTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:40.584064Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x7aebeaaa1598ddf351f88503a8cfa7d2d98ec078a3b66eca8893b8472c3da85"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:14:40.587233Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 2862 | ECDSA: 1 | L1 Gas: 3672 | Pedersen: 15 | Range Checks: 63"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:40.587281Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:40.587803Z","level":"INFO","fields":{"message":"⛏️ Block 1 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:14:43.086599Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:43.087124Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:43.088103Z","level":"DEBUG","fields":{"method":"\"starknet_getClassHashAt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:43.088545Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:43.090559Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:43.096473Z","level":"DEBUG","fields":{"method":"\"starknet_addInvokeTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:43.097622Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x445c457f0f2efd4aa957c06e4846e93d0e571339e8b92ac11e78f154ce8f023"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:14:43.101075Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 5652 | ECDSA: 1 | L1 Gas: 4284 | Pedersen: 23 | Range Checks: 128"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:43.101108Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x26b160f10156dea0639bec90696772c640b9706a47f5b8c52ea1abe5858b34d]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:43.101117Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:43.101655Z","level":"INFO","fields":{"message":"⛏️ Block 2 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:14:45.598978Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:45.599518Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:45.777598Z","level":"DEBUG","fields":{"method":"\"starknet_getClass\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:45.778014Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:45.785659Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:45.862200Z","level":"DEBUG","fields":{"method":"\"starknet_addDeclareTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:45.974971Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x15e1dc6c520598b9cb21d3b83ea1ddf70647db3bbeffa77cc5a3cee78065407"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:14:45.977833Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 2862 | ECDSA: 1 | L1 Gas: 3672 | Pedersen: 15 | Range Checks: 63"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:45.977883Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:45.978475Z","level":"INFO","fields":{"message":"⛏️ Block 3 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:14:48.477324Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:48.477790Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:49.928831Z","level":"DEBUG","fields":{"method":"\"starknet_getClass\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:49.929229Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:50.002835Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:50.543568Z","level":"DEBUG","fields":{"method":"\"starknet_addDeclareTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:51.014427Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x63536888d2304148940d9994ab6932e45574c94e0aaa63b2a2187384ba93d00"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:14:51.017650Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 2862 | ECDSA: 1 | L1 Gas: 3672 | Pedersen: 15 | Range Checks: 63"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:51.017690Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:51.018297Z","level":"INFO","fields":{"message":"⛏️ Block 4 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:14:53.516680Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:53.517361Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:53.518710Z","level":"DEBUG","fields":{"method":"\"starknet_getClassHashAt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:53.519157Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:53.521374Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:53.531520Z","level":"DEBUG","fields":{"method":"\"starknet_addInvokeTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:53.532867Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x1edbef2f032181a6c215139aa1706b3aa1bf6bad8c8daffcc6311f4aa181a7a"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:14:53.539333Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 6356 | ECDSA: 1 | L1 Gas: 7956 | Pedersen: 25 | Range Checks: 139"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:53.539367Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x26b160f10156dea0639bec90696772c640b9706a47f5b8c52ea1abe5858b34d]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:53.539376Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x20f4a9eb90c382f623710b9c287e5c670ffc7e969860c063aa3ea54cf7325e7]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:53.539383Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:53.539917Z","level":"INFO","fields":{"message":"⛏️ Block 5 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:14:56.035418Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:56.036014Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:56.252528Z","level":"DEBUG","fields":{"method":"\"starknet_getClass\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:56.252841Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:56.262522Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:56.363698Z","level":"DEBUG","fields":{"method":"\"starknet_addDeclareTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:56.411568Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x13fab891c574507ddcaba9f8791b75e2de7f9f9b1133c5d873c8ec3899c248a"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:14:56.414618Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 2862 | ECDSA: 1 | L1 Gas: 3672 | Pedersen: 15 | Range Checks: 63"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:56.414647Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:56.415232Z","level":"INFO","fields":{"message":"⛏️ Block 6 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:14:58.912999Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:58.913510Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:59.115976Z","level":"DEBUG","fields":{"method":"\"starknet_getClass\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:59.116315Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:59.125346Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:59.219344Z","level":"DEBUG","fields":{"method":"\"starknet_addDeclareTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:14:59.262413Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x3196e54802e48d896234be0719ce64efabdd13b129059903cd01a86b5cee49b"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:14:59.265012Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 2862 | ECDSA: 1 | L1 Gas: 3672 | Pedersen: 15 | Range Checks: 63"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:59.265042Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:14:59.265658Z","level":"INFO","fields":{"message":"⛏️ Block 7 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:15:01.765503Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:01.766061Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:01.766582Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:01.768921Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:01.781200Z","level":"DEBUG","fields":{"method":"\"starknet_addInvokeTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:01.782538Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x46a08e90df5b0cb95b562ae50971d8a21bcd3c61cd8715be815d2a859a5bbe1"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:15:01.791469Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 10675 | ECDSA: 1 | L1 Gas: 8568 | Pedersen: 24 | Range Checks: 271"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:01.791503Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x2474f33346a1e5cfe0f6bedbc1facc0224efeb1be69ea9160b8dd8886a100dd]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:01.791512Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x2474f33346a1e5cfe0f6bedbc1facc0224efeb1be69ea9160b8dd8886a100dd]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:01.791519Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:01.792069Z","level":"INFO","fields":{"message":"⛏️ Block 8 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:15:04.284826Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:04.285404Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:04.715170Z","level":"DEBUG","fields":{"method":"\"starknet_getClass\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:04.715536Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:04.735674Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:04.910638Z","level":"DEBUG","fields":{"method":"\"starknet_addDeclareTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:05.022438Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x516670bc28a12351b3a2919b6b2cb4c71e8f07f02b04d9df761eaa6a6ea715a"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:15:05.025839Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 2862 | ECDSA: 1 | L1 Gas: 3672 | Pedersen: 15 | Range Checks: 63"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:05.025881Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:05.026577Z","level":"INFO","fields":{"message":"⛏️ Block 9 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:15:07.524704Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:07.525426Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:07.526088Z","level":"DEBUG","fields":{"method":"\"starknet_call\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:07.530055Z","level":"DEBUG","fields":{"method":"\"starknet_getClassHashAt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:07.530615Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:07.532674Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:07.540409Z","level":"DEBUG","fields":{"method":"\"starknet_addInvokeTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:07.541498Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x1fde99ddbb0dcbb435b4922d8d0e284ce4b49d410945a8a38e57cd4b3523686"},"target":"txpool"}
+{"timestamp":"2024-01-11T17:15:07.548045Z","level":"TRACE","fields":{"message":"Transaction resource usage: Steps: 7630 | ECDSA: 1 | L1 Gas: 7956 | Pedersen: 25 | Range Checks: 169"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:07.548079Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x26b160f10156dea0639bec90696772c640b9706a47f5b8c52ea1abe5858b34d]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:07.548090Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x3cc52bd7dde2343bdef8e4b4a31f55041906cf4ca00f6c6b7015a6da4773a5a, 0x2db340e6c609371026731f47050d3976552c89b4fbb012941663841c59d1af3]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:07.548098Z","level":"TRACE","fields":{"message":"Event emitted keys=[0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9]"},"target":"executor"}
+{"timestamp":"2024-01-11T17:15:07.548642Z","level":"INFO","fields":{"message":"⛏️ Block 10 mined with 1 transactions"},"target":"backend"}
+{"timestamp":"2024-01-11T17:15:10.043376Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionStatus\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:10.043955Z","level":"DEBUG","fields":{"method":"\"starknet_getTransactionReceipt\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:10.150842Z","level":"DEBUG","fields":{"method":"\"starknet_getNonce\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:10.167751Z","level":"DEBUG","fields":{"method":"\"starknet_estimateFee\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:10.221976Z","level":"DEBUG","fields":{"method":"\"starknet_addInvokeTransaction\""},"target":"server"}
+{"timestamp":"2024-01-11T17:15:10.223194Z","level":"INFO","fields":{"message":"Transaction received | Hash: 0x579b921642388ad84c0d9a6fda5ab55b53310ee2f2cc89ce00d77e0507bb98c"},"target":"txpool"}

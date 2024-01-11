@@ -76,11 +76,11 @@ mod tests {
     async fn bench_katana() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
         let prefunded = runner.account(0);
-        let nonce = prefunded.get_nonce().await.unwrap();
+        runner.deploy("contracts/Scarb.toml").await.unwrap();
 
         prefunded
             .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
-            .nonce(nonce)
+            .nonce(prefunded.get_nonce().await.unwrap())
             .send()
             .await
             .context("Failed to execute")

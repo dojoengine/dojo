@@ -1,3 +1,4 @@
+mod deployer;
 mod utils;
 
 use std::path::Path;
