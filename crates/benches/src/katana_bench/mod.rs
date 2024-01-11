@@ -19,8 +19,7 @@ mod tests {
     use crate::katana_bench::timings_stats::timetable_stats;
     use crate::*;
 
-    #[tokio::test]
-    #[ignore] // needs a running katana --max-connections 10000 -b 3000
+    #[katana_runner::katana_test(10000, true, "../../target/release/katana")]
     async fn bench_katana() {
         let account_manager = account_manager().await;
         let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();

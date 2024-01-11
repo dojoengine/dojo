@@ -1,15 +1,18 @@
 use benches::{estimate_gas, estimate_gas_last, log, BenchCall};
 use hex::ToHex;
+use katana_runner::runner;
 use proptest::prelude::*;
 use starknet::core::types::FieldElement;
 
 proptest! {
     #[test]
-    #[ignore] // needs a running katana
     fn bench_basic_emit(s in "[A-Za-z0-9]{1,31}") {
+        runner!(bench_basic_emit);
+
         let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
         let fee = estimate_gas(
+           &runner.account(0),
             BenchCall("bench_basic_emit", vec![s_hex])
         ).unwrap();
 
@@ -17,11 +20,12 @@ proptest! {
     }
 
     #[test]
-    #[ignore] // needs a running katana
     fn bench_basic_set(s in "[A-Za-z0-9]{1,31}") {
+        runner!(bench_basic_set);
+
         let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
-        let fee = estimate_gas(
+        let fee = estimate_gas(&runner.account(0),
             BenchCall("bench_basic_set", vec![s_hex])
         ).unwrap();
 
@@ -29,11 +33,12 @@ proptest! {
     }
 
     #[test]
-    #[ignore] // needs a running katana
     fn bench_basic_double_set(s in "[A-Za-z0-9]{1,31}") {
+        runner!(bench_basic_double_set);
+
         let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
-        let fee = estimate_gas(
+        let fee = estimate_gas(&runner.account(0),
             BenchCall("bench_basic_double_set", vec![s_hex])
         ).unwrap();
 
@@ -41,10 +46,11 @@ proptest! {
     }
 
     #[test]
-    #[ignore] // needs a running katana
     fn bench_basic_get(s in "[A-Za-z0-9]{1,31}") {
+        runner!(bench_basic_get);
+
         let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
-        let fee = estimate_gas_last(vec![
+        let fee = estimate_gas_last(&runner.account(0), vec![
             BenchCall("bench_basic_set", vec![s_hex]),
             BenchCall("bench_basic_get", vec![])
         ]).unwrap();

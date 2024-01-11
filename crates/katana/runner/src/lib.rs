@@ -16,7 +16,7 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
-pub use runner_macro::katana_test;
+pub use runner_macro::{katana_test, runner};
 use utils::find_free_port;
 
 #[derive(Debug)]
@@ -38,15 +38,22 @@ impl KatanaRunner {
             find_free_port(),
             format!("logs/katana-{}.log", name),
             2,
+            false,
         )
     }
 
-    pub fn new_with_args(program: &str, name: &str, n_accounts: u16) -> Result<Self> {
+    pub fn new_with_args(
+        program: &str,
+        name: &str,
+        n_accounts: u16,
+        with_blocks: bool,
+    ) -> Result<Self> {
         Self::new_with_port_and_filename(
             program,
             find_free_port(),
             format!("katana-logs/katana-{}.log", name),
             n_accounts,
+            with_blocks,
         )
     }
 
@@ -56,6 +63,7 @@ impl KatanaRunner {
             port,
             format!("katana-logs/katana-{}.log", port),
             2,
+            false,
         )
     }
     fn new_with_port_and_filename(
@@ -63,6 +71,7 @@ impl KatanaRunner {
         port: u16,
         log_filename: String,
         n_accounts: u16,
+        with_blocks: bool,
     ) -> Result<Self> {
         let mut child = Command::new(program)
             .args(["-p", &port.to_string()])
@@ -114,14 +123,14 @@ impl KatanaRunner {
     pub fn account(
         &self,
         index: usize,
-    ) -> SingleOwnerAccount<&JsonRpcClient<HttpTransport>, LocalWallet> {
+    ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
         let account = &self.accounts[index];
         let private_key = SigningKey::from_secret_scalar(account.private_key);
         let signer = LocalWallet::from_signing_key(private_key);
 
         debug_assert_eq!(katana_core::backend::config::Environment::default().chain_id, "KATANA");
         let chain_id = felt!("82743958523457");
-        let provider = self.provider();
+        let provider = self.owned_provider();
 
         SingleOwnerAccount::new(
             provider,
