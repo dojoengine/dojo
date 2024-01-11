@@ -36,8 +36,16 @@ impl KatanaRunner {
         Self::new_with_port_and_filename(find_free_port(), format!("logs/katana-{}.log", name), 2)
     }
 
+    pub fn new_with_name_and_accounts(name: &str, n_accounts: u16) -> Result<Self> {
+        Self::new_with_port_and_filename(
+            find_free_port(),
+            format!("katana-logs/katana-{}.log", name),
+            n_accounts,
+        )
+    }
+
     pub fn new_with_port(port: u16) -> Result<Self> {
-        Self::new_with_port_and_filename(port, format!("logs/katana-{}.log", port), 2)
+        Self::new_with_port_and_filename(port, format!("katana-logs/katana-{}.log", port), 2)
     }
     fn new_with_port_and_filename(
         port: u16,

@@ -10,3 +10,4 @@ dojo.iml
 data
 crates/benches/gas_usage.txt
 output.txt
+**/katana-logs

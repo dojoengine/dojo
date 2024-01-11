@@ -72,11 +72,11 @@ mod tests {
         log("bench_spawn", fee, "");
     }
 
-    #[katana_runner::katana_test]
+    #[katana_runner::katana_test(11)]
     async fn bench_katana() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
-        let prefunded = runner.account(0);
-        runner.deploy("contracts/Scarb.toml").await.unwrap();
+        let prefunded = runner.account(10);
+        runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
 
         prefunded
             .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
