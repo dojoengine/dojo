@@ -56,9 +56,10 @@ pub async fn estimate_gas_async(calls: Vec<BenchCall>) -> Result<u64> {
 
 #[cfg(test)]
 mod tests {
-    use futures::future::join_all;
+    use anyhow::Context;
     use helpers::log;
     use proptest::prelude::*;
+    use starknet::accounts::{Account, ConnectedAccount};
 
     use super::*;
 
@@ -74,20 +75,16 @@ mod tests {
     #[katana_runner::katana_test]
     async fn bench_katana() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
+        let prefunded = runner.account(0);
+        let nonce = prefunded.get_nonce().await.unwrap();
 
-        let nonce = cached_nonce().await;
-        execute_calls(
-            parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]),
-            nonce,
-        )
-        .await
-        .unwrap();
-
-        let calls = (0..1).map(move |i: u64| {
-            execute_calls(parse_calls(vec![BenchCall("move", args.clone())]), nonce + i.into())
-        });
-
-        join_all(calls).await.into_iter().for_each(|r| r.unwrap());
+        prefunded
+            .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
+            .nonce(nonce)
+            .send()
+            .await
+            .context("Failed to execute")
+            .unwrap();
     }
 
     proptest! {

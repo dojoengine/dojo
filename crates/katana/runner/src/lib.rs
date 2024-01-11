@@ -21,6 +21,7 @@ use utils::find_free_port;
 #[derive(Debug)]
 pub struct KatanaRunner {
     child: Child,
+    port: u16,
     provider: JsonRpcClient<HttpTransport>,
     accounts: Vec<katana_core::accounts::Account>,
 }
@@ -71,11 +72,18 @@ impl KatanaRunner {
         seed[0] = 48;
         let accounts = DevAccountGenerator::new(n_accounts).with_seed(seed).generate();
 
-        Ok(KatanaRunner { child, provider, accounts })
+        Ok(KatanaRunner { child, port, provider, accounts })
     }
 
     pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
         &self.provider
+    }
+
+    pub fn owned_provider(&self) -> JsonRpcClient<HttpTransport> {
+        let url = Url::parse(&format!("http://127.0.0.1:{}/", self.port))
+            .context("Failed to parse url")
+            .unwrap();
+        JsonRpcClient::new(HttpTransport::new(url))
     }
 
     pub fn accounts(&self) -> &[katana_core::accounts::Account] {
@@ -90,11 +98,12 @@ impl KatanaRunner {
         let private_key = SigningKey::from_secret_scalar(account.private_key);
         let signer = LocalWallet::from_signing_key(private_key);
 
-        debug_assert_eq!(katana_core::backend::config::Environment::default().chain_id, "Katana");
+        debug_assert_eq!(katana_core::backend::config::Environment::default().chain_id, "KATANA");
         let chain_id = felt!("82743958523457");
+        let provider = self.provider();
 
         SingleOwnerAccount::new(
-            self.provider(),
+            provider,
             signer,
             account.address,
             chain_id,
