@@ -40,6 +40,10 @@ pub struct AccountOptions {
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "The keystore password. Used with --keystore.")]
     pub keystore_password: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "Use legacy calldata encoding")]
+    pub legacy: bool,
 }
 
 impl AccountOptions {
@@ -57,13 +61,9 @@ impl AccountOptions {
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
 
-        Ok(SingleOwnerAccount::new(
-            provider,
-            signer,
-            account_address,
-            chain_id,
-            ExecutionEncoding::New,
-        ))
+        let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
+
+        Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
     }
 
     fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {
