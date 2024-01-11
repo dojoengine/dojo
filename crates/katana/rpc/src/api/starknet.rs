@@ -1,9 +1,11 @@
 use jsonrpsee::core::Error;
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::{CallError, ErrorObject};
+use katana_core::sequencer_error::SequencerError;
 use katana_primitives::block::{BlockIdOrTag, BlockNumber};
 use katana_primitives::transaction::TxHash;
 use katana_primitives::FieldElement;
+use katana_provider::error::ProviderError;
 use katana_rpc_types::block::{
     BlockHashAndNumber, BlockTxCount, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
 };
@@ -72,7 +74,7 @@ pub enum StarknetApiError {
     #[error("The contract class version is not supported")]
     UnsupportedContractClassVersion,
     #[error("An unexpected error occured")]
-    UnexpectedError,
+    UnexpectedError { reason: String },
     #[error("Too many storage keys requested")]
     ProofLimitExceeded,
     #[error("Too many keys provided in a filter")]
@@ -111,9 +113,15 @@ impl StarknetApiError {
             StarknetApiError::CompiledClassHashMismatch => 60,
             StarknetApiError::UnsupportedTransactionVersion => 61,
             StarknetApiError::UnsupportedContractClassVersion => 62,
-            StarknetApiError::UnexpectedError => 63,
+            StarknetApiError::UnexpectedError { .. } => 63,
             StarknetApiError::ProofLimitExceeded => 10000,
         }
+    }
+}
+
+impl From<ProviderError> for StarknetApiError {
+    fn from(value: ProviderError) -> Self {
+        StarknetApiError::UnexpectedError { reason: value.to_string() }
     }
 }
 
@@ -122,14 +130,40 @@ impl From<StarknetApiError> for Error {
         let code = err.code();
         let message = err.to_string();
 
-        let data = match err {
+        let err = match err {
             StarknetApiError::ContractError { revert_error } => {
-                Some(ContractErrorData { revert_error })
+                ErrorObject::owned(code, message, Some(ContractErrorData { revert_error }))
             }
-            _ => None,
+
+            StarknetApiError::UnexpectedError { reason } => {
+                #[derive(serde::Serialize, serde::Deserialize)]
+                struct UnexpectedError {
+                    reason: String,
+                }
+
+                ErrorObject::owned(code, message, Some(UnexpectedError { reason }))
+            }
+
+            _ => ErrorObject::owned(code, message, None::<()>),
         };
 
-        Error::Call(CallError::Custom(ErrorObject::owned(code, message, data)))
+        Error::Call(CallError::Custom(err))
+    }
+}
+
+impl From<SequencerError> for StarknetApiError {
+    fn from(value: SequencerError) -> Self {
+        match value {
+            SequencerError::TransactionExecution(e) => {
+                StarknetApiError::ContractError { revert_error: e.to_string() }
+            }
+            SequencerError::EntryPointExecution(e) => {
+                StarknetApiError::ContractError { revert_error: e.to_string() }
+            }
+            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
+            SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
+            err => StarknetApiError::UnexpectedError { reason: err.to_string() },
+        }
     }
 }
 
