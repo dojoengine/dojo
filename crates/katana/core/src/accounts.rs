@@ -1,8 +1,6 @@
 use std::fmt::Display;
-use std::sync::Arc;
 
 use anyhow::Result;
-use blockifier::execution::contract_class::ContractClass;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateWriter;
@@ -14,9 +12,7 @@ use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::{get_contract_address, get_storage_var_address};
 use starknet::signers::SigningKey;
 
-use crate::constants::{
-    FEE_TOKEN_ADDRESS, OZ_V1_ACCOUNT_CONTRACT_COMPILED, OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
-};
+use crate::constants::{FEE_TOKEN_ADDRESS, OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH};
 
 #[serde_as]
 #[derive(Debug, Clone, Serialize)]
@@ -31,18 +27,11 @@ pub struct Account {
     pub address: FieldElement,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    #[serde(skip_serializing)]
-    pub contract_class: Arc<ContractClass>,
 }
 
 impl Account {
     #[must_use]
-    pub fn new(
-        private_key: FieldElement,
-        balance: FieldElement,
-        class_hash: FieldElement,
-        contract_class: Arc<ContractClass>,
-    ) -> Self {
+    pub fn new(private_key: FieldElement, balance: FieldElement, class_hash: FieldElement) -> Self {
         let public_key = public_key_from_private_key(private_key);
         let address = get_contract_address(
             FieldElement::from(666u32),
@@ -51,7 +40,7 @@ impl Account {
             FieldElement::ZERO,
         );
 
-        Self { address, public_key, balance, class_hash, private_key, contract_class }
+        Self { address, public_key, balance, class_hash, private_key }
     }
 
     // TODO: separate fund logic from this struct - implement FeeToken type
@@ -104,7 +93,6 @@ pub struct DevAccountGenerator {
     pub seed: [u8; 32],
     pub balance: FieldElement,
     pub class_hash: FieldElement,
-    pub contract_class: Arc<ContractClass>,
 }
 
 impl DevAccountGenerator {
@@ -114,8 +102,7 @@ impl DevAccountGenerator {
             total,
             seed: [0u8; 32],
             balance: FieldElement::ZERO,
-            class_hash: (*OZ_V1_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH),
-            contract_class: Arc::new((*OZ_V1_ACCOUNT_CONTRACT_COMPILED).clone()),
+            class_hash: (*OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH),
         }
     }
 
@@ -125,10 +112,6 @@ impl DevAccountGenerator {
 
     pub fn with_balance(self, balance: FieldElement) -> Self {
         Self { balance, ..self }
-    }
-
-    pub fn with_class(self, class_hash: FieldElement, contract_class: Arc<ContractClass>) -> Self {
-        Self { class_hash, contract_class, ..self }
     }
 
     /// Generate `total` number of accounts based on the `seed`.
@@ -147,12 +130,7 @@ impl DevAccountGenerator {
                 let private_key = FieldElement::from_bytes_be(&private_key_bytes)
                     .expect("able to create FieldElement from bytes");
 
-                Account::new(
-                    private_key,
-                    self.balance,
-                    self.class_hash,
-                    self.contract_class.clone(),
-                )
+                Account::new(private_key, self.balance, self.class_hash)
             })
             .collect()
     }
