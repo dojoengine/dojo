@@ -5,7 +5,6 @@ use cainome::parser::tokens::Token;
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
-use starknet::core::types::contract::{AbiEntry, SierraClass};
 
 pub mod error;
 use error::{BindgenResult, Error};
@@ -73,7 +72,8 @@ impl PluginManager {
                         let file_content = fs::read_to_string(&path)?;
 
                         if is_systems_contract(file_name, &file_content) {
-                            let tokens = tokens_from_abi_string(&file_content, &types_aliases)?;
+                            let tokens =
+                                AbiParser::tokens_from_abi_string(&file_content, &types_aliases)?;
                             builder.generate_systems_bindings(file_name, tokens, &metadata).await?;
                         }
                     }
@@ -128,7 +128,9 @@ fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<HashMap<String, 
             if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
                 let file_content = fs::read_to_string(&path)?;
 
-                if let Ok(tokens) = tokens_from_abi_string(&file_content, &HashMap::new()) {
+                if let Ok(tokens) =
+                    AbiParser::tokens_from_abi_string(&file_content, &HashMap::new())
+                {
                     if is_model_contract(&tokens) {
                         if let Some(model_name) = model_name_from_artifact_filename(file_name) {
                             let model_pascal_case =
@@ -207,50 +209,6 @@ fn is_model_contract(tokens: &HashMap<String, Vec<Token>>) -> bool {
     funcs_counts == expected_funcs.len()
 }
 
-/// Generates the [`Token`]s from the given ABI string.
-///
-/// The `abi` can have two formats:
-/// 1. Entire [`SierraClass`] json representation.
-/// 2. The `abi` key from the [`SierraClass`], which is an array of [`AbiEntry`].
-///
-/// TODO: Move to cainome implementation when available.
-///
-/// # Arguments
-///
-/// * `abi` - A string representing the ABI.
-/// * `type_aliases` - Types to be renamed to avoid name clashing of generated types.
-fn tokens_from_abi_string(
-    abi: &str,
-    type_aliases: &HashMap<String, String>,
-) -> BindgenResult<HashMap<String, Vec<Token>>> {
-    let abi_entries = parse_abi_string(abi)?;
-    let abi_tokens = AbiParser::collect_tokens(&abi_entries).expect("failed tokens parsing");
-    let abi_tokens = AbiParser::organize_tokens(abi_tokens, type_aliases);
-
-    Ok(abi_tokens)
-}
-
-/// Parses an ABI string to output a `Vec<AbiEntry>`.
-///
-/// The `abi` can have two formats:
-/// 1. Entire [`SierraClass`] json representation.
-/// 2. The `abi` key from the [`SierraClass`], which is an array of AbiEntry.
-///
-/// TODO: Move to cainome implementation when available.
-///
-/// # Arguments
-///
-/// * `abi` - A string representing the ABI.
-fn parse_abi_string(abi: &str) -> BindgenResult<Vec<AbiEntry>> {
-    let entries = if let Ok(sierra) = serde_json::from_str::<SierraClass>(abi) {
-        sierra.abi
-    } else {
-        serde_json::from_str::<Vec<AbiEntry>>(abi).map_err(Error::SerdeJson)?
-    };
-
-    Ok(entries)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,7 +217,7 @@ mod tests {
     fn is_system_contract_ok() {
         let file_name = "dojo_examples::actions::actions.json";
         let file_content = include_str!(
-            "../../../examples/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
+            "../../examples/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
         );
 
         assert!(is_systems_contract(file_name, file_content));
@@ -279,7 +237,7 @@ mod tests {
     fn test_is_system_contract_ignore_models() {
         let file_name = "dojo_examples::models::position.json";
         let file_content = include_str!(
-            "../../../examples/spawn-and-move/target/dev/dojo_examples::models::position.json"
+            "../../examples/spawn-and-move/target/dev/dojo_examples::models::position.json"
         );
         assert!(!is_systems_contract(file_name, file_content));
     }
@@ -293,9 +251,9 @@ mod tests {
     #[test]
     fn is_model_contract_ok() {
         let file_content = include_str!(
-            "../../../examples/spawn-and-move/target/dev/dojo_examples::models::moves.json"
+            "../../examples/spawn-and-move/target/dev/dojo_examples::models::moves.json"
         );
-        let tokens = tokens_from_abi_string(&file_content, &HashMap::new()).unwrap();
+        let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
 
         assert!(is_model_contract(&tokens));
     }
@@ -303,9 +261,9 @@ mod tests {
     #[test]
     fn is_model_contract_ignore_systems() {
         let file_content = include_str!(
-            "../../../examples/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
+            "../../examples/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
         );
-        let tokens = tokens_from_abi_string(&file_content, &HashMap::new()).unwrap();
+        let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
 
         assert!(!is_model_contract(&tokens));
     }
@@ -313,8 +271,8 @@ mod tests {
     #[test]
     fn is_model_contract_ignore_dojo_files() {
         let file_content =
-            include_str!("../../../examples/spawn-and-move/target/dev/dojo::world::world.json");
-        let tokens = tokens_from_abi_string(&file_content, &HashMap::new()).unwrap();
+            include_str!("../../examples/spawn-and-move/target/dev/dojo::world::world.json");
+        let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
 
         assert!(!is_model_contract(&tokens));
     }
@@ -327,11 +285,17 @@ mod tests {
         assert_eq!(models.len(), 2);
         assert_eq!(
             models.get("Position").unwrap(),
-            &DojoModel { name: "Position".to_string(), qualified_path: "dojo_examples::models::Position".to_string() }
+            &DojoModel {
+                name: "Position".to_string(),
+                qualified_path: "dojo_examples::models::Position".to_string()
+            }
         );
         assert_eq!(
             models.get("Moves").unwrap(),
-            &DojoModel { name: "Moves".to_string(), qualified_path: "dojo_examples::models::Moves".to_string() }
+            &DojoModel {
+                name: "Moves".to_string(),
+                qualified_path: "dojo_examples::models::Moves".to_string()
+            }
         );
     }
 }

@@ -15,4 +15,4 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.1.9" }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.1.10" }
