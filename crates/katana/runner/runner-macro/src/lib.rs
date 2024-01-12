@@ -10,9 +10,9 @@ fn parse_metadata(metadata: String) -> (u16, String, bool) {
     let args = metadata.split(",").collect::<Vec<&str>>();
     let n_accounts = if args.len() != 0 { args[0].parse::<u16>().unwrap() } else { 1 };
 
-    let with_blocks = if args.len() == 0 { args[0].parse::<bool>().unwrap() } else { false };
+    let with_blocks = if args.len() >= 2 { args[1].trim().parse::<bool>().unwrap() } else { false };
 
-    let executable = if args.len() == 3 { args[1].trim() } else { "katana" };
+    let executable = if args.len() == 3 { args[2].trim() } else { "katana" };
     let executable = executable.replace("\"", "");
 
     (n_accounts, executable, with_blocks)

@@ -101,8 +101,9 @@ impl KatanaRunner {
         let mut seed = [0; 32];
         seed[0] = 48;
         let accounts = DevAccountGenerator::new(n_accounts).with_seed(seed).generate();
+        let owned_accounts = vec![];
 
-        Ok(KatanaRunner { child, port, provider, accounts })
+        Ok(KatanaRunner { child, port, provider, accounts, owned_accounts })
     }
 
     pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
@@ -116,8 +117,12 @@ impl KatanaRunner {
         JsonRpcClient::new(HttpTransport::new(url))
     }
 
-    pub fn accounts(&self) -> &[katana_core::accounts::Account] {
-        &self.accounts
+    pub fn accounts_data(&self) -> &[katana_core::accounts::Account] {
+        &self.accounts[1..] // The first one is used to deploy the contract
+    }
+
+    pub fn accounts(&self) -> Vec<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> {
+        self.accounts[1..].iter().enumerate().map(|(i, _)| self.account(i)).collect()
     }
 
     pub fn account(

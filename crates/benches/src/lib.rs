@@ -65,28 +65,30 @@ mod tests {
 
     use super::*;
 
-    // // does not need proptest, as it doesn't use any input
-    // #[katana_runner::katana_test]
-    // fn bench_default_spawn() {
-    //     let fee = estimate_gas(&runner.account(0), BenchCall("spawn", vec![])).unwrap();
+    // does not need proptest, as it doesn't use any input
+    #[katana_runner::katana_test]
+    async fn bench_default_spawn() {
+        runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
 
-    //     log("bench_spawn", fee, "");
-    // }
+        let fee = estimate_gas(&runner.account(0), BenchCall("spawn", vec![])).unwrap();
 
-    // #[katana_runner::katana_test]
-    // async fn bench_katana() {
-    //     let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
-    //     let prefunded = runner.account(0);
-    //     runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
+        log("bench_spawn", fee, "");
+    }
 
-    //     prefunded
-    //         .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
-    //         .nonce(prefunded.get_nonce().await.unwrap())
-    //         .send()
-    //         .await
-    //         .context("Failed to execute")
-    //         .unwrap();
-    // }
+    #[katana_runner::katana_test]
+    async fn bench_katana() {
+        let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
+        let prefunded = runner.account(0);
+        runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
+
+        prefunded
+            .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
+            .nonce(prefunded.get_nonce().await.unwrap())
+            .send()
+            .await
+            .context("Failed to execute")
+            .unwrap();
+    }
 
     proptest! {
         #[test]
