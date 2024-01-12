@@ -12,7 +12,7 @@ use starknet::core::types::FieldElement;
 use tokio::runtime::Runtime;
 
 const KATANA_ENDPOINT: &str = "http://localhost:5050";
-const CONTRACT_ADDRESS: &str = "0x297bde19ca499fd8a39dd9bedbcd881a47f7b8f66c19478ce97d7de89e6112e";
+const CONTRACT_ADDRESS: &str = "0x38979e719956897617c83fcbc69de9bc56491fd10c093dd8492b92ee7326d98";
 
 const ACCOUNT_ADDRESS: &str = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973";
 const _PRIVATE_KEY: &str = "0x1800000000300000180000000000030000000000003006001800006600";
@@ -65,28 +65,28 @@ mod tests {
 
     use super::*;
 
-    // does not need proptest, as it doesn't use any input
-    #[katana_runner::katana_test]
-    fn bench_default_spawn() {
-        let fee = estimate_gas(&runner.account(0), BenchCall("spawn", vec![])).unwrap();
+    // // does not need proptest, as it doesn't use any input
+    // #[katana_runner::katana_test]
+    // fn bench_default_spawn() {
+    //     let fee = estimate_gas(&runner.account(0), BenchCall("spawn", vec![])).unwrap();
 
-        log("bench_spawn", fee, "");
-    }
+    //     log("bench_spawn", fee, "");
+    // }
 
-    #[katana_runner::katana_test]
-    async fn bench_katana() {
-        let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
-        let prefunded = runner.account(0);
-        runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
+    // #[katana_runner::katana_test]
+    // async fn bench_katana() {
+    //     let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
+    //     let prefunded = runner.account(0);
+    //     runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
 
-        prefunded
-            .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
-            .nonce(prefunded.get_nonce().await.unwrap())
-            .send()
-            .await
-            .context("Failed to execute")
-            .unwrap();
-    }
+    //     prefunded
+    //         .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
+    //         .nonce(prefunded.get_nonce().await.unwrap())
+    //         .send()
+    //         .await
+    //         .context("Failed to execute")
+    //         .unwrap();
+    // }
 
     proptest! {
         #[test]

@@ -54,17 +54,33 @@ pub fn runner(metadata: TokenStream) -> TokenStream {
 
     let (n_accounts, executable, with_blocks) = parse_metadata(args.join(","));
     TokenStream::from(quote! {
-        let runner =
-            katana_runner::KatanaRunner::new_with_args(#executable, #function_name, #n_accounts, #with_blocks)
-                .expect("failed to start katana");
+            static RUNNER: tokio::sync::OnceCell<katana_runner::KatanaRunner> = tokio::sync::OnceCell::const_new();
+            let runner = {
+                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
+                let _rt = runtime.enter();
 
-        {
-            let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-            let _rt = runtime.enter();
+                futures::executor::block_on(
+                    RUNNER
+                    .get_or_init(|| async {
+                        let runner =
+                            katana_runner::KatanaRunner::new_with_args(#executable, #function_name, #n_accounts, #with_blocks)
+                                .expect("failed to start katana");
 
-            futures::executor::block_on(
-                runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh")
-            ).unwrap();
-        }
+                        println!("heree ");
+
+                        if std::path::Path::new("contracts/Scarb.toml").exists() {
+                            runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await
+                                .expect("Failed to deploy");
+                        } else if std::path::Path::new("../contracts/Scarb.toml").exists() {
+                            runner.deploy("../contracts/Scarb.toml", "../contracts/scripts/auth.sh").await
+                                .expect("Failed to deploy");
+                        } else {
+                            panic!("Contract not found");
+                        }
+
+                        runner
+                    })
+                )
+            };
     })
 }

@@ -51,7 +51,7 @@ impl KatanaRunner {
         Self::new_with_port_and_filename(
             program,
             find_free_port(),
-            format!("katana-logs/katana-{}.log", name),
+            format!("katana-logs/{}.log", name),
             n_accounts,
             with_blocks,
         )
@@ -61,7 +61,7 @@ impl KatanaRunner {
         Self::new_with_port_and_filename(
             "katana",
             port,
-            format!("katana-logs/katana-{}.log", port),
+            format!("katana-logs/{}.log", port),
             2,
             false,
         )

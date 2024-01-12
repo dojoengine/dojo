@@ -5,6 +5,8 @@ use starknet::core::types::FieldElement;
 
 #[katana_runner::katana_test]
 fn bench_complex_set_default() {
+    runner!(bench_complex_set_default);
+
     let fee =
         estimate_gas(&runner.account(0), BenchCall("bench_complex_set_default", vec![])).unwrap();
 
