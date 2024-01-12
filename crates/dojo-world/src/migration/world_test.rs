@@ -26,13 +26,22 @@ fn no_diff_when_local_and_remote_are_equal() {
         ..Default::default()
     }];
 
+    let remote_models = vec![Model {
+        members: vec![],
+        name: "Model".into(),
+        class_hash: 11_u32.into(),
+        ..Default::default()
+    }];
+
     let local = Manifest {
         models,
         world: world_contract,
         executor: executor_contract,
         ..Default::default()
     };
-    let remote = local.clone();
+
+    let mut remote = local.clone();
+    remote.models = remote_models;
 
     let diff = WorldDiff::compute(local, Some(remote));
 
@@ -68,6 +77,21 @@ fn diff_when_local_and_remote_are_different() {
         },
     ];
 
+    let remote_models = vec![
+        Model {
+            members: vec![],
+            name: "Model".into(),
+            class_hash: felt!("0x11"),
+            ..Default::default()
+        },
+        Model {
+            members: vec![],
+            name: "Model2".into(),
+            class_hash: felt!("0x33"),
+            ..Default::default()
+        },
+    ];
+
     let contracts = vec![
         Contract {
             name: "dojo_mock::contracts::my_contract".into(),
@@ -92,9 +116,9 @@ fn diff_when_local_and_remote_are_different() {
     };
 
     let mut remote = local.clone();
+    remote.models = remote_models;
     remote.world.class_hash = 44_u32.into();
     remote.executor.class_hash = 55_u32.into();
-    remote.models[1].class_hash = 33_u32.into();
     remote.contracts[0].class_hash = felt!("0x1112");
 
     let diff = WorldDiff::compute(local, Some(remote));
