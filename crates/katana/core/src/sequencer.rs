@@ -289,11 +289,13 @@ impl KatanaSequencer {
 
         let tx @ Some(_) = tx else {
             return Ok(self.pending_state().as_ref().and_then(|state| {
-                state
-                    .executed_txs
-                    .read()
-                    .iter()
-                    .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
+                state.executed_txs.read().iter().find_map(|tx| {
+                    if tx.0.hash == *hash {
+                        Some(tx.0.clone())
+                    } else {
+                        None
+                    }
+                })
             }));
         };
 

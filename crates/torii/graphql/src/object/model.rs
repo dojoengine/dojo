@@ -106,8 +106,10 @@ impl ObjectTrait for ModelObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("modelRegistered", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "modelRegistered",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 {
                     SubscriptionFieldFuture::new(async move {
                         let id = match ctx.args.get("id") {
@@ -126,9 +128,9 @@ impl ObjectTrait for ModelObject {
                         }))
                     })
                 }
-            })
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 

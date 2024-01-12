@@ -263,10 +263,8 @@ mod tests {
         );
         assert!(actual_values == expected_values);
         assert!(storage.storage.read().len() == model.packed_size as usize);
-        assert!(
-            actual_storage_addresses
-                .into_iter()
-                .all(|address| expected_storage_addresses.contains(&address))
-        );
+        assert!(actual_storage_addresses
+            .into_iter()
+            .all(|address| expected_storage_addresses.contains(&address)));
     }
 }

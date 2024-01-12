@@ -204,6 +204,10 @@ where
         };
 
         let hash = hash.0.into();
-        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
+        if hash == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash))
+        }
     }
 }

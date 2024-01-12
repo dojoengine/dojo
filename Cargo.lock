@@ -8638,6 +8638,7 @@ dependencies = [
  "dojo-test-utils",
  "dojo-types",
  "dojo-world",
+ "katana-runner",
  "notify",
  "notify-debouncer-mini",
  "scarb",

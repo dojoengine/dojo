@@ -13,7 +13,9 @@ pub struct TransactionOptions {
     pub fee_estimate_multiplier: Option<f64>,
 
     #[arg(short, long)]
-    #[arg(help = "Wait until the transaction is accepted by the sequencer, returning the receipt.")]
+    #[arg(
+        help = "Wait until the transaction is accepted by the sequencer, returning the receipt."
+    )]
     #[arg(long_help = "Wait until the transaction is accepted by the sequencer, returning the \
                        receipt. This will poll the transaction status until it gets accepted or \
                        rejected by the sequencer.")]
