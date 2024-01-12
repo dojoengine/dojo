@@ -68,7 +68,7 @@ mod actions {
     }
 
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {
         fn spawn(self: @ContractState) {
             let world = self.world_dispatcher.read();

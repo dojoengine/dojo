@@ -25,12 +25,12 @@ mod bar {
     #[storage]
     struct Storage {}
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn dojo_resource(self: @ContractState) -> felt252 {
         'bar'
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn execute(self: @ContractState, foo: Foo) -> Foo {
         foo
     }

@@ -216,17 +216,17 @@ mod position {
     #[storage]
     struct Storage {}
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn name(self: @ContractState) -> felt252 {
         'Position'
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn unpacked_size(self: @ContractState) -> usize {
         dojo::database::introspect::Introspect::<Position>::size()
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn packed_size(self: @ContractState) -> usize {
         let mut layout = ArrayTrait::new();
         dojo::database::introspect::Introspect::<Position>::layout(ref layout);
@@ -234,14 +234,14 @@ mod position {
         dojo::packing::calculate_packed_size(ref layout_span)
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
         dojo::database::introspect::Introspect::<Position>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
         dojo::database::introspect::Introspect::<Position>::ty()
     }
@@ -354,17 +354,17 @@ mod roles {
     #[storage]
     struct Storage {}
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn name(self: @ContractState) -> felt252 {
         'Roles'
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn unpacked_size(self: @ContractState) -> usize {
         dojo::database::introspect::Introspect::<Roles>::size()
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn packed_size(self: @ContractState) -> usize {
         let mut layout = ArrayTrait::new();
         dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
@@ -372,14 +372,14 @@ mod roles {
         dojo::packing::calculate_packed_size(ref layout_span)
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
         dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
         dojo::database::introspect::Introspect::<Roles>::ty()
     }
@@ -494,17 +494,17 @@ mod player {
     #[storage]
     struct Storage {}
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn name(self: @ContractState) -> felt252 {
         'Player'
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn unpacked_size(self: @ContractState) -> usize {
         dojo::database::introspect::Introspect::<Player>::size()
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn packed_size(self: @ContractState) -> usize {
         let mut layout = ArrayTrait::new();
         dojo::database::introspect::Introspect::<Player>::layout(ref layout);
@@ -512,14 +512,14 @@ mod player {
         dojo::packing::calculate_packed_size(ref layout_span)
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn layout(self: @ContractState) -> Span<u8> {
         let mut layout = ArrayTrait::new();
         dojo::database::introspect::Introspect::<Player>::layout(ref layout);
         array::ArrayTrait::span(@layout)
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
         dojo::database::introspect::Introspect::<Player>::ty()
     }
@@ -563,27 +563,27 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:80:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:85:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:90:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:98:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:105:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
@@ -598,27 +598,27 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:76:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:81:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:86:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:94:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:101:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
@@ -633,27 +633,27 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:75:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:80:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:85:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:93:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:100:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
@@ -668,27 +668,27 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:84:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:89:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:94:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:102:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:109:17
-                #[external(v0)]
+                #[abi(embed_v0)]
                 ^*************^
 
 error: Unsupported attribute.
@@ -898,17 +898,17 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
                 #[storage]
                 struct Storage {}
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn name(self: @ContractState) -> felt252 {
                     'Position'
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
                     dojo::database::introspect::Introspect::<Position>::size()
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Position>::layout(ref layout);
@@ -916,14 +916,14 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Position>::layout(ref layout);
                     core::array::ArrayTrait::span(@layout)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<Position>::ty()
                 }
@@ -1017,17 +1017,17 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                 #[storage]
                 struct Storage {}
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn name(self: @ContractState) -> felt252 {
                     'Roles'
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
                     dojo::database::introspect::Introspect::<Roles>::size()
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
@@ -1035,14 +1035,14 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
                     core::array::ArrayTrait::span(@layout)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<Roles>::ty()
                 }
@@ -1135,17 +1135,17 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
                 #[storage]
                 struct Storage {}
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn name(self: @ContractState) -> felt252 {
                     'OnlyKeyModel'
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
                     dojo::database::introspect::Introspect::<OnlyKeyModel>::size()
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
@@ -1153,14 +1153,14 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
                     core::array::ArrayTrait::span(@layout)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<OnlyKeyModel>::ty()
                 }
@@ -1268,17 +1268,17 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
                 #[storage]
                 struct Storage {}
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn name(self: @ContractState) -> felt252 {
                     'Player'
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
                     dojo::database::introspect::Introspect::<Player>::size()
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Player>::layout(ref layout);
@@ -1286,14 +1286,14 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<Player>::layout(ref layout);
                     core::array::ArrayTrait::span(@layout)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<Player>::ty()
                 }

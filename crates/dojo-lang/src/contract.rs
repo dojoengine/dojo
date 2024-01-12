@@ -69,12 +69,12 @@ impl DojoContract {
                     component!(path: dojo::components::upgradeable::upgradeable, storage: \
                  upgradeable, event: UpgradeableEvent);
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         '$name$'
                     }
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     impl WorldProviderImpl of IWorldProvider<ContractState> {
                         fn world(self: @ContractState) -> IWorldDispatcher {
                             self.world_dispatcher.read()

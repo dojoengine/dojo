@@ -44,7 +44,7 @@ mod withevent {
         address: ContractAddress,
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn test(value: felt252) -> value {
         value
     }
@@ -97,12 +97,12 @@ mod spawn {
         world_dispatcher: IWorldDispatcher,
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn name(self: @ContractState) -> felt252 {
         'spawn'
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
             let caller = starknet::get_caller_address();
@@ -116,7 +116,7 @@ mod spawn {
     use traits::Into;
     use dojo::world::Context;
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn execute(self: @ContractState, ctx: Context, name: felt252) {
         return ();
     }
@@ -134,12 +134,12 @@ mod proxy {
         world_dispatcher: IWorldDispatcher,
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn name(self: @ContractState) -> felt252 {
         'proxy'
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
             let caller = starknet::get_caller_address();
@@ -151,7 +151,7 @@ mod proxy {
     }
 
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn execute(self: @ContractState, value: felt252) -> felt252 {
         value
     }
@@ -169,12 +169,12 @@ mod ctxnamed {
         world_dispatcher: IWorldDispatcher,
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn name(self: @ContractState) -> felt252 {
         'ctxnamed'
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl Upgradeable of dojo::upgradable::IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, new_class_hash: starknet::ClassHash) {
             let caller = starknet::get_caller_address();
@@ -188,7 +188,7 @@ mod ctxnamed {
     use traits::Into;
     use dojo::world::Context;
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn execute(self: @ContractState, ctx2: Context, name: felt252) {
         return ();
     }
@@ -247,12 +247,12 @@ error: Unknown inline item macro: 'component'.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[spawn]:11:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[spawn]:16:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
@@ -282,12 +282,12 @@ error: Unknown inline item macro: 'component'.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[proxy]:11:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[proxy]:16:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
@@ -317,12 +317,12 @@ error: Unknown inline item macro: 'component'.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[ctxnamed]:11:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[ctxnamed]:16:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
@@ -352,12 +352,12 @@ error: Unknown inline item macro: 'component'.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:11:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:16:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
@@ -372,7 +372,7 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:39:5
-    #[external(v0)]
+    #[abi(embed_v0)]
     ^*************^
 
 error: Unsupported attribute.
@@ -392,12 +392,12 @@ error: Unknown inline item macro: 'component'.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withcomponent]:11:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withcomponent]:16:21
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     ^*************^
 
 error: Unsupported attribute.
@@ -465,12 +465,12 @@ mod testcomponent2 {
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         'spawn'
                     }
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     impl WorldProviderImpl of IWorldProvider<ContractState> {
                         fn world(self: @ContractState) -> IWorldDispatcher {
                             self.world_dispatcher.read()
@@ -510,12 +510,12 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         'proxy'
                     }
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     impl WorldProviderImpl of IWorldProvider<ContractState> {
                         fn world(self: @ContractState) -> IWorldDispatcher {
                             self.world_dispatcher.read()
@@ -552,12 +552,12 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         'ctxnamed'
                     }
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     impl WorldProviderImpl of IWorldProvider<ContractState> {
                         fn world(self: @ContractState) -> IWorldDispatcher {
                             self.world_dispatcher.read()
@@ -597,12 +597,12 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         'withevent'
                     }
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     impl WorldProviderImpl of IWorldProvider<ContractState> {
                         fn world(self: @ContractState) -> IWorldDispatcher {
                             self.world_dispatcher.read()
@@ -625,7 +625,7 @@ impl EventDrop of core::traits::Drop::<Event>;
         address: ContractAddress,
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn test(value: felt252) -> value {
         value
     }
@@ -648,12 +648,12 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     fn dojo_resource(self: @ContractState) -> felt252 {
                         'withcomponent'
                     }
 
-                    #[external(v0)]
+                    #[abi(embed_v0)]
                     impl WorldProviderImpl of IWorldProvider<ContractState> {
                         fn world(self: @ContractState) -> IWorldDispatcher {
                             self.world_dispatcher.read()

@@ -213,7 +213,7 @@ mod world {
         self.executor_dispatcher.read().call(class_hash, entrypoint, calldata)
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl World of IWorld<ContractState> {
         /// Returns the metadata URI of the world.
         ///
@@ -634,7 +634,7 @@ mod world {
     }
 
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl UpgradeableWorld of IUpgradeableWorld<ContractState> {
         /// Upgrade world with new_class_hash
         ///

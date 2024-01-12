@@ -128,17 +128,17 @@ pub fn handle_model_struct(
                 #[storage]
                 struct Storage {}
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn name(self: @ContractState) -> felt252 {
                     '$type_name$'
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn unpacked_size(self: @ContractState) -> usize {
                     dojo::database::introspect::Introspect::<$type_name$>::size()
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn packed_size(self: @ContractState) -> usize {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
@@ -146,14 +146,14 @@ pub fn handle_model_struct(
                     dojo::packing::calculate_packed_size(ref layout_span)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn layout(self: @ContractState) -> Span<u8> {
                     let mut layout = core::array::ArrayTrait::new();
                     dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
                     core::array::ArrayTrait::span(@layout)
                 }
 
-                #[external(v0)]
+                #[abi(embed_v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<$type_name$>::ty()
                 }

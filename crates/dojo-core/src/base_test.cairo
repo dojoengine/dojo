@@ -21,7 +21,7 @@ mod contract_upgrade {
     #[constructor]
     fn constructor(ref self: ContractState) {}
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl QuantumLeap of IQuantumLeap<ContractState> {
         fn plz_more_tps(self: @ContractState) -> felt252 {
             'daddy'

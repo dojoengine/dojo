@@ -19,7 +19,7 @@ mod contract_1 {
     }
 
     /// Sends a message with the given value.
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn send_message(
         ref self: ContractState, to_address: ContractAddress, selector: felt252, value: felt252,
     ) {
@@ -31,7 +31,7 @@ mod contract_1 {
     }
 
     /// Consume a message registered by the appchain.
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn consume_message(
         ref self: ContractState, from_address: ContractAddress, payload: Span<felt252>,
     ) {
@@ -48,12 +48,12 @@ mod contract_1 {
 
     /// An example function to test how appchain contract can trigger
     /// code execution on Starknet.
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn set_value(ref self: ContractState, value: felt252) {
         self.value.write(value);
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn get_value(self: @ContractState) -> felt252 {
         self.value.read()
     }
