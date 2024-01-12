@@ -564,27 +564,27 @@ error: Unsupported attribute.
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:80:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:85:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:90:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:98:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:105:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:110:17
@@ -599,27 +599,27 @@ error: Unsupported attribute.
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:76:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:81:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:86:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:94:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:101:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:106:17
@@ -634,27 +634,27 @@ error: Unsupported attribute.
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:75:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:80:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:85:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:93:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:100:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[OnlyKeyModel]:105:17
@@ -669,27 +669,27 @@ error: Unsupported attribute.
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:84:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:89:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:94:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:102:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:109:17
                 #[abi(embed_v0)]
-                ^*************^
+                ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:114:17

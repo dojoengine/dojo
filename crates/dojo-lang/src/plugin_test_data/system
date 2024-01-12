@@ -248,12 +248,12 @@ error: Unknown inline item macro: 'component'.
 error: Unsupported attribute.
  --> test_src/lib.cairo[spawn]:11:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[spawn]:16:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[spawn]:23:21
@@ -283,12 +283,12 @@ error: Unknown inline item macro: 'component'.
 error: Unsupported attribute.
  --> test_src/lib.cairo[proxy]:11:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[proxy]:16:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[proxy]:23:21
@@ -318,12 +318,12 @@ error: Unknown inline item macro: 'component'.
 error: Unsupported attribute.
  --> test_src/lib.cairo[ctxnamed]:11:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[ctxnamed]:16:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[ctxnamed]:23:21
@@ -353,12 +353,12 @@ error: Unknown inline item macro: 'component'.
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:11:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:16:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:23:21
@@ -373,7 +373,7 @@ error: Unsupported attribute.
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:39:5
     #[abi(embed_v0)]
-    ^*************^
+    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withevent]:44:13
@@ -393,12 +393,12 @@ error: Unknown inline item macro: 'component'.
 error: Unsupported attribute.
  --> test_src/lib.cairo[withcomponent]:11:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withcomponent]:16:21
                     #[abi(embed_v0)]
-                    ^*************^
+                    ^**************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withcomponent]:23:21
