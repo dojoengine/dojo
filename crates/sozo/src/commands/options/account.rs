@@ -42,7 +42,7 @@ pub struct AccountOptions {
     pub keystore_password: Option<String>,
 
     #[arg(long)]
-    #[arg(help = "Use legacy calldata encoding")]
+    #[arg(help = "Use legacy account (cairo0 account)")]
     pub legacy: bool,
 }
 
@@ -349,6 +349,7 @@ mod tests {
         // checking it by encoding a dummy call and checking which method it used to encode the call
         let account = cmd.account.account(provider, None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
+        // 0x0 is the data offset.
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
     }
 
@@ -360,8 +361,8 @@ mod tests {
             to: FieldElement::from_hex_be("0x0").unwrap(),
             selector: FieldElement::from_hex_be("0x1").unwrap(),
             calldata: vec![
-                FieldElement::from_hex_be("0x2").unwrap(),
-                FieldElement::from_hex_be("0x3").unwrap(),
+                FieldElement::from_hex_be("0xf2").unwrap(),
+                FieldElement::from_hex_be("0xf3").unwrap(),
             ],
         }];
 
@@ -369,6 +370,7 @@ mod tests {
         // checking it by encoding a dummy call and checking which method it used to encode the call
         let account = cmd.account.account(provider, None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
+        // 0x2 is the Calldata len.
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x2").unwrap());
     }
 }
