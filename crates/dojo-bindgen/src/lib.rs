@@ -38,7 +38,7 @@ pub struct PluginManager {
 }
 
 impl PluginManager {
-    /// Generates the bindings for all the given [`Plugin`].
+    /// Generates the bindings for all the given Plugin.
     pub async fn generate(&self) -> BindgenResult<()> {
         if self.builtin_plugins.is_empty() && self.plugins.is_empty() {
             return Ok(());
@@ -180,8 +180,8 @@ fn model_name_from_artifact_filename(file_name: &str) -> Option<String> {
 /// Identifies if the given contract contains a model.
 ///
 /// The identification is based on the methods name. This must
-/// be adjusted if the #[model] attribute expansion change in the future.
-/// https://github.com/dojoengine/dojo/blob/36e5853877d011a5bb4b3bd77b9de676fb454b0c/crates/dojo-lang/src/model.rs#L81
+/// be adjusted if the model attribute expansion change in the future.
+/// <https://github.com/dojoengine/dojo/blob/36e5853877d011a5bb4b3bd77b9de676fb454b0c/crates/dojo-lang/src/model.rs#L81>
 ///
 /// # Arguments
 ///
@@ -227,11 +227,11 @@ fn tokens_from_abi_string(
     Ok(abi_tokens)
 }
 
-/// Parses an ABI string to output a [`Vec<AbiEntry`].
+/// Parses an ABI string to output a `Vec<AbiEntry>`.
 ///
 /// The `abi` can have two formats:
 /// 1. Entire [`SierraClass`] json representation.
-/// 2. The `abi` key from the [`SierraClass`], which is an array of [`AbiEntry`].
+/// 2. The `abi` key from the [`SierraClass`], which is an array of AbiEntry.
 ///
 /// TODO: Move to cainome implementation when available.
 ///
