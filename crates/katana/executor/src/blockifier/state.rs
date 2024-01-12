@@ -7,6 +7,7 @@ use katana_primitives::contract::FlattenedSierraClass;
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
+use katana_provider::ProviderResult;
 use parking_lot::{Mutex, RawMutex, RwLock};
 use starknet_api::core::{ClassHash, CompiledClassHash, Nonce, PatriciaKey};
 use starknet_api::hash::StarkHash;
@@ -140,7 +141,7 @@ where
     fn class(
         &self,
         hash: katana_primitives::contract::ClassHash,
-    ) -> anyhow::Result<Option<katana_primitives::contract::CompiledContractClass>> {
+    ) -> ProviderResult<Option<katana_primitives::contract::CompiledContractClass>> {
         let Ok(class) = self.inner().get_compiled_contract_class(&ClassHash(hash.into())) else {
             return Ok(None);
         };
@@ -150,7 +151,7 @@ where
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: katana_primitives::contract::ClassHash,
-    ) -> anyhow::Result<Option<katana_primitives::contract::CompiledClassHash>> {
+    ) -> ProviderResult<Option<katana_primitives::contract::CompiledClassHash>> {
         let Ok(hash) = self.inner().get_compiled_class_hash(ClassHash(hash.into())) else {
             return Ok(None);
         };
@@ -160,7 +161,7 @@ where
     fn sierra_class(
         &self,
         hash: katana_primitives::contract::ClassHash,
-    ) -> anyhow::Result<Option<FlattenedSierraClass>> {
+    ) -> ProviderResult<Option<FlattenedSierraClass>> {
         let class @ Some(_) = self.sierra_class().get(&hash).cloned() else {
             return Ok(None);
         };
@@ -176,7 +177,7 @@ where
         &self,
         address: katana_primitives::contract::ContractAddress,
         storage_key: katana_primitives::contract::StorageKey,
-    ) -> anyhow::Result<Option<katana_primitives::contract::StorageValue>> {
+    ) -> ProviderResult<Option<katana_primitives::contract::StorageValue>> {
         let Ok(value) =
             self.inner().get_storage_at(address.into(), StorageKey(patricia_key!(storage_key)))
         else {
@@ -188,7 +189,7 @@ where
     fn nonce(
         &self,
         address: katana_primitives::contract::ContractAddress,
-    ) -> anyhow::Result<Option<katana_primitives::contract::Nonce>> {
+    ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
         let Ok(nonce) = self.inner().get_nonce_at(address.into()) else {
             return Ok(None);
         };
@@ -198,7 +199,7 @@ where
     fn class_hash_of_contract(
         &self,
         address: katana_primitives::contract::ContractAddress,
-    ) -> anyhow::Result<Option<katana_primitives::contract::ClassHash>> {
+    ) -> ProviderResult<Option<katana_primitives::contract::ClassHash>> {
         let Ok(hash) = self.inner().get_class_hash_at(address.into()) else {
             return Ok(None);
         };
