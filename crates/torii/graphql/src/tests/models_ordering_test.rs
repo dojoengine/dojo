@@ -23,7 +23,7 @@ mod tests {
                     createdAt
                 }}
               }}
-              pageInfo{{
+              pageInfo {{
                 startCursor
                 hasPreviousPage
                 hasNextPage
