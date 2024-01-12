@@ -95,7 +95,7 @@ impl Backend {
             );
 
             let blockchain = Blockchain::new_from_forked(
-                ForkedProvider::new(provider, forked_block_num.into()),
+                ForkedProvider::new(provider, forked_block_num.into()).unwrap(),
                 block.block_hash,
                 block.parent_hash,
                 &block_context,
