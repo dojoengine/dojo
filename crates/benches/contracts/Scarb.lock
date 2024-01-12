@@ -2,6 +2,13 @@
 version = 1
 
 [[package]]
+name = "benches"
+version = "0.4.4"
+dependencies = [
+ "dojo",
+]
+
+[[package]]
 name = "dojo"
 version = "0.4.4"
 source = "git+https://github.com/dojoengine/dojo#37f41d585f549013a73ca189034b0471f1e81731"
@@ -13,10 +20,3 @@ dependencies = [
 name = "dojo_plugin"
 version = "0.3.11"
 source = "git+https://github.com/dojoengine/dojo?tag=v0.3.11#1e651b5d4d3b79b14a7d8aa29a92062fcb9e6659"
-
-[[package]]
-name = "dojo_starter"
-version = "0.4.4"
-dependencies = [
- "dojo",
-]
