@@ -2696,6 +2696,7 @@ dependencies = [
  "async-trait",
  "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?tag=v0.1.9)",
  "camino",
+ "convert_case 0.6.0",
  "serde",
  "serde_json",
  "starknet",

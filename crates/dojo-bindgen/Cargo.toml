@@ -9,6 +9,7 @@ version.workspace = true
 [dependencies]
 async-trait.workspace = true
 camino.workspace = true
+convert_case.workspace = true
 starknet.workspace = true
 serde.workspace = true
 serde_json.workspace = true

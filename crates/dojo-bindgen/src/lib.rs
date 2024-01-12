@@ -4,6 +4,7 @@ use std::fs;
 use cainome::parser::tokens::Token;
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
+use convert_case::{Case, Casing};
 use starknet::core::types::contract::{AbiEntry, SierraClass};
 
 pub mod error;
@@ -15,7 +16,7 @@ use plugins::unity::UnityPlugin;
 use plugins::BuiltinPlugin;
 pub use plugins::BuiltinPlugins;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DojoModel {
     pub name: String,
     pub qualified_path: String,
@@ -116,6 +117,7 @@ fn is_systems_contract(file_name: &str, file_content: &str) -> bool {
 ///
 /// * `artifacts_path` - Artifacts path where model contracts were generated.
 fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<HashMap<String, DojoModel>> {
+    println!("ARTIF PATH: {}", artifacts_path);
     let mut models = HashMap::new();
 
     for entry in fs::read_dir(artifacts_path)? {
@@ -129,7 +131,8 @@ fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<HashMap<String, 
                 if let Ok(tokens) = tokens_from_abi_string(&file_content, &HashMap::new()) {
                     if is_model_contract(&tokens) {
                         if let Some(model_name) = model_name_from_artifact_filename(file_name) {
-                            let model_pascal_case = snake_to_pascal_case(&model_name);
+                            let model_pascal_case =
+                                model_name.from_case(Case::Snake).to_case(Case::Pascal);
 
                             let model = DojoModel {
                                 name: model_pascal_case.clone(),
@@ -248,33 +251,87 @@ fn parse_abi_string(abi: &str) -> BindgenResult<Vec<AbiEntry>> {
     Ok(entries)
 }
 
-/// Converts a "snake_case" string to "PascalCase".
-fn snake_to_pascal_case(s: &str) -> String {
-    s.split('_')
-        .map(|word| {
-            word.chars()
-                .next()
-                .unwrap_or_default()
-                .to_uppercase()
-                .chain(word.chars().skip(1))
-                .collect::<String>()
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_model_name_from_artifact_filename() {
+    fn is_system_contract_ok() {
+        let file_name = "dojo_examples::actions::actions.json";
+        let file_content = include_str!(
+            "../../../examples/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
+        );
+
+        assert!(is_systems_contract(file_name, file_content));
+    }
+
+    #[test]
+    fn is_system_contract_ignore_dojo_files() {
+        let file_name = "dojo::world::world.json";
+        let file_content = "";
+        assert!(!is_systems_contract(file_name, file_content));
+
+        let file_name = "manifest.json";
+        assert!(!is_systems_contract(file_name, file_content));
+    }
+
+    #[test]
+    fn test_is_system_contract_ignore_models() {
+        let file_name = "dojo_examples::models::position.json";
+        let file_content = include_str!(
+            "../../../examples/spawn-and-move/target/dev/dojo_examples::models::position.json"
+        );
+        assert!(!is_systems_contract(file_name, file_content));
+    }
+
+    #[test]
+    fn model_name_from_artifact_filename_ok() {
         let file_name = "dojo_examples::models::position.json";
         assert_eq!(model_name_from_artifact_filename(file_name), Some("position".to_string()));
     }
 
     #[test]
-    fn test_snake_to_pascal_case() {
-        let s = "snake_case";
-        assert_eq!(snake_to_pascal_case(s), "SnakeCase");
+    fn is_model_contract_ok() {
+        let file_content = include_str!(
+            "../../../examples/spawn-and-move/target/dev/dojo_examples::models::moves.json"
+        );
+        let tokens = tokens_from_abi_string(&file_content, &HashMap::new()).unwrap();
+
+        assert!(is_model_contract(&tokens));
+    }
+
+    #[test]
+    fn is_model_contract_ignore_systems() {
+        let file_content = include_str!(
+            "../../../examples/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
+        );
+        let tokens = tokens_from_abi_string(&file_content, &HashMap::new()).unwrap();
+
+        assert!(!is_model_contract(&tokens));
+    }
+
+    #[test]
+    fn is_model_contract_ignore_dojo_files() {
+        let file_content =
+            include_str!("../../../examples/spawn-and-move/target/dev/dojo::world::world.json");
+        let tokens = tokens_from_abi_string(&file_content, &HashMap::new()).unwrap();
+
+        assert!(!is_model_contract(&tokens));
+    }
+
+    #[test]
+    fn gather_models_ok() {
+        let models =
+            gather_models(&Utf8PathBuf::from("../../examples/spawn-and-move/target/dev")).unwrap();
+
+        assert_eq!(models.len(), 2);
+        assert_eq!(
+            models.get("Position").unwrap(),
+            &DojoModel { name: "Position".to_string(), qualified_path: "dojo_examples::models::Position".to_string() }
+        );
+        assert_eq!(
+            models.get("Moves").unwrap(),
+            &DojoModel { name: "Moves".to_string(), qualified_path: "dojo_examples::models::Moves".to_string() }
+        );
     }
 }
