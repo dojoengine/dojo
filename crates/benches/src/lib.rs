@@ -1,8 +1,7 @@
-pub mod account_manager;
 pub mod helpers;
+#[cfg(test)]
 pub mod katana_bench;
 
-pub use account_manager::*;
 use anyhow::Result;
 use futures::executor::block_on;
 use futures::future;
@@ -11,13 +10,7 @@ use lazy_static::lazy_static;
 use starknet::core::types::FieldElement;
 use tokio::runtime::Runtime;
 
-const KATANA_ENDPOINT: &str = "http://localhost:5050";
 const CONTRACT_ADDRESS: &str = "0x38979e719956897617c83fcbc69de9bc56491fd10c093dd8492b92ee7326d98";
-
-const ACCOUNT_ADDRESS: &str = "0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973";
-const _PRIVATE_KEY: &str = "0x1800000000300000180000000000030000000000003006001800006600";
-
-pub struct BenchCall(pub &'static str, pub Vec<FieldElement>);
 
 lazy_static! {
     static ref CONTRACT: FieldElement = FieldElement::from_hex_be(CONTRACT_ADDRESS).unwrap();
@@ -70,26 +63,9 @@ mod tests {
     async fn bench_default_spawn() {
         runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
 
-        dbg!(runner.account(0).address().to_string());
-
         let fee = estimate_gas(&runner.account(0), BenchCall("spawn", vec![])).unwrap();
 
         log("bench_spawn", fee, "");
-    }
-
-    #[katana_runner::katana_test]
-    async fn bench_katana_small() {
-        let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
-        let prefunded = runner.account(0);
-        runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
-
-        prefunded
-            .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
-            .nonce(prefunded.get_nonce().await.unwrap())
-            .send()
-            .await
-            .context("Failed to execute")
-            .unwrap();
     }
 
     proptest! {

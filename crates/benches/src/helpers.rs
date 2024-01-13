@@ -2,26 +2,18 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 use anyhow::{Context, Result};
-use reqwest::Url;
-use starknet::accounts::{Account, Call, ConnectedAccount};
+use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::JsonRpcClient;
+use starknet::signers::LocalWallet;
 use tokio::sync::OnceCell;
 
-use crate::{BenchCall, OwnerAccount, CONTRACT, KATANA_ENDPOINT};
+use crate::CONTRACT;
 
-pub async fn chain_id() -> FieldElement {
-    static CHAIN_ID: OnceCell<FieldElement> = OnceCell::const_new();
-
-    *CHAIN_ID
-        .get_or_init(|| async {
-            let provider = provider();
-            provider.chain_id().await.unwrap()
-        })
-        .await
-}
+pub type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
+pub struct BenchCall(pub &'static str, pub Vec<FieldElement>);
 
 // Because no calls are actually executed in the benchmark, we can use the same nonce for all of
 // them
@@ -29,11 +21,6 @@ pub async fn cached_nonce(account: &OwnerAccount) -> FieldElement {
     static NONCE: OnceCell<FieldElement> = OnceCell::const_new();
 
     *NONCE.get_or_init(|| async { account.get_nonce().await.unwrap() }).await
-}
-
-pub fn provider() -> JsonRpcClient<HttpTransport> {
-    let url = Url::parse(KATANA_ENDPOINT).expect("Invalid Katana endpoint");
-    JsonRpcClient::new(HttpTransport::new(url))
 }
 
 pub fn log(name: &str, gas: u64, calldata: &str) {
