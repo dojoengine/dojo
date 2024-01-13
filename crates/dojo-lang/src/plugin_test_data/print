@@ -3,8 +3,12 @@
 //! > test_runner_name
 test_expand_plugin
 
+//! > cfg
+["test"]
+
 //! > cairo_code
 use serde::Serde;
+use debug::PrintTrait;
 
 #[derive(Print)]
 struct Position {
@@ -39,9 +43,9 @@ enum Enemy {
     OtherPlayer: ContractAddress,
 }
 
-//! > generated_cairo_code
+//! > expanded_cairo_code
 use serde::Serde;
-
+use debug::PrintTrait;
 
 #[derive(Print)]
 struct Position {
@@ -52,36 +56,14 @@ struct Position {
     y: felt252
 }
 
-#[cfg(test)]
-impl PositionPrintImpl of core::debug::PrintTrait<Position> {
-    fn print(self: Position) {
-        core::debug::PrintTrait::print('id');
-        core::debug::PrintTrait::print(self.id);
-        core::debug::PrintTrait::print('x');
-        core::debug::PrintTrait::print(self.x);
-        core::debug::PrintTrait::print('y');
-        core::debug::PrintTrait::print(self.y);
-    }
-}
-
 #[derive(Print)]
 struct Roles {
     role_ids: Array<u8>
 }
 
-#[cfg(test)]
-impl RolesPrintImpl of core::debug::PrintTrait<Roles> {
-    fn print(self: Roles) {
-        core::debug::PrintTrait::print('role_ids');
-        core::debug::PrintTrait::print(self.role_ids);
-    }
-}
-
-
 use starknet::ContractAddress;
 
-
-#[derive(Print, Copy, Drop, Serde)]
+#[derive(Print)]
 struct Player {
     #[key]
     game: felt252,
@@ -91,52 +73,47 @@ struct Player {
     name: felt252, 
 }
 
+#[derive(Print)]
+enum Enemy {
+    Unknown,
+    Bot: felt252,
+    OtherPlayer: ContractAddress,
+}
+
 #[cfg(test)]
-impl PlayerPrintImpl of core::debug::PrintTrait<Player> {
+impl PositionStructPrintImpl of core::debug::PrintTrait<Position> {
+    fn print(self: Position) {
+        core::debug::PrintTrait::print('id'); core::debug::PrintTrait::print(self.id);
+core::debug::PrintTrait::print('x'); core::debug::PrintTrait::print(self.x);
+core::debug::PrintTrait::print('y'); core::debug::PrintTrait::print(self.y);
+    }
+}
+
+#[cfg(test)]
+impl RolesStructPrintImpl of core::debug::PrintTrait<Roles> {
+    fn print(self: Roles) {
+        core::debug::PrintTrait::print('role_ids'); core::debug::PrintTrait::print(self.role_ids);
+    }
+}
+
+#[cfg(test)]
+impl PlayerStructPrintImpl of core::debug::PrintTrait<Player> {
     fn print(self: Player) {
-        core::debug::PrintTrait::print('game');
-        core::debug::PrintTrait::print(self.game);
-        core::debug::PrintTrait::print('player');
-        core::debug::PrintTrait::print(self.player);
-        core::debug::PrintTrait::print('name');
-        core::debug::PrintTrait::print(self.name);
+        core::debug::PrintTrait::print('game'); core::debug::PrintTrait::print(self.game);
+core::debug::PrintTrait::print('player'); core::debug::PrintTrait::print(self.player);
+core::debug::PrintTrait::print('name'); core::debug::PrintTrait::print(self.name);
+    }
+}
+
+#[cfg(test)]
+impl EnemyEnumPrintImpl of core::debug::PrintTrait<Enemy> {
+    fn print(self: Enemy) {
+        match self {
+            Enemy::Unknown => { core::debug::PrintTrait::print('Unknown'); },
+Enemy::Bot(v) => { core::debug::PrintTrait::print('Bot'); core::debug::PrintTrait::print(v); },
+Enemy::OtherPlayer(v) => { core::debug::PrintTrait::print('OtherPlayer'); core::debug::PrintTrait::print(v); }
+        }
     }
 }
 
 //! > expected_diagnostics
-
-//! > expanded_cairo_code
-use serde::Serde;
-
-#[derive(Print)]
-struct Position {
-    #[key]
-    id: felt252,
-
-    x: felt252,
-    y: felt252
-}
-
-#[derive(Print)]
-struct Roles {
-    role_ids: Array<u8>
-}
-
-use starknet::ContractAddress;
-
-#[derive(Print)]
-struct Player {
-    #[key]
-    game: felt252,
-    #[key]
-    player: ContractAddress,
-
-    name: felt252, 
-}
-
-#[derive(Print)]
-enum Enemy {
-    Unknown,
-    Bot: felt252,
-    OtherPlayer: ContractAddress,
-}

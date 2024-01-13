@@ -25,12 +25,14 @@ pub fn handle_print_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> Rewr
         .collect();
 
     RewriteNode::interpolate_patched(
-        "#[cfg(test)]
-            impl $type_name$StructPrintImpl of core::debug::PrintTrait<$type_name$> {
-                fn print(self: $type_name$) {
-                    $print$
-                }
-            }",
+        "
+#[cfg(test)]
+impl $type_name$StructPrintImpl of core::debug::PrintTrait<$type_name$> {
+    fn print(self: $type_name$) {
+        $print$
+    }
+}
+",
         &UnorderedHashMap::from([
             (
                 "type_name".to_string(),
@@ -64,9 +66,9 @@ pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNod
                 }
                 OptionTypeClause::TypeClause(_) => {
                     format!(
-                        "{enum_name}::{variant_name}(value) => {{ \
+                        "{enum_name}::{variant_name}(v) => {{ \
                          core::debug::PrintTrait::print('{variant_name}'); \
-                         core::debug::PrintTrait::print(value); }}"
+                         core::debug::PrintTrait::print(v); }}"
                     )
                 }
             }
@@ -74,14 +76,16 @@ pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNod
         .collect();
 
     RewriteNode::interpolate_patched(
-        "#[cfg(test)]
-            impl $type_name$EnumPrintImpl of core::debug::PrintTrait<$type_name$> {
-                fn print(self: $type_name$) {
-                    match self {
-                        $print$
-                    }
-                }
-            }",
+        "
+#[cfg(test)]
+impl $type_name$EnumPrintImpl of core::debug::PrintTrait<$type_name$> {
+    fn print(self: $type_name$) {
+        match self {
+            $print$
+        }
+    }
+}
+",
         &UnorderedHashMap::from([
             ("type_name".to_string(), RewriteNode::new_trimmed(enum_ast.name(db).as_syntax_node())),
             ("print".to_string(), RewriteNode::Text(prints.join(",\n"))),
