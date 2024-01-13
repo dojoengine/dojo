@@ -5,7 +5,7 @@ use cainome::parser::tokens::Token;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
-use crate::DojoMetadata;
+use crate::{DojoMetadata, DojoModel};
 
 pub struct UnityPlugin;
 
@@ -17,6 +17,19 @@ impl UnityPlugin {
 
 #[async_trait]
 impl BuiltinPlugin for UnityPlugin {
+    async fn generate_models_bindings(
+        &self,
+        models: &HashMap<String, DojoModel>,
+    ) -> BindgenResult<()> {
+        println!("Unity models bindings");
+        for (name, model) in models {
+            println!("## Model: {}\n", name);
+            println!("{:?}\n", model);
+        }
+
+        Ok(())
+    }
+
     async fn generate_systems_bindings(
         &self,
         contract_name: &str,

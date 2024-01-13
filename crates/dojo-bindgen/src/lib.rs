@@ -19,6 +19,7 @@ pub use plugins::BuiltinPlugins;
 pub struct DojoModel {
     pub name: String,
     pub qualified_path: String,
+    pub tokens: HashMap<String, Vec<Token>>,
 }
 
 #[derive(Debug)]
@@ -62,6 +63,8 @@ impl PluginManager {
             // by the user from command line. But in dojo context, the naming conflict
             // in a contract are low as they remain usually relatively simple.
             let types_aliases = HashMap::new();
+
+            builder.generate_models_bindings(&metadata.models).await?;
 
             for entry in fs::read_dir(&self.artifacts_path)? {
                 let entry = entry?;
@@ -142,6 +145,7 @@ fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<HashMap<String, 
                                     .replace(&model_name, &model_pascal_case)
                                     .trim_end_matches(".json")
                                     .to_string(),
+                                tokens: filter_model_tokens(&tokens),
                             };
 
                             models.insert(model_pascal_case, model);
@@ -157,6 +161,49 @@ fn gather_models(artifacts_path: &Utf8PathBuf) -> BindgenResult<HashMap<String, 
     }
 
     Ok(models)
+}
+
+/// Filters the model ABI to keep relevant types
+/// to be generated for bindings.
+fn filter_model_tokens(tokens: &HashMap<String, Vec<Token>>) -> HashMap<String, Vec<Token>> {
+    let mut structs = vec![];
+    let mut enums = vec![];
+
+    // All types from introspect module can also be removed as the clients does not rely on them.
+    // Events are also always empty at model contract level.
+    fn skip_token(token: &Token) -> bool {
+        if token.type_path().starts_with("dojo::database::introspect") {
+            return true;
+        }
+
+        if let Token::Composite(c) = token {
+            if c.is_event {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    for s in tokens.get("structs").unwrap() {
+        if !skip_token(s) {
+            structs.push(s.clone());
+        }
+    }
+
+    for e in tokens.get("enums").unwrap() {
+        if !skip_token(e) {
+            enums.push(e.clone());
+        }
+    }
+
+    let mut model_tokens = HashMap::new();
+    // All functions can be ignored, the client does not need to call them directly.
+    model_tokens.insert(String::from("structs"), structs);
+    model_tokens.insert(String::from("enums"), enums);
+    model_tokens.insert(String::from("functions"), vec![]);
+
+    model_tokens
 }
 
 /// Extracts a model name from the artifact file name.
@@ -282,19 +329,13 @@ mod tests {
             gather_models(&Utf8PathBuf::from("src/test_data/spawn-and-move/target/dev")).unwrap();
 
         assert_eq!(models.len(), 2);
-        assert_eq!(
-            models.get("Position").unwrap(),
-            &DojoModel {
-                name: "Position".to_string(),
-                qualified_path: "dojo_examples::models::Position".to_string()
-            }
-        );
-        assert_eq!(
-            models.get("Moves").unwrap(),
-            &DojoModel {
-                name: "Moves".to_string(),
-                qualified_path: "dojo_examples::models::Moves".to_string()
-            }
-        );
+
+        let pos = models.get("Position").unwrap();
+        assert_eq!(pos.name, "Position");
+        assert_eq!(pos.qualified_path, "dojo_examples::models::Position");
+
+        let moves = models.get("Moves").unwrap();
+        assert_eq!(moves.name, "Moves");
+        assert_eq!(moves.qualified_path, "dojo_examples::models::Moves");
     }
 }

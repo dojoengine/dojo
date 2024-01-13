@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use cainome::parser::tokens::Token;
 
 use crate::error::BindgenResult;
-use crate::DojoMetadata;
+use crate::{DojoMetadata, DojoModel};
 
 pub mod typescript;
 pub mod unity;
@@ -17,7 +17,30 @@ pub enum BuiltinPlugins {
 
 #[async_trait]
 pub trait BuiltinPlugin {
+    /// Generates the models bindings.
+    /// Each [`DojoModel`] contains all the types that are required to
+    /// generate a model bindings.
+    ///
+    /// Warning, some types may be repeated in different models, due to the fact
+    /// that the Cairo ABI contains all types used in a contract.
+    ///
+    /// It's at the plugin discretion to separate models bindings in modules/namespace
+    /// to avoid collision, or ensuring unicity of a type among all the models.
+    ///
+    /// # Arguments
+    ///
+    /// * `models` - All the models found in the project.
+    async fn generate_models_bindings(
+        &self,
+        models: &HashMap<String, DojoModel>,
+    ) -> BindgenResult<()>;
+
     /// Generates the bindings for all the systems found in the given contract.
+    /// The `tokens` fields is the self contained ABI, which means all the tokens
+    /// to call any function in the contract is present in `tokens` ABI.
+    ///
+    /// A plugin may use the `generate_models_bindings` to centralized the models,
+    /// bindings and ignore models type generation in this call.
     ///
     /// # Arguments
     ///
