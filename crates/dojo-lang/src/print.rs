@@ -1,5 +1,5 @@
 use cairo_lang_defs::patcher::RewriteNode;
-use cairo_lang_syntax::node::ast::{ItemEnum, ItemStruct};
+use cairo_lang_syntax::node::ast::{ItemEnum, ItemStruct, OptionTypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
@@ -54,13 +54,22 @@ pub fn handle_print_enum(db: &dyn SyntaxGroup, enum_ast: ItemEnum) -> RewriteNod
         .elements(db)
         .iter()
         .map(|m| {
-            format!(
-                "{}::{}(value) => {{ core::debug::PrintTrait::print('{}'); \
-                 core::debug::PrintTrait::print(value); }}",
-                enum_name,
-                m.name(db).text(db).to_string(),
-                m.name(db).text(db).to_string()
-            )
+            let variant_name = m.name(db).text(db).to_string();
+            match m.type_clause(db) {
+                OptionTypeClause::Empty(_) => {
+                    format!(
+                        "{enum_name}::{variant_name} => {{ \
+                         core::debug::PrintTrait::print('{variant_name}'); }}"
+                    )
+                }
+                OptionTypeClause::TypeClause(_) => {
+                    format!(
+                        "{enum_name}::{variant_name}(value) => {{ \
+                         core::debug::PrintTrait::print('{variant_name}'); \
+                         core::debug::PrintTrait::print(value); }}"
+                    )
+                }
+            }
         })
         .collect();
 
