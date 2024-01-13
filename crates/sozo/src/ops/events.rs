@@ -13,7 +13,7 @@ use crate::commands::events::EventsArgs;
 pub async fn execute(
     args: EventsArgs,
     env_metadata: Option<Environment>,
-    events_map: HashMap<String, Vec<Event>>,
+    events_map: Option<HashMap<String, Vec<Event>>>,
 ) -> Result<()> {
     let EventsArgs {
         chunk_size,
@@ -23,7 +23,7 @@ pub async fn execute(
         to_block,
         events,
         continuation_token,
-        json,
+        ..
     } = args;
 
     let from_block = from_block.map(BlockId::Number);
@@ -38,29 +38,30 @@ pub async fn execute(
 
     let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
 
-    if json {
-        let value = serde_json::to_value(res)?;
-        println!("{}", serde_json::to_string_pretty(&value)?);
+    if let Some(events_map) = events_map {
+        parse_and_print_events(res, events_map)?;
     } else {
-        parse_and_print_events(res, events_map);
+        println!("{}", serde_json::to_string_pretty(&res)?);
     }
+
     Ok(())
 }
 
 fn parse_and_print_events(
     res: starknet::core::types::EventsPage,
     events_map: HashMap<String, Vec<Event>>,
-) {
+) -> Result<()> {
     println!("Continuation token: {:?}", res.continuation_token);
     println!("----------------------------------------------");
     for event in res.events {
         if let Some(e) = parse_event(event.clone(), &events_map) {
-            println!("{}\n", e);
+            println!("{e}");
         } else {
             // Couldn't parse event
-            println!("{}\n", serde_json::to_string_pretty(&event).unwrap());
+            println!("{}", serde_json::to_string_pretty(&event)?);
         }
     }
+    Ok(())
 }
 
 fn parse_event(

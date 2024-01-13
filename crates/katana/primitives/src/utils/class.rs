@@ -2,7 +2,9 @@ use anyhow::Result;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 
-use crate::contract::{CompiledContractClass, CompiledContractClassV0, CompiledContractClassV1};
+use crate::contract::{
+    CompiledContractClass, CompiledContractClassV0, CompiledContractClassV1, SierraClass,
+};
 
 /// Parse a [`str`] into a [`CompiledContractClass`].
 pub fn parse_compiled_class(class: &str) -> Result<CompiledContractClass> {
@@ -22,5 +24,10 @@ pub fn parse_compiled_class_v1(class: &str) -> Result<CompiledContractClassV1> {
 
 /// Parse a [`str`] into a [`CompiledContractClassV0`].
 pub fn parse_compiled_class_v0(class: &str) -> Result<CompiledContractClassV0, std::io::Error> {
+    Ok(serde_json::from_str(class)?)
+}
+
+/// Parse a [`str`] into a [`SierraClass`].
+pub fn parse_sierra_class(class: &str) -> Result<SierraClass, std::io::Error> {
     Ok(serde_json::from_str(class)?)
 }

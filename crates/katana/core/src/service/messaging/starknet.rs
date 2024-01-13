@@ -111,7 +111,7 @@ impl StarknetMessaging {
             signer,
             self.sender_account_address,
             self.chain_id,
-            ExecutionEncoding::Legacy,
+            ExecutionEncoding::New,
         );
 
         account.set_block_id(BlockId::Tag(BlockTag::Latest));
@@ -488,7 +488,7 @@ mod tests {
         let to_address = selector!("to_address");
         let selector = selector!("selector");
         let nonce = FieldElement::ONE;
-        let calldata = vec![from_address, FieldElement::THREE];
+        let calldata = [from_address, FieldElement::THREE];
         let transaction_hash = FieldElement::ZERO;
 
         let event = EmittedEvent {
@@ -522,7 +522,7 @@ mod tests {
         let _to_address = selector!("to_address");
         let _selector = selector!("selector");
         let _nonce = FieldElement::ONE;
-        let _calldata = vec![from_address, FieldElement::THREE];
+        let _calldata = [from_address, FieldElement::THREE];
         let transaction_hash = FieldElement::ZERO;
 
         let event = EmittedEvent {

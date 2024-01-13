@@ -135,8 +135,12 @@ pub struct StarknetOptions {
     pub total_accounts: u8,
 
     #[arg(long)]
-    #[arg(help = "Disable charging fee for transactions.")]
+    #[arg(help = "Disable charging fee when executing transactions.")]
     pub disable_fee: bool,
+
+    #[arg(long)]
+    #[arg(help = "Disable validation when executing transactions.")]
+    pub disable_validate: bool,
 
     #[command(flatten)]
     #[command(next_help_heading = "Environment options")]
@@ -211,6 +215,7 @@ impl KatanaArgs {
             total_accounts: self.starknet.total_accounts,
             seed: parse_seed(&self.starknet.seed),
             disable_fee: self.starknet.disable_fee,
+            disable_validate: self.starknet.disable_validate,
             fork_rpc_url: self.rpc_url.clone(),
             fork_block_number: self.fork_block_number,
             env: Environment {

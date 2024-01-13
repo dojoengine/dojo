@@ -8,13 +8,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.70.0
+  RUST_VERSION: 1.74.0
 
 jobs:
   test:
     runs-on: ubuntu-latest-16-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:448ffda
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -28,7 +28,7 @@ jobs:
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:448ffda
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -61,7 +61,7 @@ jobs:
   dojo-core-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:448ffda
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -70,16 +70,25 @@ jobs:
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:448ffda
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
       - run: cargo run --bin sozo -- --manifest-path examples/spawn-and-move/Scarb.toml test
 
+  dojo-world-bindings-check:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo run --bin dojo-world-abigen -- --check
+
   clippy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:448ffda
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -88,7 +97,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:448ffda
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -97,7 +106,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:448ffda
+      image: ghcr.io/dojoengine/dojo-dev:136a67a
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2

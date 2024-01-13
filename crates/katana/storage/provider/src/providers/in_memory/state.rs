@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
@@ -146,7 +146,7 @@ impl StateProvider for InMemorySnapshot {
 }
 
 impl ContractClassProvider for InMemorySnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
             Ok(self.classes.sierra_classes.read().get(&hash).cloned())
         } else {
@@ -202,7 +202,7 @@ impl StateProvider for LatestStateProvider {
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
         let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
         Ok(class)
     }

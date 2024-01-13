@@ -8,14 +8,22 @@ use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
 
+use super::{
+    DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR,
+};
+
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Account options")]
+// INVARIANT:
+// - For commandline: we can either specify `private_key` or `keystore_path` along with
+//   `keystore_password`. This is enforced by Clap.
+// - For `Scarb.toml`: if both private_key and keystore are specified in `Scarb.toml` private_key
+//   will take priority
 pub struct AccountOptions {
-    #[arg(long)]
+    #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
     pub account_address: Option<FieldElement>,
 
-    #[arg(long)]
-    #[arg(requires = "account_address")]
+    #[arg(long, env = DOJO_PRIVATE_KEY_ENV_VAR)]
     #[arg(conflicts_with = "keystore_path")]
     #[arg(help_heading = "Signer options - RAW")]
     #[arg(help = "The raw private key associated with the account contract.")]
@@ -27,12 +35,15 @@ pub struct AccountOptions {
     #[arg(help = "Use the keystore in the given folder or file.")]
     pub keystore_path: Option<String>,
 
-    #[arg(long = "password")]
+    #[arg(long = "password", env = DOJO_KEYSTORE_PASSWORD_ENV_VAR)]
     #[arg(value_name = "PASSWORD")]
-    #[arg(requires = "keystore_path")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "The keystore password. Used with --keystore.")]
     pub keystore_password: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "Use legacy account (cairo0 account)")]
+    pub legacy: bool,
 }
 
 impl AccountOptions {
@@ -50,37 +61,29 @@ impl AccountOptions {
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
 
-        Ok(SingleOwnerAccount::new(
-            provider,
-            signer,
-            account_address,
-            chain_id,
-            // This is made under the assumption that the accounts used with `sozo` commands would
-            // be one of the `katana` dev accounts. The dev accounts deployed on `katana` are
-            // legacy accounts (Cairo 0).
-            // TODO: Make this configurable
-            ExecutionEncoding::Legacy,
-        ))
+        let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
+
+        Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
     }
 
     fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {
-        if let Some(private_key) = self
-            .private_key
-            .as_deref()
-            .or_else(|| env_metadata.and_then(|env| env.private_key()))
-            .or(std::env::var("DOJO_PRIVATE_KEY").ok().as_deref())
+        if let Some(private_key) =
+            self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
         {
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(private_key)?,
             )));
         }
 
-        if let Some(path) = &self.keystore_path {
+        if let Some(path) = &self
+            .keystore_path
+            .as_deref()
+            .or_else(|| env_metadata.and_then(|env| env.keystore_path()))
+        {
             if let Some(password) = self
                 .keystore_password
                 .as_deref()
                 .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
-                .or(std::env::var("DOJO_KEYSTORE_PASSWORD").ok().as_deref())
             {
                 return Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
                     path, password,
@@ -99,10 +102,7 @@ impl AccountOptions {
     fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         if let Some(address) = self.account_address {
             Ok(address)
-        } else if let Some(address) = env_metadata
-            .and_then(|env| env.account_address())
-            .or(std::env::var("DOJO_ACCOUNT_ADDRESS").ok().as_deref())
-        {
+        } else if let Some(address) = env_metadata.and_then(|env| env.account_address()) {
             Ok(FieldElement::from_str(address)?)
         } else {
             Err(anyhow!(
@@ -110,5 +110,267 @@ impl AccountOptions {
                  the environment config."
             ))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use clap::Parser;
+    use katana_runner::KatanaRunner;
+    use starknet::accounts::{Call, ExecutionEncoder};
+    use starknet::signers::{LocalWallet, Signer, SigningKey};
+    use starknet_crypto::FieldElement;
+
+    use super::{
+        AccountOptions, DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR,
+        DOJO_PRIVATE_KEY_ENV_VAR,
+    };
+
+    #[derive(clap::Parser, Debug)]
+    struct Command {
+        #[clap(flatten)]
+        pub account: AccountOptions,
+    }
+
+    #[test]
+    fn account_address_read_from_env_variable() {
+        std::env::set_var(DOJO_ACCOUNT_ADDRESS_ENV_VAR, "0x0");
+
+        let cmd = Command::parse_from([""]);
+        assert_eq!(cmd.account.account_address, Some(FieldElement::from_hex_be("0x0").unwrap()));
+    }
+
+    #[test]
+    fn private_key_read_from_env_variable() {
+        std::env::set_var(DOJO_PRIVATE_KEY_ENV_VAR, "private_key");
+
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
+        assert_eq!(cmd.account.private_key, Some("private_key".to_owned()));
+    }
+
+    #[test]
+    fn keystore_path_read_from_env_variable() {
+        std::env::set_var(DOJO_KEYSTORE_PASSWORD_ENV_VAR, "keystore_password");
+
+        let cmd = Command::parse_from(["sozo", "--keystore", "./some/path"]);
+        assert_eq!(cmd.account.keystore_password, Some("keystore_password".to_owned()));
+    }
+
+    #[test]
+    fn account_address_from_args() {
+        let env_metadata = dojo_world::metadata::Environment::default();
+
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
+        assert_eq!(
+            cmd.account.account_address(Some(&env_metadata)).unwrap(),
+            FieldElement::from_hex_be("0x0").unwrap()
+        );
+    }
+
+    #[test]
+    fn account_address_from_env_metadata() {
+        let env_metadata = dojo_world::metadata::Environment {
+            account_address: Some("0x0".to_owned()),
+            ..Default::default()
+        };
+
+        let cmd = Command::parse_from([""]);
+        assert_eq!(
+            cmd.account.account_address(Some(&env_metadata)).unwrap(),
+            FieldElement::from_hex_be("0x0").unwrap()
+        );
+    }
+
+    #[test]
+    fn account_address_from_both() {
+        let env_metadata = dojo_world::metadata::Environment {
+            account_address: Some("0x0".to_owned()),
+            ..Default::default()
+        };
+
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x1"]);
+        assert_eq!(
+            cmd.account.account_address(Some(&env_metadata)).unwrap(),
+            FieldElement::from_hex_be("0x1").unwrap()
+        );
+    }
+
+    #[test]
+    fn account_address_from_neither() {
+        let env_metadata = dojo_world::metadata::Environment::default();
+
+        let cmd = Command::parse_from([""]);
+        assert!(cmd.account.account_address(Some(&env_metadata)).is_err());
+    }
+
+    #[tokio::test]
+    async fn private_key_from_args() {
+        let env_metadata = dojo_world::metadata::Environment::default();
+        let private_key = "0x1";
+
+        let cmd =
+            Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", private_key]);
+        let result_wallet = cmd.account.signer(Some(&env_metadata)).unwrap();
+        let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            FieldElement::from_str(private_key).unwrap(),
+        ));
+
+        let result_public_key = result_wallet.get_public_key().await.unwrap();
+        let expected_public_key = expected_wallet.get_public_key().await.unwrap();
+        assert!(result_public_key.scalar() == expected_public_key.scalar());
+    }
+
+    #[tokio::test]
+    async fn private_key_from_env_metadata() {
+        let private_key = "0x1";
+        let env_metadata = dojo_world::metadata::Environment {
+            private_key: Some(private_key.to_owned()),
+            ..Default::default()
+        };
+
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
+        let result_wallet = cmd.account.signer(Some(&env_metadata)).unwrap();
+        let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            FieldElement::from_str(private_key).unwrap(),
+        ));
+
+        let result_public_key = result_wallet.get_public_key().await.unwrap();
+        let expected_public_key = expected_wallet.get_public_key().await.unwrap();
+        assert!(result_public_key.scalar() == expected_public_key.scalar());
+    }
+
+    #[tokio::test]
+    async fn keystore_path_and_keystore_password_from_args() {
+        let keystore_path = "./tests/test_data/keystore/test.json";
+        let keystore_password = "dojoftw";
+        let private_key = "0x1";
+        let env_metadata = dojo_world::metadata::Environment::default();
+
+        let cmd = Command::parse_from([
+            "sozo",
+            "--keystore",
+            keystore_path,
+            "--password",
+            keystore_password,
+        ]);
+        let result_wallet = cmd.account.signer(Some(&env_metadata)).unwrap();
+        let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            FieldElement::from_str(private_key).unwrap(),
+        ));
+
+        let result_public_key = result_wallet.get_public_key().await.unwrap();
+        let expected_public_key = expected_wallet.get_public_key().await.unwrap();
+        assert!(result_public_key.scalar() == expected_public_key.scalar());
+    }
+
+    #[tokio::test]
+    async fn keystore_path_from_env_metadata() {
+        let keystore_path = "./tests/test_data/keystore/test.json";
+        let keystore_password = "dojoftw";
+
+        let private_key = "0x1";
+        let env_metadata = dojo_world::metadata::Environment {
+            keystore_path: Some(keystore_path.to_owned()),
+            ..Default::default()
+        };
+
+        let cmd = Command::parse_from(["sozo", "--password", keystore_password]);
+        let result_wallet = cmd.account.signer(Some(&env_metadata)).unwrap();
+        let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            FieldElement::from_str(private_key).unwrap(),
+        ));
+
+        let result_public_key = result_wallet.get_public_key().await.unwrap();
+        let expected_public_key = expected_wallet.get_public_key().await.unwrap();
+        assert!(result_public_key.scalar() == expected_public_key.scalar());
+    }
+
+    #[tokio::test]
+    async fn keystore_password_from_env_metadata() {
+        let keystore_path = "./tests/test_data/keystore/test.json";
+        let keystore_password = "dojoftw";
+        let private_key = "0x1";
+
+        let env_metadata = dojo_world::metadata::Environment {
+            keystore_password: Some(keystore_password.to_owned()),
+            ..Default::default()
+        };
+
+        let cmd = Command::parse_from(["sozo", "--keystore", keystore_path]);
+        let result_wallet = cmd.account.signer(Some(&env_metadata)).unwrap();
+        let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+            FieldElement::from_str(private_key).unwrap(),
+        ));
+
+        let result_public_key = result_wallet.get_public_key().await.unwrap();
+        let expected_public_key = expected_wallet.get_public_key().await.unwrap();
+        assert!(result_public_key.scalar() == expected_public_key.scalar());
+    }
+
+    #[test]
+    fn dont_allow_both_private_key_and_keystore() {
+        let keystore_path = "./tests/test_data/keystore/test.json";
+        let private_key = "0x1";
+        assert!(
+            Command::try_parse_from([
+                "sozo",
+                "--keystore",
+                keystore_path,
+                "--private_key",
+                private_key,
+            ])
+            .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn legacy_flag_works_as_expected() {
+        let cmd = Command::parse_from([
+            "sozo",
+            "--legacy",
+            "--account-address",
+            "0x0",
+            "--private-key",
+            "0x1",
+        ]);
+        let (_runner, provider) = KatanaRunner::new().unwrap();
+        let dummy_call = vec![Call {
+            to: FieldElement::from_hex_be("0x0").unwrap(),
+            selector: FieldElement::from_hex_be("0x1").unwrap(),
+            calldata: vec![
+                FieldElement::from_hex_be("0x2").unwrap(),
+                FieldElement::from_hex_be("0x3").unwrap(),
+            ],
+        }];
+
+        // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
+        // checking it by encoding a dummy call and checking which method it used to encode the call
+        let account = cmd.account.account(provider, None).await.unwrap();
+        let result = account.encode_calls(&dummy_call);
+        // 0x0 is the data offset.
+        assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
+    }
+
+    #[tokio::test]
+    async fn without_legacy_flag_works_as_expected() {
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
+        let (_runner, provider) = KatanaRunner::new().unwrap();
+        let dummy_call = vec![Call {
+            to: FieldElement::from_hex_be("0x0").unwrap(),
+            selector: FieldElement::from_hex_be("0x1").unwrap(),
+            calldata: vec![
+                FieldElement::from_hex_be("0xf2").unwrap(),
+                FieldElement::from_hex_be("0xf3").unwrap(),
+            ],
+        }];
+
+        // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
+        // checking it by encoding a dummy call and checking which method it used to encode the call
+        let account = cmd.account.account(provider, None).await.unwrap();
+        let result = account.encode_calls(&dummy_call);
+        // 0x2 is the Calldata len.
+        assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x2").unwrap());
     }
 }

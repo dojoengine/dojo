@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use convert_case::{Case, Casing};
+
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
@@ -28,7 +30,19 @@ impl WorldDiff {
                 name: model.name.to_string(),
                 local: model.class_hash,
                 remote: remote.as_ref().and_then(|m| {
-                    m.models.iter().find(|e| e.name == model.name).map(|s| s.class_hash)
+                    // Remote models are detected from events, where only the struct
+                    // name (pascal case) is emitted.
+                    // Local models uses the fully qualified name of the model,
+                    // always in snake_case from cairo compiler.
+                    let model_name = model
+                        .name
+                        .split("::")
+                        .last()
+                        .unwrap_or(&model.name)
+                        .from_case(Case::Snake)
+                        .to_case(Case::Pascal);
+
+                    m.models.iter().find(|e| e.name == model_name).map(|s| s.class_hash)
                 }),
             })
             .collect::<Vec<_>>();

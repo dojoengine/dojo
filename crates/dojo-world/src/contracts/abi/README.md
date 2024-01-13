@@ -1,13 +1,10 @@
 # Embedded ABI for contracts
 
-Currently, the ABIs for `world` and `executor` are embedded in the repo.
-To build them, consider the following:
+To ease the re-use of `dojo-world` crate on other projects that are not aware of the whole dojo stack, the ABI used for binding generation are decoupled from the compilation process.
 
-1. Change directory into `examples/spawn-and-move` at the root of the workspace.
-2. Build the example with `sozo`.
-3. Extract the ABI key only for `world` and `executor`:
+To generate the ABI in `world.rs` or `executor.rs`, please consider to run:
+```bash
+cargo run --bin dojo-world-abigen
 ```
-sozo build
-jq .abi ./target/dev/dojo\:\:world\:\:world.json > ../../crates/dojo-world/src/contracts/abi/world.json
-jq .abi ./target/dev/dojo\:\:executor\:\:executor.json > ../../crates/dojo-world/src/contracts/abi/executor.json
-```
+
+The CI runs the same command with the `--check` argument, to ensure that the ABI that are inside the rust modules are still consistent with the latest version of `dojo-core` contracts.

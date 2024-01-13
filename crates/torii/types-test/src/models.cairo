@@ -21,6 +21,7 @@ struct Record {
     type_nested_two: NestedMost,
     random_u8: u8,
     random_u128: u128,
+    composite_u256: u256,
 }
 
 #[derive(Model, Copy, Drop, Serde)]

@@ -2,7 +2,8 @@ use derive_more::{AsRef, Deref};
 use ethers::types::H256;
 
 use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    Nonce,
 };
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_deploy_account_v1_tx_hash,
@@ -97,7 +98,7 @@ impl ExecutableTxWithHash {
 #[derive(Debug, Clone, AsRef, Deref)]
 pub struct DeclareTxWithClass {
     /// The Sierra class, if any.
-    pub sierra_class: Option<SierraClass>,
+    pub sierra_class: Option<FlattenedSierraClass>,
     /// The compiled contract class.
     pub compiled_class: CompiledContractClass,
     /// The raw transaction.
@@ -109,7 +110,7 @@ pub struct DeclareTxWithClass {
 impl DeclareTxWithClass {
     pub fn new_with_classes(
         transaction: DeclareTx,
-        sierra_class: SierraClass,
+        sierra_class: FlattenedSierraClass,
         compiled_class: CompiledContractClass,
     ) -> Self {
         Self { sierra_class: Some(sierra_class), compiled_class, transaction }

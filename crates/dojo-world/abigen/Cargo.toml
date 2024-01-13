@@ -1,0 +1,14 @@
+[package]
+name = "dojo-world-abigen"
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+camino.workspace = true
+scarb-ui.workspace = true
+scarb.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+cairo-lang-starknet.workspace = true
