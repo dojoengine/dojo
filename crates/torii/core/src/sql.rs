@@ -150,7 +150,9 @@ impl Sql {
     }
 
     pub fn delete_entity(&mut self, model: String, key: FieldElement) {
+        println!("delete entity model: {}", model);
         let model = Argument::String(model);
+        println!("delete entity key: {:#x}", key);
         let id = Argument::FieldElement(key);
 
         self.query_queue.enqueue("DELETE FROM ? WHERE id = ?", vec![model, id]);

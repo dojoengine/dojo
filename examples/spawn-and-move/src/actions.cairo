@@ -6,6 +6,7 @@ use starknet::{ContractAddress, ClassHash};
 trait IActions<TContractState> {
     fn spawn(self: @TContractState);
     fn move(self: @TContractState, direction: Direction);
+    fn delete(self: @TContractState);
 }
 
 #[dojo::contract]
@@ -85,6 +86,20 @@ mod actions {
             set!(world, (moves, next));
             emit!(world, Moved { player, direction });
             return ();
+        }
+
+        fn delete(self: @ContractState) {
+            // Access the world dispatcher for reading.
+            let world = self.world_dispatcher.read();
+
+            // Get the address of the current caller, possibly the player's address.
+            let player = get_caller_address();
+
+            // Retrieve the player's current position and moves data from the world.
+            let (position, moves) = get!(world, player, (Position, Moves));
+
+            // Delete the player's data from the world.
+            delete!(world, (position, moves));
         }
     }
 }

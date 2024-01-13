@@ -2827,7 +2827,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.1.0"
+version = "0.4.4"
 dependencies = [
  "cairo-lang-starknet",
  "camino",
