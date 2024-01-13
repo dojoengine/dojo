@@ -46,7 +46,9 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
     rm -r hurl-4.1.0-x86_64-unknown-linux-gnu && \
     rm hurl.tar.gz && \
     rustup component add llvm-tools-preview --toolchain $(cat rust_toolchain_version)-x86_64-unknown-linux-gnu && \
-    rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly; \
+    rustup target add x86_64-fortanix-unknown-sgx --toolchain nightly && \
+    cargo binstall fortanix-sgx-tools sgxs-tools && \
+    echo >> ~/.cargo/config -e '[target.x86_64-fortanix-unknown-sgx]\nrunner = "ftxsgx-runner-cargo"'; \
     fi
 
 RUN curl -L https://install.dojoengine.org | bash
