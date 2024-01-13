@@ -1,7 +1,7 @@
 [package]
 cairo-version = "2.4.0"
 name = "types_test"
-version = "0.4.4"
+version = "0.5.0"
 
 [cairo]
 sierra-replace-ids = true
@@ -21,6 +21,6 @@ build-external-contracts = [  ]
 # socials.x = "https://twitter.com/dojostarknet"
 
 [tool.dojo.env]
-account_address = "0x9238c8ca6b3c6ab45a793593b13d98797ccd3bda179d313553e51fee114624"
+account_address = "0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
 rpc_url = "http://localhost:5050/"

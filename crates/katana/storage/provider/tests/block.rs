@@ -26,14 +26,6 @@ use fixtures::{
 };
 use utils::generate_dummy_blocks_and_receipts;
 
-#[template]
-#[rstest::rstest]
-#[case::insert_1_block(1)]
-#[case::insert_2_block(2)]
-#[case::insert_5_block(5)]
-#[case::insert_10_block(10)]
-fn insert_block_cases(#[case] block_count: u64) {}
-
 #[apply(insert_block_cases)]
 fn insert_block_with_in_memory_provider(
     #[from(in_memory_provider)] provider: BlockchainProvider<InMemoryProvider>,
@@ -139,19 +131,6 @@ where
     Ok(())
 }
 
-#[template]
-#[rstest::rstest]
-#[case::state_update_at_block_1(1, mock_state_updates()[0].clone())]
-#[case::state_update_at_block_2(2, mock_state_updates()[1].clone())]
-#[case::state_update_at_block_3(3, StateUpdatesWithDeclaredClasses::default())]
-#[case::state_update_at_block_5(5, mock_state_updates()[2].clone())]
-fn test_read_state_update<Db>(
-    #[from(provider_with_states)] provider: BlockchainProvider<Db>,
-    #[case] block_num: BlockNumber,
-    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
-) {
-}
-
 #[apply(test_read_state_update)]
 fn test_read_state_update_with_in_memory_provider(
     #[with(in_memory_provider())] provider: BlockchainProvider<InMemoryProvider>,
@@ -192,4 +171,25 @@ where
     let actual_state_update = provider.state_update(BlockHashOrNumber::from(block_num))?;
     assert_eq!(actual_state_update, Some(expected_state_update.state_updates));
     Ok(())
+}
+
+#[template]
+#[rstest::rstest]
+#[case::insert_1_block(1)]
+#[case::insert_2_block(2)]
+#[case::insert_5_block(5)]
+#[case::insert_10_block(10)]
+fn insert_block_cases(#[case] block_count: u64) {}
+
+#[template]
+#[rstest::rstest]
+#[case::state_update_at_block_1(1, mock_state_updates()[0].clone())]
+#[case::state_update_at_block_2(2, mock_state_updates()[1].clone())]
+#[case::state_update_at_block_3(3, StateUpdatesWithDeclaredClasses::default())]
+#[case::state_update_at_block_5(5, mock_state_updates()[2].clone())]
+fn test_read_state_update<Db>(
+    #[from(provider_with_states)] provider: BlockchainProvider<Db>,
+    #[case] block_num: BlockNumber,
+    #[case] expected_state_update: StateUpdatesWithDeclaredClasses,
+) {
 }
