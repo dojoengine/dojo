@@ -47,4 +47,5 @@ url.workspace = true
 [dev-dependencies]
 assert_fs = "1.0.10"
 dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
+katana-runner = { path = "../katana/runner" }
 snapbox = "0.4.6"

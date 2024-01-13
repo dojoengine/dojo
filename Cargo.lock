@@ -801,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "clap_builder",
@@ -2705,15 +2705,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-core"
-version = "0.4.4"
+version = "0.5.0"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "0.4.4"
+version = "0.5.0"
 
 [[package]]
 name = "dojo-lang"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2761,7 +2761,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2783,7 +2783,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-signers"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "starknet",
@@ -2791,7 +2791,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2822,7 +2822,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -2837,7 +2837,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2871,7 +2871,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "cairo-lang-starknet",
  "camino",
@@ -5488,7 +5488,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "assert_matches",
  "clap",
@@ -5496,7 +5496,7 @@ dependencies = [
  "console",
  "katana-core",
  "katana-rpc",
- "metrics 0.4.4",
+ "metrics 0.5.0",
  "metrics-process",
  "serde_json",
  "starknet_api",
@@ -5508,7 +5508,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -5516,7 +5516,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5526,7 +5526,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5559,7 +5559,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5581,7 +5581,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5597,7 +5597,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5615,7 +5615,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -5640,7 +5640,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5672,7 +5672,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "derive_more",
@@ -5685,7 +5685,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -5697,7 +5697,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "home",
@@ -5988,7 +5988,7 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "hyper",
@@ -8657,7 +8657,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8683,6 +8683,7 @@ dependencies = [
  "dojo-test-utils",
  "dojo-types",
  "dojo-world",
+ "katana-runner",
  "notify",
  "notify-debouncer-mini",
  "scarb",
@@ -9852,7 +9853,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "camino",
@@ -9878,7 +9879,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -9914,7 +9915,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -9953,7 +9954,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "bytes",
  "crypto-bigint",
@@ -9992,7 +9993,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -10011,7 +10012,7 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.4.4",
+ "metrics 0.5.0",
  "metrics-process",
  "scarb",
  "serde",
@@ -10279,7 +10280,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "0.4.4"
+version = "0.5.0"
 
 [[package]]
 name = "ucd-trie"

@@ -157,6 +157,10 @@ pub fn handle_model_struct(
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<$type_name$>::ty()
                 }
+
+                #[external(v0)]
+                fn ensure_abi(self: @ContractState, model: $type_name$) {
+                }
             }
         ",
             &UnorderedHashMap::from([
