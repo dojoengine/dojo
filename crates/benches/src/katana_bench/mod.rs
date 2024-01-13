@@ -31,10 +31,10 @@ mod tests {
         let (spawn_txs, move_txs): (Vec<_>, Vec<_>) = accounts.iter()
             .map(|account| {
                 let spawn_call =
-                    account.execute(calldata_spawn.clone()).nonce(FieldElement::ZERO).max_fee(max_fee);
+                    account.execute(calldata_spawn.clone()).nonce(FieldElement::ONE).max_fee(max_fee);
                 let move_call = account
                     .execute(calldata_move.clone())
-                    .nonce(FieldElement::ONE)
+                    .nonce(FieldElement::TWO)
                     .max_fee(max_fee);
                 (spawn_call, move_call)
             })

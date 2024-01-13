@@ -70,13 +70,15 @@ mod tests {
     async fn bench_default_spawn() {
         runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
 
+        dbg!(runner.account(0).address().to_string());
+
         let fee = estimate_gas(&runner.account(0), BenchCall("spawn", vec![])).unwrap();
 
         log("bench_spawn", fee, "");
     }
 
     #[katana_runner::katana_test]
-    async fn bench_katana() {
+    async fn bench_katana_small() {
         let args = vec![FieldElement::from_hex_be("0x1").unwrap()];
         let prefunded = runner.account(0);
         runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
@@ -97,7 +99,7 @@ mod tests {
 
             let fee = estimate_gas_last(&runner.account(0), vec![
                 BenchCall("spawn", vec![]),
-                BenchCall("move", vec![FieldElement::from_hex_be(&c).unwrap()])
+                // BenchCall("move", vec![FieldElement::from_hex_be(&c).unwrap()])
             ]).unwrap();
 
             log("bench_move", fee, &c);

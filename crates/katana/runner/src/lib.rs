@@ -101,9 +101,8 @@ impl KatanaRunner {
         let mut seed = [0; 32];
         seed[0] = 48;
         let accounts = DevAccountGenerator::new(n_accounts).with_seed(seed).generate();
-        let owned_accounts = vec![];
 
-        Ok(KatanaRunner { child, port, provider, accounts, owned_accounts })
+        Ok(KatanaRunner { child, port, provider, accounts })
     }
 
     pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
@@ -137,13 +136,7 @@ impl KatanaRunner {
         let chain_id = felt!("82743958523457");
         let provider = self.owned_provider();
 
-        SingleOwnerAccount::new(
-            provider,
-            signer,
-            account.address,
-            chain_id,
-            ExecutionEncoding::Legacy,
-        )
+        SingleOwnerAccount::new(provider, signer, account.address, chain_id, ExecutionEncoding::New)
     }
 }
 
