@@ -475,7 +475,7 @@ where
         .execute(calls)
         .send()
         .await
-        .map_err(|e| anyhow!("Failed to register models to World: {e}"))?;
+        .map_err(|e| anyhow!("Failed to register models to World: {e:?}"))?;
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
