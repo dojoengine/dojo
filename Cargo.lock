@@ -2738,14 +2738,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-signers"
-version = "0.5.0"
-dependencies = [
- "anyhow",
- "starknet",
-]
-
-[[package]]
 name = "dojo-test-utils"
 version = "0.5.0"
 dependencies = [
@@ -8655,6 +8647,14 @@ dependencies = [
  "tracing",
  "tracing-log 0.1.4",
  "url",
+]
+
+[[package]]
+name = "sozo-signers"
+version = "0.5.0"
+dependencies = [
+ "anyhow",
+ "starknet",
 ]
 
 [[package]]
