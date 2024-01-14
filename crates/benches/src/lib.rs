@@ -25,8 +25,7 @@ pub fn estimate_gas_last(account: &OwnerAccount, calls: Vec<BenchCall>) -> Resul
     let _rt = RUNTIME.enter();
     block_on(async move {
         let (whole_gas, before_gas) =
-            future::try_join(estimate_calls(&account, all), estimate_calls(&account, calls))
-                .await?;
+            future::try_join(estimate_calls(account, all), estimate_calls(account, calls)).await?;
         Ok(whole_gas - before_gas)
     })
 }
@@ -50,11 +49,9 @@ pub async fn estimate_gas_async(account: &OwnerAccount, calls: Vec<BenchCall>) -
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Context;
     use helpers::log;
     use katana_runner::runner;
     use proptest::prelude::*;
-    use starknet::accounts::{Account, ConnectedAccount};
 
     use super::*;
 

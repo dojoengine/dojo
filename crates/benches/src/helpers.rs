@@ -50,7 +50,7 @@ pub fn parse_calls(entrypoints_and_calldata: Vec<BenchCall>) -> Vec<Call> {
 pub async fn estimate_calls(account: &OwnerAccount, calls: Vec<Call>) -> Result<u64> {
     let fee = account
         .execute(calls)
-        .nonce(cached_nonce(&account).await)
+        .nonce(cached_nonce(account).await)
         .estimate_fee()
         .await
         .context("Failed to estimate fee")

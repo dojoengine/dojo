@@ -9,14 +9,13 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use katana_core::accounts::DevAccountGenerator;
+pub use runner_macro::{katana_test, runner};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
-
-pub use runner_macro::{katana_test, runner};
 use utils::find_free_port;
 
 #[derive(Debug)]
@@ -71,7 +70,7 @@ impl KatanaRunner {
         port: u16,
         log_filename: String,
         n_accounts: u16,
-        with_blocks: bool,
+        _with_blocks: bool,
     ) -> Result<Self> {
         let mut child = Command::new(program)
             .args(["-p", &port.to_string()])

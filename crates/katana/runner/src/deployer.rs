@@ -1,6 +1,7 @@
-use crate::KatanaRunner;
 use anyhow::{Context, Ok, Result};
 use tokio::process::Command;
+
+use crate::KatanaRunner;
 
 impl KatanaRunner {
     /// Known issue - rpc set in Scarb.toml overrides command line argument

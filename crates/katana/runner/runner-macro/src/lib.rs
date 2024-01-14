@@ -1,4 +1,3 @@
-extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, parse_quote, Stmt};
@@ -7,13 +6,13 @@ fn parse_metadata(metadata: String) -> (u16, String, bool) {
     if metadata.is_empty() {
         return (1, "katana".into(), false);
     }
-    let args = metadata.split(",").collect::<Vec<&str>>();
-    let n_accounts = if args.len() != 0 { args[0].parse::<u16>().unwrap() } else { 1 };
+    let args = metadata.split(',').collect::<Vec<&str>>();
+    let n_accounts = if !args.is_empty() { args[0].parse::<u16>().unwrap() } else { 1 };
 
     let with_blocks = if args.len() >= 2 { args[1].trim().parse::<bool>().unwrap() } else { false };
 
     let executable = if args.len() == 3 { args[2].trim() } else { "katana" };
-    let executable = executable.replace("\"", "");
+    let executable = executable.replace('"', "");
 
     (n_accounts, executable, with_blocks)
 }
@@ -49,7 +48,7 @@ pub fn katana_test(metadata: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro] // Needed because the main macro doesn't work with proptest
 pub fn runner(metadata: TokenStream) -> TokenStream {
     let metadata = metadata.to_string();
-    let mut args = metadata.split(",").collect::<Vec<&str>>();
+    let mut args = metadata.split(',').collect::<Vec<&str>>();
     let function_name = args.remove(0);
 
     let (n_accounts, executable, with_blocks) = parse_metadata(args.join(","));
