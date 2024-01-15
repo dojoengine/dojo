@@ -51,9 +51,22 @@ where
 
         let model = db.model(&name).await?;
 
+        let keys_start = NUM_KEYS_INDEX + 1;
+        let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
+        let keys = event.data[keys_start..keys_end].to_vec();
+
+        let values_start = keys_end + 2;
+        let values_end: usize = values_start + usize::from(u8::try_from(event.data[keys_end + 1])?);
+
+        let values = event.data[values_start..values_end].to_vec();
+        let mut keys_and_unpacked = [keys, values].concat();
+
         let mut entity = model.schema().await?;
+        info!("get entity");
+        entity.deserialize(&mut keys_and_unpacked)?;
 
         db.delete_entity(entity, event_id).await?;
+        info!("Deleted entity");
         Ok(())
     }
 }

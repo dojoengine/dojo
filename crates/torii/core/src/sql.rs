@@ -6,6 +6,7 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
+use log::info;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
@@ -149,13 +150,25 @@ impl Sql {
         Ok(())
     }
 
-    pub fn delete_entity(&mut self, model: String, key: FieldElement) {
-        println!("delete entity model: {}", model);
-        let model = Argument::String(model);
-        println!("delete entity key: {:#x}", key);
-        let id = Argument::FieldElement(key);
-
-        self.query_queue.enqueue("DELETE FROM ? WHERE id = ?", vec![model, id]);
+    pub async fn delete_entity(&mut self, entity: Ty, event_id: &str) -> Result<()> {
+        let keys = if let Ty::Struct(s) = &entity {
+            let mut keys = Vec::new();
+            for m in s.keys() {
+                keys.extend(m.serialize()?);
+            }
+            keys
+        } else {
+            return Err(anyhow!("Entity is not a struct"));
+        };
+        let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        let table = format!("{}", entity.name());
+        info!("Deleting entity: {}, table: {}", entity_id, table);
+        self.query_queue.enqueue(
+            "DELETE FROM ? WHERE entity_id = ?",
+            vec![Argument::String(table), Argument::String(entity_id)],
+        );
+        self.query_queue.execute_all().await.unwrap();
+        Ok(())
     }
 
     pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str) {

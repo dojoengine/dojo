@@ -47,7 +47,7 @@ trait IWorld<T> {
 
 #[starknet::interface]
 trait IUpgradeableWorld<T> {
-    fn upgrade(ref self: T, new_class_hash : ClassHash);
+    fn upgrade(ref self: T, new_class_hash: ClassHash);
 }
 
 #[starknet::interface]
@@ -70,15 +70,15 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult, SyscallResultTrait,
-        SyscallResultTraitImpl
+        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult,
+        SyscallResultTrait, SyscallResultTraitImpl
     };
 
     use dojo::database;
     use dojo::database::index::WhereCondition;
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
-    
+
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
     const NAME_ENTRYPOINT: felt252 =
@@ -112,7 +112,7 @@ mod world {
     struct WorldUpgraded {
         class_hash: ClassHash,
     }
-   
+
     #[derive(Drop, starknet::Event)]
     struct ContractDeployed {
         salt: felt252,
@@ -525,7 +525,7 @@ mod world {
             };
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, 0, empty_values.span(), layout);
+            //database::set(model, key, 0, empty_values.span(), layout);
             // this deletes the index
             database::del(model, key);
 
@@ -641,17 +641,18 @@ mod world {
         /// # Arguments
         ///
         /// * `new_class_hash` - The new world class hash.
-        fn upgrade(ref self: ContractState, new_class_hash : ClassHash){
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
-            assert(IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD), 'only owner can upgrade');
+            assert(
+                IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD),
+                'only owner can upgrade'
+            );
 
             // upgrade to new_class_hash
             replace_class_syscall(new_class_hash).unwrap();
 
             // emit Upgrade Event
-            EventEmitter::emit(
-                ref self, WorldUpgraded {class_hash: new_class_hash }
-            );
+            EventEmitter::emit(ref self, WorldUpgraded { class_hash: new_class_hash });
         }
     }
 

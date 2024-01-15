@@ -31,6 +31,7 @@ use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
+use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
 use torii_core::simple_broker::SimpleBroker;
@@ -132,6 +133,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(RegisterModelProcessor),
             Box::new(StoreSetRecordProcessor),
             Box::new(MetadataUpdateProcessor),
+            Box::new(StoreDelRecordProcessor),
         ],
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
