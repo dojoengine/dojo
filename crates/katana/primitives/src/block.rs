@@ -40,18 +40,18 @@ pub struct PartialHeader {
 }
 
 /// The L1 gas prices.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
-    pub eth_gas_price: u64,
+    pub eth: u64,
     /// The price of one unit of the given resource, denominated in strk
-    pub strk_gas_price: u64,
+    pub strk: u64,
 }
 
 impl GasPrices {
     pub fn new(eth_gas_price: u64, strk_gas_price: u64) -> Self {
-        Self { eth_gas_price, strk_gas_price }
+        Self { eth: eth_gas_price, strk: strk_gas_price }
     }
 }
 

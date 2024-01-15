@@ -1,13 +1,14 @@
 use anyhow::Result;
-use blockifier::block_context::BlockContext;
 use katana_primitives::block::{
-    Block, BlockHash, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
+    Block, BlockHash, FinalityStatus, Header, PartialHeader, SealedBlockWithStatus,
 };
+use katana_primitives::env::BlockEnv;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
+use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
@@ -30,6 +31,7 @@ pub trait Database:
     + StateWriter
     + ContractClassWriter
     + StateFactoryProvider
+    + BlockEnvProvider
     + 'static
     + Send
     + Sync
@@ -48,6 +50,7 @@ impl<T> Database for T where
         + StateWriter
         + ContractClassWriter
         + StateFactoryProvider
+        + BlockEnvProvider
         + 'static
         + Send
         + Sync
@@ -63,22 +66,19 @@ impl Blockchain {
         Self { inner: BlockchainProvider::new(Box::new(provider)) }
     }
 
-    pub fn new_with_genesis(provider: impl Database, block_context: &BlockContext) -> Result<Self> {
+    pub fn new_with_genesis(provider: impl Database, block_env: &BlockEnv) -> Result<Self> {
         let header = PartialHeader {
             parent_hash: 0u8.into(),
             version: CURRENT_STARKNET_VERSION,
-            timestamp: block_context.block_timestamp.0,
+            timestamp: block_env.timestamp,
             sequencer_address: *SEQUENCER_ADDRESS,
-            gas_prices: GasPrices {
-                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
-            },
+            gas_prices: block_env.l1_gas_prices,
         };
 
         let block = SealedBlockWithStatus {
             status: FinalityStatus::AcceptedOnL1,
             block: Block {
-                header: Header::new(header, block_context.block_number.0, 0u8.into()),
+                header: Header::new(header, block_env.number, 0u8.into()),
                 body: vec![],
             }
             .seal(),
@@ -93,7 +93,7 @@ impl Blockchain {
         provider: impl Database,
         block_hash: BlockHash,
         parent_hash: FieldElement,
-        block_context: &BlockContext,
+        block_env: &BlockEnv,
         state_root: FieldElement,
         block_status: FinalityStatus,
     ) -> Result<Self> {
@@ -101,13 +101,10 @@ impl Blockchain {
             state_root,
             parent_hash,
             version: CURRENT_STARKNET_VERSION,
-            number: block_context.block_number.0,
-            timestamp: block_context.block_timestamp.0,
+            number: block_env.number,
+            timestamp: block_env.timestamp,
             sequencer_address: *SEQUENCER_ADDRESS,
-            gas_prices: GasPrices {
-                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
-            },
+            gas_prices: block_env.l1_gas_prices,
         };
 
         let block = SealedBlockWithStatus {
@@ -134,8 +131,8 @@ impl Blockchain {
 
 #[cfg(test)]
 mod tests {
-    use blockifier::block_context::{BlockContext, FeeTokenAddresses, GasPrices};
-    use katana_primitives::block::FinalityStatus;
+    use katana_primitives::block::{FinalityStatus, GasPrices};
+    use katana_primitives::env::BlockEnv;
     use katana_primitives::FieldElement;
     use katana_provider::providers::in_memory::InMemoryProvider;
     use katana_provider::traits::block::{
@@ -143,8 +140,6 @@ mod tests {
     };
     use katana_provider::traits::state::StateFactoryProvider;
     use starknet::macros::felt;
-    use starknet_api::block::{BlockNumber, BlockTimestamp};
-    use starknet_api::core::ChainId;
 
     use super::Blockchain;
     use crate::constants::{
@@ -154,23 +149,14 @@ mod tests {
     #[test]
     fn blockchain_from_genesis_states() {
         let provider = InMemoryProvider::new();
-        let block_context = BlockContext {
-            gas_prices: GasPrices { eth_l1_gas_price: 0, strk_l1_gas_price: 0 },
-            max_recursion_depth: 0,
-            validate_max_n_steps: 0,
-            invoke_tx_max_n_steps: 0,
-            block_number: BlockNumber(0),
-            chain_id: ChainId("test".into()),
-            block_timestamp: BlockTimestamp(0),
+        let block_env = BlockEnv {
+            number: 0,
+            timestamp: 0,
             sequencer_address: Default::default(),
-            fee_token_addresses: FeeTokenAddresses {
-                eth_fee_token_address: Default::default(),
-                strk_fee_token_address: Default::default(),
-            },
-            vm_resource_fee_cost: Default::default(),
+            l1_gas_prices: GasPrices { eth: 0, strk: 0 },
         };
 
-        let blockchain = Blockchain::new_with_genesis(provider, &block_context)
+        let blockchain = Blockchain::new_with_genesis(provider, &block_env)
             .expect("failed to create blockchain from genesis block");
         let state = blockchain.provider().latest().expect("failed to get latest state");
 
@@ -188,27 +174,18 @@ mod tests {
     fn blockchain_from_fork() {
         let provider = InMemoryProvider::new();
 
-        let block_context = BlockContext {
-            gas_prices: GasPrices { eth_l1_gas_price: 9090, strk_l1_gas_price: 0 },
-            max_recursion_depth: 0,
-            validate_max_n_steps: 0,
-            invoke_tx_max_n_steps: 0,
-            chain_id: ChainId("test".into()),
-            block_number: BlockNumber(23),
-            block_timestamp: BlockTimestamp(6868),
+        let block_env = BlockEnv {
+            number: 23,
+            timestamp: 6868,
             sequencer_address: Default::default(),
-            fee_token_addresses: FeeTokenAddresses {
-                eth_fee_token_address: Default::default(),
-                strk_fee_token_address: Default::default(),
-            },
-            vm_resource_fee_cost: Default::default(),
+            l1_gas_prices: GasPrices { eth: 9090, strk: 0 },
         };
 
         let blockchain = Blockchain::new_from_forked(
             provider,
             felt!("1111"),
             FieldElement::ZERO,
-            &block_context,
+            &block_env,
             felt!("1334"),
             FinalityStatus::AcceptedOnL1,
         )
@@ -223,7 +200,7 @@ mod tests {
         assert_eq!(latest_number, 23);
         assert_eq!(latest_hash, felt!("1111"));
 
-        assert_eq!(header.gas_prices.eth_gas_price, 9090);
+        assert_eq!(header.gas_prices.eth, 9090);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
         assert_eq!(header.state_root, felt!("1334"));

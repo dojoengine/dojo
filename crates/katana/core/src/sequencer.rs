@@ -4,10 +4,11 @@ use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
+use blockifier::block_context::BlockContext;
 use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
 use blockifier::transaction::errors::TransactionExecutionError;
 use katana_executor::blockifier::state::StateRefDb;
-use katana_executor::blockifier::utils::EntryPointCall;
+use katana_executor::blockifier::utils::{block_context_from_envs, EntryPointCall};
 use katana_executor::blockifier::PendingState;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::ChainId;
@@ -22,6 +23,7 @@ use katana_provider::traits::block::{
     BlockHashProvider, BlockIdReader, BlockNumberProvider, BlockProvider,
 };
 use katana_provider::traits::contract::ContractClassProvider;
+use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionsProviderExt,
@@ -58,19 +60,30 @@ pub struct KatanaSequencer {
 }
 
 impl KatanaSequencer {
-    pub async fn new(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
+    pub async fn new(
+        config: SequencerConfig,
+        starknet_config: StarknetConfig,
+    ) -> anyhow::Result<Self> {
         let backend = Arc::new(Backend::new(starknet_config).await);
 
         let pool = Arc::new(TransactionPool::new());
         let miner = TransactionMiner::new(pool.add_listener());
+
         let state = StateFactoryProvider::latest(backend.blockchain.provider())
             .map(StateRefDb::new)
             .unwrap();
 
-        let block_producer = if let Some(block_time) = config.block_time {
-            BlockProducer::interval(Arc::clone(&backend), state, block_time)
-        } else if config.no_mining {
-            BlockProducer::on_demand(Arc::clone(&backend), state)
+        let block_producer = if config.block_time.is_some() || config.no_mining {
+            let block_num = backend.blockchain.provider().latest_number()?;
+
+            let block_env = backend.blockchain.provider().block_env_at(block_num.into())?.unwrap();
+            let cfg_env = backend.chain_cfg_env();
+
+            if let Some(interval) = config.block_time {
+                BlockProducer::interval(Arc::clone(&backend), state, interval, (block_env, cfg_env))
+            } else {
+                BlockProducer::on_demand(Arc::clone(&backend), state, (block_env, cfg_env))
+            }
         } else {
             BlockProducer::instant(Arc::clone(&backend))
         };
@@ -90,7 +103,7 @@ impl KatanaSequencer {
             messaging,
         });
 
-        Self { pool, config, backend, block_producer }
+        Ok(Self { pool, config, backend, block_producer })
     }
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
@@ -107,6 +120,38 @@ impl KatanaSequencer {
 
     pub fn backend(&self) -> &Backend {
         &self.backend
+    }
+
+    pub fn block_execution_context_at(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> SequencerResult<Option<BlockContext>> {
+        let provider = self.backend.blockchain.provider();
+        let cfg_env = self.backend().chain_cfg_env();
+
+        if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
+            if let Some(state) = self.pending_state() {
+                let (block_env, _) = state.block_execution_envs();
+                return Ok(Some(block_context_from_envs(&block_env, &cfg_env)));
+            }
+        }
+
+        let block_num = match block_id {
+            BlockIdOrTag::Tag(BlockTag::Pending) | BlockIdOrTag::Tag(BlockTag::Latest) => {
+                provider.latest_number()?
+            }
+
+            BlockIdOrTag::Hash(hash) => provider
+                .block_number_by_hash(hash)?
+                .ok_or(SequencerError::BlockNotFound(block_id))?,
+
+            BlockIdOrTag::Number(num) => num,
+        };
+
+        provider
+            .block_env_at(block_num.into())?
+            .map(|block_env| Some(block_context_from_envs(&block_env, &cfg_env)))
+            .ok_or(SequencerError::BlockNotFound(block_id))
     }
 
     pub fn state(&self, block_id: &BlockIdOrTag) -> SequencerResult<Box<dyn StateProvider>> {
@@ -149,12 +194,16 @@ impl KatanaSequencer {
         block_id: BlockIdOrTag,
     ) -> SequencerResult<Vec<FeeEstimate>> {
         let state = self.state(&block_id)?;
-        let block_context = self.backend.env.read().block.clone();
+
+        let block_context = self
+            .block_execution_context_at(block_id)?
+            .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
+
         katana_executor::blockifier::utils::estimate_fee(
             transactions.into_iter(),
             block_context,
             state,
-            !self.backend.config.read().disable_validate,
+            !self.backend.config.disable_validate,
         )
         .map_err(SequencerError::TransactionExecution)
     }
@@ -267,7 +316,10 @@ impl KatanaSequencer {
         block_id: BlockIdOrTag,
     ) -> SequencerResult<Vec<FieldElement>> {
         let state = self.state(&block_id)?;
-        let block_context = self.backend.env.read().block.clone();
+
+        let block_context = self
+            .block_execution_context_at(block_id)?
+            .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
 
         let retdata = katana_executor::blockifier::utils::call(request, block_context, state)
             .map_err(|e| match e {
