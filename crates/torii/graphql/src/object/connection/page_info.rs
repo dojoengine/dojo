@@ -1,14 +1,13 @@
 use async_graphql::connection::PageInfo;
 use async_graphql::dynamic::indexmap::IndexMap;
-use async_graphql::dynamic::Field;
 use async_graphql::{Name, Value};
 
 use crate::mapping::PAGE_INFO_TYPE_MAPPING;
-use crate::object::{ObjectTrait, TypeMapping};
+use crate::object::{BasicObjectTrait, TypeMapping};
 
 pub struct PageInfoObject;
 
-impl ObjectTrait for PageInfoObject {
+impl BasicObjectTrait for PageInfoObject {
     fn name(&self) -> (&str, &str) {
         ("pageInfo", "")
     }
@@ -19,14 +18,6 @@ impl ObjectTrait for PageInfoObject {
 
     fn type_mapping(&self) -> &TypeMapping {
         &PAGE_INFO_TYPE_MAPPING
-    }
-
-    fn resolve_one(&self) -> Option<Field> {
-        None
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        None
     }
 }
 

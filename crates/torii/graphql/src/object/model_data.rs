@@ -8,8 +8,10 @@ use super::connection::{connection_arguments, connection_output, parse_connectio
 use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
 use super::inputs::where_input::{parse_where_argument, where_argument, WhereInputObject};
 use super::inputs::InputObjectTrait;
-use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::constants::{ENTITY_ID_COLUMN, ENTITY_TABLE, ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
+use super::{BasicObjectTrait, ResolvableObjectTrait, TypeMapping, ValueMapping};
+use crate::constants::{
+    ENTITY_ID_COLUMN, ENTITY_TABLE, EVENT_ID_COLUMN, ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
+};
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
@@ -47,7 +49,7 @@ impl ModelDataObject {
     }
 }
 
-impl ObjectTrait for ModelDataObject {
+impl BasicObjectTrait for ModelDataObject {
     fn name(&self) -> (&str, &str) {
         (&self.name, &self.plural_name)
     }
@@ -60,6 +62,23 @@ impl ObjectTrait for ModelDataObject {
         &self.type_mapping
     }
 
+    fn objects(&self) -> Vec<Object> {
+        let mut objects = data_objects_recursion(
+            self.type_name(),
+            self.type_mapping(),
+            vec![self.type_name().to_string()],
+        );
+
+        // root object requires entity_field association
+        let mut root = objects.pop().unwrap();
+        root = root.field(entity_field());
+
+        objects.push(root);
+        objects
+    }
+}
+
+impl ResolvableObjectTrait for ModelDataObject {
     fn input_objects(&self) -> Option<Vec<InputObject>> {
         Some(vec![self.where_input.input_object(), self.order_input.input_object()])
     }
@@ -70,6 +89,10 @@ impl ObjectTrait for ModelDataObject {
 
     fn resolve_one(&self) -> Option<Field> {
         None
+    }
+
+    fn table_name(&self) -> &str {
+        self.type_name()
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -88,7 +111,7 @@ impl ObjectTrait for ModelDataObject {
                 let order = parse_order_argument(&ctx);
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
                 let connection = parse_connection_arguments(&ctx)?;
-                let id_column = "event_id";
+                let id_column = EVENT_ID_COLUMN;
 
                 let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
                 let (data, page_info) = fetch_multiple_rows(
@@ -122,21 +145,6 @@ impl ObjectTrait for ModelDataObject {
         field = order_argument(field, self.type_name());
 
         Some(field)
-    }
-
-    fn objects(&self) -> Vec<Object> {
-        let mut objects = data_objects_recursion(
-            self.type_name(),
-            self.type_mapping(),
-            vec![self.type_name().to_string()],
-        );
-
-        // root object requires entity_field association
-        let mut root = objects.pop().unwrap();
-        root = root.field(entity_field());
-
-        objects.push(root);
-        objects
     }
 }
 

@@ -11,7 +11,7 @@ use torii_core::types::Model;
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::order_input::parse_order_argument;
-use super::{ObjectTrait, TypeMapping, ValueMapping};
+use super::{BasicObjectTrait, ResolvableObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::{
     ID_COLUMN, MODEL_NAMES, MODEL_ORDER_FIELD_TYPE_NAME, MODEL_ORDER_TYPE_NAME, MODEL_TABLE,
     MODEL_TYPE_NAME, ORDER_ASC, ORDER_DESC, ORDER_DIR_TYPE_NAME,
@@ -24,7 +24,7 @@ const ORDER_BY_HASH: &str = "CLASS_HASH";
 
 pub struct ModelObject;
 
-impl ObjectTrait for ModelObject {
+impl BasicObjectTrait for ModelObject {
     fn name(&self) -> (&str, &str) {
         MODEL_NAMES
     }
@@ -36,9 +36,11 @@ impl ObjectTrait for ModelObject {
     fn type_mapping(&self) -> &TypeMapping {
         &MODEL_TYPE_MAPPING
     }
+}
 
-    fn table_name(&self) -> Option<&str> {
-        Some(MODEL_TABLE)
+impl ResolvableObjectTrait for ModelObject {
+    fn table_name(&self) -> &str {
+        MODEL_TABLE
     }
 
     fn input_objects(&self) -> Option<Vec<InputObject>> {
@@ -59,23 +61,21 @@ impl ObjectTrait for ModelObject {
 
     fn resolve_many(&self) -> Option<Field> {
         let type_mapping = self.type_mapping().clone();
-        let table_name = self.table_name().unwrap().to_string();
 
         let mut field = Field::new(
             self.name().1,
             TypeRef::named(format!("{}Connection", self.type_name())),
             move |ctx| {
                 let type_mapping = type_mapping.clone();
-                let table_name = table_name.to_string();
 
                 FieldFuture::new(async move {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                     let order = parse_order_argument(&ctx);
                     let connection = parse_connection_arguments(&ctx)?;
-                    let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
+                    let total_count = count_rows(&mut conn, MODEL_TABLE, &None, &None).await?;
                     let (data, page_info) = fetch_multiple_rows(
                         &mut conn,
-                        &table_name,
+                        MODEL_TABLE,
                         ID_COLUMN,
                         &None,
                         &order,
@@ -106,8 +106,10 @@ impl ObjectTrait for ModelObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("modelRegistered", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "modelRegistered",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 {
                     SubscriptionFieldFuture::new(async move {
                         let id = match ctx.args.get("id") {
@@ -126,9 +128,9 @@ impl ObjectTrait for ModelObject {
                         }))
                     })
                 }
-            })
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 

@@ -10,7 +10,7 @@ use torii_core::types::Event;
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
-use super::{ObjectTrait, TypeMapping};
+use super::{BasicObjectTrait, ResolvableObjectTrait, TypeMapping};
 use crate::constants::{EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
 use crate::mapping::EVENT_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows};
@@ -18,7 +18,7 @@ use crate::types::ValueMapping;
 
 pub struct EventObject;
 
-impl ObjectTrait for EventObject {
+impl BasicObjectTrait for EventObject {
     fn name(&self) -> (&str, &str) {
         EVENT_NAMES
     }
@@ -30,9 +30,11 @@ impl ObjectTrait for EventObject {
     fn type_mapping(&self) -> &TypeMapping {
         &EVENT_TYPE_MAPPING
     }
+}
 
-    fn table_name(&self) -> Option<&str> {
-        Some(EVENT_TABLE)
+impl ResolvableObjectTrait for EventObject {
+    fn table_name(&self) -> &str {
+        EVENT_TABLE
     }
 
     fn resolve_one(&self) -> Option<Field> {
@@ -82,15 +84,17 @@ impl ObjectTrait for EventObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("eventEmitted", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "eventEmitted",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let input_keys = parse_keys_argument(&ctx)?;
                     Ok(EventObject::subscription_stream(input_keys))
                 })
-            })
-            .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING))),
-        ])
+            },
+        )
+        .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))])
     }
 }
 

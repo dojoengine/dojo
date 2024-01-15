@@ -23,7 +23,12 @@ use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
 
-pub trait ObjectTrait: Send + Sync {
+pub enum ObjectVariant {
+    Basic(Box<dyn BasicObjectTrait>),
+    Resolvable(Box<dyn ResolvableObjectTrait>),
+}
+
+pub trait BasicObjectTrait: Send + Sync {
     // Name of the graphql object, singular and plural (eg "player" and "players")
     fn name(&self) -> (&str, &str);
 
@@ -37,6 +42,40 @@ pub trait ObjectTrait: Send + Sync {
     fn related_fields(&self) -> Option<Vec<Field>> {
         None
     }
+
+    fn objects(&self) -> Vec<Object> {
+        let mut object = Object::new(self.type_name());
+
+        for (field_name, type_data) in self.type_mapping().clone() {
+            let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
+                let field_name = field_name.clone();
+
+                FieldFuture::new(async move {
+                    match ctx.parent_value.try_to_value()? {
+                        Value::Object(values) => {
+                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
+                        }
+                        _ => Err("incorrect value, requires Value::Object".into()),
+                    }
+                })
+            });
+
+            object = object.field(field);
+        }
+
+        // Add related graphql objects (eg event, system)
+        if let Some(fields) = self.related_fields() {
+            for field in fields {
+                object = object.field(field);
+            }
+        }
+        vec![object]
+    }
+}
+
+pub trait ResolvableObjectTrait: BasicObjectTrait {
+    // Table name of the object in the database
+    fn table_name(&self) -> &str;
 
     // Resolves subscriptions, returns current object (eg "PlayerAdded")
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
@@ -54,14 +93,10 @@ pub trait ObjectTrait: Send + Sync {
         None
     }
 
-    fn table_name(&self) -> Option<&str> {
-        None
-    }
-
     // Resolves single object queries, returns current object of type type_name (eg "Player")
     fn resolve_one(&self) -> Option<Field> {
         let type_mapping = self.type_mapping().clone();
-        let table_name = self.table_name().unwrap().to_string();
+        let table_name = self.table_name().to_string();
 
         Some(
             Field::new(self.name().0, TypeRef::named_nn(self.type_name()), move |ctx| {
@@ -83,7 +118,7 @@ pub trait ObjectTrait: Send + Sync {
     // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
     fn resolve_many(&self) -> Option<Field> {
         let type_mapping = self.type_mapping().clone();
-        let table_name = self.table_name().unwrap().to_string();
+        let table_name = self.table_name().to_string();
 
         let mut field = Field::new(
             self.name().1,
@@ -127,6 +162,18 @@ pub trait ObjectTrait: Send + Sync {
         Some(field)
     }
 
+    fn resolvers(&self) -> Vec<Field> {
+        let mut fields = Vec::new();
+        if let Some(field) = self.resolve_one() {
+            fields.push(field);
+        }
+        if let Some(field) = self.resolve_many() {
+            fields.push(field);
+        }
+
+        fields
+    }
+
     // Connection type, if resolve_many is Some then register connection graphql obj, includes
     // {type_name}Connection and {type_name}Edge according to relay spec https://relay.dev/graphql/connections.htm
     fn connection(&self) -> Option<Vec<Object>> {
@@ -141,34 +188,5 @@ pub trait ObjectTrait: Send + Sync {
         objects.extend(connection.objects());
 
         Some(objects)
-    }
-
-    fn objects(&self) -> Vec<Object> {
-        let mut object = Object::new(self.type_name());
-
-        for (field_name, type_data) in self.type_mapping().clone() {
-            let field = Field::new(field_name.to_string(), type_data.type_ref(), move |ctx| {
-                let field_name = field_name.clone();
-
-                FieldFuture::new(async move {
-                    match ctx.parent_value.try_to_value()? {
-                        Value::Object(values) => {
-                            Ok(Some(values.get(&field_name).unwrap().clone())) // safe unwrap
-                        }
-                        _ => Err("incorrect value, requires Value::Object".into()),
-                    }
-                })
-            });
-
-            object = object.field(field);
-        }
-
-        // Add related graphql objects (eg event, system)
-        if let Some(fields) = self.related_fields() {
-            for field in fields {
-                object = object.field(field);
-            }
-        }
-        vec![object]
     }
 }

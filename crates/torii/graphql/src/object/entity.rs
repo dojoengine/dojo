@@ -12,7 +12,7 @@ use torii_core::types::Entity;
 
 use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
-use super::{ObjectTrait, TypeMapping, ValueMapping};
+use super::{BasicObjectTrait, ResolvableObjectTrait, TypeMapping, ValueMapping};
 use crate::constants::{ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN};
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows};
@@ -21,7 +21,7 @@ use crate::types::TypeData;
 use crate::utils::extract;
 pub struct EntityObject;
 
-impl ObjectTrait for EntityObject {
+impl BasicObjectTrait for EntityObject {
     fn name(&self) -> (&str, &str) {
         ENTITY_NAMES
     }
@@ -34,12 +34,14 @@ impl ObjectTrait for EntityObject {
         &ENTITY_TYPE_MAPPING
     }
 
-    fn table_name(&self) -> Option<&str> {
-        Some(ENTITY_TABLE)
-    }
-
     fn related_fields(&self) -> Option<Vec<Field>> {
         Some(vec![model_union_field()])
+    }
+}
+
+impl ResolvableObjectTrait for EntityObject {
+    fn table_name(&self) -> &str {
+        ENTITY_TABLE
     }
 
     fn resolve_many(&self) -> Option<Field> {
@@ -85,8 +87,10 @@ impl ObjectTrait for EntityObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "entityUpdated",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let id = match ctx.args.get("id") {
                         Some(id) => Some(id.string()?.to_string()),
@@ -103,9 +107,9 @@ impl ObjectTrait for EntityObject {
                         }
                     }))
                 })
-            })
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 

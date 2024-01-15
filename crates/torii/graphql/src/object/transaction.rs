@@ -1,10 +1,10 @@
-use super::{ObjectTrait, TypeMapping};
+use super::{BasicObjectTrait, ResolvableObjectTrait, TypeMapping};
 use crate::constants::{TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME};
 use crate::mapping::TRANSACTION_MAPPING;
 
 pub struct TransactionObject;
 
-impl ObjectTrait for TransactionObject {
+impl BasicObjectTrait for TransactionObject {
     fn name(&self) -> (&str, &str) {
         TRANSACTION_NAMES
     }
@@ -16,8 +16,10 @@ impl ObjectTrait for TransactionObject {
     fn type_mapping(&self) -> &TypeMapping {
         &TRANSACTION_MAPPING
     }
+}
 
-    fn table_name(&self) -> Option<&str> {
-        Some(TRANSACTION_TABLE)
+impl ResolvableObjectTrait for TransactionObject {
+    fn table_name(&self) -> &str {
+        TRANSACTION_TABLE
     }
 }
