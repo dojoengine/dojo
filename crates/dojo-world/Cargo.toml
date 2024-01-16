@@ -35,7 +35,6 @@ url = { version = "2.2.2", optional = true }
 [dev-dependencies]
 assert_fs = "1.0.9"
 assert_matches.workspace = true
-dojo-lang = { path = "../dojo-lang" }
 dojo-test-utils = { path = "../dojo-test-utils" }
 tokio.workspace = true
 toml.workspace = true

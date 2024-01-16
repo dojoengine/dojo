@@ -1,8 +1,8 @@
 [package]
-description = "Dojo Signer implementations"
+description = "Sozo signer implementations"
 edition.workspace = true
 license-file.workspace = true
-name = "dojo-signers"
+name = "sozo-signers"
 repository.workspace = true
 version.workspace = true
 
