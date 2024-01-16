@@ -27,12 +27,14 @@ pub trait BlockIdReader: BlockNumberProvider + Send + Sync {
                 if let Some((num, _)) = Self::pending_block_id(self)? {
                     Ok(Some(num))
                 } else {
-                    Ok(None)
+                    // returns latest number for now
+                    BlockNumberProvider::latest_number(&self).map(Some)
                 }
             }
         }
     }
 
+    // TODO: integrate the pending block with the provider
     /// Retrieves the pending block number and hash.
     fn pending_block_id(&self) -> ProviderResult<Option<(BlockNumber, BlockHash)>> {
         Ok(None) // Returns `None` for now
