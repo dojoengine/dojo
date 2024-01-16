@@ -48,7 +48,7 @@ use crate::traits::transaction::{
 };
 use crate::ProviderResult;
 
-/// A provider implementation that uses a database as a backend.
+/// A provider implementation that uses a persistent database as the backend.
 #[derive(Debug)]
 pub struct DbProvider(DbEnv);
 

@@ -104,6 +104,12 @@ impl Backend {
             .expect("able to create forked blockchain");
 
             (blockchain, forked_chain_id.into())
+        } else if let Some(db_path) = &config.db_dir {
+            (
+                Blockchain::new_with_db(db_path, &block_env)
+                    .expect("able to create blockchain from db"),
+                config.env.chain_id,
+            )
         } else {
             let blockchain = Blockchain::new_with_genesis(InMemoryProvider::new(), &block_env)
                 .expect("able to create blockchain from genesis block");
