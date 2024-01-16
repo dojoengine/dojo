@@ -51,7 +51,7 @@ async fn bench_katana() {
 
     // running a spawn for each account
     join_all(spawn_txs.iter().map(|t| t.send())).await;
-    sleep(BLOCK_TIME).await;
+    runner.blocks_until_empty().await;
 
     let transaction_hashes = join_all(move_txs.iter().map(|t| async {
         let r = t.send().await;
@@ -75,6 +75,9 @@ async fn bench_katana() {
     let transaction_sum: u32 = block_sizes.iter().sum();
 
     assert_eq!(transaction_sum, 2 * runner.accounts_data().len() as u32);
+
+    dbg!(runner.block_times().await);
+    dbg!(block_sizes);
 
     // time difference between first and last transaction
     println!("duration: {:?}", *times.last().unwrap() - *times.first().unwrap());

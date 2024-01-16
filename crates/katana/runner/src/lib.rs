@@ -1,8 +1,8 @@
 mod deployer;
+mod logs;
+mod prefunded;
 mod utils;
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self};
@@ -12,12 +12,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use katana_core::accounts::DevAccountGenerator;
 pub use runner_macro::{katana_test, runner};
-use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
-use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet::signers::{LocalWallet, SigningKey};
-use tokio::time::sleep;
 use url::Url;
 use utils::find_free_port;
 
@@ -126,75 +122,6 @@ impl KatanaRunner {
             .context("Failed to parse url")
             .unwrap();
         JsonRpcClient::new(HttpTransport::new(url))
-    }
-
-    pub fn accounts_data(&self) -> &[katana_core::accounts::Account] {
-        &self.accounts[1..] // The first one is used to deploy the contract
-    }
-
-    pub fn accounts(&self) -> Vec<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> {
-        self.accounts_data().iter().enumerate().map(|(i, _)| self.account(i)).collect()
-    }
-
-    pub fn account(
-        &self,
-        index: usize,
-    ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
-        let account = &self.accounts[index];
-        let private_key = SigningKey::from_secret_scalar(account.private_key);
-        let signer = LocalWallet::from_signing_key(private_key);
-
-        debug_assert_eq!(katana_core::backend::config::Environment::default().chain_id, "KATANA");
-        let chain_id = felt!("82743958523457");
-        let provider = self.owned_provider();
-
-        SingleOwnerAccount::new(provider, signer, account.address, chain_id, ExecutionEncoding::New)
-    }
-
-    pub fn blocks(&self) -> Vec<String> {
-        BufReader::new(File::open(&self.log_filename).unwrap())
-            .lines()
-            .filter_map(|line| {
-                let line = line.unwrap();
-                if line.contains("⛏️ Block") {
-                    Some(line)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    pub async fn blocks_until_empty(&self) -> Vec<String> {
-        let mut blocks = self.blocks();
-        loop {
-            if let Some(block) = blocks.last() {
-                println!("{}", block);
-                if block.contains("mined with 0 transactions") {
-                    break;
-                }
-            }
-
-            let len_at_call = blocks.len();
-            while len_at_call == blocks.len() {
-                sleep(Duration::from_millis(BLOCK_TIME_IF_ENABLED)).await;
-                blocks = self.blocks();
-            }
-        }
-        blocks
-    }
-
-    pub async fn block_sizes(&self) -> Vec<u32> {
-        self.blocks_until_empty()
-            .await
-            .iter()
-            .map(|block| {
-                let limit =
-                    block.find(" transactions").expect("Failed to find transactions in block");
-                let number = block[..limit].split(" ").last().unwrap();
-                number.parse::<u32>().expect("Failed to parse block number")
-            })
-            .collect()
     }
 }
 

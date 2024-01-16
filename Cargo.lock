@@ -6338,6 +6338,7 @@ name = "katana-runner"
 version = "0.5.1-alpha.2"
 dependencies = [
  "anyhow",
+ "chrono",
  "home",
  "katana-core",
  "lazy_static",

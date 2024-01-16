@@ -14,3 +14,4 @@ lazy_static.workspace = true
 starknet.workspace = true
 tokio.workspace = true
 url.workspace = true
+chrono.workspace = true
