@@ -14,7 +14,7 @@ You should now have a json file into `logs` folder with the deployed addresses.
 To interact with the node, you can use the Makefile for better UX.
 If you need more customization, please check the Makefile to see the commands.
 
-If a command in the makefile requires argument, please use the associated `*_usage`.
+If a command in the makefile requires an argument, please use the associated `*_usage`.
 
 If you want to check the logs emitted by the contracts, run `cast logs`.
 
