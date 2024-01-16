@@ -7,7 +7,7 @@ use sqlx::{Pool, Row, Sqlite};
 
 use super::connection::page_info::PageInfoObject;
 use super::connection::{connection_arguments, cursor, parse_connection_arguments};
-use super::{BasicObjectTrait, ResolvableObjectTrait};
+use super::{BasicObject, ResolvableObject};
 use crate::constants::{
     ID_COLUMN, JSON_COLUMN, METADATA_NAMES, METADATA_TABLE, METADATA_TYPE_NAME,
 };
@@ -29,7 +29,7 @@ impl MetadataObject {
     }
 }
 
-impl BasicObjectTrait for MetadataObject {
+impl BasicObject for MetadataObject {
     fn name(&self) -> (&str, &str) {
         METADATA_NAMES
     }
@@ -43,16 +43,8 @@ impl BasicObjectTrait for MetadataObject {
     }
 }
 
-impl ResolvableObjectTrait for MetadataObject {
-    fn table_name(&self) -> &str {
-        METADATA_TABLE
-    }
-
-    fn resolve_one(&self) -> Option<Field> {
-        None
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
+impl ResolvableObject for MetadataObject {
+    fn resolvers(&self) -> Vec<Field> {
         let row_types = self.row_types();
 
         let mut field = Field::new(
@@ -94,7 +86,7 @@ impl ResolvableObjectTrait for MetadataObject {
 
         field = connection_arguments(field);
 
-        Some(field)
+        vec![field]
     }
 }
 

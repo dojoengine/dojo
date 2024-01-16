@@ -1,11 +1,11 @@
 use super::TypeMapping;
 use crate::constants::{SOCIAL_NAMES, SOCIAL_TYPE_NAME};
 use crate::mapping::SOCIAL_TYPE_MAPPING;
-use crate::object::BasicObjectTrait;
+use crate::object::BasicObject;
 
 pub struct SocialObject;
 
-impl BasicObjectTrait for SocialObject {
+impl BasicObject for SocialObject {
     fn name(&self) -> (&str, &str) {
         SOCIAL_NAMES
     }

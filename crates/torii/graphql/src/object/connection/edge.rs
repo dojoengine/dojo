@@ -1,7 +1,7 @@
 use async_graphql::dynamic::TypeRef;
 use async_graphql::Name;
 
-use crate::object::BasicObjectTrait;
+use crate::object::BasicObject;
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
 pub struct EdgeObject {
@@ -28,7 +28,7 @@ impl EdgeObject {
     }
 }
 
-impl BasicObjectTrait for EdgeObject {
+impl BasicObject for EdgeObject {
     fn name(&self) -> (&str, &str) {
         (&self.name, "")
     }

@@ -1,10 +1,13 @@
-use super::{BasicObjectTrait, ResolvableObjectTrait, TypeMapping};
-use crate::constants::{TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME};
+use async_graphql::dynamic::Field;
+
+use super::{BasicObject, ResolvableObject, TypeMapping};
+use crate::constants::{ID_COLUMN, TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME};
 use crate::mapping::TRANSACTION_MAPPING;
+use crate::object::{resolve_many, resolve_one};
 
 pub struct TransactionObject;
 
-impl BasicObjectTrait for TransactionObject {
+impl BasicObject for TransactionObject {
     fn name(&self) -> (&str, &str) {
         TRANSACTION_NAMES
     }
@@ -18,8 +21,24 @@ impl BasicObjectTrait for TransactionObject {
     }
 }
 
-impl ResolvableObjectTrait for TransactionObject {
-    fn table_name(&self) -> &str {
-        TRANSACTION_TABLE
+impl ResolvableObject for TransactionObject {
+    fn resolvers(&self) -> Vec<Field> {
+        let resolve_one = resolve_one(
+            TRANSACTION_TABLE,
+            ID_COLUMN,
+            self.name().0,
+            self.type_name(),
+            self.type_mapping(),
+        );
+
+        let resolve_many = resolve_many(
+            TRANSACTION_TABLE,
+            ID_COLUMN,
+            self.name().1,
+            self.type_name(),
+            self.type_mapping(),
+        );
+
+        vec![resolve_one, resolve_many]
     }
 }

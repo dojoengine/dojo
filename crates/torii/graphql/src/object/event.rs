@@ -1,24 +1,22 @@
 use async_graphql::dynamic::{
-    Field, FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+    Field, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Result, Value};
-use sqlx::{Pool, Sqlite};
 use tokio_stream::{Stream, StreamExt};
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::FELT_DELIMITER;
 use torii_core::types::Event;
 
-use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
-use super::{BasicObjectTrait, ResolvableObjectTrait, TypeMapping};
+use super::{resolve_many, BasicObject, ResolvableObject, TypeMapping};
 use crate::constants::{EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
 use crate::mapping::EVENT_TYPE_MAPPING;
-use crate::query::data::{count_rows, fetch_multiple_rows};
+use crate::object::resolve_one;
 use crate::types::ValueMapping;
 
 pub struct EventObject;
 
-impl BasicObjectTrait for EventObject {
+impl BasicObject for EventObject {
     fn name(&self) -> (&str, &str) {
         EVENT_NAMES
     }
@@ -32,69 +30,38 @@ impl BasicObjectTrait for EventObject {
     }
 }
 
-impl ResolvableObjectTrait for EventObject {
-    fn table_name(&self) -> &str {
-        EVENT_TABLE
-    }
-
-    fn resolve_one(&self) -> Option<Field> {
-        None
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        let mut field = Field::new(
-            self.name().1,
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let connection = parse_connection_arguments(&ctx)?;
-                    let keys = parse_keys_argument(&ctx)?;
-                    let total_count = count_rows(&mut conn, EVENT_TABLE, &keys, &None).await?;
-                    let (data, page_info) = fetch_multiple_rows(
-                        &mut conn,
-                        EVENT_TABLE,
-                        ID_COLUMN,
-                        &keys,
-                        &None,
-                        &None,
-                        &connection,
-                        total_count,
-                    )
-                    .await?;
-                    let results = connection_output(
-                        &data,
-                        &EVENT_TYPE_MAPPING,
-                        &None,
-                        ID_COLUMN,
-                        total_count,
-                        false,
-                        page_info,
-                    )?;
-
-                    Ok(Some(Value::Object(results)))
-                })
-            },
+impl ResolvableObject for EventObject {
+    fn resolvers(&self) -> Vec<Field> {
+        let resolve_one = resolve_one(
+            EVENT_TABLE,
+            ID_COLUMN,
+            self.name().0,
+            self.type_name(),
+            self.type_mapping(),
         );
 
-        field = connection_arguments(field);
-        field = keys_argument(field);
+        let mut resolve_many = resolve_many(
+            EVENT_TABLE,
+            ID_COLUMN,
+            self.name().1,
+            self.type_name(),
+            self.type_mapping(),
+        );
+        resolve_many = keys_argument(resolve_many);
 
-        Some(field)
+        vec![resolve_one, resolve_many]
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![SubscriptionField::new(
-            "eventEmitted",
-            TypeRef::named_nn(self.type_name()),
-            |ctx| {
+        Some(vec![
+            SubscriptionField::new("eventEmitted", TypeRef::named_nn(self.type_name()), |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let input_keys = parse_keys_argument(&ctx)?;
                     Ok(EventObject::subscription_stream(input_keys))
                 })
-            },
-        )
-        .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))])
+            })
+            .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING))),
+        ])
     }
 }
 

@@ -36,6 +36,7 @@ pub const SOCIAL_NAMES: (&str, &str) = ("social", "socials");
 pub const CONTENT_NAMES: (&str, &str) = ("content", "contents");
 pub const METADATA_NAMES: (&str, &str) = ("metadata", "metadatas");
 pub const TRANSACTION_NAMES: (&str, &str) = ("transaction", "transactions");
+pub const PAGE_INFO_NAMES: (&str, &str) = ("pageInfo", "");
 
 // misc
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";

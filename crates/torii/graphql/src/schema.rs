@@ -58,6 +58,13 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
                     query_root = query_root.field(resolver);
                 }
 
+                // register connection types, relay
+                if let Some(conn_objects) = object.connection_objects() {
+                    for conn in conn_objects {
+                        schema_builder = schema_builder.register(conn);
+                    }
+                }
+
                 // register enum objects
                 if let Some(input_objects) = object.enum_objects() {
                     for input in input_objects {
@@ -69,13 +76,6 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
                 if let Some(input_objects) = object.input_objects() {
                     for input in input_objects {
                         schema_builder = schema_builder.register(input);
-                    }
-                }
-
-                // register connection types, relay
-                if let Some(conn_objects) = object.connection() {
-                    for object in conn_objects {
-                        schema_builder = schema_builder.register(object);
                     }
                 }
 
@@ -103,14 +103,14 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)>
 
     // predefined objects
     let mut objects: Vec<ObjectVariant> = vec![
-        ObjectVariant::Resolvable(Box::new(EntityObject)),
-        ObjectVariant::Resolvable(Box::new(EventObject)),
-        ObjectVariant::Resolvable(Box::new(MetadataObject)),
         ObjectVariant::Resolvable(Box::new(ModelObject)),
-        ObjectVariant::Basic(Box::new(PageInfoObject)),
-        ObjectVariant::Basic(Box::new(TransactionObject)),
+        ObjectVariant::Resolvable(Box::new(EventObject)),
+        ObjectVariant::Resolvable(Box::new(EntityObject)),
+        ObjectVariant::Resolvable(Box::new(MetadataObject)),
+        ObjectVariant::Resolvable(Box::new(TransactionObject)),
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
+        ObjectVariant::Basic(Box::new(PageInfoObject)),
     ];
 
     // model union object
