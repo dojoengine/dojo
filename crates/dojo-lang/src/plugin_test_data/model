@@ -587,6 +587,11 @@ error: Unsupported attribute.
                 ^*************^
 
 error: Unsupported attribute.
+ --> test_src/lib.cairo[Position]:110:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:73:17
                 #[storage]
                 ^********^
@@ -613,6 +618,11 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Roles]:101:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Roles]:106:17
                 #[external(v0)]
                 ^*************^
 
@@ -647,6 +657,11 @@ error: Unsupported attribute.
                 ^*************^
 
 error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:105:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:81:17
                 #[storage]
                 ^********^
@@ -673,6 +688,11 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[Player]:109:17
+                #[external(v0)]
+                ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:114:17
                 #[external(v0)]
                 ^*************^
 
@@ -907,6 +927,10 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<Position>::ty()
                 }
+
+                #[external(v0)]
+                fn ensure_abi(self: @ContractState, model: Position) {
+                }
             }
 impl RolesSerde of core::serde::Serde::<Roles> {
     fn serialize(self: @Roles, ref output: core::array::Array<felt252>) {
@@ -1022,6 +1046,10 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<Roles>::ty()
                 }
+
+                #[external(v0)]
+                fn ensure_abi(self: @ContractState, model: Roles) {
+                }
             }
 impl OnlyKeyModelSerde of core::serde::Serde::<OnlyKeyModel> {
     fn serialize(self: @OnlyKeyModel, ref output: core::array::Array<felt252>) {
@@ -1135,6 +1163,10 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
                 #[external(v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<OnlyKeyModel>::ty()
+                }
+
+                #[external(v0)]
+                fn ensure_abi(self: @ContractState, model: OnlyKeyModel) {
                 }
             }
 impl PlayerCopy of core::traits::Copy::<Player>;
@@ -1264,5 +1296,9 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
                 #[external(v0)]
                 fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                     dojo::database::introspect::Introspect::<Player>::ty()
+                }
+
+                #[external(v0)]
+                fn ensure_abi(self: @ContractState, model: Player) {
                 }
             }

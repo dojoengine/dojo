@@ -6,7 +6,6 @@ members = [
   "crates/dojo-core",
   "crates/dojo-lang",
   "crates/dojo-language-server",
-  "crates/dojo-signers",
   "crates/dojo-test-utils",
   "crates/dojo-types",
   "crates/dojo-world",
@@ -25,6 +24,7 @@ members = [
   "crates/katana/storage/provider",
   "crates/metrics",
   "crates/sozo",
+  "crates/sozo/signers",
   "crates/torii/client",
   "crates/torii/server",
   "crates/torii/types-test",
@@ -36,7 +36,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.4.4"
+version = "0.5.0"
 
 [profile.performance]
 codegen-units = 1

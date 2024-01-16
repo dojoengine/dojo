@@ -50,9 +50,9 @@ struct Args {
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
     world_address: FieldElement,
 
-    /// The rpc endpoint to use
-    #[arg(long, default_value = "http://localhost:5050")]
-    rpc: String,
+    /// The sequencer rpc endpoint to index.
+    #[arg(long, value_name = "SOCKET", default_value = ":5050", value_parser = parse_socket_address)]
+    rpc: SocketAddr,
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
@@ -63,13 +63,9 @@ struct Args {
     #[arg(short, long, default_value = "0")]
     start_block: u64,
 
-    /// Host address for api endpoints
-    #[arg(long, default_value = "0.0.0.0")]
-    host: String,
-
-    /// Port number for api endpoints
-    #[arg(long, default_value = "8080")]
-    port: u16,
+    /// Address to serve api endpoints at.
+    #[arg(long, value_name = "SOCKET", default_value = ":8080", value_parser = parse_socket_address)]
+    addr: SocketAddr,
 
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
@@ -86,7 +82,7 @@ struct Args {
     ///
     /// The metrics will be served at the given interface and port.
     #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
-    pub metrics: Option<SocketAddr>,
+    metrics: Option<SocketAddr>,
 }
 
 #[tokio::main]
@@ -121,7 +117,9 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::migrate!("../migrations").run(&pool).await?;
 
-    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(Url::parse(&args.rpc)?)).into();
+    let provider: Arc<_> =
+        JsonRpcClient::new(HttpTransport::new(format!("http://{}", args.rpc).parse::<Url>()?))
+            .into();
 
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
@@ -149,8 +147,6 @@ async fn main() -> anyhow::Result<()> {
         Some(block_tx),
     );
 
-    let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
-
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(
         shutdown_rx,
@@ -161,7 +157,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    let proxy_server = Arc::new(Proxy::new(addr, args.allowed_origins, Some(grpc_addr), None));
+    let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
 
     let graphql_server = spawn_rebuilding_graphql_server(
         shutdown_tx.clone(),
@@ -170,8 +166,8 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", addr));
-    info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", addr));
+    info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", args.addr));
+    info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", args.addr));
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder()?;

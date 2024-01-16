@@ -24,7 +24,7 @@ starknet.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "950e487", features = ["abigen-rs"] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", rev = "950e487", features = [ "abigen-rs" ] }
 dojo-types = { path = "../dojo-types", optional = true }
 http = { version = "0.2.9", optional = true }
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls" ], optional = true }
@@ -35,7 +35,6 @@ url = { version = "2.2.2", optional = true }
 [dev-dependencies]
 assert_fs = "1.0.9"
 assert_matches.workspace = true
-dojo-lang = { path = "../dojo-lang" }
 dojo-test-utils = { path = "../dojo-test-utils" }
 tokio.workspace = true
 toml.workspace = true

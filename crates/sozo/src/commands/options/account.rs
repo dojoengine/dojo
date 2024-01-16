@@ -40,6 +40,10 @@ pub struct AccountOptions {
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "The keystore password. Used with --keystore.")]
     pub keystore_password: Option<String>,
+
+    #[arg(long)]
+    #[arg(help = "Use legacy account (cairo0 account)")]
+    pub legacy: bool,
 }
 
 impl AccountOptions {
@@ -57,13 +61,9 @@ impl AccountOptions {
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
 
-        Ok(SingleOwnerAccount::new(
-            provider,
-            signer,
-            account_address,
-            chain_id,
-            ExecutionEncoding::New,
-        ))
+        let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
+
+        Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
     }
 
     fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {
@@ -118,6 +118,8 @@ mod tests {
     use std::str::FromStr;
 
     use clap::Parser;
+    use katana_runner::KatanaRunner;
+    use starknet::accounts::{Call, ExecutionEncoder};
     use starknet::signers::{LocalWallet, Signer, SigningKey};
     use starknet_crypto::FieldElement;
 
@@ -321,5 +323,54 @@ mod tests {
             ])
             .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn legacy_flag_works_as_expected() {
+        let cmd = Command::parse_from([
+            "sozo",
+            "--legacy",
+            "--account-address",
+            "0x0",
+            "--private-key",
+            "0x1",
+        ]);
+        let (_runner, provider) = KatanaRunner::new().unwrap();
+        let dummy_call = vec![Call {
+            to: FieldElement::from_hex_be("0x0").unwrap(),
+            selector: FieldElement::from_hex_be("0x1").unwrap(),
+            calldata: vec![
+                FieldElement::from_hex_be("0x2").unwrap(),
+                FieldElement::from_hex_be("0x3").unwrap(),
+            ],
+        }];
+
+        // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
+        // checking it by encoding a dummy call and checking which method it used to encode the call
+        let account = cmd.account.account(provider, None).await.unwrap();
+        let result = account.encode_calls(&dummy_call);
+        // 0x0 is the data offset.
+        assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
+    }
+
+    #[tokio::test]
+    async fn without_legacy_flag_works_as_expected() {
+        let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
+        let (_runner, provider) = KatanaRunner::new().unwrap();
+        let dummy_call = vec![Call {
+            to: FieldElement::from_hex_be("0x0").unwrap(),
+            selector: FieldElement::from_hex_be("0x1").unwrap(),
+            calldata: vec![
+                FieldElement::from_hex_be("0xf2").unwrap(),
+                FieldElement::from_hex_be("0xf3").unwrap(),
+            ],
+        }];
+
+        // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
+        // checking it by encoding a dummy call and checking which method it used to encode the call
+        let account = cmd.account.account(provider, None).await.unwrap();
+        let result = account.encode_calls(&dummy_call);
+        // 0x2 is the Calldata len.
+        assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x2").unwrap());
     }
 }
