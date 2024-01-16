@@ -1,5 +1,7 @@
+use std::any::Any;
+
 use async_trait::async_trait;
-use cainome::parser::tokens::{Composite, Token};
+use cainome::parser::tokens::{Composite, Token, Function, CompositeType};
 
 use crate::error::{BindgenResult, Error};
 use crate::plugins::BuiltinPlugin;
@@ -159,11 +161,87 @@ public class {} : ModelInstance {{
         Ok(out)
     }
 
+    fn format_system(system: &Function) -> Result<String, UnityPluginError> {
+        let args = system
+            .inputs
+            .iter()
+            .map(|arg| {
+                format!(
+                    "{} {}",
+                    UnityPlugin::map_type(&arg.1.type_name()).unwrap(),
+                    arg.0,
+                )
+            })
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        let calldata = system
+            .inputs
+            .iter()
+            .map(|arg| {
+                match arg.1.to_composite().unwrap().r#type {
+                    CompositeType::Enum => {
+                        return format!("new FieldElement(\"0x(int){}\")", arg.0);
+                    }
+                    _ => format!("new FieldElement({})", arg.0)
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(",\n                ");
+
+        Ok(format!(
+            "
+    public async Task<FieldElement> {}(Account account{}{}) {{
+        return await account.ExecuteRaw(new dojo.Call[] {{
+            new dojo.Call{{
+                to = contractAddress,
+                selector = \"{}\",
+                calldata = new FieldElement[] {{
+                    {}
+                }}
+            }}
+        }});
+    }}
+            ",
+            // capitalize system name
+            system.name.chars().next().unwrap().to_uppercase().to_string() + &system.name[1..],
+            // add comma if we have args
+            if args.len() > 0 { ", " } else { "" },
+            // formatted args to use our mapped types
+            args,
+            // selector for execute
+            system.name,
+            // calldata for execute
+            calldata
+        ))
+    }
+
     fn handle_contract(&self, contract: &DojoContract) -> Result<String, UnityPluginError> {
         let mut out = String::new();
         out += "using System;\n";
         out += "using Dojo;\n";
         out += "using Dojo.Starknet;\n";
+
+        let contract_name = contract.contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
+        // capitalize contract name
+        let contract_name = contract_name.chars().next().unwrap().to_uppercase().to_string() + &contract_name[1..];
+
+        let systems = contract.systems.iter().map(|system| {
+            UnityPlugin::format_system(system.to_function().unwrap()).unwrap()
+        }).collect::<Vec<String>>().join("\n\n    ");
+
+        out += &format!(
+            "
+public class {} : MonoBehaviour {{
+    public string contractAddress;
+
+    {}
+}}
+        ", 
+        // capitalize contract name
+        contract_name,
+        systems
+    );
 
         Ok(out)
     }
