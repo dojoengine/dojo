@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;
@@ -15,6 +17,7 @@ pub struct StarknetConfig {
     pub fork_rpc_url: Option<Url>,
     pub fork_block_number: Option<u64>,
     pub disable_validate: bool,
+    pub db_dir: Option<PathBuf>,
 }
 
 impl StarknetConfig {
@@ -40,6 +43,7 @@ impl Default for StarknetConfig {
             fork_block_number: None,
             env: Environment::default(),
             disable_validate: false,
+            db_dir: None,
         }
     }
 }
