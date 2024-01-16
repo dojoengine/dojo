@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 
 use cainome::parser::tokens::Token;
-use cainome::parser::AbiParser;
+use cainome::parser::{AbiParser, TokenizedAbi};
 use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 
@@ -17,20 +17,31 @@ pub use plugins::BuiltinPlugins;
 
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
+    /// PascalCase name of the model.
     pub name: String,
+    /// Fully qualified path of the model type in cairo code.
     pub qualified_path: String,
-    pub tokens: HashMap<String, Vec<Token>>,
+    /// List of tokens found in the model contract ABI.
+    /// Only structs and enums are currently used.
+    pub tokens: TokenizedAbi,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct DojoContract {
+    /// Contract's name.
     pub contract_file_name: String,
-    pub tokens: HashMap<String, Vec<Token>>,
+    /// Full ABI of the contract in case the plugin wants to make extra checks,
+    /// or generated other functions than the systems.
+    pub tokens: TokenizedAbi,
+    /// Functions that are identified as systems.
+    pub systems: Vec<Token>,
 }
 
 #[derive(Debug)]
 pub struct DojoData {
+    /// All contracts found in the project.
     pub contracts: HashMap<String, DojoContract>,
+    /// All the models contracts found in the project.
     pub models: HashMap<String, DojoModel>,
 }
 
@@ -92,11 +103,26 @@ fn gather_dojo_data(artifacts_path: &Utf8PathBuf) -> BindgenResult<DojoData> {
                 {
                     // Contract.
                     if is_systems_contract(file_name, &file_content) {
+                        // Identify the systems -> for now only take the functions from the
+                        // interfaces.
+                        let mut systems = vec![];
+                        let interface_blacklist = [
+                            "dojo::world::IWorldProvider",
+                            "dojo::components::upgradeable::IUpgradeable",
+                        ];
+
+                        for (interface, funcs) in &tokens.interfaces {
+                            if !interface_blacklist.contains(&interface.as_str()) {
+                                systems.extend(funcs.clone());
+                            }
+                        }
+
                         contracts.insert(
                             file_name.to_string(),
                             DojoContract {
                                 contract_file_name: file_name.to_string(),
                                 tokens: tokens.clone(),
+                                systems,
                             },
                         );
                     }
@@ -151,7 +177,7 @@ fn is_systems_contract(file_name: &str, file_content: &str) -> bool {
 
 /// Filters the model ABI to keep relevant types
 /// to be generated for bindings.
-fn filter_model_tokens(tokens: &HashMap<String, Vec<Token>>) -> HashMap<String, Vec<Token>> {
+fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
     let mut structs = vec![];
     let mut enums = vec![];
 
@@ -171,25 +197,19 @@ fn filter_model_tokens(tokens: &HashMap<String, Vec<Token>>) -> HashMap<String, 
         false
     }
 
-    for s in tokens.get("structs").unwrap() {
+    for s in &tokens.structs {
         if !skip_token(s) {
             structs.push(s.clone());
         }
     }
 
-    for e in tokens.get("enums").unwrap() {
+    for e in &tokens.enums {
         if !skip_token(e) {
             enums.push(e.clone());
         }
     }
 
-    let mut model_tokens = HashMap::new();
-    // All functions can be ignored, the client does not need to call them directly.
-    model_tokens.insert(String::from("structs"), structs);
-    model_tokens.insert(String::from("enums"), enums);
-    model_tokens.insert(String::from("functions"), vec![]);
-
-    model_tokens
+    TokenizedAbi { structs, enums, ..Default::default() }
 }
 
 /// Extracts a model name from the artifact file name.
@@ -225,14 +245,14 @@ fn model_name_from_artifact_filename(file_name: &str) -> Option<String> {
 ///
 /// * `file_name` - Name of the contract file.
 /// * `file_content` - Content of the contract artifact.
-fn is_model_contract(tokens: &HashMap<String, Vec<Token>>) -> bool {
+fn is_model_contract(tokens: &TokenizedAbi) -> bool {
     let expected_funcs = ["name", "layout", "packed_size", "unpacked_size", "schema"];
 
     let mut funcs_counts = 0;
 
     // This hashmap is not that good at devex level.. one must check the
     // code to know the keys.
-    for f in &tokens["functions"] {
+    for f in &tokens.functions {
         if expected_funcs.contains(&f.to_function().expect("Function expected").name.as_str()) {
             funcs_counts += 1;
         }
