@@ -18,8 +18,8 @@ If a command in the makefile requires an argument, please use the associated `*_
 
 If you want to check the logs emitted by the contracts, run `cast logs`.
 
-Note, starknet core contract is expected at least 30k wei to work. So you must
-always send a value when calling a function that will send a message to L2.
+Note, the starknet core contract requires a minimum of 30k wei to work. 
+So you must always send a value when calling a function that will send a message to L2.
 
 If the message is not ready yet to be consumed, you should see an error like this
 using:
