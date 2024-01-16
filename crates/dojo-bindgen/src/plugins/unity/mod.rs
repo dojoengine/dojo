@@ -1,11 +1,11 @@
 use std::any::Any;
 
 use async_trait::async_trait;
-use cainome::parser::tokens::{Composite, Token, Function, CompositeType};
+use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 
 use crate::error::{BindgenResult, Error};
 use crate::plugins::BuiltinPlugin;
-use crate::{DojoData, DojoModel, DojoContract};
+use crate::{DojoContract, DojoData, DojoModel};
 
 #[derive(Debug)]
 pub enum UnityPluginError {
@@ -36,8 +36,8 @@ impl UnityPlugin {
             "u16" => Ok("ushort".to_string()),
             "u32" => Ok("uint".to_string()),
             "u64" => Ok("ulong".to_string()),
-            "u128" => Ok("Span<byte>".to_string()),
-            "u256" => Ok("Span<ulong>".to_string()),
+            "u128" => Ok("BigInteger".to_string()),
+            "u256" => Ok("BigInteger".to_string()),
             "usize" => Ok("uint".to_string()),
             "felt252" => Ok("FieldElement".to_string()),
             "ClassHash" => Ok("FieldElement".to_string()),
@@ -132,7 +132,11 @@ public class {} : ModelInstance {{
         ));
     }
 
-    fn handle_model(&self, model: &DojoModel) -> Result<String, UnityPluginError> {
+    fn handle_model(
+        &self,
+        model: &DojoModel,
+        handled_tokens: &mut Vec<Composite>,
+    ) -> Result<String, UnityPluginError> {
         let mut out = String::new();
         out += "using System;\n";
         out += "using Dojo;\n";
@@ -141,6 +145,8 @@ public class {} : ModelInstance {{
         let mut model_struct: Option<&Composite> = None;
         let tokens = &model.tokens;
         for token in &tokens.structs {
+            handled_tokens.push(token.to_composite().unwrap().to_owned());
+
             // first index is our model struct
             if token.type_name() == model.name {
                 model_struct = Some(token.to_composite().unwrap());
@@ -151,6 +157,7 @@ public class {} : ModelInstance {{
         }
 
         for token in &tokens.enums {
+            handled_tokens.push(token.to_composite().unwrap().to_owned());
             out += UnityPlugin::format_enum(token.to_composite().unwrap())?.as_str();
         }
 
@@ -161,17 +168,14 @@ public class {} : ModelInstance {{
         Ok(out)
     }
 
-    fn format_system(system: &Function) -> Result<String, UnityPluginError> {
+    fn format_system(
+        system: &Function,
+        handled_tokens: &Vec<Composite>,
+    ) -> Result<String, UnityPluginError> {
         let args = system
             .inputs
             .iter()
-            .map(|arg| {
-                format!(
-                    "{} {}",
-                    UnityPlugin::map_type(&arg.1.type_name()).unwrap(),
-                    arg.0,
-                )
-            })
+            .map(|arg| format!("{} {}", UnityPlugin::map_type(&arg.1.type_name()).unwrap(), arg.0,))
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -179,11 +183,34 @@ public class {} : ModelInstance {{
             .inputs
             .iter()
             .map(|arg| {
-                match arg.1.to_composite().unwrap().r#type {
-                    CompositeType::Enum => {
-                        return format!("new FieldElement(\"0x(int){}\")", arg.0);
+                let token = arg.1.to_composite().unwrap();
+                println!("{:?}", token);
+                // r#type doesnt seem to be working rn.
+                // match token.unwrap().r#type {
+                //     CompositeType::Struct => {
+                //         // doesnt support structs yet
+                //         format!("new FieldElement({})", arg.0)
+                //     }
+                //     _ => {
+                //         format!("new FieldElement({})", arg.0)
+                //     }
+                // }
+
+                // instead, we can take a look at our
+                // handled tokens db
+                let token =
+                    handled_tokens.iter().find(|t| t.type_name() == token.type_name()).unwrap();
+
+                match token.r#type {
+                    CompositeType::Struct => token
+                        .inners
+                        .iter()
+                        .map(|field| format!("new FieldElement({}.{})", arg.0, field.name))
+                        .collect::<Vec<String>>()
+                        .join(",\n                    "),
+                    _ => {
+                        format!("new FieldElement({})", arg.0)
                     }
-                    _ => format!("new FieldElement({})", arg.0)
                 }
             })
             .collect::<Vec<String>>()
@@ -216,19 +243,30 @@ public class {} : ModelInstance {{
         ))
     }
 
-    fn handle_contract(&self, contract: &DojoContract) -> Result<String, UnityPluginError> {
+    fn handle_contract(
+        &self,
+        contract: &DojoContract,
+        handled_tokens: &Vec<Composite>,
+    ) -> Result<String, UnityPluginError> {
         let mut out = String::new();
         out += "using System;\n";
         out += "using Dojo;\n";
         out += "using Dojo.Starknet;\n";
 
-        let contract_name = contract.contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
+        let contract_name =
+            contract.contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
         // capitalize contract name
-        let contract_name = contract_name.chars().next().unwrap().to_uppercase().to_string() + &contract_name[1..];
+        let contract_name =
+            contract_name.chars().next().unwrap().to_uppercase().to_string() + &contract_name[1..];
 
-        let systems = contract.systems.iter().map(|system| {
-            UnityPlugin::format_system(system.to_function().unwrap()).unwrap()
-        }).collect::<Vec<String>>().join("\n\n    ");
+        let systems = contract
+            .systems
+            .iter()
+            .map(|system| {
+                UnityPlugin::format_system(system.to_function().unwrap(), handled_tokens).unwrap()
+            })
+            .collect::<Vec<String>>()
+            .join("\n\n    ");
 
         out += &format!(
             "
@@ -237,11 +275,11 @@ public class {} : MonoBehaviour {{
 
     {}
 }}
-        ", 
-        // capitalize contract name
-        contract_name,
-        systems
-    );
+        ",
+            // capitalize contract name
+            contract_name,
+            systems
+        );
 
         Ok(out)
     }
@@ -250,11 +288,13 @@ public class {} : MonoBehaviour {{
 #[async_trait]
 impl BuiltinPlugin for UnityPlugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<()> {
+        let mut handled_tokens = Vec::<Composite>::new();
+
         // Handle codegen for models
         for (name, model) in &data.models {
             println!("Generating model: {}", name);
             let code = self
-                .handle_model(model)
+                .handle_model(model, &mut handled_tokens)
                 .map_err(|e| Error::Format(format!("Failed to generate code for model: {}", e)))?;
             println!("{}", code);
         }
@@ -262,9 +302,9 @@ impl BuiltinPlugin for UnityPlugin {
         // Handle codegen for systems
         for (name, contract) in &data.contracts {
             println!("Generating contract: {}", name);
-            let code = self
-                .handle_contract(contract)
-                .map_err(|e| Error::Format(format!("Failed to generate code for contract: {}", e)))?;
+            let code = self.handle_contract(contract, &handled_tokens).map_err(|e| {
+                Error::Format(format!("Failed to generate code for contract: {}", e))
+            })?;
             println!("{}", code);
         }
 
