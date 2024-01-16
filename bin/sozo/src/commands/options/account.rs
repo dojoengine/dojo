@@ -119,7 +119,6 @@ mod tests {
     use std::str::FromStr;
 
     use clap::Parser;
-    use katana_runner::KatanaRunner;
     use starknet::accounts::{Call, ExecutionEncoder};
     use starknet::signers::{LocalWallet, Signer, SigningKey};
     use starknet_crypto::FieldElement;
@@ -308,19 +307,17 @@ mod tests {
     fn dont_allow_both_private_key_and_keystore() {
         let keystore_path = "./tests/test_data/keystore/test.json";
         let private_key = "0x1";
-        assert!(
-            Command::try_parse_from([
-                "sozo",
-                "--keystore",
-                keystore_path,
-                "--private_key",
-                private_key,
-            ])
-            .is_err()
-        );
+        assert!(Command::try_parse_from([
+            "sozo",
+            "--keystore",
+            keystore_path,
+            "--private_key",
+            private_key,
+        ])
+        .is_err());
     }
 
-    #[tokio::test]
+    #[katana_runner::katana_test]
     async fn legacy_flag_works_as_expected() {
         let cmd = Command::parse_from([
             "sozo",
@@ -330,7 +327,6 @@ mod tests {
             "--private-key",
             "0x1",
         ]);
-        let (_runner, provider) = KatanaRunner::new().unwrap();
         let dummy_call = vec![Call {
             to: FieldElement::from_hex_be("0x0").unwrap(),
             selector: FieldElement::from_hex_be("0x1").unwrap(),
@@ -342,16 +338,15 @@ mod tests {
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
         // checking it by encoding a dummy call and checking which method it used to encode the call
-        let account = cmd.account.account(provider, None).await.unwrap();
+        let account = cmd.account.account(runner.provider(), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x0 is the data offset.
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
     }
 
-    #[tokio::test]
+    #[katana_runner::katana_test]
     async fn without_legacy_flag_works_as_expected() {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
-        let (_runner, provider) = KatanaRunner::new().unwrap();
         let dummy_call = vec![Call {
             to: FieldElement::from_hex_be("0x0").unwrap(),
             selector: FieldElement::from_hex_be("0x1").unwrap(),
@@ -363,7 +358,7 @@ mod tests {
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
         // checking it by encoding a dummy call and checking which method it used to encode the call
-        let account = cmd.account.account(provider, None).await.unwrap();
+        let account = cmd.account.account(runner.provider(), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x2 is the Calldata len.
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x2").unwrap());
