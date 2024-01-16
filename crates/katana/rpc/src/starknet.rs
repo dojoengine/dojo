@@ -112,44 +112,48 @@ impl StarknetApiServer for StarknetApi {
         let provider = self.sequencer.backend.blockchain.provider();
 
         if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-            let pending_state = self.sequencer.pending_state().expect("pending state should exist");
+            if let Some(pending_state) = self.sequencer.pending_state() {
+                let block_env = pending_state.block_envs.read().0.clone();
+                let latest_hash =
+                    BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
 
-            let block_context = self.sequencer.backend.env.read().block.clone();
-            let latest_hash =
-                BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
+                let gas_prices = GasPrices {
+                    eth: block_env.l1_gas_prices.eth,
+                    strk: block_env.l1_gas_prices.strk,
+                };
 
-            let gas_prices = GasPrices {
-                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
-            };
+                let header = PartialHeader {
+                    gas_prices,
+                    parent_hash: latest_hash,
+                    version: CURRENT_STARKNET_VERSION,
+                    timestamp: block_env.timestamp,
+                    sequencer_address: block_env.sequencer_address,
+                };
 
-            let header = PartialHeader {
-                gas_prices,
-                parent_hash: latest_hash,
-                version: CURRENT_STARKNET_VERSION,
-                timestamp: block_context.block_timestamp.0,
-                sequencer_address: block_context.sequencer_address.into(),
-            };
+                let transactions = pending_state
+                    .executed_txs
+                    .read()
+                    .iter()
+                    .map(|(tx, _)| tx.hash)
+                    .collect::<Vec<_>>();
 
-            let transactions =
-                pending_state.executed_txs.read().iter().map(|(tx, _)| tx.hash).collect::<Vec<_>>();
-
-            Ok(MaybePendingBlockWithTxHashes::Pending(PendingBlockWithTxHashes::new(
-                header,
-                transactions,
-            )))
-        } else {
-            let block_num = BlockIdReader::convert_block_id(provider, block_id)
-                .map_err(StarknetApiError::from)?
-                .map(BlockHashOrNumber::Num)
-                .ok_or(StarknetApiError::BlockNotFound)?;
-
-            katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                .build_with_tx_hash()
-                .map_err(StarknetApiError::from)?
-                .map(MaybePendingBlockWithTxHashes::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))
+                return Ok(MaybePendingBlockWithTxHashes::Pending(PendingBlockWithTxHashes::new(
+                    header,
+                    transactions,
+                )));
+            }
         }
+
+        let block_num = BlockIdReader::convert_block_id(provider, block_id)
+            .map_err(StarknetApiError::from)?
+            .map(BlockHashOrNumber::Num)
+            .ok_or(StarknetApiError::BlockNotFound)?;
+
+        katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
+            .build_with_tx_hash()
+            .map_err(StarknetApiError::from)?
+            .map(MaybePendingBlockWithTxHashes::Block)
+            .ok_or(Error::from(StarknetApiError::BlockNotFound))
     }
 
     async fn transaction_by_block_id_and_index(
@@ -187,45 +191,48 @@ impl StarknetApiServer for StarknetApi {
         let provider = self.sequencer.backend.blockchain.provider();
 
         if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-            let pending_state = self.sequencer.pending_state().expect("pending state should exist");
+            if let Some(pending_state) = self.sequencer.pending_state() {
+                let block_env = pending_state.block_envs.read().0.clone();
+                let latest_hash =
+                    BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
 
-            let block_context = self.sequencer.backend.env.read().block.clone();
-            let latest_hash =
-                BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
+                let gas_prices = GasPrices {
+                    eth: block_env.l1_gas_prices.eth,
+                    strk: block_env.l1_gas_prices.strk,
+                };
 
-            let gas_prices = GasPrices {
-                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
-            };
+                let header = PartialHeader {
+                    gas_prices,
+                    parent_hash: latest_hash,
+                    version: CURRENT_STARKNET_VERSION,
+                    timestamp: block_env.timestamp,
+                    sequencer_address: block_env.sequencer_address,
+                };
 
-            let header = PartialHeader {
-                gas_prices,
-                parent_hash: latest_hash,
-                version: CURRENT_STARKNET_VERSION,
-                timestamp: block_context.block_timestamp.0,
-                sequencer_address: block_context.sequencer_address.into(),
-            };
+                let transactions = pending_state
+                    .executed_txs
+                    .read()
+                    .iter()
+                    .map(|(tx, _)| tx.clone())
+                    .collect::<Vec<_>>();
 
-            let transactions = pending_state
-                .executed_txs
-                .read()
-                .iter()
-                .map(|(tx, _)| tx.clone())
-                .collect::<Vec<_>>();
-
-            Ok(MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs::new(header, transactions)))
-        } else {
-            let block_num = BlockIdReader::convert_block_id(provider, block_id)
-                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
-                .map(BlockHashOrNumber::Num)
-                .ok_or(StarknetApiError::BlockNotFound)?;
-
-            katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                .build()
-                .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
-                .map(MaybePendingBlockWithTxs::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))
+                return Ok(MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs::new(
+                    header,
+                    transactions,
+                )));
+            }
         }
+
+        let block_num = BlockIdReader::convert_block_id(provider, block_id)
+            .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+            .map(BlockHashOrNumber::Num)
+            .ok_or(StarknetApiError::BlockNotFound)?;
+
+        katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
+            .build()
+            .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+            .map(MaybePendingBlockWithTxs::Block)
+            .ok_or(Error::from(StarknetApiError::BlockNotFound))
     }
 
     async fn state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdate, Error> {

@@ -12,6 +12,7 @@ use katana_primitives::block::{
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
 };
+use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
@@ -28,6 +29,7 @@ use crate::traits::block::{
     HeaderProvider,
 };
 use crate::traits::contract::ContractClassWriter;
+use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -516,5 +518,16 @@ impl StateWriter for ForkedProvider {
     ) -> ProviderResult<()> {
         self.state.contract_state.write().entry(address).or_default().nonce = nonce;
         Ok(())
+    }
+}
+
+impl BlockEnvProvider for ForkedProvider {
+    fn block_env_at(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<BlockEnv>> {
+        Ok(self.header(block_id)?.map(|header| BlockEnv {
+            number: header.number,
+            timestamp: header.timestamp,
+            l1_gas_prices: header.gas_prices,
+            sequencer_address: header.sequencer_address,
+        }))
     }
 }

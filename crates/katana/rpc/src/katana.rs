@@ -25,7 +25,8 @@ impl KatanaApiServer for KatanaApi {
     }
 
     async fn next_block_timestamp(&self) -> Result<u64, Error> {
-        Ok(self.sequencer.backend().env.read().block.block_timestamp.0)
+        // Ok(self.sequencer.backend().env.read().block.block_timestamp.0)
+        unimplemented!()
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {

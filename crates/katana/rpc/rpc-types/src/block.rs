@@ -12,8 +12,8 @@ pub struct BlockWithTxs(starknet::core::types::BlockWithTxs);
 impl BlockWithTxs {
     pub fn new(block_hash: BlockHash, block: Block, finality_status: FinalityStatus) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: block.header.gas_prices.eth_gas_price,
-            price_in_strk: Some(block.header.gas_prices.strk_gas_price),
+            price_in_wei: block.header.gas_prices.eth,
+            price_in_strk: Some(block.header.gas_prices.strk),
         };
 
         let transactions =
@@ -47,8 +47,8 @@ impl PendingBlockWithTxs {
             transactions.into_iter().map(|tx| crate::transaction::Tx::from(tx).0).collect();
 
         let l1_gas_price = ResourcePrice {
-            price_in_wei: header.gas_prices.eth_gas_price,
-            price_in_strk: Some(header.gas_prices.strk_gas_price),
+            price_in_wei: header.gas_prices.eth,
+            price_in_strk: Some(header.gas_prices.strk),
         };
 
         Self(starknet::core::types::PendingBlockWithTxs {
@@ -80,8 +80,8 @@ impl BlockWithTxHashes {
         finality_status: FinalityStatus,
     ) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: block.header.gas_prices.eth_gas_price,
-            price_in_strk: Some(block.header.gas_prices.strk_gas_price),
+            price_in_wei: block.header.gas_prices.eth,
+            price_in_strk: Some(block.header.gas_prices.strk),
         };
 
         Self(starknet::core::types::BlockWithTxHashes {
@@ -109,8 +109,8 @@ pub struct PendingBlockWithTxHashes(starknet::core::types::PendingBlockWithTxHas
 impl PendingBlockWithTxHashes {
     pub fn new(header: PartialHeader, transactions: Vec<TxHash>) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: header.gas_prices.eth_gas_price,
-            price_in_strk: Some(header.gas_prices.strk_gas_price),
+            price_in_wei: header.gas_prices.eth,
+            price_in_strk: Some(header.gas_prices.strk),
         };
 
         Self(starknet::core::types::PendingBlockWithTxHashes {

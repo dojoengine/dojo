@@ -9,12 +9,14 @@ use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
     GenericContractInfo, StorageKey, StorageValue,
 };
+use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::FieldElement;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
 use traits::contract::{ContractClassProvider, ContractClassWriter};
+use traits::env::BlockEnvProvider;
 use traits::state::{StateRootProvider, StateWriter};
 use traits::transaction::TransactionStatusProvider;
 
@@ -346,5 +348,14 @@ where
         nonce: katana_primitives::contract::Nonce,
     ) -> ProviderResult<()> {
         self.provider.set_nonce(address, nonce)
+    }
+}
+
+impl<Db> BlockEnvProvider for BlockchainProvider<Db>
+where
+    Db: BlockEnvProvider,
+{
+    fn block_env_at(&self, id: BlockHashOrNumber) -> ProviderResult<Option<BlockEnv>> {
+        self.provider.block_env_at(id)
     }
 }

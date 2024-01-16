@@ -29,6 +29,7 @@ use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, Nonce, StorageKey,
     StorageValue,
 };
+use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
@@ -39,6 +40,7 @@ use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
 };
+use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
@@ -529,6 +531,19 @@ impl ReceiptProvider for DbProvider {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl BlockEnvProvider for DbProvider {
+    fn block_env_at(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<BlockEnv>> {
+        let Some(header) = self.header(block_id)? else { return Ok(None) };
+
+        Ok(Some(BlockEnv {
+            number: header.number,
+            timestamp: header.timestamp,
+            l1_gas_prices: header.gas_prices,
+            sequencer_address: header.sequencer_address,
+        }))
     }
 }
 
