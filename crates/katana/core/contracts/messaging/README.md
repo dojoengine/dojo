@@ -39,7 +39,7 @@ To test this scenario, you can use the associated Makefiles. But the flow is the
 How to run the scripts:
 
 -   Start Anvil in a terminal.
--   Start Katana in an other terminal on default port 5050 with the messaging configuration that is inside the:
+-   Start Katana in another terminal on default port 5050 with the messaging configuration that is inside the:
     `katana --messaging ~/dojo/crates/katana/core/contracts/messaging/anvil.messaging.json`
 -   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
