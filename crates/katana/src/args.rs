@@ -48,10 +48,11 @@ pub struct KatanaArgs {
 
     #[arg(long)]
     #[arg(value_name = "PATH")]
-    #[arg(help = "Dump the state of chain on exit to the given file.")]
-    #[arg(long_help = "Dump the state of chain on exit to the given file. If the value is a \
-                       directory, the state will be written to `<PATH>/state.bin`.")]
-    pub dump_state: Option<PathBuf>,
+    #[arg(help = "Directory path of the database to initialize from.")]
+    #[arg(long_help = "Directory path of the database to initialize from. The path must either \
+                       be an empty directory or a directory which already contains a previously \
+                       initialized Katana database.")]
+    pub db_dir: Option<PathBuf>,
 
     #[arg(long)]
     #[arg(value_name = "URL")]
@@ -237,6 +238,7 @@ impl KatanaArgs {
                     .validate_max_steps
                     .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
             },
+            db_dir: self.db_dir.clone(),
         }
     }
 }
