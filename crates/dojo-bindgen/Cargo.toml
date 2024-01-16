@@ -14,6 +14,7 @@ starknet.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+chrono.workspace = true
 
 # Some issue with CI on windows, need to be investigated.
 # https://github.com/dojoengine/dojo/actions/runs/7736050751/job/21092743552?pr=1501#step:6:249
