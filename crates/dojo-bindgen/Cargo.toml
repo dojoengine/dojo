@@ -16,3 +16,4 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.1" }
+chrono.workspace = true
