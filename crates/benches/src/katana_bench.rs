@@ -51,13 +51,15 @@ async fn bench_katana() {
 
     // running a spawn for each account
     join_all(spawn_txs.iter().map(|t| t.send())).await;
-    runner.blocks_until_empty().await;
+    sleep(Duration::from_secs(30)).await;
 
+    let before = Instant::now();
     let transaction_hashes = join_all(move_txs.iter().map(|t| async {
         let r = t.send().await;
         (r, Instant::now())
     }))
     .await;
+    println!("sending: {}", before.elapsed().as_millis());
 
     // Unwraping and extracting the times
     let mut times = transaction_hashes
@@ -66,18 +68,25 @@ async fn bench_katana() {
             r.0.unwrap();
             r.1
         })
+        .collect::<Vec<_>>()
+        .windows(2)
+        .map(|w| w[1] - w[0])
         .collect::<Vec<_>>();
     times.sort();
 
+    println!("min sending: {}", times.first().unwrap().as_millis());
+    println!("max sending: {}", times.last().unwrap().as_millis());
+
     // ⛏️ Block {block_number} mined with {tx_count} transactions
+    sleep(Duration::from_secs(90)).await;
 
     let block_sizes = runner.block_sizes().await;
     let transaction_sum: u32 = block_sizes.iter().sum();
 
-    assert_eq!(transaction_sum, 2 * runner.accounts_data().len() as u32);
-
     dbg!(runner.block_times().await);
     dbg!(block_sizes);
+
+    assert_eq!(transaction_sum, 2 * runner.accounts_data().len() as u32);
 
     // time difference between first and last transaction
     println!("duration: {:?}", *times.last().unwrap() - *times.first().unwrap());
