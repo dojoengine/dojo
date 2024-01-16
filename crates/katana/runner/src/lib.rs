@@ -1,7 +1,9 @@
 mod deployer;
 mod utils;
 
-use std::path::Path;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self};
 use std::thread;
@@ -15,6 +17,7 @@ use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
+use tokio::time::sleep;
 use url::Url;
 use utils::find_free_port;
 
@@ -24,7 +27,10 @@ pub struct KatanaRunner {
     port: u16,
     provider: JsonRpcClient<HttpTransport>,
     accounts: Vec<katana_core::accounts::Account>,
+    log_filename: PathBuf,
 }
+
+pub const BLOCK_TIME_IF_ENABLED: u64 = 3000;
 
 impl KatanaRunner {
     pub fn new() -> Result<Self> {
@@ -65,28 +71,35 @@ impl KatanaRunner {
             false,
         )
     }
+
     fn new_with_port_and_filename(
         program: &str,
         port: u16,
         log_filename: String,
         n_accounts: u16,
-        _with_blocks: bool,
+        with_blocks: bool,
     ) -> Result<Self> {
-        let mut child = Command::new(program)
+        let mut command = Command::new(program);
+        command
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
             .args(["--max-connections", &format!("{}", 10000)])
-            .args(["--accounts", &format!("{}", n_accounts)])
-            .stdout(Stdio::piped())
-            .spawn()
-            .context("failed to start subprocess")?;
+            .args(["--accounts", &format!("{}", n_accounts)]);
+
+        if with_blocks {
+            command.args(["--block-time", &format!("{}", BLOCK_TIME_IF_ENABLED)]);
+        }
+
+        let mut child =
+            command.stdout(Stdio::piped()).spawn().context("failed to start subprocess")?;
 
         let stdout = child.stdout.take().context("failed to take subprocess stdout")?;
 
+        let log_filename_sent = PathBuf::from(log_filename);
+        let log_filename = log_filename_sent.clone();
         let (sender, receiver) = mpsc::channel();
-
         thread::spawn(move || {
-            utils::wait_for_server_started_and_signal(Path::new(&log_filename), stdout, sender);
+            utils::wait_for_server_started_and_signal(&log_filename_sent, stdout, sender);
         });
 
         receiver
@@ -101,7 +114,7 @@ impl KatanaRunner {
         seed[0] = 48;
         let accounts = DevAccountGenerator::new(n_accounts).with_seed(seed).generate();
 
-        Ok(KatanaRunner { child, port, provider, accounts })
+        Ok(KatanaRunner { child, port, provider, accounts, log_filename })
     }
 
     pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
@@ -120,7 +133,7 @@ impl KatanaRunner {
     }
 
     pub fn accounts(&self) -> Vec<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> {
-        self.accounts[1..].iter().enumerate().map(|(i, _)| self.account(i)).collect()
+        self.accounts_data().iter().enumerate().map(|(i, _)| self.account(i)).collect()
     }
 
     pub fn account(
@@ -136,6 +149,52 @@ impl KatanaRunner {
         let provider = self.owned_provider();
 
         SingleOwnerAccount::new(provider, signer, account.address, chain_id, ExecutionEncoding::New)
+    }
+
+    pub fn blocks(&self) -> Vec<String> {
+        BufReader::new(File::open(&self.log_filename).unwrap())
+            .lines()
+            .filter_map(|line| {
+                let line = line.unwrap();
+                if line.contains("⛏️ Block") {
+                    Some(line)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    pub async fn blocks_until_empty(&self) -> Vec<String> {
+        let mut blocks = self.blocks();
+        loop {
+            if let Some(block) = blocks.last() {
+                println!("{}", block);
+                if block.contains("mined with 0 transactions") {
+                    break;
+                }
+            }
+
+            let len_at_call = blocks.len();
+            while len_at_call == blocks.len() {
+                sleep(Duration::from_millis(BLOCK_TIME_IF_ENABLED)).await;
+                blocks = self.blocks();
+            }
+        }
+        blocks
+    }
+
+    pub async fn block_sizes(&self) -> Vec<u32> {
+        self.blocks_until_empty()
+            .await
+            .iter()
+            .map(|block| {
+                let limit =
+                    block.find(" transactions").expect("Failed to find transactions in block");
+                let number = block[..limit].split(" ").last().unwrap();
+                number.parse::<u32>().expect("Failed to parse block number")
+            })
+            .collect()
     }
 }
 

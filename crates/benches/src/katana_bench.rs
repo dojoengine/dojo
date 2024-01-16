@@ -1,16 +1,16 @@
-use std::time::Duration;
-
-pub const ENOUGH_GAS: &str = "0x100000000000000000";
-pub const BLOCK_TIME: Duration = Duration::from_secs(3);
-pub const N_TRANSACTIONS: usize = 2000;
-
 use anyhow::Context;
 use futures::future::join_all;
+use katana_runner::BLOCK_TIME_IF_ENABLED;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::FieldElement;
+use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
 use crate::{parse_calls, BenchCall};
+
+pub const ENOUGH_GAS: &str = "0x100000000000000000";
+pub const BLOCK_TIME: Duration = Duration::from_millis(BLOCK_TIME_IF_ENABLED);
+pub const N_TRANSACTIONS: usize = 2000;
 
 #[katana_runner::katana_test]
 async fn bench_katana_small() {
@@ -68,6 +68,13 @@ async fn bench_katana() {
         })
         .collect::<Vec<_>>();
     times.sort();
+
+    // ⛏️ Block {block_number} mined with {tx_count} transactions
+
+    let block_sizes = runner.block_sizes().await;
+    let transaction_sum: u32 = block_sizes.iter().sum();
+
+    assert_eq!(transaction_sum, 2 * runner.accounts_data().len() as u32);
 
     // time difference between first and last transaction
     println!("duration: {:?}", *times.last().unwrap() - *times.first().unwrap());
