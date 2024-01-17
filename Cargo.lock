@@ -1111,13 +1111,13 @@ checksum = "3a4f925191b4367301851c6d99b09890311d74b0d43f274c0b34c86d308a3663"
 [[package]]
 name = "cainome"
 version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.1#decf850b8979f4fbcf9d89f8d605ee260c23954b"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.1)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.1)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.1)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
  "camino",
  "clap",
  "clap_complete",
@@ -1145,7 +1145,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.1#decf850b8979f4fbcf9d89f8d605ee260c23954b"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
 dependencies = [
  "starknet",
  "thiserror",
@@ -1163,7 +1163,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.1#decf850b8979f4fbcf9d89f8d605ee260c23954b"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
 dependencies = [
  "quote",
  "serde_json",
@@ -1187,11 +1187,11 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.1#decf850b8979f4fbcf9d89f8d605ee260c23954b"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.1)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.1)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -2725,7 +2725,7 @@ name = "dojo-bindgen"
 version = "0.5.0"
 dependencies = [
  "async-trait",
- "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.1)",
+ "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
  "camino",
  "convert_case 0.6.0",
  "dojo-test-utils",
