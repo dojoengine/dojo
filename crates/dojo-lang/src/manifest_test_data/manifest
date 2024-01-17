@@ -955,8 +955,30 @@ test_manifest_file
     {
       "name": "dojo_examples::actions::actions",
       "address": null,
-      "class_hash": "0x2d0b29efea4f6ba1c3ad62e1031c3e388173e5b3961b0d946b88e9c4d583e91",
+      "class_hash": "0x52d3920cfb6eef13c2bcd2c04eb1d7b7123325da7f16bbeeb0f83b8b33c00f",
       "abi": [
+        {
+          "type": "impl",
+          "name": "DojoResourceProviderImpl",
+          "interface_name": "dojo::world::IDojoResourceProvider"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::world::IDojoResourceProvider",
+          "items": [
+            {
+              "type": "function",
+              "name": "dojo_resource",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
         {
           "type": "impl",
           "name": "WorldProviderImpl",

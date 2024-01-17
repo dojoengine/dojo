@@ -271,11 +271,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         Manifest::load_from_remote(&provider, migration.world_address().unwrap()).await.unwrap();
 
     //  Execute `create` and insert 10 records into storage
-    let records_contract = manifest
-        .contracts
-        .iter()
-        .find(|contract| contract.name.eq("types_test::contracts::records"))
-        .unwrap();
+    let records_contract =
+        manifest.contracts.iter().find(|contract| contract.name.eq("records")).unwrap();
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],

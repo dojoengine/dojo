@@ -55,6 +55,10 @@ trait IWorldProvider<T> {
     fn world(self: @T) -> IWorldDispatcher;
 }
 
+#[starknet::interface]
+trait IDojoResourceProvider<T> {
+    fn dojo_resource(self: @T) -> felt252;
+}
 
 #[starknet::contract]
 mod world {

@@ -241,207 +241,207 @@ error: Unsupported attribute.
     ^********^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[spawn]:9:21
+ --> test_src/lib.cairo[spawn]:10:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:11:21
+ --> test_src/lib.cairo[spawn]:12:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:16:21
+ --> test_src/lib.cairo[spawn]:19:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:23:21
+ --> test_src/lib.cairo[spawn]:26:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:33:13
+ --> test_src/lib.cairo[spawn]:36:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:39:13
+ --> test_src/lib.cairo[spawn]:42:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[spawn]:42:17
+ --> test_src/lib.cairo[spawn]:45:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[proxy]:9:21
+ --> test_src/lib.cairo[proxy]:10:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:11:21
+ --> test_src/lib.cairo[proxy]:12:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:16:21
+ --> test_src/lib.cairo[proxy]:19:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:23:21
+ --> test_src/lib.cairo[proxy]:26:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:30:13
+ --> test_src/lib.cairo[proxy]:33:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:36:13
+ --> test_src/lib.cairo[proxy]:39:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[proxy]:39:17
+ --> test_src/lib.cairo[proxy]:42:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[ctxnamed]:9:21
+ --> test_src/lib.cairo[ctxnamed]:10:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:11:21
+ --> test_src/lib.cairo[ctxnamed]:12:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:16:21
+ --> test_src/lib.cairo[ctxnamed]:19:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:23:21
+ --> test_src/lib.cairo[ctxnamed]:26:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:33:13
+ --> test_src/lib.cairo[ctxnamed]:36:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:39:13
+ --> test_src/lib.cairo[ctxnamed]:42:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ctxnamed]:42:17
+ --> test_src/lib.cairo[ctxnamed]:45:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withevent]:9:21
+ --> test_src/lib.cairo[withevent]:10:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:11:21
+ --> test_src/lib.cairo[withevent]:12:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:16:21
+ --> test_src/lib.cairo[withevent]:19:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:23:21
+ --> test_src/lib.cairo[withevent]:26:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:27:13
+ --> test_src/lib.cairo[withevent]:30:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:39:5
+ --> test_src/lib.cairo[withevent]:42:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:44:13
+ --> test_src/lib.cairo[withevent]:47:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:47:17
+ --> test_src/lib.cairo[withevent]:50:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withcomponent]:9:21
+ --> test_src/lib.cairo[withcomponent]:10:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:11:21
+ --> test_src/lib.cairo[withcomponent]:12:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:16:21
+ --> test_src/lib.cairo[withcomponent]:19:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:23:21
+ --> test_src/lib.cairo[withcomponent]:26:21
                     #[abi(embed_v0)]
                     ^**************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withcomponent]:27:5
+ --> test_src/lib.cairo[withcomponent]:30:5
     component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
     ^*********************************************************************************************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withcomponent]:28:5
+ --> test_src/lib.cairo[withcomponent]:31:5
     component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
     ^*********************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:30:13
+ --> test_src/lib.cairo[withcomponent]:33:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:33:17
+ --> test_src/lib.cairo[withcomponent]:36:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:35:25
+ --> test_src/lib.cairo[withcomponent]:38:25
                         #[substorage(v0)]
                         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:37:9
+ --> test_src/lib.cairo[withcomponent]:40:9
         #[substorage(v0)]
         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:41:13
+ --> test_src/lib.cairo[withcomponent]:44:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:45:25
+ --> test_src/lib.cairo[withcomponent]:48:25
                         #[flat]
                         ^*****^
 
@@ -464,10 +464,13 @@ mod testcomponent2 {
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
 
                     #[abi(embed_v0)]
-                    fn dojo_resource(self: @ContractState) -> felt252 {
-                        'spawn'
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'spawn'
+                        }
                     }
 
                     #[abi(embed_v0)]
@@ -509,10 +512,13 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
 
                     #[abi(embed_v0)]
-                    fn dojo_resource(self: @ContractState) -> felt252 {
-                        'proxy'
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'proxy'
+                        }
                     }
 
                     #[abi(embed_v0)]
@@ -551,10 +557,13 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
 
                     #[abi(embed_v0)]
-                    fn dojo_resource(self: @ContractState) -> felt252 {
-                        'ctxnamed'
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'ctxnamed'
+                        }
                     }
 
                     #[abi(embed_v0)]
@@ -596,10 +605,13 @@ impl EventDrop of core::traits::Drop::<Event>;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
 
                     #[abi(embed_v0)]
-                    fn dojo_resource(self: @ContractState) -> felt252 {
-                        'withevent'
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'withevent'
+                        }
                     }
 
                     #[abi(embed_v0)]
@@ -647,10 +659,13 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
                     use dojo::world::IWorldDispatcher;
                     use dojo::world::IWorldDispatcherTrait;
                     use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
 
                     #[abi(embed_v0)]
-                    fn dojo_resource(self: @ContractState) -> felt252 {
-                        'withcomponent'
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'withcomponent'
+                        }
                     }
 
                     #[abi(embed_v0)]
