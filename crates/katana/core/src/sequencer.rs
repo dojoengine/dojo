@@ -300,7 +300,7 @@ impl KatanaSequencer {
         Ok(count)
     }
 
-    pub async fn nonce_at(
+    pub fn nonce_at(
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,

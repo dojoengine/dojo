@@ -12,6 +12,7 @@ katana-primitives = { path = "../primitives" }
 katana-provider = { path = "../storage/provider" }
 katana-rpc-types = { path = "rpc-types" }
 katana-rpc-types-builder = { path = "rpc-types-builder" }
+katana-tasks = { path = "../tasks" }
 
 anyhow.workspace = true
 cairo-lang-starknet = "2.3.1"
