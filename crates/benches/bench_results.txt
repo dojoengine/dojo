@@ -1,99 +1,110 @@
-benchmark 99 transactions:
-sending time: 698
-responses span: 80
+benchmark 100 transactions:
+sending time: 756
+responses span: 87
 longest confirmation difference: 0
-block times: [3001, 2999, 3978, 3000]
-block sizes: [91, 8, 0, 99, 0]
-relevant blocks: [(99, 3000)]
+block times: [3001, 2999, 4079, 3000]
+block sizes: [91, 9, 0, 100, 0]
+relevant blocks: [(100, 3000)]
+estimated tps: 33.333333333333336
 
 
-benchmark 199 transactions:
+benchmark 200 transactions:
 sending time: 1391
-responses span: 110
+responses span: 119
 longest confirmation difference: 0
-block times: [3869, 3443, 3000, 8388, 2999]
-block sizes: [0, 94, 105, 0, 199, 0]
-relevant blocks: [(199, 2999)]
+block times: [3714, 3707, 3001, 6656, 3000, 3000]
+block sizes: [0, 88, 112, 0, 149, 51, 0]
+relevant blocks: [(149, 3000), (51, 3000)]
+estimated tps: 33.333333333333336
 
 
-benchmark 299 transactions:
-sending time: 2046
-responses span: 152
+benchmark 300 transactions:
+sending time: 2063
+responses span: 153
 longest confirmation difference: 0
-block times: [8015, 4441, 3001, 10334, 2999, 3000]
-block sizes: [0, 163, 136, 0, 247, 52, 0]
-relevant blocks: [(247, 2999), (52, 3000)]
+block times: [5831, 6647, 2999, 10062, 2999, 3000]
+block sizes: [0, 97, 203, 0, 239, 61, 0]
+relevant blocks: [(239, 2999), (61, 3000)]
+estimated tps: 50.008334722453746
 
 
-benchmark 399 transactions:
-sending time: 2729
-responses span: 191
+benchmark 400 transactions:
+sending time: 2755
+responses span: 185
 longest confirmation difference: 0
-block times: [2999, 4613, 9950, 2999, 8997, 6834, 2999]
-block sizes: [0, 0, 94, 305, 0, 192, 207, 0]
-relevant blocks: [(192, 6834), (207, 2999)]
+block times: [2999, 4603, 10152, 2999, 10624, 5092, 3000]
+block sizes: [0, 0, 90, 310, 0, 245, 155, 0]
+relevant blocks: [(245, 5092), (155, 3000)]
+estimated tps: 49.431537320810676
 
 
-benchmark 499 transactions:
-sending time: 3409
-responses span: 231
+benchmark 500 transactions:
+sending time: 3422
+responses span: 228
 longest confirmation difference: 0
-block times: [2999, 2999, 16732, 2998, 3000, 4616, 12704, 2999]
-block sizes: [0, 0, 0, 499, 0, 0, 109, 390, 0]
-relevant blocks: [(109, 12704), (390, 2999)]
+block times: [2999, 3001, 3499, 13296, 2999, 2999, 8891, 8436, 3000]
+block sizes: [0, 0, 0, 93, 407, 0, 0, 240, 260, 0]
+relevant blocks: [(240, 8436), (260, 3000)]
+estimated tps: 43.72158097236796
 
 
-benchmark 749 transactions:
-sending time: 5064
-responses span: 345
+benchmark 750 transactions:
+sending time: 5074
+responses span: 298
 longest confirmation difference: 0
-block times: [2999, 2999, 3000, 5070, 21584, 2998, 3002, 2997, 6702, 19042, 3002, 2996]
-block sizes: [0, 0, 0, 0, 90, 659, 0, 0, 0, 163, 586, 0, 0]
-relevant blocks: [(163, 19042), (586, 3002)]
+block times: [2999, 3000, 3000, 4979, 21729, 2997, 3000, 3000, 6878, 18998, 2998, 2999]
+block sizes: [0, 0, 0, 0, 85, 665, 0, 0, 0, 162, 588, 0, 0]
+relevant blocks: [(162, 18998), (588, 2998)]
+estimated tps: 34.09710856519367
 
 
-benchmark 999 transactions:
-sending time: 6646
-responses span: 406
+benchmark 1000 transactions:
+sending time: 6725
+responses span: 399
 longest confirmation difference: 0
-block times: [2999, 3000, 2999, 3000, 2999, 33526, 2995, 3000, 2999, 3000, 9739, 24209, 2996, 3000]
-block sizes: [0, 0, 0, 0, 0, 0, 999, 0, 0, 0, 0, 245, 754, 0, 0]
-relevant blocks: [(245, 24209), (754, 2996)]
+block times: [2998, 3000, 2999, 3000, 2999, 3960, 29562, 2998, 3000, 2999, 3001, 3145, 31063, 2996, 2999]
+block sizes: [0, 0, 0, 0, 0, 0, 94, 906, 0, 0, 0, 0, 32, 968, 0, 0]
+relevant blocks: [(32, 31063), (968, 2996)]
+estimated tps: 29.36081505622596
 
 
-benchmark 1249 transactions:
-sending time: 8206
-responses span: 486
+benchmark 1250 transactions:
+sending time: 8273
+responses span: 469
 longest confirmation difference: 0
-block times: [2999, 2999, 2999, 3002, 2997, 2999, 4974, 38212, 2995, 3000, 3000, 2999, 2999, 10243, 32606, 2995, 2999, 3000]
-block sizes: [0, 0, 0, 0, 0, 0, 0, 74, 1175, 0, 0, 0, 0, 0, 241, 1008, 0, 0, 0]
-relevant blocks: [(241, 32606), (1008, 2995)]
+block times: [2999, 2999, 2999, 2999, 3001, 2999, 5236, 38002, 2994, 3000, 3002, 2996, 2999, 10295, 32323, 2996, 2999, 2999]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 81, 1169, 0, 0, 0, 0, 0, 240, 1010, 0, 0, 0]
+relevant blocks: [(240, 32323), (1010, 2996)]
+estimated tps: 35.39171550723407
 
 
-benchmark 1499 transactions:
-sending time: 9853
-responses span: 580
+benchmark 1500 transactions:
+sending time: 9933
+responses span: 561
 longest confirmation difference: 0
-block times: [2998, 3000, 2999, 3000, 3000, 2999, 2999, 3000, 3648, 46266, 2994, 3000, 2999, 3000, 3000, 2998, 3004, 8701, 39768, 2994, 3000, 2999, 2999]
-block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 70, 1429, 0, 0, 0, 0, 0, 0, 0, 261, 1238, 0, 0, 0, 0]
-relevant blocks: [(261, 39768), (1238, 2994)]
+block times: [2998, 3000, 2999, 2999, 3000, 2999, 3000, 2999, 6094, 43900, 2994, 2999, 2999, 3000, 2999, 2999, 2999, 7925, 40377, 2994, 2999, 2999, 2999]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 147, 1353, 0, 0, 0, 0, 0, 0, 0, 240, 1260, 0, 0, 0, 0]
+relevant blocks: [(240, 40377), (1260, 2994)]
+estimated tps: 34.585321989347726
 
 
-benchmark 1749 transactions:
-sending time: 11566
-responses span: 672
+benchmark 1750 transactions:
+sending time: 11643
+responses span: 648
 longest confirmation difference: 0
-block times: [2998, 3000, 2999, 3000, 2999, 2999, 2999, 3000, 2999, 4590, 54645, 2993, 3000, 2999, 2999, 3001, 2999, 3000, 3000, 56785, 2993, 3000, 3000, 2999, 3000]
-block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 1697, 0, 0, 0, 0, 0, 0, 0, 0, 1749, 0, 0, 0, 0, 0]
-relevant blocks: [(1749, 2993)]
+block times: [3000, 2999, 2999, 2999, 3000, 3000, 2998, 3001, 3000, 5073, 54393, 2993, 3000, 2999, 2999, 3000, 3000, 3000, 3000, 9124, 47689, 2995, 2998, 3000, 2999, 2999]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 61, 1689, 0, 0, 0, 0, 0, 0, 0, 0, 245, 1505, 0, 0, 0, 0, 0]
+relevant blocks: [(245, 47689), (1505, 2995)]
+estimated tps: 34.527661589456244
 
 
-benchmark 1999 transactions:
-sending time: 13197
-responses span: 779
+benchmark 2000 transactions:
+sending time: 13189
+responses span: 761
 longest confirmation difference: 0
-block times: [2999, 3001, 2997, 3000, 3000, 3000, 2999, 3006, 3000, 3000, 3000, 3497, 62683, 2991, 2999, 3001, 2999, 2999, 2999, 3000, 2999, 3000, 3752, 61107, 2991, 3000, 2999, 3000, 3000]
-block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 1947, 0, 0, 0, 0, 0, 0, 0, 0, 0, 61, 1938, 0, 0, 0, 0, 0]
-relevant blocks: [(61, 61107), (1938, 2991)]
+block times: [2999, 2999, 3000, 3000, 3000, 2998, 3001, 3000, 2999, 3000, 3000, 4523, 61608, 2992, 3000, 2999, 2999, 2999, 2999, 3000, 3001, 2998, 3839, 60578, 2992, 3000, 3001, 2997, 3000, 3001]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 1917, 0, 0, 0, 0, 0, 0, 0, 0, 0, 61, 1939, 0, 0, 0, 0, 0, 0]
+relevant blocks: [(61, 60578), (1939, 2992)]
+estimated tps: 31.461381154632686
 
 

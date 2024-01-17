@@ -51,6 +51,13 @@ impl BenchResult {
         joined.drain(start..).collect()
     }
 
+    pub fn estimated_tps(&self) -> f64 {
+        let relevant_blocks = self.relevant_blocks();
+        let total_transactions = relevant_blocks.iter().map(|(s, _t)| s).sum::<u32>();
+        let total_time = relevant_blocks.iter().map(|(_s, t)| t).sum::<i64>();
+        total_transactions as f64 / total_time as f64 * 1000.0
+    }
+
     pub async fn dump(&self) {
         let mut file =
             OpenOptions::new().create(true).append(true).open("bench_results.txt").await.unwrap();
@@ -68,6 +75,7 @@ impl std::fmt::Display for BenchResult {
         writeln!(f, "block times: {:?}", self.block_times)?;
         writeln!(f, "block sizes: {:?}", self.block_sizes)?;
         writeln!(f, "relevant blocks: {:?}", self.relevant_blocks())?;
+        writeln!(f, "estimated tps: {}", self.estimated_tps())?;
         Ok(())
     }
 }
