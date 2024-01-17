@@ -60,7 +60,7 @@ cairo-lang-formatter = "2.4.0"
 cairo-lang-language-server = "2.4.0"
 cairo-lang-lowering = "2.4.0"
 cairo-lang-parser = "2.4.0"
-cairo-lang-plugins = "2.4.0"
+cairo-lang-plugins = { version = "2.4.0", features = [ "testing" ] }
 cairo-lang-project = "2.4.0"
 cairo-lang-semantic = { version = "2.4.0", features = [ "testing" ] }
 cairo-lang-sierra = "2.4.0"
