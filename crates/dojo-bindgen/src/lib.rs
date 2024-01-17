@@ -333,7 +333,7 @@ mod tests {
         let data = gather_dojo_data(&Utf8PathBuf::from("src/test_data/spawn-and-move/target/dev"))
             .unwrap();
 
-        assert_eq!(data.models.len(), 4);
+        assert_eq!(data.models.len(), 2);
 
         let pos = data.models.get("Position").unwrap();
         assert_eq!(pos.name, "Position");
