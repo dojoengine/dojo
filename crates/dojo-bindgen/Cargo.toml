@@ -14,6 +14,9 @@ starknet.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] } 
+
+# Some issue with CI on windows, need to be investigated.
+# https://github.com/dojoengine/dojo/actions/runs/7548423990/job/20550444492?pr=1425#step:6:1644
+#dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
 
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.2" }
