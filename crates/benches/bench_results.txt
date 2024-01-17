@@ -1,0 +1,99 @@
+benchmark 99 transactions:
+sending time: 698
+responses span: 80
+longest confirmation difference: 0
+block times: [3001, 2999, 3978, 3000]
+block sizes: [91, 8, 0, 99, 0]
+relevant blocks: [(99, 3000)]
+
+
+benchmark 199 transactions:
+sending time: 1391
+responses span: 110
+longest confirmation difference: 0
+block times: [3869, 3443, 3000, 8388, 2999]
+block sizes: [0, 94, 105, 0, 199, 0]
+relevant blocks: [(199, 2999)]
+
+
+benchmark 299 transactions:
+sending time: 2046
+responses span: 152
+longest confirmation difference: 0
+block times: [8015, 4441, 3001, 10334, 2999, 3000]
+block sizes: [0, 163, 136, 0, 247, 52, 0]
+relevant blocks: [(247, 2999), (52, 3000)]
+
+
+benchmark 399 transactions:
+sending time: 2729
+responses span: 191
+longest confirmation difference: 0
+block times: [2999, 4613, 9950, 2999, 8997, 6834, 2999]
+block sizes: [0, 0, 94, 305, 0, 192, 207, 0]
+relevant blocks: [(192, 6834), (207, 2999)]
+
+
+benchmark 499 transactions:
+sending time: 3409
+responses span: 231
+longest confirmation difference: 0
+block times: [2999, 2999, 16732, 2998, 3000, 4616, 12704, 2999]
+block sizes: [0, 0, 0, 499, 0, 0, 109, 390, 0]
+relevant blocks: [(109, 12704), (390, 2999)]
+
+
+benchmark 749 transactions:
+sending time: 5064
+responses span: 345
+longest confirmation difference: 0
+block times: [2999, 2999, 3000, 5070, 21584, 2998, 3002, 2997, 6702, 19042, 3002, 2996]
+block sizes: [0, 0, 0, 0, 90, 659, 0, 0, 0, 163, 586, 0, 0]
+relevant blocks: [(163, 19042), (586, 3002)]
+
+
+benchmark 999 transactions:
+sending time: 6646
+responses span: 406
+longest confirmation difference: 0
+block times: [2999, 3000, 2999, 3000, 2999, 33526, 2995, 3000, 2999, 3000, 9739, 24209, 2996, 3000]
+block sizes: [0, 0, 0, 0, 0, 0, 999, 0, 0, 0, 0, 245, 754, 0, 0]
+relevant blocks: [(245, 24209), (754, 2996)]
+
+
+benchmark 1249 transactions:
+sending time: 8206
+responses span: 486
+longest confirmation difference: 0
+block times: [2999, 2999, 2999, 3002, 2997, 2999, 4974, 38212, 2995, 3000, 3000, 2999, 2999, 10243, 32606, 2995, 2999, 3000]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 74, 1175, 0, 0, 0, 0, 0, 241, 1008, 0, 0, 0]
+relevant blocks: [(241, 32606), (1008, 2995)]
+
+
+benchmark 1499 transactions:
+sending time: 9853
+responses span: 580
+longest confirmation difference: 0
+block times: [2998, 3000, 2999, 3000, 3000, 2999, 2999, 3000, 3648, 46266, 2994, 3000, 2999, 3000, 3000, 2998, 3004, 8701, 39768, 2994, 3000, 2999, 2999]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 70, 1429, 0, 0, 0, 0, 0, 0, 0, 261, 1238, 0, 0, 0, 0]
+relevant blocks: [(261, 39768), (1238, 2994)]
+
+
+benchmark 1749 transactions:
+sending time: 11566
+responses span: 672
+longest confirmation difference: 0
+block times: [2998, 3000, 2999, 3000, 2999, 2999, 2999, 3000, 2999, 4590, 54645, 2993, 3000, 2999, 2999, 3001, 2999, 3000, 3000, 56785, 2993, 3000, 3000, 2999, 3000]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 1697, 0, 0, 0, 0, 0, 0, 0, 0, 1749, 0, 0, 0, 0, 0]
+relevant blocks: [(1749, 2993)]
+
+
+benchmark 1999 transactions:
+sending time: 13197
+responses span: 779
+longest confirmation difference: 0
+block times: [2999, 3001, 2997, 3000, 3000, 3000, 2999, 3006, 3000, 3000, 3000, 3497, 62683, 2991, 2999, 3001, 2999, 2999, 2999, 3000, 2999, 3000, 3752, 61107, 2991, 3000, 2999, 3000, 3000]
+block sizes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 1947, 0, 0, 0, 0, 0, 0, 0, 0, 0, 61, 1938, 0, 0, 0, 0, 0]
+relevant blocks: [(61, 61107), (1938, 2991)]
+
+
