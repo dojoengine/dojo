@@ -955,7 +955,7 @@ test_manifest_file
     {
       "name": "dojo_examples::actions::actions",
       "address": null,
-      "class_hash": "0x28d6337a75b81a573e0eaf719b8c19c410e557616d9024f3f9fa8db4b61eb1a",
+      "class_hash": "0x2d0b29efea4f6ba1c3ad62e1031c3e388173e5b3961b0d946b88e9c4d583e91",
       "abi": [
         {
           "type": "impl",
@@ -983,6 +983,77 @@ test_manifest_file
               "outputs": [
                 {
                   "type": "dojo::world::IWorldDispatcher"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "ActionsComputedImpl",
+          "interface_name": "dojo_examples::actions::IActionsComputed"
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Vec2",
+          "members": [
+            {
+              "name": "x",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "y",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Position",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "vec",
+              "type": "dojo_examples::models::Vec2"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::actions::IActionsComputed",
+          "items": [
+            {
+              "type": "function",
+              "name": "tile_terrain",
+              "inputs": [
+                {
+                  "name": "vec",
+                  "type": "dojo_examples::models::Vec2"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "quadrant",
+              "inputs": [
+                {
+                  "name": "pos",
+                  "type": "dojo_examples::models::Position"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::integer::u8"
                 }
               ],
               "state_mutability": "view"
@@ -1134,8 +1205,111 @@ test_manifest_file
     {
       "name": "dojo_examples::models::moves",
       "address": null,
-      "class_hash": "0x3e8f5fd739837454657716404aca18c7c93af7bddae611ce3ff986290cc1f7a",
+      "class_hash": "0x6cba88049c7c90527d1a87d2e8a3268d667a90387c9ee54ed975d8f9ad6284e",
       "abi": [
+        {
+          "type": "impl",
+          "name": "movesImpl",
+          "interface_name": "dojo_examples::models::Imoves"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Struct",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Enum",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo::database::introspect::Ty",
+          "variants": [
+            {
+              "name": "Primitive",
+              "type": "core::felt252"
+            },
+            {
+              "name": "Struct",
+              "type": "dojo::database::introspect::Struct"
+            },
+            {
+              "name": "Enum",
+              "type": "dojo::database::introspect::Enum"
+            },
+            {
+              "name": "Tuple",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
         {
           "type": "enum",
           "name": "dojo_examples::models::Direction",
@@ -1181,16 +1355,77 @@ test_manifest_file
           ]
         },
         {
-          "type": "function",
-          "name": "ensure_abi",
-          "inputs": [
+          "type": "interface",
+          "name": "dojo_examples::models::Imoves",
+          "items": [
             {
-              "name": "model",
-              "type": "dojo_examples::models::Moves"
+              "type": "function",
+              "name": "name",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "unpacked_size",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u32"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "packed_size",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u32"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "layout",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::array::Span::<core::integer::u8>"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "schema",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "dojo::database::introspect::Ty"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "ensure_abi",
+              "inputs": [
+                {
+                  "name": "model",
+                  "type": "dojo_examples::models::Moves"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "view"
             }
-          ],
-          "outputs": [],
-          "state_mutability": "view"
+          ]
         },
         {
           "type": "event",
@@ -1206,8 +1441,111 @@ test_manifest_file
     {
       "name": "dojo_examples::models::position",
       "address": null,
-      "class_hash": "0x31194af0f0893634f1196cf91562ff293e017931fd7a280bf0fca47e37aa451",
+      "class_hash": "0x731c5f211f7cd2c9282983740df5e581532f4f4814a4b8dde2c17a4ca0ec240",
       "abi": [
+        {
+          "type": "impl",
+          "name": "positionImpl",
+          "interface_name": "dojo_examples::models::Iposition"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Struct",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Enum",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo::database::introspect::Ty",
+          "variants": [
+            {
+              "name": "Primitive",
+              "type": "core::felt252"
+            },
+            {
+              "name": "Struct",
+              "type": "dojo::database::introspect::Struct"
+            },
+            {
+              "name": "Enum",
+              "type": "dojo::database::introspect::Enum"
+            },
+            {
+              "name": "Tuple",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
         {
           "type": "struct",
           "name": "dojo_examples::models::Vec2",
@@ -1237,16 +1575,77 @@ test_manifest_file
           ]
         },
         {
-          "type": "function",
-          "name": "ensure_abi",
-          "inputs": [
+          "type": "interface",
+          "name": "dojo_examples::models::Iposition",
+          "items": [
             {
-              "name": "model",
-              "type": "dojo_examples::models::Position"
+              "type": "function",
+              "name": "name",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "unpacked_size",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u32"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "packed_size",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u32"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "layout",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::array::Span::<core::integer::u8>"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "schema",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "dojo::database::introspect::Ty"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "ensure_abi",
+              "inputs": [
+                {
+                  "name": "model",
+                  "type": "dojo_examples::models::Position"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "view"
             }
-          ],
-          "outputs": [],
-          "state_mutability": "view"
+          ]
         },
         {
           "type": "event",

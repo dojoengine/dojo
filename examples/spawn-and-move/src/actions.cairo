@@ -1,13 +1,22 @@
+use dojo_examples::models::{Position, Vec2};
+
 #[starknet::interface]
 trait IActions<TContractState> {
     fn spawn(self: @TContractState);
     fn move(self: @TContractState, direction: dojo_examples::models::Direction);
 }
 
+#[starknet::interface]
+trait IActionsComputed<TContractState> {
+    fn tile_terrain(self: @TContractState, vec: Vec2) -> felt252 ;
+    fn quadrant(self: @TContractState, pos: Position) -> u8;
+}
+
 #[dojo::contract]
 mod actions {
     use super::IActions;
-    
+    use super::IActionsComputed;
+        
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
@@ -25,28 +34,30 @@ mod actions {
     }
 
     #[abi(embed_v0)]
-    #[computed]
-    fn tile_terrain(self: @ContractState, vec: Vec2) -> felt252 {
-        'land'
-    }
+    impl ActionsComputedImpl of IActionsComputed<ContractState> {
+        #[computed]
+        fn tile_terrain(self: @ContractState, vec: Vec2) -> felt252 {
+            'land'
+        }
 
-    #[abi(embed_v0)]
-    #[computed(Position)]
-    fn quadrant(self: @ContractState, pos: Position) -> u8 {
-        // 10 is zero
-        if pos.vec.x < 10 {
-            if pos.vec.y < 10 {
-                3 // Quadrant - -
+        #[computed(Position)]
+        fn quadrant(self: @ContractState, pos: Position) -> u8 {
+            // 10 is zero
+            if pos.vec.x < 10 {
+                if pos.vec.y < 10 {
+                    3 // Quadrant - -
+                } else {
+                    4 // Quadrant - +
+                }
             } else {
-                4 // Quadrant - +
-            }
-        } else {
-            if pos.vec.y < 10 {
-                2 // Quadrant + -
-            } else {
-                1 // Quadrant + +
+                if pos.vec.y < 10 {
+                    2 // Quadrant + -
+                } else {
+                    1 // Quadrant + +
+                }
             }
         }
+
     }
 
     // impl: implement functions specified in trait

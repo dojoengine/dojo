@@ -15,7 +15,7 @@ source = "git+https://github.com/dojoengine/dojo?tag=v0.3.11#1e651b5d4d3b79b14a7
 
 [[package]]
 name = "types_test"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "dojo",
 ]
