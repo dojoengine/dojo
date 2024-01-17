@@ -20,3 +20,5 @@ lazy_static.workspace = true
 sozo = { path = "../../bin/sozo" }
 starknet.workspace = true
 tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

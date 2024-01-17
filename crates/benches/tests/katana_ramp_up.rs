@@ -1,26 +1,31 @@
 // Implementation of https://github.com/neotheprogramist/dojo/pull/16#discussion_r1453664539
 use futures::future::join_all;
 use katana_runner::KatanaRunner;
+use serde::Serialize;
 use starknet::accounts::Account;
 use starknet::core::types::FieldElement;
-use std::time::Duration;
-use tokio::{
-    fs::OpenOptions,
-    io::AsyncWriteExt,
-    time::{sleep, Instant},
-};
+use std::io::Write;
+use std::{fs::OpenOptions, time::Duration};
+use tokio::time::{sleep, Instant};
 
 use benches::{parse_calls, BenchCall, ENOUGH_GAS};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 struct BenchResult {
     // All times are in miliseconds
+    pub name: String,
     pub sending_time: u64,
     pub responses_span: u64,
+    pub longest_confirmation_difference: u64,
+    pub stats: Option<BenchStats>,
     pub block_times: Vec<i64>,
     pub block_sizes: Vec<u32>,
-    pub longest_confirmation_difference: u64,
-    pub name: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct BenchStats {
+    pub estimated_tps: f64,
+    pub relevant_blocks: Vec<(u32, i64)>,
 }
 
 impl BenchResult {
@@ -58,12 +63,22 @@ impl BenchResult {
         total_transactions as f64 / total_time as f64 * 1000.0
     }
 
+    pub fn compute_stats(&mut self) {
+        if self.stats.is_none() {
+            self.stats = Some(BenchStats {
+                estimated_tps: self.estimated_tps(),
+                relevant_blocks: self.relevant_blocks(),
+            });
+        }
+    }
+
     pub async fn dump(&self) {
         let mut file =
-            OpenOptions::new().create(true).append(true).open("bench_results.txt").await.unwrap();
+            OpenOptions::new().create(true).append(true).open("bench_results.txt").unwrap();
 
-        let content = format!("{}:\n{}\n\n", self.name, self);
-        file.write_all(content.as_bytes()).await.unwrap();
+        let mut data = self.clone();
+        data.compute_stats();
+        writeln!(file, "{}", serde_json::to_string(&data).unwrap()).unwrap();
     }
 }
 
@@ -147,6 +162,7 @@ async fn run(runner: KatanaRunner) -> BenchResult {
         block_sizes,
         longest_confirmation_difference,
         name,
+        stats: None,
     }
 }
 

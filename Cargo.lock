@@ -899,6 +899,8 @@ dependencies = [
  "lazy_static",
  "proptest",
  "reqwest",
+ "serde",
+ "serde_json",
  "sozo",
  "starknet",
  "tokio",
