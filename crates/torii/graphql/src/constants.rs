@@ -11,6 +11,7 @@ pub const ID_COLUMN: &str = "id";
 pub const EVENT_ID_COLUMN: &str = "event_id";
 pub const ENTITY_ID_COLUMN: &str = "entity_id";
 pub const JSON_COLUMN: &str = "json";
+pub const TRANSACTION_HASH_COLUMN: &str = "transaction_hash";
 
 pub const INTERNAL_ENTITY_ID_KEY: &str = "$entity_id$";
 

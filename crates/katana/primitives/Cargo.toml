@@ -12,7 +12,10 @@ cairo-vm.workspace = true
 derive_more.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde_with.workspace = true
 starknet.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
 thiserror.workspace = true
 
 blockifier.workspace = true

@@ -11,7 +11,6 @@ use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{resolve_many, BasicObject, ResolvableObject, TypeMapping};
 use crate::constants::{EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
 use crate::mapping::EVENT_TYPE_MAPPING;
-use crate::object::resolve_one;
 use crate::types::ValueMapping;
 
 pub struct EventObject;
@@ -32,14 +31,6 @@ impl BasicObject for EventObject {
 
 impl ResolvableObject for EventObject {
     fn resolvers(&self) -> Vec<Field> {
-        let resolve_one = resolve_one(
-            EVENT_TABLE,
-            ID_COLUMN,
-            self.name().0,
-            self.type_name(),
-            self.type_mapping(),
-        );
-
         let mut resolve_many = resolve_many(
             EVENT_TABLE,
             ID_COLUMN,
@@ -49,7 +40,7 @@ impl ResolvableObject for EventObject {
         );
         resolve_many = keys_argument(resolve_many);
 
-        vec![resolve_one, resolve_many]
+        vec![resolve_many]
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {

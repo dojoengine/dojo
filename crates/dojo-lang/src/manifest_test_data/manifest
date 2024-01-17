@@ -955,7 +955,7 @@ test_manifest_file
     {
       "name": "dojo_examples::actions::actions",
       "address": null,
-      "class_hash": "0x69c6bec7de74fc2404fe6b68ad8ece7be81ad6d861b38a8ba8fa583bfc3666b",
+      "class_hash": "0x352a6ab719469097c1f3f9db41552fc79a1bf09b83c8a0839052218461ecea9",
       "abi": [
         {
           "type": "impl",

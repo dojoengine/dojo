@@ -103,10 +103,10 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)>
 
     // predefined objects
     let mut objects: Vec<ObjectVariant> = vec![
-        ObjectVariant::Resolvable(Box::new(ModelObject)),
-        ObjectVariant::Resolvable(Box::new(EventObject)),
         ObjectVariant::Resolvable(Box::new(EntityObject)),
+        ObjectVariant::Resolvable(Box::new(EventObject)),
         ObjectVariant::Resolvable(Box::new(MetadataObject)),
+        ObjectVariant::Resolvable(Box::new(ModelObject)),
         ObjectVariant::Resolvable(Box::new(TransactionObject)),
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),

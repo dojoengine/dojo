@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
     GenericContractInfo, Nonce, StorageKey, StorageValue,
@@ -11,6 +10,7 @@ use crate::providers::in_memory::cache::CacheStateDb;
 use crate::providers::in_memory::state::StateSnapshot;
 use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
 use crate::traits::state::StateProvider;
+use crate::ProviderResult;
 
 pub type ForkedStateDb = CacheStateDb<SharedStateProvider>;
 pub type ForkedSnapshot = StateSnapshot<SharedStateProvider>;
@@ -25,7 +25,7 @@ impl ForkedStateDb {
 }
 
 impl ContractInfoProvider for ForkedStateDb {
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
         if let info @ Some(_) = self.contract_state.read().get(&address).cloned() {
             return Ok(info);
         }
@@ -34,14 +34,17 @@ impl ContractInfoProvider for ForkedStateDb {
 }
 
 impl StateProvider for ForkedStateDb {
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+    fn class_hash_of_contract(
+        &self,
+        address: ContractAddress,
+    ) -> ProviderResult<Option<ClassHash>> {
         if let hash @ Some(_) = self.contract_state.read().get(&address).map(|i| i.class_hash) {
             return Ok(hash);
         }
         StateProvider::class_hash_of_contract(&self.db, address)
     }
 
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+    fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         if let nonce @ Some(_) = self.contract_state.read().get(&address).map(|i| i.nonce) {
             return Ok(nonce);
         }
@@ -52,7 +55,7 @@ impl StateProvider for ForkedStateDb {
         &self,
         address: ContractAddress,
         storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
+    ) -> ProviderResult<Option<StorageValue>> {
         if let value @ Some(_) =
             self.storage.read().get(&address).and_then(|s| s.get(&storage_key)).copied()
         {
@@ -63,7 +66,7 @@ impl StateProvider for ForkedStateDb {
 }
 
 impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         if let class @ Some(_) = self.shared_contract_classes.sierra_classes.read().get(&hash) {
             return Ok(class.cloned());
         }
@@ -73,14 +76,14 @@ impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
+    ) -> ProviderResult<Option<CompiledClassHash>> {
         if let hash @ Some(_) = self.compiled_class_hashes.read().get(&hash) {
             return Ok(hash.cloned());
         }
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.db, hash)
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
         if let class @ Some(_) = self.shared_contract_classes.compiled_classes.read().get(&hash) {
             return Ok(class.cloned());
         }
@@ -91,13 +94,13 @@ impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
 pub(super) struct LatestStateProvider(pub(super) Arc<ForkedStateDb>);
 
 impl ContractInfoProvider for LatestStateProvider {
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
         ContractInfoProvider::contract(&self.0, address)
     }
 }
 
 impl StateProvider for LatestStateProvider {
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+    fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         StateProvider::nonce(&self.0, address)
     }
 
@@ -105,34 +108,37 @@ impl StateProvider for LatestStateProvider {
         &self,
         address: ContractAddress,
         storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
+    ) -> ProviderResult<Option<StorageValue>> {
         StateProvider::storage(&self.0, address, storage_key)
     }
 
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+    fn class_hash_of_contract(
+        &self,
+        address: ContractAddress,
+    ) -> ProviderResult<Option<ClassHash>> {
         StateProvider::class_hash_of_contract(&self.0, address)
     }
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         ContractClassProvider::sierra_class(&self.0, hash)
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
         ContractClassProvider::class(&self.0, hash)
     }
 
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
+    ) -> ProviderResult<Option<CompiledClassHash>> {
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.0, hash)
     }
 }
 
 impl ContractInfoProvider for ForkedSnapshot {
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
         if let info @ Some(_) = self.inner.contract_state.get(&address).cloned() {
             return Ok(info);
         }
@@ -141,7 +147,7 @@ impl ContractInfoProvider for ForkedSnapshot {
 }
 
 impl StateProvider for ForkedSnapshot {
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+    fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         if let nonce @ Some(_) = self.inner.contract_state.get(&address).map(|info| info.nonce) {
             return Ok(nonce);
         }
@@ -152,7 +158,7 @@ impl StateProvider for ForkedSnapshot {
         &self,
         address: ContractAddress,
         storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
+    ) -> ProviderResult<Option<StorageValue>> {
         if let value @ Some(_) =
             self.inner.storage.get(&address).and_then(|s| s.get(&storage_key)).copied()
         {
@@ -161,7 +167,10 @@ impl StateProvider for ForkedSnapshot {
         StateProvider::storage(&self.inner.db, address, storage_key)
     }
 
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+    fn class_hash_of_contract(
+        &self,
+        address: ContractAddress,
+    ) -> ProviderResult<Option<ClassHash>> {
         if let class_hash @ Some(_) =
             self.inner.contract_state.get(&address).map(|info| info.class_hash)
         {
@@ -172,7 +181,7 @@ impl StateProvider for ForkedSnapshot {
 }
 
 impl ContractClassProvider for ForkedSnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         if self.inner.compiled_class_hashes.get(&hash).is_some() {
             Ok(self.classes.sierra_classes.read().get(&hash).cloned())
         } else {
@@ -183,14 +192,14 @@ impl ContractClassProvider for ForkedSnapshot {
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
+    ) -> ProviderResult<Option<CompiledClassHash>> {
         if let hash @ Some(_) = self.inner.compiled_class_hashes.get(&hash).cloned() {
             return Ok(hash);
         }
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.inner.db, hash)
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
         if self.inner.compiled_class_hashes.get(&hash).is_some() {
             Ok(self.classes.compiled_classes.read().get(&hash).cloned())
         } else {

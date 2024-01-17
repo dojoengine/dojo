@@ -1,7 +1,9 @@
 use async_graphql::dynamic::Field;
 
 use super::{BasicObject, ResolvableObject, TypeMapping};
-use crate::constants::{ID_COLUMN, TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME};
+use crate::constants::{
+    ID_COLUMN, TRANSACTION_HASH_COLUMN, TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME,
+};
 use crate::mapping::TRANSACTION_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 
@@ -25,7 +27,7 @@ impl ResolvableObject for TransactionObject {
     fn resolvers(&self) -> Vec<Field> {
         let resolve_one = resolve_one(
             TRANSACTION_TABLE,
-            ID_COLUMN,
+            TRANSACTION_HASH_COLUMN,
             self.name().0,
             self.type_name(),
             self.type_mapping(),

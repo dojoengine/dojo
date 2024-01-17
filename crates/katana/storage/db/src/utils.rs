@@ -16,8 +16,10 @@ pub(crate) fn default_page_size() -> usize {
     os_page_size.clamp(MIN_PAGE_SIZE, LIBMDBX_MAX_PAGE_SIZE)
 }
 
-/// Check if a db is empty. It does not provide any information on the
-/// validity of the data in it. We consider a database as non empty when it's a non empty directory.
+/// Check if a database is empty. We consider a database as empty when (1) `path` it's an empty
+/// directory, (2) if `path` doesn't exist, or (3) `path` is not a directory.
+///
+/// It does not provide any information on the validity of the data in the Db if it isn't empty.
 pub fn is_database_empty<P: AsRef<Path>>(path: P) -> bool {
     let path = path.as_ref();
     if !path.exists() {

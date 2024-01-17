@@ -9,11 +9,18 @@ use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
 use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
 use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
-use katana_executor::blockifier::utils::get_state_update_from_cached_state;
+use katana_executor::blockifier::utils::{
+    block_context_from_envs, get_state_update_from_cached_state,
+};
 use katana_executor::blockifier::{PendingState, TransactionExecutor};
+use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
+use katana_provider::error::ProviderError;
+use katana_provider::traits::block::BlockNumberProvider;
+use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::StateFactoryProvider;
 use parking_lot::RwLock;
 use tokio::time::{interval_at, Instant, Interval};
@@ -21,13 +28,20 @@ use tracing::trace;
 
 use crate::backend::Backend;
 
+#[derive(Debug, thiserror::Error)]
+pub enum BlockProductionError {
+    #[error(transparent)]
+    Provider(#[from] ProviderError),
+}
+
 pub struct MinedBlockOutcome {
     pub block_number: u64,
 }
 
 type ServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + Sync>>;
-type InstantBlockMiningFuture = ServiceFuture<MinedBlockOutcome>;
-type IntervalBlockMiningFuture = ServiceFuture<MinedBlockOutcome>;
+
+type BlockProductionResult = Result<MinedBlockOutcome, BlockProductionError>;
+type BlockProductionFuture = ServiceFuture<BlockProductionResult>;
 
 /// The type which responsible for block production.
 #[must_use = "BlockProducer does nothing unless polled"]
@@ -39,22 +53,32 @@ pub struct BlockProducer {
 
 impl BlockProducer {
     /// Creates a block producer that mines a new block every `interval` milliseconds.
-    pub fn interval(backend: Arc<Backend>, initial_state: StateRefDb, interval: u64) -> Self {
+    pub fn interval(
+        backend: Arc<Backend>,
+        initial_state: StateRefDb,
+        interval: u64,
+        block_exec_envs: (BlockEnv, CfgEnv),
+    ) -> Self {
         Self {
             inner: Arc::new(RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new(
                 backend,
                 initial_state,
                 interval,
+                block_exec_envs,
             )))),
         }
     }
 
     /// Creates a new block producer that will only be possible to mine by calling the
     /// `katana_generateBlock` RPC method.
-    pub fn on_demand(backend: Arc<Backend>, initial_state: StateRefDb) -> Self {
+    pub fn on_demand(
+        backend: Arc<Backend>,
+        initial_state: StateRefDb,
+        block_exec_envs: (BlockEnv, CfgEnv),
+    ) -> Self {
         Self {
             inner: Arc::new(RwLock::new(BlockProducerMode::Interval(
-                IntervalBlockProducer::new_no_mining(backend, initial_state),
+                IntervalBlockProducer::new_no_mining(backend, initial_state, block_exec_envs),
             ))),
         }
     }
@@ -99,7 +123,7 @@ impl BlockProducer {
 }
 
 impl Stream for BlockProducer {
-    type Item = MinedBlockOutcome;
+    type Item = BlockProductionResult;
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut mode = self.inner.write();
         match &mut *mode {
@@ -132,18 +156,20 @@ pub struct IntervalBlockProducer {
     interval: Option<Interval>,
     backend: Arc<Backend>,
     /// Single active future that mines a new block
-    block_mining: Option<IntervalBlockMiningFuture>,
+    block_mining: Option<BlockProductionFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
     /// The state of the pending block after executing all the transactions within the interval.
     state: Arc<PendingState>,
-    /// This is to make sure that the block context is updated
-    /// before the first block is opened.
-    is_initialized: bool,
 }
 
 impl IntervalBlockProducer {
-    pub fn new(backend: Arc<Backend>, db: StateRefDb, interval: u64) -> Self {
+    pub fn new(
+        backend: Arc<Backend>,
+        db: StateRefDb,
+        interval: u64,
+        block_exec_envs: (BlockEnv, CfgEnv),
+    ) -> Self {
         let interval = {
             let duration = Duration::from_millis(interval);
             let mut interval = interval_at(Instant::now() + duration, duration);
@@ -151,13 +177,12 @@ impl IntervalBlockProducer {
             interval
         };
 
-        let state = Arc::new(PendingState::new(db));
+        let state = Arc::new(PendingState::new(db, block_exec_envs.0, block_exec_envs.1));
 
         Self {
-            state,
             backend,
+            state,
             block_mining: None,
-            is_initialized: false,
             interval: Some(interval),
             queued: VecDeque::default(),
         }
@@ -166,17 +191,14 @@ impl IntervalBlockProducer {
     /// Creates a new [IntervalBlockProducer] with no `interval`. This mode will not produce blocks
     /// for every fixed interval, although it will still execute all queued transactions and
     /// keep hold of the pending state.
-    pub fn new_no_mining(backend: Arc<Backend>, db: StateRefDb) -> Self {
-        let state = Arc::new(PendingState::new(db));
+    pub fn new_no_mining(
+        backend: Arc<Backend>,
+        db: StateRefDb,
+        block_exec_envs: (BlockEnv, CfgEnv),
+    ) -> Self {
+        let state = Arc::new(PendingState::new(db, block_exec_envs.0, block_exec_envs.1));
 
-        Self {
-            state,
-            backend,
-            interval: None,
-            block_mining: None,
-            is_initialized: false,
-            queued: VecDeque::default(),
-        }
+        Self { state, backend, interval: None, block_mining: None, queued: VecDeque::default() }
     }
 
     pub fn state(&self) -> Arc<PendingState> {
@@ -197,30 +219,40 @@ impl IntervalBlockProducer {
         state_updates: StateUpdatesWithDeclaredClasses,
         backend: Arc<Backend>,
         pending_state: Arc<PendingState>,
-    ) -> MinedBlockOutcome {
+    ) -> BlockProductionResult {
         trace!(target: "miner", "creating new block");
 
         let (txs, _) = pending_state.take_txs_all();
         let tx_receipt_pairs =
             txs.into_iter().map(|(tx, rct)| (tx, rct.receipt)).collect::<Vec<_>>();
 
-        let (outcome, new_state) = backend.mine_pending_block(tx_receipt_pairs, state_updates);
+        let (mut block_env, cfg_env) = pending_state.block_execution_envs();
+
+        let (outcome, new_state) =
+            backend.mine_pending_block(&block_env, tx_receipt_pairs, state_updates)?;
+
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
-        backend.update_block_context();
-        pending_state.reset_state_with(new_state.into());
+        backend.update_block_env(&mut block_env);
+        pending_state.reset_state(new_state.into(), block_env, cfg_env);
 
-        outcome
+        Ok(outcome)
     }
 
     fn execute_transactions(&self, transactions: Vec<ExecutableTxWithHash>) {
         let txs = transactions.iter().map(TxWithHash::from);
+
+        let block_context = block_context_from_envs(
+            &self.state.block_envs.read().0,
+            &self.state.block_envs.read().1,
+        );
+
         let results = {
             TransactionExecutor::new(
                 &self.state.state,
-                &self.backend.env.read().block,
-                !self.backend.config.read().disable_fee,
-                !self.backend.config.read().disable_validate,
+                &block_context,
+                !self.backend.config.disable_fee,
+                !self.backend.config.disable_validate,
                 transactions.clone().into_iter(),
             )
             .with_error_log()
@@ -245,15 +277,10 @@ impl IntervalBlockProducer {
 
 impl Stream for IntervalBlockProducer {
     // mined block outcome and the new state
-    type Item = MinedBlockOutcome;
+    type Item = BlockProductionResult;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();
-
-        if !pin.is_initialized {
-            pin.backend.update_block_context();
-            pin.is_initialized = true;
-        }
 
         if let Some(interval) = &mut pin.interval {
             if interval.poll_tick(cx).is_ready() && pin.block_mining.is_none() {
@@ -293,7 +320,7 @@ pub struct InstantBlockProducer {
     /// Holds the backend if no block is being mined
     backend: Arc<Backend>,
     /// Single active future that mines a new block
-    block_mining: Option<InstantBlockMiningFuture>,
+    block_mining: Option<BlockProductionFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
 }
@@ -315,23 +342,28 @@ impl InstantBlockProducer {
     fn do_mine(
         backend: Arc<Backend>,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> MinedBlockOutcome {
+    ) -> Result<MinedBlockOutcome, BlockProductionError> {
         trace!(target: "miner", "creating new block");
 
-        backend.update_block_context();
+        let provider = backend.blockchain.provider();
 
-        let latest_state = StateFactoryProvider::latest(backend.blockchain.provider())
-            .expect("able to get latest state");
+        let cfg_env = backend.chain_cfg_env();
+        let latest_num = provider.latest_number()?;
+        let mut block_env = provider.block_env_at(BlockHashOrNumber::Num(latest_num))?.unwrap();
+        backend.update_block_env(&mut block_env);
+
+        let block_context = block_context_from_envs(&block_env, &cfg_env);
+
+        let latest_state = StateFactoryProvider::latest(backend.blockchain.provider())?;
         let state = CachedStateWrapper::new(latest_state.into());
-        let block_context = backend.env.read().block.clone();
 
         let txs = transactions.iter().map(TxWithHash::from);
 
         let tx_receipt_pairs: Vec<(TxWithHash, Receipt)> = TransactionExecutor::new(
             &state,
             &block_context,
-            !backend.config.read().disable_fee,
-            !backend.config.read().disable_validate,
+            !backend.config.disable_fee,
+            !backend.config.disable_validate,
             transactions.clone().into_iter(),
         )
         .with_error_log()
@@ -349,20 +381,20 @@ impl InstantBlockProducer {
         .collect();
 
         let outcome = backend.do_mine_block(
-            block_context,
+            &block_env,
             tx_receipt_pairs,
             get_state_update_from_cached_state(&state),
-        );
+        )?;
 
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
-        outcome
+        Ok(outcome)
     }
 }
 
 impl Stream for InstantBlockProducer {
     // mined block outcome and the new state
-    type Item = MinedBlockOutcome;
+    type Item = BlockProductionResult;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();

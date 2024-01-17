@@ -11,6 +11,7 @@ use async_graphql::dynamic::{
     Enum, Field, FieldFuture, InputObject, InputValue, Object, SubscriptionField, TypeRef,
 };
 use async_graphql::Value;
+use convert_case::{Case, Casing};
 use sqlx::{Pool, Sqlite};
 
 use self::connection::edge::EdgeObject;
@@ -119,22 +120,24 @@ pub fn resolve_one(
 ) -> Field {
     let type_mapping = type_mapping.clone();
     let table_name = table_name.to_owned();
-    let id_column_ = id_column.to_owned();
+    let id_column = id_column.to_owned();
+    let argument = InputValue::new(id_column.to_case(Case::Camel), TypeRef::named_nn(TypeRef::ID));
 
     Field::new(field_name, TypeRef::named_nn(type_name), move |ctx| {
         let type_mapping = type_mapping.clone();
         let table_name = table_name.to_owned();
-        let id_column = id_column_.to_owned();
+        let id_column = id_column.to_owned();
 
         FieldFuture::new(async move {
             let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-            let id = extract::<String>(ctx.args.as_index_map(), &id_column)?;
+            let id: String =
+                extract::<String>(ctx.args.as_index_map(), &id_column.to_case(Case::Camel))?;
             let data = fetch_single_row(&mut conn, &table_name, &id_column, &id).await?;
             let model = value_mapping_from_row(&data, &type_mapping, false)?;
             Ok(Some(Value::Object(model)))
         })
     })
-    .argument(InputValue::new(id_column, TypeRef::named_nn(TypeRef::ID)))
+    .argument(argument)
 }
 
 // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")

@@ -3,6 +3,7 @@ use katana_primitives::FieldElement;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::state::StateRootProvider;
 use katana_provider::traits::state_update::StateUpdateProvider;
+use katana_provider::ProviderResult;
 use katana_rpc_types::state_update::{StateDiff, StateUpdate};
 
 /// A builder for building RPC state update type.
@@ -22,7 +23,7 @@ where
     P: BlockHashProvider + BlockNumberProvider + StateRootProvider + StateUpdateProvider,
 {
     /// Builds a state update for the given block.
-    pub fn build(self) -> anyhow::Result<Option<StateUpdate>> {
+    pub fn build(self) -> ProviderResult<Option<StateUpdate>> {
         let Some(block_hash) = BlockHashProvider::block_hash_by_id(&self.provider, self.block_id)?
         else {
             return Ok(None);
