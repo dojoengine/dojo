@@ -11,6 +11,7 @@ use starknet::core::types::FieldElement;
 use tokio::runtime::Runtime;
 
 const CONTRACT_ADDRESS: &str = "0x38979e719956897617c83fcbc69de9bc56491fd10c093dd8492b92ee7326d98";
+pub const ENOUGH_GAS: &str = "0x100000000000000000";
 
 lazy_static! {
     static ref CONTRACT: FieldElement = FieldElement::from_hex_be(CONTRACT_ADDRESS).unwrap();

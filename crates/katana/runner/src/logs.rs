@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader};
 use std::time::Duration;
 use tokio::time::sleep;
 
-use crate::{KatanaRunner, BLOCK_TIME_IF_ENABLED};
+use crate::KatanaRunner;
 
 impl KatanaRunner {
     pub fn blocks(&self) -> Vec<String> {
@@ -25,7 +25,6 @@ impl KatanaRunner {
         let mut blocks = self.blocks();
         loop {
             if let Some(block) = blocks.last() {
-                println!("{}", block);
                 if block.contains("mined with 0 transactions") {
                     break;
                 }

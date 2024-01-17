@@ -14,7 +14,8 @@ fn parse_metadata(metadata: String) -> (u16, String, bool) {
     let executable = if args.len() == 3 { args[2].trim() } else { "katana" };
     let executable = executable.replace('"', "");
 
-    (n_accounts, executable, with_blocks)
+    // plus one as the first account is used for deployment
+    (n_accounts + 1, executable, with_blocks)
 }
 
 #[proc_macro_attribute]

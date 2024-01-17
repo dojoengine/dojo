@@ -6,11 +6,10 @@ use starknet::core::types::FieldElement;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
-use crate::{parse_calls, BenchCall};
+use crate::{parse_calls, BenchCall, ENOUGH_GAS};
 
-pub const ENOUGH_GAS: &str = "0x100000000000000000";
 pub const BLOCK_TIME: Duration = Duration::from_millis(BLOCK_TIME_IF_ENABLED);
-pub const N_TRANSACTIONS: usize = 2000;
+pub const N_TRANSACTIONS: usize = 2000; // depends on https://github.com/neotheprogramist/dojo/blob/6dbd719c09c01189f0b51f7381830fe451f268aa/crates/katana/core/src/pool.rs#L33-L34
 
 #[katana_runner::katana_test]
 async fn bench_katana_small() {
@@ -27,7 +26,7 @@ async fn bench_katana_small() {
         .unwrap();
 }
 
-#[katana_runner::katana_test(1000, true, "../../target/release/katana")]
+#[katana_runner::katana_test(2000, true, "../../target/release/katana")]
 async fn bench_katana() {
     let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
     let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])]);
@@ -51,7 +50,8 @@ async fn bench_katana() {
 
     // running a spawn for each account
     join_all(spawn_txs.iter().map(|t| t.send())).await;
-    sleep(Duration::from_secs(30)).await;
+    sleep(Duration::from_secs(100)).await;
+    runner.block_sizes().await;
 
     let before = Instant::now();
     let transaction_hashes = join_all(move_txs.iter().map(|t| async {
@@ -60,6 +60,7 @@ async fn bench_katana() {
     }))
     .await;
     println!("sending: {}", before.elapsed().as_millis());
+    sleep(Duration::from_secs(200)).await;
 
     // Unwraping and extracting the times
     let mut times = transaction_hashes
@@ -68,17 +69,13 @@ async fn bench_katana() {
             r.0.unwrap();
             r.1
         })
-        .collect::<Vec<_>>()
-        .windows(2)
-        .map(|w| w[1] - w[0])
         .collect::<Vec<_>>();
+    let durations = times.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>();
+
     times.sort();
 
-    println!("min sending: {}", times.first().unwrap().as_millis());
-    println!("max sending: {}", times.last().unwrap().as_millis());
-
-    // ⛏️ Block {block_number} mined with {tx_count} transactions
-    sleep(Duration::from_secs(90)).await;
+    println!("min sending: {}", durations.first().unwrap().as_millis());
+    println!("max sending: {}", durations.last().unwrap().as_millis());
 
     let block_sizes = runner.block_sizes().await;
     let transaction_sum: u32 = block_sizes.iter().sum();

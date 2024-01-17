@@ -24,8 +24,7 @@ pub async fn cached_nonce(account: &OwnerAccount) -> FieldElement {
 }
 
 pub fn log(name: &str, gas: u64, calldata: &str) {
-    let mut file =
-        OpenOptions::new().create(true).write(true).append(true).open("gas_usage.txt").unwrap();
+    let mut file = OpenOptions::new().create(true).append(true).open("gas_usage.txt").unwrap();
 
     let mut calldata = String::from(calldata);
     if !calldata.is_empty() {
