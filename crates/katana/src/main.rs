@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(listen_addr) = config.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder()?;
+        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
         info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
         prometheus_exporter::serve(

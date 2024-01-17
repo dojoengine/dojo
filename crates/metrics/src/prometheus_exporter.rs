@@ -14,13 +14,13 @@ pub(crate) trait Hook: Fn() + Send + Sync {}
 impl<T: Fn() + Send + Sync> Hook for T {}
 
 /// Installs Prometheus as the metrics recorder.
-pub fn install_recorder() -> anyhow::Result<PrometheusHandle> {
+pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
     let recorder = PrometheusBuilder::new().build_recorder();
     let handle = recorder.handle();
 
     // Build metrics stack
     Stack::new(recorder)
-        .push(PrefixLayer::new("katana"))
+        .push(PrefixLayer::new(prefix))
         .install()
         .map_err(|e| anyhow::anyhow!("Couldn't set metrics recorder: {}", e))?;
 

@@ -170,7 +170,7 @@ async fn main() -> anyhow::Result<()> {
     info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", args.addr));
 
     if let Some(listen_addr) = args.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder()?;
+        let prometheus_handle = prometheus_exporter::install_recorder("torii")?;
 
         info!(target: "torii::cli", addr = %listen_addr, "Starting metrics endpoint");
         prometheus_exporter::serve(
