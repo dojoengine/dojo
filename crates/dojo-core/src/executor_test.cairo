@@ -26,13 +26,15 @@ mod bar {
     struct Storage {}
 
     #[abi(embed_v0)]
-    fn dojo_resource(self: @ContractState) -> felt252 {
-        'bar'
-    }
+    #[generate_trait]
+    impl IbarImpl of IBar {
+        fn dojo_resource(self: @ContractState) -> felt252 {
+            'bar'
+        }
 
-    #[abi(embed_v0)]
-    fn execute(self: @ContractState, foo: Foo) -> Foo {
-        foo
+        fn execute(self: @ContractState, foo: Foo) -> Foo {
+            foo
+        }
     }
 }
 
