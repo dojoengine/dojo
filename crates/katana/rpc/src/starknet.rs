@@ -29,10 +29,12 @@ use katana_rpc_types::transaction::{
 };
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use katana_rpc_types_builder::ReceiptBuilder;
+use katana_tasks::TokioTaskSpawner;
 use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
 
 use crate::api::starknet::{StarknetApiError, StarknetApiServer};
 
+#[derive(Clone)]
 pub struct StarknetApi {
     sequencer: Arc<KatanaSequencer>,
 }
@@ -40,6 +42,15 @@ pub struct StarknetApi {
 impl StarknetApi {
     pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
         Self { sequencer }
+    }
+
+    async fn on_blocking_task<F, T>(&self, func: F) -> T
+    where
+        F: FnOnce(Self) -> T + Send + 'static,
+        T: Send + 'static,
+    {
+        let this = self.clone();
+        TokioTaskSpawner::new().unwrap().spawn_blocking(move || func(this)).await.unwrap()
     }
 }
 #[async_trait]
@@ -54,8 +65,9 @@ impl StarknetApiServer for StarknetApi {
         contract_address: FieldElement,
     ) -> Result<FeltAsHex, Error> {
         let nonce = self
-            .sequencer
-            .nonce_at(block_id, contract_address.into())
+            .on_blocking_task(move |this| {
+                this.sequencer.nonce_at(block_id, contract_address.into())
+            })
             .await
             .map_err(StarknetApiError::from)?
             .ok_or(StarknetApiError::ContractNotFound)?;
