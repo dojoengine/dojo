@@ -1,103 +1,83 @@
-// Copyright 2020 Parity Technologies (UK) Ltd.
-// Copyright 2021 Protocol Labs.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
-
-use futures::executor::block_on;
-use futures::stream::StreamExt;
 use libp2p::{
-    core::multiaddr::Protocol,
-    core::Multiaddr,
-    identify, identity, noise, ping, relay,
-    swarm::{NetworkBehaviour, SwarmEvent},
-    tcp, yamux,
+    core::{upgrade, Multiaddr, PeerId, Transport},
+    futures::StreamExt,
+    gossipsub::{
+        Gossipsub, GossipsubConfig, GossipsubEvent, GossipsubMessage, IdentTopic, MessageAuthenticity, ValidationMode,
+    },
+    identity, mplex, noise::{Keypair, NoiseConfig, X25519Spec},
+    swarm::{Swarm, SwarmBuilder, SwarmEvent},
+    tcp::TcpConfig, yamux::YamuxConfig,
 };
+use std::collections::HashMap;
 use std::error::Error;
-use std::net::{Ipv4Addr, Ipv6Addr};
-use tracing_subscriber::EnvFilter;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .try_init();
+pub struct ChatServer {
+    swarm: Swarm<Gossipsub>,
+    rooms: HashMap<String, IdentTopic>,
+}
 
-    // Create a static known PeerId based on given secret
-    let local_key: identity::Keypair = identity::Keypair::generate_ed25519();
+impl ChatServer {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
+        let id_keys = identity::Keypair::generate_ed25519();
+        let peer_id = PeerId::from(id_keys.public());
 
-    let port = 1010;
+        let noise_keys = Keypair::<X25519Spec>::new().into_authentic(&id_keys)?;
 
-    let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
-        .with_async_std()
-        .with_tcp(
-            tcp::Config::default(),
-            noise::Config::new,
-            yamux::Config::default,
-        )?
-        .with_quic()
-        .with_behaviour(|key| Behaviour {
-            relay: relay::Behaviour::new(key.public().to_peer_id(), Default::default()),
-            ping: ping::Behaviour::new(ping::Config::new()),
-            identify: identify::Behaviour::new(identify::Config::new(
-                "/TODO/0.0.1".to_string(),
-                key.public(),
-            )),
-        })?
-        .build();
+        let transport = TcpConfig::new()
+            .upgrade(upgrade::Version::V1)
+            .authenticate(NoiseConfig::xx(noise_keys).into_authenticated())
+            .multiplex(upgrade::SelectUpgrade::new(YamuxConfig::default(), mplex::MplexConfig::new()))
+            .boxed();
 
-    // Listen on all interfaces
-    let listen_addr_tcp = Multiaddr::empty()
-        .with(Protocol::from(Ipv6Addr::UNSPECIFIED))
-        .with(Protocol::Tcp(port));
-    swarm.listen_on(listen_addr_tcp)?;
+        let gossipsub_config = GossipsubConfig::default();
+        let mut gossipsub = Gossipsub::new(MessageAuthenticity::Signed(id_keys), gossipsub_config).unwrap();
 
-    let listen_addr_quic = Multiaddr::empty()
-        .with(Protocol::from(Ipv6Addr::UNSPECIFIED))
-        .with(Protocol::Udp(port))
-        .with(Protocol::QuicV1);
-    swarm.listen_on(listen_addr_quic)?;
+        gossipsub.subscribe(&IdentTopic::new("global")).unwrap();
 
-    block_on(async {
+        let swarm = SwarmBuilder::new(transport, gossipsub, peer_id)
+            .executor(Box::new(|fut| { async_std::task::spawn(fut); }))
+            .build();
+
+        Ok(Self {
+            swarm,
+            rooms: HashMap::new(),
+        })
+    }
+
+    pub async fn run(&mut self) {
         loop {
-            match swarm.next().await.expect("Infinite Stream.") {
-                SwarmEvent::Behaviour(event) => {
-                    if let BehaviourEvent::Identify(identify::Event::Received {
-                        info: identify::Info { observed_addr, .. },
-                        ..
-                    }) = &event
-                    {
-                        swarm.add_external_address(observed_addr.clone());
-                    }
-
-                    println!("{event:?}")
-                }
-                SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("Listening on {address:?}");
+            match self.swarm.next().await {
+                Some(SwarmEvent::Behaviour(GossipsubEvent::Message {
+                    propagation_source: _peer_id,
+                    message_id: _id,
+                    message,
+                })) => {
+                    self.handle_message(message).await;
                 }
                 _ => {}
             }
         }
-    })
-}
+    }
 
-#[derive(NetworkBehaviour)]
-struct Behaviour {
-    relay: relay::Behaviour,
-    ping: ping::Behaviour,
-    identify: identify::Behaviour,
+    async fn handle_message(&mut self, message: GossipsubMessage) {
+        if let Ok(text) = String::from_utf8(message.data.clone()) {
+            if text.starts_with("/join ") {
+                let room_name = text[6..].to_string();
+                let topic = IdentTopic::new(&room_name);
+
+                if !self.rooms.contains_key(&room_name) {
+                    self.swarm.behaviour_mut().subscribe(&topic).unwrap();
+                    self.rooms.insert(room_name.clone(), topic.clone());
+                }
+
+                // Relay join message
+                self.swarm.behaviour_mut().publish(topic, format!("{} has joined the room.", message.source).as_bytes()).unwrap();
+            } else {
+                // Relay message to all subscribed rooms
+                for topic in self.rooms.values() {
+                    self.swarm.behaviour_mut().publish(topic.clone(), message.data.clone()).unwrap();
+                }
+            }
+        }
+    }
 }
