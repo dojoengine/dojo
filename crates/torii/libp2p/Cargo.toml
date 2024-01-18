@@ -11,6 +11,7 @@ version.workspace = true
 [dependencies]
 futures.workspace = true
 libp2p = { version = "0.53.2", features = [ "async-std", "noise", "macros", "ping", "tcp", "identify", "yamux", "relay", "quic", "gossipsub"] }
+serde.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber = "0.3.18"

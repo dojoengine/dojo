@@ -1,4 +1,4 @@
-use futures::stream::StreamExt;
+use futures::{stream::StreamExt, Future};
 use libp2p::{
     core::multiaddr::Protocol,
     core::Multiaddr,
@@ -32,7 +32,7 @@ pub struct RelayServer {
 }
 
 impl RelayServer {
-    pub fn new(use_ipv6: Option<bool>, port: u16) -> Result<Self, Box<dyn Error>> {
+    pub fn new(use_ipv6: Option<bool>, port: u16) -> Result<impl Future<Output = Result<(), Box<dyn Error>>>, Box<dyn Error>> {
         let local_key: identity::Keypair = identity::Keypair::generate_ed25519();
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
@@ -85,10 +85,18 @@ impl RelayServer {
             .with(Protocol::QuicV1);
         swarm.listen_on(listen_addr_quic)?;
 
-        Ok(Self { swarm, rooms: HashMap::new() })
+        let mut server = Self {
+            swarm,
+            rooms: HashMap::new(),
+        };
+
+        Ok(async move {
+            server.run().await;
+            Ok(())
+        })
     }
 
-    pub async fn run(&mut self) {
+    async fn run(&mut self) {
         loop {
             match self.swarm.next().await.expect("Infinite Stream.") {
                 SwarmEvent::Behaviour(event) => {
@@ -118,26 +126,6 @@ impl RelayServer {
                 }
                 _ => {}
             }
-        }
-    }
-
-    // Method to send a message to a specific peer
-    fn send_message_to_peer(&self, peer: &PeerId, message: &str) {
-        // Implement the logic to send a message to the peer
-        // This may involve using a custom protocol or behaviour
-    }
-
-    // Method to join a room
-    pub fn join_room(&mut self, peer: PeerId, room: String) {
-        let topic = gossipsub::IdentTopic::new(&room);
-        self.swarm.behaviour_mut().gossipsub.subscribe(&topic).expect("Subscribing should work");
-        self.rooms.insert(room, topic);
-    }
-
-    // Method to leave a room
-    pub fn leave_room(&mut self, peer: &PeerId, room: &str) {
-        if let Some(topic) = self.rooms.get(room) {
-            self.swarm.behaviour_mut().gossipsub.unsubscribe(topic).expect("Unsubscribing should work");
         }
     }
 }
