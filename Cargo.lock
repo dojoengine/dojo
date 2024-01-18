@@ -5686,6 +5686,7 @@ dependencies = [
  "katana-provider",
  "katana-rpc-types",
  "katana-rpc-types-builder",
+ "katana-tasks",
  "serde",
  "serde_json",
  "serde_with",
@@ -5734,6 +5735,16 @@ dependencies = [
  "starknet",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "katana-tasks"
+version = "0.5.0"
+dependencies = [
+ "futures",
+ "rayon",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
