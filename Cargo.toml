@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
   "crates/benches",
+  "crates/dojo-bindgen",
   "crates/dojo-core",
   "crates/dojo-lang",
   "crates/dojo-language-server",
