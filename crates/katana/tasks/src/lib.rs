@@ -1,0 +1,111 @@
+use std::any::Any;
+use std::future::Future;
+use std::panic::{self, AssertUnwindSafe};
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::Poll;
+
+use futures::channel::oneshot;
+use rayon::{ThreadPoolBuildError, ThreadPoolBuilder};
+use tokio::runtime::Handle;
+use tokio::task::JoinHandle;
+
+/// This `struct` is created by the [TokioTaskSpawner::new] method.
+#[derive(Debug, thiserror::Error)]
+#[error("Failed to initialize task spawner: {0}")]
+pub struct TaskSpawnerInitError(tokio::runtime::TryCurrentError);
+
+/// A task spawner for spawning tasks on a tokio runtime. This is simple wrapper around a tokio's
+/// runtime [Handle] to easily spawn tasks on the runtime.
+///
+/// For running expensive CPU-bound tasks, use [BlockingTaskPool] instead.
+#[derive(Clone)]
+pub struct TokioTaskSpawner {
+    /// Handle to the tokio runtime.
+    tokio_handle: Handle,
+}
+
+impl TokioTaskSpawner {
+    /// Creates a new [TokioTaskSpawner] over the currently running tokio runtime.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if no tokio runtime has been started.
+    pub fn new() -> Result<Self, TaskSpawnerInitError> {
+        Ok(Self { tokio_handle: Handle::try_current().map_err(TaskSpawnerInitError)? })
+    }
+
+    /// Creates a new [TokioTaskSpawner] with the given tokio runtime [Handle].
+    pub fn new_with_handle(tokio_handle: Handle) -> Self {
+        Self { tokio_handle }
+    }
+}
+
+impl TokioTaskSpawner {
+    pub fn spawn<F>(&self, future: F) -> JoinHandle<F::Output>
+    where
+        F: Future + Send + 'static,
+        F::Output: Send + 'static,
+    {
+        self.tokio_handle.spawn(future)
+    }
+
+    pub fn spawn_blocking<F, R>(&self, func: F) -> JoinHandle<R>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        self.tokio_handle.spawn_blocking(func)
+    }
+}
+
+type BlockingTaskResult<T> = Result<T, Box<dyn Any + Send>>;
+
+#[derive(Debug)]
+#[must_use = "BlockingTaskHandle does nothing unless polled"]
+pub struct BlockingTaskHandle<T>(oneshot::Receiver<BlockingTaskResult<T>>);
+
+impl<T> Future for BlockingTaskHandle<T> {
+    type Output = BlockingTaskResult<T>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        match Pin::new(&mut self.get_mut().0).poll(cx) {
+            Poll::Ready(Ok(res)) => Poll::Ready(res),
+            Poll::Ready(Err(_)) => panic!("blocking task cancelled"),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+/// This is mainly for expensive CPU-bound tasks. For spawing blocking IO-bound tasks, use
+/// [TokioTaskSpawner::spawn_blocking] instead.
+#[derive(Debug, Clone)]
+pub struct BlockingTaskPool {
+    pool: Arc<rayon::ThreadPool>,
+}
+
+impl BlockingTaskPool {
+    pub fn build() -> ThreadPoolBuilder {
+        ThreadPoolBuilder::new().thread_name(|i| format!("blocking-thread-pool-{i}"))
+    }
+
+    pub fn new() -> Result<Self, ThreadPoolBuildError> {
+        Self::build().build().map(|pool| Self { pool: Arc::new(pool) })
+    }
+
+    pub fn new_with_pool(rayon_pool: rayon::ThreadPool) -> Self {
+        Self { pool: Arc::new(rayon_pool) }
+    }
+
+    pub fn spawn<F, R>(&self, func: F) -> BlockingTaskHandle<R>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let (tx, rx) = oneshot::channel();
+        self.pool.spawn(move || {
+            let _ = tx.send(panic::catch_unwind(AssertUnwindSafe(func)));
+        });
+        BlockingTaskHandle(rx)
+    }
+}
