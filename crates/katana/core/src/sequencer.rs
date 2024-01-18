@@ -267,8 +267,9 @@ impl KatanaSequencer {
         self.backend.chain_id
     }
 
-    pub fn block_number(&self) -> BlockNumber {
-        BlockNumberProvider::latest_number(&self.backend.blockchain.provider()).unwrap()
+    pub fn block_number(&self) -> SequencerResult<BlockNumber> {
+        let num = BlockNumberProvider::latest_number(&self.backend.blockchain.provider())?;
+        Ok(num)
     }
 
     pub fn block_tx_count(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<u64>> {
@@ -352,7 +353,7 @@ impl KatanaSequencer {
         Ok(tx)
     }
 
-    pub async fn events(
+    pub fn events(
         &self,
         from_block: BlockIdOrTag,
         to_block: BlockIdOrTag,
