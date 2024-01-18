@@ -785,6 +785,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
+name = "basic-toml"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f2139706359229bfa8f19142ac1155b4b80beafb7a60471ac5dd109d4a19778"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bech32"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2735,6 +2744,39 @@ dependencies = [
  "smol_str",
  "tokio",
  "tower-lsp",
+]
+
+[[package]]
+name = "dojo-metrics"
+version = "0.4.2"
+dependencies = [
+ "anyhow",
+ "dojo-metrics-derive",
+ "hyper",
+ "jemalloc-ctl",
+ "jemallocator",
+ "katana-db",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "metrics-process",
+ "metrics-util",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "dojo-metrics-derive"
+version = "0.4.2"
+dependencies = [
+ "metrics",
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "serial_test",
+ "syn 2.0.41",
+ "trybuild",
 ]
 
 [[package]]
@@ -5438,9 +5480,12 @@ dependencies = [
  "clap",
  "clap_complete",
  "console",
+ "dojo-metrics",
+ "dojo-metrics-derive",
  "katana-core",
+ "katana-db",
  "katana-rpc",
- "metrics 0.4.2",
+ "metrics",
  "metrics-process",
  "serde_json",
  "starknet_api",
@@ -5480,6 +5525,8 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-vm",
  "convert_case 0.6.0",
+ "dojo-metrics",
+ "dojo-metrics-derive",
  "ethers",
  "flate2",
  "futures",
@@ -5488,6 +5535,7 @@ dependencies = [
  "katana-primitives",
  "katana-provider",
  "lazy_static",
+ "metrics",
  "parking_lot 0.12.1",
  "rand",
  "serde",
@@ -5510,7 +5558,12 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-vm",
  "criterion",
+ "eyre",
  "katana-primitives",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "metrics-process",
+ "metrics-util",
  "page_size",
  "parking_lot 0.12.1",
  "postcard",
@@ -5930,23 +5983,6 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.4.2"
-dependencies = [
- "anyhow",
- "hyper",
- "jemalloc-ctl",
- "jemallocator",
- "metrics 0.21.1",
- "metrics-exporter-prometheus",
- "metrics-process",
- "metrics-util",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "metrics"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fde3af1a009ed76a778cb84fdef9e7dbbdf5775ae3e4cc1f434a6a307f6f76c5"
@@ -5966,7 +6002,7 @@ dependencies = [
  "hyper",
  "indexmap 1.9.3",
  "ipnet",
- "metrics 0.21.1",
+ "metrics",
  "metrics-util",
  "quanta",
  "thiserror",
@@ -5993,7 +6029,7 @@ checksum = "2674a02f6ad51326c2106d9aa5a07d1f759695b655c06df0bba5d5fb338ac0a4"
 dependencies = [
  "libproc",
  "mach2",
- "metrics 0.21.1",
+ "metrics",
  "once_cell",
  "procfs",
  "rlimit",
@@ -6011,7 +6047,7 @@ dependencies = [
  "crossbeam-utils",
  "hashbrown 0.13.1",
  "indexmap 1.9.3",
- "metrics 0.21.1",
+ "metrics",
  "num_cpus",
  "ordered-float 3.9.2",
  "quanta",
@@ -9942,6 +9978,7 @@ dependencies = [
  "chrono",
  "clap",
  "ctrlc",
+ "dojo-metrics",
  "dojo-types",
  "dojo-world",
  "either",
@@ -9952,7 +9989,6 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.4.2",
  "metrics-process",
  "scarb",
  "serde",
@@ -10171,6 +10207,21 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
+
+[[package]]
+name = "trybuild"
+version = "1.0.86"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8419ecd263363827c5730386f418715766f584e2f874d32c23c5b00bd9727e7e"
+dependencies = [
+ "basic-toml",
+ "glob",
+ "once_cell",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "termcolor",
+]
 
 [[package]]
 name = "tungstenite"
