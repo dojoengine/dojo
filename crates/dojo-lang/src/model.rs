@@ -117,17 +117,7 @@ pub fn handle_model_struct(
             $schema_introspection$
 
             #[starknet::interface]
-            trait I$type_name$<T> {
-                fn name(self: @T) -> felt252;
-            }
-
-            #[starknet::interface]
             trait I$contract_name$<T> {
-                fn name(self: @T) -> felt252;
-                fn unpacked_size(self: @T) -> usize;
-                fn packed_size(self: @T) -> usize;
-                fn layout(self: @T) -> Span<u8>;
-                fn schema(self: @T) -> dojo::database::introspect::Ty;
                 fn ensure_abi(self: @T, model: $type_name$);
             }
 
@@ -140,7 +130,7 @@ pub fn handle_model_struct(
                 struct Storage {}
 
                 #[abi(embed_v0)]
-                impl $contract_name$Impl of I$contract_name$<ContractState>{
+                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
                     fn name(self: @ContractState) -> felt252 {
                         '$type_name$'
                     }
@@ -165,7 +155,10 @@ pub fn handle_model_struct(
                     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                         dojo::database::introspect::Introspect::<$type_name$>::ty()
                     }
+                }
 
+                #[abi(embed_v0)]
+                impl $contract_name$Impl of I$contract_name$<ContractState>{
                     fn ensure_abi(self: @ContractState, model: $type_name$) {
                     }
                 }

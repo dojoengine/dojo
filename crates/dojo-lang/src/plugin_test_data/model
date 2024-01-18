@@ -537,62 +537,82 @@ struct OnlyKeyModel {
        ^**********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:83:13
+ --> test_src/lib.cairo[Position]:73:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:79:13
+ --> test_src/lib.cairo[Roles]:69:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:78:13
+ --> test_src/lib.cairo[OnlyKeyModel]:68:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:87:13
+ --> test_src/lib.cairo[Player]:77:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:88:17
+ --> test_src/lib.cairo[Position]:78:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:91:17
+ --> test_src/lib.cairo[Position]:81:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:84:17
-                #[storage]
-                ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:87:17
+ --> test_src/lib.cairo[Position]:109:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:83:17
+ --> test_src/lib.cairo[Roles]:74:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:86:17
+ --> test_src/lib.cairo[Roles]:77:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:92:17
+ --> test_src/lib.cairo[Roles]:105:17
+                #[abi(embed_v0)]
+                ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:73:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:95:17
+ --> test_src/lib.cairo[OnlyKeyModel]:76:17
+                #[abi(embed_v0)]
+                ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[OnlyKeyModel]:104:17
+                #[abi(embed_v0)]
+                ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:82:17
+                #[storage]
+                ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:85:17
+                #[abi(embed_v0)]
+                ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[Player]:113:17
                 #[abi(embed_v0)]
                 ^**************^
 
@@ -787,17 +807,7 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
         
 
             #[starknet::interface]
-            trait IPosition<T> {
-                fn name(self: @T) -> felt252;
-            }
-
-            #[starknet::interface]
             trait Iposition<T> {
-                fn name(self: @T) -> felt252;
-                fn unpacked_size(self: @T) -> usize;
-                fn packed_size(self: @T) -> usize;
-                fn layout(self: @T) -> Span<u8>;
-                fn schema(self: @T) -> dojo::database::introspect::Ty;
                 fn ensure_abi(self: @T, model: Position);
             }
 
@@ -810,7 +820,7 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
                 struct Storage {}
 
                 #[abi(embed_v0)]
-                impl positionImpl of Iposition<ContractState>{
+                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
                     fn name(self: @ContractState) -> felt252 {
                         'Position'
                     }
@@ -835,7 +845,10 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
                     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                         dojo::database::introspect::Introspect::<Position>::ty()
                     }
+                }
 
+                #[abi(embed_v0)]
+                impl positionImpl of Iposition<ContractState>{
                     fn ensure_abi(self: @ContractState, model: Position) {
                     }
                 }
@@ -914,17 +927,7 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
         
 
             #[starknet::interface]
-            trait IRoles<T> {
-                fn name(self: @T) -> felt252;
-            }
-
-            #[starknet::interface]
             trait Iroles<T> {
-                fn name(self: @T) -> felt252;
-                fn unpacked_size(self: @T) -> usize;
-                fn packed_size(self: @T) -> usize;
-                fn layout(self: @T) -> Span<u8>;
-                fn schema(self: @T) -> dojo::database::introspect::Ty;
                 fn ensure_abi(self: @T, model: Roles);
             }
 
@@ -937,7 +940,7 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                 struct Storage {}
 
                 #[abi(embed_v0)]
-                impl rolesImpl of Iroles<ContractState>{
+                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
                     fn name(self: @ContractState) -> felt252 {
                         'Roles'
                     }
@@ -962,7 +965,10 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
                     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                         dojo::database::introspect::Introspect::<Roles>::ty()
                     }
+                }
 
+                #[abi(embed_v0)]
+                impl rolesImpl of Iroles<ContractState>{
                     fn ensure_abi(self: @ContractState, model: Roles) {
                     }
                 }
@@ -1040,17 +1046,7 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
         
 
             #[starknet::interface]
-            trait IOnlyKeyModel<T> {
-                fn name(self: @T) -> felt252;
-            }
-
-            #[starknet::interface]
             trait Ionly_key_model<T> {
-                fn name(self: @T) -> felt252;
-                fn unpacked_size(self: @T) -> usize;
-                fn packed_size(self: @T) -> usize;
-                fn layout(self: @T) -> Span<u8>;
-                fn schema(self: @T) -> dojo::database::introspect::Ty;
                 fn ensure_abi(self: @T, model: OnlyKeyModel);
             }
 
@@ -1063,7 +1059,7 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
                 struct Storage {}
 
                 #[abi(embed_v0)]
-                impl only_key_modelImpl of Ionly_key_model<ContractState>{
+                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
                     fn name(self: @ContractState) -> felt252 {
                         'OnlyKeyModel'
                     }
@@ -1088,7 +1084,10 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
                     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                         dojo::database::introspect::Introspect::<OnlyKeyModel>::ty()
                     }
+                }
 
+                #[abi(embed_v0)]
+                impl only_key_modelImpl of Ionly_key_model<ContractState>{
                     fn ensure_abi(self: @ContractState, model: OnlyKeyModel) {
                     }
                 }
@@ -1181,17 +1180,7 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
         
 
             #[starknet::interface]
-            trait IPlayer<T> {
-                fn name(self: @T) -> felt252;
-            }
-
-            #[starknet::interface]
             trait Iplayer<T> {
-                fn name(self: @T) -> felt252;
-                fn unpacked_size(self: @T) -> usize;
-                fn packed_size(self: @T) -> usize;
-                fn layout(self: @T) -> Span<u8>;
-                fn schema(self: @T) -> dojo::database::introspect::Ty;
                 fn ensure_abi(self: @T, model: Player);
             }
 
@@ -1204,7 +1193,7 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
                 struct Storage {}
 
                 #[abi(embed_v0)]
-                impl playerImpl of Iplayer<ContractState>{
+                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
                     fn name(self: @ContractState) -> felt252 {
                         'Player'
                     }
@@ -1229,7 +1218,10 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
                     fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
                         dojo::database::introspect::Introspect::<Player>::ty()
                     }
+                }
 
+                #[abi(embed_v0)]
+                impl playerImpl of Iplayer<ContractState>{
                     fn ensure_abi(self: @ContractState, model: Player) {
                     }
                 }
