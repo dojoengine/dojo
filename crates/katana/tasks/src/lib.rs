@@ -19,7 +19,7 @@ pub struct TaskSpawnerInitError(tokio::runtime::TryCurrentError);
 /// runtime [Handle] to easily spawn tasks on the runtime.
 ///
 /// For running expensive CPU-bound tasks, use [BlockingTaskPool] instead.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TokioTaskSpawner {
     /// Handle to the tokio runtime.
     tokio_handle: Handle,
@@ -127,5 +127,55 @@ impl BlockingTaskPool {
             let _ = tx.send(panic::catch_unwind(AssertUnwindSafe(func)));
         });
         BlockingTaskHandle(rx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tokio_task_spawner() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        {
+            rt.block_on(async {
+                assert!(
+                    TokioTaskSpawner::new().is_ok(),
+                    "TokioTaskSpawner::new() should return Ok if within a tokio runtime"
+                )
+            });
+        }
+
+        {
+            let tokio_handle = rt.handle().clone();
+            rt.block_on(async move {
+                let spawner = TokioTaskSpawner::new_with_handle(tokio_handle);
+                let res = spawner.spawn(async { 1 + 1 }).await;
+                assert!(res.is_ok());
+            })
+        }
+
+        {
+            assert!(
+                TokioTaskSpawner::new()
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Failed to initialize task spawner:"),
+                "TokioTaskSpawner::new() should return an error if not within a tokio runtime"
+            );
+        }
+    }
+
+    #[test]
+    fn blocking_task_pool() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let blocking_pool = BlockingTaskPool::new().unwrap();
+        rt.block_on(async {
+            let res = blocking_pool.spawn(|| 1 + 1).await;
+            assert!(res.is_ok());
+            let res = blocking_pool.spawn(|| panic!("test")).await;
+            assert!(res.is_err(), "panic'd task should be caught");
+        })
     }
 }
