@@ -193,11 +193,16 @@ impl KatanaSequencer {
         transactions: Vec<ExecutableTxWithHash>,
         block_id: BlockIdOrTag,
     ) -> SequencerResult<Vec<FeeEstimate>> {
+        println!("ohayo 3");
         let state = self.state(&block_id)?;
+
+        println!("ohayo 4");
 
         let block_context = self
             .block_execution_context_at(block_id)?
             .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
+
+        println!("ohayo 5");
 
         katana_executor::blockifier::utils::estimate_fee(
             transactions.into_iter(),

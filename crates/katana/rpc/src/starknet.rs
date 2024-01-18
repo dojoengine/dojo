@@ -50,7 +50,16 @@ impl StarknetApi {
         T: Send + 'static,
     {
         let this = self.clone();
-        TokioTaskSpawner::new().unwrap().spawn_blocking(move || func(this)).await.unwrap()
+        // create oneshot tokio channel
+        let (sender, receiver) = tokio::sync::oneshot::channel::<T>();
+        let _ = TokioTaskSpawner::new()
+            .unwrap()
+            .spawn_blocking(move || {
+                let res = func(this);
+                let _ = sender.send(res);
+            })
+            .await;
+        receiver.await.unwrap()
     }
 }
 #[async_trait]
@@ -461,21 +470,26 @@ impl StarknetApiServer for StarknetApi {
         self.on_blocking_task(move |this| {
             let chain_id = this.sequencer.chain_id();
 
+            println!("ohayo");
+
             let transactions = request
                 .into_iter()
                 .map(|tx| {
                     let tx = match tx {
                         BroadcastedTx::Invoke(tx) => {
+                            println!("red");
                             let tx = tx.into_tx_with_chain_id(chain_id);
                             ExecutableTxWithHash::new_query(ExecutableTx::Invoke(tx))
                         }
 
                         BroadcastedTx::DeployAccount(tx) => {
+                            println!("blue");
                             let tx = tx.into_tx_with_chain_id(chain_id);
                             ExecutableTxWithHash::new_query(ExecutableTx::DeployAccount(tx))
                         }
 
                         BroadcastedTx::Declare(tx) => {
+                            println!("purple");
                             let tx = tx
                                 .try_into_tx_with_chain_id(chain_id)
                                 .map_err(|_| StarknetApiError::InvalidContractClass)?;
@@ -487,14 +501,22 @@ impl StarknetApiServer for StarknetApi {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
+            println!("ohayo 2");
+
             let res = this
                 .sequencer
                 .estimate_fee(transactions, block_id)
                 .map_err(StarknetApiError::from)?;
 
+            println!("ohayo 6");
+
             Ok(res)
         })
         .await
+        .map_err(|e| {
+            println!("got error {:?}", e);
+            e
+        })
     }
 
     async fn estimate_message_fee(
