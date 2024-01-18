@@ -558,7 +558,7 @@ where
             }
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
-                return Err(anyhow!("Failed to migrate {}: {:?}", name, e));
+                return Err(anyhow!("Failed to migrate {name}: {e}"));
             }
         }
     }
