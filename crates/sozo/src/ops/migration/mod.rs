@@ -416,7 +416,7 @@ where
         Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
             Ok(ContractDeploymentOutput::AlreadyDeployed(contract_address))
         }
-        Err(e) => Err(anyhow!("Failed to migrate {}: {:?}", contract_id, e)),
+        Err(e) => Err(anyhow!("Failed to migrate {contract_id}: {e}")),
     }
 }
 
