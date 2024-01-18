@@ -150,24 +150,11 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, entity: Ty, event_id: &str) -> Result<()> {
-        let keys = if let Ty::Struct(s) = &entity {
-            let mut keys = Vec::new();
-            for m in s.keys() {
-                keys.extend(m.serialize()?);
-            }
-            keys
-        } else {
-            return Err(anyhow!("Entity is not a struct"));
-        };
+    pub async fn delete_entity(&mut self, model: String, keys: Vec<FieldElement>) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let table = format!("{}", entity.name());
-        info!("Deleting entity: {}, table: {}", entity_id, table);
-        self.query_queue.enqueue(
-            "DELETE FROM ? WHERE entity_id = ?",
-            vec![Argument::String(table), Argument::String(entity_id)],
-        );
-        self.query_queue.execute_all().await.unwrap();
+        let statement = format!("DELETE FROM [{model}] WHERE entity_id = ?");
+        self.query_queue.enqueue(statement, vec![Argument::String(entity_id)]);
+        self.query_queue.execute_all().await?;
         Ok(())
     }
 
