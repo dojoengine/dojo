@@ -1,9 +1,12 @@
+use std::any::Any;
 use std::future::Future;
+use std::panic::{self, AssertUnwindSafe};
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::Poll;
 
 use futures::channel::oneshot;
-use rayon::ThreadPoolBuilder;
+use rayon::{ThreadPoolBuildError, ThreadPoolBuilder};
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
@@ -14,6 +17,8 @@ pub struct TaskSpawnerInitError(tokio::runtime::TryCurrentError);
 
 /// A task spawner for spawning tasks on a tokio runtime. This is simple wrapper around a tokio's
 /// runtime [Handle] to easily spawn tasks on the runtime.
+///
+/// For running expensive CPU-bound tasks, use [BlockingTaskPool] instead.
 #[derive(Clone)]
 pub struct TokioTaskSpawner {
     /// Handle to the tokio runtime.
@@ -54,12 +59,15 @@ impl TokioTaskSpawner {
     }
 }
 
+type BlockingTaskResult<T> = Result<T, Box<dyn Any + Send>>;
+
 #[derive(Debug)]
 #[must_use = "BlockingTaskHandle does nothing unless polled"]
-pub struct BlockingTaskHandle<T>(oneshot::Receiver<T>);
+pub struct BlockingTaskHandle<T>(oneshot::Receiver<BlockingTaskResult<T>>);
 
 impl<T> Future for BlockingTaskHandle<T> {
-    type Output = T;
+    type Output = BlockingTaskResult<T>;
+
     fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
         match Pin::new(&mut self.get_mut().0).poll(cx) {
             Poll::Ready(Ok(res)) => Poll::Ready(res),
@@ -69,30 +77,34 @@ impl<T> Future for BlockingTaskHandle<T> {
     }
 }
 
-/// For expensive CPU-bound computations. For spawing blocking IO-bound tasks, use
-/// [TokioTaskSpawner::spawn_blocking].
+/// This is mainly for expensive CPU-bound tasks. For spawing blocking IO-bound tasks, use
+/// [TokioTaskSpawner::spawn_blocking] instead.
+#[derive(Debug, Clone)]
 pub struct BlockingTaskPool {
-    pool: rayon::ThreadPool,
+    pool: Arc<rayon::ThreadPool>,
 }
 
 impl BlockingTaskPool {
-    pub fn new() -> Self {
-        Self { pool: Self::build().build().unwrap() }
-    }
-
     pub fn build() -> ThreadPoolBuilder {
         ThreadPoolBuilder::new().thread_name(|i| format!("blocking-thread-pool-{i}"))
     }
 
-    pub fn spawn<F, T>(&self, func: F) -> BlockingTaskHandle<T>
+    pub fn new() -> Result<Self, ThreadPoolBuildError> {
+        Self::build().build().map(|pool| Self { pool: Arc::new(pool) })
+    }
+
+    pub fn new_with_pool(rayon_pool: rayon::ThreadPool) -> Self {
+        Self { pool: Arc::new(rayon_pool) }
+    }
+
+    pub fn spawn<F, R>(&self, func: F) -> BlockingTaskHandle<R>
     where
-        F: FnOnce() -> T + Send + 'static,
-        T: Send + 'static,
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
     {
-        let (tx, rx) = oneshot::channel::<T>();
+        let (tx, rx) = oneshot::channel();
         self.pool.spawn(move || {
-            let res = func();
-            let _ = tx.send(res);
+            let _ = tx.send(panic::catch_unwind(AssertUnwindSafe(func)));
         });
         BlockingTaskHandle(rx)
     }

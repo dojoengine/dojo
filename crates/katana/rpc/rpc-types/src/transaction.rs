@@ -79,11 +79,9 @@ impl BroadcastedDeclareTx {
             }
 
             BroadcastedDeclareTransaction::V2(tx) => {
-                println!("hi");
                 // TODO: avoid computing the class hash again
                 let (class_hash, _, compiled_class) =
                     flattened_sierra_to_compiled_class(&tx.contract_class)?;
-                println!("hi 1");
 
                 Ok(DeclareTxWithClass {
                     compiled_class,
