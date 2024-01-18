@@ -15,9 +15,6 @@ mod executor {
 
     use super::IExecutor;
 
-    const EXECUTE_ENTRYPOINT: felt252 =
-        0x0240060cdb34fcc260f41eac7474ee1d7c80b7e3607daff9ac67c7ea2ebb1c44;
-
     #[storage]
     struct Storage {}
 
