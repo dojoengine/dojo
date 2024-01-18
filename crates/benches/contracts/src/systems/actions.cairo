@@ -36,6 +36,7 @@ trait IActions<TContractState> {
     fn bench_complex_get_minimal(self: @TContractState) -> u32;
     fn bench_complex_check(self: @TContractState, ability: felt252, threshold: u8) -> bool;
 
+    fn is_prime(self: @TContractState, n: felt252) -> bool;
 }
 
 // dojo decorator
@@ -359,6 +360,19 @@ mod actions {
             };
             
             points >= threshold
+        }
+
+        fn is_prime(self: @ContractState, n: felt252) -> bool {
+            let n: u256 = n.into();
+            let mut i = 2;
+            loop {
+                if i * i > n {
+                    break true;
+                } else if n % i == 0 {
+                    break false;
+                }
+                i += 1;
+            }
         }
     }
 }
