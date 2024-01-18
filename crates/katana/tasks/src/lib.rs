@@ -86,10 +86,11 @@ impl<T> Future for BlockingTaskHandle<T> {
 /// thread-pool. This is mainly for executing expensive CPU-bound tasks. For spawing blocking
 /// IO-bound tasks, use [TokioTaskSpawner::spawn_blocking] instead.
 ///
-/// Refer to the [CPU-bound tasks and blocking code] section of the *tokio* docs for more
-/// information.
+/// Refer to the [CPU-bound tasks and blocking code] section of the *tokio* docs and this [blog
+/// post] for more information.
 ///
 /// [CPU-bound tasks and blocking code]: https://docs.rs/tokio/latest/tokio/index.html#cpu-bound-tasks-and-blocking-code
+/// [blog post]: https://ryhl.io/blog/async-what-is-blocking/
 #[derive(Debug, Clone)]
 pub struct BlockingTaskPool {
     pool: Arc<rayon::ThreadPool>,
