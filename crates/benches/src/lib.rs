@@ -1,6 +1,6 @@
 pub mod helpers;
-#[cfg(test)]
-pub mod katana_bench;
+pub mod spammer;
+pub mod summary;
 
 use anyhow::Result;
 use futures::executor::block_on;
