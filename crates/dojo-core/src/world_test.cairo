@@ -9,7 +9,10 @@ use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
 use dojo::executor::executor;
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait };
+use dojo::world::{
+    IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
+    IUpgradeableWorldDispatcherTrait, ResourceMetadata
+};
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
@@ -246,32 +249,51 @@ fn deploy_world() -> IWorldDispatcher {
 
 #[test]
 #[available_gas(60000000)]
-fn test_metadata_uri() {
-    // Deploy world contract
+fn test_set_metadata_world() {
     let world = deploy_world();
-    world.set_metadata_uri(0, array!['test_uri'].span());
-    let uri = world.metadata_uri(0);
 
-    assert(uri.len() == 1, 'Incorrect metadata uri len');
-    assert(uri[0] == @'test_uri', 'Incorrect metadata uri');
+    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: 'ipfs:world', };
 
-    world.set_metadata_uri(0, array!['new_uri', 'longer'].span());
+    world.set_metadata(metadata.clone());
 
-    let uri = world.metadata_uri(0);
-    assert(uri.len() == 2, 'Incorrect metadata uri len');
-    assert(uri[0] == @'new_uri', 'Incorrect metadata uri 1');
-    assert(uri[1] == @'longer', 'Incorrect metadata uri 2');
+    assert(world.metadata(0) == metadata, 'invalid metadata');
 }
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic]
-fn test_set_metadata_uri_reverts_for_not_owner() {
-    // Deploy world contract
+fn test_set_metadata_model_owner() {
+    let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
+
+    let bar_contract = IbarDispatcher {
+        contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
+    };
+
+    bar_contract.set_foo(1337, 1337);
+
+    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: 'ipfs:bob', };
+
+    // A system that has write access on a model should be able to update the metadata.
+    // This follows conventional ACL model.
+    starknet::testing::set_contract_address(bar_contract.contract_address);
+    world.set_metadata(metadata);
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('not writer', 'ENTRYPOINT_FAILED',))]
+fn test_set_metadata_same_model_rules() {
     let world = deploy_world();
 
-    starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
-    world.set_metadata_uri(0, array!['new_uri', 'longer'].span());
+    let metadata = ResourceMetadata { // World metadata.
+    resource_id: 0, metadata_uri: 'ipfs:bob', };
+
+    let bob = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_contract_address(bob);
+    starknet::testing::set_account_contract_address(bob);
+
+    // Bob access follow the conventional ACL, he can't write the world
+    // metadata if he does not have access.
+    world.set_metadata(metadata);
 }
 
 #[test]
@@ -502,10 +524,10 @@ mod worldupgrade {
     struct Storage {
         world: IWorldDispatcher,
     }
-    
+
     #[external(v0)]
     impl IWorldUpgradeImpl of super::IWorldUpgrade<ContractState> {
-        fn hello(self: @ContractState) -> felt252{
+        fn hello(self: @ContractState) -> felt252 {
             'dojo'
         }
     }
@@ -515,7 +537,6 @@ mod worldupgrade {
 #[test]
 #[available_gas(60000000)]
 fn test_upgradeable_world() {
-    
     // Deploy world contract
     let world = deploy_world();
 
@@ -524,18 +545,15 @@ fn test_upgradeable_world() {
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
 
-    let res = (IWorldUpgradeDispatcher {
-        contract_address: world.contract_address
-    }).hello();
+    let res = (IWorldUpgradeDispatcher { contract_address: world.contract_address }).hello();
 
     assert(res == 'dojo', 'should return dojo');
 }
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic(expected:('invalid class_hash', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('invalid class_hash', 'ENTRYPOINT_FAILED'))]
 fn test_upgradeable_world_with_class_hash_zero() {
-    
     // Deploy world contract
     let world = deploy_world();
 
@@ -549,9 +567,8 @@ fn test_upgradeable_world_with_class_hash_zero() {
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic( expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
 fn test_upgradeable_world_from_non_owner() {
-    
     // Deploy world contract
     let world = deploy_world();
 

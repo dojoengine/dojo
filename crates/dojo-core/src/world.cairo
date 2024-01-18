@@ -2,10 +2,19 @@ use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
 
+#[derive(Model, Drop, Serde, PartialEq, Clone)]
+struct ResourceMetadata {
+    #[key]
+    resource_id: felt252,
+    metadata_uri: felt252,
+}
+
+const RESOURCE_METADATA_MODEL: felt252 = 'ResourceMetadata';
+
 #[starknet::interface]
 trait IWorld<T> {
-    fn metadata_uri(self: @T, resource: felt252) -> Span<felt252>;
-    fn set_metadata_uri(ref self: T, resource: felt252, uri: Span<felt252>);
+    fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
+    fn set_metadata(ref self: T, metadata: ResourceMetadata);
     fn model(self: @T, name: felt252) -> ClassHash;
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
@@ -47,7 +56,7 @@ trait IWorld<T> {
 
 #[starknet::interface]
 trait IUpgradeableWorld<T> {
-    fn upgrade(ref self: T, new_class_hash : ClassHash);
+    fn upgrade(ref self: T, new_class_hash: ClassHash);
 }
 
 #[starknet::interface]
@@ -70,21 +79,25 @@ mod world {
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
-        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult, SyscallResultTrait,
-        SyscallResultTraitImpl
+        syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult,
+        SyscallResultTrait, SyscallResultTraitImpl
     };
 
     use dojo::database;
+    use dojo::database::introspect::Introspect;
     use dojo::database::index::WhereCondition;
-    use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
-    
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+    use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
+    use dojo::model::Model;
+    use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
+
+    use super::{ResourceMetadata, RESOURCE_METADATA_MODEL};
 
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
 
     const WORLD: felt252 = 0;
+    const RESOURCE_METADATA: felt252 = 1;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -112,7 +125,7 @@ mod world {
     struct WorldUpgraded {
         class_hash: ClassHash,
     }
-   
+
     #[derive(Drop, starknet::Event)]
     struct ContractDeployed {
         salt: felt252,
@@ -192,6 +205,19 @@ mod world {
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
 
+        // Register the resource metadata model, controlled only by the world's creator.
+        let resource_metadata = RESOURCE_METADATA.try_into().unwrap();
+        self.owners.write((RESOURCE_METADATA_MODEL, creator), true);
+        self.models.write(RESOURCE_METADATA_MODEL, resource_metadata);
+        EventEmitter::emit(
+            ref self,
+            ModelRegistered {
+                name: RESOURCE_METADATA_MODEL,
+                class_hash: resource_metadata,
+                prev_class_hash: 0.try_into().unwrap()
+            }
+        );
+
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
 
@@ -215,58 +241,45 @@ mod world {
 
     #[external(v0)]
     impl World of IWorld<ContractState> {
-        /// Returns the metadata URI of the world.
-        ///
-        /// # Returns
-        ///
-        /// * `Span<felt252>` - The metadata URI of the world.
-        fn metadata_uri(self: @ContractState, resource: felt252) -> Span<felt252> {
-            let mut uri = array![];
-
-            // We add one here since we start i at 1;
-            let len = self.metadata_uri.read(resource) + 1;
-
-            let mut i = resource + 1;
-            loop {
-                if len == i {
-                    break;
-                }
-
-                uri.append(self.metadata_uri.read(i));
-                i += 1;
-            };
-
-            uri.span()
-        }
-
-        /// Sets the metadata URI of the world.
+        /// Returns the metadata of the resource.
         ///
         /// # Arguments
         ///
-        /// * `uri` - The new metadata URI to be set.
-        fn set_metadata_uri(ref self: ContractState, resource: felt252, mut uri: Span<felt252>) {
-            assert(self.is_owner(get_caller_address(), resource), 'not owner');
+        /// `resource` - The resource id.
+        fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
+            let mut layout = array![];
+            Introspect::<ResourceMetadata>::layout(ref layout);
 
-            let len = uri.len();
+            let mut layout_span = layout.clone().span();
+            let length = dojo::packing::calculate_packed_size(ref layout_span);
 
-            // Max len to avoid overflowing into other resources
-            assert(len < 255, 'metadata too long');
+            let mut data = self
+                .entity(RESOURCE_METADATA_MODEL, array![resource_id].span(), 0, length, layout.span(),);
 
-            self.metadata_uri.write(resource, len.into());
+            let mut model = array![resource_id];
+            core::array::serialize_array_helper(data, ref model);
 
-            // Emit event before uri is consumed.
-            EventEmitter::emit(ref self, MetadataUpdate { resource, uri });
+            let mut model_span = model.span();
 
-            let mut i = resource + 1;
-            loop {
-                match uri.pop_front() {
-                    Option::Some(item) => {
-                        self.metadata_uri.write(i, *item);
-                        i += 1;
-                    },
-                    Option::None(_) => { break; }
-                };
-            };
+            Serde::<ResourceMetadata>::deserialize(ref model_span).expect('metadata deser error')
+        }
+
+        /// Sets the metadata of the resource.
+        ///
+        /// # Arguments
+        ///
+        /// `metadata` - The metadata content for this resource.
+        fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
+            assert_can_write(@self, metadata.resource_id, get_caller_address());
+
+            self
+                .set_entity(
+                    Model::<ResourceMetadata>::name(@metadata),
+                    Model::<ResourceMetadata>::keys(@metadata),
+                    0,
+                    Model::<ResourceMetadata>::values(@metadata),
+                    Model::<ResourceMetadata>::layout(@metadata),
+                );
         }
 
         /// Checks if the provided account is an owner of the resource.
@@ -641,17 +654,18 @@ mod world {
         /// # Arguments
         ///
         /// * `new_class_hash` - The new world class hash.
-        fn upgrade(ref self: ContractState, new_class_hash : ClassHash){
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
-            assert(IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD), 'only owner can upgrade');
+            assert(
+                IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD),
+                'only owner can upgrade'
+            );
 
             // upgrade to new_class_hash
             replace_class_syscall(new_class_hash).unwrap();
 
             // emit Upgrade Event
-            EventEmitter::emit(
-                ref self, WorldUpgraded {class_hash: new_class_hash }
-            );
+            EventEmitter::emit(ref self, WorldUpgraded { class_hash: new_class_hash });
         }
     }
 
