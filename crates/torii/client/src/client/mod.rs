@@ -53,6 +53,8 @@ impl Client {
         models_keys: Option<Vec<KeysClause>>,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
+        let mut libp2p_client = torii_libp2p::client::RelayClient::new("/ip6/::1/tcp/1010".parse().unwrap()).expect("Failed to create libp2p client");
+        libp2p_client.run().await;
 
         let metadata = grpc_client.metadata().await?;
 

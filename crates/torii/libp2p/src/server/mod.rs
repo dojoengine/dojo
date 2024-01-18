@@ -2,7 +2,7 @@ use futures::{stream::StreamExt, Future};
 use libp2p::{
     core::multiaddr::Protocol,
     core::Multiaddr,
-    gossipsub, identify, identity, noise, ping, relay,
+    gossipsub::{self, IdentTopic}, identify, identity, noise, ping, relay,
     swarm::{NetworkBehaviour, SwarmEvent},
     tcp, yamux, PeerId, Swarm,
 };
@@ -85,6 +85,8 @@ impl RelayServer {
             .with(Protocol::QuicV1);
         swarm.listen_on(listen_addr_quic)?;
 
+        swarm.behaviour_mut().gossipsub.subscribe(&IdentTopic::new("mimi")).unwrap();
+
         let mut server = Self {
             swarm,
             rooms: HashMap::new(),
@@ -108,12 +110,13 @@ impl RelayServer {
                         }) => {
                                 let room_name = message.topic.clone();
                                 println!("Received message in room {room_name}: {:?}", String::from_utf8_lossy(&message.data));
-                                self.swarm.behaviour_mut().gossipsub.publish(room_name, message.data.clone()).expect("Publishing should work");
+                                // self.swarm.behaviour_mut().gossipsub.publish(room_name, message.data.clone()).expect("Publishing should work");
                         }
                         ServerEvent::Identify(identify::Event::Received {
                             info: identify::Info { observed_addr, .. },
-                            ..
+                            peer_id,
                         }) => {
+                            println!("Received identify event from {peer_id:?} with observed address {observed_addr:?}", peer_id = peer_id, observed_addr = observed_addr);
                             self.swarm.add_external_address(observed_addr.clone());
                         }
                         _ => {}

@@ -20,6 +20,7 @@ starknet.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = false }
 torii-grpc = { path = "../grpc", features = [ "client" ] }
+torii-libp2p = { path = "../libp2p" }
 url.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

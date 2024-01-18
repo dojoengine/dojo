@@ -1,13 +1,8 @@
 use futures::StreamExt;
 use libp2p::{
-    identity,
-    core::{multiaddr::Protocol},
-    gossipsub::{self, IdentTopic, MessageAuthenticity},
-    noise,
-    swarm::{NetworkBehaviour, Swarm, SwarmEvent},
-    tcp, yamux, PeerId,
+    gossipsub::{self, IdentTopic, MessageId, PublishError, SubscriptionError, TopicHash}, identify, identity, noise, ping, relay, swarm::{NetworkBehaviour, Swarm, SwarmEvent}, tcp, yamux, Multiaddr, PeerId
 };
-use std::{collections::HashMap, error::Error};
+use std::error::Error;
 
 mod events;
 use crate::client::events::ClientEvent;
@@ -16,7 +11,8 @@ use crate::client::events::ClientEvent;
 #[behaviour(out_event = "ClientEvent")]
 pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
-    // Add other behaviours if needed
+    identify: identify::Behaviour,
+    ping: ping::Behaviour,
 }
 
 pub struct RelayClient {
@@ -24,7 +20,7 @@ pub struct RelayClient {
 }
 
 impl RelayClient {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new(relay_addr: Multiaddr) -> Result<Self, Box<dyn Error>> {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
@@ -42,10 +38,17 @@ impl RelayClient {
                         gossipsub::MessageAuthenticity::Signed(key.clone()),
                         gossipsub_config,
                     )
-                    .expect("Valid gossipsub behaviour")
+                    .expect("Valid gossipsub behaviour"),
+                    identify: identify::Behaviour::new(identify::Config::new(
+                        "/torii-client/0.0.1".to_string(),
+                        key.public(),
+                    )),
+                    ping: ping::Behaviour::new(ping::Config::default()),
                 }
             })?
             .build();
+
+        swarm.dial(relay_addr)?;
 
         Ok(Self { swarm })
     }
@@ -53,8 +56,14 @@ impl RelayClient {
     pub async fn run(&mut self) {
         while let Some(event) = self.swarm.next().await {
             match event {
+                SwarmEvent::Behaviour(ClientEvent::Identify(event)) => {
+                    println!("Identify event: {:?}", event);
+                }
+                SwarmEvent::Behaviour(ClientEvent::Ping(event)) => {
+                    println!("Ping event: {:?}", event);
+                }
                 SwarmEvent::Behaviour(ClientEvent::Gossipsub(message)) => {
-                    // checxk if event type Message
+                    // check if event type Message
                     match message {
                         gossipsub::Event::Message { propagation_source, message_id, message } => {
                             println!("Received: {:?}", String::from_utf8_lossy(&message.data));
@@ -67,15 +76,21 @@ impl RelayClient {
         }
     }
 
-    pub fn join_room(&mut self, topic: IdentTopic) {
-        self.swarm.behaviour_mut().gossipsub.subscribe(&topic).unwrap();
+    pub fn topics(&self) -> Vec<&TopicHash> {
+        self.swarm.behaviour().gossipsub.topics().collect()
     }
 
-    pub fn leave_room(&mut self, topic: IdentTopic) {
-        self.swarm.behaviour_mut().gossipsub.unsubscribe(&topic).unwrap();
+
+
+    pub fn subscribe(&mut self, room: &str) -> Result<bool, SubscriptionError> {
+        self.swarm.behaviour_mut().gossipsub.subscribe(&IdentTopic::new(room))
     }
 
-    pub fn send_message(&mut self, topic: IdentTopic, message: &str) {
-        self.swarm.behaviour_mut().gossipsub.publish(topic, message.as_bytes()).unwrap();
+    pub fn unsubscribe(&mut self, room: &str) -> Result<bool, PublishError> {
+        self.swarm.behaviour_mut().gossipsub.unsubscribe(&IdentTopic::new(room))
+    }
+
+    pub fn publish(&mut self, room: &str, message: &str) -> Result<MessageId, PublishError> {
+        self.swarm.behaviour_mut().gossipsub.publish(IdentTopic::new(room), message.as_bytes())
     }
 }
