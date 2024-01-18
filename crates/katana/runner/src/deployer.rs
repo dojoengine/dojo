@@ -1,11 +1,12 @@
 use anyhow::{Context, Ok, Result};
+use starknet::core::types::FieldElement;
 use tokio::process::Command;
 
 use crate::KatanaRunner;
 
 impl KatanaRunner {
     /// Known issue - rpc set in Scarb.toml overrides command line argument
-    pub async fn deploy(&self, manifest: &str, script: &str) -> Result<()> {
+    pub async fn deploy(&self, manifest: &str, script: &str) -> Result<FieldElement> {
         let rpc_url = &format!("http://localhost:{}", self.port);
 
         let out = Command::new("sozo")
@@ -20,6 +21,19 @@ impl KatanaRunner {
             return Err(anyhow::anyhow!("deploy failed {:?}", out));
         }
 
+        let constract_address = String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .rev()
+            .find(|l| l.contains("> Contract address:"))
+            .expect("failed to find contract address")
+            .split_whitespace()
+            .last()
+            .expect("failed to get contract address")
+            .to_owned();
+
+        let constract_address = FieldElement::from_hex_be(&constract_address)
+            .expect("failed to parse contract address");
+
         let out = Command::new("bash")
             .arg(script)
             .env("RPC_URL", rpc_url)
@@ -31,6 +45,6 @@ impl KatanaRunner {
             return Err(anyhow::anyhow!("script failed {:?}", out));
         }
 
-        Ok(())
+        Ok(constract_address)
     }
 }

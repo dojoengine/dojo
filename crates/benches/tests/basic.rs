@@ -13,7 +13,7 @@ proptest! {
 
         let fee = estimate_gas(
            &runner.account(0),
-            BenchCall("bench_basic_emit", vec![s_hex])
+            BenchCall("bench_basic_emit", vec![s_hex]), contract_address
         ).unwrap();
 
         log("bench_basic_emit", fee, &s);
@@ -26,7 +26,7 @@ proptest! {
         let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
         let fee = estimate_gas(&runner.account(0),
-            BenchCall("bench_basic_set", vec![s_hex])
+            BenchCall("bench_basic_set", vec![s_hex]), contract_address
         ).unwrap();
 
         log("bench_basic_set", fee, &s);
@@ -39,7 +39,7 @@ proptest! {
         let s_hex = FieldElement::from_hex_be(&format!("0x{}", s.as_bytes().encode_hex::<String>())).unwrap();
 
         let fee = estimate_gas(&runner.account(0),
-            BenchCall("bench_basic_double_set", vec![s_hex])
+            BenchCall("bench_basic_double_set", vec![s_hex]), contract_address
         ).unwrap();
 
         log("bench_basic_double_set", fee, &s);
@@ -53,7 +53,7 @@ proptest! {
         let fee = estimate_gas_last(&runner.account(0), vec![
             BenchCall("bench_basic_set", vec![s_hex]),
             BenchCall("bench_basic_get", vec![])
-        ]).unwrap();
+        ], contract_address).unwrap();
 
         log("bench_basic_get", fee, &s);
     }

@@ -4,11 +4,13 @@ use proptest::prelude::*;
 use starknet::core::types::FieldElement;
 
 #[katana_runner::katana_test]
-fn bench_complex_set_default() {
-    runner!(bench_complex_set_default);
-
-    let fee =
-        estimate_gas(&runner.account(0), BenchCall("bench_complex_set_default", vec![])).unwrap();
+async fn bench_complex_set_default() {
+    let fee = estimate_gas(
+        &runner.account(0),
+        BenchCall("bench_complex_set_default", vec![]),
+        &contract_address,
+    )
+    .unwrap();
 
     log("bench_complex_set_default", fee, "");
 }
@@ -24,7 +26,7 @@ proptest! {
             .collect();
 
         let fee = estimate_gas(&runner.account(0),
-            BenchCall("bench_complex_set_with_smaller", points)
+            BenchCall("bench_complex_set_with_smaller", points), contract_address
         ).unwrap();
 
         log("bench_complex_set_with_smaller", fee, &s);
@@ -38,7 +40,7 @@ proptest! {
         let fee = estimate_gas_last(&runner.account(0), vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata])
-        ]).unwrap();
+        ], contract_address).unwrap();
 
         log("bench_complex_update_minimal", fee, &s);
     }
@@ -51,7 +53,7 @@ proptest! {
         let fee = estimate_gas_last(&runner.account(0), vec![
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal_nested", vec![calldata])
-        ]).unwrap();
+        ], contract_address).unwrap();
 
         log("bench_complex_update_minimal_nested", fee, &(w as u32).to_string());
     }
@@ -67,7 +69,7 @@ proptest! {
         let fee = estimate_gas_last(&runner.account(0), vec![
             BenchCall("bench_complex_set_with_smaller", calldata),
             BenchCall("bench_complex_get", vec![])
-        ]).unwrap();
+        ], contract_address).unwrap();
 
         log("bench_complex_get", fee, &s);
     }
@@ -81,7 +83,7 @@ proptest! {
             BenchCall("bench_complex_set_default", vec![]),
             BenchCall("bench_complex_update_minimal", vec![calldata]),
             BenchCall("bench_complex_get_minimal", vec![])
-        ]).unwrap();
+        ], contract_address).unwrap();
 
         log("bench_complex_get_minimal", fee, &s);
     }
@@ -101,7 +103,7 @@ proptest! {
         let fee = estimate_gas_last(&runner.account(0), vec![
             BenchCall("bench_complex_set_with_smaller", abilities),
             BenchCall("bench_complex_check", vec![ability, threshold])
-        ]).unwrap();
+        ], contract_address).unwrap();
 
         log("bench_complex_check", fee, &format!("{}, {}, {}", s, a, t));
 

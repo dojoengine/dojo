@@ -10,8 +10,6 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
 use tokio::sync::OnceCell;
 
-use crate::CONTRACT;
-
 pub type OwnerAccount = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
 pub struct BenchCall(pub &'static str, pub Vec<FieldElement>);
 
@@ -35,11 +33,11 @@ pub fn log(name: &str, gas: u64, calldata: &str) {
     file.flush().unwrap();
 }
 
-pub fn parse_calls(entrypoints_and_calldata: Vec<BenchCall>) -> Vec<Call> {
-    entrypoints_and_calldata
+pub fn parse_calls(calls: Vec<BenchCall>, to: &FieldElement) -> Vec<Call> {
+    calls
         .into_iter()
         .map(|BenchCall(name, calldata)| Call {
-            to: *CONTRACT,
+            to: *to,
             selector: get_selector_from_name(name).context("Failed to get selector").unwrap(),
             calldata,
         })

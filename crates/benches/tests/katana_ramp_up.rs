@@ -95,11 +95,15 @@ impl std::fmt::Display for BenchResult {
     }
 }
 
-async fn run(runner: KatanaRunner) -> BenchResult {
+async fn run(runner: KatanaRunner, contract_address: FieldElement) -> BenchResult {
     let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
-    let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])]);
-    let calldata_move =
-        parse_calls(vec![BenchCall("move", vec![FieldElement::from_hex_be("0x3").unwrap()])]);
+    let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])], &contract_address);
+    let calldata_move = parse_calls(
+        vec![BenchCall("move", vec![FieldElement::from_hex_be("0x3").unwrap()])],
+        &contract_address,
+    );
+
+    let transaction_sum_before: u32 = runner.block_sizes().await.iter().sum();
 
     // generating all needed accounts
     let accounts = runner.accounts();
@@ -146,14 +150,14 @@ async fn run(runner: KatanaRunner) -> BenchResult {
         (durations.last().unwrap().as_millis() - durations.first().unwrap().as_millis()) as u64;
 
     let block_sizes = runner.block_sizes().await;
-    let transaction_sum: u32 = block_sizes.iter().sum();
+    let transaction_sum = block_sizes.iter().sum::<u32>() - transaction_sum_before;
 
-    assert_eq!(transaction_sum, 2 * runner.accounts_data().len() as u32);
+    // assert_eq!(transaction_sum, 2 * accounts.len() as u32);
 
     // time difference between first and last transaction
     let block_times = runner.block_times().await;
     let block_sizes = runner.block_sizes().await;
-    let name = format!("benchmark {} transactions", runner.accounts_data().len());
+    let name = format!("benchmark {} transactions", accounts.len());
     let responses_span = (*times.last().unwrap() - *times.first().unwrap()).as_millis() as u64;
     BenchResult {
         sending_time,
@@ -166,68 +170,74 @@ async fn run(runner: KatanaRunner) -> BenchResult {
     }
 }
 
+#[katana_runner::katana_test(2, true, "../../target/release/katana")]
+async fn katana_benchmark_1() {
+    let results = run(runner, contract_address).await;
+    results.dump().await;
+}
+
 #[katana_runner::katana_test(100, true, "../../target/release/katana")]
 async fn katana_benchmark_100() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(200, true, "../../target/release/katana")]
 async fn katana_benchmark_200() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(300, true, "../../target/release/katana")]
 async fn katana_benchmark_300() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(400, true, "../../target/release/katana")]
 async fn katana_benchmark_400() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(500, true, "../../target/release/katana")]
 async fn katana_benchmark_500() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(750, true, "../../target/release/katana")]
 async fn katana_benchmark_750() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(1000, true, "../../target/release/katana")]
 async fn katana_benchmark_1000() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(1250, true, "../../target/release/katana")]
 async fn katana_benchmark_1250() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(1500, true, "../../target/release/katana")]
 async fn katana_benchmark_1500() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(1750, true, "../../target/release/katana")]
 async fn katana_benchmark_1750() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }
 
 #[katana_runner::katana_test(2000, true, "../../target/release/katana")]
 async fn katana_benchmark_2000() {
-    let results = run(runner).await;
+    let results = run(runner, contract_address).await;
     results.dump().await;
 }

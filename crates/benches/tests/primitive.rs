@@ -15,7 +15,7 @@ proptest! {
         }).collect::<Vec<_>>();
 
         let fee = estimate_gas(&runner.account(0),
-            BenchCall("bench_primitive_pass_many", args)
+            BenchCall("bench_primitive_pass_many", args), contract_address
         ).unwrap();
 
         log("bench_primitive_pass_many", fee, &s);
@@ -29,7 +29,7 @@ proptest! {
         let s_hex = FieldElement::from_dec_str(&s).unwrap();
 
         let fee = estimate_gas(&runner.account(0),
-            BenchCall("bench_primitive_iter", vec![s_hex])
+            BenchCall("bench_primitive_iter", vec![s_hex]), contract_address
         ).unwrap();
 
         log("bench_primitive_iter", fee, &s);
@@ -45,7 +45,7 @@ proptest! {
         let args = vec![a.clone(), b.clone(), c.clone()].into_iter().map(|d| FieldElement::from_dec_str(&d).unwrap()).collect::<Vec<_>>();
 
         let fee = estimate_gas(&runner.account(0),
-            BenchCall("bench_primitive_hash", args)
+            BenchCall("bench_primitive_hash", args), contract_address
         ).unwrap();
 
         log("bench_primitive_hash", fee, &format!("{},{},{}", a, b, c));

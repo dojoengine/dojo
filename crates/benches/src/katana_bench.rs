@@ -18,7 +18,10 @@ async fn bench_katana_small() {
     runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
 
     prefunded
-        .execute(parse_calls(vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())]))
+        .execute(parse_calls(
+            vec![BenchCall("spawn", vec![]), BenchCall("move", args.clone())],
+            &contract_address,
+        ))
         .nonce(prefunded.get_nonce().await.unwrap())
         .send()
         .await
@@ -29,9 +32,11 @@ async fn bench_katana_small() {
 #[katana_runner::katana_test(2000, true, "../../target/release/katana")]
 async fn bench_katana() {
     let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
-    let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])]);
-    let calldata_move =
-        parse_calls(vec![BenchCall("move", vec![FieldElement::from_hex_be("0x3").unwrap()])]);
+    let calldata_spawn = parse_calls(vec![BenchCall("spawn", vec![])], &contract_address);
+    let calldata_move = parse_calls(
+        vec![BenchCall("move", vec![FieldElement::from_hex_be("0x3").unwrap()])],
+        &contract_address,
+    );
 
     // generating all needed accounts
     let accounts = runner.accounts();

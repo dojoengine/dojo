@@ -30,7 +30,12 @@ pub fn katana_test(metadata: TokenStream, input: TokenStream) -> TokenStream {
             katana_runner::KatanaRunner::new_with_args(#executable, #function_name, #n_accounts, #with_blocks)
                 .expect("failed to start katana");
     };
+    let header_deploy: Stmt = parse_quote! {
+        let contract_address = runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await
+            .expect("Failed to deploy");
+    };
 
+    test_function.block.stmts.insert(0, header_deploy);
     test_function.block.stmts.insert(0, header);
 
     if test_function.sig.asyncness.is_none() {
@@ -54,8 +59,8 @@ pub fn runner(metadata: TokenStream) -> TokenStream {
 
     let (n_accounts, executable, with_blocks) = parse_metadata(args.join(","));
     TokenStream::from(quote! {
-            static RUNNER: tokio::sync::OnceCell<katana_runner::KatanaRunner> = tokio::sync::OnceCell::const_new();
-            let runner = {
+            static RUNNER: tokio::sync::OnceCell<(katana_runner::KatanaRunner, starknet::core::types::FieldElement)> = tokio::sync::OnceCell::const_new();
+            let (runner, contract_address) = {
                 let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
                 let _rt = runtime.enter();
 
@@ -66,19 +71,17 @@ pub fn runner(metadata: TokenStream) -> TokenStream {
                             katana_runner::KatanaRunner::new_with_args(#executable, #function_name, #n_accounts, #with_blocks)
                                 .expect("failed to start katana");
 
-                        println!("heree ");
-
-                        if std::path::Path::new("contracts/Scarb.toml").exists() {
+                        let contract = if std::path::Path::new("contracts/Scarb.toml").exists() {
                             runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await
-                                .expect("Failed to deploy");
+                                .expect("Failed to deploy")
                         } else if std::path::Path::new("../contracts/Scarb.toml").exists() {
                             runner.deploy("../contracts/Scarb.toml", "../contracts/scripts/auth.sh").await
-                                .expect("Failed to deploy");
+                                .expect("Failed to deploy")
                         } else {
                             panic!("Contract not found");
-                        }
+                        };
 
-                        runner
+                        (runner, contract)
                     })
                 )
             };
