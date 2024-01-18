@@ -2699,6 +2699,7 @@ dependencies = [
  "indoc 1.0.9",
  "itertools 0.10.5",
  "lazy_static",
+ "num-traits 0.2.17",
  "once_cell",
  "pretty_assertions",
  "salsa",
@@ -2827,7 +2828,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.1.0"
+version = "0.4.4"
 dependencies = [
  "cairo-lang-starknet",
  "camino",

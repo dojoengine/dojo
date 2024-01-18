@@ -50,6 +50,24 @@ struct GenericStruct<T> {
     t: T,
 }
 
+#[derive(Copy, Drop, Serde, Introspect)]
+struct FeltsArray<T> {
+    #[capacity(10)]
+    felts: Array<felt252>,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct CapacityInvalidType<T> {
+    #[capacity(10)]
+    value: Position,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct FeltsArrayBadCapacity<T> {
+    #[capacity(0)]
+    felts: Array<felt252>,
+}
+
 //! > expanded_cairo_code
 use core::serde::Serde;
 
@@ -95,6 +113,24 @@ struct Position {
 #[derive(Copy, Drop, Serde, Introspect)]
 struct GenericStruct<T> {
     t: T,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct FeltsArray<T> {
+    #[capacity(10)]
+    felts: Array<felt252>,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct CapacityInvalidType<T> {
+    #[capacity(10)]
+    value: Position,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
+struct FeltsArrayBadCapacity<T> {
+    #[capacity(0)]
+    felts: Array<felt252>,
 }
 impl Vec2Copy of core::traits::Copy::<Vec2>;
 impl Vec2Drop of core::traits::Drop::<Vec2>;
@@ -445,5 +481,148 @@ impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::In
         })
     }
 }
+impl FeltsArrayCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<FeltsArray<T>>;
+impl FeltsArrayDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<FeltsArray<T>>;
+impl FeltsArraySerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<FeltsArray<T>> {
+    fn serialize(self: @FeltsArray<T>, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.felts, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<FeltsArray<T>> {
+        core::option::Option::Some(FeltsArray {
+            felts: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+impl FeltsArrayIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<FeltsArray<T>> {
+    #[inline(always)]
+    fn size() -> usize {
+        1 + 10 + 0
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'FeltsArray',
+            attrs: array![].span(),
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'felts',
+                ty: dojo::database::introspect::Ty::Array(10),
+                attrs: array![].span()
+            })].span()
+        })
+    }
+}
+impl CapacityInvalidTypeCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<CapacityInvalidType<T>>;
+impl CapacityInvalidTypeDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<CapacityInvalidType<T>>;
+impl CapacityInvalidTypeSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<CapacityInvalidType<T>> {
+    fn serialize(self: @CapacityInvalidType<T>, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.value, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<CapacityInvalidType<T>> {
+        core::option::Option::Some(CapacityInvalidType {
+            value: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+impl CapacityInvalidTypeIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<CapacityInvalidType<T>> {
+    #[inline(always)]
+    fn size() -> usize {
+        1 + 10 + 0
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+layout.append(251);
+
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'CapacityInvalidType',
+            attrs: array![].span(),
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'value',
+                ty: dojo::database::introspect::Ty::Array(10),
+                attrs: array![].span()
+            })].span()
+        })
+    }
+}
+impl FeltsArrayBadCapacityCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<FeltsArrayBadCapacity<T>>;
+impl FeltsArrayBadCapacityDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<FeltsArrayBadCapacity<T>>;
+impl FeltsArrayBadCapacitySerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<FeltsArrayBadCapacity<T>> {
+    fn serialize(self: @FeltsArrayBadCapacity<T>, ref output: core::array::Array<felt252>) {
+        core::serde::Serde::serialize(self.felts, ref output)
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<FeltsArrayBadCapacity<T>> {
+        core::option::Option::Some(FeltsArrayBadCapacity {
+            felts: core::serde::Serde::deserialize(ref serialized)?,
+        })
+    }
+}
+
+impl FeltsArrayBadCapacityIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<FeltsArrayBadCapacity<T>> {
+    #[inline(always)]
+    fn size() -> usize {
+        1 + 0 + 0
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(251);
+
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'FeltsArrayBadCapacity',
+            attrs: array![].span(),
+            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+                name: 'felts',
+                ty: dojo::database::introspect::Ty::Array(0),
+                attrs: array![].span()
+            })].span()
+        })
+    }
+}
 
 //! > expected_diagnostics
+error: Capacity is only supported for Array<felt252> or Span<felt252>.
+ --> test_src/lib.cairo:55:5
+    #[capacity(10)]
+    ^*************^
+
+error: Capacity must be greater than 0.
+ --> test_src/lib.cairo:61:5
+    #[capacity(0)]
+    ^************^

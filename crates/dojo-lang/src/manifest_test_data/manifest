@@ -8,12 +8,26 @@ test_manifest_file
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
+    "class_hash": "0x46a3bd47d22e65e60b86ff5b38aebddfcacf46fdfc31d2a998797db05ccba1",
     "abi": [
       {
         "type": "impl",
         "name": "World",
         "interface_name": "dojo::world::IWorld"
+      },
+      {
+        "type": "struct",
+        "name": "dojo::world::ResourceMetadata",
+        "members": [
+          {
+            "name": "resource_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "metadata_uri",
+            "type": "core::felt252"
+          }
+        ]
       },
       {
         "type": "struct",
@@ -79,31 +93,27 @@ test_manifest_file
         "items": [
           {
             "type": "function",
-            "name": "metadata_uri",
+            "name": "metadata",
             "inputs": [
               {
-                "name": "resource",
+                "name": "resource_id",
                 "type": "core::felt252"
               }
             ],
             "outputs": [
               {
-                "type": "core::array::Span::<core::felt252>"
+                "type": "dojo::world::ResourceMetadata"
               }
             ],
             "state_mutability": "view"
           },
           {
             "type": "function",
-            "name": "set_metadata_uri",
+            "name": "set_metadata",
             "inputs": [
               {
-                "name": "resource",
-                "type": "core::felt252"
-              },
-              {
-                "name": "uri",
-                "type": "core::array::Span::<core::felt252>"
+                "name": "metadata",
+                "type": "dojo::world::ResourceMetadata"
               }
             ],
             "outputs": [],
@@ -953,6 +963,179 @@ test_manifest_file
   },
   "contracts": [
     {
+      "name": "dojo::world::resource_metadata",
+      "address": null,
+      "class_hash": "0x55c0249bb763a9ed653ed4c0df283c695231745efdb523fa269555b3f9e0b00",
+      "abi": [
+        {
+          "type": "function",
+          "name": "name",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::felt252"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "unpacked_size",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "packed_size",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "layout",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::integer::u8>"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Struct",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Enum",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo::database::introspect::Ty",
+          "variants": [
+            {
+              "name": "Primitive",
+              "type": "core::felt252"
+            },
+            {
+              "name": "Struct",
+              "type": "dojo::database::introspect::Struct"
+            },
+            {
+              "name": "Enum",
+              "type": "dojo::database::introspect::Enum"
+            },
+            {
+              "name": "Tuple",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            },
+            {
+              "name": "Array",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "schema",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "dojo::database::introspect::Ty"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "event",
+          "name": "dojo::world::resource_metadata::Event",
+          "kind": "enum",
+          "variants": []
+        }
+      ],
+      "reads": [],
+      "writes": [],
+      "computed": []
+    },
+    {
       "name": "dojo_examples::actions::actions",
       "address": null,
       "class_hash": "0x69c6bec7de74fc2404fe6b68ad8ece7be81ad6d861b38a8ba8fa583bfc3666b",
@@ -1205,7 +1388,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::moves",
       "address": null,
-      "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
+      "class_hash": "0x3e31858be112ccfd6caf9b7af8009f5d565563bce7e989ab2d572dcfd41b71f",
       "abi": [
         {
           "type": "function",
@@ -1346,6 +1529,10 @@ test_manifest_file
             {
               "name": "Tuple",
               "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            },
+            {
+              "name": "Array",
+              "type": "core::integer::u32"
             }
           ]
         },
@@ -1374,7 +1561,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::position",
       "address": null,
-      "class_hash": "0x4cd20d231b04405a77b184c115dc60637e186504fad7f0929bd76cbd09c10b",
+      "class_hash": "0x1c42c05a25232a5be08bb2db065c97dfc8021f65428bd911fa0770f64e09c2b",
       "abi": [
         {
           "type": "function",
@@ -1515,6 +1702,10 @@ test_manifest_file
             {
               "name": "Tuple",
               "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            },
+            {
+              "name": "Array",
+              "type": "core::integer::u32"
             }
           ]
         },

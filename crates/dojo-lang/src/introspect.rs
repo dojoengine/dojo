@@ -2,15 +2,22 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_syntax::attribute::structured::{
+    Attribute, AttributeArg, AttributeArgVariant, AttributeListStructurize,
+};
 use cairo_lang_syntax::node::ast::{
-    Expr, GenericParam, ItemEnum, ItemStruct, OptionTypeClause, OptionWrappedGenericParamList,
+    self, Expr, GenericParam, ItemEnum, ItemStruct, OptionTypeClause, OptionWrappedGenericParamList,
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
+use cairo_lang_utils::OptionHelper;
 use dojo_world::manifest::Member;
 use itertools::Itertools;
+use num_traits::ToPrimitive;
+
+const ARRAY_CAPACITY_ATTR: &str = "capacity";
 
 #[derive(Clone, Default)]
 struct TypeIntrospection(usize, Vec<usize>);
@@ -37,7 +44,11 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
 /// * struct_ast: The AST of the struct.
 /// Returns:
 /// * A RewriteNode containing the generated code.
-pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) -> RewriteNode {
+pub fn handle_introspect_struct(
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+    struct_ast: ItemStruct,
+) -> RewriteNode {
     let name = struct_ast.name(db).text(db).into();
 
     let mut member_types: Vec<String> = vec![];
@@ -49,7 +60,14 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
         .iter()
         .map(|member| {
             let key = member.has_attr(db, "key");
-            let ty = member.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string();
+
+            let attrs = member.attributes(db).structurize(db);
+            let array_capacity_attr =
+                attrs.iter().find(|attr| attr.id.as_str() == ARRAY_CAPACITY_ATTR);
+            let capacity = extract_array_capacity(array_capacity_attr, db, diagnostics);
+
+            let mut ty =
+                member.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string();
             let name = member.name(db).text(db).to_string();
             let mut attrs = vec![];
             if key {
@@ -67,6 +85,33 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
             }})",
                     attrs.join(","),
                 ));
+            } else if let Some(c) = capacity {
+                if c == 0 {
+                    diagnostics.push(PluginDiagnostic {
+                        stable_ptr: member.stable_ptr().0,
+                        message: "Capacity must be greater than 0.".to_string(),
+                    });
+                }
+
+                if &ty != "Array<felt252>" && &ty != "Span<felt252>" {
+                    diagnostics.push(PluginDiagnostic {
+                        stable_ptr: member.stable_ptr().0,
+                        message: "Capacity is only supported for Array<felt252> or Span<felt252>."
+                            .to_string(),
+                    });
+                }
+
+                member_types.push(format!(
+                    "dojo::database::introspect::serialize_member(@\
+                     dojo::database::introspect::Member {{
+                name: '{name}',
+                ty: dojo::database::introspect::Ty::Array({c}),
+                attrs: array![{}].span()
+            }})",
+                    attrs.join(","),
+                ));
+
+                ty = format!("array_felts__{c}");
             } else {
                 // It's a custom struct/enum
                 member_types.push(format!(
@@ -261,6 +306,23 @@ fn handle_introspect_internal(
                     layout.push(RewriteNode::Text(format!("layout.append({});\n", l)))
                 });
             }
+        } else if m.ty.starts_with("array_felts__") {
+            let capacity =
+                m.ty.strip_prefix("array_felts__")
+                    .unwrap()
+                    .parse::<u32>()
+                    .expect("u32 expected for array capacity");
+
+            if m.key {
+                attrs.push("'key'");
+            } else {
+                // Serialized array always have their length first.
+                size.push(format!("1 + {capacity}"));
+
+                for _i in 0..=capacity {
+                    layout.push(RewriteNode::Text("layout.append(251);\n".to_string()))
+                }
+            }
         } else {
             // It's a custom type
             if m.key {
@@ -306,4 +368,34 @@ impl $name$Introspect<$generics$> of \
             ("ty".to_string(), RewriteNode::Text(type_ty)),
         ]),
     )
+}
+
+/// Extract the array capacity from the attribute.
+/// Adds a diagnostic if the attribute is malformed.
+fn extract_array_capacity(
+    capacity_attr: Option<&Attribute>,
+    db: &dyn SyntaxGroup,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+) -> Option<usize> {
+    let Some(attr) = capacity_attr else {
+        return None;
+    };
+
+    #[allow(clippy::collapsible_match)]
+    match &attr.args[..] {
+        [AttributeArg { variant: AttributeArgVariant::Unnamed { value, .. }, .. }] => match value {
+            ast::Expr::Literal(literal) => {
+                literal.numeric_value(db).and_then(|v| v.to_u32()).and_then(|v| v.to_usize())
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+    .on_none(|| {
+        diagnostics.push(PluginDiagnostic {
+            stable_ptr: attr.args_stable_ptr.untyped(),
+            message: "Attribute should have a single non-negative literal in `u32` range."
+                .to_string(),
+        })
+    })
 }

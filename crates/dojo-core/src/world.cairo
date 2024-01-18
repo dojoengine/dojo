@@ -6,7 +6,8 @@ use option::OptionTrait;
 struct ResourceMetadata {
     #[key]
     resource_id: felt252,
-    metadata_uri: felt252,
+    #[capacity(10)]
+    metadata_uri: Span<felt252>,
 }
 
 const RESOURCE_METADATA_MODEL: felt252 = 'ResourceMetadata';

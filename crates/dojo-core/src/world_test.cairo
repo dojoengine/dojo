@@ -252,7 +252,7 @@ fn deploy_world() -> IWorldDispatcher {
 fn test_set_metadata_world() {
     let world = deploy_world();
 
-    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: 'ipfs:world', };
+    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json')).span() };
 
     world.set_metadata(metadata.clone());
 
@@ -270,7 +270,7 @@ fn test_set_metadata_model_owner() {
 
     bar_contract.set_foo(1337, 1337);
 
-    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: 'ipfs:bob', };
+    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: array_cap!(10, ('ipfs:bob',)).span(), };
 
     // A system that has write access on a model should be able to update the metadata.
     // This follows conventional ACL model.
@@ -285,7 +285,7 @@ fn test_set_metadata_same_model_rules() {
     let world = deploy_world();
 
     let metadata = ResourceMetadata { // World metadata.
-    resource_id: 0, metadata_uri: 'ipfs:bob', };
+    resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:bob',)).span(), };
 
     let bob = starknet::contract_address_const::<0xb0b>();
     starknet::testing::set_contract_address(bob);
@@ -580,4 +580,27 @@ fn test_upgradeable_world_from_non_owner() {
         contract_address: world.contract_address
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[derive(Model, Drop, Serde)]
+struct ArrayModel {
+    #[key]
+    id: felt252,
+    #[capacity(3)]
+    values: Array<felt252>,
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_array_model() {
+    let world = deploy_world();
+
+    set!(world, ArrayModel { id: 0xaa, values: array_cap!(3, (0x1, 0xf2)) });
+    let stored: ArrayModel = get!(world, 0xaa, ArrayModel);
+
+    assert(stored.id == 0xaa, 'invalid id');
+    assert(stored.values.len() == 3, 'invalid capacity');
+    assert((*stored.values[0]) == 1, 'invalid 0');
+    assert((*stored.values[1]) == 0xf2, 'invalid 1');
+    assert((*stored.values[2]) == 0, 'invalid 2');
 }

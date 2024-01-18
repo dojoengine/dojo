@@ -10,6 +10,12 @@ struct Generic<T> {
     value: T,
 }
 
+#[derive(Drop, Introspect)]
+struct FeltsArray {
+    #[capacity(10)]
+    felts: Array<felt252>,
+}
+
 #[test]
 #[available_gas(2000000)]
 fn test_generic_introspect() {

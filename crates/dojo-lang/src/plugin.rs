@@ -21,6 +21,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::contract::DojoContract;
+use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
@@ -220,6 +221,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<DeleteMacro>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
+        .add_inline_macro_plugin::<ArrayCapMacro>()
         .add_inline_macro_plugin::<EmitMacro>();
 
     suite
@@ -358,8 +360,11 @@ impl MacroPlugin for BuiltinDojoPlugin {
                                 rewrite_nodes.push(derive_print(db, struct_ast.clone()));
                             }
                             "Introspect" => {
-                                rewrite_nodes
-                                    .push(handle_introspect_struct(db, struct_ast.clone()));
+                                rewrite_nodes.push(handle_introspect_struct(
+                                    db,
+                                    &mut diagnostics,
+                                    struct_ast.clone(),
+                                ));
                             }
                             _ => continue,
                         }
@@ -375,6 +380,8 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 for node in rewrite_nodes {
                     builder.add_modified(node);
                 }
+
+                // println!("** {}\n{}\n", name, builder.code);
 
                 PluginResult {
                     code: Some(PluginGeneratedFile {
@@ -393,7 +400,12 @@ impl MacroPlugin for BuiltinDojoPlugin {
     }
 
     fn declared_attributes(&self) -> Vec<String> {
-        vec!["dojo::contract".to_string(), "key".to_string(), "computed".to_string()]
+        vec![
+            "dojo::contract".to_string(),
+            "key".to_string(),
+            "computed".to_string(),
+            "capacity".to_string(),
+        ]
     }
 }
 
