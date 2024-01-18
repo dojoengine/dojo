@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+katana-db = { path = "../storage/db" }
 katana-executor = { path = "../executor" }
 katana-primitives = { path = "../primitives" }
 katana-provider = { path = "../storage/provider" }
@@ -40,6 +41,7 @@ dojo-metrics-derive.workspace = true
 [dev-dependencies]
 assert_matches.workspace = true
 hex = "0.4.3"
+tempfile = "3.8.1"
 
 [features]
 default = [ "jemalloc", "messaging" ]

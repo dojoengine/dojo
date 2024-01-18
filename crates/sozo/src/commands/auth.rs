@@ -6,6 +6,7 @@ use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
+use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::ops::auth;
 
@@ -33,6 +34,9 @@ pub enum AuthCommand {
 
         #[command(flatten)]
         account: AccountOptions,
+
+        #[command(flatten)]
+        transaction: TransactionOptions,
     },
 }
 

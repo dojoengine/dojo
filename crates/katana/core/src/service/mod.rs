@@ -61,8 +61,16 @@ impl Future for NodeService {
         // this drives block production and feeds new sets of ready transactions to the block
         // producer
         loop {
-            while let Poll::Ready(Some(outcome)) = pin.block_producer.poll_next_unpin(cx) {
-                trace!(target: "node", "mined block {}", outcome.block_number);
+            while let Poll::Ready(Some(res)) = pin.block_producer.poll_next_unpin(cx) {
+                match res {
+                    Ok(outcome) => {
+                        trace!(target: "node", "mined block {}", outcome.block_number)
+                    }
+
+                    Err(err) => {
+                        trace!(target: "node", "failed to mine block: {err}");
+                    }
+                }
             }
 
             if let Poll::Ready(transactions) = pin.miner.poll(&pin.pool, cx) {

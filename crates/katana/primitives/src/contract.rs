@@ -18,7 +18,8 @@ pub type CompiledClassHash = FieldElement;
 /// Represents the type for a contract nonce.
 pub type Nonce = FieldElement;
 
-pub type SierraClass = starknet::core::types::FlattenedSierraClass;
+pub type SierraClass = starknet::core::types::contract::SierraClass;
+pub type FlattenedSierraClass = starknet::core::types::FlattenedSierraClass;
 
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]

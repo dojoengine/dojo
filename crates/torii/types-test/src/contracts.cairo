@@ -8,7 +8,7 @@ trait IRecords<TContractState> {
 #[dojo::contract]
 mod records {
     use starknet::{ContractAddress, get_caller_address};
-    use types_test::models::{Record, RecordSibling, Subrecord, Nested, NestedMore, NestedMoreMore, Depth};
+    use types_test::models::{Record, RecordSibling, Subrecord, Nested, NestedMore, NestedMost, Depth};
     use types_test::{seed, random};
     use super::IRecords;
 
@@ -48,6 +48,10 @@ mod records {
                     0,
                     0xffffffffffffffffffffffffffffffff_u128
                 );
+                let composite_u256 = u256 {
+                    low: random_u128,
+                    high: random_u128
+                };
 
                 let record_id = world.uuid();
                 let subrecord_id = world.uuid();
@@ -72,7 +76,7 @@ mod records {
                             type_felt: record_idx.into(),
                             type_class_hash: type_felt.try_into().unwrap(),
                             type_contract_address: type_felt.try_into().unwrap(),
-                            type_nested: Nested {
+                            type_deeply_nested: Nested {
                                 depth: Depth::One,
                                 type_number: record_idx.into(),
                                 type_string: type_felt,
@@ -80,15 +84,26 @@ mod records {
                                     depth: Depth::Two,
                                     type_number: record_idx.into(),
                                     type_string: type_felt,
-                                    type_nested_more_more: NestedMoreMore {
+                                    type_nested_most: NestedMost {
                                         depth: Depth::Three,
                                         type_number: record_idx.into(),
                                         type_string: type_felt,
                                     }
                                 }
                             },
+                            type_nested_one: NestedMost {
+                                depth: Depth::One,
+                                type_number: 1,
+                                type_string: 1,
+                            },
+                            type_nested_two: NestedMost {
+                                depth: Depth::One,
+                                type_number: 2,
+                                type_string: 2,
+                            },
                             random_u8,
-                            random_u128
+                            random_u128,
+                            composite_u256
                         },
                         RecordSibling {
                             record_id, random_u8

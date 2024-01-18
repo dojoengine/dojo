@@ -25,6 +25,8 @@ pub const PAGE_INFO_TYPE_NAME: &str = "World__PageInfo";
 pub const TRANSACTION_TYPE_NAME: &str = "World__Transaction";
 pub const QUERY_TYPE_NAME: &str = "World__Query";
 pub const SUBSCRIPTION_TYPE_NAME: &str = "World__Subscription";
+pub const MODEL_ORDER_TYPE_NAME: &str = "World__ModelOrder";
+pub const MODEL_ORDER_FIELD_TYPE_NAME: &str = "World__ModelOrderField";
 
 // objects' single and plural names
 pub const ENTITY_NAMES: (&str, &str) = ("entity", "entities");
@@ -34,3 +36,8 @@ pub const SOCIAL_NAMES: (&str, &str) = ("social", "socials");
 pub const CONTENT_NAMES: (&str, &str) = ("content", "contents");
 pub const METADATA_NAMES: (&str, &str) = ("metadata", "metadatas");
 pub const TRANSACTION_NAMES: (&str, &str) = ("transaction", "transactions");
+
+// misc
+pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";
+pub const ORDER_ASC: &str = "ASC";
+pub const ORDER_DESC: &str = "DESC";

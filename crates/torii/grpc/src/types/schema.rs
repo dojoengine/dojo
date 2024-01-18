@@ -1,3 +1,4 @@
+use crypto_bigint::{Encoding, U256};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde::{Deserialize, Serialize};
@@ -198,14 +199,8 @@ impl TryFrom<proto::types::Primitive> for Primitive {
                                 .map_err(ClientError::SliceError)?,
                         ))
                     }
-                    _ => return Err(ClientError::UnsupportedType),
-                }
-            }
-            proto::types::value::ValueType::StringValue(_string) => {
-                match proto::types::PrimitiveType::from_i32(primitive_type) {
                     Some(proto::types::PrimitiveType::U256) => {
-                        // TODO: Handle u256
-                        Primitive::U256(None)
+                        Primitive::U256(Some(U256::from_be_slice(bytes)))
                     }
                     _ => return Err(ClientError::UnsupportedType),
                 }
@@ -234,7 +229,9 @@ impl TryFrom<Primitive> for proto::types::Primitive {
             Primitive::U128(u128) => {
                 u128.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
             }
-            Primitive::U256(u256) => u256.map(|val| ValueType::StringValue(val.to_string())),
+            Primitive::U256(u256) => {
+                u256.map(|val| ValueType::ByteValue(val.to_be_bytes().to_vec()))
+            }
             Primitive::Felt252(felt) => {
                 felt.map(|val| ValueType::ByteValue(val.to_bytes_be().to_vec()))
             }

@@ -35,13 +35,13 @@ pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesCo
     AllCratesConfig { override_map: crates_config, ..Default::default() }
 }
 
-// TODO(mkaput): ScarbDatabase?
+/// Builds the scarb root database injecting the dojo plugin suite, additionaly to the
+/// default Starknet and Test suites.
 pub fn build_scarb_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
     b.with_cfg(unit.cfg_set.clone());
 
-    // TODO: Is it fair to consider only those plugins at the moment?
     b.with_plugin_suite(test_plugin_suite());
     b.with_plugin_suite(dojo_plugin_suite());
     b.with_plugin_suite(starknet_plugin_suite());

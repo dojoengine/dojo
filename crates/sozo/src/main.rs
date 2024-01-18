@@ -29,7 +29,9 @@ fn cli_main(args: SozoArgs) -> Result<()> {
     let cairo_plugins = CairoPluginRepository::default();
 
     match &args.command {
-        Commands::Build(_) | Commands::Dev(_) => compilers.add(Box::new(DojoCompiler)).unwrap(),
+        Commands::Build(_) | Commands::Dev(_) | Commands::Migrate(_) => {
+            compilers.add(Box::new(DojoCompiler)).unwrap()
+        }
         _ => {}
     }
 

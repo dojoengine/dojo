@@ -5,7 +5,7 @@ Content-Type: application/json
     "method": "starknet_getClass",
     "params": [
         "latest",
-        "0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f"
+        "0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
     ],
     "id":1
 }

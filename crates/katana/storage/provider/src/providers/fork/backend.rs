@@ -1,33 +1,35 @@
 use std::collections::VecDeque;
 use std::pin::Pin;
-use std::sync::mpsc::{channel as oneshot, Sender as OneshotSender};
+use std::sync::mpsc::{channel as oneshot, RecvError, Sender as OneshotSender};
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::thread;
 
-use anyhow::Result;
 use futures::channel::mpsc::{channel, Receiver, SendError, Sender};
 use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, GenericContractInfo,
-    Nonce, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::conversion::rpc::{
-    compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_inner_class, rpc_to_inner_class,
+    compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
+    legacy_rpc_to_inner_compiled_class,
 };
 use katana_primitives::FieldElement;
 use parking_lot::Mutex;
 use starknet::core::types::{BlockId, ContractClass, StarknetError};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::providers::{JsonRpcClient, Provider, ProviderError as StarknetProviderError};
 use tracing::{error, trace};
 
+use crate::error::ProviderError;
 use crate::providers::in_memory::cache::CacheStateDb;
 use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
 use crate::traits::state::StateProvider;
+use crate::ProviderResult;
 
 type GetNonceResult = Result<Nonce, ForkedBackendError>;
 type GetStorageResult = Result<StorageValue, ForkedBackendError>;
@@ -36,14 +38,23 @@ type GetClassAtResult = Result<starknet::core::types::ContractClass, ForkedBacke
 
 #[derive(Debug, thiserror::Error)]
 pub enum ForkedBackendError {
-    #[error(transparent)]
-    Send(SendError),
+    #[error("Failed to send request to the forked backend: {0}")]
+    Send(#[from] SendError),
+    #[error("Failed to receive result from the forked backend: {0}")]
+    Receive(#[from] RecvError),
     #[error("Compute class hash error: {0}")]
     ComputeClassHashError(String),
+    #[error("Failed to spawn forked backend thread: {0}")]
+    BackendThreadInit(#[from] std::io::Error),
     #[error(transparent)]
-    Provider(ProviderError),
+    StarknetProvider(#[from] starknet::providers::ProviderError),
 }
 
+/// The request types that is processed by [`Backend`].
+///
+/// Each request is accompanied by the sender-half of a oneshot channel that will be used
+/// to send the [`ProviderResult`] back to the backend client, [`ForkedBackend`], which sent the
+/// requests.
 pub enum BackendRequest {
     GetClassAt(ClassHash, OneshotSender<GetClassAtResult>),
     GetNonce(ContractAddress, OneshotSender<GetNonceResult>),
@@ -54,7 +65,7 @@ pub enum BackendRequest {
 type BackendRequestFuture = BoxFuture<'static, ()>;
 
 /// The backend for the forked provider. It processes all requests from the [ForkedBackend]'s
-/// and sends the results back to it.
+/// and sends the ProviderResults back to it.
 ///
 /// It is responsible it fetching the data from the forked provider.
 pub struct Backend {
@@ -74,7 +85,7 @@ impl Backend {
     /// into a future that will be polled until completion by the `BackendHandler`.
     ///
     /// Each request is accompanied by the sender-half of a oneshot channel that will be used
-    /// to send the result back to the [ForkedBackend] which sent the requests.
+    /// to send the ProviderResult back to the [ForkedBackend] which sent the requests.
     fn handle_requests(&mut self, request: BackendRequest) {
         let block = self.block;
         let provider = self.provider.clone();
@@ -85,7 +96,7 @@ impl Backend {
                     let res = provider
                         .get_nonce(block, Into::<FieldElement>::into(contract_address))
                         .await
-                        .map_err(ForkedBackendError::Provider);
+                        .map_err(ForkedBackendError::StarknetProvider);
 
                     sender.send(res).expect("failed to send nonce result")
                 });
@@ -98,7 +109,7 @@ impl Backend {
                     let res = provider
                         .get_storage_at(Into::<FieldElement>::into(contract_address), key, block)
                         .await
-                        .map_err(ForkedBackendError::Provider);
+                        .map_err(ForkedBackendError::StarknetProvider);
 
                     sender.send(res).expect("failed to send storage result")
                 });
@@ -111,7 +122,7 @@ impl Backend {
                     let res = provider
                         .get_class_hash_at(block, Into::<FieldElement>::into(contract_address))
                         .await
-                        .map_err(ForkedBackendError::Provider);
+                        .map_err(ForkedBackendError::StarknetProvider);
 
                     sender.send(res).expect("failed to send class hash result")
                 });
@@ -124,7 +135,7 @@ impl Backend {
                     let res = provider
                         .get_class(block, class_hash)
                         .await
-                        .map_err(ForkedBackendError::Provider);
+                        .map_err(ForkedBackendError::StarknetProvider);
 
                     sender.send(res).expect("failed to send class result")
                 });
@@ -196,22 +207,20 @@ impl ForkedBackend {
     pub fn new_with_backend_thread(
         provider: Arc<JsonRpcClient<HttpTransport>>,
         block_id: BlockHashOrNumber,
-    ) -> Self {
+    ) -> Result<Self, ForkedBackendError> {
         let (handler, backend) = Self::new(provider, block_id);
 
-        thread::Builder::new()
-            .spawn(move || {
-                tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .expect("failed to create tokio runtime")
-                    .block_on(backend);
-            })
-            .expect("failed to spawn fork backend thread");
+        thread::Builder::new().spawn(move || {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("failed to create tokio runtime")
+                .block_on(backend);
+        })?;
 
         trace!(target: "forked_backend", "fork backend thread spawned");
 
-        handler
+        Ok(handler)
     }
 
     fn new(
@@ -244,8 +253,8 @@ impl ForkedBackend {
         self.0
             .lock()
             .try_send(BackendRequest::GetNonce(contract_address, sender))
-            .map_err(|e| ForkedBackendError::Send(e.into_send_error()))?;
-        rx.recv().expect("failed to receive nonce result")
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
     }
 
     pub fn do_get_storage(
@@ -258,8 +267,8 @@ impl ForkedBackend {
         self.0
             .lock()
             .try_send(BackendRequest::GetStorage(contract_address, key, sender))
-            .map_err(|e| ForkedBackendError::Send(e.into_send_error()))?;
-        rx.recv().expect("failed to receive storage result")
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
     }
 
     pub fn do_get_class_hash_at(
@@ -271,8 +280,8 @@ impl ForkedBackend {
         self.0
             .lock()
             .try_send(BackendRequest::GetClassHashAt(contract_address, sender))
-            .map_err(|e| ForkedBackendError::Send(e.into_send_error()))?;
-        rx.recv().expect("failed to receive class hash result")
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
     }
 
     pub fn do_get_class_at(
@@ -284,8 +293,8 @@ impl ForkedBackend {
         self.0
             .lock()
             .try_send(BackendRequest::GetClassAt(class_hash, sender))
-            .map_err(|e| ForkedBackendError::Send(e.into_send_error()))?;
-        rx.recv().expect("failed to receive class result")
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
     }
 
     pub fn do_get_compiled_class_hash(
@@ -321,14 +330,14 @@ impl SharedStateProvider {
 }
 
 impl ContractInfoProvider for SharedStateProvider {
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
         let info = self.0.contract_state.read().get(&address).cloned();
         Ok(info)
     }
 }
 
 impl StateProvider for SharedStateProvider {
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+    fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         if let nonce @ Some(_) = self.contract(address)?.map(|i| i.nonce) {
             return Ok(nonce);
         }
@@ -348,7 +357,7 @@ impl StateProvider for SharedStateProvider {
         &self,
         address: ContractAddress,
         storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
+    ) -> ProviderResult<Option<StorageValue>> {
         if let value @ Some(_) =
             self.0.storage.read().get(&address).and_then(|s| s.get(&storage_key))
         {
@@ -370,7 +379,10 @@ impl StateProvider for SharedStateProvider {
         Ok(value)
     }
 
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+    fn class_hash_of_contract(
+        &self,
+        address: ContractAddress,
+    ) -> ProviderResult<Option<ClassHash>> {
         if let hash @ Some(_) = self.contract(address)?.map(|i| i.class_hash) {
             return Ok(hash);
         }
@@ -388,12 +400,20 @@ impl StateProvider for SharedStateProvider {
 }
 
 impl ContractClassProvider for SharedStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<SierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         if let class @ Some(_) = self.0.shared_contract_classes.sierra_classes.read().get(&hash) {
             return Ok(class.cloned());
         }
 
-        let class = self.0.do_get_class_at(hash)?;
+        let Some(class) = handle_contract_or_class_not_found_err(self.0.do_get_class_at(hash))
+            .map_err(|e| {
+                error!(target: "forked_backend", "error while fetching sierra class {hash:#x}: {e}");
+                e
+            })?
+        else {
+            return Ok(None);
+        };
+
         match class {
             starknet::core::types::ContractClass::Legacy(_) => Ok(None),
             starknet::core::types::ContractClass::Sierra(sierra_class) => {
@@ -410,7 +430,7 @@ impl ContractClassProvider for SharedStateProvider {
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
+    ) -> ProviderResult<Option<CompiledClassHash>> {
         if let hash @ Some(_) = self.0.compiled_class_hashes.read().get(&hash) {
             return Ok(hash.cloned());
         }
@@ -429,7 +449,7 @@ impl ContractClassProvider for SharedStateProvider {
         }
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
         if let Some(class) = self.0.shared_contract_classes.compiled_classes.read().get(&hash) {
             return Ok(Some(class.clone()));
         }
@@ -445,18 +465,18 @@ impl ContractClassProvider for SharedStateProvider {
 
         let (class_hash, compiled_class_hash, casm, sierra) = match class {
             ContractClass::Legacy(class) => {
-                let (_, compiled_class) = legacy_rpc_to_inner_class(&class).map_err(|e| {
+                let (_, compiled_class) = legacy_rpc_to_inner_compiled_class(&class).map_err(|e| {
                     error!(target: "forked_backend", "error while parsing legacy class {hash:#x}: {e}");
-                    e
+                    ProviderError::ParsingError(e.to_string())
                 })?;
 
                 (hash, hash, compiled_class, None)
             }
 
             ContractClass::Sierra(sierra_class) => {
-                let (_, compiled_class_hash, compiled_class) = rpc_to_inner_class(&sierra_class).map_err(|e|{
+                let (_, compiled_class_hash, compiled_class) = flattened_sierra_to_compiled_class(&sierra_class).map_err(|e|{
                     error!(target: "forked_backend", "error while parsing sierra class {hash:#x}: {e}");
-                    e
+                    ProviderError::ParsingError(e.to_string())
                 })?;
 
                 (hash, compiled_class_hash, compiled_class, Some(sierra_class))
@@ -491,7 +511,7 @@ fn handle_contract_or_class_not_found_err<T>(
     match result {
         Ok(value) => Ok(Some(value)),
 
-        Err(ForkedBackendError::Provider(ProviderError::StarknetError(
+        Err(ForkedBackendError::StarknetProvider(StarknetProviderError::StarknetError(
             StarknetError::ContractNotFound | StarknetError::ClassHashNotFound,
         ))) => Ok(None),
 
@@ -535,6 +555,7 @@ mod tests {
             ))),
             BlockHashOrNumber::Num(block_num),
         )
+        .unwrap()
     }
 
     #[test]

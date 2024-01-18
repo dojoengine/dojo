@@ -113,7 +113,6 @@ impl Environment {
         self.private_key.as_deref()
     }
 
-    #[allow(dead_code)]
     pub fn keystore_path(&self) -> Option<&str> {
         self.keystore_path.as_deref()
     }

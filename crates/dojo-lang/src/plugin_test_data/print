@@ -3,10 +3,14 @@
 //! > test_runner_name
 test_expand_plugin
 
+//! > cfg
+["test"]
+
 //! > cairo_code
 use serde::Serde;
+use debug::PrintTrait;
 
-#[derive(Print, Copy, Drop, Serde)]
+#[derive(Print)]
 struct Position {
     #[key]
     id: felt252,
@@ -15,14 +19,14 @@ struct Position {
     y: felt252
 }
 
-#[derive(Print, Serde)]
+#[derive(Print)]
 struct Roles {
     role_ids: Array<u8>
 }
 
 use starknet::ContractAddress;
 
-#[derive(Print, Copy, Drop, Serde)]
+#[derive(Print)]
 struct Player {
     #[key]
     game: felt252,
@@ -32,11 +36,18 @@ struct Player {
     name: felt252, 
 }
 
-//! > generated_cairo_code
+#[derive(Print)]
+enum Enemy {
+    Unknown,
+    Bot: felt252,
+    OtherPlayer: ContractAddress,
+}
+
+//! > expanded_cairo_code
 use serde::Serde;
+use debug::PrintTrait;
 
-
-#[derive(Print, Copy, Drop, Serde)]
+#[derive(Print)]
 struct Position {
     #[key]
     id: felt252,
@@ -45,37 +56,14 @@ struct Position {
     y: felt252
 }
 
-#[cfg(test)]
-impl PositionPrintImpl of core::debug::PrintTrait<Position> {
-    fn print(self: Position) {
-        core::debug::PrintTrait::print('id');
-        core::debug::PrintTrait::print(self.id);
-        core::debug::PrintTrait::print('x');
-        core::debug::PrintTrait::print(self.x);
-        core::debug::PrintTrait::print('y');
-        core::debug::PrintTrait::print(self.y);
-    }
-}
-
-
-#[derive(Print, Serde)]
+#[derive(Print)]
 struct Roles {
     role_ids: Array<u8>
 }
 
-#[cfg(test)]
-impl RolesPrintImpl of core::debug::PrintTrait<Roles> {
-    fn print(self: Roles) {
-        core::debug::PrintTrait::print('role_ids');
-        core::debug::PrintTrait::print(self.role_ids);
-    }
-}
-
-
 use starknet::ContractAddress;
 
-
-#[derive(Print, Copy, Drop, Serde)]
+#[derive(Print)]
 struct Player {
     #[key]
     game: felt252,
@@ -84,87 +72,48 @@ struct Player {
 
     name: felt252, 
 }
+
+#[derive(Print)]
+enum Enemy {
+    Unknown,
+    Bot: felt252,
+    OtherPlayer: ContractAddress,
+}
+
 #[cfg(test)]
-impl PlayerPrintImpl of core::debug::PrintTrait<Player> {
+impl PositionStructPrintImpl of core::debug::PrintTrait<Position> {
+    fn print(self: Position) {
+        core::debug::PrintTrait::print('id'); core::debug::PrintTrait::print(self.id);
+core::debug::PrintTrait::print('x'); core::debug::PrintTrait::print(self.x);
+core::debug::PrintTrait::print('y'); core::debug::PrintTrait::print(self.y);
+    }
+}
+
+#[cfg(test)]
+impl RolesStructPrintImpl of core::debug::PrintTrait<Roles> {
+    fn print(self: Roles) {
+        core::debug::PrintTrait::print('role_ids'); core::debug::PrintTrait::print(self.role_ids);
+    }
+}
+
+#[cfg(test)]
+impl PlayerStructPrintImpl of core::debug::PrintTrait<Player> {
     fn print(self: Player) {
-        core::debug::PrintTrait::print('game');
-        core::debug::PrintTrait::print(self.game);
-        core::debug::PrintTrait::print('player');
-        core::debug::PrintTrait::print(self.player);
-        core::debug::PrintTrait::print('name');
-        core::debug::PrintTrait::print(self.name);
+        core::debug::PrintTrait::print('game'); core::debug::PrintTrait::print(self.game);
+core::debug::PrintTrait::print('player'); core::debug::PrintTrait::print(self.player);
+core::debug::PrintTrait::print('name'); core::debug::PrintTrait::print(self.name);
+    }
+}
+
+#[cfg(test)]
+impl EnemyEnumPrintImpl of core::debug::PrintTrait<Enemy> {
+    fn print(self: Enemy) {
+        match self {
+            Enemy::Unknown => { core::debug::PrintTrait::print('Unknown'); },
+Enemy::Bot(v) => { core::debug::PrintTrait::print('Bot'); core::debug::PrintTrait::print(v); },
+Enemy::OtherPlayer(v) => { core::debug::PrintTrait::print('OtherPlayer'); core::debug::PrintTrait::print(v); }
+        }
     }
 }
 
 //! > expected_diagnostics
-
-//! > expanded_cairo_code
-use serde::Serde;
-
-#[derive(Print, Copy, Drop, Serde)]
-struct Position {
-    #[key]
-    id: felt252,
-
-    x: felt252,
-    y: felt252
-}
-
-#[derive(Print, Serde)]
-struct Roles {
-    role_ids: Array<u8>
-}
-
-use starknet::ContractAddress;
-
-#[derive(Print, Copy, Drop, Serde)]
-struct Player {
-    #[key]
-    game: felt252,
-    #[key]
-    player: ContractAddress,
-
-    name: felt252, 
-}
-impl PositionCopy of core::traits::Copy::<Position>;
-impl PositionDrop of core::traits::Drop::<Position>;
-impl PositionSerde of core::serde::Serde::<Position> {
-    fn serialize(self: @Position, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.id, ref output);
-        core::serde::Serde::serialize(self.x, ref output);
-        core::serde::Serde::serialize(self.y, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Position> {
-        core::option::Option::Some(Position {
-            id: core::serde::Serde::deserialize(ref serialized)?,
-            x: core::serde::Serde::deserialize(ref serialized)?,
-            y: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-impl RolesSerde of core::serde::Serde::<Roles> {
-    fn serialize(self: @Roles, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.role_ids, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Roles> {
-        core::option::Option::Some(Roles {
-            role_ids: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-impl PlayerCopy of core::traits::Copy::<Player>;
-impl PlayerDrop of core::traits::Drop::<Player>;
-impl PlayerSerde of core::serde::Serde::<Player> {
-    fn serialize(self: @Player, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.game, ref output);
-        core::serde::Serde::serialize(self.player, ref output);
-        core::serde::Serde::serialize(self.name, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<Player> {
-        core::option::Option::Some(Player {
-            game: core::serde::Serde::deserialize(ref serialized)?,
-            player: core::serde::Serde::deserialize(ref serialized)?,
-            name: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}

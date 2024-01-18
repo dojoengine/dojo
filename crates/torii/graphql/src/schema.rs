@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_graphql::dynamic::{
     Field, Object, Scalar, Schema, Subscription, SubscriptionField, Union,
 };
+use convert_case::{Case, Casing};
 use sqlx::SqlitePool;
 use torii_core::types::Model;
 
@@ -126,7 +127,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, 
         let type_mapping = type_mapping_query(&mut conn, &model.id).await?;
 
         if !type_mapping.is_empty() {
-            let field_name = model.name.to_lowercase();
+            let field_name = model.name.to_case(Case::Camel);
             let type_name = model.name;
 
             union = union.possible_type(&type_name);

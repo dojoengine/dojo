@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::{Range, RangeInclusive};
 
-use anyhow::Result;
 use katana_db::error::DatabaseError;
 use katana_db::mdbx::{self, DbEnv};
 use katana_db::models::block::StoredBlockBodyIndices;
@@ -30,22 +29,26 @@ use katana_primitives::contract::{
     ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, Nonce, StorageKey,
     StorageValue,
 };
+use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::FieldElement;
 
+use crate::error::ProviderError;
 use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
 };
+use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
+use crate::ProviderResult;
 
-/// A provider implementation that uses a database as a backend.
+/// A provider implementation that uses a persistent database as the backend.
 #[derive(Debug)]
 pub struct DbProvider(DbEnv);
 
@@ -57,11 +60,14 @@ impl DbProvider {
 }
 
 impl StateFactoryProvider for DbProvider {
-    fn latest(&self) -> Result<Box<dyn StateProvider>> {
+    fn latest(&self) -> ProviderResult<Box<dyn StateProvider>> {
         Ok(Box::new(self::state::LatestStateProvider::new(self.0.tx()?)))
     }
 
-    fn historical(&self, block_id: BlockHashOrNumber) -> Result<Option<Box<dyn StateProvider>>> {
+    fn historical(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Box<dyn StateProvider>>> {
         let block_number = match block_id {
             BlockHashOrNumber::Num(num) => {
                 let latest_num = self.latest_number()?;
@@ -83,14 +89,14 @@ impl StateFactoryProvider for DbProvider {
 }
 
 impl BlockNumberProvider for DbProvider {
-    fn block_number_by_hash(&self, hash: BlockHash) -> Result<Option<BlockNumber>> {
+    fn block_number_by_hash(&self, hash: BlockHash) -> ProviderResult<Option<BlockNumber>> {
         let db_tx = self.0.tx()?;
         let block_num = db_tx.get::<BlockNumbers>(hash)?;
         db_tx.commit()?;
         Ok(block_num)
     }
 
-    fn latest_number(&self) -> Result<BlockNumber> {
+    fn latest_number(&self) -> ProviderResult<BlockNumber> {
         let db_tx = self.0.tx()?;
         let total_blocks = db_tx.entries::<BlockNumbers>()? as u64;
         db_tx.commit()?;
@@ -99,16 +105,16 @@ impl BlockNumberProvider for DbProvider {
 }
 
 impl BlockHashProvider for DbProvider {
-    fn latest_hash(&self) -> Result<BlockHash> {
+    fn latest_hash(&self) -> ProviderResult<BlockHash> {
         let db_tx = self.0.tx()?;
         let total_blocks = db_tx.entries::<BlockNumbers>()? as u64;
         let latest_block = if total_blocks == 0 { 0 } else { total_blocks - 1 };
-        let latest_hash = db_tx.get::<BlockHashes>(latest_block)?.expect("block hash should exist");
+        let latest_hash = db_tx.get::<BlockHashes>(latest_block)?;
         db_tx.commit()?;
-        Ok(latest_hash)
+        latest_hash.ok_or(ProviderError::MissingLatestBlockHash)
     }
 
-    fn block_hash_by_num(&self, num: BlockNumber) -> Result<Option<BlockHash>> {
+    fn block_hash_by_num(&self, num: BlockNumber) -> ProviderResult<Option<BlockHash>> {
         let db_tx = self.0.tx()?;
         let block_hash = db_tx.get::<BlockHashes>(num)?;
         db_tx.commit()?;
@@ -117,7 +123,7 @@ impl BlockHashProvider for DbProvider {
 }
 
 impl HeaderProvider for DbProvider {
-    fn header(&self, id: BlockHashOrNumber) -> Result<Option<Header>> {
+    fn header(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Header>> {
         let db_tx = self.0.tx()?;
 
         let num = match id {
@@ -126,7 +132,8 @@ impl HeaderProvider for DbProvider {
         };
 
         if let Some(num) = num {
-            let header = db_tx.get::<Headers>(num)?.expect("should exist");
+            let header =
+                db_tx.get::<Headers>(num)?.ok_or(ProviderError::MissingBlockHeader(num))?;
             db_tx.commit()?;
             Ok(Some(header))
         } else {
@@ -136,7 +143,10 @@ impl HeaderProvider for DbProvider {
 }
 
 impl BlockProvider for DbProvider {
-    fn block_body_indices(&self, id: BlockHashOrNumber) -> Result<Option<StoredBlockBodyIndices>> {
+    fn block_body_indices(
+        &self,
+        id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<StoredBlockBodyIndices>> {
         let db_tx = self.0.tx()?;
 
         let block_num = match id {
@@ -153,11 +163,13 @@ impl BlockProvider for DbProvider {
         }
     }
 
-    fn block(&self, id: BlockHashOrNumber) -> Result<Option<Block>> {
+    fn block(&self, id: BlockHashOrNumber) -> ProviderResult<Option<Block>> {
         let db_tx = self.0.tx()?;
 
         if let Some(header) = self.header(id)? {
-            let body = self.transactions_by_block(id)?.expect("should exist");
+            let res = self.transactions_by_block(id)?;
+            let body = res.ok_or(ProviderError::MissingBlockTxs(header.number))?;
+
             db_tx.commit()?;
             Ok(Some(Block { header, body }))
         } else {
@@ -165,7 +177,10 @@ impl BlockProvider for DbProvider {
         }
     }
 
-    fn block_with_tx_hashes(&self, id: BlockHashOrNumber) -> Result<Option<BlockWithTxHashes>> {
+    fn block_with_tx_hashes(
+        &self,
+        id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BlockWithTxHashes>> {
         let db_tx = self.0.tx()?;
 
         let block_num = match id {
@@ -176,7 +191,9 @@ impl BlockProvider for DbProvider {
         let Some(block_num) = block_num else { return Ok(None) };
 
         if let Some(header) = db_tx.get::<Headers>(block_num)? {
-            let body_indices = db_tx.get::<BlockBodyIndices>(block_num)?.expect("should exist");
+            let res = db_tx.get::<BlockBodyIndices>(block_num)?;
+            let body_indices = res.ok_or(ProviderError::MissingBlockTxs(block_num))?;
+
             let body = self.transaction_hashes_in_range(Range::from(body_indices))?;
             let block = BlockWithTxHashes { header, body };
 
@@ -188,7 +205,7 @@ impl BlockProvider for DbProvider {
         }
     }
 
-    fn blocks_in_range(&self, range: RangeInclusive<u64>) -> Result<Vec<Block>> {
+    fn blocks_in_range(&self, range: RangeInclusive<u64>) -> ProviderResult<Vec<Block>> {
         let db_tx = self.0.tx()?;
 
         let total = range.end() - range.start() + 1;
@@ -196,7 +213,9 @@ impl BlockProvider for DbProvider {
 
         for num in range {
             if let Some(header) = db_tx.get::<Headers>(num)? {
-                let body_indices = db_tx.get::<BlockBodyIndices>(num)?.expect("should exist");
+                let res = db_tx.get::<BlockBodyIndices>(num)?;
+                let body_indices = res.ok_or(ProviderError::MissingBlockBodyIndices(num))?;
+
                 let body = self.transaction_in_range(Range::from(body_indices))?;
                 blocks.push(Block { header, body })
             }
@@ -208,7 +227,7 @@ impl BlockProvider for DbProvider {
 }
 
 impl BlockStatusProvider for DbProvider {
-    fn block_status(&self, id: BlockHashOrNumber) -> Result<Option<FinalityStatus>> {
+    fn block_status(&self, id: BlockHashOrNumber) -> ProviderResult<Option<FinalityStatus>> {
         let db_tx = self.0.tx()?;
 
         let block_num = match id {
@@ -217,7 +236,9 @@ impl BlockStatusProvider for DbProvider {
         };
 
         if let Some(block_num) = block_num {
-            let status = db_tx.get::<BlockStatusses>(block_num)?.expect("should exist");
+            let res = db_tx.get::<BlockStatusses>(block_num)?;
+            let status = res.ok_or(ProviderError::MissingBlockStatus(block_num))?;
+
             db_tx.commit()?;
             Ok(Some(status))
         } else {
@@ -227,7 +248,7 @@ impl BlockStatusProvider for DbProvider {
 }
 
 impl StateRootProvider for DbProvider {
-    fn state_root(&self, block_id: BlockHashOrNumber) -> Result<Option<FieldElement>> {
+    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<FieldElement>> {
         let db_tx = self.0.tx()?;
 
         let block_num = match block_id {
@@ -246,14 +267,14 @@ impl StateRootProvider for DbProvider {
 }
 
 impl StateUpdateProvider for DbProvider {
-    fn state_update(&self, block_id: BlockHashOrNumber) -> Result<Option<StateUpdates>> {
+    fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
         // A helper function that iterates over all entries in a dupsort table and collects the
         // results into `V`. If `key` is not found, `V::default()` is returned.
         fn dup_entries<Tb, V, T>(
             db_tx: &mdbx::tx::TxRO,
             key: <Tb as Table>::Key,
-            f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> Result<T, DatabaseError>,
-        ) -> Result<V, DatabaseError>
+            f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> ProviderResult<T>,
+        ) -> ProviderResult<V>
         where
             Tb: DupSort + Debug,
             V: FromIterator<T> + Default,
@@ -261,7 +282,7 @@ impl StateUpdateProvider for DbProvider {
             Ok(db_tx
                 .cursor::<Tb>()?
                 .walk_dup(Some(key), None)?
-                .map(|walker| walker.map(f).collect::<Result<V, DatabaseError>>())
+                .map(|walker| walker.map(f).collect::<ProviderResult<V>>())
                 .transpose()?
                 .unwrap_or_default())
         }
@@ -294,8 +315,11 @@ impl StateUpdateProvider for DbProvider {
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, class_hash) = entry?;
-                let compiled_hash =
-                    db_tx.get::<CompiledClassHashes>(class_hash)?.expect("qed; must exist");
+
+                let compiled_hash = db_tx
+                    .get::<CompiledClassHashes>(class_hash)?
+                    .ok_or(ProviderError::MissingCompiledClassHash(class_hash))?;
+
                 Ok((class_hash, compiled_hash))
             })?;
 
@@ -306,7 +330,7 @@ impl StateUpdateProvider for DbProvider {
                     _,
                 >(&db_tx, block_num, |entry| {
                     let (_, ContractStorageEntry { key, value }) = entry?;
-                    Ok::<_, DatabaseError>((key.contract_address, (key.key, value)))
+                    Ok((key.contract_address, (key.key, value)))
                 })?;
 
                 let mut map: HashMap<_, HashMap<StorageKey, StorageValue>> = HashMap::new();
@@ -332,11 +356,12 @@ impl StateUpdateProvider for DbProvider {
 }
 
 impl TransactionProvider for DbProvider {
-    fn transaction_by_hash(&self, hash: TxHash) -> Result<Option<TxWithHash>> {
+    fn transaction_by_hash(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
         let db_tx = self.0.tx()?;
 
         if let Some(num) = db_tx.get::<TxNumbers>(hash)? {
-            let transaction = db_tx.get::<Transactions>(num)?.expect("transaction should exist");
+            let res = db_tx.get::<Transactions>(num)?;
+            let transaction = res.ok_or(ProviderError::MissingTx(num))?;
             let transaction = TxWithHash { hash, transaction };
             db_tx.commit()?;
 
@@ -349,7 +374,7 @@ impl TransactionProvider for DbProvider {
     fn transactions_by_block(
         &self,
         block_id: BlockHashOrNumber,
-    ) -> Result<Option<Vec<TxWithHash>>> {
+    ) -> ProviderResult<Option<Vec<TxWithHash>>> {
         if let Some(indices) = self.block_body_indices(block_id)? {
             Ok(Some(self.transaction_in_range(Range::from(indices))?))
         } else {
@@ -357,7 +382,7 @@ impl TransactionProvider for DbProvider {
         }
     }
 
-    fn transaction_in_range(&self, range: Range<TxNumber>) -> Result<Vec<TxWithHash>> {
+    fn transaction_in_range(&self, range: Range<TxNumber>) -> ProviderResult<Vec<TxWithHash>> {
         let db_tx = self.0.tx()?;
 
         let total = range.end - range.start;
@@ -365,7 +390,9 @@ impl TransactionProvider for DbProvider {
 
         for i in range {
             if let Some(transaction) = db_tx.get::<Transactions>(i)? {
-                let hash = db_tx.get::<TxHashes>(i)?.expect("should exist");
+                let res = db_tx.get::<TxHashes>(i)?;
+                let hash = res.ok_or(ProviderError::MissingTxHash(i))?;
+
                 transactions.push(TxWithHash { hash, transaction });
             };
         }
@@ -377,11 +404,15 @@ impl TransactionProvider for DbProvider {
     fn transaction_block_num_and_hash(
         &self,
         hash: TxHash,
-    ) -> Result<Option<(BlockNumber, BlockHash)>> {
+    ) -> ProviderResult<Option<(BlockNumber, BlockHash)>> {
         let db_tx = self.0.tx()?;
         if let Some(num) = db_tx.get::<TxNumbers>(hash)? {
-            let block_num = db_tx.get::<TxBlocks>(num)?.expect("should exist");
-            let block_hash = db_tx.get::<BlockHashes>(block_num)?.expect("should exist");
+            let block_num =
+                db_tx.get::<TxBlocks>(num)?.ok_or(ProviderError::MissingTxBlock(num))?;
+
+            let res = db_tx.get::<BlockHashes>(block_num)?;
+            let block_hash = res.ok_or(ProviderError::MissingBlockHash(num))?;
+
             db_tx.commit()?;
             Ok(Some((block_num, block_hash)))
         } else {
@@ -393,25 +424,32 @@ impl TransactionProvider for DbProvider {
         &self,
         block_id: BlockHashOrNumber,
         idx: u64,
-    ) -> Result<Option<TxWithHash>> {
+    ) -> ProviderResult<Option<TxWithHash>> {
         let db_tx = self.0.tx()?;
 
         match self.block_body_indices(block_id)? {
             // make sure the requested idx is within the range of the block tx count
             Some(indices) if idx < indices.tx_count => {
                 let num = indices.tx_offset + idx;
-                let hash = db_tx.get::<TxHashes>(num)?.expect("should exist");
-                let transaction = db_tx.get::<Transactions>(num)?.expect("should exist");
-                let transaction = TxWithHash { hash, transaction };
+
+                let res = db_tx.get::<TxHashes>(num)?;
+                let hash = res.ok_or(ProviderError::MissingTxHash(num))?;
+
+                let res = db_tx.get::<Transactions>(num)?;
+                let transaction = res.ok_or(ProviderError::MissingTx(num))?;
+
                 db_tx.commit()?;
-                Ok(Some(transaction))
+                Ok(Some(TxWithHash { hash, transaction }))
             }
 
             _ => Ok(None),
         }
     }
 
-    fn transaction_count_by_block(&self, block_id: BlockHashOrNumber) -> Result<Option<u64>> {
+    fn transaction_count_by_block(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<u64>> {
         let db_tx = self.0.tx()?;
         if let Some(indices) = self.block_body_indices(block_id)? {
             db_tx.commit()?;
@@ -423,7 +461,7 @@ impl TransactionProvider for DbProvider {
 }
 
 impl TransactionsProviderExt for DbProvider {
-    fn transaction_hashes_in_range(&self, range: Range<TxNumber>) -> Result<Vec<TxHash>> {
+    fn transaction_hashes_in_range(&self, range: Range<TxNumber>) -> ProviderResult<Vec<TxHash>> {
         let db_tx = self.0.tx()?;
 
         let total = range.end - range.start;
@@ -441,11 +479,15 @@ impl TransactionsProviderExt for DbProvider {
 }
 
 impl TransactionStatusProvider for DbProvider {
-    fn transaction_status(&self, hash: TxHash) -> Result<Option<FinalityStatus>> {
+    fn transaction_status(&self, hash: TxHash) -> ProviderResult<Option<FinalityStatus>> {
         let db_tx = self.0.tx()?;
         if let Some(tx_num) = db_tx.get::<TxNumbers>(hash)? {
-            let block_num = db_tx.get::<TxBlocks>(tx_num)?.expect("should exist");
-            let status = db_tx.get::<BlockStatusses>(block_num)?.expect("should exist");
+            let res = db_tx.get::<TxBlocks>(tx_num)?;
+            let block_num = res.ok_or(ProviderError::MissingTxBlock(tx_num))?;
+
+            let res = db_tx.get::<BlockStatusses>(block_num)?;
+            let status = res.ok_or(ProviderError::MissingBlockStatus(block_num))?;
+
             db_tx.commit()?;
             Ok(Some(status))
         } else {
@@ -455,10 +497,13 @@ impl TransactionStatusProvider for DbProvider {
 }
 
 impl ReceiptProvider for DbProvider {
-    fn receipt_by_hash(&self, hash: TxHash) -> Result<Option<Receipt>> {
+    fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
         let db_tx = self.0.tx()?;
         if let Some(num) = db_tx.get::<TxNumbers>(hash)? {
-            let receipt = db_tx.get::<katana_db::tables::Receipts>(num)?.expect("should exist");
+            let receipt = db_tx
+                .get::<katana_db::tables::Receipts>(num)?
+                .ok_or(ProviderError::MissingTxReceipt(num))?;
+
             db_tx.commit()?;
             Ok(Some(receipt))
         } else {
@@ -466,7 +511,10 @@ impl ReceiptProvider for DbProvider {
         }
     }
 
-    fn receipts_by_block(&self, block_id: BlockHashOrNumber) -> Result<Option<Vec<Receipt>>> {
+    fn receipts_by_block(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Vec<Receipt>>> {
         if let Some(indices) = self.block_body_indices(block_id)? {
             let db_tx = self.0.tx()?;
             let mut receipts = Vec::with_capacity(indices.tx_count as usize);
@@ -486,14 +534,27 @@ impl ReceiptProvider for DbProvider {
     }
 }
 
+impl BlockEnvProvider for DbProvider {
+    fn block_env_at(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<BlockEnv>> {
+        let Some(header) = self.header(block_id)? else { return Ok(None) };
+
+        Ok(Some(BlockEnv {
+            number: header.number,
+            timestamp: header.timestamp,
+            l1_gas_prices: header.gas_prices,
+            sequencer_address: header.sequencer_address,
+        }))
+    }
+}
+
 impl BlockWriter for DbProvider {
     fn insert_block_with_states_and_receipts(
         &self,
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
-    ) -> Result<()> {
-        self.0.update(move |db_tx| -> Result<()> {
+    ) -> ProviderResult<()> {
+        self.0.update(move |db_tx| -> ProviderResult<()> {
             let block_hash = block.block.header.hash;
             let block_number = block.block.header.header.number;
 

@@ -12,6 +12,7 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 use super::{parse_contracts_events, Contract, Manifest, Model};
 use crate::contracts::world::test::deploy_world;
 use crate::manifest::{parse_models_events, ManifestError};
+use crate::migration::world::WorldDiff;
 
 #[tokio::test]
 async fn manifest_from_remote_throw_error_on_not_deployed() {
@@ -231,14 +232,24 @@ async fn fetch_remote_manifest() {
     let account = sequencer.account();
     let provider = account.provider();
 
-    let (world_address, _) = deploy_world(
-        &sequencer,
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
-    )
-    .await;
+    let artifacts_path =
+        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
+    let manifest_path = artifacts_path.join("manifest.json");
 
-    let manifest = Manifest::load_from_remote(provider, world_address).await.unwrap();
+    let (world_address, _) = deploy_world(&sequencer, artifacts_path).await;
 
-    assert_eq!(manifest.models.len(), 2);
-    assert_eq!(manifest.contracts.len(), 1);
+    let local_manifest = Manifest::load_from_path(manifest_path).unwrap();
+    let remote_manifest = Manifest::load_from_remote(provider, world_address).await.unwrap();
+
+    assert_eq!(local_manifest.models.len(), 2);
+    assert_eq!(local_manifest.contracts.len(), 1);
+
+    assert_eq!(remote_manifest.models.len(), 2);
+    assert_eq!(remote_manifest.contracts.len(), 1);
+
+    // compute diff from local and remote manifest
+
+    let diff = WorldDiff::compute(local_manifest, Some(remote_manifest));
+
+    assert_eq!(diff.count_diffs(), 0, "there should not be any diff");
 }

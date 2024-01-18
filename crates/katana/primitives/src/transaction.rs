@@ -1,14 +1,16 @@
 use derive_more::{AsRef, Deref};
 use ethers::types::H256;
 
+use crate::chain::ChainId;
 use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, Nonce, SierraClass,
+    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    Nonce,
 };
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_deploy_account_v1_tx_hash,
     compute_invoke_v1_tx_hash, compute_l1_handler_tx_hash,
 };
-use crate::{ChainId, FieldElement};
+use crate::FieldElement;
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
@@ -97,7 +99,7 @@ impl ExecutableTxWithHash {
 #[derive(Debug, Clone, AsRef, Deref)]
 pub struct DeclareTxWithClass {
     /// The Sierra class, if any.
-    pub sierra_class: Option<SierraClass>,
+    pub sierra_class: Option<FlattenedSierraClass>,
     /// The compiled contract class.
     pub compiled_class: CompiledContractClass,
     /// The raw transaction.
@@ -109,7 +111,7 @@ pub struct DeclareTxWithClass {
 impl DeclareTxWithClass {
     pub fn new_with_classes(
         transaction: DeclareTx,
-        sierra_class: SierraClass,
+        sierra_class: FlattenedSierraClass,
         compiled_class: CompiledContractClass,
     ) -> Self {
         Self { sierra_class: Some(sierra_class), compiled_class, transaction }
@@ -135,7 +137,7 @@ impl InvokeTx {
             self.sender_address.into(),
             &self.calldata,
             self.max_fee,
-            self.chain_id,
+            self.chain_id.into(),
             self.nonce,
             is_query,
         )
@@ -194,7 +196,7 @@ impl DeclareTx {
                 tx.sender_address.into(),
                 tx.class_hash,
                 tx.max_fee,
-                tx.chain_id,
+                tx.chain_id.into(),
                 tx.nonce,
                 is_query,
             ),
@@ -203,7 +205,7 @@ impl DeclareTx {
                 tx.sender_address.into(),
                 tx.class_hash,
                 tx.max_fee,
-                tx.chain_id,
+                tx.chain_id.into(),
                 tx.nonce,
                 tx.compiled_class_hash,
                 is_query,
@@ -233,7 +235,7 @@ impl L1HandlerTx {
             self.contract_address.into(),
             self.entry_point_selector,
             &self.calldata,
-            self.chain_id,
+            self.chain_id.into(),
             self.nonce,
         )
     }
@@ -262,7 +264,7 @@ impl DeployAccountTx {
             self.class_hash,
             self.contract_address_salt,
             self.max_fee,
-            self.chain_id,
+            self.chain_id.into(),
             self.nonce,
             is_query,
         )

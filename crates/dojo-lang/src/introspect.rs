@@ -99,7 +99,7 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
 /// A handler for Dojo code derives Introspect for an enum
 /// Parameters:
 /// * db: The semantic database.
-/// * struct_ast: The AST of the struct.
+/// * enum_ast: The AST of the enum.
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_introspect_enum(
@@ -275,17 +275,7 @@ fn handle_introspect_internal(
         }
     });
 
-    if size_precompute > 0 {
-        size.push(format!("{}", size_precompute));
-    }
-
-    if size.is_empty() {
-        panic!(
-            "The model `{}` has only keys, ensure you have at least one field without the #[key] \
-             attribute.",
-            name
-        );
-    }
+    size.push(format!("{}", size_precompute));
 
     RewriteNode::interpolate_patched(
         "

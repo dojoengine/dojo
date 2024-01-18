@@ -29,7 +29,12 @@ impl KatanaRunner {
     }
 
     pub fn new_with_port(port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
-        let log_filename = format!("logs/katana-{}.log", port);
+        let mut temp_dir = std::env::temp_dir();
+        temp_dir.push("dojo");
+        temp_dir.push("logs");
+        temp_dir.push(format!("katana-{}.log", port));
+
+        eprintln!("Writing katana logs to {}", temp_dir.to_str().unwrap());
 
         let mut child = Command::new("katana")
             .args(["-p", &port.to_string()])
@@ -43,11 +48,7 @@ impl KatanaRunner {
         let (sender, receiver) = mpsc::channel();
 
         thread::spawn(move || {
-            KatanaRunner::wait_for_server_started_and_signal(
-                Path::new(&log_filename),
-                stdout,
-                sender,
-            );
+            KatanaRunner::wait_for_server_started_and_signal(temp_dir.as_path(), stdout, sender);
         });
 
         receiver

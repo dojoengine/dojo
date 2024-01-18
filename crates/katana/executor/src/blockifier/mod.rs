@@ -11,6 +11,7 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
+use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{
     DeclareTxWithClass, ExecutableTx, ExecutableTxWithHash, TxWithHash,
 };
@@ -42,6 +43,8 @@ pub struct TransactionExecutor<'a, S: StateReader, T> {
     transactions: T,
     /// The state the transactions will be executed on.
     state: &'a CachedStateWrapper<S>,
+    /// A flag to enable/disable transaction validation.
+    validate: bool,
 
     // logs flags
     error_log: bool,
@@ -58,6 +61,7 @@ where
         state: &'a CachedStateWrapper<S>,
         block_context: &'a BlockContext,
         charge_fee: bool,
+        validate: bool,
         transactions: T,
     ) -> Self {
         Self {
@@ -65,6 +69,7 @@ where
             charge_fee,
             transactions,
             block_context,
+            validate,
             error_log: false,
             events_log: false,
             resources_log: false,
@@ -97,10 +102,9 @@ where
     type Item = TxExecutionResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let res = self
-            .transactions
-            .next()
-            .map(|tx| execute_tx(tx, self.state, self.block_context, self.charge_fee))?;
+        let res = self.transactions.next().map(|tx| {
+            execute_tx(tx, self.state, self.block_context, self.charge_fee, self.validate)
+        })?;
 
         match res {
             Ok(ref info) => {
@@ -142,10 +146,8 @@ fn execute_tx<S: StateReader>(
     state: &CachedStateWrapper<S>,
     block_context: &BlockContext,
     charge_fee: bool,
+    validate: bool,
 ) -> TxExecutionResult {
-    // TODO: check how this value must be controlled.
-    let validate = true;
-
     let sierra = if let ExecutableTx::Declare(DeclareTxWithClass {
         transaction,
         sierra_class: Some(sierra_class),
@@ -179,23 +181,28 @@ pub type AcceptedTxPair = (TxWithHash, TxReceiptWithExecInfo);
 pub type RejectedTxPair = (TxWithHash, TransactionExecutionError);
 
 pub struct PendingState {
+    /// The block context of the pending block.
+    pub block_envs: RwLock<(BlockEnv, CfgEnv)>,
+    /// The state of the pending block.
     pub state: Arc<CachedStateWrapper<StateRefDb>>,
     /// The transactions that have been executed.
-    pub executed_txs: RwLock<Vec<(TxWithHash, TxReceiptWithExecInfo)>>,
+    pub executed_txs: RwLock<Vec<AcceptedTxPair>>,
     /// The transactions that have been rejected.
-    pub rejected_txs: RwLock<Vec<(TxWithHash, TransactionExecutionError)>>,
+    pub rejected_txs: RwLock<Vec<RejectedTxPair>>,
 }
 
 impl PendingState {
-    pub fn new(state: StateRefDb) -> Self {
+    pub fn new(state: StateRefDb, block_env: BlockEnv, cfg_env: CfgEnv) -> Self {
         Self {
+            block_envs: RwLock::new((block_env, cfg_env)),
             state: Arc::new(CachedStateWrapper::new(state)),
             executed_txs: RwLock::new(Vec::new()),
             rejected_txs: RwLock::new(Vec::new()),
         }
     }
 
-    pub fn reset_state_with(&self, state: StateRefDb) {
+    pub fn reset_state(&self, state: StateRefDb, block_env: BlockEnv, cfg_env: CfgEnv) {
+        *self.block_envs.write() = (block_env, cfg_env);
         self.state.reset_with_new_state(state);
     }
 
@@ -208,6 +215,10 @@ impl PendingState {
         let executed_txs = std::mem::take(&mut *self.executed_txs.write());
         let rejected_txs = std::mem::take(&mut *self.rejected_txs.write());
         (executed_txs, rejected_txs)
+    }
+
+    pub fn block_execution_envs(&self) -> (BlockEnv, CfgEnv) {
+        self.block_envs.read().clone()
     }
 
     fn add_executed_tx(&self, tx: TxWithHash, execution_result: TxExecutionResult) {
