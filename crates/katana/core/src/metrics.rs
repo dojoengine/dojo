@@ -1,4 +1,4 @@
-//! Transaction pool metrics.
+//! Core pool metrics.
 
 use dojo_metrics::{metrics::Counter, Metrics};
 
