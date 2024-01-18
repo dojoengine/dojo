@@ -66,16 +66,7 @@ impl StarknetApi {
         T: Send + 'static,
     {
         let this = self.clone();
-        // create oneshot tokio channel
-        let (sender, receiver) = tokio::sync::oneshot::channel::<T>();
-        let _ = TokioTaskSpawner::new()
-            .unwrap()
-            .spawn_blocking(move || {
-                let res = func(this);
-                let _ = sender.send(res);
-            })
-            .await;
-        receiver.await.unwrap()
+        TokioTaskSpawner::new().unwrap().spawn_blocking(move || func(this)).await.unwrap()
     }
 }
 #[async_trait]
