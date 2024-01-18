@@ -50,7 +50,7 @@ pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Res
     let middleware = tower::ServiceBuilder::new()
         .layer(cors)
         .layer(ProxyGetRequestLayer::new("/", "health")?)
-        .timeout(Duration::from_secs(2));
+        .timeout(Duration::from_secs(20));
 
     let server = ServerBuilder::new()
         .set_logger(RpcLogger)
