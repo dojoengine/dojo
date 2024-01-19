@@ -1,23 +1,21 @@
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::{
-        client::Libp2pClient,
-        server::Libp2pRelay,
-        types::{ClientMessage, ServerMessage},
-    };
+    use std::error::Error;
+    use std::time::Duration;
+
     use futures::StreamExt;
-    use std::{error::Error, time::Duration};
-    use tokio::{
-        self, select,
-        time::{self, sleep},
-    };
+    use tokio::time::sleep;
+    use tokio::{self, select};
+
+    use crate::client::{Libp2pClient, Message};
+    use crate::server::Libp2pRelay;
+    use crate::types::ClientMessage;
 
     // This tests subscribing to a topic and receiving a message
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
         // Initialize the relay server
-        let relay_server = Libp2pRelay::new(Some(true), 1010)?;
+        let mut relay_server = Libp2pRelay::new(Some(true), 1010)?;
 
         // Give some time for the server to start up
         sleep(Duration::from_secs(1)).await;
@@ -25,10 +23,10 @@ mod test {
         // Initialize the first client (listener)
         let mut client = Libp2pClient::new("/ip6/::1/tcp/1010".to_string())?;
         client.subscribe("mawmaw")?;
-        let (sender, mut receiver) = futures::channel::mpsc::unbounded::<ServerMessage>();
+        let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Message>();
 
         tokio::spawn(async move {
-            relay_server.await;
+            relay_server.run().await;
         });
 
         loop {
