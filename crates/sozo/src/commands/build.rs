@@ -60,7 +60,8 @@ mod tests {
     fn build_example() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
 
-        let result = BuildArgs.run(&config);
+        let build_args = BuildArgs;
+        let result = build_args.run(&config);
         assert!(result.is_ok());
     }
 }
