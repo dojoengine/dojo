@@ -1,13 +1,14 @@
-use anyhow::Result;
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
     GenericContractInfo,
 };
 
+use crate::ProviderResult;
+
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ContractInfoProvider: Send + Sync {
     /// Returns the contract information given its address.
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>>;
+    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>>;
 }
 
 /// A provider trait for retrieving contract class related information.
@@ -17,13 +18,13 @@ pub trait ContractClassProvider: Send + Sync {
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>>;
+    ) -> ProviderResult<Option<CompiledClassHash>>;
 
     /// Returns the compiled class definition of a contract class given its class hash.
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>>;
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>>;
 
     /// Retrieves the Sierra class definition of a contract class given its class hash.
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>>;
+    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>>;
 }
 
 // TEMP: added mainly for compatibility reason. might be removed in the future.
@@ -34,11 +35,12 @@ pub trait ContractClassWriter: Send + Sync {
         &self,
         hash: ClassHash,
         compiled_hash: CompiledClassHash,
-    ) -> Result<()>;
+    ) -> ProviderResult<()>;
 
     /// Returns the compiled class definition of a contract class given its class hash.
-    fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> Result<()>;
+    fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> ProviderResult<()>;
 
     /// Retrieves the Sierra class definition of a contract class given its class hash.
-    fn set_sierra_class(&self, hash: ClassHash, sierra: FlattenedSierraClass) -> Result<()>;
+    fn set_sierra_class(&self, hash: ClassHash, sierra: FlattenedSierraClass)
+    -> ProviderResult<()>;
 }

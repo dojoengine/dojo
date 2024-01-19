@@ -20,6 +20,7 @@ use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::sequencer::SequencerConfig;
+use katana_primitives::chain::ChainId;
 use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
 use metrics::utils::parse_socket_address;
@@ -47,10 +48,11 @@ pub struct KatanaArgs {
 
     #[arg(long)]
     #[arg(value_name = "PATH")]
-    #[arg(help = "Dump the state of chain on exit to the given file.")]
-    #[arg(long_help = "Dump the state of chain on exit to the given file. If the value is a \
-                       directory, the state will be written to `<PATH>/state.bin`.")]
-    pub dump_state: Option<PathBuf>,
+    #[arg(help = "Directory path of the database to initialize from.")]
+    #[arg(long_help = "Directory path of the database to initialize from. The path must either \
+                       be an empty directory or a directory which already contains a previously \
+                       initialized Katana database.")]
+    pub db_dir: Option<PathBuf>,
 
     #[arg(long)]
     #[arg(value_name = "URL")]
@@ -151,12 +153,16 @@ pub struct StarknetOptions {
 pub struct EnvironmentOptions {
     #[arg(long)]
     #[arg(help = "The chain ID.")]
+    #[arg(long_help = "The chain ID. If a raw hex string (`0x` prefix) is provided, then it'd \
+                       used as the actual chain ID. Otherwise, it's represented as the raw \
+                       ASCII values. It must be a valid Cairo short string.")]
     #[arg(default_value = "KATANA")]
-    pub chain_id: String,
+    #[arg(value_parser = ChainId::parse)]
+    pub chain_id: ChainId,
 
     #[arg(long)]
     #[arg(help = "The gas price.")]
-    pub gas_price: Option<u128>,
+    pub gas_price: Option<u64>,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
@@ -219,7 +225,7 @@ impl KatanaArgs {
             fork_rpc_url: self.rpc_url.clone(),
             fork_block_number: self.fork_block_number,
             env: Environment {
-                chain_id: self.starknet.environment.chain_id.clone(),
+                chain_id: self.starknet.environment.chain_id,
                 gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
                 invoke_max_steps: self
                     .starknet
@@ -232,6 +238,7 @@ impl KatanaArgs {
                     .validate_max_steps
                     .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
             },
+            db_dir: self.db_dir.clone(),
         }
     }
 }
@@ -255,11 +262,8 @@ mod test {
     #[test]
     fn default_block_context_from_args() {
         let args = KatanaArgs::parse_from(["katana"]);
-        let block_context = args.starknet_config().block_context();
-        assert_eq!(block_context.gas_prices.eth_l1_gas_price, DEFAULT_GAS_PRICE);
-        assert_eq!(block_context.chain_id.0, "KATANA".to_string());
-        assert_eq!(block_context.validate_max_n_steps, DEFAULT_VALIDATE_MAX_STEPS);
-        assert_eq!(block_context.invoke_tx_max_n_steps, DEFAULT_INVOKE_MAX_STEPS);
+        let block_context = args.starknet_config().block_env();
+        assert_eq!(block_context.l1_gas_prices.eth, DEFAULT_GAS_PRICE);
     }
 
     #[test]
@@ -276,11 +280,8 @@ mod test {
             "200",
         ]);
 
-        let block_context = args.starknet_config().block_context();
+        let block_context = args.starknet_config().block_env();
 
-        assert_eq!(block_context.gas_prices.eth_l1_gas_price, 10);
-        assert_eq!(block_context.chain_id.0, "SN_GOERLI".to_string());
-        assert_eq!(block_context.validate_max_n_steps, 100);
-        assert_eq!(block_context.invoke_tx_max_n_steps, 200);
+        assert_eq!(block_context.l1_gas_prices.eth, 10);
     }
 }

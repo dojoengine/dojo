@@ -1,6 +1,6 @@
-use anyhow::Result;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_provider::traits::block::{BlockHashProvider, BlockProvider, BlockStatusProvider};
+use katana_provider::ProviderResult;
 use katana_rpc_types::block::{BlockWithTxHashes, BlockWithTxs};
 
 /// A builder for building RPC block types.
@@ -19,7 +19,7 @@ impl<P> BlockBuilder<P>
 where
     P: BlockProvider + BlockHashProvider,
 {
-    pub fn build(self) -> Result<Option<BlockWithTxs>> {
+    pub fn build(self) -> ProviderResult<Option<BlockWithTxs>> {
         let Some(hash) = BlockHashProvider::block_hash_by_id(&self.provider, self.block_id)? else {
             return Ok(None);
         };
@@ -32,7 +32,7 @@ where
         Ok(Some(BlockWithTxs::new(hash, block, finality_status)))
     }
 
-    pub fn build_with_tx_hash(self) -> Result<Option<BlockWithTxHashes>> {
+    pub fn build_with_tx_hash(self) -> ProviderResult<Option<BlockWithTxHashes>> {
         let Some(hash) = BlockHashProvider::block_hash_by_id(&self.provider, self.block_id)? else {
             return Ok(None);
         };

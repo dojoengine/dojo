@@ -955,7 +955,7 @@ test_manifest_file
     {
       "name": "dojo_examples::actions::actions",
       "address": null,
-      "class_hash": "0x69c6bec7de74fc2404fe6b68ad8ece7be81ad6d861b38a8ba8fa583bfc3666b",
+      "class_hash": "0x352a6ab719469097c1f3f9db41552fc79a1bf09b83c8a0839052218461ecea9",
       "abi": [
         {
           "type": "impl",
@@ -1205,7 +1205,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::moves",
       "address": null,
-      "class_hash": "0x64495ca6dc1dc328972697b30468cea364bcb7452bbb6e4aaad3e4b3f190147",
+      "class_hash": "0x1e13e74f3cb66e022c2b58a8ab7670a065d12d050446e20f736bd5bdc37c17e",
       "abi": [
         {
           "type": "function",
@@ -1358,6 +1358,62 @@ test_manifest_file
               "type": "dojo::database::introspect::Ty"
             }
           ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "enum",
+          "name": "dojo_examples::models::Direction",
+          "variants": [
+            {
+              "name": "None",
+              "type": "()"
+            },
+            {
+              "name": "Left",
+              "type": "()"
+            },
+            {
+              "name": "Right",
+              "type": "()"
+            },
+            {
+              "name": "Up",
+              "type": "()"
+            },
+            {
+              "name": "Down",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Moves",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "remaining",
+              "type": "core::integer::u8"
+            },
+            {
+              "name": "last_direction",
+              "type": "dojo_examples::models::Direction"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "ensure_abi",
+          "inputs": [
+            {
+              "name": "model",
+              "type": "dojo_examples::models::Moves"
+            }
+          ],
+          "outputs": [],
           "state_mutability": "view"
         },
         {
@@ -1374,7 +1430,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::position",
       "address": null,
-      "class_hash": "0x4cd20d231b04405a77b184c115dc60637e186504fad7f0929bd76cbd09c10b",
+      "class_hash": "0x2a7df852d6ef0af662dad741b97b423ba0fb34a1483599781ac9e7f6822bc25",
       "abi": [
         {
           "type": "function",
@@ -1527,6 +1583,46 @@ test_manifest_file
               "type": "dojo::database::introspect::Ty"
             }
           ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Vec2",
+          "members": [
+            {
+              "name": "x",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "y",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::Position",
+          "members": [
+            {
+              "name": "player",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "vec",
+              "type": "dojo_examples::models::Vec2"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "ensure_abi",
+          "inputs": [
+            {
+              "name": "model",
+              "type": "dojo_examples::models::Position"
+            }
+          ],
+          "outputs": [],
           "state_mutability": "view"
         },
         {

@@ -65,12 +65,12 @@ pub struct TransactionWaiter<'a, P: Provider> {
     /// be considered when waiting for the transaction, meaning `REVERTED` transaction will not
     /// return an error.
     must_succeed: bool,
-    /// Poll the transaction every `interval` miliseconds. Miliseconds are used so that
+    /// Poll the transaction every `interval` milliseconds. Milliseconds are used so that
     /// we can be more precise with the polling interval. Defaults to 2.5 seconds.
     interval: Interval,
     /// The maximum amount of time to wait for the transaction to achieve the desired status. An
     /// error will be returned if it is unable to finish within the `timeout` duration. Defaults to
-    /// 60 seconds.
+    /// 300 seconds.
     timeout: Duration,
     /// The provider to use for polling the transaction.
     provider: &'a P,
@@ -240,6 +240,10 @@ where
                     }
 
                     Poll::Ready(res) => match res {
+                        Err(ProviderError::StarknetError(
+                            StarknetError::TransactionHashNotFound,
+                        )) => {}
+
                         Err(e) => {
                             return Poll::Ready(Err(TransactionWaitingError::Provider(e)));
                         }

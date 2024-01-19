@@ -465,7 +465,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "strum 0.25.0",
- "syn 2.0.41",
+ "syn 2.0.47",
  "thiserror",
 ]
 
@@ -572,7 +572,7 @@ checksum = "5fd55a5ba1179988837d24ab4c7cc8ed6efdeff578ede0416b4225a5fca35bd0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -620,7 +620,7 @@ checksum = "16e62a023e7c117e27523144c5d2459f4397fcc3cab0085af8e2224f643a0193"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -637,7 +637,7 @@ checksum = "a66537f1bb974b254c98ed142ff995236e81b9d0fe4db0575f46612cb15eb0f9"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -801,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "clap_builder",
@@ -852,7 +852,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -1111,11 +1111,44 @@ checksum = "3a4f925191b4367301851c6d99b09890311d74b0d43f274c0b34c86d308a3663"
 [[package]]
 name = "cainome"
 version = "0.1.5"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "camino",
+ "clap",
+ "clap_complete",
+ "convert_case 0.6.0",
+ "serde",
+ "serde_json",
+ "starknet",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "cainome"
+version = "0.1.5"
 source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
 dependencies = [
- "cainome-cairo-serde",
- "cainome-parser",
- "cainome-rs",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
+]
+
+[[package]]
+name = "cainome-cairo-serde"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
+dependencies = [
+ "starknet",
+ "thiserror",
 ]
 
 [[package]]
@@ -1130,8 +1163,36 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
+dependencies = [
+ "quote",
+ "serde_json",
+ "starknet",
+ "syn 2.0.41",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-parser"
+version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
 dependencies = [
+ "quote",
+ "serde_json",
+ "starknet",
+ "syn 2.0.47",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.2#46c9fa734b396632cb5f986294d05532ada80f9a"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "proc-macro2",
  "quote",
  "serde_json",
  "starknet",
@@ -1145,13 +1206,13 @@ version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
- "cainome-parser",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
  "proc-macro2",
  "quote",
  "serde_json",
  "starknet",
- "syn 2.0.41",
+ "syn 2.0.47",
  "thiserror",
 ]
 
@@ -1392,7 +1453,7 @@ checksum = "c8cc59c40344194d2cc825071080d887826dcf0df37de71e58fc8aa4c344bb84"
 dependencies = [
  "cairo-lang-debug",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -1917,7 +1978,7 @@ dependencies = [
  "heck 0.4.1",
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -2317,7 +2378,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30d2b3721e861707777e3195b0158f950ae6dc4a27e4d02ff9f67e3eb3de199e"
 dependencies = [
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -2384,7 +2445,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "strsim",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -2406,7 +2467,7 @@ checksum = "836a9bbc7ad63342d6d6e7b815ccab164bc77a2d95d84bc3117a8c0d5c98e2d5"
 dependencies = [
  "darling_core 0.20.3",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -2660,16 +2721,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
-name = "dojo-core"
+name = "dojo-bindgen"
 version = "0.5.0"
+dependencies = [
+ "async-trait",
+ "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "camino",
+ "convert_case 0.6.0",
+ "serde",
+ "serde_json",
+ "starknet",
+ "thiserror",
+]
+
+[[package]]
+name = "dojo-core"
+version = "0.5.1-alpha.0"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 
 [[package]]
 name = "dojo-lang"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2717,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2738,16 +2813,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-signers"
-version = "0.5.0"
-dependencies = [
- "anyhow",
- "starknet",
-]
-
-[[package]]
 name = "dojo-test-utils"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2761,6 +2828,7 @@ dependencies = [
  "dojo-world",
  "jsonrpsee",
  "katana-core",
+ "katana-primitives",
  "katana-rpc",
  "scarb",
  "scarb-ui",
@@ -2778,7 +2846,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -2793,19 +2861,18 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "assert_fs",
  "assert_matches",
  "async-trait",
- "cainome",
+ "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
  "cairo-lang-filesystem",
  "cairo-lang-project",
  "cairo-lang-starknet",
  "camino",
  "convert_case 0.6.0",
- "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
  "futures",
@@ -2827,7 +2894,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "cairo-lang-starknet",
  "camino",
@@ -3136,7 +3203,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "syn 2.0.41",
+ "syn 2.0.47",
  "toml 0.8.8",
  "walkdir",
 ]
@@ -3154,7 +3221,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -3180,7 +3247,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum 0.25.0",
- "syn 2.0.41",
+ "syn 2.0.47",
  "tempfile",
  "thiserror",
  "tiny-keccak",
@@ -3642,7 +3709,7 @@ checksum = "53b153fd91e4b0147f4aced87be237c98248656bb01050b96bf3ee89220a8ddb"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -3713,7 +3780,7 @@ checksum = "d4cf186fea4af17825116f72932fe52cce9a13bae39ff63b4dc0cfdb3fb4bde1"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -4133,7 +4200,7 @@ checksum = "02a5bcaf6704d9354a3071cede7e77d366a5980c7352e102e2c2f9b645b1d3ae"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -5444,15 +5511,16 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "assert_matches",
  "clap",
  "clap_complete",
  "console",
  "katana-core",
+ "katana-primitives",
  "katana-rpc",
- "metrics 0.5.0",
+ "metrics 0.5.1-alpha.0",
  "metrics-process",
  "serde_json",
  "starknet_api",
@@ -5464,7 +5532,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -5472,17 +5540,17 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "proc-macro2",
  "quote",
  "serde",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
 name = "katana-core"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5496,6 +5564,7 @@ dependencies = [
  "flate2",
  "futures",
  "hex",
+ "katana-db",
  "katana-executor",
  "katana-primitives",
  "katana-provider",
@@ -5507,6 +5576,7 @@ dependencies = [
  "serde_with",
  "starknet",
  "starknet_api",
+ "tempfile",
  "thiserror",
  "tokio",
  "tracing",
@@ -5515,7 +5585,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5537,7 +5607,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5553,7 +5623,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5564,14 +5634,17 @@ dependencies = [
  "flate2",
  "serde",
  "serde_json",
+ "serde_with",
  "starknet",
  "starknet_api",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
  "thiserror",
 ]
 
 [[package]]
 name = "katana-provider"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -5596,7 +5669,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5628,7 +5701,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "derive_more",
@@ -5641,7 +5714,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -5653,7 +5726,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "home",
@@ -5944,7 +6017,7 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "hyper",
@@ -5996,7 +6069,7 @@ checksum = "ddece26afd34c31585c74a4db0630c376df271c285d682d1e55012197830b6df"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -6427,7 +6500,7 @@ dependencies = [
  "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -6520,7 +6593,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -6801,7 +6874,7 @@ dependencies = [
  "pest_meta",
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -6865,7 +6938,7 @@ dependencies = [
  "phf_shared 0.11.2",
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -6909,7 +6982,7 @@ checksum = "4359fd9c9171ec6e8c62926d6faaf553a8dc3f64e1507e76da7911b4f6a04405"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -7110,7 +7183,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae005bd773ab59b4725093fd7df83fd7892f7d8eafb48dbd7de6e024e4215f9d"
 dependencies = [
  "proc-macro2",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -7172,9 +7245,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.70"
+version = "1.0.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39278fbbf5fb4f646ce651690877f89d1c5811a3d4acb27700c1cb3cdb78fd3b"
+checksum = "907a61bd0f64c2f29cd1cf1dc34d05176426a3f504a78010f08416ddb7b13708"
 dependencies = [
  "unicode-ident",
 ]
@@ -7291,7 +7364,7 @@ dependencies = [
  "prost 0.12.3",
  "prost-types 0.12.3",
  "regex",
- "syn 2.0.41",
+ "syn 2.0.47",
  "tempfile",
  "which 4.4.2",
 ]
@@ -7319,7 +7392,7 @@ dependencies = [
  "itertools 0.11.0",
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -7364,9 +7437,9 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quote"
-version = "1.0.33"
+version = "1.0.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae"
+checksum = "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
 dependencies = [
  "proc-macro2",
 ]
@@ -7751,7 +7824,7 @@ dependencies = [
  "regex",
  "relative-path",
  "rustc_version",
- "syn 2.0.41",
+ "syn 2.0.47",
  "unicode-ident",
 ]
 
@@ -7764,7 +7837,7 @@ dependencies = [
  "quote",
  "rand",
  "rustc_version",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -8218,9 +8291,9 @@ checksum = "cd0b0ec5f1c1ca621c432a25813d8d60c88abe6d3e08a3eb9cf37d97a0fe3d73"
 
 [[package]]
 name = "serde"
-version = "1.0.193"
+version = "1.0.194"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25dd9975e68d0cb5aa1120c288333fc98731bd1dd12f561e468ea4728c042b89"
+checksum = "0b114498256798c94a0689e1a15fec6005dee8ac1f41de56404b67afc2a4b773"
 dependencies = [
  "serde_derive",
 ]
@@ -8247,13 +8320,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.193"
+version = "1.0.194"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43576ca501357b9b071ac53cdc7da8ef0cbd9493d8df094cd821777ea6e894d3"
+checksum = "a3385e45322e8f9931410f01b3031ec534c3947d0e94c18049af4d9f9907d4e0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -8297,7 +8370,7 @@ checksum = "3081f5ffbb02284dda55132aa26daecedd7372a42417bbbab6f14ab7d6bb9145"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -8346,7 +8419,7 @@ dependencies = [
  "darling 0.20.3",
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -8381,7 +8454,7 @@ checksum = "91d129178576168c589c9ec973feedf7d3126c01ac2bf08795109aa35b69fb8f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -8613,7 +8686,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8634,6 +8707,7 @@ dependencies = [
  "clap-verbosity-flag",
  "clap_complete",
  "console",
+ "dojo-bindgen",
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
@@ -8655,6 +8729,14 @@ dependencies = [
  "tracing",
  "tracing-log 0.1.4",
  "url",
+]
+
+[[package]]
+name = "sozo-signers"
+version = "0.5.1-alpha.0"
+dependencies = [
+ "anyhow",
+ "starknet",
 ]
 
 [[package]]
@@ -9024,7 +9106,7 @@ checksum = "af6527b845423542c8a16e060ea1bc43f67229848e7cd4c4d80be994a84220ce"
 dependencies = [
  "starknet-curve 0.4.0",
  "starknet-ff",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -9067,7 +9149,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "840be1a7eb5735863eee47d3a3f26df45b9be2c519e8da294e74b4d0524d77d1"
 dependencies = [
  "starknet-core",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -9200,7 +9282,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustversion",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -9242,9 +9324,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.41"
+version = "2.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c8b28c477cc3bf0e7966561e3460130e1255f7a1cf71931075f1c5e7a7e269"
+checksum = "1726efe18f42ae774cc644f330953a5e7b3c3003d3edcecf18850fe9d4dd9afb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -9364,7 +9446,7 @@ checksum = "7ba277e77219e9eea169e8508942db1bf5d8a41ff2db9b20aab5a5aadc9fa25d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -9384,7 +9466,7 @@ checksum = "266b2e40bc00e5a6c09c3584011e08b06f123c00362c92b975ba9843aaaa14b8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -9519,7 +9601,7 @@ checksum = "5b8a1e28f2deaa14e508979454cb3a223b10b938b45af148bc0986de36f1923b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -9746,7 +9828,7 @@ dependencies = [
  "proc-macro2",
  "prost-build 0.12.3",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -9808,7 +9890,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "async-trait",
  "camino",
@@ -9834,7 +9916,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -9870,7 +9952,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -9909,7 +9991,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "bytes",
  "crypto-bigint",
@@ -9948,7 +10030,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -9967,7 +10049,7 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.5.0",
+ "metrics 0.5.1-alpha.0",
  "metrics-process",
  "scarb",
  "serde",
@@ -10076,7 +10158,7 @@ checksum = "84fd902d4e0b9a4b27f2f440108dc034e1758628a9b702f8ec61ad66355422fa"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -10105,7 +10187,7 @@ checksum = "34704c8d6ebcbc939824180af020566b01a7c01f80641264eba0999f6c2b6be7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -10224,7 +10306,7 @@ checksum = "982ee4197351b5c9782847ef5ec1fdcaf50503fb19d68f9771adae314e72b492"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -10235,7 +10317,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 
 [[package]]
 name = "ucd-trie"
@@ -10522,7 +10604,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
  "wasm-bindgen-shared",
 ]
 
@@ -10556,7 +10638,7 @@ checksum = "f0eb82fcb7930ae6219a7ecfd55b217f5f0893484b7a13022ebb2b2bf20b5283"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -10996,7 +11078,7 @@ checksum = "be912bf68235a88fbefd1b73415cb218405958d1655b2ece9035a19920bdf6ba"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]
@@ -11016,7 +11098,7 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.41",
+ "syn 2.0.47",
 ]
 
 [[package]]

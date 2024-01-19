@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sequencer_config = config.sequencer_config();
     let starknet_config = config.starknet_config();
 
-    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await);
+    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await?);
     let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
 
     if !config.silent {
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(listen_addr) = config.metrics {
-        let prometheus_handle = prometheus_exporter::install_recorder()?;
+        let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
         info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
         prometheus_exporter::serve(

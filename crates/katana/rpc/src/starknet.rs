@@ -1,10 +1,8 @@
-use std::str::FromStr;
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::sequencer::KatanaSequencer;
-use katana_core::sequencer_error::SequencerError;
 use katana_executor::blockifier::utils::EntryPointCall;
 use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, FinalityStatus, GasPrices, PartialHeader,
@@ -47,8 +45,7 @@ impl StarknetApi {
 #[async_trait]
 impl StarknetApiServer for StarknetApi {
     async fn chain_id(&self) -> Result<FeltAsHex, Error> {
-        let chain_id = self.sequencer.chain_id().as_hex();
-        Ok(FieldElement::from_str(&chain_id).map_err(|_| StarknetApiError::UnexpectedError)?.into())
+        Ok(FieldElement::from(self.sequencer.chain_id()).into())
     }
 
     async fn nonce(
@@ -60,10 +57,7 @@ impl StarknetApiServer for StarknetApi {
             .sequencer
             .nonce_at(block_id, contract_address.into())
             .await
-            .map_err(|e| match e {
-                SequencerError::StateNotFound(_) => StarknetApiError::BlockNotFound,
-                _ => StarknetApiError::UnexpectedError,
-            })?
+            .map_err(StarknetApiError::from)?
             .ok_or(StarknetApiError::ContractNotFound)?;
 
         Ok(nonce.into())
@@ -77,7 +71,7 @@ impl StarknetApiServer for StarknetApi {
         let tx = self
             .sequencer
             .transaction(&transaction_hash)
-            .map_err(|_| StarknetApiError::UnexpectedError)?
+            .map_err(StarknetApiError::from)?
             .ok_or(StarknetApiError::TxnHashNotFound)?;
         Ok(tx.into())
     }
@@ -86,7 +80,7 @@ impl StarknetApiServer for StarknetApi {
         let count = self
             .sequencer
             .block_tx_count(block_id)
-            .map_err(|_| StarknetApiError::UnexpectedError)?
+            .map_err(StarknetApiError::from)?
             .ok_or(StarknetApiError::BlockNotFound)?;
         Ok(count)
     }
@@ -99,17 +93,15 @@ impl StarknetApiServer for StarknetApi {
         let class_hash = self
             .sequencer
             .class_hash_at(block_id, contract_address.into())
-            .map_err(|_| StarknetApiError::UnexpectedError)?
+            .map_err(StarknetApiError::from)?
             .ok_or(StarknetApiError::ContractNotFound)?;
 
         self.class(block_id, class_hash).await
     }
 
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
-        let hash_and_num_pair = self
-            .sequencer
-            .block_hash_and_number()
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let hash_and_num_pair =
+            self.sequencer.block_hash_and_number().map_err(StarknetApiError::from)?;
         Ok(hash_and_num_pair.into())
     }
 
@@ -120,43 +112,48 @@ impl StarknetApiServer for StarknetApi {
         let provider = self.sequencer.backend.blockchain.provider();
 
         if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-            let pending_state = self.sequencer.pending_state().expect("pending state should exist");
+            if let Some(pending_state) = self.sequencer.pending_state() {
+                let block_env = pending_state.block_envs.read().0.clone();
+                let latest_hash =
+                    BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
 
-            let block_context = self.sequencer.backend.env.read().block.clone();
-            let latest_hash = BlockHashProvider::latest_hash(provider)?;
+                let gas_prices = GasPrices {
+                    eth: block_env.l1_gas_prices.eth,
+                    strk: block_env.l1_gas_prices.strk,
+                };
 
-            let gas_prices = GasPrices {
-                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
-            };
+                let header = PartialHeader {
+                    gas_prices,
+                    parent_hash: latest_hash,
+                    version: CURRENT_STARKNET_VERSION,
+                    timestamp: block_env.timestamp,
+                    sequencer_address: block_env.sequencer_address,
+                };
 
-            let header = PartialHeader {
-                gas_prices,
-                parent_hash: latest_hash,
-                version: CURRENT_STARKNET_VERSION,
-                timestamp: block_context.block_timestamp.0,
-                sequencer_address: block_context.sequencer_address.into(),
-            };
+                let transactions = pending_state
+                    .executed_txs
+                    .read()
+                    .iter()
+                    .map(|(tx, _)| tx.hash)
+                    .collect::<Vec<_>>();
 
-            let transactions =
-                pending_state.executed_txs.read().iter().map(|(tx, _)| tx.hash).collect::<Vec<_>>();
-
-            Ok(MaybePendingBlockWithTxHashes::Pending(PendingBlockWithTxHashes::new(
-                header,
-                transactions,
-            )))
-        } else {
-            let block_num = BlockIdReader::convert_block_id(provider, block_id)
-                .map_err(|_| StarknetApiError::UnexpectedError)?
-                .map(BlockHashOrNumber::Num)
-                .ok_or(StarknetApiError::BlockNotFound)?;
-
-            katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                .build_with_tx_hash()
-                .map_err(|_| StarknetApiError::UnexpectedError)?
-                .map(MaybePendingBlockWithTxHashes::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))
+                return Ok(MaybePendingBlockWithTxHashes::Pending(PendingBlockWithTxHashes::new(
+                    header,
+                    transactions,
+                )));
+            }
         }
+
+        let block_num = BlockIdReader::convert_block_id(provider, block_id)
+            .map_err(StarknetApiError::from)?
+            .map(BlockHashOrNumber::Num)
+            .ok_or(StarknetApiError::BlockNotFound)?;
+
+        katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
+            .build_with_tx_hash()
+            .map_err(StarknetApiError::from)?
+            .map(MaybePendingBlockWithTxHashes::Block)
+            .ok_or(Error::from(StarknetApiError::BlockNotFound))
     }
 
     async fn transaction_by_block_id_and_index(
@@ -176,12 +173,12 @@ impl StarknetApiServer for StarknetApi {
             let provider = &self.sequencer.backend.blockchain.provider();
 
             let block_num = BlockIdReader::convert_block_id(provider, block_id)
-                .map_err(|_| StarknetApiError::UnexpectedError)?
+                .map_err(StarknetApiError::from)?
                 .map(BlockHashOrNumber::Num)
                 .ok_or(StarknetApiError::BlockNotFound)?;
 
             TransactionProvider::transaction_by_block_and_idx(provider, block_num, index)
-                .map_err(|_| StarknetApiError::UnexpectedError)?
+                .map_err(StarknetApiError::from)?
         };
 
         Ok(tx.ok_or(StarknetApiError::InvalidTxnIndex)?.into())
@@ -194,44 +191,48 @@ impl StarknetApiServer for StarknetApi {
         let provider = self.sequencer.backend.blockchain.provider();
 
         if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-            let pending_state = self.sequencer.pending_state().expect("pending state should exist");
+            if let Some(pending_state) = self.sequencer.pending_state() {
+                let block_env = pending_state.block_envs.read().0.clone();
+                let latest_hash =
+                    BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
 
-            let block_context = self.sequencer.backend.env.read().block.clone();
-            let latest_hash = BlockHashProvider::latest_hash(provider)?;
+                let gas_prices = GasPrices {
+                    eth: block_env.l1_gas_prices.eth,
+                    strk: block_env.l1_gas_prices.strk,
+                };
 
-            let gas_prices = GasPrices {
-                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
-            };
+                let header = PartialHeader {
+                    gas_prices,
+                    parent_hash: latest_hash,
+                    version: CURRENT_STARKNET_VERSION,
+                    timestamp: block_env.timestamp,
+                    sequencer_address: block_env.sequencer_address,
+                };
 
-            let header = PartialHeader {
-                gas_prices,
-                parent_hash: latest_hash,
-                version: CURRENT_STARKNET_VERSION,
-                timestamp: block_context.block_timestamp.0,
-                sequencer_address: block_context.sequencer_address.into(),
-            };
+                let transactions = pending_state
+                    .executed_txs
+                    .read()
+                    .iter()
+                    .map(|(tx, _)| tx.clone())
+                    .collect::<Vec<_>>();
 
-            let transactions = pending_state
-                .executed_txs
-                .read()
-                .iter()
-                .map(|(tx, _)| tx.clone())
-                .collect::<Vec<_>>();
-
-            Ok(MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs::new(header, transactions)))
-        } else {
-            let block_num = BlockIdReader::convert_block_id(provider, block_id)
-                .map_err(|_| StarknetApiError::UnexpectedError)?
-                .map(BlockHashOrNumber::Num)
-                .ok_or(StarknetApiError::BlockNotFound)?;
-
-            katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
-                .build()
-                .map_err(|_| StarknetApiError::UnexpectedError)?
-                .map(MaybePendingBlockWithTxs::Block)
-                .ok_or(Error::from(StarknetApiError::BlockNotFound))
+                return Ok(MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs::new(
+                    header,
+                    transactions,
+                )));
+            }
         }
+
+        let block_num = BlockIdReader::convert_block_id(provider, block_id)
+            .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+            .map(BlockHashOrNumber::Num)
+            .ok_or(StarknetApiError::BlockNotFound)?;
+
+        katana_rpc_types_builder::BlockBuilder::new(block_num, provider)
+            .build()
+            .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
+            .map(MaybePendingBlockWithTxs::Block)
+            .ok_or(Error::from(StarknetApiError::BlockNotFound))
     }
 
     async fn state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdate, Error> {
@@ -244,6 +245,7 @@ impl StarknetApiServer for StarknetApi {
             BlockIdOrTag::Tag(BlockTag::Latest) => BlockNumberProvider::latest_number(provider)
                 .map(BlockHashOrNumber::Num)
                 .map_err(|_| StarknetApiError::BlockNotFound)?,
+
             BlockIdOrTag::Tag(BlockTag::Pending) => {
                 return Err(StarknetApiError::BlockNotFound.into());
             }
@@ -251,7 +253,7 @@ impl StarknetApiServer for StarknetApi {
 
         katana_rpc_types_builder::StateUpdateBuilder::new(block_id, provider)
             .build()
-            .map_err(|_| StarknetApiError::UnexpectedError)?
+            .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?
             .ok_or(Error::from(StarknetApiError::BlockNotFound))
     }
 
@@ -262,7 +264,7 @@ impl StarknetApiServer for StarknetApi {
         let provider = self.sequencer.backend.blockchain.provider();
         let receipt = ReceiptBuilder::new(transaction_hash, provider)
             .build()
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+            .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?;
 
         match receipt {
             Some(receipt) => Ok(MaybePendingTxReceipt::Receipt(receipt)),
@@ -296,11 +298,8 @@ impl StarknetApiServer for StarknetApi {
         let hash = self
             .sequencer
             .class_hash_at(block_id, contract_address.into())
-            .map_err(|e| match e {
-                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-                _ => StarknetApiError::UnexpectedError,
-            })?
-            .ok_or(Error::from(StarknetApiError::ContractNotFound))?;
+            .map_err(StarknetApiError::from)?
+            .ok_or(StarknetApiError::ContractNotFound)?;
 
         Ok(hash.into())
     }
@@ -310,17 +309,13 @@ impl StarknetApiServer for StarknetApi {
         block_id: BlockIdOrTag,
         class_hash: FieldElement,
     ) -> Result<ContractClass, Error> {
-        let class = self.sequencer.class(block_id, class_hash).map_err(|e| match e {
-            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            _ => StarknetApiError::UnexpectedError,
-        })?;
-
+        let class = self.sequencer.class(block_id, class_hash).map_err(StarknetApiError::from)?;
         let Some(class) = class else { return Err(StarknetApiError::ClassHashNotFound.into()) };
 
         match class {
             StarknetContract::Legacy(c) => {
-                let contract =
-                    legacy_inner_to_rpc_class(c).map_err(|_| StarknetApiError::UnexpectedError)?;
+                let contract = legacy_inner_to_rpc_class(c)
+                    .map_err(|e| StarknetApiError::UnexpectedError { reason: e.to_string() })?;
                 Ok(contract)
             }
             StarknetContract::Sierra(c) => Ok(ContractClass::Sierra(c)),
@@ -345,10 +340,7 @@ impl StarknetApiServer for StarknetApi {
                 filter.result_page_request.chunk_size,
             )
             .await
-            .map_err(|e| match e {
-                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-                _ => StarknetApiError::UnexpectedError,
-            })?;
+            .map_err(StarknetApiError::from)?;
 
         Ok(events)
     }
@@ -364,14 +356,7 @@ impl StarknetApiServer for StarknetApi {
             entry_point_selector: request.entry_point_selector,
         };
 
-        let res = self.sequencer.call(request, block_id).map_err(|e| match e {
-            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
-            SequencerError::EntryPointExecution(e) => {
-                StarknetApiError::ContractError { revert_error: e.to_string() }
-            }
-            _ => StarknetApiError::UnexpectedError,
-        })?;
+        let res = self.sequencer.call(request, block_id).map_err(StarknetApiError::from)?;
 
         Ok(res.into_iter().map(|v| v.into()).collect())
     }
@@ -382,13 +367,10 @@ impl StarknetApiServer for StarknetApi {
         key: FieldElement,
         block_id: BlockIdOrTag,
     ) -> Result<FeltAsHex, Error> {
-        let value = self.sequencer.storage_at(contract_address.into(), key, block_id).map_err(
-            |e| match e {
-                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-                SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
-                _ => StarknetApiError::UnexpectedError,
-            },
-        )?;
+        let value = self
+            .sequencer
+            .storage_at(contract_address.into(), key, block_id)
+            .map_err(StarknetApiError::from)?;
 
         Ok(value.into())
     }
@@ -401,8 +383,7 @@ impl StarknetApiServer for StarknetApi {
             return Err(StarknetApiError::UnsupportedTransactionVersion.into());
         }
 
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let tx = deploy_account_transaction.into_tx_with_chain_id(chain_id);
         let contract_address = tx.contract_address;
@@ -420,8 +401,7 @@ impl StarknetApiServer for StarknetApi {
         request: Vec<BroadcastedTx>,
         block_id: BlockIdOrTag,
     ) -> Result<Vec<FeeEstimate>, Error> {
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let transactions = request
             .into_iter()
@@ -449,13 +429,8 @@ impl StarknetApiServer for StarknetApi {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let res = self.sequencer.estimate_fee(transactions, block_id).map_err(|e| match e {
-            SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-            SequencerError::TransactionExecution(e) => {
-                StarknetApiError::ContractError { revert_error: e.to_string() }
-            }
-            _ => StarknetApiError::UnexpectedError,
-        })?;
+        let res =
+            self.sequencer.estimate_fee(transactions, block_id).map_err(StarknetApiError::from)?;
 
         Ok(res)
     }
@@ -465,8 +440,7 @@ impl StarknetApiServer for StarknetApi {
         message: MsgFromL1,
         block_id: BlockIdOrTag,
     ) -> Result<FeeEstimate, Error> {
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let tx = message.into_tx_with_chain_id(chain_id);
         let hash = tx.calculate_hash();
@@ -475,13 +449,7 @@ impl StarknetApiServer for StarknetApi {
         let res = self
             .sequencer
             .estimate_fee(vec![tx], block_id)
-            .map_err(|e| match e {
-                SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
-                SequencerError::TransactionExecution(e) => {
-                    StarknetApiError::ContractError { revert_error: e.to_string() }
-                }
-                _ => StarknetApiError::UnexpectedError,
-            })?
+            .map_err(StarknetApiError::from)?
             .pop()
             .expect("should have estimate result");
 
@@ -496,8 +464,7 @@ impl StarknetApiServer for StarknetApi {
             return Err(StarknetApiError::UnsupportedTransactionVersion.into());
         }
 
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         // // validate compiled class hash
         // let is_valid = declare_transaction
@@ -529,8 +496,7 @@ impl StarknetApiServer for StarknetApi {
             return Err(StarknetApiError::UnsupportedTransactionVersion.into());
         }
 
-        let chain_id = FieldElement::from_hex_be(&self.sequencer.chain_id().as_hex())
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+        let chain_id = self.sequencer.chain_id();
 
         let tx = invoke_transaction.into_tx_with_chain_id(chain_id);
         let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));
@@ -548,51 +514,55 @@ impl StarknetApiServer for StarknetApi {
         let provider = self.sequencer.backend.blockchain.provider();
 
         let tx_status = TransactionStatusProvider::transaction_status(provider, transaction_hash)
-            .map_err(|_| StarknetApiError::UnexpectedError)?;
+            .map_err(StarknetApiError::from)?;
 
         if let Some(status) = tx_status {
-            let receipt = ReceiptProvider::receipt_by_hash(provider, transaction_hash)
-                .map_err(|_| StarknetApiError::UnexpectedError)?
-                .ok_or(StarknetApiError::UnexpectedError)?;
-
-            let execution_status = if receipt.is_reverted() {
-                TransactionExecutionStatus::Reverted
-            } else {
-                TransactionExecutionStatus::Succeeded
-            };
-
-            Ok(match status {
-                FinalityStatus::AcceptedOnL1 => TransactionStatus::AcceptedOnL1(execution_status),
-                FinalityStatus::AcceptedOnL2 => TransactionStatus::AcceptedOnL2(execution_status),
-            })
-        } else {
-            let pending_state = self.sequencer.pending_state();
-            let state = pending_state.ok_or(StarknetApiError::TxnHashNotFound)?;
-            let executed_txs = state.executed_txs.read();
-
-            // attemps to find in the valid transactions list first (executed_txs)
-            // if not found, then search in the rejected transactions list (rejected_txs)
-            if let Some(is_reverted) = executed_txs
-                .iter()
-                .find(|(tx, _)| tx.hash == transaction_hash)
-                .map(|(_, rct)| rct.receipt.is_reverted())
+            if let Some(receipt) = ReceiptProvider::receipt_by_hash(provider, transaction_hash)
+                .map_err(StarknetApiError::from)?
             {
-                let exec_status = if is_reverted {
+                let execution_status = if receipt.is_reverted() {
                     TransactionExecutionStatus::Reverted
                 } else {
                     TransactionExecutionStatus::Succeeded
                 };
 
-                Ok(TransactionStatus::AcceptedOnL2(exec_status))
-            } else {
-                let rejected_txs = state.rejected_txs.read();
-
-                rejected_txs
-                    .iter()
-                    .find(|(tx, _)| tx.hash == transaction_hash)
-                    .map(|_| TransactionStatus::Rejected)
-                    .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
+                return Ok(match status {
+                    FinalityStatus::AcceptedOnL1 => {
+                        TransactionStatus::AcceptedOnL1(execution_status)
+                    }
+                    FinalityStatus::AcceptedOnL2 => {
+                        TransactionStatus::AcceptedOnL2(execution_status)
+                    }
+                });
             }
+        }
+
+        let pending_state = self.sequencer.pending_state();
+        let state = pending_state.ok_or(StarknetApiError::TxnHashNotFound)?;
+        let executed_txs = state.executed_txs.read();
+
+        // attemps to find in the valid transactions list first (executed_txs)
+        // if not found, then search in the rejected transactions list (rejected_txs)
+        if let Some(is_reverted) = executed_txs
+            .iter()
+            .find(|(tx, _)| tx.hash == transaction_hash)
+            .map(|(_, rct)| rct.receipt.is_reverted())
+        {
+            let exec_status = if is_reverted {
+                TransactionExecutionStatus::Reverted
+            } else {
+                TransactionExecutionStatus::Succeeded
+            };
+
+            Ok(TransactionStatus::AcceptedOnL2(exec_status))
+        } else {
+            let rejected_txs = state.rejected_txs.read();
+
+            rejected_txs
+                .iter()
+                .find(|(tx, _)| tx.hash == transaction_hash)
+                .map(|_| TransactionStatus::Rejected)
+                .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
         }
     }
 }

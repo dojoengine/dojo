@@ -10,6 +10,7 @@ use ::blockifier::execution::entry_point::{
 use ::blockifier::execution::errors::EntryPointExecutionError;
 use ::blockifier::state::cached_state::{CachedState, GlobalContractCache, MutRefState};
 use ::blockifier::transaction::objects::AccountTransactionContext;
+use blockifier::block_context::{FeeTokenAddresses, GasPrices};
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
 use blockifier::state::state_api::State;
 use blockifier::transaction::errors::TransactionExecutionError;
@@ -18,6 +19,7 @@ use blockifier::transaction::objects::{
 };
 use convert_case::{Case, Casing};
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::{Event, MessageToL1};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::ExecutableTxWithHash;
@@ -26,6 +28,7 @@ use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use starknet::core::types::FeeEstimate;
 use starknet::core::utils::parse_cairo_short_string;
+use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::transaction::Calldata;
 use tracing::trace;
@@ -144,6 +147,32 @@ pub fn calculate_execution_fee(
     let overall_fee = total_l1_gas_usage.ceil() as u64 * gas_price;
 
     Ok(FeeEstimate { gas_price, gas_consumed, overall_fee })
+}
+
+/// Create a block context from the chain environment values.
+pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
+    let fee_token_addresses = FeeTokenAddresses {
+        eth_fee_token_address: cfg_env.fee_token_addresses.eth.into(),
+        strk_fee_token_address: cfg_env.fee_token_addresses.strk.into(),
+    };
+
+    let gas_prices = GasPrices {
+        eth_l1_gas_price: block_env.l1_gas_prices.eth.try_into().unwrap(),
+        strk_l1_gas_price: block_env.l1_gas_prices.strk.try_into().unwrap(),
+    };
+
+    BlockContext {
+        gas_prices,
+        fee_token_addresses,
+        chain_id: cfg_env.chain_id.into(),
+        block_number: BlockNumber(block_env.number),
+        block_timestamp: BlockTimestamp(block_env.timestamp),
+        sequencer_address: block_env.sequencer_address.into(),
+        vm_resource_fee_cost: cfg_env.vm_resource_fee_cost.clone().into(),
+        validate_max_n_steps: cfg_env.validate_max_n_steps,
+        invoke_tx_max_n_steps: cfg_env.invoke_tx_max_n_steps,
+        max_recursion_depth: cfg_env.max_recursion_depth,
+    }
 }
 
 pub(crate) fn warn_message_transaction_error_exec_error(err: &TransactionExecutionError) {

@@ -8,6 +8,7 @@ use ethers::prelude::*;
 use ethers::providers::{Http, Provider};
 use ethers::types::{Address, BlockNumber, Log};
 use k256::ecdsa::SigningKey;
+use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
@@ -127,7 +128,7 @@ impl Messenger for EthereumMessaging {
         &self,
         from_block: u64,
         max_blocks: u64,
-        chain_id: FieldElement,
+        chain_id: ChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = self
             .provider
@@ -206,7 +207,7 @@ impl Messenger for EthereumMessaging {
     }
 }
 
-fn l1_handler_tx_from_log(log: Log, chain_id: FieldElement) -> MessengerResult<L1HandlerTx> {
+fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
     let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.into()).map_err(|e| {
         error!(target: LOG_TARGET, "Log parsing failed {e}");
         Error::GatherError
@@ -259,6 +260,7 @@ fn felt_from_address(v: Address) -> FieldElement {
 #[cfg(test)]
 mod tests {
 
+    use katana_primitives::chain::{ChainId, NamedChainId};
     use starknet::macros::{felt, selector};
 
     use super::*;
@@ -299,7 +301,7 @@ mod tests {
         };
 
         // SN_GOERLI.
-        let chain_id = starknet::macros::felt!("0x534e5f474f45524c49");
+        let chain_id = ChainId::Named(NamedChainId::Goerli);
         let to_address = FieldElement::from_hex_be(to_address).unwrap();
         let from_address = FieldElement::from_hex_be(from_address).unwrap();
 
