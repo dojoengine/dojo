@@ -6,11 +6,11 @@ use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
-use log::info;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
+use tracing::info;
 
 use super::World;
 use crate::model::ModelSQLReader;
@@ -142,6 +142,7 @@ impl Sql {
             .await?;
 
         let path = vec![entity.name()];
+        info!("path {:?}", path);
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
         self.query_queue.execute_all().await?;
 
@@ -150,10 +151,12 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn delete_entity(&mut self, model: String, keys: Vec<FieldElement>) -> Result<()> {
+    pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let statement = format!("DELETE FROM [{model}] WHERE entity_id = ?");
-        self.query_queue.enqueue(statement, vec![Argument::String(entity_id)]);
+        info!("delete entity: {}", entity_id);
+        let model = entity.name();
+        let path = vec![model.clone()];
+        self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
         Ok(())
     }
@@ -346,7 +349,7 @@ impl Sql {
                     if let Ty::Struct(_) = &member.ty {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
-
+                        info!("path_clone struct {:?}", path_clone);
                         self.build_set_entity_queries_recursive(
                             path_clone, event_id, entity_id, &member.ty,
                         );
@@ -357,9 +360,44 @@ impl Sql {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
+                    info!("path_clone enum {:?}", path_clone);
                     self.build_set_entity_queries_recursive(
                         path_clone, event_id, entity_id, &child.ty,
                     );
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn build_delete_entity_queries_recursive(
+        &mut self,
+        path: Vec<String>,
+        entity_id: &str,
+        entity: &Ty,
+    ) {
+        match entity {
+            Ty::Struct(s) => {
+                let table_id = path.join("$");
+                let statement = format!("DELETE FROM [{table_id}] WHERE entity_id = ?");
+                self.query_queue
+                    .push_front(statement, vec![Argument::String(entity_id.to_string())]);
+                for member in s.children.iter() {
+                    if let Ty::Struct(_) = &member.ty {
+                        let mut path_clone = path.clone();
+                        path_clone.push(member.name.clone());
+                        info!("path_clone struct {:?}", path_clone);
+                        self.build_delete_entity_queries_recursive(
+                            path_clone, entity_id, &member.ty,
+                        );
+                    }
+                }
+            }
+            Ty::Enum(e) => {
+                for child in e.options.iter() {
+                    let mut path_clone = path.clone();
+                    path_clone.push(child.name.clone());
+                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
                 }
             }
             _ => {}
