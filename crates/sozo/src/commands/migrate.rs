@@ -14,6 +14,7 @@ use crate::ops::migration;
 pub struct MigrateArgs {
     #[arg(short, long)]
     #[arg(help = "Perform a dry run and outputs the plan to be executed.")]
+    // TODO: i think dry_run would be more descriptive
     pub plan: bool,
 
     #[arg(long)]
@@ -55,8 +56,6 @@ impl MigrateArgs {
                 CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
             )?;
         }
-
-        // TODO: Check the updated scarb way to read profile specific values
 
         ws.config().tokio_handle().block_on(migration::execute(&ws, self, target_dir))?;
 
