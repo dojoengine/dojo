@@ -4,8 +4,8 @@ use jsonrpsee::core::{async_trait, Error};
 use katana_core::accounts::Account;
 use katana_core::sequencer::KatanaSequencer;
 use katana_primitives::FieldElement;
-
-use crate::api::katana::{KatanaApiError, KatanaApiServer};
+use katana_rpc_api::katana::KatanaApiServer;
+use katana_rpc_types::error::katana::KatanaApiError;
 
 pub struct KatanaApi {
     sequencer: Arc<KatanaSequencer>,

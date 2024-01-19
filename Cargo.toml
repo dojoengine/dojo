@@ -15,7 +15,8 @@ members = [
   "crates/katana/core",
   "crates/katana/executor",
   "crates/katana/primitives",
-  "crates/katana/rpc",
+  "crates/katana/rpc/rpc",
+  "crates/katana/rpc/rpc-api",
   "crates/katana/rpc/rpc-types",
   "crates/katana/rpc/rpc-types-builder",
   "crates/katana/runner",
@@ -89,6 +90,7 @@ futures = "0.3.28"
 hex = "0.4.3"
 indoc = "1.0.7"
 itertools = "0.10.3"
+jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
 metrics-process = "1.0.9"
 num-bigint = "0.4"

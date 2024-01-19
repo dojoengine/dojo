@@ -21,8 +21,8 @@ use katana_core::constants::{
 };
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::chain::ChainId;
-use katana_rpc::api::ApiKind;
 use katana_rpc::config::ServerConfig;
+use katana_rpc_api::ApiKind;
 use metrics::utils::parse_socket_address;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};

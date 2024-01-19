@@ -2,9 +2,9 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
 use katana_primitives::FieldElement;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MsgFromL1(starknet::core::types::MsgFromL1);
 
 impl MsgFromL1 {
