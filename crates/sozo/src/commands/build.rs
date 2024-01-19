@@ -47,3 +47,20 @@ impl BuildArgs {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use dojo_test_utils::compiler::build_test_config;
+
+    use super::BuildArgs;
+
+    // this adds considerable time to test suite, should this be enabled by default?
+    #[ignore]
+    #[test]
+    fn build_example() {
+        let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+
+        let result = BuildArgs.run(&config);
+        assert!(result.is_ok());
+    }
+}
