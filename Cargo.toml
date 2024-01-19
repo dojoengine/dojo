@@ -31,7 +31,6 @@ members = [
   "crates/torii/client",
   "crates/torii/server",
   "crates/torii/types-test",
-  "crates/torii/client-bin",
   "examples/spawn-and-move",
 ]
 

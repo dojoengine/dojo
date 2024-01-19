@@ -1,27 +1,23 @@
-use futures::{stream::StreamExt, Future};
-use libp2p::{
-    core::multiaddr::Protocol,
-    core::Multiaddr,
-    gossipsub::{self, IdentTopic},
-    identify, identity, noise, ping, relay,
-    swarm::{NetworkBehaviour, SwarmEvent},
-    tcp, yamux, PeerId, Swarm,
-};
-use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::time::Duration;
-use std::{collections::HashMap};
+
+use futures::stream::StreamExt;
+use libp2p::core::multiaddr::Protocol;
+use libp2p::core::Multiaddr;
+use libp2p::gossipsub::{self, IdentTopic};
+use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
+use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, Swarm};
+use tracing::info;
+
 use crate::errors::Error;
 
 mod events;
 
-use crate::{
-    server::events::ServerEvent,
-    types::{ClientMessage, ServerMessage},
-};
+use crate::server::events::ServerEvent;
+use crate::types::{ClientMessage, ServerMessage};
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -37,15 +33,12 @@ pub struct Libp2pRelay {
 }
 
 impl Libp2pRelay {
-    pub fn new(
-        use_ipv6: Option<bool>,
-        port: u16,
-    ) -> Result<impl Future<Output = Result<(), Box<dyn std::error::Error>>>, Error> {
+    pub fn new(use_ipv6: Option<bool>, port: u16) -> Result<Self, Error> {
         let local_key: identity::Keypair = identity::Keypair::generate_ed25519();
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_async_std()
-            .with_tcp(tcp::Config::default(), noise::Config::new, || yamux::Config::default())?
+            .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
             .with_quic()
             .with_behaviour(|key| {
                 let message_id_fn = |message: &gossipsub::Message| {
@@ -99,15 +92,10 @@ impl Libp2pRelay {
         // along with the message data.
         swarm.behaviour_mut().gossipsub.subscribe(&IdentTopic::new("message")).unwrap();
 
-        let mut server = Self { swarm };
-
-        Ok(async move {
-            server.run().await;
-            Ok(())
-        })
+        Ok(Self { swarm })
     }
 
-    async fn run(&mut self) {
+    pub async fn run(&mut self) {
         loop {
             match self.swarm.next().await.expect("Infinite Stream.") {
                 SwarmEvent::Behaviour(event) => {
@@ -120,7 +108,9 @@ impl Libp2pRelay {
                             // deserialize message
                             let message: ClientMessage = serde_json::from_slice(&message.data)
                                 .expect("Failed to deserialize message");
-                            println!("Received message in room {:?}", message);
+
+                            info!(target: "libp2p", "Received message {:?} from peer {:?} with topic {:?} and data {:?}", message_id, peer_id, message.topic, message.data);
+
                             // forward message to room
                             let server_message =
                                 ServerMessage { peer_id: peer_id.to_string(), data: message.data };
@@ -139,16 +129,17 @@ impl Libp2pRelay {
                             info: identify::Info { observed_addr, .. },
                             peer_id,
                         }) => {
-                            println!("Received identify event from {peer_id:?} with observed address {observed_addr:?}", peer_id = peer_id, observed_addr = observed_addr);
+                            info!(target: "libp2p", "Received identify event from peer {:?} with observed address {:?}", peer_id, observed_addr);
                             self.swarm.add_external_address(observed_addr.clone());
+                        }
+                        ServerEvent::Ping(ping::Event { peer, result, .. }) => {
+                            info!(target: "libp2p", "Ping success from peer {:?} with result {:?}", peer, result);
                         }
                         _ => {}
                     }
-
-                    println!("{:?}", event);
                 }
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("Listening on {address:?}");
+                    info!(target: "libp2p", "Listening on {:?}", address);
                 }
                 _ => {}
             }

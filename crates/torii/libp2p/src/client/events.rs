@@ -1,5 +1,5 @@
-use libp2p::{identify, gossipsub, ping};
 use gossipsub::Event as GossipsubEvent;
+use libp2p::{gossipsub, identify, ping};
 
 #[derive(Debug)]
 pub enum ClientEvent {

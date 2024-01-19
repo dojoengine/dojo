@@ -1,10 +1,8 @@
-use std::{convert::Infallible, io};
-use libp2p::{
-    Multiaddr, gossipsub::{
-        SubscriptionError, PublishError
-    },
-    noise
-};
+use std::convert::Infallible;
+use std::io;
+
+use libp2p::gossipsub::{PublishError, SubscriptionError};
+use libp2p::noise;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -20,7 +18,7 @@ pub enum Error {
 
     // accept any error
     #[error(transparent)]
-    BehaviourError(#[from] Infallible), 
+    BehaviourError(#[from] Infallible),
 
     #[error(transparent)]
     GossipConfigError(#[from] libp2p::gossipsub::ConfigBuilderError),

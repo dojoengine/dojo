@@ -1,8 +1,7 @@
+use libp2p::gossipsub::Event as GossipsubEvent;
 use libp2p::identify::Event as IdentifyEvent;
 use libp2p::ping::Event as PingEvent;
 use libp2p::relay::Event as RelayEvent;
-use libp2p::PeerId;
-use libp2p::gossipsub::Event as GossipsubEvent;
 
 #[derive(Debug)]
 pub enum ServerEvent {

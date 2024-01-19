@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use dojo_world::contracts::model::ModelError;
 use starknet::core::utils::{CairoShortStringToFeltError, ParseCairoShortStringError};
 
