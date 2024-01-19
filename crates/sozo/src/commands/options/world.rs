@@ -23,8 +23,8 @@ impl WorldOptions {
             Ok(FieldElement::from_str(world_address)?)
         } else {
             Err(anyhow!(
-                "Could not find World address. Please specify it with --world, environment variable or in the world \
-                 config."
+                "Could not find World address. Please specify it with --world, environment \
+                 variable or in the world config."
             ))
         }
     }
@@ -33,9 +33,10 @@ impl WorldOptions {
 #[cfg(test)]
 mod tests {
 
-    use super::{WorldOptions, DOJO_WORLD_ADDRESS_ENV_VAR};
     use clap::Parser;
     use starknet_crypto::FieldElement;
+
+    use super::{WorldOptions, DOJO_WORLD_ADDRESS_ENV_VAR};
 
     #[derive(clap::Parser, Debug)]
     struct Command {
