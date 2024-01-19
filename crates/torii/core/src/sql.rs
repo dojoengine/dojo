@@ -154,8 +154,7 @@ impl Sql {
     pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         info!("delete entity: {}", entity_id);
-        let model = entity.name();
-        let path = vec![model.clone()];
+        let path = vec![entity.name()];
         self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
         Ok(())
