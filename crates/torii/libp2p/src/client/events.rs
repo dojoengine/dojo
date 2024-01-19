@@ -1,4 +1,4 @@
-use libp2p::{identify, relay, gossipsub, ping};
+use libp2p::{identify, gossipsub, ping};
 use gossipsub::Event as GossipsubEvent;
 
 #[derive(Debug)]

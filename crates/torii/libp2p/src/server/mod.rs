@@ -2,20 +2,26 @@ use futures::{stream::StreamExt, Future};
 use libp2p::{
     core::multiaddr::Protocol,
     core::Multiaddr,
-    gossipsub::{self, IdentTopic}, identify, identity, noise, ping, relay,
+    gossipsub::{self, IdentTopic},
+    identify, identity, noise, ping, relay,
     swarm::{NetworkBehaviour, SwarmEvent},
     tcp, yamux, PeerId, Swarm,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::time::Duration;
-use std::{collections::HashMap, error::Error};
+use std::{collections::HashMap};
+use crate::errors::Error;
 
 mod events;
 
-use crate::server::events::ServerEvent;
+use crate::{
+    server::events::ServerEvent,
+    types::{ClientMessage, ServerMessage},
+};
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -26,13 +32,15 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
-pub struct RelayServer {
+pub struct Libp2pRelay {
     swarm: Swarm<Behaviour>,
-    rooms: HashMap<String, gossipsub::IdentTopic>,
 }
 
-impl RelayServer {
-    pub fn new(use_ipv6: Option<bool>, port: u16) -> Result<impl Future<Output = Result<(), Box<dyn Error>>>, Box<dyn Error>> {
+impl Libp2pRelay {
+    pub fn new(
+        use_ipv6: Option<bool>,
+        port: u16,
+    ) -> Result<impl Future<Output = Result<(), Box<dyn std::error::Error>>>, Error> {
         let local_key: identity::Keypair = identity::Keypair::generate_ed25519();
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
@@ -85,12 +93,13 @@ impl RelayServer {
             .with(Protocol::QuicV1);
         swarm.listen_on(listen_addr_quic)?;
 
-        swarm.behaviour_mut().gossipsub.subscribe(&IdentTopic::new("mimi")).unwrap();
+        // Clients will send their messages to the "message" topic
+        // with a room name as the message data.
+        // and we will forward those messages to a specific room - in this case the topic
+        // along with the message data.
+        swarm.behaviour_mut().gossipsub.subscribe(&IdentTopic::new("message")).unwrap();
 
-        let mut server = Self {
-            swarm,
-            rooms: HashMap::new(),
-        };
+        let mut server = Self { swarm };
 
         Ok(async move {
             server.run().await;
@@ -108,9 +117,23 @@ impl RelayServer {
                             message_id,
                             message,
                         }) => {
-                                let room_name = message.topic.clone();
-                                println!("Received message in room {room_name}: {:?}", String::from_utf8_lossy(&message.data));
-                                // self.swarm.behaviour_mut().gossipsub.publish(room_name, message.data.clone()).expect("Publishing should work");
+                            // deserialize message
+                            let message: ClientMessage = serde_json::from_slice(&message.data)
+                                .expect("Failed to deserialize message");
+                            println!("Received message in room {:?}", message);
+                            // forward message to room
+                            let server_message =
+                                ServerMessage { peer_id: peer_id.to_string(), data: message.data };
+                            self.swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(
+                                    IdentTopic::new(message.topic),
+                                    serde_json::to_string(&server_message)
+                                        .expect("Failed to serialize message")
+                                        .as_bytes(),
+                                )
+                                .expect("Failed to publish message");
                         }
                         ServerEvent::Identify(identify::Event::Received {
                             info: identify::Info { observed_addr, .. },

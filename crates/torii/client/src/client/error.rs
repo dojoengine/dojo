@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use dojo_world::contracts::model::ModelError;
 use starknet::core::utils::{CairoShortStringToFeltError, ParseCairoShortStringError};
 
@@ -16,6 +18,8 @@ pub enum Error {
     Parse(#[from] ParseError),
     #[error(transparent)]
     GrpcClient(#[from] torii_grpc::client::Error),
+    #[error(transparent)]
+    Libp2pClient(#[from] torii_libp2p::errors::Error),
     #[error(transparent)]
     Model(#[from] ModelError),
     #[error("Unsupported query")]
