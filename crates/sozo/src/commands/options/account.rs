@@ -33,6 +33,7 @@ pub struct AccountOptions {
     #[arg(value_name = "PATH")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "Use the keystore in the given folder or file.")]
+    // TODO: Should we add `DOJO_KEYSTORE_PATH_ENV_VAR`?
     pub keystore_path: Option<String>,
 
     #[arg(long = "password", env = DOJO_KEYSTORE_PASSWORD_ENV_VAR)]
@@ -160,11 +161,9 @@ mod tests {
 
     #[test]
     fn account_address_from_args() {
-        let env_metadata = dojo_world::metadata::Environment::default();
-
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0"]);
         assert_eq!(
-            cmd.account.account_address(Some(&env_metadata)).unwrap(),
+            cmd.account.account_address(None).unwrap(),
             FieldElement::from_hex_be("0x0").unwrap()
         );
     }
@@ -199,20 +198,17 @@ mod tests {
 
     #[test]
     fn account_address_from_neither() {
-        let env_metadata = dojo_world::metadata::Environment::default();
-
         let cmd = Command::parse_from([""]);
-        assert!(cmd.account.account_address(Some(&env_metadata)).is_err());
+        assert!(cmd.account.account_address(None).is_err());
     }
 
     #[tokio::test]
     async fn private_key_from_args() {
-        let env_metadata = dojo_world::metadata::Environment::default();
         let private_key = "0x1";
 
         let cmd =
             Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", private_key]);
-        let result_wallet = cmd.account.signer(Some(&env_metadata)).unwrap();
+        let result_wallet = cmd.account.signer(None).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
             FieldElement::from_str(private_key).unwrap(),
         ));
@@ -246,7 +242,6 @@ mod tests {
         let keystore_path = "./tests/test_data/keystore/test.json";
         let keystore_password = "dojoftw";
         let private_key = "0x1";
-        let env_metadata = dojo_world::metadata::Environment::default();
 
         let cmd = Command::parse_from([
             "sozo",
@@ -255,7 +250,7 @@ mod tests {
             "--password",
             keystore_password,
         ]);
-        let result_wallet = cmd.account.signer(Some(&env_metadata)).unwrap();
+        let result_wallet = cmd.account.signer(None).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
             FieldElement::from_str(private_key).unwrap(),
         ));
@@ -313,16 +308,14 @@ mod tests {
     fn dont_allow_both_private_key_and_keystore() {
         let keystore_path = "./tests/test_data/keystore/test.json";
         let private_key = "0x1";
-        assert!(
-            Command::try_parse_from([
-                "sozo",
-                "--keystore",
-                keystore_path,
-                "--private_key",
-                private_key,
-            ])
-            .is_err()
-        );
+        assert!(Command::try_parse_from([
+            "sozo",
+            "--keystore",
+            keystore_path,
+            "--private_key",
+            private_key,
+        ])
+        .is_err());
     }
 
     #[tokio::test]
@@ -372,5 +365,23 @@ mod tests {
         let result = account.encode_calls(&dummy_call);
         // 0x2 is the Calldata len.
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x2").unwrap());
+    }
+
+    #[test]
+    fn keystore_path_without_keystore_password() {
+        let keystore_path = "./tests/test_data/keystore/test.json";
+
+        let cmd = Command::parse_from(["sozo", "--keystore", keystore_path]);
+        let result = cmd.account.signer(None);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn signer_without_pk_or_keystore() {
+        let cmd = Command::parse_from(["sozo"]);
+        let result = cmd.account.signer(None);
+
+        assert!(result.is_err());
     }
 }
