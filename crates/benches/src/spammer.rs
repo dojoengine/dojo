@@ -12,17 +12,21 @@ pub async fn spam_katana(
     runner: KatanaRunner,
     contract_address: FieldElement,
     mut calldata: Vec<BenchCall>,
+    additional_sleep: u64,
 ) -> BenchSummary {
     let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
 
     let transaction_sum_before: u32 = runner.block_sizes().await.iter().sum();
-
-    let final_call = parse_calls(vec![calldata.pop().unwrap()], &contract_address);
+    let steps_before = runner.steps().await;
 
     // generating all needed accounts
     let mut nonce = FieldElement::ONE;
     let accounts = runner.accounts();
-    let wait_time = Duration::from_millis(accounts.len() as u64 * 40);
+    let wait_time = Duration::from_millis(accounts.len() as u64 * 30 + 3000 + additional_sleep);
+
+    let expected_transactions = calldata.len() * accounts.len();
+
+    let final_call = parse_calls(vec![calldata.pop().unwrap()], &contract_address);
 
     for call in parse_calls(calldata, &contract_address) {
         let transactions = accounts
@@ -65,19 +69,26 @@ pub async fn spam_katana(
     times.sort();
     let durations = times.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>();
 
-    let longest_confirmation_difference =
-        (durations.last().unwrap().as_millis() - durations.first().unwrap().as_millis()) as u64;
+    let longest_confirmation_difference = match durations.len() {
+        0 => 0,
+        _ => durations.last().unwrap().as_millis() - durations.first().unwrap().as_millis(),
+    } as u64;
 
     let block_sizes = runner.block_sizes().await;
-    let _transaction_sum = block_sizes.iter().sum::<u32>() - transaction_sum_before;
-
-    // assert_eq!(transaction_sum, 2 * accounts.len() as u32);
+    let transaction_sum = block_sizes.iter().sum::<u32>() - transaction_sum_before;
+    assert_eq!(transaction_sum as usize, expected_transactions);
 
     // time difference between first and last transaction
     let block_times = runner.block_times().await;
     let block_sizes = runner.block_sizes().await;
     let name = format!("benchmark {} transactions", accounts.len());
     let responses_span = (*times.last().unwrap() - *times.first().unwrap()).as_millis() as u64;
+
+    let mut steps = runner.steps().await;
+    steps.drain(0..steps_before.len());
+
+    assert_eq!(steps.len(), expected_transactions);
+
     BenchSummary {
         sending_time,
         responses_span,
@@ -86,5 +97,6 @@ pub async fn spam_katana(
         longest_confirmation_difference,
         name,
         stats: None,
+        steps: steps.into_iter().sum(),
     }
 }
