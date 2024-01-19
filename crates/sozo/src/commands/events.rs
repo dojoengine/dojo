@@ -132,4 +132,13 @@ mod test {
         assert!(arg.to_block.is_none());
         assert!(arg.chunk_size == 1);
     }
+
+    #[test]
+    fn extract_events_work_as_expected() {
+        let manifest = Manifest::load_from_path("./tests/test_data/manifest.json").unwrap();
+        let result = extract_events(&manifest);
+
+        // we are just collection all events from manifest file so just verifying count should work
+        assert!(result.len() == 13);
+    }
 }
