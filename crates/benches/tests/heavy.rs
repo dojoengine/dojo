@@ -1,24 +1,99 @@
-use starknet::accounts::Account;
 use starknet::core::types::FieldElement;
 
-use benches::{parse_calls, BenchCall, ENOUGH_GAS};
+use benches::{spammer::spam_katana, BenchCall};
 
-#[katana_runner::katana_test(2, true)]
-async fn katana_heavy_single() {
-    let n = (1009u64 * 1009u64).to_string();
-    let calldata = parse_calls(
-        vec![BenchCall("is_prime", vec![FieldElement::from_dec_str(&n).unwrap()])],
-        &contract_address,
-    );
-    let tx = runner
-        .account(1)
-        .execute(calldata)
-        .max_fee(FieldElement::from_hex_be(ENOUGH_GAS).unwrap())
-        .nonce(FieldElement::ONE)
-        .send()
-        .await
-        .unwrap();
-    dbg!(tx);
+#[katana_runner::katana_test(1, true, "../../target/release/katana")]
+async fn katana_heavy_prime_single() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
 
-    runner.blocks_until_empty().await;
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 8000, true)
+            .await;
+
+    assert_eq!(result.steps, 881383);
+    result.dump().await;
+}
+
+#[katana_runner::katana_test(100, true, "../../target/release/katana")]
+async fn katana_heavy_prime_100() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 80000, true)
+            .await;
+
+    assert!(result.steps > 80000000);
+    result.dump().await;
+}
+
+#[katana_runner::katana_test(1000, true, "../../target/release/katana")]
+async fn katana_heavy_prime_1000_a() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 120000, true)
+            .await;
+
+    assert!(result.steps > 800000000);
+    result.dump().await;
+}
+
+#[katana_runner::katana_test(1000, true, "../../target/release/katana")]
+async fn katana_heavy_prime_1000_b() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 120000, true)
+            .await;
+
+    assert!(result.steps > 800000000);
+    result.dump().await;
+}
+
+#[katana_runner::katana_test(1000, true, "../../target/release/katana")]
+async fn katana_heavy_prime_1000_c() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 120000, true)
+            .await;
+
+    assert!(result.steps > 800000000);
+    result.dump().await;
+}
+
+#[katana_runner::katana_test(2000, true, "../../target/release/katana")]
+async fn katana_heavy_prime_2000_a() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 180000, true)
+            .await;
+
+    assert!(result.steps > 1600000000);
+    result.dump().await;
+}
+
+#[katana_runner::katana_test(2000, true, "../../target/release/katana")]
+async fn katana_heavy_prime_2000_b() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 180000, true)
+            .await;
+
+    assert!(result.steps > 1600000000);
+    result.dump().await;
+}
+
+#[katana_runner::katana_test(2000, true, "../../target/release/katana")]
+async fn katana_heavy_prime_2000_c() {
+    let arg = FieldElement::from_dec_str(&(2111u64 * 2111u64).to_string()).unwrap();
+
+    let result =
+        spam_katana(runner, contract_address, vec![BenchCall("is_prime", vec![arg])], 180000, true)
+            .await;
+
+    assert!(result.steps > 1600000000);
+    result.dump().await;
 }

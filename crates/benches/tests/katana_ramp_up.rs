@@ -9,7 +9,7 @@ async fn run(runner: KatanaRunner, contract_address: FieldElement) -> BenchSumma
     let spawn = BenchCall("spawn", vec![]);
     let calldata_move = BenchCall("move", vec![FieldElement::from_hex_be("0x3").unwrap()]);
 
-    spam_katana(runner, contract_address, vec![spawn, calldata_move], 0).await
+    spam_katana(runner, contract_address, vec![spawn, calldata_move], 0, true).await
 }
 
 #[katana_runner::katana_test(1, true, "../../target/release/katana")]
