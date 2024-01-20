@@ -52,12 +52,23 @@ pub async fn spam_katana(
     // generating all needed accounts
     let accounts = runner.accounts();
     let wait_time = Duration::from_millis(accounts.len() as u64 * 30 + 3000 + additional_sleep);
-    let name =
-        format!("benchmark {} transactions '{}'", accounts.len(), calldata.last().unwrap().0);
+    let name = format!(
+        "Benchmark: {} accounts, {} transactions, {} calls",
+        accounts.len(),
+        calldata.last().unwrap().0,
+        calldata.len()
+    );
 
-    let expected_transactions = calldata.len() * accounts.len();
+    let calls = match sequential {
+        true => {
+            let calls = parse_calls(calldata, &contract_address);
+            calldata = vec![];
+            calls
+        }
+        false => parse_calls(vec![calldata.pop().unwrap()], &contract_address),
+    };
 
-    let final_call = parse_calls(vec![calldata.pop().unwrap()], &contract_address);
+    let expected_transactions = (calldata.len() + 1) * accounts.len();
 
     // transactions preparing for the benchmarked one
     let nonce = spam_no_stats(&runner, &accounts, &contract_address, calldata, wait_time).await;
@@ -66,7 +77,7 @@ pub async fn spam_katana(
     let final_transactions = accounts
         .iter()
         .map(|account| {
-            let move_call = account.execute(final_call.clone()).nonce(nonce).max_fee(max_fee);
+            let move_call = account.execute(calls.clone()).nonce(nonce).max_fee(max_fee);
             move_call
         })
         .collect::<Vec<_>>();
