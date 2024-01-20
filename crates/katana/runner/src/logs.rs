@@ -53,7 +53,8 @@ impl KatanaRunner {
     }
 
     pub async fn block_times(&self) -> Vec<i64> {
-        self.blocks_until_empty()
+        let mut v = self
+            .blocks_until_empty()
             .await
             .into_iter()
             .map(|block| {
@@ -64,6 +65,28 @@ impl KatanaRunner {
             .collect::<Vec<_>>()
             .windows(2)
             .map(|w| (w[1] - w[0]).num_milliseconds())
+            .collect::<Vec<_>>();
+
+        // First block has no previous one, so always has a time of 0
+        v.insert(0, 0);
+        v
+    }
+
+    pub async fn steps(&self) -> Vec<u64> {
+        let matching = "Transaction resource usage: Steps: ";
+        BufReader::new(File::open(&self.log_filename).unwrap())
+            .lines()
+            .filter_map(|line| {
+                let line = line.unwrap();
+                if let Some(start) = line.find(matching) {
+                    let end = line.find(" | ");
+                    let steps = line[start + matching.len()..end.unwrap()].to_string();
+
+                    Some(steps.parse::<u64>().unwrap())
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 }

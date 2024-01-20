@@ -12,12 +12,15 @@ pub struct BenchSummary {
     pub stats: Option<BenchStats>,
     pub block_times: Vec<i64>,
     pub block_sizes: Vec<u32>,
+    pub steps: u64,
 }
 
 #[derive(Debug, Serialize, Clone)]
 pub struct BenchStats {
     pub estimated_tps: f64,
+    pub estimated_sps: f64,
     pub relevant_blocks: Vec<(u32, i64)>,
+    pub relevant_time: i64,
 }
 
 impl BenchSummary {
@@ -51,15 +54,25 @@ impl BenchSummary {
     pub fn estimated_tps(&self) -> f64 {
         let relevant_blocks = self.relevant_blocks();
         let total_transactions = relevant_blocks.iter().map(|(s, _t)| s).sum::<u32>();
-        let total_time = relevant_blocks.iter().map(|(_s, t)| t).sum::<i64>();
-        total_transactions as f64 / total_time as f64 * 1000.0
+        total_transactions as f64 / self.relevant_time() as f64 * 1000.0
+    }
+
+    pub fn relevant_time(&self) -> i64 {
+        let relevant_blocks = self.relevant_blocks();
+        relevant_blocks.iter().map(|(_s, t)| t).sum::<i64>()
+    }
+
+    pub fn estimated_sps(&self) -> f64 {
+        self.steps as f64 / self.relevant_time() as f64 * 1000.0
     }
 
     pub fn compute_stats(&mut self) {
         if self.stats.is_none() {
             self.stats = Some(BenchStats {
                 estimated_tps: self.estimated_tps(),
+                estimated_sps: self.estimated_sps(),
                 relevant_blocks: self.relevant_blocks(),
+                relevant_time: self.relevant_time(),
             });
         }
     }

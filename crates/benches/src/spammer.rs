@@ -1,32 +1,25 @@
 use futures::future::join_all;
 use katana_runner::KatanaRunner;
-use starknet::accounts::Account;
+use starknet::accounts::{Account, SingleOwnerAccount};
 use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
+use starknet::signers::LocalWallet;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
 use crate::summary::BenchSummary;
 use crate::{parse_calls, BenchCall, ENOUGH_GAS};
 
-pub async fn spam_katana(
-    runner: KatanaRunner,
-    contract_address: FieldElement,
-    mut calldata: Vec<BenchCall>,
-    additional_sleep: u64,
-) -> BenchSummary {
+async fn spam_no_stats(
+    runner: &KatanaRunner,
+    accounts: &Vec<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>,
+    contract_address: &FieldElement,
+    calldata: Vec<BenchCall>,
+    wait_time: Duration,
+) -> FieldElement {
     let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
-
-    let transaction_sum_before: u32 = runner.block_sizes().await.iter().sum();
-    let steps_before = runner.steps().await;
-
-    // generating all needed accounts
     let mut nonce = FieldElement::ONE;
-    let accounts = runner.accounts();
-    let wait_time = Duration::from_millis(accounts.len() as u64 * 30 + 3000 + additional_sleep);
-
-    let expected_transactions = calldata.len() * accounts.len();
-
-    let final_call = parse_calls(vec![calldata.pop().unwrap()], &contract_address);
 
     for call in parse_calls(calldata, &contract_address) {
         let transactions = accounts
@@ -41,7 +34,36 @@ pub async fn spam_katana(
         nonce += FieldElement::ONE;
     }
 
-    let move_txs = accounts
+    nonce
+}
+
+pub async fn spam_katana(
+    runner: KatanaRunner,
+    contract_address: FieldElement,
+    mut calldata: Vec<BenchCall>,
+    additional_sleep: u64,
+    sequential: bool,
+) -> BenchSummary {
+    let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
+
+    let transaction_sum_before: u32 = runner.block_sizes().await.iter().sum();
+    let steps_before = runner.steps().await;
+
+    // generating all needed accounts
+    let accounts = runner.accounts();
+    let wait_time = Duration::from_millis(accounts.len() as u64 * 30 + 3000 + additional_sleep);
+    let name =
+        format!("benchmark {} transactions '{}'", accounts.len(), calldata.last().unwrap().0);
+
+    let expected_transactions = calldata.len() * accounts.len();
+
+    let final_call = parse_calls(vec![calldata.pop().unwrap()], &contract_address);
+
+    // transactions preparing for the benchmarked one
+    let nonce = spam_no_stats(&runner, &accounts, &contract_address, calldata, wait_time).await;
+
+    // the benchmarked transaction
+    let final_transactions = accounts
         .iter()
         .map(|account| {
             let move_call = account.execute(final_call.clone()).nonce(nonce).max_fee(max_fee);
@@ -50,7 +72,7 @@ pub async fn spam_katana(
         .collect::<Vec<_>>();
 
     let before = Instant::now();
-    let transaction_hashes = join_all(move_txs.iter().map(|t| async {
+    let transaction_hashes = join_all(final_transactions.iter().map(|t| async {
         let r = t.send().await;
         (r, Instant::now())
     }))
@@ -67,7 +89,8 @@ pub async fn spam_katana(
         })
         .collect::<Vec<_>>();
     times.sort();
-    let durations = times.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>();
+    let mut durations = times.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>();
+    durations.sort();
 
     let longest_confirmation_difference = match durations.len() {
         0 => 0,
@@ -81,12 +104,12 @@ pub async fn spam_katana(
     // time difference between first and last transaction
     let block_times = runner.block_times().await;
     let block_sizes = runner.block_sizes().await;
-    let name = format!("benchmark {} transactions", accounts.len());
     let responses_span = (*times.last().unwrap() - *times.first().unwrap()).as_millis() as u64;
 
     let mut steps = runner.steps().await;
     steps.drain(0..steps_before.len());
 
+    // Check if transactions actually passed as well
     assert_eq!(steps.len(), expected_transactions);
 
     BenchSummary {
