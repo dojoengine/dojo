@@ -1,11 +1,11 @@
 use katana_primitives::block::{Block, BlockHash, BlockNumber, FinalityStatus, PartialHeader};
 use katana_primitives::transaction::{TxHash, TxWithHash};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{BlockStatus, ResourcePrice};
 
 pub type BlockTxCount = u64;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockWithTxs(starknet::core::types::BlockWithTxs);
 
@@ -37,7 +37,7 @@ impl BlockWithTxs {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PendingBlockWithTxs(starknet::core::types::PendingBlockWithTxs);
 
@@ -62,14 +62,14 @@ impl PendingBlockWithTxs {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MaybePendingBlockWithTxs {
     Pending(PendingBlockWithTxs),
     Block(BlockWithTxs),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockWithTxHashes(starknet::core::types::BlockWithTxHashes);
 
@@ -102,7 +102,7 @@ impl BlockWithTxHashes {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PendingBlockWithTxHashes(starknet::core::types::PendingBlockWithTxHashes);
 
@@ -124,14 +124,14 @@ impl PendingBlockWithTxHashes {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MaybePendingBlockWithTxHashes {
     Pending(PendingBlockWithTxHashes),
     Block(BlockWithTxHashes),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockHashAndNumber(starknet::core::types::BlockHashAndNumber);
 

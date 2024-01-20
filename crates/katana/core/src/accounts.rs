@@ -6,7 +6,7 @@ use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateWriter;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::{get_contract_address, get_storage_var_address};
@@ -15,7 +15,7 @@ use starknet::signers::SigningKey;
 use crate::constants::{FEE_TOKEN_ADDRESS, OZ_V1_ACCOUNT_CONTRACT_CLASS_HASH};
 
 #[serde_as]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     #[serde_as(as = "UfeHex")]
     pub balance: FieldElement,
