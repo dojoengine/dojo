@@ -1,9 +1,9 @@
-use benches::{spammer::spam_katana, summary::BenchSummary};
 // Implementation of https://github.com/neotheprogramist/dojo/pull/16#discussion_r1453664539
+use benches::spammer::spam_katana;
+use benches::summary::BenchSummary;
+use benches::BenchCall;
 use katana_runner::KatanaRunner;
 use starknet::core::types::FieldElement;
-
-use benches::BenchCall;
 
 async fn run(runner: KatanaRunner, contract_address: FieldElement) -> BenchSummary {
     let spawn = BenchCall("spawn", vec![]);

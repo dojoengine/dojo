@@ -1,4 +1,5 @@
-use std::{fs::OpenOptions, io::Write};
+use std::fs::OpenOptions;
+use std::io::Write;
 
 use serde::Serialize;
 

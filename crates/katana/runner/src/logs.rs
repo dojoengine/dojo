@@ -1,7 +1,8 @@
-use chrono::prelude::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
+
+use chrono::prelude::*;
 use tokio::time::sleep;
 
 use crate::KatanaRunner;
@@ -12,10 +13,9 @@ impl KatanaRunner {
             .lines()
             .filter_map(|line| {
                 let line = line.unwrap();
-                if line.contains("⛏️ Block") {
-                    Some(line)
-                } else {
-                    None
+                match line.contains("⛏️ Block") {
+                    true => Some(line),
+                    false => None,
                 }
             })
             .collect()

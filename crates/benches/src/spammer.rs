@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use futures::future::join_all;
 use katana_runner::KatanaRunner;
 use starknet::accounts::{Account, SingleOwnerAccount};
@@ -5,7 +7,6 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet;
-use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
 use crate::summary::BenchSummary;
@@ -13,7 +14,7 @@ use crate::{parse_calls, BenchCall, ENOUGH_GAS};
 
 async fn spam_no_stats(
     runner: &KatanaRunner,
-    accounts: &Vec<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>,
+    accounts: &[SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>],
     contract_address: &FieldElement,
     calldata: Vec<BenchCall>,
     wait_time: Duration,
@@ -21,7 +22,7 @@ async fn spam_no_stats(
     let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
     let mut nonce = FieldElement::ONE;
 
-    for call in parse_calls(calldata, &contract_address) {
+    for call in parse_calls(calldata, contract_address) {
         let transactions = accounts
             .iter()
             .map(|account| account.execute(vec![call.clone()]).nonce(nonce).max_fee(max_fee))
