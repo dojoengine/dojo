@@ -1,4 +1,3 @@
-pub mod api;
 pub mod config;
 pub mod katana;
 pub mod starknet;
@@ -8,7 +7,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use api::ApiKind;
 use config::ServerConfig;
 use hyper::Method;
 use jsonrpsee::server::logger::{Logger, MethodKind, TransportProtocol};
@@ -18,10 +16,11 @@ use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
 use katana_core::sequencer::KatanaSequencer;
+use katana_rpc_api::katana::KatanaApiServer;
+use katana_rpc_api::starknet::StarknetApiServer;
+use katana_rpc_api::ApiKind;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::api::katana::KatanaApiServer;
-use crate::api::starknet::StarknetApiServer;
 use crate::katana::KatanaApi;
 use crate::starknet::StarknetApi;
 

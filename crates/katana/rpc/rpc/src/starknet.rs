@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use jsonrpsee::core::{async_trait, Error};
+use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::sequencer::KatanaSequencer;
 use katana_executor::blockifier::utils::EntryPointCall;
@@ -15,10 +15,12 @@ use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumb
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
+use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithTxHashes, PendingBlockWithTxs,
 };
+use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
@@ -31,8 +33,6 @@ use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
-
-use crate::api::starknet::{StarknetApiError, StarknetApiServer};
 
 #[derive(Clone)]
 pub struct StarknetApi {
@@ -71,7 +71,7 @@ impl StarknetApi {
 }
 #[async_trait]
 impl StarknetApiServer for StarknetApi {
-    async fn chain_id(&self) -> Result<FeltAsHex, Error> {
+    async fn chain_id(&self) -> RpcResult<FeltAsHex> {
         Ok(FieldElement::from(self.inner.sequencer.chain_id()).into())
     }
 
@@ -79,7 +79,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
-    ) -> Result<FeltAsHex, Error> {
+    ) -> RpcResult<FeltAsHex> {
         self.on_io_blocking_task(move |this| {
             let nonce = this
                 .inner
@@ -92,7 +92,7 @@ impl StarknetApiServer for StarknetApi {
         .await
     }
 
-    async fn block_number(&self) -> Result<u64, Error> {
+    async fn block_number(&self) -> RpcResult<u64> {
         self.on_io_blocking_task(move |this| {
             let block_number =
                 this.inner.sequencer.block_number().map_err(StarknetApiError::from)?;
@@ -101,7 +101,7 @@ impl StarknetApiServer for StarknetApi {
         .await
     }
 
-    async fn transaction_by_hash(&self, transaction_hash: FieldElement) -> Result<Tx, Error> {
+    async fn transaction_by_hash(&self, transaction_hash: FieldElement) -> RpcResult<Tx> {
         self.on_io_blocking_task(move |this| {
             let tx = this
                 .inner
@@ -114,7 +114,7 @@ impl StarknetApiServer for StarknetApi {
         .await
     }
 
-    async fn block_transaction_count(&self, block_id: BlockIdOrTag) -> Result<u64, Error> {
+    async fn block_transaction_count(&self, block_id: BlockIdOrTag) -> RpcResult<u64> {
         self.on_io_blocking_task(move |this| {
             let count = this
                 .inner
@@ -131,7 +131,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
-    ) -> Result<ContractClass, Error> {
+    ) -> RpcResult<ContractClass> {
         let class_hash = self
             .on_io_blocking_task(move |this| {
                 this.inner
@@ -144,7 +144,7 @@ impl StarknetApiServer for StarknetApi {
         self.class(block_id, class_hash).await
     }
 
-    async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, Error> {
+    async fn block_hash_and_number(&self) -> RpcResult<BlockHashAndNumber> {
         let hash_and_num_pair = self
             .on_io_blocking_task(move |this| this.inner.sequencer.block_hash_and_number())
             .await
@@ -155,7 +155,7 @@ impl StarknetApiServer for StarknetApi {
     async fn block_with_tx_hashes(
         &self,
         block_id: BlockIdOrTag,
-    ) -> Result<MaybePendingBlockWithTxHashes, Error> {
+    ) -> RpcResult<MaybePendingBlockWithTxHashes> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
@@ -209,7 +209,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         block_id: BlockIdOrTag,
         index: u64,
-    ) -> Result<Tx, Error> {
+    ) -> RpcResult<Tx> {
         self.on_io_blocking_task(move |this| {
             // TEMP: have to handle pending tag independently for now
             let tx = if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
@@ -236,10 +236,7 @@ impl StarknetApiServer for StarknetApi {
         .await
     }
 
-    async fn block_with_txs(
-        &self,
-        block_id: BlockIdOrTag,
-    ) -> Result<MaybePendingBlockWithTxs, Error> {
+    async fn block_with_txs(&self, block_id: BlockIdOrTag) -> RpcResult<MaybePendingBlockWithTxs> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
@@ -290,7 +287,7 @@ impl StarknetApiServer for StarknetApi {
         .await
     }
 
-    async fn state_update(&self, block_id: BlockIdOrTag) -> Result<StateUpdate, Error> {
+    async fn state_update(&self, block_id: BlockIdOrTag) -> RpcResult<StateUpdate> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
@@ -318,7 +315,7 @@ impl StarknetApiServer for StarknetApi {
     async fn transaction_receipt(
         &self,
         transaction_hash: FieldElement,
-    ) -> Result<MaybePendingTxReceipt, Error> {
+    ) -> RpcResult<MaybePendingTxReceipt> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
             let receipt = ReceiptBuilder::new(transaction_hash, provider)
@@ -355,7 +352,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         block_id: BlockIdOrTag,
         contract_address: FieldElement,
-    ) -> Result<FeltAsHex, Error> {
+    ) -> RpcResult<FeltAsHex> {
         self.on_io_blocking_task(move |this| {
             let hash = this
                 .inner
@@ -372,7 +369,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         block_id: BlockIdOrTag,
         class_hash: FieldElement,
-    ) -> Result<ContractClass, Error> {
+    ) -> RpcResult<ContractClass> {
         self.on_io_blocking_task(move |this| {
             let class =
                 this.inner.sequencer.class(block_id, class_hash).map_err(StarknetApiError::from)?;
@@ -390,7 +387,7 @@ impl StarknetApiServer for StarknetApi {
         .await
     }
 
-    async fn events(&self, filter: EventFilterWithPage) -> Result<EventsPage, Error> {
+    async fn events(&self, filter: EventFilterWithPage) -> RpcResult<EventsPage> {
         self.on_io_blocking_task(move |this| {
             let from_block = filter.event_filter.from_block.unwrap_or(BlockIdOrTag::Number(0));
             let to_block =
@@ -421,7 +418,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         request: FunctionCall,
         block_id: BlockIdOrTag,
-    ) -> Result<Vec<FeltAsHex>, Error> {
+    ) -> RpcResult<Vec<FeltAsHex>> {
         self.on_io_blocking_task(move |this| {
             let request = EntryPointCall {
                 calldata: request.calldata,
@@ -441,7 +438,7 @@ impl StarknetApiServer for StarknetApi {
         contract_address: FieldElement,
         key: FieldElement,
         block_id: BlockIdOrTag,
-    ) -> Result<FeltAsHex, Error> {
+    ) -> RpcResult<FeltAsHex> {
         self.on_io_blocking_task(move |this| {
             let value = this
                 .inner
@@ -457,7 +454,7 @@ impl StarknetApiServer for StarknetApi {
     async fn add_deploy_account_transaction(
         &self,
         deploy_account_transaction: BroadcastedDeployAccountTx,
-    ) -> Result<DeployAccountTxResult, Error> {
+    ) -> RpcResult<DeployAccountTxResult> {
         self.on_io_blocking_task(move |this| {
             if deploy_account_transaction.is_query {
                 return Err(StarknetApiError::UnsupportedTransactionVersion.into());
@@ -482,7 +479,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         request: Vec<BroadcastedTx>,
         block_id: BlockIdOrTag,
-    ) -> Result<Vec<FeeEstimate>, Error> {
+    ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
             let chain_id = this.inner.sequencer.chain_id();
 
@@ -527,7 +524,7 @@ impl StarknetApiServer for StarknetApi {
         &self,
         message: MsgFromL1,
         block_id: BlockIdOrTag,
-    ) -> Result<FeeEstimate, Error> {
+    ) -> RpcResult<FeeEstimate> {
         self.on_cpu_blocking_task(move |this| {
             let chain_id = this.inner.sequencer.chain_id();
 
@@ -551,7 +548,7 @@ impl StarknetApiServer for StarknetApi {
     async fn add_declare_transaction(
         &self,
         declare_transaction: BroadcastedDeclareTx,
-    ) -> Result<DeclareTxResult, Error> {
+    ) -> RpcResult<DeclareTxResult> {
         self.on_io_blocking_task(move |this| {
             if declare_transaction.is_query() {
                 return Err(StarknetApiError::UnsupportedTransactionVersion.into());
@@ -586,7 +583,7 @@ impl StarknetApiServer for StarknetApi {
     async fn add_invoke_transaction(
         &self,
         invoke_transaction: BroadcastedInvokeTx,
-    ) -> Result<InvokeTxResult, Error> {
+    ) -> RpcResult<InvokeTxResult> {
         self.on_io_blocking_task(move |this| {
             if invoke_transaction.is_query {
                 return Err(StarknetApiError::UnsupportedTransactionVersion.into());
@@ -605,10 +602,7 @@ impl StarknetApiServer for StarknetApi {
         .await
     }
 
-    async fn transaction_status(
-        &self,
-        transaction_hash: TxHash,
-    ) -> Result<TransactionStatus, Error> {
+    async fn transaction_status(&self, transaction_hash: TxHash) -> RpcResult<TransactionStatus> {
         self.on_io_blocking_task(move |this| {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 

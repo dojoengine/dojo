@@ -12,7 +12,8 @@ clap_complete.workspace = true
 console.workspace = true
 katana-core = { path = "core" }
 katana-primitives = { path = "primitives" }
-katana-rpc = { path = "rpc" }
+katana-rpc = { path = "rpc/rpc" }
+katana-rpc-api = { path = "rpc/rpc-api" }
 metrics = { path = "../metrics" }
 metrics-process.workspace = true
 serde_json.workspace = true
