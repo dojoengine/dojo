@@ -1,4 +1,6 @@
 use katana_core::accounts::Account;
+use katana_core::backend::config::Environment;
+use katana_primitives::chain::ChainId;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -30,7 +32,7 @@ impl KatanaRunner {
         let private_key = SigningKey::from_secret_scalar(account.private_key);
         let signer = LocalWallet::from_signing_key(private_key);
 
-        debug_assert_eq!(katana_core::backend::config::Environment::default().chain_id, "KATANA");
+        debug_assert_eq!(Environment::default().chain_id, ChainId::parse("KATANA").unwrap());
         let chain_id = felt!("82743958523457");
         let provider = self.owned_provider();
 
