@@ -120,5 +120,10 @@ mod records {
             };
             return ();
         }
-    }
+        // Implemment fn delete, input param: record_id
+        fn delete(self: @ContractState, record_id: u32) {
+            let world = self.world_dispatcher.read();
+            let (record, record_sibling) = get!(world, record_id, (Record, RecordSibling));
+            delete!(world, (record, record_sibling));
+        }
 }

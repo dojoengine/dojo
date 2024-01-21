@@ -1168,7 +1168,7 @@ dependencies = [
  "quote",
  "serde_json",
  "starknet",
- "syn 2.0.41",
+ "syn 2.0.47",
  "thiserror",
 ]
 
@@ -1196,7 +1196,7 @@ dependencies = [
  "quote",
  "serde_json",
  "starknet",
- "syn 2.0.41",
+ "syn 2.0.47",
  "thiserror",
 ]
 
@@ -2722,7 +2722,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "async-trait",
  "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",

@@ -44,7 +44,8 @@ mod tests {
     // to run so combine all related tests into one
     #[tokio::test(flavor = "multi_thread")]
     async fn models_ordering_test() -> Result<()> {
-        let pool = spinup_types_test().await?;
+        let (pool, _, _, _) = spinup_types_test().await?;
+        spinup_types_test().await?;
         let schema = build_schema(&pool).await.unwrap();
 
         // default params, test entity relationship, test nested types

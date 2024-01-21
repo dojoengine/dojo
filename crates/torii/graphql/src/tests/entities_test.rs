@@ -1,15 +1,14 @@
 #[cfg(test)]
 mod tests {
 
-    use anyhow::Result;
-    use async_graphql::dynamic::Schema;
-    use serde_json::Value;
-    use starknet_crypto::{poseidon_hash_many, FieldElement};
-
     use crate::schema::build_schema;
     use crate::tests::{
         run_graphql_query, spinup_types_test, Connection, Entity, Record, Subrecord,
     };
+    use anyhow::Result;
+    use async_graphql::dynamic::Schema;
+    use serde_json::Value;
+    use starknet_crypto::{poseidon_hash_many, FieldElement};
 
     async fn entities_query(schema: &Schema, arg: &str) -> Value {
         let query = format!(
@@ -85,7 +84,7 @@ mod tests {
     // to run so combine all related tests into one
     #[tokio::test(flavor = "multi_thread")]
     async fn entities_test() -> Result<()> {
-        let pool = spinup_types_test().await?;
+        let (pool, _, _, _) = spinup_types_test().await?;
         let schema = build_schema(&pool).await.unwrap();
 
         // default without params
@@ -235,7 +234,6 @@ mod tests {
         let subrecord: Subrecord = serde_json::from_value(models[0].clone()).unwrap();
         assert_eq!(&subrecord.__typename, "Subrecord");
         assert_eq!(subrecord.subrecord_id, 1);
-
         Ok(())
     }
 }
