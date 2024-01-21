@@ -54,13 +54,11 @@ mod tests {
 
     use super::BuildArgs;
 
-    // this adds considerable time to test suite, should this be enabled by default?
-    #[ignore]
     #[test]
-    fn build_example() {
+    fn build_example_with_typescript_and_unity_bindings() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
 
-        let build_args = BuildArgs { typescript: false, unity: false };
+        let build_args = BuildArgs { typescript: true, unity: true };
         let result = build_args.run(&config);
         assert!(result.is_ok());
     }
