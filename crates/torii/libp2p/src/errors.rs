@@ -2,6 +2,7 @@ use std::convert::Infallible;
 use std::io;
 
 use libp2p::gossipsub::{PublishError, SubscriptionError};
+#[cfg(not(target_arch = "wasm32"))]
 use libp2p::noise;
 use thiserror::Error;
 
@@ -10,6 +11,7 @@ pub enum Error {
     #[error(transparent)]
     MultiaddrParseError(#[from] libp2p::core::multiaddr::Error),
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
     NoiseUpgradeError(#[from] noise::Error),
 
