@@ -35,7 +35,7 @@ impl Libp2pClient {
         info!(target: "libp2p", "Local peer id: {:?}", peer_id);
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
-            .with_async_std()
+            .with_tokio()
             .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()

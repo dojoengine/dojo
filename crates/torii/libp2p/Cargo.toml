@@ -10,14 +10,14 @@ version.workspace = true
 
 [dependencies]
 futures.workspace = true
-getrandom = { version = "0.2.12", features = [ "js" ] }
-libp2p = { version = "0.53.2", features = [ "async-std", "gossipsub", "identify", "macros", "mdns", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "mdns", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }
+libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "tokio" ] }
+rand = "0.8.5"
+tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.35", features = ["macros", "net", "rt", "signal"] }
-tokio-util = { version = "0.7", features = ["compat"] }
 tracing-subscriber = "0.3.18"
 tracing.workspace = true
-libp2p-webrtc = { version = "0.7.0-alpha", features = ["tokio"] }
-rand = "0.8.5"
+async-trait = "0.1.77"
+regex = "1.10.3"

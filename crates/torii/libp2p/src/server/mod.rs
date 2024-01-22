@@ -4,15 +4,20 @@ use std::io;
 use std::net::Ipv4Addr;
 use std::time::Duration;
 
+use futures::future::{select, Either};
 use futures::StreamExt;
 use libp2p::core::multiaddr::Protocol;
 use libp2p::core::Multiaddr;
 use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
-use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, Swarm, core::muxing::StreamMuxerBox};
+use libp2p::{
+    core::muxing::StreamMuxerBox, identify, identity, noise, ping, relay,
+    tcp, yamux, StreamProtocol, Swarm, Transport,
+};
 use libp2p_webrtc as webrtc;
-use tracing::info;
+use libp2p_webrtc::tokio::Certificate;
 use rand::thread_rng;
+use tracing::info;
 
 use crate::errors::Error;
 
@@ -39,7 +44,7 @@ impl Libp2pRelay {
         let local_key: identity::Keypair = identity::Keypair::generate_ed25519();
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
-            .with_async_std()
+            .with_tokio()
             .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
             .with_quic()
             .with_other_transport(|key| {
@@ -48,7 +53,7 @@ impl Libp2pRelay {
                     webrtc::tokio::Certificate::generate(&mut thread_rng())?,
                 )
                 .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn))))
-            })
+            }).unwrap()
             .with_behaviour(|key| {
                 let message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();

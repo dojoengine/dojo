@@ -16,7 +16,6 @@ mod test {
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
         // Initialize the relay server
         let mut relay_server: Libp2pRelay = Libp2pRelay::new(1010, 2020)?;
-        println!("Relay server initialized");
 
         // Give some time for the server to start up
         sleep(Duration::from_secs(1)).await;
