@@ -163,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    let mut libp2p_relay_server = torii_libp2p::server::Libp2pRelay::new(Some(true), 1010)
+    let mut libp2p_relay_server = torii_libp2p::server::Libp2pRelay::new(1010, 2020)
         .expect("Failed to start libp2p relay server");
 
     info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", args.addr));

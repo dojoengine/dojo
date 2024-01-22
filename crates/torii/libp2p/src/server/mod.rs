@@ -1,16 +1,18 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io;
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::net::Ipv4Addr;
 use std::time::Duration;
 
-use futures::stream::StreamExt;
+use futures::StreamExt;
 use libp2p::core::multiaddr::Protocol;
 use libp2p::core::Multiaddr;
 use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
-use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, Swarm};
+use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, Swarm, core::muxing::StreamMuxerBox};
+use libp2p_webrtc as webrtc;
 use tracing::info;
+use rand::thread_rng;
 
 use crate::errors::Error;
 
@@ -33,13 +35,20 @@ pub struct Libp2pRelay {
 }
 
 impl Libp2pRelay {
-    pub fn new(use_ipv6: Option<bool>, port: u16) -> Result<Self, Error> {
+    pub fn new(port: u16, port_webrtc: u16) -> Result<Self, Error> {
         let local_key: identity::Keypair = identity::Keypair::generate_ed25519();
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_async_std()
             .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
             .with_quic()
+            .with_other_transport(|key| {
+                Ok(webrtc::tokio::Transport::new(
+                    key.clone(),
+                    webrtc::tokio::Certificate::generate(&mut thread_rng())?,
+                )
+                .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn))))
+            })
             .with_behaviour(|key| {
                 let message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
@@ -69,22 +78,20 @@ impl Libp2pRelay {
             })?
             .build();
 
-        let listen_addr_tcp = Multiaddr::empty()
-            .with(match use_ipv6 {
-                Some(true) => Protocol::from(Ipv6Addr::UNSPECIFIED),
-                _ => Protocol::from(Ipv4Addr::UNSPECIFIED),
-            })
-            .with(Protocol::Tcp(port));
+        // TCP
+        let listen_addr_tcp = Multiaddr::from(Ipv4Addr::UNSPECIFIED).with(Protocol::Tcp(port));
         swarm.listen_on(listen_addr_tcp)?;
 
-        let listen_addr_quic = Multiaddr::empty()
-            .with(match use_ipv6 {
-                Some(true) => Protocol::from(Ipv6Addr::UNSPECIFIED),
-                _ => Protocol::from(Ipv4Addr::UNSPECIFIED),
-            })
-            .with(Protocol::Udp(port))
-            .with(Protocol::QuicV1);
+        // UDP QUIC
+        let listen_addr_quic =
+            Multiaddr::from(Ipv4Addr::UNSPECIFIED).with(Protocol::Udp(port)).with(Protocol::QuicV1);
         swarm.listen_on(listen_addr_quic)?;
+
+        // WebRTC
+        let listen_addr_webrtc = Multiaddr::from(Ipv4Addr::UNSPECIFIED)
+            .with(Protocol::Udp(port_webrtc))
+            .with(Protocol::WebRTCDirect);
+        swarm.listen_on(listen_addr_webrtc)?;
 
         // Clients will send their messages to the "message" topic
         // with a room name as the message data.

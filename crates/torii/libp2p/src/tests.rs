@@ -15,13 +15,14 @@ mod test {
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
         // Initialize the relay server
-        let mut relay_server = Libp2pRelay::new(Some(true), 1010)?;
+        let mut relay_server: Libp2pRelay = Libp2pRelay::new(1010, 2020)?;
+        println!("Relay server initialized");
 
         // Give some time for the server to start up
         sleep(Duration::from_secs(1)).await;
 
         // Initialize the first client (listener)
-        let mut client = Libp2pClient::new("/ip6/::1/tcp/1010".to_string())?;
+        let mut client = Libp2pClient::new("/ip4/127.0.0.1/tcp/1010".to_string())?;
         client.subscribe("mawmaw")?;
         let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Message>();
 

@@ -1,8 +1,8 @@
 [package]
-name = "torii-libp2p"
 edition.workspace = true
-license.workspace = true
 license-file.workspace = true
+license.workspace = true
+name = "torii-libp2p"
 repository.workspace = true
 version.workspace = true
 
@@ -10,10 +10,14 @@ version.workspace = true
 
 [dependencies]
 futures.workspace = true
-libp2p = { version = "0.53.2", features = [ "async-std", "noise", "macros", "ping", "tcp", "identify", "yamux", "relay", "quic", "gossipsub", "mdns", "tokio"] }
-serde_json.workspace = true
+getrandom = { version = "0.2.12", features = [ "js" ] }
+libp2p = { version = "0.53.2", features = [ "async-std", "gossipsub", "identify", "macros", "mdns", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }
 serde.workspace = true
-tokio.workspace = true
-tracing.workspace = true
-tracing-subscriber = "0.3.18"
+serde_json.workspace = true
 thiserror.workspace = true
+tokio = { version = "1.35", features = ["macros", "net", "rt", "signal"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+tracing-subscriber = "0.3.18"
+tracing.workspace = true
+libp2p-webrtc = { version = "0.7.0-alpha", features = ["tokio"] }
+rand = "0.8.5"
