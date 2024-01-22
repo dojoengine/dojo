@@ -4,18 +4,16 @@ use std::io;
 use std::net::Ipv4Addr;
 use std::time::Duration;
 
-use futures::future::{select, Either};
 use futures::StreamExt;
 use libp2p::core::multiaddr::Protocol;
 use libp2p::core::Multiaddr;
 use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{
-    core::muxing::StreamMuxerBox, identify, identity, noise, ping, relay,
-    tcp, yamux, StreamProtocol, Swarm, Transport,
+    core::muxing::StreamMuxerBox, identify, identity, noise, ping, relay, tcp, yamux,
+    Swarm, Transport,
 };
 use libp2p_webrtc as webrtc;
-use libp2p_webrtc::tokio::Certificate;
 use rand::thread_rng;
 use tracing::info;
 
@@ -53,7 +51,7 @@ impl Libp2pRelay {
                     webrtc::tokio::Certificate::generate(&mut thread_rng())?,
                 )
                 .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn))))
-            }).unwrap()
+            }).expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {
                 let message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
@@ -85,18 +83,18 @@ impl Libp2pRelay {
 
         // TCP
         let listen_addr_tcp = Multiaddr::from(Ipv4Addr::UNSPECIFIED).with(Protocol::Tcp(port));
-        swarm.listen_on(listen_addr_tcp)?;
+        swarm.listen_on(listen_addr_tcp.clone())?;
 
         // UDP QUIC
         let listen_addr_quic =
             Multiaddr::from(Ipv4Addr::UNSPECIFIED).with(Protocol::Udp(port)).with(Protocol::QuicV1);
-        swarm.listen_on(listen_addr_quic)?;
+        swarm.listen_on(listen_addr_quic.clone())?;
 
         // WebRTC
         let listen_addr_webrtc = Multiaddr::from(Ipv4Addr::UNSPECIFIED)
             .with(Protocol::Udp(port_webrtc))
             .with(Protocol::WebRTCDirect);
-        swarm.listen_on(listen_addr_webrtc)?;
+        swarm.listen_on(listen_addr_webrtc.clone())?;
 
         // Clients will send their messages to the "message" topic
         // with a room name as the message data.
@@ -121,7 +119,7 @@ impl Libp2pRelay {
                             let message: ClientMessage = serde_json::from_slice(&message.data)
                                 .expect("Failed to deserialize message");
 
-                            info!(target: "libp2p", "Received message {:?} from peer {:?} with topic {:?} and data {:?}", message_id, peer_id, message.topic, message.data);
+                            info!("Received message {:?} from peer {:?} with topic {:?} and data {:?}", message_id, peer_id, message.topic, message.data);
 
                             // forward message to room
                             let server_message =
@@ -141,17 +139,20 @@ impl Libp2pRelay {
                             info: identify::Info { observed_addr, .. },
                             peer_id,
                         }) => {
-                            info!(target: "libp2p", "Received identify event from peer {:?} with observed address {:?}", peer_id, observed_addr);
+                            info!(
+                                "Received identify event from peer {:?} with observed address {:?}",
+                                peer_id, observed_addr
+                            );
                             self.swarm.add_external_address(observed_addr.clone());
                         }
                         ServerEvent::Ping(ping::Event { peer, result, .. }) => {
-                            info!(target: "libp2p", "Ping success from peer {:?} with result {:?}", peer, result);
+                            info!("Ping success from peer {:?} with result {:?}", peer, result);
                         }
                         _ => {}
                     }
                 }
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    info!(target: "libp2p", "Listening on {:?}", address);
+                    info!("Listening on {:?}", address);
                 }
                 _ => {}
             }

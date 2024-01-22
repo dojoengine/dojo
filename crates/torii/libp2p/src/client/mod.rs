@@ -32,7 +32,7 @@ impl Libp2pClient {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
-        info!(target: "libp2p", "Local peer id: {:?}", peer_id);
+        info!("Local peer id: {:?}", peer_id);
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -58,7 +58,7 @@ impl Libp2pClient {
             })?
             .build();
 
-        info!(target: "libp2p", "Dialing relay: {:?}", relay_addr);
+        info!("Dialing relay: {:?}", relay_addr);
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         Ok(Self { swarm, topics: HashMap::new() })

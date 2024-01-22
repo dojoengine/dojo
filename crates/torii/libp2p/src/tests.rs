@@ -14,6 +14,9 @@ mod test {
     // This tests subscribing to a topic and receiving a message
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter("torii_libp2p=debug")
+            .try_init();
         // Initialize the relay server
         let mut relay_server: Libp2pRelay = Libp2pRelay::new(1010, 2020)?;
 
