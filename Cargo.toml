@@ -2,16 +2,18 @@
 resolver = "2"
 
 members = [
+  "bin/dojo-language-server",
+  "bin/katana",
+  "bin/sozo",
+  "bin/torii",
   "crates/benches",
   "crates/dojo-bindgen",
   "crates/dojo-core",
   "crates/dojo-lang",
-  "crates/dojo-language-server",
   "crates/dojo-test-utils",
   "crates/dojo-types",
   "crates/dojo-world",
   "crates/dojo-world/abigen",
-  "crates/katana",
   "crates/katana/core",
   "crates/katana/executor",
   "crates/katana/primitives",
@@ -25,7 +27,6 @@ members = [
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
   "crates/metrics",
-  "crates/sozo",
   "crates/sozo/signers",
   "crates/torii/client",
   "crates/torii/server",
@@ -47,6 +48,41 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
+# metrics
+metrics = { path = "crates/metrics" }
+
+# dojo-lang
+dojo-bindgen = { path = "crates/dojo-bindgen" }
+dojo-core = { path = "crates/dojo-core" }
+dojo-lang = { path = "crates/dojo-lang" }
+dojo-test-utils = { path = "crates/dojo-test-utils" }
+dojo-types = { path = "crates/dojo-types" }
+dojo-world = { path = "crates/dojo-world" }
+
+# katana
+katana-codecs = { path = "crates/katana/storage/codecs" }
+katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
+katana-core = { path = "crates/katana/core" }
+katana-db = { path = "crates/katana/storage/db" }
+katana-executor = { path = "crates/katana/executor" }
+katana-primitives = { path = "crates/katana/primitives" }
+katana-provider = { path = "crates/katana/storage/provider" }
+katana-rpc = { path = "crates/katana/rpc/rpc" }
+katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
+katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
+katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
+katana-runner = { path = "crates/katana/runner" }
+
+# torii
+torii-client = { path = "crates/torii/client" }
+torii-core = { path = "crates/torii/core" }
+torii-graphql = { path = "crates/torii/graphql" }
+torii-grpc = { path = "crates/torii/grpc" }
+torii-server = { path = "crates/torii/server" }
+
+# sozo
+sozo-signers = { path = "crates/sozo/signers" }
+
 anyhow = "1.0.75"
 assert_matches = "1.5.0"
 async-trait = "0.1.68"

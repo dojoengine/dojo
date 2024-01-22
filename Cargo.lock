@@ -10028,6 +10028,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "torii"
+version = "0.5.1-alpha.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.21.5",
+ "camino",
+ "chrono",
+ "clap",
+ "ctrlc",
+ "dojo-types",
+ "dojo-world",
+ "either",
+ "futures",
+ "http",
+ "http-body",
+ "hyper",
+ "hyper-reverse-proxy",
+ "indexmap 1.9.3",
+ "lazy_static",
+ "metrics 0.5.1-alpha.0",
+ "metrics-process",
+ "scarb",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "starknet",
+ "starknet-crypto 0.6.1",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "torii-core",
+ "torii-graphql",
+ "torii-grpc",
+ "torii-server",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "torii-client"
 version = "0.5.1-alpha.0"
 dependencies = [
