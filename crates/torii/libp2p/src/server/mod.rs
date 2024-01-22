@@ -6,13 +6,11 @@ use std::time::Duration;
 
 use futures::StreamExt;
 use libp2p::core::multiaddr::Protocol;
+use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::Multiaddr;
 use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
-use libp2p::{
-    core::muxing::StreamMuxerBox, identify, identity, noise, ping, relay, tcp, yamux,
-    Swarm, Transport,
-};
+use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use tracing::info;
@@ -51,7 +49,8 @@ impl Libp2pRelay {
                     webrtc::tokio::Certificate::generate(&mut thread_rng())?,
                 )
                 .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn))))
-            }).expect("Failed to create WebRTC transport")
+            })
+            .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {
                 let message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
@@ -119,7 +118,11 @@ impl Libp2pRelay {
                             let message: ClientMessage = serde_json::from_slice(&message.data)
                                 .expect("Failed to deserialize message");
 
-                            info!("Received message {:?} from peer {:?} with topic {:?} and data {:?}", message_id, peer_id, message.topic, message.data);
+                            info!(
+                                "Received message {:?} from peer {:?} with topic {:?} and data \
+                                 {:?}",
+                                message_id, peer_id, message.topic, message.data
+                            );
 
                             // forward message to room
                             let server_message =
