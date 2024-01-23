@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
-use futures::channel::mpsc::UnboundedSender;
+use futures::channel::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender};
+use futures::{select, SinkExt};
 use futures::StreamExt;
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
@@ -23,11 +22,23 @@ pub struct Behaviour {
 }
 
 pub struct Libp2pClient {
-    pub swarm: Swarm<Behaviour>,
-    pub topics: HashMap<String, IdentTopic>,
+    pub command_sender: Sender<Command>,
+    pub message_receiver: Receiver<Message>,
+    pub event_loop: EventLoop,
+}
+
+pub struct EventLoop {
+    swarm: Swarm<Behaviour>,
+    message_sender: Sender<Message>,
+    command_receiver: Receiver<Command>,
 }
 
 pub type Message = (PeerId, MessageId, ServerMessage);
+pub enum Command {
+    Subscribe(String),
+    Unsubscribe(String),
+    Publish(ClientMessage),
+}
 
 impl Libp2pClient {
     #[cfg(not(target_arch = "wasm32"))]
@@ -64,7 +75,13 @@ impl Libp2pClient {
         info!("Dialing relay: {:?}", relay_addr);
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
-        Ok(Self { swarm, topics: HashMap::new() })
+        let (message_sender, message_receiver) = futures::channel::mpsc::channel(0);
+        let (command_sender, command_receiver) = futures::channel::mpsc::channel(0);
+        Ok(Self {
+            command_sender,
+            message_receiver,
+            event_loop: EventLoop { swarm, message_sender, command_receiver },
+        })
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -104,61 +121,86 @@ impl Libp2pClient {
         info!("Dialing relay: {:?}", relay_addr);
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
-        Ok(Self { swarm, topics: HashMap::new() })
+        let (message_sender, message_receiver) = futures::channel::mpsc::channel(0);
+        let (command_sender, command_receiver) = futures::channel::mpsc::channel(0);
+        Ok(Self {
+            command_sender,
+            message_receiver,
+            event_loop: EventLoop { swarm, message_sender, command_receiver },
+        })
     }
+}
 
-    pub async fn run(&mut self, sender: &UnboundedSender<Message>) {
+impl EventLoop {
+    pub async fn run(&mut self) {
         loop {
             // Poll the swarm for new events.
-            let event = self.swarm.select_next_some().await;
-            match event {
-                SwarmEvent::Behaviour(event) => {
-                    // Handle behaviour events.
-                    if let ClientEvent::Gossipsub(gossipsub::Event::Message {
-                        propagation_source: peer_id,
-                        message_id,
-                        message,
-                    }) = event
-                    {
-                        // deserialize message
-                        let message: ServerMessage = serde_json::from_slice(&message.data)
-                            .expect("Failed to deserialize message");
-                        sender.unbounded_send((peer_id, message_id, message)).unwrap();
-                    }
-                }
-                SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
-                    tracing::info!("Swarm event: {:?}", cause);
+            select! {
+                event = self.swarm.select_next_some() => {
+                    match event {
+                        SwarmEvent::Behaviour(event) => {
+                            // Handle behaviour events.
+                            if let ClientEvent::Gossipsub(gossipsub::Event::Message {
+                                propagation_source: peer_id,
+                                message_id,
+                                message,
+                            }) = event
+                            {
+                                // deserialize message
+                                let message: ServerMessage = serde_json::from_slice(&message.data)
+                                    .expect("Failed to deserialize message");
+                                self.message_sender.send((peer_id, message_id, message)).await.expect("Failed to send message");
+                            }
+                        }
+                        SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
+                            tracing::info!("Swarm event: {:?}", cause);
+                            tracing::info!("connection a crash");
 
-                    if let libp2p::swarm::ConnectionError::KeepAliveTimeout = cause {
-                        break;
+                            if let libp2p::swarm::ConnectionError::KeepAliveTimeout = cause {
+                                break;
+                            }
+                        }
+                        evt => tracing::info!("Swarm event: {:?}", evt),
+                    }
+                },
+                command = self.command_receiver.select_next_some() => {
+                    match command {
+                        Command::Subscribe(room) => {
+                            self.subscribe(&room).expect("Failed to subscribe");
+                        },
+                        Command::Unsubscribe(room) => {
+                            self.unsubscribe(&room).expect("Failed to unsubscribe");
+                        },
+                        Command::Publish(message) => {
+                            self.publish(&message).expect("Failed to publish message");
+                        },
                     }
                 }
-                evt => tracing::info!("Swarm event: {:?}", evt),
             }
         }
     }
 
-    pub fn subscribe(&mut self, room: &str) -> Result<bool, Error> {
+    fn subscribe(&mut self, room: &str) -> Result<bool, Error> {
         let topic = IdentTopic::new(room);
-        let sub = self.swarm.behaviour_mut().gossipsub.subscribe(&IdentTopic::new(room))?;
-        if sub {
-            self.topics.insert(room.to_string(), topic);
-        }
+        let sub = self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
+        // if sub {
+        //     self.topics.insert(room.to_string(), topic);
+        // }
 
         Ok(sub)
     }
 
-    pub fn unsubscribe(&mut self, room: &str) -> Result<bool, Error> {
+    fn unsubscribe(&mut self, room: &str) -> Result<bool, Error> {
         let topic = IdentTopic::new(room);
         let unsub = self.swarm.behaviour_mut().gossipsub.unsubscribe(&topic)?;
-        if unsub {
-            self.topics.remove(room);
-        }
+        // if unsub {
+        //     self.topics.remove(room);
+        // }
 
         Ok(unsub)
     }
 
-    pub fn publish(&mut self, message: &ClientMessage) -> Result<MessageId, Error> {
+    fn publish(&mut self, message: &ClientMessage) -> Result<MessageId, Error> {
         self.swarm
             .behaviour_mut()
             .gossipsub
