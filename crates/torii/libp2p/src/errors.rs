@@ -33,4 +33,10 @@ pub enum Error {
 
     #[error(transparent)]
     PublishError(#[from] PublishError),
+
+    #[error("Failed to read identity: {0}")]
+    ReadIdentityError(anyhow::Error),
+
+    #[error("Failed to read certificate: {0}")]
+    ReadCertificateError(anyhow::Error),
 }

@@ -28,7 +28,7 @@ mod test {
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
         let _ = tracing_subscriber::fmt().with_env_filter("torii_libp2p=debug").try_init();
         // Initialize the relay server
-        let mut relay_server: Libp2pRelay = Libp2pRelay::new(1010, 2020)?;
+        let mut relay_server: Libp2pRelay = Libp2pRelay::new(1010, 2020, None, None)?;
 
         // Give some time for the server to start up
         sleep(Duration::from_secs(1)).await;

@@ -1,8 +1,9 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::io;
 use std::net::Ipv4Addr;
+use std::path::Path;
 use std::time::Duration;
+use std::{fs, io};
 
 use futures::StreamExt;
 use libp2p::core::multiaddr::Protocol;
@@ -14,6 +15,7 @@ use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, Swarm, Transpor
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use tracing::info;
+use webrtc::tokio::Certificate;
 
 use crate::errors::Error;
 
@@ -36,19 +38,33 @@ pub struct Libp2pRelay {
 }
 
 impl Libp2pRelay {
-    pub fn new(port: u16, port_webrtc: u16) -> Result<Self, Error> {
-        let local_key: identity::Keypair = identity::Keypair::generate_ed25519();
+    pub fn new(
+        port: u16,
+        port_webrtc: u16,
+        local_key_path: Option<String>,
+        cert_path: Option<String>,
+    ) -> Result<Self, Error> {
+        let local_key = if let Some(path) = local_key_path {
+            let path = Path::new(&path);
+            read_or_create_identity(path).map_err(|e| Error::ReadIdentityError(e))?
+        } else {
+            identity::Keypair::generate_ed25519()
+        };
+
+        let cert = if let Some(path) = cert_path {
+            let path = Path::new(&path);
+            read_or_create_certificate(path).map_err(|e| Error::ReadCertificateError(e))?
+        } else {
+            Certificate::generate(&mut thread_rng()).unwrap()
+        };
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
             .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
             .with_quic()
             .with_other_transport(|key| {
-                Ok(webrtc::tokio::Transport::new(
-                    key.clone(),
-                    webrtc::tokio::Certificate::generate(&mut thread_rng())?,
-                )
-                .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn))))
+                Ok(webrtc::tokio::Transport::new(key.clone(), cert)
+                    .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn))))
             })
             .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {
@@ -161,4 +177,39 @@ impl Libp2pRelay {
             }
         }
     }
+}
+
+fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
+    if path.exists() {
+        let bytes = fs::read(&path)?;
+
+        info!("Using existing identity from {}", path.display());
+
+        return Ok(identity::Keypair::from_protobuf_encoding(&bytes)?); // This only works for ed25519 but that is what we are using.
+    }
+
+    let identity = identity::Keypair::generate_ed25519();
+
+    fs::write(&path, &identity.to_protobuf_encoding()?)?;
+
+    info!("Generated new identity and wrote it to {}", path.display());
+
+    Ok(identity)
+}
+
+fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
+    if path.exists() {
+        let pem = fs::read_to_string(&path)?;
+
+        info!("Using existing certificate from {}", path.display());
+
+        return Ok(Certificate::from_pem(&pem)?);
+    }
+
+    let cert = Certificate::generate(&mut rand::thread_rng())?;
+    fs::write(&path, &cert.serialize_pem().as_bytes())?;
+
+    info!("Generated new certificate and wrote it to {}", path.display());
+
+    Ok(cert)
 }
