@@ -17,7 +17,7 @@ use tokio::process::Command;
 use crate::KatanaRunner;
 
 async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
-    // Preparing config, as in https://github.com/neotheprogramist/dojo/blob/fec863cb0375a684edd9e7e76c8fdeb9ebf386e6/bin/sozo/src/cli_entry.rs#L29
+    // Preparing config, as in https://github.com/dojoengine/dojo/blob/25fbb7fc973cff4ce1273625c4664545d9b088e9/bin/sozo/src/main.rs#L28-L29
     let mut compilers = CompilerRepository::std();
     let cairo_plugins = CairoPluginRepository::default();
     compilers.add(Box::new(DojoCompiler)).unwrap();
@@ -33,13 +33,13 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
         .build()
         .context("failed to build config")?;
 
-    // Extractiong migration command, as here https://github.com/neotheprogramist/dojo/blob/fec863cb0375a684edd9e7e76c8fdeb9ebf386e6/bin/sozo/src/commands/mod.rs#L24
+    // Extractiong migration command, as here https://github.com/dojoengine/dojo/blob/25fbb7fc973cff4ce1273625c4664545d9b088e9/bin/sozo/src/commands/mod.rs#L24-L25
     let mut migrate = match args.command {
         Commands::Migrate(migrate) => *migrate,
         _ => return Err(anyhow!("failed to parse migrate args")),
     };
 
-    // Preparing workspace, as in https://github.com/neotheprogramist/dojo/blob/fec863cb0375a684edd9e7e76c8fdeb9ebf386e6/bin/sozo/src/commands/migrate.rs#L40-L41
+    // Preparing workspace, as in https://github.com/dojoengine/dojo/blob/25fbb7fc973cff4ce1273625c4664545d9b088e9/bin/sozo/src/commands/migrate.rs#L40-L41
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
     if migrate.name.is_none() {
         if let Some(root_package) = ws.root_package() {
