@@ -73,15 +73,15 @@ pub struct GenesisAccountJson {
 }
 
 #[derive(Debug)]
-pub struct GenesisJson {
+pub struct GenesisJsonWithPath {
     base_path: PathBuf,
-    pub content: GenesisJsonContent,
+    pub content: GenesisJson,
 }
 
-impl GenesisJson {
+impl GenesisJsonWithPath {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
         let content = fs::read_to_string(path.as_ref())?;
-        let content: GenesisJsonContent = serde_json::from_str(&content)?;
+        let content: GenesisJson = serde_json::from_str(&content)?;
 
         let mut base_path = path.as_ref().to_path_buf();
         base_path.pop();
@@ -90,9 +90,15 @@ impl GenesisJson {
     }
 }
 
+/// The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
+/// the genesis configuration from a JSON file before being converted to a [Genesis] instance.
+/// However, this type alone is inadquate for creating the [Genesis] type, for that you have to load
+/// the JSON file using [GenesisJsonWithPath] and then convert it to [Genesis] using
+/// [`Genesis::try_from<Genesis>`]. This is because the `classes` field of this type contains
+/// paths to the class files, which are set to be relative to the JSON file.
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GenesisJsonContent {
+pub struct GenesisJson {
     pub parent_hash: BlockHash,
     pub state_root: FieldElement,
     pub number: BlockNumber,
@@ -101,7 +107,7 @@ pub struct GenesisJsonContent {
     #[serde(default)]
     pub classes: Vec<GenesisClassJson>,
     pub fee_token: FeeTokenConfigJson,
-    pub universal_deployer: UniversalDeployerConfigJson,
+    pub universal_deployer: Option<UniversalDeployerConfigJson>,
     pub allocations: HashMap<ContractAddress, GenesisAccountJson>,
 }
 
@@ -125,15 +131,15 @@ pub enum GenesisTryFromJsonError {
     MissingFeeTokenClass(ClassHash),
     #[error("Missing universal deployer class: {0}")]
     MissingUniversalDeployerClass(ClassHash),
-    #[error(transparent)]
-    FlattenedError(#[from] JsonError),
+    #[error("Failed to flatten Sierra contract: {0}")]
+    Flattened(#[from] JsonError),
 }
 
-impl TryFrom<GenesisJson> for Genesis {
+impl TryFrom<GenesisJsonWithPath> for Genesis {
     type Error = GenesisTryFromJsonError;
 
-    fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
-        let GenesisJson { content: value, base_path } = value;
+    fn try_from(value: GenesisJsonWithPath) -> Result<Self, Self::Error> {
+        let GenesisJsonWithPath { content: value, base_path } = value;
 
         let mut classes: HashMap<ClassHash, GenesisClass> = value
             .classes
@@ -215,23 +221,25 @@ impl TryFrom<GenesisJson> for Genesis {
             }
         };
 
-        match value.universal_deployer.class {
-            Some(hash) => {
-                if !classes.contains_key(&hash) {
-                    return Err(GenesisTryFromJsonError::MissingUniversalDeployerClass(hash));
+        if let Some(config) = value.universal_deployer {
+            match config.class {
+                Some(hash) => {
+                    if !classes.contains_key(&hash) {
+                        return Err(GenesisTryFromJsonError::MissingUniversalDeployerClass(hash));
+                    }
                 }
-            }
 
-            // if no class hash is provided, use the default UD class
-            None => {
-                let _ = classes.insert(
-                    *LEGACY_UDC_CLASS_HASH,
-                    GenesisClass {
-                        sierra: None,
-                        casm: LEGACY_UDC_CASM.clone(),
-                        compiled_class_hash: *LEGACY_UDC_COMPILED_CLASS_HASH,
-                    },
-                );
+                // if no class hash is provided, use the default UD class
+                None => {
+                    let _ = classes.insert(
+                        *LEGACY_UDC_CLASS_HASH,
+                        GenesisClass {
+                            sierra: None,
+                            casm: LEGACY_UDC_CASM.clone(),
+                            compiled_class_hash: *LEGACY_UDC_COMPILED_CLASS_HASH,
+                        },
+                    );
+                }
             }
         }
 
@@ -296,68 +304,19 @@ mod tests {
     use std::collections::HashMap;
     use std::path::PathBuf;
 
-    use serde_json::json;
     use starknet::macros::felt;
 
-    use super::{GenesisClassJson, GenesisJsonContent};
+    use super::{GenesisClassJson, GenesisJson};
     use crate::block::GasPrices;
     use crate::contract::{
         ContractAddress, LEGACY_ERC20_CONTRACT_CASM, LEGACY_UDC_CASM, OZ_ACCOUNT_CONTRACT,
         OZ_ACCOUNT_CONTRACT_CASM, OZ_ACCOUNT_CONTRACT_CLASS_HASH,
     };
-    use crate::genesis::json::GenesisJson;
+    use crate::genesis::json::GenesisJsonWithPath;
     use crate::genesis::{FeeTokenConfig, Genesis, GenesisClass};
 
-    fn genesis_json() -> GenesisJsonContent {
-        serde_json::from_value(json!(
-            {
-                "number": 0,
-                "parentHash": "0x999",
-                "timestamp": 5123512314u128,
-                "stateRoot": "0x99",
-                "gasPrices": {
-                    "ETH": 1241231,
-                    "STRK": 123123
-                },
-                "feeToken": {
-                    "address": "0x55",
-                    "name": "ETHER",
-                    "symbol": "ETH",
-                    "decimals": 18,
-                    "class": "0x80085"
-                },
-                "universalDeployer": {
-                    "class": "0x999",
-                    "address": "0x77",
-                },
-                "allocations": {
-                    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
-                        "privateKey": "0x1",
-                        "balance": "0xD3C21BCECCEDA1000000",
-                        "nonce": "0x1",
-                        "class": "0x80085",
-                        "storage": {
-                            "0x1": "0x1",
-                            "0x2": "0x2"
-                        }
-                    },
-                    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8": {
-                        "privateKey": "0x2",
-                        "balance": "0xD3C21BCECCEDA1000000"
-                    }
-                },
-                "classes": [
-                    {
-                        "path": "../../contracts/compiled/erc20.json"
-                    },
-                    {
-                        "path": "../../contracts/compiled/universal_deployer.json",
-                        "classHash": "0x80085"
-                    }
-                ]
-            }
-        ))
-        .unwrap()
+    fn genesis_json() -> GenesisJsonWithPath {
+        GenesisJsonWithPath::new("./src/genesis/test-genesis.json").unwrap()
     }
 
     #[test]
@@ -368,7 +327,7 @@ mod tests {
 
     #[test]
     fn deserialize_from_json() {
-        let genesis: GenesisJsonContent = genesis_json();
+        let genesis: GenesisJson = genesis_json().content;
 
         assert_eq!(genesis.number, 0);
         assert_eq!(genesis.parent_hash, felt!("0x999"));
@@ -419,7 +378,7 @@ mod tests {
 
     #[test]
     fn genesis_try_from_json() {
-        let genesis = GenesisJson::new("./src/genesis/test-genesis.json").unwrap();
+        let genesis = genesis_json();
         let actual_genesis = Genesis::try_from(genesis).unwrap();
 
         let classes = HashMap::from([

@@ -93,6 +93,12 @@ pub struct GenesisClass {
     pub sierra: Option<FlattenedSierraClass>,
 }
 
+#[derive(Debug, serde::Serialize, PartialEq, Eq)]
+pub struct UniversalDeployerConfig {
+    pub class_hash: ClassHash,
+    pub address: ContractAddress,
+}
+
 /// Genesis block configuration.
 #[serde_with::serde_as]
 #[derive(Debug, serde::Serialize)]
@@ -113,10 +119,13 @@ pub struct Genesis {
     pub classes: HashMap<ClassHash, GenesisClass>,
     /// The fee token configuration.
     pub fee_token: FeeTokenConfig,
+    /// The universal deployer (UDC) configuration.
+    pub universal_deployer: UniversalDeployerConfig,
     /// The genesis accounts.
     pub allocations: HashMap<ContractAddress, GenesisAccount>,
 }
 
+/// A helper type for allocating accounts in the genesis block.
 #[must_use]
 pub struct GenesisAllocationsGenerator {
     total: u8,
