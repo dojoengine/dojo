@@ -52,7 +52,7 @@ pub async fn spam_katana(
 
     // generating all needed accounts
     let accounts = runner.accounts();
-    let wait_time = Duration::from_millis(accounts.len() as u64 * 35 + 3000 + additional_sleep);
+    let wait_time = Duration::from_millis(accounts.len() as u64 * 60 + 3000 + additional_sleep);
     let name = format!(
         "Benchmark: {} accounts, {} transactions, {} calls",
         accounts.len(),
