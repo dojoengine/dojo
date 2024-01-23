@@ -28,3 +28,6 @@ libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "t
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "tokio", "wasm-bindgen" ] }
 libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p" }
 tracing-wasm = "0.2.1"
+wasm-bindgen-test = "0.3.40"
+wasm-bindgen-futures = "0.4.40"
+wasm-timer = "0.2.5"
