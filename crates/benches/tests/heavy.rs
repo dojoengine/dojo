@@ -103,7 +103,7 @@ async fn katana_heavy_multicall_2000() {
     let arg = FieldElement::from_dec_str(&(109u64 * 109u64).to_string()).unwrap();
     let calls = (0..23).map(|_| BenchCall("is_prime", vec![arg])).collect();
 
-    let result = spam_katana(runner, contract_address, calls, 0, true).await;
+    let result = spam_katana(runner, contract_address, calls, 120000, true).await;
 
     // assert!(result.steps > 1600000000);
     result.dump().await;

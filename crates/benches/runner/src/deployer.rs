@@ -5,18 +5,18 @@ use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::compile_workspace;
+use dojo_world::manifest::Manifest;
 use scarb::compiler::CompilerRepository;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 use sozo::args::{Commands, SozoArgs};
 use sozo::ops::migration;
 use starknet::core::types::FieldElement;
-use starknet::macros::felt;
 use tokio::process::Command;
 
 use crate::KatanaRunner;
 
-async fn prepare_migration_args(args: SozoArgs) -> Result<()> {
+async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
     // Preparing config, as in https://github.com/neotheprogramist/dojo/blob/fec863cb0375a684edd9e7e76c8fdeb9ebf386e6/bin/sozo/src/cli_entry.rs#L29
     let mut compilers = CompilerRepository::std();
     let cairo_plugins = CairoPluginRepository::default();
@@ -56,9 +56,11 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<()> {
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
         )?;
     }
+    let manifest = Manifest::load_from_path(target_dir.join("manifest.json"))
+        .expect("failed to load manifest");
 
     migration::execute(&ws, migrate, target_dir).await?;
-    Ok(())
+    Ok(manifest.contracts[0].address.unwrap())
 }
 
 impl KatanaRunner {
@@ -75,10 +77,7 @@ impl KatanaRunner {
             manifest,
         ]);
 
-        prepare_migration_args(args).await?;
-
-        let constract_address =
-            felt!("0x38979e719956897617c83fcbc69de9bc56491fd10c093dd8492b92ee7326d98");
+        let constract_address = prepare_migration_args(args).await?;
 
         let out = Command::new("bash")
             .arg(script)

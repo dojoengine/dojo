@@ -7,10 +7,11 @@ version.workspace = true
 
 [dependencies]
 runner-macro = { path = "./runner-macro" }
-katana-core = { path = "../core" }
-katana-primitives = { path = "../primitives" }
+katana-core.workspace = true
+katana-primitives.workspace = true
 sozo = { path = "../../../bin/sozo" }
-dojo-lang = { path = "../../dojo-lang" }
+dojo-lang.workspace = true
+dojo-world.workspace = true
 anyhow.workspace = true
 home = "0.5.5"
 lazy_static.workspace = true

@@ -17,11 +17,13 @@ fn parse_metadata(metadata: String) -> (u16, String, bool, String, String) {
     let executable = if args.len() >= 3 { args[2].trim() } else { "katana" };
     let executable = executable.replace('"', "");
 
-    let contract = if args.len() >= 4 { args[3].trim() } else { DEFAULT_CONTRACT };
-    let script = if args.len() >= 5 { args[3].trim() } else { DEFAULT_SCRIPT };
+    let contract =
+        if args.len() >= 4 { args[3].trim().replace('"', "") } else { DEFAULT_CONTRACT.into() };
+    let script =
+        if args.len() >= 5 { args[4].trim().replace('"', "") } else { DEFAULT_SCRIPT.into() };
 
     // plus one as the first account is used for deployment
-    (n_accounts + 1, executable, with_blocks, contract.into(), script.into())
+    (n_accounts + 1, executable, with_blocks, contract, script)
 }
 
 #[proc_macro_attribute]

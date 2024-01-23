@@ -317,7 +317,7 @@ mod tests {
         assert!(parse_result.is_err());
     }
 
-    #[katana_runner::katana_test]
+    #[katana_runner::katana_test(2, true, "katana", "")]
     async fn legacy_flag_works_as_expected() {
         let cmd = Command::parse_from([
             "sozo",
@@ -344,7 +344,7 @@ mod tests {
         assert!(*result.get(3).unwrap() == FieldElement::from_hex_be("0x0").unwrap());
     }
 
-    #[katana_runner::katana_test]
+    #[katana_runner::katana_test(2, true, "katana", "")]
     async fn without_legacy_flag_works_as_expected() {
         let cmd = Command::parse_from(["sozo", "--account-address", "0x0", "--private-key", "0x1"]);
         let dummy_call = vec![Call {

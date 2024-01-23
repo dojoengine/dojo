@@ -7,6 +7,8 @@ members = [
   "bin/sozo",
   "bin/torii",
   "crates/benches",
+  "crates/benches/runner",
+  "crates/benches/runner/runner-macro",
   "crates/dojo-bindgen",
   "crates/dojo-core",
   "crates/dojo-lang",
@@ -21,8 +23,6 @@ members = [
   "crates/katana/rpc/rpc-api",
   "crates/katana/rpc/rpc-types",
   "crates/katana/rpc/rpc-types-builder",
-  "crates/katana/runner",
-  "crates/katana/runner/runner-macro",
   "crates/katana/storage/codecs",
   "crates/katana/storage/codecs/derive",
   "crates/katana/storage/db",
@@ -72,7 +72,7 @@ katana-rpc = { path = "crates/katana/rpc/rpc" }
 katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
-katana-runner = { path = "crates/katana/runner" }
+katana-runner = { path = "crates/benches/runner" }
 
 # torii
 torii-client = { path = "crates/torii/client" }
