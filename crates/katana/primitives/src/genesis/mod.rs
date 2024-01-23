@@ -67,7 +67,7 @@ impl GenesisAccount {
 }
 
 #[serde_with::serde_as]
-#[derive(Debug, serde::Serialize, PartialEq, Eq)]
+#[derive(Debug, serde::Serialize)]
 pub struct FeeTokenConfig {
     /// The name of the fee token.
     pub name: String,
@@ -77,6 +77,9 @@ pub struct FeeTokenConfig {
     pub address: ContractAddress,
     /// The decimals of the fee token.
     pub decimals: u8,
+    // TODO: change to U256
+    /// The total supply of the fee token.
+    pub total_supply: FieldElement,
     /// The class hash of the fee token contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,

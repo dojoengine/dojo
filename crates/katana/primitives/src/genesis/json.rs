@@ -69,6 +69,7 @@ pub struct UniversalDeployerConfigJson {
 #[serde(rename_all = "camelCase")]
 pub struct GenesisAccountJson {
     pub private_key: FieldElement,
+    // TODO: change to U256
     pub balance: FieldElement,
     pub nonce: Option<FieldElement>,
     /// The class hash of the account contract. If not provided, the default account class is used.
@@ -197,9 +198,10 @@ impl TryFrom<GenesisJsonWithPath> for Genesis {
             })
             .collect::<Result<_, Self::Error>>()?;
 
-        let fee_token = FeeTokenConfig {
+        let mut fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
+            total_supply: FieldElement::ZERO,
             address: value.fee_token.address,
             decimals: value.fee_token.decimals,
             class_hash: value.fee_token.class.unwrap_or(*DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
@@ -290,6 +292,8 @@ impl TryFrom<GenesisJsonWithPath> for Genesis {
                         *DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH
                     }
                 };
+
+                fee_token.total_supply += account.balance;
 
                 Ok((
                     address,
@@ -448,6 +452,7 @@ mod tests {
             address: ContractAddress::from(felt!("0x55")),
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
+            total_supply: felt!("0x1a784379d99db42000000"),
             decimals: 18,
             class_hash: felt!("0x8"),
         };
@@ -505,7 +510,13 @@ mod tests {
         assert_eq!(actual_genesis.state_root, expected_genesis.state_root);
         assert_eq!(actual_genesis.gas_prices, expected_genesis.gas_prices);
 
-        assert_eq!(actual_genesis.fee_token, expected_genesis.fee_token);
+        assert_eq!(actual_genesis.fee_token.address, expected_genesis.fee_token.address);
+        assert_eq!(actual_genesis.fee_token.name, expected_genesis.fee_token.name);
+        assert_eq!(actual_genesis.fee_token.symbol, expected_genesis.fee_token.symbol);
+        assert_eq!(actual_genesis.fee_token.decimals, expected_genesis.fee_token.decimals);
+        assert_eq!(actual_genesis.fee_token.total_supply, expected_genesis.fee_token.total_supply);
+        assert_eq!(actual_genesis.fee_token.class_hash, expected_genesis.fee_token.class_hash);
+
         assert_eq!(actual_genesis.universal_deployer, expected_genesis.universal_deployer);
 
         assert_eq!(actual_genesis.allocations.len(), expected_genesis.allocations.len());
