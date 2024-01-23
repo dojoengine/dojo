@@ -1,16 +1,19 @@
 use std::collections::HashMap;
 
+use lazy_static::lazy_static;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::get_contract_address;
+use starknet::macros::felt;
 use starknet::signers::SigningKey;
 
 use crate::block::{BlockHash, BlockNumber, GasPrices};
 use crate::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    StorageKey, StorageValue,
+    SierraClass, StorageKey, StorageValue,
 };
+use crate::utils::class::{parse_compiled_class, parse_sierra_class};
 use crate::FieldElement;
 
 pub mod json;
@@ -120,7 +123,7 @@ pub struct Genesis {
     /// The fee token configuration.
     pub fee_token: FeeTokenConfig,
     /// The universal deployer (UDC) configuration.
-    pub universal_deployer: UniversalDeployerConfig,
+    pub universal_deployer: Option<UniversalDeployerConfig>,
     /// The genesis accounts.
     pub allocations: HashMap<ContractAddress, GenesisAccount>,
 }
@@ -173,4 +176,26 @@ impl GenesisAllocationsGenerator {
 
 fn public_key_from_private_key(private_key: FieldElement) -> FieldElement {
     SigningKey::from_secret_scalar(private_key).verifying_key().scalar()
+}
+
+lazy_static! {
+
+    // Pre-compiled contract classes
+
+    pub static ref DEFAULT_UDC_ADDRESS: ContractAddress = ContractAddress(felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"));
+    pub static ref DEFAULT_FEE_TOKEN_ADDRESS: ContractAddress = ContractAddress(felt!("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"));
+
+    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/erc20.json")).unwrap();
+    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH: ClassHash = felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
+    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash = felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
+
+    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/universal_deployer.json")).unwrap();
+    pub static ref DEFAULT_LEGACY_UDC_CLASS_HASH: ClassHash = felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
+    pub static ref DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH: CompiledClassHash = felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
+
+    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../contracts/compiled/oz_account_080.json")).unwrap();
+    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/oz_account_080.json")).unwrap();
+    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = felt!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
+    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash = felt!("0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc");
+
 }
