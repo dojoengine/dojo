@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use ethers::types::U256;
 use lazy_static::lazy_static;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
@@ -31,7 +32,7 @@ pub struct GenesisAccount {
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
     /// The amount of the fee token allocated to the account.
-    pub balance: FieldElement,
+    pub balance: U256,
     /// The initial nonce of the account.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<FieldElement>,
@@ -59,7 +60,7 @@ impl GenesisAccount {
     pub fn new_with_balance(
         private_key: FieldElement,
         class_hash: ClassHash,
-        balance: FieldElement,
+        balance: U256,
     ) -> (ContractAddress, Self) {
         let (address, account) = Self::new(private_key, class_hash);
         (address, Self { balance, ..account })
@@ -79,7 +80,7 @@ pub struct FeeTokenConfig {
     pub decimals: u8,
     // TODO: change to U256
     /// The total supply of the fee token.
-    pub total_supply: FieldElement,
+    pub total_supply: U256,
     /// The class hash of the fee token contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
@@ -136,13 +137,13 @@ pub struct Genesis {
 pub struct GenesisAllocationsGenerator {
     total: u8,
     seed: [u8; 32],
-    balance: FieldElement,
+    balance: U256,
     class_hash: FieldElement,
 }
 
 impl GenesisAllocationsGenerator {
     pub fn new(total: u8) -> Self {
-        Self { total, seed: [0u8; 32], balance: FieldElement::ZERO, class_hash: Default::default() }
+        Self { total, seed: [0u8; 32], balance: U256::zero(), class_hash: Default::default() }
     }
 
     pub fn new_with_class_hash(self, class_hash: ClassHash) -> Self {
@@ -153,7 +154,7 @@ impl GenesisAllocationsGenerator {
         Self { seed, ..self }
     }
 
-    pub fn with_balance(self, balance: FieldElement) -> Self {
+    pub fn with_balance(self, balance: U256) -> Self {
         Self { balance, ..self }
     }
 

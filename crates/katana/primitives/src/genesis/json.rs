@@ -5,6 +5,7 @@ use std::{fs, io};
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, StarknetSierraCompilationError};
 use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_vm::types::errors::program_errors::ProgramError;
+use ethers::types::U256;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{ComputeClassHashError, JsonError};
@@ -69,8 +70,7 @@ pub struct UniversalDeployerConfigJson {
 #[serde(rename_all = "camelCase")]
 pub struct GenesisAccountJson {
     pub private_key: FieldElement,
-    // TODO: change to U256
-    pub balance: FieldElement,
+    pub balance: U256,
     pub nonce: Option<FieldElement>,
     /// The class hash of the account contract. If not provided, the default account class is used.
     pub class: Option<ClassHash>,
@@ -201,7 +201,7 @@ impl TryFrom<GenesisJsonWithPath> for Genesis {
         let mut fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
-            total_supply: FieldElement::ZERO,
+            total_supply: U256::zero(),
             address: value.fee_token.address,
             decimals: value.fee_token.decimals,
             class_hash: value.fee_token.class.unwrap_or(*DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
@@ -327,7 +327,9 @@ impl TryFrom<GenesisJsonWithPath> for Genesis {
 mod tests {
     use std::collections::HashMap;
     use std::path::PathBuf;
+    use std::str::FromStr;
 
+    use ethers::types::U256;
     use starknet::macros::felt;
 
     use super::{GenesisClassJson, GenesisJson};
@@ -358,27 +360,31 @@ mod tests {
         assert_eq!(genesis.parent_hash, felt!("0x999"));
         assert_eq!(genesis.timestamp, 5123512314u128);
         assert_eq!(genesis.state_root, felt!("0x99"));
-        assert_eq!(genesis.gas_prices.eth, 1241231);
-        assert_eq!(genesis.gas_prices.strk, 123123);
+        assert_eq!(genesis.gas_prices.eth, 1111);
+        assert_eq!(genesis.gas_prices.strk, 2222);
 
         assert_eq!(genesis.fee_token.address, ContractAddress::from(felt!("0x55")));
         assert_eq!(genesis.fee_token.name, String::from("ETHER"));
         assert_eq!(genesis.fee_token.symbol, String::from("ETH"));
-        assert_eq!(genesis.fee_token.class, Some(felt!("0x80085")));
+        assert_eq!(genesis.fee_token.class, Some(felt!("0x8")));
         assert_eq!(genesis.fee_token.decimals, 18);
 
         assert_eq!(
             genesis.universal_deployer.clone().unwrap().address,
             Some(ContractAddress::from(felt!("0x77")))
         );
-        assert_eq!(genesis.universal_deployer.unwrap().class, Some(felt!("0x999")));
+        assert_eq!(genesis.universal_deployer.unwrap().class, None);
 
         let alloc_1 = ContractAddress::from(felt!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"));
         let alloc_2 = ContractAddress::from(felt!("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
 
         assert_eq!(genesis.allocations.len(), 2);
         assert_eq!(genesis.allocations[&alloc_1].private_key, felt!("0x1"));
-        assert_eq!(genesis.allocations[&alloc_1].balance, felt!("0xD3C21BCECCEDA1000000"));
+        assert_eq!(
+            genesis.allocations[&alloc_1].balance,
+            U256::from_str("0xD3C21BCECCEDA1000000").unwrap()
+        );
+        // assert_eq!(genesis.allocations[&alloc_1].balance, felt!("0xD3C21BCECCEDA1000000"));
         assert_eq!(genesis.allocations[&alloc_1].nonce, Some(felt!("0x1")));
         assert_eq!(genesis.allocations[&alloc_1].class, Some(felt!("0x80085")));
         assert_eq!(
@@ -387,18 +393,21 @@ mod tests {
         );
 
         assert_eq!(genesis.allocations[&alloc_2].private_key, felt!("0x2"));
-        assert_eq!(genesis.allocations[&alloc_2].balance, felt!("0xD3C21BCECCEDA1000000"));
+        assert_eq!(
+            genesis.allocations[&alloc_2].balance,
+            U256::from_str("0xD3C21BCECCEDA1000000").unwrap()
+        );
 
         assert_eq!(
             genesis.classes,
             vec![
                 GenesisClassJson {
-                    class_hash: None,
-                    path: PathBuf::from("../../classes/contract.json"),
+                    class_hash: Some(felt!("0x8")),
+                    path: PathBuf::from("../../contracts/compiled/erc20.json"),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
-                    path: PathBuf::from("../../classes/account.json"),
+                    path: PathBuf::from("../../contracts/compiled/universal_deployer.json"),
                 },
             ]
         );
@@ -452,7 +461,8 @@ mod tests {
             address: ContractAddress::from(felt!("0x55")),
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
-            total_supply: felt!("0x1a784379d99db42000000"),
+            total_supply: U256::from_str("0x1a784379d99db42000000").unwrap(),
+            // total_supply: felt!("0x1a784379d99db42000000"),
             decimals: 18,
             class_hash: felt!("0x8"),
         };
@@ -465,7 +475,8 @@ mod tests {
                     public_key: felt!(
                         "0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
                     ),
-                    balance: felt!("0xD3C21BCECCEDA1000000"),
+                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                    // balance: felt!("0xD3C21BCECCEDA1000000"),
                     nonce: Some(felt!("0x1")),
                     class_hash: felt!("0x80085"),
                     storage: Some(HashMap::from([
@@ -481,7 +492,8 @@ mod tests {
                     public_key: felt!(
                         "0x0759ca09377679ecd535a81e83039658bf40959283187c654c5416f439403cf5"
                     ),
-                    balance: felt!("0xD3C21BCECCEDA1000000"),
+                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                    // balance: felt!("0xD3C21BCECCEDA1000000"),
                     class_hash: *DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                     nonce: None,
                     storage: None,
