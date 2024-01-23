@@ -1,3 +1,5 @@
+//! JSON deserialization of the genesis configuration.
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
@@ -77,13 +79,16 @@ pub struct GenesisAccountJson {
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
+/// A wrapper around [GenesisJson] that also contains the path to the JSON file. The `base_path` is
+/// needed to calculate the paths of the class files, which are relative to the JSON file.
 #[derive(Debug)]
-pub struct GenesisJsonWithPath {
-    base_path: PathBuf,
+pub struct GenesisJsonWithBasePath {
+    pub base_path: PathBuf,
     pub content: GenesisJson,
 }
 
-impl GenesisJsonWithPath {
+impl GenesisJsonWithBasePath {
+    /// Loads the genesis configuration from a JSON file at `path`.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
         let content = fs::read_to_string(path.as_ref())?;
         let content: GenesisJson = serde_json::from_str(&content)?;
@@ -93,12 +98,16 @@ impl GenesisJsonWithPath {
 
         Ok(Self { content, base_path })
     }
+
+    pub fn new_with_content_and_base_path(base_path: PathBuf, content: GenesisJson) -> Self {
+        Self { content, base_path }
+    }
 }
 
 /// The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
 /// the genesis configuration from a JSON file before being converted to a [Genesis] instance.
-/// However, this type alone is inadquate for creating the [Genesis] type, for that you have to load
-/// the JSON file using [GenesisJsonWithPath] and then convert it to [Genesis] using
+/// However, this type alone is inadequate for creating the [Genesis] type, for that you have to
+/// load the JSON file using [GenesisJsonWithPath] and then convert it to [Genesis] using
 /// [`Genesis::try_from<Genesis>`]. This is because the `classes` field of this type contains
 /// paths to the class files, which are set to be relative to the JSON file.
 #[derive(Debug, serde::Deserialize)]
@@ -140,11 +149,11 @@ pub enum GenesisTryFromJsonError {
     Flattened(#[from] JsonError),
 }
 
-impl TryFrom<GenesisJsonWithPath> for Genesis {
+impl TryFrom<GenesisJsonWithBasePath> for Genesis {
     type Error = GenesisTryFromJsonError;
 
-    fn try_from(value: GenesisJsonWithPath) -> Result<Self, Self::Error> {
-        let GenesisJsonWithPath { content: value, base_path } = value;
+    fn try_from(value: GenesisJsonWithBasePath) -> Result<Self, Self::Error> {
+        let GenesisJsonWithBasePath { content: value, base_path } = value;
 
         let mut classes: HashMap<ClassHash, GenesisClass> = value
             .classes
@@ -334,7 +343,7 @@ mod tests {
 
     use super::{GenesisClassJson, GenesisJson};
     use crate::block::GasPrices;
-    use crate::genesis::json::GenesisJsonWithPath;
+    use crate::genesis::json::GenesisJsonWithBasePath;
     use crate::genesis::{
         ContractAddress, FeeTokenConfig, Genesis, GenesisClass, UniversalDeployerConfig,
         DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM, DEFAULT_LEGACY_UDC_CLASS_HASH,
@@ -342,8 +351,8 @@ mod tests {
         DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
     };
 
-    fn genesis_json() -> GenesisJsonWithPath {
-        GenesisJsonWithPath::new("./src/genesis/test-genesis.json").unwrap()
+    fn genesis_json() -> GenesisJsonWithBasePath {
+        GenesisJsonWithBasePath::new("./src/genesis/test-genesis.json").unwrap()
     }
 
     #[test]
