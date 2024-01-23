@@ -22,3 +22,4 @@ mod test_utils;
 mod benchmarks;
 
 mod components;
+mod resource_metadata;

@@ -22,6 +22,20 @@ abigen!(
   },
   {
     "type": "struct",
+    "name": "dojo::resource_metadata::ResourceMetadata",
+    "members": [
+      {
+        "name": "resource_id",
+        "type": "core::felt252"
+      },
+      {
+        "name": "metadata_uri",
+        "type": "core::array::Span::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
     "name": "core::array::Span::<core::integer::u8>",
     "members": [
       {
@@ -74,31 +88,27 @@ abigen!(
     "items": [
       {
         "type": "function",
-        "name": "metadata_uri",
+        "name": "metadata",
         "inputs": [
           {
-            "name": "resource",
+            "name": "resource_id",
             "type": "core::felt252"
           }
         ],
         "outputs": [
           {
-            "type": "core::array::Span::<core::felt252>"
+            "type": "dojo::resource_metadata::ResourceMetadata"
           }
         ],
         "state_mutability": "view"
       },
       {
         "type": "function",
-        "name": "set_metadata_uri",
+        "name": "set_metadata",
         "inputs": [
           {
-            "name": "resource",
-            "type": "core::felt252"
-          },
-          {
-            "name": "uri",
-            "type": "core::array::Span::<core::felt252>"
+            "name": "metadata",
+            "type": "dojo::resource_metadata::ResourceMetadata"
           }
         ],
         "outputs": [],

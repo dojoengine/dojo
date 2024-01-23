@@ -1,5 +1,4 @@
-mod abi;
-
+pub mod abi;
 pub mod cairo_utils;
 pub mod model;
 pub mod world;

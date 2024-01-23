@@ -1,16 +1,7 @@
 use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
-
-#[derive(Model, Drop, Serde, PartialEq, Clone)]
-struct ResourceMetadata {
-    #[key]
-    resource_id: felt252,
-    #[capacity(10)]
-    metadata_uri: Span<felt252>,
-}
-
-const RESOURCE_METADATA_MODEL: felt252 = 'ResourceMetadata';
+use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
 
 #[starknet::interface]
 trait IWorld<T> {
@@ -91,8 +82,7 @@ mod world {
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::model::Model;
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
-
-    use super::{ResourceMetadata, RESOURCE_METADATA_MODEL};
+    use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
 
     const NAME_ENTRYPOINT: felt252 =
         0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;

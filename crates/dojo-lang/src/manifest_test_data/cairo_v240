@@ -8,7 +8,7 @@ test_compiler_cairo_v240
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x46a3bd47d22e65e60b86ff5b38aebddfcacf46fdfc31d2a998797db05ccba1",
+    "class_hash": "0x6750fe86b05e7bb5d79f4ad1a4cb742e6fb8dfd09a307540f873a3f64573e9c",
     "abi": [
       {
         "type": "impl",
@@ -17,7 +17,17 @@ test_compiler_cairo_v240
       },
       {
         "type": "struct",
-        "name": "dojo::world::ResourceMetadata",
+        "name": "core::array::Span::<core::felt252>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<core::felt252>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "dojo::resource_metadata::ResourceMetadata",
         "members": [
           {
             "name": "resource_id",
@@ -25,17 +35,7 @@ test_compiler_cairo_v240
           },
           {
             "name": "metadata_uri",
-            "type": "core::felt252"
-          }
-        ]
-      },
-      {
-        "type": "struct",
-        "name": "core::array::Span::<core::felt252>",
-        "members": [
-          {
-            "name": "snapshot",
-            "type": "@core::array::Array::<core::felt252>"
+            "type": "core::array::Span::<core::felt252>"
           }
         ]
       },
@@ -102,7 +102,7 @@ test_compiler_cairo_v240
             ],
             "outputs": [
               {
-                "type": "dojo::world::ResourceMetadata"
+                "type": "dojo::resource_metadata::ResourceMetadata"
               }
             ],
             "state_mutability": "view"
@@ -113,7 +113,7 @@ test_compiler_cairo_v240
             "inputs": [
               {
                 "name": "metadata",
-                "type": "dojo::world::ResourceMetadata"
+                "type": "dojo::resource_metadata::ResourceMetadata"
               }
             ],
             "outputs": [],
@@ -861,7 +861,7 @@ test_compiler_cairo_v240
   },
   "base": {
     "name": "dojo::base::base",
-    "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
+    "class_hash": "0x4aa4c2d0afad683bb61ccdc2689fb70c4fde13c28cfa95cdff2d5a62dd5bea4",
     "abi": [
       {
         "type": "impl",
@@ -979,9 +979,9 @@ test_compiler_cairo_v240
       "computed": []
     },
     {
-      "name": "dojo::world::resource_metadata",
+      "name": "dojo::resource_metadata::resource_metadata",
       "address": null,
-      "class_hash": "0x55c0249bb763a9ed653ed4c0df283c695231745efdb523fa269555b3f9e0b00",
+      "class_hash": "0x181eeb0a8403ab2dfe1be9a03ad9ae4b26ca18f730e3ad98aa50029ac350656",
       "abi": [
         {
           "type": "function",
@@ -1141,8 +1141,34 @@ test_compiler_cairo_v240
           "state_mutability": "view"
         },
         {
+          "type": "struct",
+          "name": "dojo::resource_metadata::ResourceMetadata",
+          "members": [
+            {
+              "name": "resource_id",
+              "type": "core::felt252"
+            },
+            {
+              "name": "metadata_uri",
+              "type": "core::array::Span::<core::felt252>"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "ensure_abi",
+          "inputs": [
+            {
+              "name": "model",
+              "type": "dojo::resource_metadata::ResourceMetadata"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "view"
+        },
+        {
           "type": "event",
-          "name": "dojo::world::resource_metadata::Event",
+          "name": "dojo::resource_metadata::resource_metadata::Event",
           "kind": "enum",
           "variants": []
         }

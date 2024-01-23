@@ -3,6 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
+use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -347,9 +348,14 @@ where
                     Ok(hash) => {
                         let encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
 
+                        let world_metadata = ResourceMetadata {
+                            resource_id: FieldElement::ZERO,
+                            metadata_uri: encoded_uri,
+                        };
+
                         let InvokeTransactionResult { transaction_hash } =
                             WorldContract::new(world.contract_address, migrator)
-                                .set_metadata_uri(&FieldElement::ZERO, &encoded_uri)
+                                .set_metadata(&world_metadata)
                                 .send()
                                 .await
                                 .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
