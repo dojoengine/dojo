@@ -357,12 +357,6 @@ mod tests {
     }
 
     #[test]
-    fn canon() {
-        let path = PathBuf::try_from("").unwrap().canonicalize().unwrap();
-        println!("{}", path.display())
-    }
-
-    #[test]
     fn deserialize_from_json() {
         let genesis: GenesisJson = genesis_json().content;
 

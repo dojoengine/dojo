@@ -1,9 +1,0 @@
-{
-	"rust-analyzer.linkedProjects": [
-		"./crates/katana/primitives/Cargo.toml",
-		"./crates/katana/primitives/Cargo.toml",
-		"./crates/katana/primitives/Cargo.toml",
-		"./crates/katana/primitives/Cargo.toml",
-		"./crates/katana/primitives/Cargo.toml"
-	]
-}
