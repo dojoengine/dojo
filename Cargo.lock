@@ -11518,7 +11518,7 @@ version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.21.5",
+ "base64 0.21.7",
  "camino",
  "chrono",
  "clap",
