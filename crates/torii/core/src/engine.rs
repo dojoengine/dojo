@@ -11,7 +11,7 @@ use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
@@ -256,7 +256,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
             } else {
                 let keys: Vec<String> = event.keys.iter().map(|k| format!("{:#x}", k)).collect();
                 let data: Vec<String> = event.data.iter().map(|d| format!("{:#x}", d)).collect();
-                debug!("Event {{ keys: {:?}, data: {:?} }}", keys, data);
+                trace!("Event {{ keys: {:?}, data: {:?} }}", keys, data);
             }
         }
         Ok(())
