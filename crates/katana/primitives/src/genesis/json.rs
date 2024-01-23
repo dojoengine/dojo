@@ -133,8 +133,6 @@ pub enum GenesisTryFromJsonError {
     #[error(transparent)]
     ParsingError(#[from] serde_json::Error),
     #[error(transparent)]
-    Other(#[from] anyhow::Error),
-    #[error(transparent)]
     ComputeClassHash(#[from] ComputeClassHashError),
     #[error(transparent)]
     ConversionError(#[from] FromByteArrayError),
@@ -147,7 +145,9 @@ pub enum GenesisTryFromJsonError {
     #[error("Missing universal deployer class: {0}")]
     MissingUniversalDeployerClass(ClassHash),
     #[error("Failed to flatten Sierra contract: {0}")]
-    Flattened(#[from] JsonError),
+    FlattenSierraClass(#[from] JsonError),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 impl TryFrom<GenesisJsonWithBasePath> for Genesis {
@@ -388,7 +388,6 @@ mod tests {
             genesis.allocations[&alloc_1].balance,
             U256::from_str("0xD3C21BCECCEDA1000000").unwrap()
         );
-        // assert_eq!(genesis.allocations[&alloc_1].balance, felt!("0xD3C21BCECCEDA1000000"));
         assert_eq!(genesis.allocations[&alloc_1].nonce, Some(felt!("0x1")));
         assert_eq!(genesis.allocations[&alloc_1].class, Some(felt!("0x80085")));
         assert_eq!(
@@ -466,7 +465,6 @@ mod tests {
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
             total_supply: U256::from_str("0x1a784379d99db42000000").unwrap(),
-            // total_supply: felt!("0x1a784379d99db42000000"),
             decimals: 18,
             class_hash: felt!("0x8"),
         };
@@ -480,7 +478,6 @@ mod tests {
                         "0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
                     ),
                     balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
-                    // balance: felt!("0xD3C21BCECCEDA1000000"),
                     nonce: Some(felt!("0x1")),
                     class_hash: felt!("0x80085"),
                     storage: Some(HashMap::from([
@@ -497,7 +494,6 @@ mod tests {
                         "0x0759ca09377679ecd535a81e83039658bf40959283187c654c5416f439403cf5"
                     ),
                     balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
-                    // balance: felt!("0xD3C21BCECCEDA1000000"),
                     class_hash: *DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                     nonce: None,
                     storage: None,
