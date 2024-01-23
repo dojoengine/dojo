@@ -78,7 +78,6 @@ pub struct FeeTokenConfig {
     pub address: ContractAddress,
     /// The decimals of the fee token.
     pub decimals: u8,
-    // TODO: change to U256
     /// The total supply of the fee token.
     pub total_supply: U256,
     /// The class hash of the fee token contract.
