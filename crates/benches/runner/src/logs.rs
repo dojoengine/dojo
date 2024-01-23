@@ -3,20 +3,38 @@ use std::io::{BufRead, BufReader};
 use std::time::Duration;
 
 use chrono::prelude::*;
+use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 
 use crate::KatanaRunner;
+
+#[derive(Serialize, Deserialize)]
+struct TimedLog<T> {
+    timestamp: String,
+    level: String,
+    fields: T,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Message {
+    message: String,
+    target: String,
+}
+
+type Log = TimedLog<Message>;
 
 impl KatanaRunner {
     pub fn blocks(&self) -> Vec<String> {
         BufReader::new(File::open(&self.log_filename).unwrap())
             .lines()
-            .filter_map(|line| {
-                let line = line.unwrap();
-                match line.contains("⛏️ Block") {
-                    true => Some(line),
-                    false => None,
-                }
+            .map_while(Result::ok)
+            .filter_map(|line| match serde_json::from_str(&line) {
+                Ok(Log { fields: Message { message, .. }, .. }) => Some(message),
+                Err(_) => None,
+            })
+            .filter_map(|message| match message.contains("⛏️ Block") {
+                true => Some(message),
+                false => None,
             })
             .collect()
     }

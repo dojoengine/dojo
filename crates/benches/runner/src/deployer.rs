@@ -68,7 +68,7 @@ impl KatanaRunner {
     pub async fn deploy(&self, manifest: &str, script: &str) -> Result<FieldElement> {
         let rpc_url = &format!("http://localhost:{}", self.port);
 
-        let args = SozoArgs::parse_from(&[
+        let args = SozoArgs::parse_from([
             "sozo",
             "migrate",
             "--rpc-url",

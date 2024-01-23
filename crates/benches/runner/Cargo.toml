@@ -21,3 +21,5 @@ url.workspace = true
 chrono.workspace = true
 clap.workspace = true
 scarb.workspace = true
+serde.workspace = true
+serde_json = "1.0.111"
