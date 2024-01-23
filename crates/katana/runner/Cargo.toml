@@ -9,6 +9,8 @@ version.workspace = true
 runner-macro = { path = "./runner-macro" }
 katana-core = { path = "../core" }
 katana-primitives = { path = "../primitives" }
+sozo = { path = "../../../bin/sozo" }
+dojo-lang = { path = "../../dojo-lang" }
 anyhow.workspace = true
 home = "0.5.5"
 lazy_static.workspace = true
@@ -16,3 +18,5 @@ starknet.workspace = true
 tokio.workspace = true
 url.workspace = true
 chrono.workspace = true
+clap.workspace = true
+scarb.workspace = true
