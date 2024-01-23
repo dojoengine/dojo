@@ -189,14 +189,17 @@ lazy_static! {
     pub static ref DEFAULT_UDC_ADDRESS: ContractAddress = ContractAddress(felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"));
     pub static ref DEFAULT_FEE_TOKEN_ADDRESS: ContractAddress = ContractAddress(felt!("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"));
 
+    // Default fee token contract
     pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/erc20.json")).unwrap();
     pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH: ClassHash = felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
     pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash = felt!("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f");
 
+    // Default universal deployer
     pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/universal_deployer.json")).unwrap();
     pub static ref DEFAULT_LEGACY_UDC_CLASS_HASH: ClassHash = felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
     pub static ref DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH: CompiledClassHash = felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69");
 
+    // Default account contract
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../contracts/compiled/oz_account_080.json")).unwrap();
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/oz_account_080.json")).unwrap();
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = felt!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c");
