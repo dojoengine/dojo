@@ -37,7 +37,6 @@ tokio.workspace = true
 torii-core = { path = "../core" }
 torii-graphql = { path = "../graphql" }
 torii-grpc = { path = "../grpc", features = [ "server" ] }
-torii-libp2p = { path = "../libp2p" }
 tower = "0.4.13"
 tower-http = "0.4.4"
 tracing-subscriber.workspace = true
