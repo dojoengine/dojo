@@ -1,4 +1,5 @@
-//! JSON deserialization of the genesis configuration.
+//! JSON representation of the genesis configuration. Used to deserialize the genesis configuration
+//! from a JSON file.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
