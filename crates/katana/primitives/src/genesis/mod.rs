@@ -1,9 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use ethers::types::U256;
 use lazy_static::lazy_static;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
+use serde::Serialize;
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::get_contract_address;
 use starknet::macros::felt;
@@ -19,8 +20,35 @@ use crate::FieldElement;
 
 pub mod json;
 
+/// A contract allocation in the genesis block.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum GenesisAllocation {
+    /// Account contract
+    Account(GenesisAccount),
+    /// Non-account contract
+    Contract(GenesisContract),
+}
+
+/// A generic non-account contract.
 #[serde_with::serde_as]
-#[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Serialize, PartialEq, Eq)]
+pub struct GenesisContract {
+    /// The class hash of the contract.
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: ClassHash,
+    /// The amount of the fee token allocated to the contract.
+    pub balance: U256,
+    /// The initial nonce of the contract.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<FieldElement>,
+    /// The initial storage values of the contract.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage: Option<HashMap<StorageKey, StorageValue>>,
+}
+
+#[serde_with::serde_as]
+#[derive(Debug, Default, Clone, Serialize, PartialEq, Eq)]
 pub struct GenesisAccount {
     /// The private key of the account.
     #[serde_as(as = "UfeHex")]
@@ -68,7 +96,7 @@ impl GenesisAccount {
 }
 
 #[serde_with::serde_as]
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Serialize)]
 pub struct FeeTokenConfig {
     /// The name of the fee token.
     pub name: String,
@@ -86,7 +114,7 @@ pub struct FeeTokenConfig {
 }
 
 #[serde_with::serde_as]
-#[derive(Debug, serde::Serialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct GenesisClass {
     /// The compiled class hash of the contract class.
     #[serde_as(as = "UfeHex")]
@@ -99,7 +127,7 @@ pub struct GenesisClass {
     pub sierra: Option<FlattenedSierraClass>,
 }
 
-#[derive(Debug, serde::Serialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct UniversalDeployerConfig {
     pub class_hash: ClassHash,
     pub address: ContractAddress,
@@ -107,7 +135,7 @@ pub struct UniversalDeployerConfig {
 
 /// Genesis block configuration.
 #[serde_with::serde_as]
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Genesis {
     /// The genesis block parent hash.
     #[serde_as(as = "UfeHex")]
@@ -122,13 +150,23 @@ pub struct Genesis {
     /// The genesis block L1 gas prices.
     pub gas_prices: GasPrices,
     /// The classes to declare in the genesis block.
-    pub classes: HashMap<ClassHash, GenesisClass>,
+    pub classes: BTreeMap<ClassHash, GenesisClass>,
     /// The fee token configuration.
     pub fee_token: FeeTokenConfig,
     /// The universal deployer (UDC) configuration.
     pub universal_deployer: Option<UniversalDeployerConfig>,
-    /// The genesis accounts.
-    pub allocations: HashMap<ContractAddress, GenesisAccount>,
+    /// The genesis contract allocations.
+    pub allocations: BTreeMap<ContractAddress, GenesisAllocation>,
+}
+
+impl Genesis {
+    /// Returns an iterator over the genesis accounts.
+    pub fn accounts(&self) -> impl Iterator<Item = &GenesisAccount> {
+        self.allocations.values().filter_map(|allocation| match allocation {
+            GenesisAllocation::Account(account) => Some(account),
+            _ => None,
+        })
+    }
 }
 
 /// A helper type for allocating accounts in the genesis block.
