@@ -24,10 +24,10 @@ clap-verbosity-flag = "2.0.1"
 clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
-dojo-bindgen = { path = "../dojo-bindgen" }
-dojo-lang = { path = "../dojo-lang" }
-dojo-types = { path = "../dojo-types" }
-dojo-world = { path = "../dojo-world", features = [ "contracts", "metadata", "migration" ] }
+dojo-bindgen.workspace = true
+dojo-lang.workspace = true
+dojo-types.workspace = true
+dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 notify = "6.0.1"
 notify-debouncer-mini = "0.3.0"
 scarb-ui.workspace = true
@@ -46,6 +46,6 @@ url.workspace = true
 
 [dev-dependencies]
 assert_fs = "1.0.10"
-dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
-katana-runner = { path = "../katana/runner" }
+dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
+katana-runner.workspace = true
 snapbox = "0.4.6"

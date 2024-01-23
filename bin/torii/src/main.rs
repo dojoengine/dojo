@@ -10,8 +10,6 @@
 //!   documentation for usage details. This is **not recommended on Windows**. See [here](https://rust-lang.github.io/rfcs/1974-global-allocators.html#jemalloc)
 //!   for more info.
 
-mod proxy;
-
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -36,11 +34,10 @@ use torii_core::processors::store_transaction::StoreTransactionProcessor;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::Model;
+use torii_server::proxy::Proxy;
 use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
-
-use crate::proxy::Proxy;
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -115,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
         .connect_with(options)
         .await?;
 
-    sqlx::migrate!("../migrations").run(&pool).await?;
+    sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
     let provider: Arc<_> =
         JsonRpcClient::new(HttpTransport::new(format!("http://{}", args.rpc).parse::<Url>()?))
