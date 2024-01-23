@@ -4,9 +4,6 @@ name = "dojo-language-server"
 version.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[[bin]]
-name = "dojo-language-server"
-path = "src/bin/language_server.rs"
 
 [dependencies]
 anyhow.workspace = true
@@ -19,7 +16,7 @@ cairo-lang-starknet.workspace = true
 cairo-lang-test-plugin.workspace = true
 cairo-lang-utils.workspace = true
 clap.workspace = true
-dojo-lang = { path = "../dojo-lang" }
+dojo-lang.workspace = true
 log = "0.4.14"
 salsa = "0.16.1"
 smol_str.workspace = true

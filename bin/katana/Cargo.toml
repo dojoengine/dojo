@@ -10,11 +10,12 @@ version.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
-katana-core = { path = "core" }
-katana-primitives = { path = "primitives" }
-katana-rpc = { path = "rpc" }
-metrics = { path = "../metrics" }
+katana-core.workspace = true
+katana-primitives.workspace = true
+katana-rpc-api.workspace = true
+katana-rpc.workspace = true
 metrics-process.workspace = true
+metrics.workspace = true
 serde_json.workspace = true
 starknet_api.workspace = true
 tokio.workspace = true

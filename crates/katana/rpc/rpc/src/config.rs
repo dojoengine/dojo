@@ -1,4 +1,4 @@
-use crate::api::ApiKind;
+use katana_rpc_api::ApiKind;
 
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
