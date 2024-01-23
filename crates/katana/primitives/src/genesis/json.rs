@@ -108,7 +108,7 @@ impl GenesisJsonWithBasePath {
 /// The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
 /// the genesis configuration from a JSON file before being converted to a [Genesis] instance.
 /// However, this type alone is inadequate for creating the [Genesis] type, for that you have to
-/// load the JSON file using [GenesisJsonWithPath] and then convert it to [Genesis] using
+/// load the JSON file using [GenesisJsonWithBasePath] and then convert it to [Genesis] using
 /// [`Genesis::try_from<Genesis>`]. This is because the `classes` field of this type contains
 /// paths to the class files, which are set to be relative to the JSON file.
 #[derive(Debug, serde::Deserialize)]
