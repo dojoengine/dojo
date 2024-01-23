@@ -5744,6 +5744,7 @@ dependencies = [
  "derive_more",
  "ethers",
  "flate2",
+ "lazy_static",
  "rand",
  "rayon",
  "serde",

@@ -16,7 +16,7 @@ use crate::FieldElement;
 pub mod json;
 
 #[serde_with::serde_as]
-#[derive(Debug, Default, Clone, serde::Serialize)]
+#[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq)]
 pub struct GenesisAccount {
     /// The private key of the account.
     #[serde_as(as = "UfeHex")]
@@ -64,7 +64,7 @@ impl GenesisAccount {
 }
 
 #[serde_with::serde_as]
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, PartialEq, Eq)]
 pub struct FeeTokenConfig {
     /// The name of the fee token.
     pub name: String,
@@ -72,13 +72,15 @@ pub struct FeeTokenConfig {
     pub symbol: String,
     /// The address of the fee token contract.
     pub address: ContractAddress,
+    /// The decimals of the fee token.
+    pub decimals: u8,
     /// The class hash of the fee token contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
 }
 
 #[serde_with::serde_as]
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, PartialEq, Eq)]
 pub struct GenesisClass {
     /// The compiled class hash of the contract class.
     #[serde_as(as = "UfeHex")]
