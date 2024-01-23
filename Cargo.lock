@@ -5744,6 +5744,8 @@ dependencies = [
  "derive_more",
  "ethers",
  "flate2",
+ "rand",
+ "rayon",
  "serde",
  "serde_json",
  "serde_with",

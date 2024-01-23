@@ -42,6 +42,7 @@ pub struct PartialHeader {
 /// The L1 gas prices.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
     pub eth: u64,

@@ -1,0 +1,68 @@
+{
+	// genesis block header info
+	"number": 0,
+	"parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"timestamp": 5123512314,
+	"stateRoot": "0x99",
+	// the address of the sequencer contract (required)
+	// the address must be one of the value defined in the `allocations` field
+	"sequencerAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+	/// The L1 gas prices for a unit of a resource
+	"gasPrices": {
+		// The price of one unit of the given resource, denominated in wei
+		"ETH": 1241231,
+		// The price of one unit of the given resource, denominated in strk
+		"STRK": 123123
+	},
+	// fee token info 
+	"feeToken": {
+		"address": "0x44", // (optional) - if not provided, the default fee token address is used
+		"name": "ETHER",
+		"symbol": "ETH",
+		"decimals": 18,
+		// a way to override the default fee token class, if not provided, the default fee token class is used
+		// can either be a path to a class definition or a class hash (if class hash then it would be looked up in the `classes` field)
+		"class": "0x80085"
+	},
+	"universalDeployer": {
+		"class": "0x999", // can either be a path to a class definition or a class hash (if class hash then it would be looked up in the `classes` field)
+		"address": "0x77" // (optional - if not provided, the default address is used)
+	},
+	// the initial account allocations. this is used to pre-fund / initialize accounts / contracts
+	// this is also how you can initialize the storage of a contract at genesis
+	"allocations": {
+		"0x44": {
+			"storage": {
+				"0x1": "0x1",
+				"0x2": "0x2"
+			}
+		},
+		"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
+			// the private key of the account (optional) - if provided this contract will be treated as an account contract
+			"privateKey": "0x1",
+			// fee token balance (optional)
+			"balance": "0xD3C21BCECCEDA1000000",
+			// the initial nonce (optional)
+			"nonce": "0x1",
+			// the initial storage (optional) - a map of storage keys to values
+			"storage": {
+				"0x1": "0x1",
+				"0x2": "0x2"
+			}
+		},
+		"0x70997970C51812dc3A010C7d01b50e0d17dc79C8": {
+			"privateKey": "0x2",
+			"balance": "0xD3C21BCECCEDA1000000"
+		}
+	},
+	// extra classes to declare at genesis
+	"classes": [
+		{
+			"path": "../../classes/contract.json"
+		},
+		{
+			"path": "../../classes/erc20.json",
+			"classHash": "0x80085" // (optional - the class hash is computed from the class definition by default)
+		}
+	]
+}

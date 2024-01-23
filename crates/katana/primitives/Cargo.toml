@@ -10,6 +10,8 @@ version.workspace = true
 anyhow.workspace = true
 cairo-vm.workspace = true
 derive_more.workspace = true
+rand = { version = "0.8.5", features = [ "small_rng" ] }
+rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
