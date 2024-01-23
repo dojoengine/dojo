@@ -32,13 +32,6 @@ use crate::utils::class::{parse_compiled_class_v0, parse_sierra_class};
 use crate::FieldElement;
 
 #[derive(Debug, PartialEq, Eq, serde::Deserialize)]
-#[serde(untagged)]
-pub enum ClassHashOrPath {
-    ClassHash(ClassHash),
-    Path(PathBuf),
-}
-
-#[derive(Debug, PartialEq, Eq, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisClassJson {
     pub path: PathBuf,
