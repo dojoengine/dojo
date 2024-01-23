@@ -74,8 +74,6 @@ mod tests {
     // does not need proptest, as it doesn't use any input
     #[katana_runner::katana_test]
     async fn bench_default_spawn() {
-        runner.deploy("contracts/Scarb.toml", "contracts/scripts/auth.sh").await.unwrap();
-
         let fee = estimate_gas(&runner.account(0), BenchCall("spawn", vec![]), &contract_address)
             .unwrap();
 

@@ -1,19 +1,38 @@
 # This crate is dedicated for benchmarking purposes
 
-## Quick start
-
-```bash
-katana
-bash scripts/cargo_bench.sh
-```
-
 ## Prerequisites
 
 -   `cargo` - for test case generation and runtime
 -   `katana` - as a local RPC server
 -   `sozo` - for contract compilation and deployment
 
-## Requirements for running
+
+## Katana Benchmarks
+
+TMP: Due to the number of accounts overfowing `u8` at the moment, katana binary is run from `target` directory.
+After the change to `u16` is released it should take the system installed version. Because of this additional first step is required.
+
+```bash
+cargo build -r --bin katana
+```
+
+And to run the benchamarks 
+
+```bash
+cargo test --manifest-path crates/benches/Cargo.toml -- --nocapture
+```
+
+## Gas usage Benchmarks
+
+### Quick start
+
+```bash
+katana
+bash scripts/cargo_bench.sh
+```
+
+
+### Requirements for running
 
 While benchmarks are running a Katana instance has to be online either remotely or locally...
 
@@ -42,7 +61,7 @@ cargo test bench -- --ignored
 
 Benchmarks are ignored by default because they need a while to complete and need a running Katana. Their names should start with bench.
 
-## Running with compiled `sozo`
+### Running with compiled `sozo`
 
 While during testing release version of the tool worked better, Sozo can be run from source with
 
