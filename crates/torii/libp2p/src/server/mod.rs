@@ -46,14 +46,14 @@ impl Libp2pRelay {
     ) -> Result<Self, Error> {
         let local_key = if let Some(path) = local_key_path {
             let path = Path::new(&path);
-            read_or_create_identity(path).map_err(|e| Error::ReadIdentityError(e))?
+            read_or_create_identity(path).map_err(Error::ReadIdentityError)?
         } else {
             identity::Keypair::generate_ed25519()
         };
 
         let cert = if let Some(path) = cert_path {
             let path = Path::new(&path);
-            read_or_create_certificate(path).map_err(|e| Error::ReadCertificateError(e))?
+            read_or_create_certificate(path).map_err(Error::ReadCertificateError)?
         } else {
             Certificate::generate(&mut thread_rng()).unwrap()
         };
@@ -181,7 +181,7 @@ impl Libp2pRelay {
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
     if path.exists() {
-        let bytes = fs::read(&path)?;
+        let bytes = fs::read(path)?;
 
         info!("Using existing identity from {}", path.display());
 
@@ -190,7 +190,7 @@ fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
 
     let identity = identity::Keypair::generate_ed25519();
 
-    fs::write(&path, &identity.to_protobuf_encoding()?)?;
+    fs::write(path, identity.to_protobuf_encoding()?)?;
 
     info!("Generated new identity and wrote it to {}", path.display());
 
@@ -199,7 +199,7 @@ fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
 
 fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     if path.exists() {
-        let pem = fs::read_to_string(&path)?;
+        let pem = fs::read_to_string(path)?;
 
         info!("Using existing certificate from {}", path.display());
 
@@ -207,7 +207,7 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     }
 
     let cert = Certificate::generate(&mut rand::thread_rng())?;
-    fs::write(&path, &cert.serialize_pem().as_bytes())?;
+    fs::write(path, cert.serialize_pem().as_bytes())?;
 
     info!("Generated new certificate and wrote it to {}", path.display());
 

@@ -180,8 +180,13 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    let mut libp2p_relay_server = torii_libp2p::server::Libp2pRelay::new(args.port, args.port_webrtc, args.local_key_path, args.cert_path)
-        .expect("Failed to start libp2p relay server");
+    let mut libp2p_relay_server = torii_libp2p::server::Libp2pRelay::new(
+        args.port,
+        args.port_webrtc,
+        args.local_key_path,
+        args.cert_path,
+    )
+    .expect("Failed to start libp2p relay server");
 
     info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", args.addr));
     info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", args.addr));
