@@ -9,7 +9,8 @@ use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
 
 use super::{
-    DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR,
+    DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR,
+    DOJO_PRIVATE_KEY_ENV_VAR,
 };
 
 #[derive(Debug, Args)]
@@ -29,11 +30,10 @@ pub struct AccountOptions {
     #[arg(help = "The raw private key associated with the account contract.")]
     pub private_key: Option<String>,
 
-    #[arg(long = "keystore")]
+    #[arg(long = "keystore", env = DOJO_KEYSTORE_PATH_ENV_VAR)]
     #[arg(value_name = "PATH")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "Use the keystore in the given folder or file.")]
-    // TODO: Should we add `DOJO_KEYSTORE_PATH_ENV_VAR`?
     pub keystore_path: Option<String>,
 
     #[arg(long = "password", env = DOJO_KEYSTORE_PASSWORD_ENV_VAR)]
@@ -308,16 +308,14 @@ mod tests {
     fn dont_allow_both_private_key_and_keystore() {
         let keystore_path = "./tests/test_data/keystore/test.json";
         let private_key = "0x1";
-        assert!(
-            Command::try_parse_from([
-                "sozo",
-                "--keystore",
-                keystore_path,
-                "--private_key",
-                private_key,
-            ])
-            .is_err()
-        );
+        assert!(Command::try_parse_from([
+            "sozo",
+            "--keystore",
+            keystore_path,
+            "--private_key",
+            private_key,
+        ])
+        .is_err());
     }
 
     #[tokio::test]
