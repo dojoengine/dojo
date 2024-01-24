@@ -23,7 +23,9 @@ mod test {
 
         use crate::server::Relay;
 
-        let _ = tracing_subscriber::fmt().with_env_filter("torii::relay::client=debug,torii::relay::server=debug").try_init();
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
+            .try_init();
         // Initialize the relay server
         let mut relay_server: Relay = Relay::new(9090, 9091, None, None)?;
         tokio::spawn(async move {
@@ -78,7 +80,7 @@ mod test {
         // Make sure the cert hash is correct - corresponding to the cert in the relay server
         let mut client = RelayClient::new(
             "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/\
-            uEiD6v3wzt8XU3s3SqgNSBJPvn9E0VMVFm8-G0iSEsIIDxw"
+             uEiD6v3wzt8XU3s3SqgNSBJPvn9E0VMVFm8-G0iSEsIIDxw"
                 .to_string(),
         )?;
 
