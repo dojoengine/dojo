@@ -1,6 +1,9 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use futures::channel::oneshot;
+use futures::lock::Mutex;
 use futures::{select, StreamExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId, TopicHash};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
@@ -11,6 +14,7 @@ use tracing::info;
 
 pub mod events;
 use crate::client::events::ClientEvent;
+use crate::constants;
 use crate::errors::Error;
 use crate::types::{ClientMessage, ServerMessage};
 
@@ -23,8 +27,8 @@ pub struct Behaviour {
 }
 
 pub struct RelayClient {
-    pub command_sender: UnboundedSender<Command>,
-    pub message_receiver: UnboundedReceiver<Message>,
+    pub message_receiver: Arc<Mutex<UnboundedReceiver<Message>>>,
+    pub command_sender: CommandSender,
     pub event_loop: EventLoop,
 }
 
@@ -49,9 +53,9 @@ pub struct Message {
 
 #[derive(Debug)]
 pub enum Command {
-    Subscribe(String),
-    Unsubscribe(String),
-    Publish(String, Vec<u8>),
+    Subscribe(String, oneshot::Sender<Result<bool, Error>>),
+    Unsubscribe(String, oneshot::Sender<Result<bool, Error>>),
+    Publish(String, Vec<u8>, oneshot::Sender<Result<MessageId, Error>>),
 }
 
 impl RelayClient {
@@ -68,7 +72,9 @@ impl RelayClient {
             .with_quic()
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
-                    .heartbeat_interval(Duration::from_secs(10))
+                    .heartbeat_interval(Duration::from_secs(
+                        constants::GOSSIPSUB_HEARTBEAT_INTERVAL_SECS,
+                    ))
                     .build()
                     .expect("Gossipsup config is invalid");
 
@@ -85,7 +91,11 @@ impl RelayClient {
                     ping: ping::Behaviour::new(ping::Config::default()),
                 }
             })?
-            .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
+            .with_swarm_config(|cfg| {
+                cfg.with_idle_connection_timeout(Duration::from_secs(
+                    constants::IDLE_CONNECTION_TIMEOUT_SECS,
+                ))
+            })
             .build();
 
         info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
@@ -94,8 +104,8 @@ impl RelayClient {
         let (message_sender, message_receiver) = futures::channel::mpsc::unbounded();
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
         Ok(Self {
-            command_sender,
-            message_receiver,
+            command_sender: CommandSender::new(command_sender),
+            message_receiver: Arc::new(Mutex::new(message_receiver)),
             event_loop: EventLoop { swarm, message_sender, command_receiver },
         })
     }
@@ -141,10 +151,46 @@ impl RelayClient {
         let (message_sender, message_receiver) = futures::channel::mpsc::unbounded();
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
         Ok(Self {
-            command_sender,
-            message_receiver,
+            command_sender: CommandSender::new(command_sender),
+            message_receiver: Arc::new(Mutex::new(message_receiver)),
             event_loop: EventLoop { swarm, message_sender, command_receiver },
         })
+    }
+}
+
+pub struct CommandSender {
+    sender: UnboundedSender<Command>,
+}
+
+impl CommandSender {
+    pub fn new(sender: UnboundedSender<Command>) -> Self {
+        Self { sender }
+    }
+
+    pub async fn subscribe(&mut self, room: String) -> Result<bool, Error> {
+        let (tx, rx) = oneshot::channel();
+
+        self.sender.unbounded_send(Command::Subscribe(room, tx)).expect("Failed to send command");
+
+        rx.await.expect("Failed to receive response")
+    }
+
+    pub async fn unsubscribe(&mut self, room: String) -> Result<bool, Error> {
+        let (tx, rx) = oneshot::channel();
+
+        self.sender.unbounded_send(Command::Unsubscribe(room, tx)).expect("Failed to send command");
+
+        rx.await.expect("Failed to receive response")
+    }
+
+    pub async fn publish(&mut self, topic: String, data: Vec<u8>) -> Result<MessageId, Error> {
+        let (tx, rx) = oneshot::channel();
+
+        self.sender
+            .unbounded_send(Command::Publish(topic, data, tx))
+            .expect("Failed to send command");
+
+        rx.await.expect("Failed to receive response")
     }
 }
 
@@ -155,14 +201,14 @@ impl EventLoop {
             select! {
                 command = self.command_receiver.select_next_some() => {
                     match command {
-                        Command::Subscribe(room) => {
-                            self.subscribe(&room).expect("Failed to subscribe");
+                        Command::Subscribe(room, sender) => {
+                            sender.send(self.subscribe(&room)).expect("Failed to send response");
                         },
-                        Command::Unsubscribe(room) => {
-                            self.unsubscribe(&room).expect("Failed to unsubscribe");
+                        Command::Unsubscribe(room, sender) => {
+                            sender.send(self.unsubscribe(&room)).expect("Failed to send response");
                         },
-                        Command::Publish(topic, data) => {
-                            self.publish(topic, data).expect("Failed to publish message");
+                        Command::Publish(topic, data, sender) => {
+                            sender.send(self.publish(topic, data)).expect("Failed to send response");
                         },
                     }
                 },
@@ -223,7 +269,7 @@ impl EventLoop {
             .behaviour_mut()
             .gossipsub
             .publish(
-                IdentTopic::new("message"),
+                IdentTopic::new(constants::MESSAGING_TOPIC),
                 serde_json::to_string(&ClientMessage { topic, data }).unwrap(),
             )
             .map_err(Error::PublishError)

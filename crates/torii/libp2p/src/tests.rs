@@ -4,7 +4,7 @@ mod test {
 
     use futures::StreamExt;
 
-    use crate::client::{Command, RelayClient};
+    use crate::client::RelayClient;
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -37,18 +37,16 @@ mod test {
             client.event_loop.run().await;
         });
 
-        // Give some time for the client and server to start up
+        client.command_sender.subscribe("mawmaw".to_string()).await?;
         sleep(Duration::from_secs(1)).await;
+        client.command_sender.publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()).await?;
 
-        client.command_sender.unbounded_send(Command::Subscribe("mawmaw".to_string()))?;
-        sleep(Duration::from_secs(1)).await;
-        client
-            .command_sender
-            .unbounded_send(Command::Publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()))?;
+        let message_receiver = client.message_receiver.clone();
+        let mut message_receiver = message_receiver.lock().await;
 
         loop {
             select! {
-                event = client.message_receiver.next() => {
+                event = message_receiver.next() => {
                     if let Some(message) = event {
                         println!("Received message from {:?} with id {:?}: {:?}", message.source, message.message_id, message);
                         return Ok(());
@@ -86,11 +84,9 @@ mod test {
         // Give some time for the client to start up
         let _ = wasm_timer::Delay::new(std::time::Duration::from_secs(10)).await;
 
-        client.command_sender.unbounded_send(Command::Subscribe("mawmaw".to_string()))?;
+        client.command_sender.subscribe("mawmaw".to_string()).await?;
         let _ = wasm_timer::Delay::new(std::time::Duration::from_secs(1)).await;
-        client
-            .command_sender
-            .unbounded_send(Command::Publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()))?;
+        client.command_sender.publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()).await?;
 
         let timeout = wasm_timer::Delay::new(std::time::Duration::from_secs(5));
         let message_future = client.message_receiver.next();

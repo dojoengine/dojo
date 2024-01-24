@@ -10,7 +10,8 @@ use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
-use futures::channel::mpsc::TrySendError;
+use futures::channel::mpsc::UnboundedReceiver;
+use futures_util::lock::Mutex;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -21,6 +22,7 @@ use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
+use torii_relay::client::Message;
 
 use crate::client::error::{Error, ParseError};
 use crate::client::storage::ModelStorage;
@@ -102,43 +104,35 @@ impl Client {
     /// Subscribes to a topic.
     /// Returns true if the topic was subscribed to.
     /// Returns false if the topic was already subscribed to.
-    pub fn subscribe_topic(
-        &mut self,
-        topic: &str,
-    ) -> Result<(), TrySendError<torii_relay::client::Command>> {
-        self.relay_client
-            .command_sender
-            .unbounded_send(torii_relay::client::Command::Subscribe(topic.to_string()))
+    pub async fn subscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
+        self.relay_client.command_sender.subscribe(topic).await.map_err(Error::RelayClient)
     }
 
     /// Unsubscribes from a topic.
     /// Returns true if the topic was subscribed to.
-    pub fn unsubscribe_topic(
-        &mut self,
-        topic: &str,
-    ) -> Result<(), TrySendError<torii_relay::client::Command>> {
-        self.relay_client
-            .command_sender
-            .unbounded_send(torii_relay::client::Command::Unsubscribe(topic.to_string()))
+    pub async fn unsubscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
+        self.relay_client.command_sender.unsubscribe(topic).await.map_err(Error::RelayClient)
     }
 
     /// Publishes a message to a topic.
     /// Returns the message id.
-    pub fn publish_message(
-        &mut self,
-        topic: &str,
-        message: &[u8],
-    ) -> Result<(), TrySendError<torii_relay::client::Command>> {
-        self.relay_client.command_sender.unbounded_send(torii_relay::client::Command::Publish(
-            topic.to_string(),
-            message.to_vec(),
-        ))
+    pub async fn publish_message(&mut self, topic: &str, message: &[u8]) -> Result<Vec<u8>, Error> {
+        self.relay_client
+            .command_sender
+            .publish(topic.to_string(), message.to_vec())
+            .await
+            .map_err(Error::RelayClient)
+            .map(|m| m.0)
     }
 
     /// Runs the libp2p event loop which processes incoming messages and commands.
     /// And sends events in the channel
     pub async fn run_libp2p(&mut self) {
         self.relay_client.event_loop.run().await;
+    }
+
+    pub fn libp2p_message_stream(&self) -> Arc<Mutex<UnboundedReceiver<Message>>> {
+        self.relay_client.message_receiver.clone()
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.
