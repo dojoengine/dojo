@@ -2,7 +2,7 @@
 edition.workspace = true
 license-file.workspace = true
 license.workspace = true
-name = "torii-libp2p"
+name = "torii-relay"
 repository.workspace = true
 version.workspace = true
 

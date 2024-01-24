@@ -4,7 +4,7 @@ mod test {
 
     use futures::{SinkExt, StreamExt};
 
-    use crate::client::{Command, Libp2pClient};
+    use crate::client::{Command, RelayClient};
     use crate::types::ClientMessage;
 
     #[cfg(target_arch = "wasm32")]
@@ -21,17 +21,17 @@ mod test {
         use tokio::time::sleep;
         use tokio::{self, select};
 
-        use crate::server::Libp2pRelay;
+        use crate::server::Relay;
 
-        let _ = tracing_subscriber::fmt().with_env_filter("torii_libp2p=debug").try_init();
+        let _ = tracing_subscriber::fmt().with_env_filter("torii::relay::client=debug,torii::relay::server=debug").try_init();
         // Initialize the relay server
-        let mut relay_server: Libp2pRelay = Libp2pRelay::new(9090, 9091, None, None)?;
+        let mut relay_server: Relay = Relay::new(9090, 9091, None, None)?;
         tokio::spawn(async move {
             relay_server.run().await;
         });
 
         // Initialize the first client (listener)
-        let mut client = Libp2pClient::new("/ip4/127.0.0.1/tcp/9090".to_string())?;
+        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9090".to_string())?;
         tokio::spawn(async move {
             client.event_loop.run().await;
         });
@@ -76,9 +76,9 @@ mod test {
         let _ = tracing_subscriber::fmt().with_env_filter("torii_libp2p=debug").try_init();
         // Initialize the first client (listener)
         // Make sure the cert hash is correct - corresponding to the cert in the relay server
-        let mut client = Libp2pClient::new(
+        let mut client = RelayClient::new(
             "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/\
-             uEiBDKAUMioKpVK2CLQjtOL9eLPmaJkTcPPbBMtau7XaPGA"
+            uEiD6v3wzt8XU3s3SqgNSBJPvn9E0VMVFm8-G0iSEsIIDxw"
                 .to_string(),
         )?;
 

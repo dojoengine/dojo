@@ -33,11 +33,11 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
-pub struct Libp2pRelay {
+pub struct Relay {
     swarm: Swarm<Behaviour>,
 }
 
-impl Libp2pRelay {
+impl Relay {
     pub fn new(
         port: u16,
         port_webrtc: u16,
@@ -136,9 +136,12 @@ impl Libp2pRelay {
                                 .expect("Failed to deserialize message");
 
                             info!(
-                                "Received message {:?} from peer {:?} with topic {:?} and data \
-                                 {:?}",
-                                message_id, peer_id, message.topic, message.data
+                                target: "torii::relay::server",
+                                message_id = %message_id,
+                                peer_id = %peer_id,
+                                topic = %message.topic,
+                                data = %String::from_utf8_lossy(&message.data),
+                                "Received message"
                             );
 
                             // forward message to room
@@ -160,19 +163,26 @@ impl Libp2pRelay {
                             peer_id,
                         }) => {
                             info!(
-                                "Received identify event from peer {:?} with observed address {:?}",
-                                peer_id, observed_addr
+                                target: "torii::relay::server",
+                                peer_id = %peer_id,
+                                observed_addr = %observed_addr,
+                                "Received identify event"
                             );
                             self.swarm.add_external_address(observed_addr.clone());
                         }
                         ServerEvent::Ping(ping::Event { peer, result, .. }) => {
-                            info!("Ping success from peer {:?} with result {:?}", peer, result);
+                            info!(
+                                target: "torii::relay::server",
+                                peer_id = %peer,
+                                result = ?result,
+                                "Received ping event"
+                            );
                         }
                         _ => {}
                     }
                 }
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    info!("Listening on {:?}", address);
+                    info!(target: "torii::relay::server", address = %address, "New listen address");
                 }
                 _ => {}
             }
@@ -184,7 +194,7 @@ fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
     if path.exists() {
         let bytes = fs::read(path)?;
 
-        info!("Using existing identity from {}", path.display());
+        info!(target: "torii::relay::server", path = %path.display(), "Using existing identity");
 
         return Ok(identity::Keypair::from_protobuf_encoding(&bytes)?); // This only works for ed25519 but that is what we are using.
     }
@@ -193,7 +203,7 @@ fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
 
     fs::write(path, identity.to_protobuf_encoding()?)?;
 
-    info!("Generated new identity and wrote it to {}", path.display());
+    info!(target: "torii::relay::server", path = %path.display(), "Generated new identity");
 
     Ok(identity)
 }
@@ -202,7 +212,7 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     if path.exists() {
         let pem = fs::read_to_string(path)?;
 
-        info!("Using existing certificate from {}", path.display());
+        info!(target: "torii::relay::server", path = %path.display(), "Using existing certificate");
 
         return Ok(Certificate::from_pem(&pem)?);
     }
@@ -210,7 +220,7 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     let cert = Certificate::generate(&mut rand::thread_rng())?;
     fs::write(path, cert.serialize_pem().as_bytes())?;
 
-    info!("Generated new certificate and wrote it to {}", path.display());
+    info!(target: "torii::relay::server", path = %path.display(), "Generated new certificate");
 
     Ok(cert)
 }

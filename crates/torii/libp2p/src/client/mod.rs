@@ -22,7 +22,7 @@ pub struct Behaviour {
     ping: ping::Behaviour,
 }
 
-pub struct Libp2pClient {
+pub struct RelayClient {
     pub command_sender: Sender<Command>,
     pub message_receiver: Receiver<Message>,
     pub event_loop: EventLoop,
@@ -42,13 +42,13 @@ pub enum Command {
     Publish(ClientMessage),
 }
 
-impl Libp2pClient {
+impl RelayClient {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new(relay_addr: String) -> Result<Self, Error> {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
-        info!("Local peer id: {:?}", peer_id);
+        info!(target: "torii::relay::client", peer_id = %peer_id, "Local peer id");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -76,7 +76,7 @@ impl Libp2pClient {
             .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
 
-        info!("Dialing relay: {:?}", relay_addr);
+        info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         let (message_sender, message_receiver) = futures::channel::mpsc::channel(0);
@@ -93,7 +93,7 @@ impl Libp2pClient {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
-        info!("Local peer id: {:?}", peer_id);
+        info!(target: "torii::relay::client", peer_id = %peer_id, "Local peer id");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_wasm_bindgen()
@@ -123,7 +123,7 @@ impl Libp2pClient {
             .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
 
-        info!("Dialing relay: {:?}", relay_addr);
+        info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         let (message_sender, message_receiver) = futures::channel::mpsc::channel(0);
@@ -171,14 +171,16 @@ impl EventLoop {
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
-                            tracing::info!("Swarm event: {:?}", cause);
+                            info!(target: "torii::relay::client", cause = ?cause, "Connection closed");
 
                             if let libp2p::swarm::ConnectionError::KeepAliveTimeout = cause {
-                                tracing::info!("Keep alive timeout, shutting down");
-                                // return;
+                                info!(target: "torii::relay::client", "Connection closed due to keep alive timeout. Shutting down client.");
+                                return;
                             }
                         }
-                        evt => tracing::info!("Swarm event: {:?}", evt),
+                        evt => {
+                            info!(target: "torii::relay::client", event = ?evt, "Unhandled event");
+                        }
                     }
                 },
             }
