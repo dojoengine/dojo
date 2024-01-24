@@ -3,7 +3,6 @@ name: benchmark
 on:
   push:
     branches: [main]
-  pull_request:
 
 permissions:
   # deployments permission to deploy GitHub pages website
