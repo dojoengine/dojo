@@ -5,11 +5,11 @@ use async_graphql::dynamic::Schema;
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
-    self, get_default_test_starknet_config, SequencerConfig, TestSequencer,
+    get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use dojo_world::contracts::{world, WorldContractReader};
+use dojo_world::contracts::WorldContractReader;
 use dojo_world::manifest::Manifest;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
@@ -17,13 +17,12 @@ use serde::Deserialize;
 use serde_json::Value;
 use sozo::ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::{Pool, Sqlite, SqlitePool};
-use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use sqlx::SqlitePool;
+use starknet::accounts::{Account, Call};
 use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionResult};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
-use starknet::signers::LocalWallet;
+use starknet::providers::JsonRpcClient;
 use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
@@ -32,11 +31,11 @@ use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
-// mod entities_test;
-// mod metadata_test;
-// mod models_ordering_test;
+mod entities_test;
+mod metadata_test;
+mod models_ordering_test;
 mod models_test;
-// mod subscription_test;
+mod subscription_test;
 
 use crate::schema::build_schema;
 
@@ -137,6 +136,14 @@ pub struct Subrecord {
     pub record_id: u32,
     pub subrecord_id: u32,
     pub type_u8: u8,
+    pub random_u8: u8,
+    pub entity: Option<Entity>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct RecordSibling {
+    pub __typename: String,
+    pub record_id: u32,
     pub random_u8: u8,
     pub entity: Option<Entity>,
 }
@@ -246,8 +253,7 @@ pub async fn model_fixtures(db: &mut Sql) {
     .unwrap();
 }
 
-pub async fn spinup_types_test() -> Result<(SqlitePool, FieldElement, TestSequencer, FieldElement)>
-{
+pub async fn spinup_types_test() -> Result<SqlitePool> {
     // change sqlite::memory: to sqlite:~/.test.db to dump database to disk
     let options = SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
@@ -273,14 +279,28 @@ pub async fn spinup_types_test() -> Result<(SqlitePool, FieldElement, TestSequen
     let manifest =
         Manifest::load_from_remote(&provider, migration.world_address().unwrap()).await.unwrap();
 
-    //  Execute `create` and insert 10 records into storage
+    //  Execute `create` and insert 11 records into storage
     let records_contract =
         manifest.contracts.iter().find(|contract| contract.name.eq("records")).unwrap();
+    let record_contract_address = records_contract.address.unwrap();
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],
-            to: records_contract.address.unwrap(),
+            to: record_contract_address,
             selector: selector!("create"),
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(transaction_hash, &provider).await?;
+
+    // Execute `delete` and delete Record with id 20
+    let InvokeTransactionResult { transaction_hash } = account
+        .execute(vec![Call {
+            calldata: vec![FieldElement::from_str("0x14").unwrap()],
+            to: record_contract_address,
+            selector: selector!("delete"),
         }])
         .send()
         .await
@@ -308,52 +328,5 @@ pub async fn spinup_types_test() -> Result<(SqlitePool, FieldElement, TestSequen
 
     let _ = engine.sync_to_head(0).await?;
 
-    Ok((pool, records_contract.address.unwrap(), sequencer, migration.world_address().unwrap()))
-}
-
-pub async fn delete_types_test(
-    db: &mut Sql,
-    record_contract_address: FieldElement,
-    sequencer: TestSequencer,
-    migration_world_address: FieldElement,
-) -> Result<()> {
-    let mut account = sequencer.account();
-    account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
-    let world = WorldContractReader::new(migration_world_address, &provider);
-
-    // Execute `delete` and delete Record with id 0
-    let InvokeTransactionResult { transaction_hash } = account
-        .execute(vec![Call {
-            calldata: vec![FieldElement::from_str("0x0").unwrap()],
-            to: record_contract_address,
-            selector: selector!("delete"),
-        }])
-        .send()
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(transaction_hash, &provider).await?;
-
-    let (shutdown_tx, _) = broadcast::channel(1);
-    let mut engine = Engine::new(
-        world,
-        db,
-        &provider,
-        Processors {
-            event: vec![
-                Box::new(RegisterModelProcessor),
-                Box::new(StoreSetRecordProcessor),
-                Box::new(StoreDelRecordProcessor),
-            ],
-            ..Processors::default()
-        },
-        EngineConfig::default(),
-        shutdown_tx,
-        None,
-    );
-
-    let _ = engine.sync_to_head(0).await?;
-    Ok(())
+    Ok(pool)
 }

@@ -6,30 +6,72 @@ mod tests {
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
     use starknet_crypto::FieldElement;
-    use torii_core::sql::Sql;
 
     use crate::schema::build_schema;
     use crate::tests::{
-        delete_types_test, run_graphql_query, spinup_types_test, Connection, Record,
+        run_graphql_query, spinup_types_test, Connection, Record, RecordSibling, Subrecord,
     };
 
     async fn record_sibling_query(schema: &Schema, arg: &str) -> Value {
-        let query_sibling = format!(
+        let query = format!(
             r#"
             {{
                 recordSiblingModels {} {{
+                    totalCount
                     edges {{
+                        cursor
                         node {{
                             __typename
+                            record_id
+                            random_u8
                         }}
                     }}
+                    pageInfo {{
+                        hasPreviousPage
+                        hasNextPage
+                        startCursor
+                        endCursor
+                      }}
                 }}
             }}
             "#,
             arg,
         );
 
-        run_graphql_query(schema, &query_sibling).await
+        let result = run_graphql_query(schema, &query).await;
+        result.get("recordSiblingModels").ok_or("recordSiblingModels not found").unwrap().clone()
+    }
+
+    async fn subrecord_model_query(schema: &Schema, arg: &str) -> Value {
+        let query = format!(
+            r#"
+            {{
+                subrecordModels {} {{
+                    totalCount
+                    edges {{
+                        cursor
+                        node {{
+                            __typename
+                            record_id
+                            subrecord_id
+                            type_u8
+                            random_u8
+                        }}
+                    }}
+                    pageInfo {{
+                        hasPreviousPage
+                        hasNextPage
+                        startCursor
+                        endCursor
+                      }}
+                }}
+            }}
+            "#,
+            arg,
+        );
+
+        let result = run_graphql_query(schema, &query).await;
+        result.get("subrecordModels").ok_or("subrecordModels not found").unwrap().clone()
     }
 
     async fn records_model_query(schema: &Schema, arg: &str) -> Value {
@@ -111,8 +153,7 @@ mod tests {
     // to run so combine all related tests into one
     #[tokio::test(flavor = "multi_thread")]
     async fn models_test() -> Result<()> {
-        let (pool, records_contract_address, sequencer, migration_world_address) =
-            spinup_types_test().await?;
+        let pool = spinup_types_test().await?;
         let schema = build_schema(&pool).await.unwrap();
 
         // default params, test entity relationship, test nested types
@@ -342,17 +383,33 @@ mod tests {
         assert_eq!(connection.edges.len(), 0);
 
         // *** SIBLING TESTING ***
-        let result = record_sibling_query(&schema, "").await;
-        assert!(result.get("recordSiblingModels").is_some());
+        let sibling = record_sibling_query(&schema, "").await;
+        let connection: Connection<RecordSibling> = serde_json::from_value(sibling).unwrap();
+        assert_eq!(connection.total_count, 10);
 
-        // delete Record with id 0
-        let mut db = Sql::new(pool.clone(), migration_world_address).await.unwrap();
-        delete_types_test(&mut db, records_contract_address, sequencer, migration_world_address)
-            .await?;
+        // *** SUBRECORD TESTING ***
+        let subrecord = subrecord_model_query(&schema, "").await;
+        let connection: Connection<Subrecord> = serde_json::from_value(subrecord).unwrap();
+        let last_record = connection.edges.first().unwrap();
+        assert_eq!(connection.total_count, 10);
 
-        // where filter EQ on record_id
-        let records = records_model_query(&schema, "(where: { record_id: 0 })").await;
+        assert_eq!(last_record.node.record_id, 18);
+        assert_eq!(last_record.node.subrecord_id, 19);
+
+        // *** DELETE TESTING ***
+        // where filter EQ on record_id, test Record with id 20 is deleted
+        let records = records_model_query(&schema, "(where: { record_id: 20 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        assert_eq!(connection.edges.len(), 0);
+
+        // where filter GTE on record_id, test Sibling with id 20 is deleted
+        let sibling = record_sibling_query(&schema, "(where: { record_id: 20 })").await;
+        let connection: Connection<RecordSibling> = serde_json::from_value(sibling).unwrap();
+        assert_eq!(connection.edges.len(), 0);
+
+        // where filter GTE on record_id, test Subrecord with id 20 is deleted
+        let subrecord = subrecord_model_query(&schema, "(where: { record_id: 20 })").await;
+        let connection: Connection<Subrecord> = serde_json::from_value(subrecord).unwrap();
         assert_eq!(connection.edges.len(), 0);
 
         Ok(())
