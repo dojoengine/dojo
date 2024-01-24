@@ -51,8 +51,6 @@ where
 
         let keys_start = NUM_KEYS_INDEX + 1;
         let keys = event.data[keys_start..].to_vec();
-        info!("keys: {:?}", keys);
-
         let entity = model.schema().await?;
         db.delete_entity(keys, entity).await?;
         Ok(())
