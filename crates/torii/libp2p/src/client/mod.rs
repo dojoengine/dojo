@@ -6,6 +6,7 @@ use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
 #[cfg(not(target_arch = "wasm32"))]
 use libp2p::{noise, tcp, yamux};
+use std::time::Duration;
 use tracing::info;
 
 pub mod events;
@@ -55,7 +56,7 @@ impl Libp2pClient {
             .with_quic()
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
-                    .heartbeat_interval(std::time::Duration::from_secs(10))
+                    .heartbeat_interval(Duration::from_secs(10))
                     .build()
                     .expect("Gossipsup config is invalid");
 
@@ -72,6 +73,7 @@ impl Libp2pClient {
                     ping: ping::Behaviour::new(ping::Config::default()),
                 }
             })?
+            .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
 
         info!("Dialing relay: {:?}", relay_addr);
@@ -118,6 +120,7 @@ impl Libp2pClient {
                     ping: ping::Behaviour::new(ping::Config::default()),
                 }
             })?
+            .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
 
         info!("Dialing relay: {:?}", relay_addr);

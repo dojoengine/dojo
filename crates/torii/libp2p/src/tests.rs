@@ -22,15 +22,13 @@ mod test {
 
         let _ = tracing_subscriber::fmt().with_env_filter("torii_libp2p=debug").try_init();
         // Initialize the relay server
-        // let mut relay_server: Libp2pRelay = Libp2pRelay::new(1010, 2020, None, None)?;
+        let mut relay_server: Libp2pRelay = Libp2pRelay::new(9090, 9091, None, None)?;
+        tokio::spawn(async move {
+            relay_server.run().await;
+        });
 
         // Initialize the first client (listener)
-        let mut client = Libp2pClient::new("/ip4/127.0.0.1/udp/9090/quic-v1".to_string())?;
-
-        // tokio::spawn(async move {
-        //     relay_server.run().await;
-        // });
-
+        let mut client = Libp2pClient::new("/ip4/127.0.0.1/tcp/9090".to_string())?;
         tokio::spawn(async move {
             client.event_loop.run().await;
         });
@@ -76,7 +74,7 @@ mod test {
         // Initialize the first client (listener)
         // Make sure the cert hash is correct - corresponding to the cert in the relay server
         let mut client = Libp2pClient::new(
-            "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/uEiCQoPbALOL0MWJvEjSxduijeFoN--nSnUFI5ALm_vXIAQ"
+            "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/uEiBDKAUMioKpVK2CLQjtOL9eLPmaJkTcPPbBMtau7XaPGA"
                 .to_string(),
         )?;
 
@@ -84,29 +82,31 @@ mod test {
             client.event_loop.run().await;
         });
 
-        // // Give some time for the client to start up
-        // wasm_timer::Delay::new(std::time::Duration::from_secs(1)).await;
+        // Give some time for the client to start up
+        wasm_timer::Delay::new(std::time::Duration::from_secs(10)).await;
 
-        // client.command_sender.send(Command::Subscribe("mawmaw".to_string())).await?;
-        // wasm_timer::Delay::new(std::time::Duration::from_secs(10)).await;
-        // client.command_sender.send(Command::Publish(ClientMessage {
-        //     topic: "mawmaw".to_string(),
-        //     data: "324523".as_bytes().to_vec(),
-        // })).await?;
+        client.command_sender.send(Command::Subscribe("mawmaw".to_string())).await?;
+        wasm_timer::Delay::new(std::time::Duration::from_secs(1)).await;
+        client
+            .command_sender
+            .send(Command::Publish(ClientMessage {
+                topic: "mawmaw".to_string(),
+                data: "324523".as_bytes().to_vec(),
+            }))
+            .await?;
 
-        // let timeout = wasm_timer::Delay::new(std::time::Duration::from_secs(5));
-        // let message_future = client.message_receiver.next();
+        let timeout = wasm_timer::Delay::new(std::time::Duration::from_secs(5));
+        let message_future = client.message_receiver.next();
 
-        // match select(message_future, timeout).await {
-        //     Either::Left((Some(_message), _)) => {
-        //         println!("Test OK: Received message within 5 seconds.");
-        //         Ok(())
-        //     }
-        //     _ => {
-        //         println!("Test Failed: Did not receive message within 5 seconds.");
-        //         Err("Timeout reached without receiving a message".into())
-        //     }
-        // }
-        Ok(())
+        match select(message_future, timeout).await {
+            Either::Left((Some(_message), _)) => {
+                println!("Test OK: Received message within 5 seconds.");
+                Ok(())
+            }
+            _ => {
+                println!("Test Failed: Did not receive message within 5 seconds.");
+                Err("Timeout reached without receiving a message".into())
+            }
+        }
     }
 }
