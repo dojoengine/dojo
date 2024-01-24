@@ -10,7 +10,7 @@ use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
-use futures::channel::mpsc::{SendError, UnboundedSender};
+use futures::channel::mpsc::{SendError, TrySendError, UnboundedSender};
 use futures_util::{SinkExt, TryFutureExt};
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -102,40 +102,39 @@ impl Client {
         })
     }
 
-    /// Returns all of the subscribed topics of the libp2p client.
-    // pub fn subscribed_topics(&self) -> HashSet<String> {
-    //     self.libp2p_client.topics.keys().cloned().collect()
-    // }
-
     /// Subscribes to a topic.
     /// Returns true if the topic was subscribed to.
     /// Returns false if the topic was already subscribed to.
-    pub async fn subscribe_topic(&mut self, topic: &str) -> Result<(), SendError> {
+    pub fn subscribe_topic(
+        &mut self,
+        topic: &str,
+    ) -> Result<(), TrySendError<torii_relay::client::Command>> {
         self.libp2p_client
             .command_sender
-            .send(torii_relay::client::Command::Subscribe(topic.to_string()))
-            .await
+            .unbounded_send(torii_relay::client::Command::Subscribe(topic.to_string()))
     }
 
     /// Unsubscribes from a topic.
     /// Returns true if the topic was subscribed to.
-    pub async fn unsubscribe_topic(&mut self, topic: &str) -> Result<(), SendError> {
+    pub fn unsubscribe_topic(
+        &mut self,
+        topic: &str,
+    ) -> Result<(), TrySendError<torii_relay::client::Command>> {
         self.libp2p_client
             .command_sender
-            .send(torii_relay::client::Command::Unsubscribe(topic.to_string()))
-            .await
+            .unbounded_send(torii_relay::client::Command::Unsubscribe(topic.to_string()))
     }
 
     /// Publishes a message to a topic.
     /// Returns the message id.
-    pub async fn publish_message(&mut self, topic: &str, message: &[u8]) -> Result<(), SendError> {
-        self.libp2p_client
-            .command_sender
-            .send(torii_relay::client::Command::Publish(ClientMessage {
-                topic: topic.to_string(),
-                data: message.to_vec(),
-            }))
-            .await
+    pub fn publish_message(
+        &mut self,
+        topic: &str,
+        message: &[u8],
+    ) -> Result<(), TrySendError<torii_relay::client::Command>> {
+        self.libp2p_client.command_sender.unbounded_send(torii_relay::client::Command::Publish(
+            ClientMessage { topic: topic.to_string(), data: message.to_vec() },
+        ))
     }
 
     /// Runs the libp2p event loop which processes incoming messages and commands.
