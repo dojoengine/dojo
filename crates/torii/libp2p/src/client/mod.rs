@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use futures::channel::mpsc::{Receiver, Sender};
+use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::{select, SinkExt, StreamExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
@@ -23,15 +23,15 @@ pub struct Behaviour {
 }
 
 pub struct RelayClient {
-    pub command_sender: Sender<Command>,
-    pub message_receiver: Receiver<Message>,
+    pub command_sender: UnboundedSender<Command>,
+    pub message_receiver: UnboundedReceiver<Message>,
     pub event_loop: EventLoop,
 }
 
 pub struct EventLoop {
     swarm: Swarm<Behaviour>,
-    message_sender: Sender<Message>,
-    command_receiver: Receiver<Command>,
+    message_sender: UnboundedSender<Message>,
+    command_receiver: UnboundedReceiver<Command>,
 }
 
 pub type Message = (PeerId, MessageId, ServerMessage);
@@ -79,8 +79,8 @@ impl RelayClient {
         info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
-        let (message_sender, message_receiver) = futures::channel::mpsc::channel(0);
-        let (command_sender, command_receiver) = futures::channel::mpsc::channel(0);
+        let (message_sender, message_receiver) = futures::channel::mpsc::unbounded();
+        let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
         Ok(Self {
             command_sender,
             message_receiver,
@@ -126,8 +126,8 @@ impl RelayClient {
         info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
-        let (message_sender, message_receiver) = futures::channel::mpsc::channel(0);
-        let (command_sender, command_receiver) = futures::channel::mpsc::channel(0);
+        let (message_sender, message_receiver) = futures::channel::mpsc::unbounded();
+        let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
         Ok(Self {
             command_sender,
             message_receiver,
