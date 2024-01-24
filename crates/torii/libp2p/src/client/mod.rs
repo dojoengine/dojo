@@ -1,12 +1,12 @@
+use std::time::Duration;
+
 use futures::channel::mpsc::{Receiver, Sender};
-use futures::StreamExt;
-use futures::{select, SinkExt};
+use futures::{select, SinkExt, StreamExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
 #[cfg(not(target_arch = "wasm32"))]
 use libp2p::{noise, tcp, yamux};
-use std::time::Duration;
 use tracing::info;
 
 pub mod events;

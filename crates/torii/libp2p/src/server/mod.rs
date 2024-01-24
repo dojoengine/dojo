@@ -94,9 +94,7 @@ impl Libp2pRelay {
                     .unwrap(),
                 }
             })?
-            .with_swarm_config(|cfg| {
-                cfg.with_idle_connection_timeout(Duration::from_secs(60))
-            })
+            .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
 
         // TCP

@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod test {
-    use crate::client::Command;
-    use crate::client::Libp2pClient;
-    use crate::types::ClientMessage;
-    use futures::{SinkExt, StreamExt};
     use std::error::Error;
+
+    use futures::{SinkExt, StreamExt};
+
+    use crate::client::{Command, Libp2pClient};
+    use crate::types::ClientMessage;
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -15,10 +16,12 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
-        use crate::server::Libp2pRelay;
         use std::time::Duration;
+
         use tokio::time::sleep;
         use tokio::{self, select};
+
+        use crate::server::Libp2pRelay;
 
         let _ = tracing_subscriber::fmt().with_env_filter("torii_libp2p=debug").try_init();
         // Initialize the relay server
@@ -74,7 +77,8 @@ mod test {
         // Initialize the first client (listener)
         // Make sure the cert hash is correct - corresponding to the cert in the relay server
         let mut client = Libp2pClient::new(
-            "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/uEiBDKAUMioKpVK2CLQjtOL9eLPmaJkTcPPbBMtau7XaPGA"
+            "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/\
+             uEiBDKAUMioKpVK2CLQjtOL9eLPmaJkTcPPbBMtau7XaPGA"
                 .to_string(),
         )?;
 
