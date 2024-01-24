@@ -18,7 +18,7 @@ use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 use async_trait::async_trait;
 
-use crate::contracts::model::ModelError;
+use crate::contracts::{ model::ModelError, WorldContractReader};
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -159,7 +159,7 @@ pub struct World {
 // }
 
 #[async_trait]
-pub trait RemoteLoadable<P: Provider + Sync + Send> {
+pub trait RemoteLoadable<P: Provider + Sync + Send + 'static> {
     async fn load_from_remote(
         provider: P,
         world_address: FieldElement,
@@ -167,12 +167,57 @@ pub trait RemoteLoadable<P: Provider + Sync + Send> {
 }
 
 #[async_trait]
-impl<P: Provider + Sync + Send> RemoteLoadable<P> for World {
+impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for World {
     async fn load_from_remote(
         provider: P,
         world_address: FieldElement,
     ) -> Result<World, WorldError> {
-        todo!();
+        const BLOCK_ID: BlockId = BlockId::Tag(BlockTag::Pending);
+
+        let world_class_hash =
+            provider.get_class_hash_at(BLOCK_ID, world_address).await.map_err(|err| match err {
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
+                    WorldError::RemoteWorldNotFound
+                }
+                err => err.into(),
+            })?;
+        let world = WorldContractReader::new(world_address, provider);
+        let executor_address = world.executor().block_id(BLOCK_ID).call().await?;
+        let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
+        let executor_class_hash = world
+            .provider()
+            .get_class_hash_at(BLOCK_ID, FieldElement::from(executor_address))
+            .await
+            .map_err(|err| match err {
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
+                    WorldError::ExecutorNotFound
+                }
+                err => err.into(),
+            })?;
+
+        let (models, contracts) =
+            get_remote_models_and_contracts(world_address, &world.provider()).await?;
+
+        // Err(WorldError::RemoteWorldNotFound)
+        Ok(World {
+            models,
+            contracts,
+            world: Manifest {
+                name: WORLD_CONTRACT_NAME.into(),
+                class_hash: world_class_hash,
+                kind: ManifestKind::Contract(Contract { address: Some(world_address), ..Default::default() }),
+            },
+            executor: Manifest {
+                name: EXECUTOR_CONTRACT_NAME.into(),
+                class_hash: executor_class_hash,
+                kind: ManifestKind::Contract(Contract { address: Some(executor_address.into()), ..Default::default() }),
+            },
+            base: Manifest {
+                name: BASE_CONTRACT_NAME.into(),
+                class_hash: base_class_hash.into(),
+                kind: ManifestKind::Class( Class { abi: None}),
+            },
+        })
     }
 }
 
