@@ -10,7 +10,6 @@ use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
-use tracing::info;
 
 use super::World;
 use crate::model::ModelSQLReader;
@@ -142,7 +141,6 @@ impl Sql {
             .await?;
 
         let path = vec![entity.name()];
-        info!("path {:?}", path);
         self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
         self.query_queue.execute_all().await?;
 
@@ -348,7 +346,6 @@ impl Sql {
                     if let Ty::Struct(_) = &member.ty {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
-                        info!("path_clone struct {:?}", path_clone);
                         self.build_set_entity_queries_recursive(
                             path_clone, event_id, entity_id, &member.ty,
                         );
@@ -359,7 +356,6 @@ impl Sql {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
-                    info!("path_clone enum {:?}", path_clone);
                     self.build_set_entity_queries_recursive(
                         path_clone, event_id, entity_id, &child.ty,
                     );

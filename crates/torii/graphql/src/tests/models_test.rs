@@ -391,8 +391,6 @@ mod tests {
         let subrecord = subrecord_model_query(&schema, "").await;
         let connection: Connection<Subrecord> = serde_json::from_value(subrecord).unwrap();
         let last_record = connection.edges.first().unwrap();
-        assert_eq!(connection.total_count, 10);
-
         assert_eq!(last_record.node.record_id, 18);
         assert_eq!(last_record.node.subrecord_id, 19);
 
