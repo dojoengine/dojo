@@ -1,6 +1,6 @@
-use futures::channel::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender};
-use futures::{select, SinkExt};
+use futures::channel::mpsc::{Receiver, Sender};
 use futures::StreamExt;
+use futures::{select, SinkExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
@@ -34,6 +34,7 @@ pub struct EventLoop {
 }
 
 pub type Message = (PeerId, MessageId, ServerMessage);
+#[derive(Debug)]
 pub enum Command {
     Subscribe(String),
     Unsubscribe(String),
@@ -51,6 +52,7 @@ impl Libp2pClient {
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
             .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
+            .with_quic()
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
                     .heartbeat_interval(std::time::Duration::from_secs(10))
@@ -136,6 +138,19 @@ impl EventLoop {
         loop {
             // Poll the swarm for new events.
             select! {
+                command = self.command_receiver.select_next_some() => {
+                    match command {
+                        Command::Subscribe(room) => {
+                            self.subscribe(&room).expect("Failed to subscribe");
+                        },
+                        Command::Unsubscribe(room) => {
+                            self.unsubscribe(&room).expect("Failed to unsubscribe");
+                        },
+                        Command::Publish(message) => {
+                            self.publish(&message).expect("Failed to publish message");
+                        },
+                    }
+                },
                 event = self.swarm.select_next_some() => {
                     match event {
                         SwarmEvent::Behaviour(event) => {
@@ -154,28 +169,15 @@ impl EventLoop {
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
                             tracing::info!("Swarm event: {:?}", cause);
-                            tracing::info!("connection a crash");
 
                             if let libp2p::swarm::ConnectionError::KeepAliveTimeout = cause {
-                                break;
+                                tracing::info!("Keep alive timeout, shutting down");
+                                // return;
                             }
                         }
                         evt => tracing::info!("Swarm event: {:?}", evt),
                     }
                 },
-                command = self.command_receiver.select_next_some() => {
-                    match command {
-                        Command::Subscribe(room) => {
-                            self.subscribe(&room).expect("Failed to subscribe");
-                        },
-                        Command::Unsubscribe(room) => {
-                            self.unsubscribe(&room).expect("Failed to unsubscribe");
-                        },
-                        Command::Publish(message) => {
-                            self.publish(&message).expect("Failed to publish message");
-                        },
-                    }
-                }
             }
         }
     }
