@@ -469,6 +469,10 @@ mod tests {
                     class_hash: Some(felt!("0x80085")),
                     path: PathBuf::from("../../contracts/compiled/universal_deployer.json"),
                 },
+                GenesisClassJson {
+                    class_hash: Some(felt!("0xa55")),
+                    path: PathBuf::from("../../contracts/compiled/oz_account_080.json"),
+                },
             ]
         );
     }
@@ -506,11 +510,17 @@ mod tests {
                 },
             ),
             (
-                felt!("0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"),
+                *DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                 GenesisClass {
-                    compiled_class_hash: felt!(
-                        "0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc"
-                    ),
+                    compiled_class_hash: *DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
+                    casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone(),
+                    sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
+                },
+            ),
+            (
+                felt!("0xa55"),
+                GenesisClass {
+                    compiled_class_hash: *DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
                     casm: DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone(),
                     sierra: Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap()),
                 },

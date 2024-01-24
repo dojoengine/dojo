@@ -55,6 +55,10 @@
 		{
 			"path": "../../contracts/compiled/universal_deployer.json",
 			"classHash": "0x80085"
+		},
+		{
+			"path": "../../contracts/compiled/oz_account_080.json",
+			"classHash": "0xa55"
 		}
 	]
 }
