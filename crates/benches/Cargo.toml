@@ -21,4 +21,9 @@ sozo = { path = "../../bin/sozo" }
 starknet.workspace = true
 tokio.workspace = true
 serde = { workspace = true, features = ["derive"] }
-serde_json.workspace = true
+serde_json = "1.0.111"
+
+[features]
+benchmarks = ["katana-benchmarks", "gas-benchmarks"]
+katana-benchmarks = []
+gas-benchmarks = []

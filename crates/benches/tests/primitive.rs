@@ -1,8 +1,9 @@
-use benches::{estimate_gas, log, BenchCall};
-use katana_runner::runner;
+#[cfg(feature = "gas-benchmarks")]
+use benches::{estimate_gas, log, runner, BenchCall, FieldElement};
+#[cfg(feature = "gas-benchmarks")]
 use proptest::prelude::*;
-use starknet::core::types::FieldElement;
 
+#[cfg(feature = "gas-benchmarks")]
 proptest! {
     #[test]
     fn bench_primitive_pass_many(s in "[0-9a-f]{9}") {

@@ -64,7 +64,6 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
 }
 
 impl KatanaRunner {
-    /// Known issue - rpc set in Scarb.toml overrides command line argument
     pub async fn deploy(&self, manifest: &str, script: &str) -> Result<FieldElement> {
         let rpc_url = &format!("http://localhost:{}", self.port);
 

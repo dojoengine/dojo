@@ -7,8 +7,10 @@ use futures::executor::block_on;
 use futures::future;
 pub use helpers::*;
 use lazy_static::lazy_static;
-use starknet::core::types::FieldElement;
+pub use starknet::core::types::FieldElement;
 use tokio::runtime::Runtime;
+
+pub use katana_runner::runner;
 
 pub const ENOUGH_GAS: &str = "0x100000000000000000";
 
@@ -62,6 +64,7 @@ pub async fn estimate_gas_async(
     estimate_calls(account, calls).await
 }
 
+#[cfg(feature = "gas-benchmarks")]
 #[cfg(test)]
 mod tests {
     use helpers::log;

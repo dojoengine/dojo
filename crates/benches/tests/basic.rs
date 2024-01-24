@@ -1,9 +1,16 @@
-use benches::{estimate_gas, estimate_gas_last, log, BenchCall};
-use hex::ToHex;
-use katana_runner::runner;
-use proptest::prelude::*;
-use starknet::core::types::FieldElement;
+#[cfg(feature = "gas-benchmarks")]
+mod imports {
+    pub use benches::{estimate_gas, estimate_gas_last, log, BenchCall};
+    pub use hex::ToHex;
+    pub use katana_runner::runner;
+    pub use proptest::prelude::*;
+    pub use starknet::core::types::FieldElement;
+}
 
+#[cfg(feature = "gas-benchmarks")]
+use imports::*;
+
+#[cfg(feature = "gas-benchmarks")]
 proptest! {
     #[test]
     fn bench_basic_emit(s in "[A-Za-z0-9]{1,31}") {
