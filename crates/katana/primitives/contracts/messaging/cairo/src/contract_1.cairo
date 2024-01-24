@@ -4,10 +4,10 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait Icontract_1<T> {
-  fn send_message( ref self: T, to_address: ContractAddress, selector: felt252, value: felt252);
-  fn consume_message(ref self: T, from_address: ContractAddress, payload: Span<felt252>);
-  fn set_value(ref self: T, value: felt252);
-  fn get_value(self: @T) -> felt252;
+    fn send_message(ref self: T, to_address: ContractAddress, selector: felt252, value: felt252);
+    fn consume_message(ref self: T, from_address: ContractAddress, payload: Span<felt252>);
+    fn set_value(ref self: T, value: felt252);
+    fn get_value(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -30,8 +30,7 @@ mod contract_1 {
     }
 
     #[abi(embed_v0)]
-    impl Icontract_1Impl of Icontract_1<ContractState>{
-    
+    impl Icontract_1Impl of Icontract_1<ContractState> {
         /// Sends a message with the given value.
         fn send_message(
             ref self: ContractState, to_address: ContractAddress, selector: felt252, value: felt252,
