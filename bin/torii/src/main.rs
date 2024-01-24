@@ -74,12 +74,12 @@ struct Args {
 
     /// Path to a local identity key file. If not specified, a new identity will be generated
     #[arg(long, value_name = "PATH")]
-    local_key_path: Option<String>,
+    relay_local_key_path: Option<String>,
 
     /// Path to a local certificate file. If not specified, a new certificate will be generated
     /// for WebRTC connections
     #[arg(long, value_name = "PATH")]
-    cert_path: Option<String>,
+    relay_cert_path: Option<String>,
 
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
@@ -183,8 +183,8 @@ async fn main() -> anyhow::Result<()> {
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         args.relay_port,
         args.relay_webrtc_port,
-        args.local_key_path,
-        args.cert_path,
+        args.relay_local_key_path,
+        args.relay_cert_path,
     )
     .expect("Failed to start libp2p relay server");
 
