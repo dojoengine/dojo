@@ -66,11 +66,11 @@ struct Args {
 
     /// Port to serve Libp2p TCP & UDP Quic transports
     #[arg(long, value_name = "PORT", default_value = "9090")]
-    port: u16,
+    relay_port: u16,
 
     /// Port to serve Libp2p WebRTC transport
     #[arg(long, value_name = "PORT", default_value = "9091")]
-    port_webrtc: u16,
+    relay_webrtc_port: u16,
 
     /// Path to a local identity key file. If not specified, a new identity will be generated
     #[arg(long, value_name = "PATH")]
@@ -180,9 +180,9 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    let mut libp2p_relay_server = torii_libp2p::server::Libp2pRelay::new(
-        args.port,
-        args.port_webrtc,
+    let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        args.relay_port,
+        args.relay_webrtc_port,
         args.local_key_path,
         args.cert_path,
     )

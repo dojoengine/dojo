@@ -79,6 +79,7 @@ torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-server = { path = "crates/torii/server" }
+torii-relay = { path = "crates/torii/libp2p" }
 
 # sozo
 sozo-signers = { path = "crates/sozo/signers" }

@@ -10,7 +10,8 @@ use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
-use futures::channel::mpsc::UnboundedSender;
+use futures::channel::mpsc::{SendError, UnboundedSender};
+use futures_util::{SinkExt, TryFutureExt};
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -21,8 +22,8 @@ use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
-use torii_libp2p::client::Message;
-use torii_libp2p::types::ClientMessage;
+use torii_relay::client::Message;
+use torii_relay::types::ClientMessage;
 
 use crate::client::error::{Error, ParseError};
 use crate::client::storage::ModelStorage;
@@ -38,7 +39,7 @@ pub struct Client {
     /// The grpc client.
     inner: AsyncRwLock<torii_grpc::client::WorldClient>,
     /// Libp2p client.
-    libp2p_client: torii_libp2p::client::Libp2pClient,
+    libp2p_client: torii_relay::client::RelayClient,
     /// Model storage
     storage: Arc<ModelStorage>,
     /// Models the client are subscribed to.
@@ -60,7 +61,7 @@ impl Client {
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
-        let libp2p_client = torii_libp2p::client::Libp2pClient::new(libp2p_relay_url)?;
+        let libp2p_client = torii_relay::client::RelayClient::new(libp2p_relay_url)?;
 
         let metadata = grpc_client.metadata().await?;
 
@@ -102,36 +103,45 @@ impl Client {
     }
 
     /// Returns all of the subscribed topics of the libp2p client.
-    pub fn subscribed_topics(&self) -> HashSet<String> {
-        self.libp2p_client.topics.keys().cloned().collect()
-    }
+    // pub fn subscribed_topics(&self) -> HashSet<String> {
+    //     self.libp2p_client.topics.keys().cloned().collect()
+    // }
 
     /// Subscribes to a topic.
     /// Returns true if the topic was subscribed to.
     /// Returns false if the topic was already subscribed to.
-    pub fn subscribe_topic(&mut self, topic: &str) -> Result<bool, Error> {
-        self.libp2p_client.subscribe(topic).map_err(Error::Libp2pClient)
+    pub async fn subscribe_topic(&mut self, topic: &str) -> Result<(), SendError> {
+        self.libp2p_client
+            .command_sender
+            .send(torii_relay::client::Command::Subscribe(topic.to_string()))
+            .await
     }
 
     /// Unsubscribes from a topic.
     /// Returns true if the topic was subscribed to.
-    pub fn unsubscribe_topic(&mut self, topic: &str) -> Result<bool, Error> {
-        self.libp2p_client.unsubscribe(topic).map_err(Error::Libp2pClient)
+    pub async fn unsubscribe_topic(&mut self, topic: &str) -> Result<(), SendError> {
+        self.libp2p_client
+            .command_sender
+            .send(torii_relay::client::Command::Unsubscribe(topic.to_string()))
+            .await
     }
 
     /// Publishes a message to a topic.
     /// Returns the message id.
-    pub fn publish_message(&mut self, topic: &str, message: &[u8]) -> Result<Vec<u8>, Error> {
+    pub async fn publish_message(&mut self, topic: &str, message: &[u8]) -> Result<(), SendError> {
         self.libp2p_client
-            .publish(&ClientMessage { topic: topic.to_string(), data: message.to_vec() })
-            .map(|id| id.0)
-            .map_err(Error::Libp2pClient)
+            .command_sender
+            .send(torii_relay::client::Command::Publish(ClientMessage {
+                topic: topic.to_string(),
+                data: message.to_vec(),
+            }))
+            .await
     }
 
-    /// Runs the libp2p event listener which processes incoming messages.
+    /// Runs the libp2p event loop which processes incoming messages and commands.
     /// And sends events in the channel
-    pub async fn run_libp2p(&mut self, sender: &UnboundedSender<Message>) {
-        self.libp2p_client.run(sender).await;
+    pub async fn run_libp2p(&mut self) {
+        self.libp2p_client.event_loop.run().await;
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.

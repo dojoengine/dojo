@@ -43,7 +43,7 @@ tower-http = "0.4.4"
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
-torii-libp2p = { version = "0.5.1-alpha.0", path = "../../crates/torii/libp2p" }
+torii-relay.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

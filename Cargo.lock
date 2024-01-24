@@ -11489,7 +11489,7 @@ dependencies = [
  "torii-core",
  "torii-graphql",
  "torii-grpc",
- "torii-libp2p",
+ "torii-relay",
  "torii-server",
  "tower",
  "tower-http",
@@ -11521,7 +11521,7 @@ dependencies = [
  "tonic 0.10.2",
  "tonic 0.9.2",
  "torii-grpc",
- "torii-libp2p",
+ "torii-relay",
  "url",
 ]
 
@@ -11640,7 +11640,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "torii-libp2p"
+name = "torii-relay"
 version = "0.5.1-alpha.0"
 dependencies = [
  "anyhow",
