@@ -10,18 +10,12 @@ Dojo provides a developer friendly framework for developing and scaling onchain 
 
 ## 🚀 Quick Start
 
-See the [installation guide](https://book.dojoengine.org/getting-started/quick-start.html) in the Dojo book.
+See the [installation guide](https://book.dojoengine.org/getting-started/quick-start) in the Dojo book.
 
 ## ⛩️ Built with Dojo
 
 - [Awesome Dojo](https://github.com/dojoengine/awesome-dojo)
 - [Origami](https://github.com/dojoengine/origami)
-
-## 📚 Examples in 30s
-
-- [Dojo starter react](https://github.com/dojoengine/dojo-starter-react-app)
-- [Dojo starter phaser](https://github.com/dojoengine/dojo-starter-phaser)
-- [Dojo starter unity](https://github.com/dojoengine/dojo-starter-unity)
 
 ## 🗒️ Documentation
 
@@ -35,9 +29,9 @@ If you encounter issues or have questions, you can [submit an issue on GitHub](h
 
 We welcome contributions of all kinds from anyone. See our [Contribution Guide](/CONTRIBUTING.md) for more information on how to get involved.
 
-## ✏️ Enviroment
+## ✏️ Environment
 
-See our [Enviroment setup](https://book.dojoengine.org/getting-started/setup.html) for more information.
+See our [Environment setup](https://book.dojoengine.org/getting-started) for more information.
 
 ## Releasing
 
