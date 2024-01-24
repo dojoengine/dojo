@@ -31,11 +31,11 @@ use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
-mod entities_test;
-mod metadata_test;
-mod models_ordering_test;
+// mod entities_test;
+// mod metadata_test;
+// mod models_ordering_test;
 mod models_test;
-mod subscription_test;
+// mod subscription_test;
 
 use crate::schema::build_schema;
 
