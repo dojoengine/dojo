@@ -1,4 +1,4 @@
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 mod imports {
     pub use benches::{estimate_gas, estimate_gas_last, log, BenchCall};
     pub use hex::ToHex;
@@ -7,10 +7,10 @@ mod imports {
     pub use starknet::core::types::FieldElement;
 }
 
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 use imports::*;
 
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 proptest! {
     #[test]
     fn bench_basic_emit(s in "[A-Za-z0-9]{1,31}") {

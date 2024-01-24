@@ -64,7 +64,7 @@ pub async fn estimate_gas_async(
     estimate_calls(account, calls).await
 }
 
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 #[cfg(test)]
 mod tests {
     use helpers::log;

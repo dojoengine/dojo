@@ -1,5 +1,9 @@
 # This crate is dedicated for benchmarking purposes
 
+Due to long times, and unreliable nature benchmarks are not run in the CI env at this time.
+The benchmarks themselfs are hidden behind features not to run with `--all-features`.
+To run benchmarks one can use `cargo test --no-default-features`
+
 ## Prerequisites
 
 -   `cargo` - for test case generation and runtime

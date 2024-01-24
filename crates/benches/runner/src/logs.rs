@@ -9,41 +9,41 @@ use tokio::time::sleep;
 use crate::KatanaRunner;
 
 #[derive(Serialize, Deserialize)]
-struct TimedLog<T> {
+pub struct TimedLog<T> {
     timestamp: String,
     level: String,
     fields: T,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Message {
-    message: String,
     target: String,
 }
 
-type Log = TimedLog<Message>;
+#[derive(Serialize, Deserialize)]
+pub struct Message {
+    message: String,
+}
+
+pub type Log = TimedLog<Message>;
 
 impl KatanaRunner {
-    pub fn blocks(&self) -> Vec<String> {
+    pub fn blocks(&self) -> Vec<Log> {
         BufReader::new(File::open(&self.log_filename).unwrap())
             .lines()
             .map_while(Result::ok)
             .filter_map(|line| match serde_json::from_str(&line) {
-                Ok(Log { fields: Message { message, .. }, .. }) => Some(message),
+                Ok(log) => Some(log),
                 Err(_) => None,
             })
-            .filter_map(|message| match message.contains("⛏️ Block") {
-                true => Some(message),
+            .filter_map(|log: Log| match log.fields.message.contains("⛏️ Block") {
+                true => Some(log),
                 false => None,
             })
             .collect()
     }
 
-    pub async fn blocks_until_empty(&self) -> Vec<String> {
+    pub async fn blocks_until_empty(&self) -> Vec<Log> {
         let mut blocks = self.blocks();
         loop {
             if let Some(block) = blocks.last() {
-                if block.contains("mined with 0 transactions") {
+                if block.fields.message.contains("mined with 0 transactions") {
                     break;
                 }
             }
@@ -62,9 +62,12 @@ impl KatanaRunner {
             .await
             .into_iter()
             .map(|block| {
-                let limit =
-                    block.find(" transactions").expect("Failed to find transactions in block");
-                let number = block[..limit].split(' ').last().unwrap();
+                let limit = block
+                    .fields
+                    .message
+                    .find(" transactions")
+                    .expect("Failed to find transactions in block");
+                let number = block.fields.message[..limit].split(' ').last().unwrap();
                 number.parse::<u32>().expect("Failed to parse number of transactions")
             })
             .collect()
@@ -75,12 +78,8 @@ impl KatanaRunner {
             .blocks_until_empty()
             .await
             .into_iter()
-            .map(|block| {
-                let time = block.split('"').nth(3).unwrap();
-                let time: DateTime<Utc> = time.parse().expect("Failed to parse time");
-                time
-            })
-            .collect::<Vec<_>>()
+            .map(|block| block.timestamp.parse().expect("Failed to parse time"))
+            .collect::<Vec<DateTime<Utc>>>()
             .windows(2)
             .map(|w| (w[1] - w[0]).num_milliseconds())
             .collect::<Vec<_>>();
@@ -107,4 +106,11 @@ impl KatanaRunner {
             })
             .collect()
     }
+}
+
+#[test]
+fn test_parse_katana_logs() {
+    let log = r#"{"timestamp":"2024-01-24T15:59:50.793948Z","level":"INFO","fields":{"message":"⛏️ Block 45 mined with 0 transactions"},"target":"backend"}"#;
+    let log: Log = serde_json::from_str(log).unwrap();
+    assert_eq!(log.fields.message, "⛏️ Block 45 mined with 0 transactions");
 }

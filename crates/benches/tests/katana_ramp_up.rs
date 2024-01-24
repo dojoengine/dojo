@@ -1,5 +1,5 @@
 // Implementation of https://github.com/neotheprogramist/dojo/pull/16#discussion_r1453664539
-#[cfg(feature = "katana-benchmarks")]
+#[cfg(not(feature = "skip-katana-benchmarks"))]
 mod katana_benchmarks {
     use benches::spammer::spam_katana;
     use benches::summary::BenchSummary;

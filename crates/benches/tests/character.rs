@@ -1,9 +1,9 @@
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 pub use benches::{estimate_gas, estimate_gas_last, log, runner, BenchCall, FieldElement};
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 pub use proptest::prelude::*;
 
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 #[katana_runner::katana_test]
 async fn bench_complex_set_default() {
     let fee = estimate_gas(
@@ -16,7 +16,7 @@ async fn bench_complex_set_default() {
     log("bench_complex_set_default", fee, "");
 }
 
-#[cfg(feature = "gas-benchmarks")]
+#[cfg(not(feature = "skip-gas-benchmarks"))]
 proptest! {
     #[test]
     fn bench_complex_set_with_smaller(s in "[0-7]{6}") {
