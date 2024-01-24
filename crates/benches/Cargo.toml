@@ -14,6 +14,6 @@ anyhow.workspace = true
 futures.workspace = true
 hex.workspace = true
 lazy_static.workspace = true
-sozo = { path = "../sozo" }
+sozo = { path = "../../bin/sozo" }
 starknet.workspace = true
 tokio.workspace = true
