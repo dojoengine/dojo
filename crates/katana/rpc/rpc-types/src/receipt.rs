@@ -1,7 +1,7 @@
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus};
 use katana_primitives::receipt::{MessageToL1, Receipt, TxExecutionResources};
 use katana_primitives::transaction::TxHash;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult, Hash256,
     InvokeTransactionReceipt, L1HandlerTransactionReceipt, PendingDeclareTransactionReceipt,
@@ -10,7 +10,7 @@ use starknet::core::types::{
     TransactionReceipt,
 };
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct TxReceipt(starknet::core::types::TransactionReceipt);
 
@@ -123,7 +123,7 @@ impl TxReceipt {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PendingTxReceipt(starknet::core::types::PendingTransactionReceipt);
 
@@ -213,7 +213,7 @@ impl PendingTxReceipt {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MaybePendingTxReceipt {
     Receipt(TxReceipt),

@@ -41,6 +41,6 @@ dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples
 dojo-world = { path = "../../dojo-world" }
 scarb.workspace = true
 serial_test = "2.0.0"
-sozo = { path = "../../sozo" }
+sozo = { path = "../../../bin/sozo" }
 starknet-crypto.workspace = true
 starknet.workspace = true

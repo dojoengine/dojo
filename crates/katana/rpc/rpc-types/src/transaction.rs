@@ -21,7 +21,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
-#[derive(Debug, Clone, Deserialize, Deref)]
+#[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
 
@@ -39,7 +39,7 @@ impl BroadcastedInvokeTx {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Deref)]
+#[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedDeclareTx(BroadcastedDeclareTransaction);
 
@@ -108,7 +108,7 @@ impl BroadcastedDeclareTx {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Deref)]
+#[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedDeployAccountTx(BroadcastedDeployAccountTransaction);
 
@@ -135,7 +135,7 @@ impl BroadcastedDeployAccountTx {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum BroadcastedTx {
     Invoke(BroadcastedInvokeTx),
@@ -143,19 +143,19 @@ pub enum BroadcastedTx {
     DeployAccount(BroadcastedDeployAccountTx),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Tx(pub starknet::core::types::Transaction);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DeployAccountTxResult(DeployAccountTransactionResult);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DeclareTxResult(DeclareTransactionResult);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct InvokeTxResult(InvokeTransactionResult);
 
