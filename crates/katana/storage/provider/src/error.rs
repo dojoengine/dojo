@@ -15,6 +15,9 @@ pub enum ProviderError {
     #[error("Missing latest block hash")]
     MissingLatestBlockHash,
 
+    #[error("Missing latest block number")]
+    MissingLatestBlockNumber,
+
     /// Error when the block hash is not found when it should be.
     #[error("Missing block hash for block number {0}")]
     MissingBlockHash(BlockNumber),

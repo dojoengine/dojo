@@ -99,7 +99,7 @@ impl BlockNumberProvider for DbProvider {
     fn latest_number(&self) -> ProviderResult<BlockNumber> {
         let db_tx = self.0.tx()?;
         let res = db_tx.cursor::<BlockHashes>()?.last()?.map(|(num, _)| num);
-        let total_blocks = res.unwrap_or_default();
+        let total_blocks = res.ok_or(ProviderError::MissingLatestBlockNumber)?;
         db_tx.commit()?;
         Ok(total_blocks)
     }
