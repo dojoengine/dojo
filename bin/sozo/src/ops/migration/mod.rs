@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::manifest::{Manifest, ManifestError};
+use dojo_world::manifest::{World, WorldError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
@@ -84,8 +84,8 @@ where
 
 async fn update_world_manifest<U>(
     ws: &Workspace<'_>,
-    mut local_manifest: Manifest,
-    remote_manifest: Option<Manifest>,
+    mut local_manifest: World,
+    remote_manifest: Option<World>,
     target_dir: U,
     world_address: FieldElement,
 ) -> Result<()>
@@ -202,7 +202,7 @@ async fn load_world_manifests<U, P, S>(
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
-) -> Result<(Manifest, Option<Manifest>)>
+) -> Result<(World, Option<World>)>
 where
     U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
@@ -210,15 +210,15 @@ where
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
+    let local_manifest = World::load_from_path(target_dir.as_ref().join("manifest.json"))?;
 
     let remote_manifest = if let Some(address) = world_address {
-        match Manifest::load_from_remote(account.provider(), address).await {
+        match World::load_from_remote(account.provider(), address).await {
             Ok(manifest) => {
                 ui.print_sub(format!("Found remote World: {address:#x}"));
                 Some(manifest)
             }
-            Err(ManifestError::RemoteWorldNotFound) => None,
+            Err(WorldError::RemoteWorldNotFound) => None,
             Err(e) => return Err(anyhow!("Failed to build remote World state: {e}")),
         }
     } else {

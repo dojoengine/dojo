@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::{anyhow, Result};
 use cairo_lang_starknet::abi::{self, Event, Item};
 use clap::Parser;
-use dojo_world::manifest::Manifest;
+use dojo_world::manifest::World;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 use starknet::core::utils::starknet_keccak;
@@ -56,7 +56,7 @@ impl EventsArgs {
                 return Err(anyhow!("Run scarb migrate before running this command"));
             }
 
-            Some(extract_events(&Manifest::load_from_path(manifest_path)?))
+            Some(extract_events(&World::load_from_path(manifest_path)?))
         } else {
             None
         };
@@ -74,7 +74,7 @@ impl EventsArgs {
     }
 }
 
-fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
+fn extract_events(manifest: &World) -> HashMap<String, Vec<Event>> {
     fn inner_helper(events: &mut HashMap<String, Vec<Event>>, abi: abi::Contract) {
         for item in abi.into_iter() {
             if let Item::Event(e) = item {

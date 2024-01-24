@@ -1,7 +1,7 @@
 use starknet::macros::felt;
 
 use super::*;
-use crate::manifest::{Contract, Manifest, Model};
+use crate::manifest::{Contract, Model, World};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
@@ -33,12 +33,8 @@ fn no_diff_when_local_and_remote_are_equal() {
         ..Default::default()
     }];
 
-    let local = Manifest {
-        models,
-        world: world_contract,
-        executor: executor_contract,
-        ..Default::default()
-    };
+    let local =
+        World { models, world: world_contract, executor: executor_contract, ..Default::default() };
 
     let mut remote = local.clone();
     remote.models = remote_models;
@@ -107,7 +103,7 @@ fn diff_when_local_and_remote_are_different() {
         },
     ];
 
-    let local = Manifest {
+    let local = World {
         models,
         contracts,
         world: world_contract,

@@ -9,9 +9,9 @@ use starknet::core::types::{EmittedEvent, FieldElement};
 use starknet::macros::{felt, short_string};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
-use super::{parse_contracts_events, Contract, Manifest, Model};
+use super::{parse_contracts_events, Contract, Model, World};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::{parse_models_events, ManifestError};
+use crate::manifest::{parse_models_events, WorldError};
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -30,10 +30,10 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let err = Manifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
+    let err = World::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
 
     match err {
-        ManifestError::RemoteWorldNotFound => {
+        WorldError::RemoteWorldNotFound => {
             // World not deployed.
         }
         err => panic!("Unexpected error: {err}"),
@@ -238,8 +238,8 @@ async fn fetch_remote_manifest() {
 
     let (world_address, _) = deploy_world(&sequencer, artifacts_path).await;
 
-    let local_manifest = Manifest::load_from_path(manifest_path).unwrap();
-    let remote_manifest = Manifest::load_from_remote(provider, world_address).await.unwrap();
+    let local_manifest = World::load_from_path(manifest_path).unwrap();
+    let remote_manifest = World::load_from_remote(provider, world_address).await.unwrap();
 
     assert_eq!(local_manifest.models.len(), 2);
     assert_eq!(local_manifest.contracts.len(), 1);

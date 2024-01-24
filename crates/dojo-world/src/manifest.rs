@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
 use cainome::cairo_serde::Error as CainomeError;
@@ -18,9 +16,9 @@ use starknet::core::utils::{
 use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
+use async_trait::async_trait;
 
 use crate::contracts::model::ModelError;
-use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -31,7 +29,7 @@ pub const EXECUTOR_CONTRACT_NAME: &str = "dojo::executor::executor";
 pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
 
 #[derive(Error, Debug)]
-pub enum ManifestError {
+pub enum WorldError {
     #[error("Remote World not found.")]
     RemoteWorldNotFound,
     #[error("Executor contract not found.")]
@@ -71,26 +69,10 @@ impl From<dojo_types::schema::Member> for Member {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Model {
-    pub name: String,
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub abi: Option<abi::Contract>,
-}
-
-/// System input ABI.
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Input {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-/// System Output ABI.
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Output {
-    #[serde(rename = "type")]
-    pub ty: String,
 }
 
 #[serde_as]
@@ -107,11 +89,8 @@ pub struct ComputedValueEntrypoint {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Contract {
-    pub name: SmolStr,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
     pub abi: Option<abi::Contract>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
@@ -121,118 +100,86 @@ pub struct Contract {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Class {
-    pub name: SmolStr,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
     pub abi: Option<abi::Contract>,
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct Manifest {
-    pub world: Contract,
-    pub executor: Contract,
-    pub base: Class,
-    pub contracts: Vec<Contract>,
-    pub models: Vec<Model>,
+    pub kind: ManifestKind,
+    pub name: SmolStr,
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
 }
 
-impl Manifest {
-    /// Load the manifest from a file at the given path.
-    pub fn load_from_path(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
-        let file = fs::File::open(path)?;
-        Ok(Self::try_from(file)?)
-    }
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub enum ManifestKind {
+    Class(Class),
+    Contract(Contract),
+    Model(Model),
+}
 
-    /// Writes the manifest into a file at the given path. Will return error if the file doesn't
-    /// exist.
-    pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-        let fd = fs::File::options().write(true).open(path)?;
-        Ok(serde_json::to_writer_pretty(fd, &self)?)
-    }
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct World {
+    pub world: Manifest,
+    pub executor: Manifest,
+    pub base: Manifest,
+    pub contracts: Vec<Manifest>,
+    pub models: Vec<Manifest>,
+}
 
-    /// Construct a manifest of a remote World.
-    ///
-    /// # Arguments
-    /// * `provider` - A Starknet RPC provider.
-    /// * `world_address` - The address of the remote World contract.
-    pub async fn load_from_remote<P>(
+// we wont be writing the whole `World` to file so these are no longer required
+// impl World {
+//     /// Load the manifest from a file at the given path.
+//     pub fn load_from_path(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
+//         let file = fs::File::open(path)?;
+//         Ok(Self::try_from(file)?)
+//     }
+
+//     /// Writes the manifest into a file at the given path. Will return error if the file doesn't
+//     /// exist.
+//     pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
+//         let fd = fs::File::options().write(true).open(path)?;
+//         Ok(serde_json::to_writer_pretty(fd, &self)?)
+//     }
+// }
+
+// impl TryFrom<std::fs::File> for World {
+//     type Error = serde_json::Error;
+//     fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
+//         serde_json::from_reader(std::io::BufReader::new(file))
+//     }
+// }
+
+// impl TryFrom<&std::fs::File> for World {
+//     type Error = serde_json::Error;
+//     fn try_from(file: &std::fs::File) -> Result<Self, Self::Error> {
+//         serde_json::from_reader(std::io::BufReader::new(file))
+//     }
+// }
+
+#[async_trait]
+pub trait RemoteLoadable<P: Provider + Sync + Send> {
+    async fn load_from_remote(
         provider: P,
         world_address: FieldElement,
-    ) -> Result<Self, ManifestError>
-    where
-        P: Provider + Send + Sync,
-    {
-        const BLOCK_ID: BlockId = BlockId::Tag(BlockTag::Pending);
+    ) -> Result<World, WorldError>;
+}
 
-        let world_class_hash =
-            provider.get_class_hash_at(BLOCK_ID, world_address).await.map_err(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::RemoteWorldNotFound
-                }
-                err => err.into(),
-            })?;
-
-        let world = WorldContractReader::new(world_address, provider);
-
-        let executor_address = world.executor().block_id(BLOCK_ID).call().await?;
-        let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
-
-        let executor_class_hash = world
-            .provider()
-            .get_class_hash_at(BLOCK_ID, FieldElement::from(executor_address))
-            .await
-            .map_err(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::ExecutorNotFound
-                }
-                err => err.into(),
-            })?;
-
-        let (models, contracts) =
-            get_remote_models_and_contracts(world_address, &world.provider()).await?;
-
-        Ok(Manifest {
-            models,
-            contracts,
-            world: Contract {
-                name: WORLD_CONTRACT_NAME.into(),
-                class_hash: world_class_hash,
-                address: Some(world_address),
-                ..Default::default()
-            },
-            executor: Contract {
-                name: EXECUTOR_CONTRACT_NAME.into(),
-                address: Some(executor_address.into()),
-                class_hash: executor_class_hash,
-                ..Default::default()
-            },
-            base: Class {
-                name: BASE_CONTRACT_NAME.into(),
-                class_hash: base_class_hash.into(),
-                ..Default::default()
-            },
-        })
+#[async_trait]
+impl<P: Provider + Sync + Send> RemoteLoadable<P> for World {
+    async fn load_from_remote(
+        provider: P,
+        world_address: FieldElement,
+    ) -> Result<World, WorldError> {
+        todo!();
     }
 }
 
-impl TryFrom<std::fs::File> for Manifest {
-    type Error = serde_json::Error;
-    fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
-        serde_json::from_reader(std::io::BufReader::new(file))
-    }
-}
-
-impl TryFrom<&std::fs::File> for Manifest {
-    type Error = serde_json::Error;
-    fn try_from(file: &std::fs::File) -> Result<Self, Self::Error> {
-        serde_json::from_reader(std::io::BufReader::new(file))
-    }
-}
-
-async fn get_remote_models_and_contracts<P: Provider>(
+async fn get_remote_models_and_contracts<P: Provider + Send + Sync>(
     world: FieldElement,
     provider: P,
-) -> Result<(Vec<Model>, Vec<Contract>), ManifestError>
+) -> Result<(Vec<Manifest>, Vec<Manifest>), WorldError>
 where
     P: Provider + Send + Sync,
 {
@@ -275,12 +222,16 @@ where
 
     // fetch contracts name
     for contract in &mut contracts {
+        let ManifestKind::Contract(ref inner) = contract.kind else {
+            unreachable!("we only pass expected kind of manifest");
+        };
+
         let name = match provider
             .call(
                 FunctionCall {
                     calldata: vec![],
                     entry_point_selector: selector!("dojo_resource"),
-                    contract_address: contract.address.expect("qed; missing address"),
+                    contract_address: inner.address.expect("qed; missing address"),
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
@@ -299,7 +250,7 @@ where
     Ok((models, contracts))
 }
 
-async fn get_events<P: Provider>(
+async fn get_events<P: Provider + Send + Sync>(
     provider: P,
     world: FieldElement,
     keys: Vec<Vec<FieldElement>>,
@@ -330,7 +281,7 @@ async fn get_events<P: Provider>(
 fn parse_contracts_events(
     deployed: Vec<EmittedEvent>,
     upgraded: Vec<EmittedEvent>,
-) -> Vec<Contract> {
+) -> Vec<Manifest> {
     fn retain_only_latest_upgrade_events(
         events: Vec<EmittedEvent>,
     ) -> HashMap<FieldElement, FieldElement> {
@@ -372,13 +323,19 @@ fn parse_contracts_events(
             if let Some(upgrade) = upgradeds.get(&address) {
                 class_hash = *upgrade;
             }
-
-            Contract { address: Some(address), class_hash, ..Default::default() }
+            Manifest {
+                kind: ManifestKind::Contract(Contract {
+                    address: Some(address),
+                    ..Default::default()
+                }),
+                class_hash,
+                name: Default::default(),
+            }
         })
         .collect()
 }
 
-fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Model> {
+fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest> {
     let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
 
     for event in events {
@@ -401,6 +358,10 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Model> {
 
     models
         .into_iter()
-        .map(|(name, class_hash)| Model { name, class_hash, ..Default::default() })
+        .map(|(name, class_hash)| Manifest {
+            kind: ManifestKind::Model(Model { ..Default::default() }),
+            name: name.into(),
+            class_hash,
+        })
         .collect()
 }

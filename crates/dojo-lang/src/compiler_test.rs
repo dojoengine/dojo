@@ -14,8 +14,8 @@ use starknet::macros::felt;
 use super::do_update_manifest;
 use crate::scarb_internal::{self};
 
-fn build_mock_manifest() -> dojo_world::manifest::Manifest {
-    dojo_world::manifest::Manifest {
+fn build_mock_manifest() -> dojo_world::manifest::World {
+    dojo_world::manifest::World {
         world: dojo_world::manifest::Contract {
             name: WORLD_CONTRACT_NAME.into(),
             abi: None,

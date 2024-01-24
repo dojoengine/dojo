@@ -9,7 +9,7 @@ use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileConten
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
 use dojo_lang::scarb_internal::build_scarb_root_database;
-use dojo_world::manifest::Manifest;
+use dojo_world::manifest::World;
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
@@ -111,8 +111,8 @@ async fn migrate<P, S>(
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
     ws: &Workspace<'_>,
-    previous_manifest: Option<Manifest>,
-) -> Result<(Manifest, Option<FieldElement>)>
+    previous_manifest: Option<World>,
+) -> Result<(World, Option<FieldElement>)>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -123,7 +123,7 @@ where
     if !manifest_path.exists() {
         return Err(anyhow!("manifest.json not found"));
     }
-    let new_manifest = Manifest::load_from_path(manifest_path)?;
+    let new_manifest = World::load_from_path(manifest_path)?;
     let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
     let total_diffs = diff.count_diffs();
     let config = ws.config();
@@ -192,7 +192,7 @@ impl DevArgs {
             RecursiveMode::Recursive,
         )?;
         let name = self.name.clone();
-        let mut previous_manifest: Option<Manifest> = Option::None;
+        let mut previous_manifest: Option<World> = Option::None;
         let result = build(&mut context);
 
         let Some((mut world_address, account)) = context

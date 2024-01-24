@@ -119,7 +119,7 @@ impl Compiler for DojoCompiler {
 
         let mut manifest = target_dir
             .open_ro("manifest.json", "output file", ws.config())
-            .map(|file| dojo_world::manifest::Manifest::try_from(file.deref()).unwrap_or_default())
+            .map(|file| dojo_world::manifest::World::try_from(file.deref()).unwrap_or_default())
             .unwrap_or_default();
 
         update_manifest(
@@ -210,7 +210,7 @@ pub fn collect_external_crate_ids(
 }
 
 fn update_manifest(
-    manifest: &mut dojo_world::manifest::Manifest,
+    manifest: &mut dojo_world::manifest::World,
     db: &RootDatabase,
     crate_ids: &[CrateId],
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
@@ -425,7 +425,7 @@ fn get_dojo_contract_artifacts(
 }
 
 fn do_update_manifest(
-    current_manifest: &mut dojo_world::manifest::Manifest,
+    current_manifest: &mut dojo_world::manifest::World,
     world: dojo_world::manifest::Contract,
     executor: dojo_world::manifest::Contract,
     base: dojo_world::manifest::Class,
