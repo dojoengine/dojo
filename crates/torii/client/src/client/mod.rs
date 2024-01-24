@@ -21,7 +21,6 @@ use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
-use torii_relay::types::ClientMessage;
 
 use crate::client::error::{Error, ParseError};
 use crate::client::storage::ModelStorage;
@@ -37,7 +36,7 @@ pub struct Client {
     /// The grpc client.
     inner: AsyncRwLock<torii_grpc::client::WorldClient>,
     /// Libp2p client.
-    libp2p_client: torii_relay::client::RelayClient,
+    relay_client: torii_relay::client::RelayClient,
     /// Model storage
     storage: Arc<ModelStorage>,
     /// Models the client are subscribed to.
@@ -95,7 +94,7 @@ impl Client {
             metadata: shared_metadata,
             sub_client_handle: OnceCell::new(),
             inner: AsyncRwLock::new(grpc_client),
-            libp2p_client,
+            relay_client: libp2p_client,
             subscribed_models: subbed_models,
         })
     }
@@ -107,7 +106,7 @@ impl Client {
         &mut self,
         topic: &str,
     ) -> Result<(), TrySendError<torii_relay::client::Command>> {
-        self.libp2p_client
+        self.relay_client
             .command_sender
             .unbounded_send(torii_relay::client::Command::Subscribe(topic.to_string()))
     }
@@ -118,7 +117,7 @@ impl Client {
         &mut self,
         topic: &str,
     ) -> Result<(), TrySendError<torii_relay::client::Command>> {
-        self.libp2p_client
+        self.relay_client
             .command_sender
             .unbounded_send(torii_relay::client::Command::Unsubscribe(topic.to_string()))
     }
@@ -130,15 +129,16 @@ impl Client {
         topic: &str,
         message: &[u8],
     ) -> Result<(), TrySendError<torii_relay::client::Command>> {
-        self.libp2p_client.command_sender.unbounded_send(torii_relay::client::Command::Publish(
-            ClientMessage { topic: topic.to_string(), data: message.to_vec() },
+        self.relay_client.command_sender.unbounded_send(torii_relay::client::Command::Publish(
+            topic.to_string(),
+            message.to_vec(),
         ))
     }
 
     /// Runs the libp2p event loop which processes incoming messages and commands.
     /// And sends events in the channel
     pub async fn run_libp2p(&mut self) {
-        self.libp2p_client.event_loop.run().await;
+        self.relay_client.event_loop.run().await;
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.

@@ -5,7 +5,6 @@ mod test {
     use futures::StreamExt;
 
     use crate::client::{Command, RelayClient};
-    use crate::types::ClientMessage;
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -43,16 +42,15 @@ mod test {
 
         client.command_sender.unbounded_send(Command::Subscribe("mawmaw".to_string()))?;
         sleep(Duration::from_secs(1)).await;
-        client.command_sender.unbounded_send(Command::Publish(ClientMessage {
-            topic: "mawmaw".to_string(),
-            data: "324523".as_bytes().to_vec(),
-        }))?;
+        client
+            .command_sender
+            .unbounded_send(Command::Publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()))?;
 
         loop {
             select! {
                 event = client.message_receiver.next() => {
-                    if let Some((peer_id, message_id, message)) = event {
-                        println!("Received message from {:?} with id {:?}: {:?}", peer_id, message_id, message);
+                    if let Some(message) = event {
+                        println!("Received message from {:?} with id {:?}: {:?}", message.source, message.message_id, message);
                         return Ok(());
                     }
                 }
@@ -90,10 +88,9 @@ mod test {
 
         client.command_sender.unbounded_send(Command::Subscribe("mawmaw".to_string()))?;
         let _ = wasm_timer::Delay::new(std::time::Duration::from_secs(1)).await;
-        client.command_sender.unbounded_send(Command::Publish(ClientMessage {
-            topic: "mawmaw".to_string(),
-            data: "324523".as_bytes().to_vec(),
-        }))?;
+        client
+            .command_sender
+            .unbounded_send(Command::Publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()))?;
 
         let timeout = wasm_timer::Delay::new(std::time::Duration::from_secs(5));
         let message_future = client.message_receiver.next();

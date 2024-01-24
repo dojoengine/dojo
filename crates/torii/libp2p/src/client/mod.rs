@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
-use futures::{select, SinkExt, StreamExt};
-use libp2p::gossipsub::{self, IdentTopic, MessageId};
+use futures::{select, StreamExt};
+use libp2p::gossipsub::{self, IdentTopic, MessageId, TopicHash};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
 #[cfg(not(target_arch = "wasm32"))]
@@ -34,12 +34,24 @@ pub struct EventLoop {
     command_receiver: UnboundedReceiver<Command>,
 }
 
-pub type Message = (PeerId, MessageId, ServerMessage);
+#[derive(Debug, Clone)]
+pub struct Message {
+    // PeerId of the relay that propagated the message
+    pub propagation_source: PeerId,
+    // Peer that published the message
+    pub source: PeerId,
+    pub message_id: MessageId,
+    // Hash of the topic message was published to
+    pub topic: TopicHash,
+    // Raw message payload
+    pub data: Vec<u8>,
+}
+
 #[derive(Debug)]
 pub enum Command {
     Subscribe(String),
     Unsubscribe(String),
-    Publish(ClientMessage),
+    Publish(String, Vec<u8>),
 }
 
 impl RelayClient {
@@ -149,8 +161,8 @@ impl EventLoop {
                         Command::Unsubscribe(room) => {
                             self.unsubscribe(&room).expect("Failed to unsubscribe");
                         },
-                        Command::Publish(message) => {
-                            self.publish(&message).expect("Failed to publish message");
+                        Command::Publish(topic, data) => {
+                            self.publish(topic, data).expect("Failed to publish message");
                         },
                     }
                 },
@@ -164,10 +176,19 @@ impl EventLoop {
                                 message,
                             }) = event
                             {
-                                // deserialize message
-                                let message: ServerMessage = serde_json::from_slice(&message.data)
+                                // deserialize message payload
+                                let message_payload: ServerMessage = serde_json::from_slice(&message.data)
                                     .expect("Failed to deserialize message");
-                                self.message_sender.send((peer_id, message_id, message)).await.expect("Failed to send message");
+
+                                let message = Message {
+                                    propagation_source: peer_id,
+                                    source: PeerId::from_bytes(&message_payload.peer_id).expect("Failed to parse peer id"),
+                                    message_id,
+                                    topic: message.topic,
+                                    data: message_payload.data,
+                                };
+
+                                self.message_sender.unbounded_send(message).expect("Failed to send message");
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
@@ -189,29 +210,22 @@ impl EventLoop {
 
     fn subscribe(&mut self, room: &str) -> Result<bool, Error> {
         let topic = IdentTopic::new(room);
-        let sub = self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
-        // if sub {
-        //     self.topics.insert(room.to_string(), topic);
-        // }
-
-        Ok(sub)
+        self.swarm.behaviour_mut().gossipsub.subscribe(&topic).map_err(Error::SubscriptionError)
     }
 
     fn unsubscribe(&mut self, room: &str) -> Result<bool, Error> {
         let topic = IdentTopic::new(room);
-        let unsub = self.swarm.behaviour_mut().gossipsub.unsubscribe(&topic)?;
-        // if unsub {
-        //     self.topics.remove(room);
-        // }
-
-        Ok(unsub)
+        self.swarm.behaviour_mut().gossipsub.unsubscribe(&topic).map_err(Error::PublishError)
     }
 
-    fn publish(&mut self, message: &ClientMessage) -> Result<MessageId, Error> {
+    fn publish(&mut self, topic: String, data: Vec<u8>) -> Result<MessageId, Error> {
         self.swarm
             .behaviour_mut()
             .gossipsub
-            .publish(IdentTopic::new("message"), serde_json::to_string(message).unwrap())
+            .publish(
+                IdentTopic::new("message"),
+                serde_json::to_string(&ClientMessage { topic, data }).unwrap(),
+            )
             .map_err(Error::PublishError)
     }
 }

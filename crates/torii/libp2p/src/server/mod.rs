@@ -11,7 +11,7 @@ use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::Multiaddr;
 use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
-use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, Swarm, Transport};
+use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use tracing::info;
@@ -57,6 +57,8 @@ impl Relay {
         } else {
             Certificate::generate(&mut thread_rng()).unwrap()
         };
+
+        info!(target: "torii::relay::server", peer_id = %PeerId::from(local_key.public()), "Relay peer id");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -146,7 +148,7 @@ impl Relay {
 
                             // forward message to room
                             let server_message =
-                                ServerMessage { peer_id: peer_id.to_string(), data: message.data };
+                                ServerMessage { peer_id: peer_id.to_bytes(), data: message.data };
                             self.swarm
                                 .behaviour_mut()
                                 .gossipsub
