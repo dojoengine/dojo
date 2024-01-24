@@ -10,8 +10,7 @@ use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
-use futures::channel::mpsc::{SendError, TrySendError, UnboundedSender};
-use futures_util::{SinkExt, TryFutureExt};
+use futures::channel::mpsc::TrySendError;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -22,7 +21,6 @@ use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
-use torii_relay::client::Message;
 use torii_relay::types::ClientMessage;
 
 use crate::client::error::{Error, ParseError};
