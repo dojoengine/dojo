@@ -6,11 +6,10 @@ use anyhow::Result;
 use futures::executor::block_on;
 use futures::future;
 pub use helpers::*;
+pub use katana_runner::runner;
 use lazy_static::lazy_static;
 pub use starknet::core::types::FieldElement;
 use tokio::runtime::Runtime;
-
-pub use katana_runner::runner;
 
 pub const ENOUGH_GAS: &str = "0x100000000000000000";
 
