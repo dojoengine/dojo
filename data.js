@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706225342674,
+  "lastUpdate": 1706227081187,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -295,6 +295,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1042900,
             "range": "± 32101",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "32a3c76869dedbf1003bae1f41267be8579a2b31",
+          "message": "refactor(sozo-migrate): de-debug error formatting (#1454)\n\n* fix\r\n\r\n* add verbose print on errors that can hide starknet data\r\n\r\nCurrently, there is some data missing to be printed out\r\nby starknet-rs. ContractError reason for instance is never printed.\r\nThe idea here is to have a bit more context with sozo if a user\r\nis stuck during migration.\r\nThis commit starts work for the #1409 issue to add more logging\r\nto sozo.\r\n\r\n* remove debug printing in anyhow error\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-01-25T17:48:51-06:00",
+          "tree_id": "4d953427f851471958e282fa1b3b184520a62fb2",
+          "url": "https://github.com/dojoengine/dojo/commit/32a3c76869dedbf1003bae1f41267be8579a2b31"
+        },
+        "date": 1706227080717,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 991201,
+            "range": "± 30272",
             "unit": "ns/iter"
           }
         ]
