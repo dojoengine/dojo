@@ -55,8 +55,9 @@ fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: S
                         unpacked.append(u);
                     },
                     Option::None(_) => {
-                        // TODO: Raise error
-                        break;
+                        // Layout value was successfully poped,
+                        // we are then expecting an unpacked value.
+                        panic_with_felt252('Unpack inner failed');
                     }
                 }
             },
