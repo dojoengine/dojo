@@ -43,6 +43,7 @@ tower-http = "0.4.4"
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
+torii-relay.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

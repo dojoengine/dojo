@@ -1,0 +1,36 @@
+[package]
+edition.workspace = true
+license-file.workspace = true
+name = "torii-relay"
+repository.workspace = true
+version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures.workspace = true
+rand = "0.8.5"
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing.workspace = true
+async-trait = "0.1.77"
+regex = "1.10.3"
+anyhow.workspace = true
+
+[dev-dependencies]
+tempfile = "3.9.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio.workspace = true
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }
+libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "tokio", "pem" ] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen" ] }
+libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p" }
+tracing-wasm = "0.2.1"
+wasm-bindgen-test = "0.3.40"
+wasm-bindgen-futures = "0.4.40"
+wasm-timer = "0.2.5"

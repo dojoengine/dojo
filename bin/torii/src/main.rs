@@ -64,6 +64,23 @@ struct Args {
     #[arg(long, value_name = "SOCKET", default_value = ":8080", value_parser = parse_socket_address)]
     addr: SocketAddr,
 
+    /// Port to serve Libp2p TCP & UDP Quic transports
+    #[arg(long, value_name = "PORT", default_value = "9090")]
+    relay_port: u16,
+
+    /// Port to serve Libp2p WebRTC transport
+    #[arg(long, value_name = "PORT", default_value = "9091")]
+    relay_webrtc_port: u16,
+
+    /// Path to a local identity key file. If not specified, a new identity will be generated
+    #[arg(long, value_name = "PATH")]
+    relay_local_key_path: Option<String>,
+
+    /// Path to a local certificate file. If not specified, a new certificate will be generated
+    /// for WebRTC connections
+    #[arg(long, value_name = "PATH")]
+    relay_cert_path: Option<String>,
+
     /// Specify allowed origins for api endpoints (comma-separated list of allowed origins, or "*"
     /// for all)
     #[arg(long, default_value = "*")]
@@ -163,6 +180,14 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
+    let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        args.relay_port,
+        args.relay_webrtc_port,
+        args.relay_local_key_path,
+        args.relay_cert_path,
+    )
+    .expect("Failed to start libp2p relay server");
+
     info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", args.addr));
     info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", args.addr));
 
@@ -183,6 +208,7 @@ async fn main() -> anyhow::Result<()> {
         _ = proxy_server.start(shutdown_tx.subscribe()) => {},
         _ = graphql_server => {},
         _ = grpc_server => {},
+        _ = libp2p_relay_server.run() => {},
     };
 
     Ok(())
