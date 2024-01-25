@@ -7,7 +7,7 @@ use starknet::SyscallResultTrait;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 
 use dojo::database;
-use dojo::database::{storage, index};
+use dojo::database::storage;
 use dojo::model::Model;
 use dojo::world_test::Foo;
 use dojo::test_utils::end;
@@ -109,102 +109,6 @@ fn bench_native_storage_offset() {
 
 #[test]
 #[available_gas(1000000000)]
-fn bench_index() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let no_query = index::query(0, 69);
-    end(gas, 'idx empty');
-    assert(no_query.len() == 0, 'entity indexed');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::create(0, 69, 420);
-    end(gas, 'idx create 1st');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69);
-    end(gas, 'idx query one');
-    assert(query.len() == 1, 'entity not indexed');
-    assert(*query.at(0) == 420, 'entity value incorrect');
-    
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::create(0, 69, 1337);
-    end(gas, 'idx query 2nd');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let two_query = index::query(0, 69);
-    end(gas, 'idx query two');
-    assert(two_query.len() == 2, 'index should have two query');
-    assert(*two_query.at(1) == 1337, 'entity value incorrect');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::exists(0, 69, 420);
-    end(gas, 'idx exists chk');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 420);
-    end(gas, 'idx dlt !last');
-
-    assert(!index::exists(0, 69, 420), 'entity should not exist');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 1337);
-    end(gas, 'idx dlt last');
-
-    assert(!index::exists(0, 69, 1337), 'entity should not exist');
-}
-
-#[test]
-#[available_gas(1000000000)]
-fn bench_big_index() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let mut i = 0;
-    loop {
-        if i == 1000 {
-            break;
-        }
-        index::create(0, 69, i);
-        i += 1;
-    };
-    end(gas, 'idx create 1000');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69);
-    end(gas, 'idx query 1000');
-    assert(query.len() == 1000, 'entity not indexed');
-    assert(*query.at(420) == 420, 'entity value incorrect');
-    
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::exists(0, 69, 999);
-    end(gas, 'idx exists 1000');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 999);
-    end(gas, 'idx dlt 1000');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 420);
-    end(gas, 'idx dlt !1000 >');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 420);
-    end(gas, 'idx dlt !1000 0');
-}
-
-#[test]
-#[available_gas(1000000000)]
 fn bench_database_array() {
     let mut keys = ArrayTrait::new();
     keys.append(0x966);
@@ -244,41 +148,6 @@ fn bench_database_array() {
         i += 1;
     };
 }
-
-#[test]
-#[available_gas(1000000000)]
-fn bench_indexed_database_array() {
-    let even = array![2, 4].span();
-    let odd = array![1, 3].span();
-    let layout = array![251, 251].span();
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    database::set_with_index('table', 'even', even, layout);
-    end(gas, 'dbi set arr 1st');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', layout);
-    end(gas, 'dbi scan arr 1');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    database::set_with_index('table', 'odd', odd, layout);
-    end(gas, 'dbi set arr 2nd');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', layout);
-    end(gas, 'dbi scan arr 2');
-
-    assert(keys.len() == 2, 'Wrong number of keys!');
-    assert(values.len() == 2, 'Wrong number of values!');
-    assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
-    assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
-    assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
-}
-
 
 #[test]
 #[available_gas(1000000000)]
