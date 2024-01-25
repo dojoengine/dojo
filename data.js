@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706222395004,
+  "lastUpdate": 1706225342674,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -265,6 +265,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1042496,
             "range": "± 26870",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2ec18ce88f1b4181ac972e33e04a17f82b082a16",
+          "message": "use #[abi(embed_v0)] (#1426)\n\n* use #[abi(embed_v0)]\r\n\r\n* fix tests\r\n\r\n* fix dojo-lang tests\r\n\r\n* wrap necessary code in impls & fix tests\r\n\r\n* add missing impl in test with #[generate_trait]\r\n\r\n* fix tests\r\n\r\n* fix tests, again\r\n\r\n* fix fmt\r\n\r\n* revert prev commit & add missing impl & regen tests\r\n\r\n* ...\r\n\r\n* IDojoModel\r\n\r\n* fix tests\r\n\r\n---------\r\n\r\nCo-authored-by: Tarrence van As <tarrencev@users.noreply.github.com>",
+          "timestamp": "2024-01-25T17:19:51-06:00",
+          "tree_id": "cc8eac8d8c4c5cb4468910837e2512cde2891129",
+          "url": "https://github.com/dojoengine/dojo/commit/2ec18ce88f1b4181ac972e33e04a17f82b082a16"
+        },
+        "date": 1706225342237,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1042900,
+            "range": "± 32101",
             "unit": "ns/iter"
           }
         ]
