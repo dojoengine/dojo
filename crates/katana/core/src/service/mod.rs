@@ -9,7 +9,7 @@ use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use starknet::core::types::FieldElement;
-use tracing::trace;
+use tracing::{error, trace};
 
 use self::block_producer::BlockProducer;
 use crate::pool::TransactionPool;
@@ -68,7 +68,7 @@ impl Future for NodeService {
                     }
 
                     Err(err) => {
-                        trace!(target: "node", "failed to mine block: {err}");
+                        error!(target: "node", "failed to mine block: {err}");
                     }
                 }
             }
