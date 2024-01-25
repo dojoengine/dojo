@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706219331200,
+  "lastUpdate": 1706222395004,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -235,6 +235,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1034146,
             "range": "± 30667",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a8258beb841646b60989c85efe6c8f0a7bfdf1cf",
+          "message": "CI: remove codecov on main merge (#1480)\n\n* CI: remove codecov on main merge\r\n\r\nCurrently, codecov reports are not always in adequation with the\r\ncode being pushed in a PR.\r\nDisabling on main merge, ensure that maintainers can evaluate\r\na PR to be mergeable, even if the codecov report is not valid.\r\n\r\n* fix: conditioned only the codecov step and not the whole workflow\r\n\r\n* fix: make the restriction on main ref instead of event_name",
+          "timestamp": "2024-01-25T17:30:44-05:00",
+          "tree_id": "7eaf06f41f8e5feafa74c4562d7579201291cb56",
+          "url": "https://github.com/dojoengine/dojo/commit/a8258beb841646b60989c85efe6c8f0a7bfdf1cf"
+        },
+        "date": 1706222394556,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1042496,
+            "range": "± 26870",
             "unit": "ns/iter"
           }
         ]
