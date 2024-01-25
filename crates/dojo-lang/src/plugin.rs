@@ -31,6 +31,7 @@ use crate::model::handle_model_struct;
 use crate::print::derive_print;
 
 const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
+const DOJO_PLUGIN_EXPAND_VAR_ENV: &str = "DOJO_PLUGIN_EXPAND";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
@@ -229,6 +230,8 @@ pub fn dojo_plugin_suite() -> PluginSuite {
 
 impl MacroPlugin for BuiltinDojoPlugin {
     fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::Item) -> PluginResult {
+        let do_expand: bool = std::env::var(DOJO_PLUGIN_EXPAND_VAR_ENV).map_or(false, |v| v == "true" || v == "1");
+
         match item_ast {
             ast::Item::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::Item::Enum(enum_ast) => {
@@ -294,6 +297,10 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut builder = PatchBuilder::new(db);
                 for node in rewrite_nodes {
                     builder.add_modified(node);
+                }
+
+                if do_expand {
+                    println!("{}", builder.code);
                 }
 
                 PluginResult {
@@ -381,7 +388,9 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     builder.add_modified(node);
                 }
 
-                // println!("** {}\n{}\n", name, builder.code);
+                if do_expand {
+                    println!("{}", builder.code);
+                }
 
                 PluginResult {
                     code: Some(PluginGeneratedFile {
