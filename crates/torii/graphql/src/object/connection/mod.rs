@@ -6,7 +6,7 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 
 use self::page_info::PageInfoObject;
-use super::ObjectTrait;
+use super::BasicObject;
 use crate::constants::PAGE_INFO_TYPE_NAME;
 use crate::query::order::Order;
 use crate::query::value_mapping_from_row;
@@ -55,7 +55,7 @@ impl ConnectionObject {
     }
 }
 
-impl ObjectTrait for ConnectionObject {
+impl BasicObject for ConnectionObject {
     fn name(&self) -> (&str, &str) {
         (&self.name, "")
     }
