@@ -219,7 +219,10 @@ where
                 Some(manifest)
             }
             Err(ManifestError::RemoteWorldNotFound) => None,
-            Err(e) => return Err(anyhow!("Failed to build remote World state: {e}")),
+            Err(e) => {
+                ui.verbose(format!("{e:?}"));
+                return Err(anyhow!("Failed to build remote World state: {e}"));
+            }
         }
     } else {
         None
@@ -295,7 +298,11 @@ where
                     WorldContract::new(addr, &migrator)
                         .set_executor(&executor.contract_address.into())
                         .send()
-                        .await?;
+                        .await
+                        .map_err(|e| {
+                            ui.verbose(format!("{e:?}"));
+                            e
+                        })?;
 
                 TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
@@ -321,7 +328,10 @@ where
                 Err(MigrationError::ClassAlreadyDeclared) => {
                     ui.print_sub(format!("Already declared: {:#x}", base.diff.local));
                 }
-                Err(e) => return Err(e.into()),
+                Err(e) => {
+                    ui.verbose(format!("{e:?}"));
+                    return Err(e.into());
+                }
             };
         }
         None => {}
@@ -337,7 +347,10 @@ where
             ];
             deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
                 .await
-                .map_err(|e| anyhow!("Failed to deploy world: {e}"))?;
+                .map_err(|e| {
+                    ui.verbose(format!("{e:?}"));
+                    anyhow!("Failed to deploy world: {e}")
+                })?;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
@@ -352,7 +365,10 @@ where
                                 .set_metadata_uri(&FieldElement::ZERO, &encoded_uri)
                                 .send()
                                 .await
-                                .map_err(|e| anyhow!("Failed to set World metadata: {e}"))?;
+                                .map_err(|e| {
+                                    ui.verbose(format!("{e:?}"));
+                                    anyhow!("Failed to set World metadata: {e}")
+                                })?;
 
                         ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
                         ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
@@ -416,7 +432,10 @@ where
         Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
             Ok(ContractDeploymentOutput::AlreadyDeployed(contract_address))
         }
-        Err(e) => Err(anyhow!("Failed to migrate {}: {:?}", contract_id, e)),
+        Err(e) => {
+            ui.verbose(format!("{e:?}"));
+            Err(anyhow!("Failed to migrate {contract_id}: {e}"))
+        }
     }
 }
 
@@ -457,7 +476,10 @@ where
                 ui.print_sub(format!("Already declared: {:#x}", c.diff.local));
                 continue;
             }
-            Err(e) => bail!("Failed to declare model {}: {e}", c.diff.name),
+            Err(e) => {
+                ui.verbose(format!("{e:?}"));
+                bail!("Failed to declare model {}: {e}", c.diff.name)
+            }
         }
 
         ui.print_sub(format!("Class hash: {:#x}", c.diff.local));
@@ -471,11 +493,11 @@ where
         .map(|c| world.register_model_getcall(&c.diff.local.into()))
         .collect::<Vec<_>>();
 
-    let InvokeTransactionResult { transaction_hash } = migrator
-        .execute(calls)
-        .send()
-        .await
-        .map_err(|e| anyhow!("Failed to register models to World: {e:?}"))?;
+    let InvokeTransactionResult { transaction_hash } =
+        migrator.execute(calls).send().await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to register models to World: {e}")
+        })?;
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
@@ -534,7 +556,10 @@ where
                 ui.print_sub(format!("Already deployed: {:#x}", contract_address));
                 deploy_output.push(None);
             }
-            Err(e) => return Err(anyhow!("Failed to migrate {}: {:?}", name, e)),
+            Err(e) => {
+                ui.verbose(format!("{e:?}"));
+                return Err(anyhow!("Failed to migrate {name}: {e}"));
+            }
         }
     }
 
