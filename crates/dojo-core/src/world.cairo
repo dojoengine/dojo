@@ -499,7 +499,7 @@ mod world {
             assert_can_write(@self, model, get_caller_address());
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, offset, values, layout);
+            database::set(model, key, values, layout);
 
             EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
         }
@@ -529,7 +529,7 @@ mod world {
             };
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, 0, empty_values.span(), layout);
+            database::set(model, key, empty_values.span(), layout);
             // this deletes the index
             database::del(model, key);
 
@@ -558,7 +558,7 @@ mod world {
             layout: Span<u8>
         ) -> Span<felt252> {
             let key = poseidon::poseidon_hash_span(keys);
-            database::get(model, key, offset, length, layout)
+            database::get(model, key, layout)
         }
 
         /// Returns entity IDs and entities that contain the model state.
@@ -583,7 +583,7 @@ mod world {
             values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             assert(values.len() == 0, 'Queries by values not impl');
-            database::scan(model, Option::None(()), values_length, values_layout)
+            database::scan(model, Option::None(()), values_layout)
         }
 
         /// Returns only the entity IDs that contain the model state.
