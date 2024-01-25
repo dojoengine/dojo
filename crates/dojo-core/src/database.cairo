@@ -16,9 +16,6 @@ mod introspect_test;
 mod storage;
 #[cfg(test)]
 mod storage_test;
-mod utils;
-#[cfg(test)]
-mod utils_test;
 
 fn get(table: felt252, key: felt252, layout: Span<u8>) -> Span<felt252> {
     let mut keys = ArrayTrait::new();
