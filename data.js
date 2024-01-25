@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706193790588,
+  "lastUpdate": 1706195440975,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -175,6 +175,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1039160,
             "range": "± 34965",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrence@vanas.family",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "tarrence@vanas.family",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "distinct": true,
+          "id": "5d611847e523e64c7e98c52ae4e1aaf46335773c",
+          "message": "ci: dont fail on codecov upload error",
+          "timestamp": "2024-01-25T10:01:23-05:00",
+          "tree_id": "51e973992ab938d24783957e41c0f5f7ff4d727d",
+          "url": "https://github.com/dojoengine/dojo/commit/5d611847e523e64c7e98c52ae4e1aaf46335773c"
+        },
+        "date": 1706195440438,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1036484,
+            "range": "± 36353",
             "unit": "ns/iter"
           }
         ]
