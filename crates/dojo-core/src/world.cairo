@@ -605,8 +605,9 @@ mod world {
         ///
         /// * `contract_address` - The contract address of the executor.
         fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
-            // Only owner can set executor
+            assert(contract_address.is_non_zero(), 'Invalid executor address');
             assert(self.is_owner(get_caller_address(), WORLD), 'only owner can set executor');
+
             let prev_address = self.executor_dispatcher.read().contract_address;
             self
                 .executor_dispatcher
