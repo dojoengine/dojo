@@ -17,6 +17,8 @@ pub enum Error {
     #[error(transparent)]
     GrpcClient(#[from] torii_grpc::client::Error),
     #[error(transparent)]
+    RelayClient(#[from] torii_relay::errors::Error),
+    #[error(transparent)]
     Model(#[from] ModelError),
     #[error("Unsupported query")]
     UnsupportedQuery,

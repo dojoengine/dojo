@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/rust
 {
 	"name": "Rust",
-	"image": "ghcr.io/dojoengine/dojo-dev:136a67a",
+	"image": "ghcr.io/dojoengine/dojo-dev:5d61184",
 	"runArgs": [
 		"--cap-add=SYS_PTRACE",
 		"--security-opt",

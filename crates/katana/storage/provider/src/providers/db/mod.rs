@@ -98,17 +98,17 @@ impl BlockNumberProvider for DbProvider {
 
     fn latest_number(&self) -> ProviderResult<BlockNumber> {
         let db_tx = self.0.tx()?;
-        let total_blocks = db_tx.entries::<BlockNumbers>()? as u64;
+        let res = db_tx.cursor::<BlockHashes>()?.last()?.map(|(num, _)| num);
+        let total_blocks = res.ok_or(ProviderError::MissingLatestBlockNumber)?;
         db_tx.commit()?;
-        Ok(if total_blocks == 0 { 0 } else { total_blocks - 1 })
+        Ok(total_blocks)
     }
 }
 
 impl BlockHashProvider for DbProvider {
     fn latest_hash(&self) -> ProviderResult<BlockHash> {
+        let latest_block = self.latest_number()?;
         let db_tx = self.0.tx()?;
-        let total_blocks = db_tx.entries::<BlockNumbers>()? as u64;
-        let latest_block = if total_blocks == 0 { 0 } else { total_blocks - 1 };
         let latest_hash = db_tx.get::<BlockHashes>(latest_block)?;
         db_tx.commit()?;
         latest_hash.ok_or(ProviderError::MissingLatestBlockHash)

@@ -39,7 +39,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.5.1-alpha.0"
+version = "0.5.1-alpha.1"
 
 [profile.performance]
 codegen-units = 1
@@ -79,6 +79,7 @@ torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-server = { path = "crates/torii/server" }
+torii-relay = { path = "crates/torii/libp2p" }
 
 # sozo
 sozo-signers = { path = "crates/sozo/signers" }
@@ -88,7 +89,6 @@ assert_matches = "1.5.0"
 async-trait = "0.1.68"
 base64 = "0.21.2"
 blockifier = { git = "https://github.com/starkware-libs/blockifier", tag = "v0.4.0-rc9.2" }
-cairo-lang-casm = "2.4.0"
 cairo-lang-compiler = "2.4.0"
 cairo-lang-debug = "2.4.0"
 cairo-lang-defs = "2.4.0"
@@ -115,12 +115,10 @@ camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.2", features = [ "derive" ] }
 clap_complete = "4.3"
-colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 derive_more = "0.99.17"
-env_logger = "0.10.0"
 flate2 = "1.0.24"
 futures = "0.3.28"
 hex = "0.4.3"
@@ -129,7 +127,6 @@ itertools = "0.10.3"
 jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
 metrics-process = "1.0.9"
-num-bigint = "0.4"
 once_cell = "1.0"
 parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"

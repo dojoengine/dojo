@@ -61,7 +61,7 @@ mod contract_msg_starknet {
         assert(value == 888, 'Invalid value');
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl ContractAppChainImpl of IContractAppchain<ContractState> {
         fn send_message(ref self: ContractState, to_address: ContractAddress, value: felt252) {
             let buf: Array<felt252> = array![to_address.into(), value];

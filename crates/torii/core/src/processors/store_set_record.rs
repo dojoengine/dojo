@@ -8,13 +8,11 @@ use starknet::providers::Provider;
 use tracing::info;
 
 use super::EventProcessor;
+use crate::processors::{MODEL_INDEX, NUM_KEYS_INDEX};
 use crate::sql::Sql;
 
 #[derive(Default)]
 pub struct StoreSetRecordProcessor;
-
-const MODEL_INDEX: usize = 0;
-const NUM_KEYS_INDEX: usize = 1;
 
 #[async_trait]
 impl<P> EventProcessor<P> for StoreSetRecordProcessor
