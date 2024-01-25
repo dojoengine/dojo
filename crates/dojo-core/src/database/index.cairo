@@ -6,12 +6,6 @@ use serde::Serde;
 
 use dojo::database::storage;
 
-#[derive(Copy, Drop)]
-struct WhereCondition {
-    key: felt252,
-    value: felt252,
-}
-
 fn create(address_domain: u32, index: felt252, id: felt252) {
     if exists(address_domain, index, id) {
         return ();
@@ -54,59 +48,11 @@ fn exists(address_domain: u32, index: felt252, id: felt252) -> bool {
     storage::get(address_domain, build_index_item_key(index, id)) != 0
 }
 
-fn query(address_domain: u32, table: felt252, where: Option<WhereCondition>) -> Span<felt252> {
+fn query(address_domain: u32, table: felt252) -> Span<felt252> {
     let mut res = ArrayTrait::new();
 
-    match where {
-        Option::Some(clause) => {
-            let mut serialized = ArrayTrait::new();
-            table.serialize(ref serialized);
-            clause.key.serialize(ref serialized);
-            let index = poseidon_hash_span(serialized.span());
-
-            let index_len_key = build_index_len_key(index);
-            let index_len = storage::get(address_domain, index_len_key);
-            let mut idx = 0;
-
-            loop {
-                if idx == index_len {
-                    break ();
-                }
-                let id = storage::get(address_domain, build_index_key(index, idx));
-                res.append(id);
-            }
-        },
-
-        // If no `where` clause is defined, we return all values.
-        Option::None(_) => {
-            let index_len_key = build_index_len_key(table);
-            let index_len = storage::get(address_domain, index_len_key);
-            let mut idx = 0;
-
-            loop {
-                if idx == index_len {
-                    break ();
-                }
-
-                res.append(storage::get(address_domain, build_index_key(table, idx)));
-                idx += 1;
-            };
-        }
-    }
-
-    res.span()
-}
-
-/// Returns all the entries that hold a given key
-/// # Arguments
-/// * address_domain - The address domain to write to.
-/// * index - The index to read from.
-/// * key - The key return values from.
-fn get_by_key(address_domain: u32, index: felt252, key: felt252) -> Array<felt252> {
-    let mut res = ArrayTrait::new();
-    let specific_len_key = build_index_specific_key_len(index, key);
-    let index_len = storage::get(address_domain, specific_len_key);
-
+    let index_len_key = build_index_len_key(table);
+    let index_len = storage::get(address_domain, index_len_key);
     let mut idx = 0;
 
     loop {
@@ -114,14 +60,11 @@ fn get_by_key(address_domain: u32, index: felt252, key: felt252) -> Array<felt25
             break ();
         }
 
-        let specific_key = build_index_specific_key(index, key, idx);
-        let id = storage::get(address_domain, specific_key);
-        res.append(id);
-
+        res.append(storage::get(address_domain, build_index_key(table, idx)));
         idx += 1;
     };
 
-    res
+    res.span()
 }
 
 fn build_index_len_key(index: felt252) -> Span<felt252> {

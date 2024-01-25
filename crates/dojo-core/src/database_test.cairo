@@ -10,7 +10,6 @@ use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
 use dojo::world::{IWorldDispatcher};
 use dojo::executor::executor;
 use dojo::database::{get, set, set_with_index, del, scan};
-use dojo::database::index::WhereCondition;
 
 #[test]
 #[available_gas(1000000)]
@@ -121,7 +120,7 @@ fn test_database_scan() {
     set_with_index('table', 'even', even, layout);
     set_with_index('table', 'odd', odd, layout);
 
-    let (keys, values) = scan('table', Option::None(()), layout);
+    let (keys, values) = scan('table', layout);
     assert(keys.len() == 2, 'Wrong number of keys!');
     assert(values.len() == 2, 'Wrong number of values!');
     assert(*keys.at(0) == 'even', 'Wrong key at index 0!');

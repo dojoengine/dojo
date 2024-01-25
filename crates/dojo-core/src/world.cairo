@@ -75,7 +75,6 @@ mod world {
 
     use dojo::database;
     use dojo::database::introspect::Introspect;
-    use dojo::database::index::WhereCondition;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::model::Model;
@@ -574,7 +573,7 @@ mod world {
             values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             assert(values.len() == 0, 'Queries by values not impl');
-            database::scan(model, Option::None(()), values_layout)
+            database::scan(model, values_layout)
         }
 
         /// Returns only the entity IDs that contain the model state.
@@ -588,7 +587,7 @@ mod world {
         /// * `Span<felt252>` - The entity IDs.
         /// * `Span<Span<felt252>>` - The entities.
         fn entity_ids(self: @ContractState, model: felt252) -> Span<felt252> {
-            database::scan_ids(model, Option::None(()))
+            database::scan_ids(model)
         }
 
         /// Sets the executor contract address.

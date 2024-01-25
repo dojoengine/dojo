@@ -2,7 +2,6 @@ use core::result::ResultTrait;
 use array::ArrayTrait;
 use array::SpanTrait;
 use debug::PrintTrait;
-use option::OptionTrait;
 use poseidon::poseidon_hash_span;
 use starknet::SyscallResultTrait;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
@@ -113,7 +112,7 @@ fn bench_native_storage_offset() {
 fn bench_index() {
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let no_query = index::query(0, 69, Option::None(()));
+    let no_query = index::query(0, 69);
     end(gas, 'idx empty');
     assert(no_query.len() == 0, 'entity indexed');
 
@@ -124,7 +123,7 @@ fn bench_index() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69, Option::None(()));
+    let query = index::query(0, 69);
     end(gas, 'idx query one');
     assert(query.len() == 1, 'entity not indexed');
     assert(*query.at(0) == 420, 'entity value incorrect');
@@ -136,7 +135,7 @@ fn bench_index() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let two_query = index::query(0, 69, Option::None(()));
+    let two_query = index::query(0, 69);
     end(gas, 'idx query two');
     assert(two_query.len() == 2, 'index should have two query');
     assert(*two_query.at(1) == 1337, 'entity value incorrect');
@@ -178,7 +177,7 @@ fn bench_big_index() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69, Option::None(()));
+    let query = index::query(0, 69);
     end(gas, 'idx query 1000');
     assert(query.len() == 1000, 'entity not indexed');
     assert(*query.at(420) == 420, 'entity value incorrect');
@@ -260,7 +259,7 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), layout);
+    let (keys, values) = database::scan('table', layout);
     end(gas, 'dbi scan arr 1');
 
     let gas = testing::get_available_gas();
@@ -270,7 +269,7 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), layout);
+    let (keys, values) = database::scan('table', layout);
     end(gas, 'dbi scan arr 2');
 
     assert(keys.len() == 2, 'Wrong number of keys!');
