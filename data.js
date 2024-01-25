@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706151124958,
+  "lastUpdate": 1706151195798,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -115,6 +115,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1032598,
             "range": "± 34153",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1cf9cafe0604c48de689b1c3d8402d80ce889ae4",
+          "message": "fix(katana): init interval block producer with updated block env (#1477)",
+          "timestamp": "2024-01-24T21:44:19-05:00",
+          "tree_id": "f2be951e6083f1c099f058c72be29de2d7a85757",
+          "url": "https://github.com/dojoengine/dojo/commit/1cf9cafe0604c48de689b1c3d8402d80ce889ae4"
+        },
+        "date": 1706151195299,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1033789,
+            "range": "± 31550",
             "unit": "ns/iter"
           }
         ]
