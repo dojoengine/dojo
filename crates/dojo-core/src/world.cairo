@@ -307,7 +307,7 @@ mod world {
         fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
             assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
-            self.owners.write((resource, address), bool::False(()));
+            self.owners.write((resource, address), false);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
         }
