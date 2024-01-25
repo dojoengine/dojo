@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-
     use anyhow::Result;
     use async_graphql::dynamic::Schema;
     use serde_json::Value;
@@ -235,7 +234,6 @@ mod tests {
         let subrecord: Subrecord = serde_json::from_value(models[0].clone()).unwrap();
         assert_eq!(&subrecord.__typename, "Subrecord");
         assert_eq!(subrecord.subrecord_id, 1);
-
         Ok(())
     }
 }
