@@ -4,6 +4,8 @@ use traits::{Into, TryInto};
 use integer::{U256BitAnd, U256BitOr, U256BitXor, upcast, downcast, BoundedInt};
 use option::OptionTrait;
 
+const PACKING_MAX_BITS: u8 = 251;
+
 fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, ref layout: Span<u8>) {
     assert(unpacked.len() == layout.len(), 'mismatched input lens');
     let mut packing: felt252 = 0x0;
@@ -30,7 +32,7 @@ fn calculate_packed_size(ref layout: Span<u8>) -> usize {
             Option::Some(item) => {
                 let item_size: usize = (*item).into();
                 partial += item_size;
-                if (partial > 251) {
+                if (partial > PACKING_MAX_BITS.into()) {
                     size += 1;
                     partial = item_size;
                 }
@@ -46,7 +48,7 @@ fn calculate_packed_size(ref layout: Span<u8>) -> usize {
 
 fn unpack(ref unpacked: Array<felt252>, ref packed: Span<felt252>, ref layout: Span<u8>) {
     let mut unpacking: felt252 = 0x0;
-    let mut offset: u8 = 251;
+    let mut offset: u8 = PACKING_MAX_BITS;
     loop {
         match layout.pop_front() {
             Option::Some(s) => {
@@ -76,10 +78,12 @@ fn pack_inner(
     ref packing_offset: u8,
     ref packed: Array<felt252>
 ) {
+    assert(packing_offset <= PACKING_MAX_BITS, 'Invalid packing offset');
+
     // Cannot use all 252 bits because some bit arrangements (eg. 11111...11111) are not valid felt252 values. 
     // Thus only 251 bits are used.                               ^-252 times-^
     // One could optimize by some conditional alligment mechanism, but it would be an at most 1/252 space-wise improvement.
-    let remaining_bits: u8 = (251 - packing_offset).into();
+    let remaining_bits: u8 = (PACKING_MAX_BITS - packing_offset).into();
 
     // If we have less remaining bits than the current item size,
     // Finalize the current `packing`felt and move to the next felt.
@@ -103,7 +107,7 @@ fn pack_inner(
 fn unpack_inner(
     size: u8, ref packed: Span<felt252>, ref unpacking: felt252, ref unpacking_offset: u8
 ) -> Option<felt252> {
-    let remaining_bits: u8 = (251 - unpacking_offset).into();
+    let remaining_bits: u8 = (PACKING_MAX_BITS - unpacking_offset).into();
 
     // If less remaining bits than size, we move to the next
     // felt for unpacking.
@@ -114,7 +118,7 @@ fn unpack_inner(
                 unpacking_offset = size;
 
                 // If we are unpacking a full felt.
-                if (size == 251) {
+                if (size == PACKING_MAX_BITS) {
                     return Option::Some(unpacking);
                 }
 
