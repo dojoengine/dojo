@@ -78,7 +78,7 @@ mod contract_msg_l1 {
         assert(data.b == 2, 'data.b is invalid');
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl ContractL1Impl of IContractL1<ContractState> {
         fn send_message_value(ref self: ContractState, to_address: EthAddress, value: felt252) {
             // Note here, we "serialized" the felt252 value.
