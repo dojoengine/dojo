@@ -20,7 +20,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo llvm-cov nextest --all-features --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v3
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/main'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
