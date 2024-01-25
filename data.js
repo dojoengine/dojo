@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706118797930,
+  "lastUpdate": 1706151124958,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -85,6 +85,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 987496,
             "range": "± 71798",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6233fa5841a3ea704d1956fa25c12cd385128334",
+          "message": "fix(katana-provider): fix how latest block number/hash is retrieved from db (#1475)",
+          "timestamp": "2024-01-24T21:42:55-05:00",
+          "tree_id": "a99bb348b8dcbbe1b5c6037c22e8d0f95467f53f",
+          "url": "https://github.com/dojoengine/dojo/commit/6233fa5841a3ea704d1956fa25c12cd385128334"
+        },
+        "date": 1706151124470,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1032598,
+            "range": "± 34153",
             "unit": "ns/iter"
           }
         ]
