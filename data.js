@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706195440975,
+  "lastUpdate": 1706219331200,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -205,6 +205,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1036484,
             "range": "± 36353",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "374f2bfac10a58b4e548e13dd0cf9b589361842b",
+          "message": "Update dev container to bc6a5c1 (#1479)\n\n* Update dev container to bc6a5c1\r\n\r\n* Run propose pr on new tags",
+          "timestamp": "2024-01-25T16:39:47-05:00",
+          "tree_id": "ef16c622e64c4e706d187daae359d2450123976b",
+          "url": "https://github.com/dojoengine/dojo/commit/374f2bfac10a58b4e548e13dd0cf9b589361842b"
+        },
+        "date": 1706219330604,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1034146,
+            "range": "± 30667",
             "unit": "ns/iter"
           }
         ]
