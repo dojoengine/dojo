@@ -12,6 +12,7 @@ use cairo_lang_project::{AllCratesConfig, SingleCrateConfig};
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use camino::Utf8PathBuf;
 use scarb::compiler::CompilationUnit;
 use scarb::core::Config;
 use scarb::ops::CompileOpts;
@@ -19,6 +20,10 @@ use smol_str::SmolStr;
 use tracing::trace;
 
 use crate::plugin::dojo_plugin_suite;
+
+pub struct CompileInfo {
+    pub target_dir: Utf8PathBuf,
+}
 
 pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesConfig {
     let crates_config: OrderedHashMap<SmolStr, SingleCrateConfig> = unit
@@ -52,7 +57,7 @@ pub fn build_scarb_root_database(unit: &CompilationUnit) -> Result<RootDatabase>
 /// This function is an alternative to `ops::compile`, it's doing the same job.
 /// However, we can control the injection of the plugins, required to have dojo plugin present
 /// for each compilation.
-pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<()> {
+pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileInfo> {
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
     let resolve = scarb::ops::resolve_workspace(&ws)?;
@@ -73,7 +78,10 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<()> {
         }
     }
 
-    Ok(())
+    let target_dir = ws.target_dir().path_existent().unwrap();
+    let target_dir = target_dir.join(ws.config().profile().as_str());
+
+    Ok(CompileInfo { target_dir })
 }
 
 fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {

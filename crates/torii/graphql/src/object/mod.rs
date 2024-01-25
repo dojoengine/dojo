@@ -11,19 +11,26 @@ use async_graphql::dynamic::{
     Enum, Field, FieldFuture, InputObject, InputValue, Object, SubscriptionField, TypeRef,
 };
 use async_graphql::Value;
+use convert_case::{Case, Casing};
 use sqlx::{Pool, Sqlite};
 
 use self::connection::edge::EdgeObject;
 use self::connection::{
     connection_arguments, connection_output, parse_connection_arguments, ConnectionObject,
 };
-use crate::constants::ID_COLUMN;
+use self::inputs::keys_input::parse_keys_argument;
+use self::inputs::order_input::parse_order_argument;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
 
-pub trait ObjectTrait: Send + Sync {
+pub enum ObjectVariant {
+    Basic(Box<dyn BasicObject>),
+    Resolvable(Box<dyn ResolvableObject>),
+}
+
+pub trait BasicObject: Send + Sync {
     // Name of the graphql object, singular and plural (eg "player" and "players")
     fn name(&self) -> (&str, &str);
 
@@ -38,111 +45,7 @@ pub trait ObjectTrait: Send + Sync {
         None
     }
 
-    // Resolves subscriptions, returns current object (eg "PlayerAdded")
-    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        None
-    }
-
-    // Input objects consist of {type_name}WhereInput for filtering and {type_name}Order for
-    // ordering
-    fn input_objects(&self) -> Option<Vec<InputObject>> {
-        None
-    }
-
-    // Enum objects
-    fn enum_objects(&self) -> Option<Vec<Enum>> {
-        None
-    }
-
-    fn table_name(&self) -> Option<&str> {
-        None
-    }
-
-    // Resolves single object queries, returns current object of type type_name (eg "Player")
-    fn resolve_one(&self) -> Option<Field> {
-        let type_mapping = self.type_mapping().clone();
-        let table_name = self.table_name().unwrap().to_string();
-
-        Some(
-            Field::new(self.name().0, TypeRef::named_nn(self.type_name()), move |ctx| {
-                let type_mapping = type_mapping.clone();
-                let table_name = table_name.to_string();
-
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let id = extract::<String>(ctx.args.as_index_map(), ID_COLUMN)?;
-                    let data = fetch_single_row(&mut conn, &table_name, ID_COLUMN, &id).await?;
-                    let model = value_mapping_from_row(&data, &type_mapping, false)?;
-                    Ok(Some(Value::Object(model)))
-                })
-            })
-            .argument(InputValue::new(ID_COLUMN, TypeRef::named_nn(TypeRef::ID))),
-        )
-    }
-
-    // Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
-    fn resolve_many(&self) -> Option<Field> {
-        let type_mapping = self.type_mapping().clone();
-        let table_name = self.table_name().unwrap().to_string();
-
-        let mut field = Field::new(
-            self.name().1,
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            move |ctx| {
-                let type_mapping = type_mapping.clone();
-                let table_name = table_name.to_string();
-
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let connection = parse_connection_arguments(&ctx)?;
-                    let total_count = count_rows(&mut conn, &table_name, &None, &None).await?;
-                    let (data, page_info) = fetch_multiple_rows(
-                        &mut conn,
-                        &table_name,
-                        ID_COLUMN,
-                        &None,
-                        &None,
-                        &None,
-                        &connection,
-                        total_count,
-                    )
-                    .await?;
-                    let results = connection_output(
-                        &data,
-                        &type_mapping,
-                        &None,
-                        ID_COLUMN,
-                        total_count,
-                        false,
-                        page_info,
-                    )?;
-
-                    Ok(Some(Value::Object(results)))
-                })
-            },
-        );
-
-        field = connection_arguments(field);
-
-        Some(field)
-    }
-
-    // Connection type, if resolve_many is Some then register connection graphql obj, includes
-    // {type_name}Connection and {type_name}Edge according to relay spec https://relay.dev/graphql/connections.htm
-    fn connection(&self) -> Option<Vec<Object>> {
-        self.resolve_many()?;
-
-        let edge = EdgeObject::new(self.name().0.to_string(), self.type_name().to_string());
-        let connection =
-            ConnectionObject::new(self.name().0.to_string(), self.type_name().to_string());
-
-        let mut objects = Vec::new();
-        objects.extend(edge.objects());
-        objects.extend(connection.objects());
-
-        Some(objects)
-    }
-
+    // Graphql objects that are created from the type mapping
     fn objects(&self) -> Vec<Object> {
         let mut object = Object::new(self.type_name());
 
@@ -171,4 +74,123 @@ pub trait ObjectTrait: Send + Sync {
         }
         vec![object]
     }
+}
+
+pub trait ResolvableObject: BasicObject {
+    // Resolvers that returns single and many objects
+    fn resolvers(&self) -> Vec<Field>;
+
+    // Resolves subscriptions, returns current object (eg "PlayerAdded")
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        None
+    }
+
+    // Input objects consist of {type_name}WhereInput for filtering and {type_name}Order for
+    // ordering
+    fn input_objects(&self) -> Option<Vec<InputObject>> {
+        None
+    }
+
+    // Enum objects
+    fn enum_objects(&self) -> Option<Vec<Enum>> {
+        None
+    }
+
+    // Connection type includes {type_name}Connection and {type_name}Edge according to relay spec https://relay.dev/graphql/connections.htm
+    fn connection_objects(&self) -> Option<Vec<Object>> {
+        let edge = EdgeObject::new(self.name().0.to_string(), self.type_name().to_string());
+        let connection =
+            ConnectionObject::new(self.name().0.to_string(), self.type_name().to_string());
+
+        let mut objects = Vec::new();
+        objects.extend(edge.objects());
+        objects.extend(connection.objects());
+
+        Some(objects)
+    }
+}
+
+// Resolves single object queries, returns current object of type type_name (eg "Player")
+pub fn resolve_one(
+    table_name: &str,
+    id_column: &str,
+    field_name: &str,
+    type_name: &str,
+    type_mapping: &TypeMapping,
+) -> Field {
+    let type_mapping = type_mapping.clone();
+    let table_name = table_name.to_owned();
+    let id_column = id_column.to_owned();
+    let argument = InputValue::new(id_column.to_case(Case::Camel), TypeRef::named_nn(TypeRef::ID));
+
+    Field::new(field_name, TypeRef::named_nn(type_name), move |ctx| {
+        let type_mapping = type_mapping.clone();
+        let table_name = table_name.to_owned();
+        let id_column = id_column.to_owned();
+
+        FieldFuture::new(async move {
+            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+            let id: String =
+                extract::<String>(ctx.args.as_index_map(), &id_column.to_case(Case::Camel))?;
+            let data = fetch_single_row(&mut conn, &table_name, &id_column, &id).await?;
+            let model = value_mapping_from_row(&data, &type_mapping, false)?;
+            Ok(Some(Value::Object(model)))
+        })
+    })
+    .argument(argument)
+}
+
+// Resolves plural object queries, returns type of {type_name}Connection (eg "PlayerConnection")
+pub fn resolve_many(
+    table_name: &str,
+    id_column: &str,
+    field_name: &str,
+    type_name: &str,
+    type_mapping: &TypeMapping,
+) -> Field {
+    let type_mapping = type_mapping.clone();
+    let table_name = table_name.to_owned();
+    let id_column = id_column.to_owned();
+
+    let mut field =
+        Field::new(field_name, TypeRef::named(format!("{}Connection", type_name)), move |ctx| {
+            let type_mapping = type_mapping.clone();
+            let table_name = table_name.to_owned();
+            let id_column = id_column.to_owned();
+
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let connection = parse_connection_arguments(&ctx)?;
+                let keys = parse_keys_argument(&ctx)?;
+                let order = parse_order_argument(&ctx);
+                let total_count = count_rows(&mut conn, &table_name, &keys, &None).await?;
+
+                let (data, page_info) = fetch_multiple_rows(
+                    &mut conn,
+                    &table_name,
+                    &id_column,
+                    &keys,
+                    &order,
+                    &None,
+                    &connection,
+                    total_count,
+                )
+                .await?;
+                let results = connection_output(
+                    &data,
+                    &type_mapping,
+                    &order,
+                    &id_column,
+                    total_count,
+                    false,
+                    page_info,
+                )?;
+
+                Ok(Some(Value::Object(results)))
+            })
+        });
+
+    field = connection_arguments(field);
+
+    field
 }

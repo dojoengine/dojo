@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use derive_more::Deref;
+use katana_primitives::chain::ChainId;
 use katana_primitives::contract::{ClassHash, ContractAddress};
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
@@ -20,12 +21,12 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
-#[derive(Debug, Clone, Deserialize, Deref)]
+#[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
 
 impl BroadcastedInvokeTx {
-    pub fn into_tx_with_chain_id(self, chain_id: FieldElement) -> InvokeTx {
+    pub fn into_tx_with_chain_id(self, chain_id: ChainId) -> InvokeTx {
         InvokeTx {
             chain_id,
             nonce: self.0.nonce,
@@ -38,7 +39,7 @@ impl BroadcastedInvokeTx {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Deref)]
+#[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedDeclareTx(BroadcastedDeclareTransaction);
 
@@ -57,7 +58,7 @@ impl BroadcastedDeclareTx {
     }
 
     /// This function assumes that the compiled class hash is valid.
-    pub fn try_into_tx_with_chain_id(self, chain_id: FieldElement) -> Result<DeclareTxWithClass> {
+    pub fn try_into_tx_with_chain_id(self, chain_id: ChainId) -> Result<DeclareTxWithClass> {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
                 let (class_hash, compiled_class) =
@@ -107,12 +108,12 @@ impl BroadcastedDeclareTx {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Deref)]
+#[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedDeployAccountTx(BroadcastedDeployAccountTransaction);
 
 impl BroadcastedDeployAccountTx {
-    pub fn into_tx_with_chain_id(self, chain_id: FieldElement) -> DeployAccountTx {
+    pub fn into_tx_with_chain_id(self, chain_id: ChainId) -> DeployAccountTx {
         let contract_address = get_contract_address(
             self.0.contract_address_salt,
             self.0.class_hash,
@@ -134,7 +135,7 @@ impl BroadcastedDeployAccountTx {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum BroadcastedTx {
     Invoke(BroadcastedInvokeTx),
@@ -142,19 +143,19 @@ pub enum BroadcastedTx {
     DeployAccount(BroadcastedDeployAccountTx),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Tx(pub starknet::core::types::Transaction);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DeployAccountTxResult(DeployAccountTransactionResult);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct DeclareTxResult(DeclareTransactionResult);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct InvokeTxResult(InvokeTransactionResult);
 
@@ -276,7 +277,7 @@ impl From<BroadcastedInvokeTx> for InvokeTx {
             calldata: tx.0.calldata,
             signature: tx.0.signature,
             version: FieldElement::ONE,
-            chain_id: FieldElement::ZERO,
+            chain_id: ChainId::default(),
             sender_address: tx.0.sender_address.into(),
             max_fee: tx.0.max_fee.try_into().expect("max_fee is too big"),
         }
@@ -297,7 +298,7 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
             signature: tx.0.signature,
             version: FieldElement::ONE,
             class_hash: tx.0.class_hash,
-            chain_id: FieldElement::ZERO,
+            chain_id: ChainId::default(),
             contract_address: contract_address.into(),
             constructor_calldata: tx.0.constructor_calldata,
             contract_address_salt: tx.0.contract_address_salt,

@@ -27,6 +27,10 @@ impl QueryQueue {
         self.queue.push_back((statement.into(), arguments));
     }
 
+    pub fn push_front<S: Into<String>>(&mut self, statement: S, arguments: Vec<Argument>) {
+        self.queue.push_front((statement.into(), arguments));
+    }
+
     pub async fn execute_all(&mut self) -> sqlx::Result<u64> {
         let mut total_affected = 0_u64;
         let mut tx = self.pool.begin().await?;

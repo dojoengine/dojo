@@ -3,12 +3,15 @@ use starknet::{ContractAddress, ClassHash};
 #[starknet::interface]
 trait IRecords<TContractState> {
     fn create(self: @TContractState, num_records: u8);
+    fn delete(self: @TContractState, record_id: u32);
 }
 
 #[dojo::contract]
 mod records {
     use starknet::{ContractAddress, get_caller_address};
-    use types_test::models::{Record, RecordSibling, Subrecord, Nested, NestedMore, NestedMost, Depth};
+    use types_test::models::{
+        Record, RecordSibling, Subrecord, Nested, NestedMore, NestedMost, Depth
+    };
     use types_test::{seed, random};
     use super::IRecords;
 
@@ -48,10 +51,7 @@ mod records {
                     0,
                     0xffffffffffffffffffffffffffffffff_u128
                 );
-                let composite_u256 = u256 {
-                    low: random_u128,
-                    high: random_u128
-                };
+                let composite_u256 = u256 { low: random_u128, high: random_u128 };
 
                 let record_id = world.uuid();
                 let subrecord_id = world.uuid();
@@ -92,22 +92,16 @@ mod records {
                                 }
                             },
                             type_nested_one: NestedMost {
-                                depth: Depth::One,
-                                type_number: 1,
-                                type_string: 1,
+                                depth: Depth::One, type_number: 1, type_string: 1,
                             },
                             type_nested_two: NestedMost {
-                                depth: Depth::One,
-                                type_number: 2,
-                                type_string: 2,
+                                depth: Depth::One, type_number: 2, type_string: 2,
                             },
                             random_u8,
                             random_u128,
                             composite_u256
                         },
-                        RecordSibling {
-                            record_id, random_u8
-                        },
+                        RecordSibling { record_id, random_u8 },
                         Subrecord {
                             record_id, subrecord_id, type_u8: record_idx.into(), random_u8,
                         }
@@ -116,9 +110,20 @@ mod records {
 
                 record_idx += 1;
 
-                emit!(world, RecordLogged { record_id, type_u8: record_idx.into(), type_felt, random_u128 });
+                emit!(
+                    world,
+                    RecordLogged { record_id, type_u8: record_idx.into(), type_felt, random_u128 }
+                );
             };
             return ();
+        }
+        // Implemment fn delete, input param: record_id
+        fn delete(self: @ContractState, record_id: u32) {
+            let world = self.world_dispatcher.read();
+            let (record, record_sibling) = get!(world, record_id, (Record, RecordSibling));
+            let subrecord_id = record_id + 1;
+            let subrecord = get!(world, (record_id, subrecord_id), (Subrecord));
+            delete!(world, (record, record_sibling, subrecord));
         }
     }
 }

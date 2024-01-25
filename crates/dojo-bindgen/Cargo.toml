@@ -1,0 +1,22 @@
+[package]
+description = "Dojo specific bindings generator based on Cainome."
+edition.workspace = true
+license-file.workspace = true
+name = "dojo-bindgen"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+camino.workspace = true
+convert_case.workspace = true
+starknet.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+# Some issue with CI on windows, need to be investigated.
+# https://github.com/dojoengine/dojo/actions/runs/7548423990/job/20550444492?pr=1425#step:6:1644
+#dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
+
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.2" }

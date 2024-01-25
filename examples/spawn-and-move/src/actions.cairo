@@ -16,7 +16,7 @@ trait IActionsComputed<TContractState> {
 mod actions {
     use super::IActions;
     use super::IActionsComputed;
-        
+
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;

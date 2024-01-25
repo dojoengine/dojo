@@ -8,8 +8,10 @@ use super::connection::{connection_arguments, connection_output, parse_connectio
 use super::inputs::order_input::{order_argument, parse_order_argument, OrderInputObject};
 use super::inputs::where_input::{parse_where_argument, where_argument, WhereInputObject};
 use super::inputs::InputObjectTrait;
-use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::constants::{ENTITY_ID_COLUMN, ENTITY_TABLE, ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
+use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
+use crate::constants::{
+    ENTITY_ID_COLUMN, ENTITY_TABLE, EVENT_ID_COLUMN, ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
+};
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
 use crate::query::value_mapping_from_row;
@@ -47,7 +49,7 @@ impl ModelDataObject {
     }
 }
 
-impl ObjectTrait for ModelDataObject {
+impl BasicObject for ModelDataObject {
     fn name(&self) -> (&str, &str) {
         (&self.name, &self.plural_name)
     }
@@ -58,70 +60,6 @@ impl ObjectTrait for ModelDataObject {
 
     fn type_mapping(&self) -> &TypeMapping {
         &self.type_mapping
-    }
-
-    fn input_objects(&self) -> Option<Vec<InputObject>> {
-        Some(vec![self.where_input.input_object(), self.order_input.input_object()])
-    }
-
-    fn enum_objects(&self) -> Option<Vec<Enum>> {
-        self.order_input.enum_objects()
-    }
-
-    fn resolve_one(&self) -> Option<Field> {
-        None
-    }
-
-    fn resolve_many(&self) -> Option<Field> {
-        let type_name = self.type_name.clone();
-        let type_mapping = self.type_mapping.clone();
-        let where_mapping = self.where_input.type_mapping.clone();
-        let field_type = format!("{}Connection", self.type_name());
-
-        let mut field = Field::new(self.name().1, TypeRef::named(field_type), move |ctx| {
-            let type_mapping = type_mapping.clone();
-            let where_mapping = where_mapping.clone();
-            let type_name = type_name.clone();
-
-            FieldFuture::new(async move {
-                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                let order = parse_order_argument(&ctx);
-                let filters = parse_where_argument(&ctx, &where_mapping)?;
-                let connection = parse_connection_arguments(&ctx)?;
-                let id_column = "event_id";
-
-                let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
-                let (data, page_info) = fetch_multiple_rows(
-                    &mut conn,
-                    &type_name,
-                    id_column,
-                    &None,
-                    &order,
-                    &filters,
-                    &connection,
-                    total_count,
-                )
-                .await?;
-                let connection = connection_output(
-                    &data,
-                    &type_mapping,
-                    &order,
-                    id_column,
-                    total_count,
-                    true,
-                    page_info,
-                )?;
-
-                Ok(Some(Value::Object(connection)))
-            })
-        });
-
-        // Add relay connection fields (first, last, before, after, where)
-        field = connection_arguments(field);
-        field = where_argument(field, self.type_name());
-        field = order_argument(field, self.type_name());
-
-        Some(field)
     }
 
     fn objects(&self) -> Vec<Object> {
@@ -137,6 +75,67 @@ impl ObjectTrait for ModelDataObject {
 
         objects.push(root);
         objects
+    }
+}
+
+impl ResolvableObject for ModelDataObject {
+    fn input_objects(&self) -> Option<Vec<InputObject>> {
+        Some(vec![self.where_input.input_object(), self.order_input.input_object()])
+    }
+
+    fn enum_objects(&self) -> Option<Vec<Enum>> {
+        self.order_input.enum_objects()
+    }
+
+    fn resolvers(&self) -> Vec<Field> {
+        let type_name = self.type_name.clone();
+        let type_mapping = self.type_mapping.clone();
+        let where_mapping = self.where_input.type_mapping.clone();
+        let field_type = format!("{}Connection", self.type_name());
+
+        let mut field = Field::new(self.name().1, TypeRef::named(field_type), move |ctx| {
+            let type_mapping = type_mapping.clone();
+            let where_mapping = where_mapping.clone();
+            let type_name = type_name.clone();
+
+            FieldFuture::new(async move {
+                let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+                let order = parse_order_argument(&ctx);
+                let filters = parse_where_argument(&ctx, &where_mapping)?;
+                let connection = parse_connection_arguments(&ctx)?;
+
+                let total_count = count_rows(&mut conn, &type_name, &None, &filters).await?;
+                let (data, page_info) = fetch_multiple_rows(
+                    &mut conn,
+                    &type_name,
+                    EVENT_ID_COLUMN,
+                    &None,
+                    &order,
+                    &filters,
+                    &connection,
+                    total_count,
+                )
+                .await?;
+                let connection = connection_output(
+                    &data,
+                    &type_mapping,
+                    &order,
+                    EVENT_ID_COLUMN,
+                    total_count,
+                    true,
+                    page_info,
+                )?;
+
+                Ok(Some(Value::Object(connection)))
+            })
+        });
+
+        // Add relay connection fields (first, last, before, after, where)
+        field = connection_arguments(field);
+        field = where_argument(field, self.type_name());
+        field = order_argument(field, self.type_name());
+
+        vec![field]
     }
 }
 
