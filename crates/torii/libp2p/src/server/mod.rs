@@ -142,9 +142,19 @@ impl Relay {
                             message_id,
                             message,
                         }) => {
-                            // deserialize message
-                            let message: ClientMessage = serde_json::from_slice(&message.data)
-                                .expect("Failed to deserialize message");
+                            // Deserialize message.
+                            // We shouldn't panic here
+                            let message = serde_json::from_slice::<ClientMessage>(&message.data);
+                            if let Err(e) = message {
+                                info!(
+                                    target: "torii::relay::server",
+                                    error = %e,
+                                    "Failed to deserialize message"
+                                );
+                                continue;
+                            }
+
+                            let message = message.unwrap();
 
                             info!(
                                 target: "torii::relay::server",

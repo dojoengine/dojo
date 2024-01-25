@@ -20,7 +20,7 @@ use crate::types::{ClientMessage, ServerMessage};
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClientEvent")]
-pub struct Behaviour {
+struct Behaviour {
     gossipsub: gossipsub::Behaviour,
     identify: identify::Behaviour,
     ping: ping::Behaviour,
@@ -52,7 +52,7 @@ pub struct Message {
 }
 
 #[derive(Debug)]
-pub enum Command {
+enum Command {
     Subscribe(String, oneshot::Sender<Result<bool, Error>>),
     Unsubscribe(String, oneshot::Sender<Result<bool, Error>>),
     Publish(String, Vec<u8>, oneshot::Sender<Result<MessageId, Error>>),
@@ -163,7 +163,7 @@ pub struct CommandSender {
 }
 
 impl CommandSender {
-    pub fn new(sender: UnboundedSender<Command>) -> Self {
+    fn new(sender: UnboundedSender<Command>) -> Self {
         Self { sender }
     }
 
