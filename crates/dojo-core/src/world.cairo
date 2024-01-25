@@ -181,6 +181,7 @@ mod world {
         nonce: usize,
         metadata_uri: LegacyMap::<felt252, felt252>,
         models: LegacyMap::<felt252, ClassHash>,
+        deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
     }
@@ -376,6 +377,12 @@ mod world {
             let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, calldata.span())[0];
             let mut prev_class_hash = starknet::class_hash::ClassHashZeroable::zero();
 
+            // Avoids a model name to conflict with already deployed contract,
+            // which can cause ACL issue with current ACL implementation.
+            if self.deployed_contracts.read(name).is_non_zero() {
+                panic_with_felt252('Invalid model name');
+            }
+
             // If model is already registered, validate permission to update.
             let current_class_hash = self.models.read(name);
             if current_class_hash.is_non_zero() {
@@ -423,6 +430,8 @@ mod world {
             upgradeable_dispatcher.upgrade(class_hash);
 
             self.owners.write((contract_address.into(), get_caller_address()), true);
+
+            self.deployed_contracts.write(contract_address.into(), class_hash.into());
 
             EventEmitter::emit(
                 ref self, ContractDeployed { salt, class_hash, address: contract_address }

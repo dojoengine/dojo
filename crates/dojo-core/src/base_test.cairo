@@ -89,3 +89,38 @@ fn test_upgrade_direct() {
     let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
     upgradeable_dispatcher.upgrade(new_class_hash);
 }
+
+use debug::PrintTrait;
+
+#[starknet::interface]
+trait INameOnly<T> {
+    fn name(self: @T) -> felt252;
+}
+
+#[starknet::contract]
+mod invalid_model {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::INameOnly<ContractState> {
+        fn name(self: @ContractState) -> felt252 {
+            0x3
+        }
+    }
+}
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(expected: ('Invalid model name', 'ENTRYPOINT_FAILED',))]
+fn test_deploy_from_world_invalid_model() {
+    let world = deploy_world();
+
+    // Should have 0x3 as address.
+    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
+
+    base_address.print();
+
+    world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
+}
