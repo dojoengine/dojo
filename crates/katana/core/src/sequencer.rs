@@ -76,7 +76,9 @@ impl KatanaSequencer {
         let block_producer = if config.block_time.is_some() || config.no_mining {
             let block_num = backend.blockchain.provider().latest_number()?;
 
-            let block_env = backend.blockchain.provider().block_env_at(block_num.into())?.unwrap();
+            let mut block_env =
+                backend.blockchain.provider().block_env_at(block_num.into())?.unwrap();
+            backend.update_block_env(&mut block_env);
             let cfg_env = backend.chain_cfg_env();
 
             if let Some(interval) = config.block_time {
@@ -550,4 +552,33 @@ fn filter_events_by_params(
         }
     }
     (filtered_events, index)
+}
+
+#[cfg(test)]
+mod tests {
+    use katana_provider::traits::block::BlockNumberProvider;
+
+    use super::{KatanaSequencer, SequencerConfig};
+    use crate::backend::config::StarknetConfig;
+
+    #[tokio::test]
+    async fn init_interval_block_producer_with_correct_block_env() {
+        let sequencer = KatanaSequencer::new(
+            SequencerConfig { no_mining: true, ..Default::default() },
+            StarknetConfig::default(),
+        )
+        .await
+        .unwrap();
+
+        let provider = sequencer.backend.blockchain.provider();
+
+        let latest_num = provider.latest_number().unwrap();
+        let producer_block_env = sequencer.pending_state().unwrap().block_execution_envs().0;
+
+        assert_eq!(
+            producer_block_env.number,
+            latest_num + 1,
+            "Pending block number should be latest block number + 1"
+        );
+    }
 }
