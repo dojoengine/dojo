@@ -14,13 +14,12 @@ trait IWorld<T> {
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
-        self: @T, model: felt252, keys: Span<felt252>, offset: u8, length: usize, layout: Span<u8>
+        self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
     ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
         model: felt252,
         keys: Span<felt252>,
-        offset: u8,
         values: Span<felt252>,
         layout: Span<u8>
     );
@@ -29,7 +28,6 @@ trait IWorld<T> {
         model: felt252,
         index: Option<felt252>,
         values: Span<felt252>,
-        values_length: usize,
         values_layout: Span<u8>
     ) -> (Span<felt252>, Span<Span<felt252>>);
     fn entity_ids(self: @T, model: felt252) -> Span<felt252>;
@@ -147,7 +145,6 @@ mod world {
     struct StoreSetRecord {
         table: felt252,
         keys: Span<felt252>,
-        offset: u8,
         values: Span<felt252>,
     }
 
@@ -242,10 +239,9 @@ mod world {
             Introspect::<ResourceMetadata>::layout(ref layout);
 
             let mut layout_span = layout.clone().span();
-            let length = dojo::packing::calculate_packed_size(ref layout_span);
 
             let mut data = self
-                .entity(RESOURCE_METADATA_MODEL, array![resource_id].span(), 0, length, layout.span(),);
+                .entity(RESOURCE_METADATA_MODEL, array![resource_id].span(), layout.span(),);
 
             let mut model = array![resource_id];
             core::array::serialize_array_helper(data, ref model);
@@ -267,7 +263,6 @@ mod world {
                 .set_entity(
                     Model::<ResourceMetadata>::name(@metadata),
                     Model::<ResourceMetadata>::keys(@metadata),
-                    0,
                     Model::<ResourceMetadata>::values(@metadata),
                     Model::<ResourceMetadata>::layout(@metadata),
                 );
@@ -485,14 +480,13 @@ mod world {
         /// # Arguments
         ///
         /// * `model` - The name of the model to be set.
-        /// * `key` - The key to be used to find the entity.
-        /// * `offset` - The offset of the model in the entity.
-        /// * `value` - The value to be set.
+        /// * `keys` - The key to be used to find the entity.
+        /// * `values` - The value to be set.
+        /// * `layout` - The memory layout of the entity.
         fn set_entity(
             ref self: ContractState,
             model: felt252,
             keys: Span<felt252>,
-            offset: u8,
             values: Span<felt252>,
             layout: Span<u8>
         ) {
@@ -501,7 +495,7 @@ mod world {
             let key = poseidon::poseidon_hash_span(keys);
             database::set(model, key, values, layout);
 
-            EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
+            EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, values });
         }
 
         /// Deletes a model from an entity.
@@ -509,7 +503,8 @@ mod world {
         /// # Arguments
         ///
         /// * `model` - The name of the model to be deleted.
-        /// * `query` - The query to be used to find the entity.
+        /// * `keys` - The key to be used to find the entity.
+        /// * `layout` - The memory layout of the entity.
         fn delete_entity(
             ref self: ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
         ) {
@@ -542,9 +537,8 @@ mod world {
         /// # Arguments
         ///
         /// * `model` - The name of the model to be retrieved.
-        /// * `query` - The query to be used to find the entity.
-        /// * `offset` - The offset of the model values.
-        /// * `length` - The length of the model values.
+        /// * `keys` - The keys used to find the entity.
+        /// * `layout` - The memory layout of the entity.
         ///
         /// # Returns
         ///
@@ -553,8 +547,6 @@ mod world {
             self: @ContractState,
             model: felt252,
             keys: Span<felt252>,
-            offset: u8,
-            length: usize,
             layout: Span<u8>
         ) -> Span<felt252> {
             let key = poseidon::poseidon_hash_span(keys);
@@ -567,8 +559,8 @@ mod world {
         ///
         /// * `model` - The name of the model to be retrieved.
         /// * `index` - The index to be retrieved.
-        /// * `values` - The query to be used to find the entity.
-        /// * `length` - The length of the model values.
+        /// * `values` - The values to be used to find the entity.
+        /// * `values_layout` - The layout associated to each value.
         ///
         /// # Returns
         ///
@@ -579,7 +571,6 @@ mod world {
             model: felt252,
             index: Option<felt252>,
             values: Span<felt252>,
-            values_length: usize,
             values_layout: Span<u8>
         ) -> (Span<felt252>, Span<Span<felt252>>) {
             assert(values.len() == 0, 'Queries by values not impl');

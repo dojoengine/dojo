@@ -315,7 +315,7 @@ fn test_entities() {
 
     let mut query_keys = ArrayTrait::new();
     let layout = array![251].span();
-    let (keys, values) = world.entities('Foo', Option::None, query_keys.span(), 2, layout);
+    let (keys, values) = world.entities('Foo', Option::None, query_keys.span(), layout);
     let ids = world.entity_ids('Foo');
     assert(keys.len() == ids.len(), 'result differs in entity_ids');
     assert(keys.len() == 0, 'found value for unindexed');
