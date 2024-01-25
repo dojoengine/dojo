@@ -135,6 +135,10 @@ fn unpack_inner(
 }
 
 fn fpow(x: u256, n: u8) -> u256 {
+    if x.is_zero() {
+        panic_with_felt252('base 0 not allowed in fpow');
+    }
+
     let y = x;
     if n == 0 {
         return 1;
