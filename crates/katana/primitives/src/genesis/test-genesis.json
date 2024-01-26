@@ -3,6 +3,7 @@
 	"parentHash": "0x999",
 	"timestamp": 5123512314,
 	"stateRoot": "0x99",
+	"sequencerAddress": "0x100",
 	"gasPrices": {
 		"ETH": 1111,
 		"STRK": 2222
@@ -19,7 +20,7 @@
 	},
 	"accounts": {
 		"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
-			"privateKey": "0x1",
+			"publicKey": "0x1",
 			"balance": "0xD3C21BCECCEDA1000000",
 			"nonce": "0x1",
 			"class": "0x80085",
@@ -29,7 +30,7 @@
 			}
 		},
 		"0x70997970C51812dc3A010C7d01b50e0d17dc79C8": {
-			"privateKey": "0x2",
+			"publicKey": "0x2",
 			"balance": "0xD3C21BCECCEDA1000000"
 		}
 	},

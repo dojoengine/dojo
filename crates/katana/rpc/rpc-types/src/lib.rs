@@ -3,6 +3,7 @@
 //! Most of the types defined in this crate are simple wrappers around types imported from
 //! `starknet-rs`.
 
+pub mod account;
 pub mod block;
 pub mod error;
 pub mod event;

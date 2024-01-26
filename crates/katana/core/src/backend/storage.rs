@@ -1,12 +1,10 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use katana_db::init_db;
-use katana_db::utils::is_database_empty;
-use katana_primitives::block::{
-    Block, BlockHash, FinalityStatus, Header, PartialHeader, SealedBlockWithStatus,
-};
+use katana_primitives::block::{Block, BlockHash, FinalityStatus, Header, SealedBlockWithStatus};
 use katana_primitives::env::BlockEnv;
+use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
@@ -22,7 +20,6 @@ use katana_provider::traits::transaction::{
 use katana_provider::BlockchainProvider;
 
 use crate::constants::SEQUENCER_ADDRESS;
-use crate::utils::get_genesis_states_for_testing;
 
 pub trait Database:
     BlockProvider
@@ -71,34 +68,39 @@ impl Blockchain {
         Self { inner: BlockchainProvider::new(Box::new(provider)) }
     }
 
-    pub fn new_with_genesis(provider: impl Database, block_env: &BlockEnv) -> Result<Self> {
-        let header = PartialHeader {
-            parent_hash: 0u8.into(),
-            version: CURRENT_STARKNET_VERSION,
-            timestamp: block_env.timestamp,
-            sequencer_address: *SEQUENCER_ADDRESS,
-            gas_prices: block_env.l1_gas_prices,
-        };
+    /// Creates a new [Blockchain] with the given [Database] implementation and genesis state.
+    pub fn new_with_genesis(provider: impl Database, genesis: &Genesis) -> Result<Self> {
+        // check whether the genesis block has been initialized
+        let genesis_hash = provider.block_hash_by_num(genesis.number)?;
 
-        let block = SealedBlockWithStatus {
-            status: FinalityStatus::AcceptedOnL1,
-            block: Block {
-                header: Header::new(header, block_env.number, 0u8.into()),
-                body: vec![],
+        match genesis_hash {
+            Some(db_hash) => {
+                let genesis_hash = genesis.block().header.compute_hash();
+                // check genesis should be the same
+                if db_hash == genesis_hash {
+                    Ok(Self::new(provider))
+                } else {
+                    Err(anyhow!(
+                        "Genesis block hash mismatch: expected {genesis_hash:#x}, got {db_hash:#}",
+                    ))
+                }
             }
-            .seal(),
-        };
 
-        Self::new_with_block_and_state(provider, block, get_genesis_states_for_testing())
+            None => {
+                let block = genesis.block().seal();
+                let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL1 };
+                let state_updates = genesis.state_updates();
+
+                Self::new_with_block_and_state(provider, block, state_updates)
+            }
+        }
     }
 
-    pub fn new_with_db(db_path: impl AsRef<Path>, block_context: &BlockEnv) -> Result<Self> {
-        if is_database_empty(&db_path) {
-            let provider = DbProvider::new(init_db(db_path)?);
-            Ok(Self::new_with_genesis(provider, block_context)?)
-        } else {
-            Ok(Self::new(DbProvider::new(init_db(db_path)?)))
-        }
+    /// Creates a new [Blockchain] from a database at `path` and `genesis` state.
+    pub fn new_with_db(db_path: impl AsRef<Path>, genesis: &Genesis) -> Result<Self> {
+        let db = init_db(db_path)?;
+        let provider = DbProvider::new(db);
+        Self::new_with_genesis(provider, genesis)
     }
 
     // TODO: make this function to just accept a `Header` created from the forked block.
@@ -149,6 +151,12 @@ mod tests {
         Block, FinalityStatus, GasPrices, Header, SealedBlockWithStatus,
     };
     use katana_primitives::env::BlockEnv;
+    use katana_primitives::genesis::constant::{
+        DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
+        DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
+        DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
+    };
+    use katana_primitives::genesis::Genesis;
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::StateUpdatesWithDeclaredClasses;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
@@ -163,33 +171,23 @@ mod tests {
     use starknet::macros::felt;
 
     use super::Blockchain;
-    use crate::constants::{
-        ERC20_CONTRACT, ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
-        UDC_CONTRACT,
-    };
 
     #[test]
     fn blockchain_from_genesis_states() {
         let provider = InMemoryProvider::new();
-        let block_env = BlockEnv {
-            number: 0,
-            timestamp: 0,
-            sequencer_address: Default::default(),
-            l1_gas_prices: GasPrices { eth: 0, strk: 0 },
-        };
 
-        let blockchain = Blockchain::new_with_genesis(provider, &block_env)
+        let blockchain = Blockchain::new_with_genesis(provider, &Genesis::default())
             .expect("failed to create blockchain from genesis block");
         let state = blockchain.provider().latest().expect("failed to get latest state");
 
         let latest_number = blockchain.provider().latest_number().unwrap();
         let fee_token_class_hash =
-            state.class_hash_of_contract(*FEE_TOKEN_ADDRESS).unwrap().unwrap();
-        let udc_class_hash = state.class_hash_of_contract(*UDC_ADDRESS).unwrap().unwrap();
+            state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
+        let udc_class_hash = state.class_hash_of_contract(DEFAULT_UDC_ADDRESS).unwrap().unwrap();
 
         assert_eq!(latest_number, 0);
-        assert_eq!(udc_class_hash, *UDC_CLASS_HASH);
-        assert_eq!(fee_token_class_hash, *ERC20_CONTRACT_CLASS_HASH);
+        assert_eq!(udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
+        assert_eq!(fee_token_class_hash, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH);
     }
 
     #[test]
@@ -234,13 +232,6 @@ mod tests {
     fn blockchain_from_db() {
         let db_path = tempfile::TempDir::new().expect("Failed to create temp dir.").into_path();
 
-        let block_env = BlockEnv {
-            number: 0,
-            timestamp: 0,
-            sequencer_address: Default::default(),
-            l1_gas_prices: GasPrices { eth: 0, strk: 0 },
-        };
-
         let dummy_tx =
             TxWithHash { hash: felt!("0xbad"), transaction: Tx::Invoke(InvokeTx::default()) };
 
@@ -259,8 +250,10 @@ mod tests {
             .seal(),
         };
 
+        let genesis = Genesis::default();
+
         {
-            let blockchain = Blockchain::new_with_db(&db_path, &block_env)
+            let blockchain = Blockchain::new_with_db(&db_path, &genesis)
                 .expect("Failed to create db-backed blockchain storage");
 
             blockchain
@@ -277,24 +270,24 @@ mod tests {
             let state = blockchain.provider().latest().expect("failed to get latest state");
 
             let actual_udc_class_hash =
-                state.class_hash_of_contract(*UDC_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_UDC_ADDRESS).unwrap().unwrap();
             let actual_udc_class = state.class(actual_udc_class_hash).unwrap().unwrap();
 
             let actual_fee_token_class_hash =
-                state.class_hash_of_contract(*FEE_TOKEN_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
-            assert_eq!(actual_udc_class_hash, *UDC_CLASS_HASH);
-            assert_eq!(actual_udc_class, (*UDC_CONTRACT).clone());
+            assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
+            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
 
-            assert_eq!(actual_fee_token_class_hash, *ERC20_CONTRACT_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, (*ERC20_CONTRACT).clone());
+            assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH);
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone());
         }
 
         // re open the db and assert the state is the same and not overwritten
 
         {
-            let blockchain = Blockchain::new_with_db(&db_path, &block_env)
+            let blockchain = Blockchain::new_with_db(&db_path, &genesis)
                 .expect("Failed to create db-backed blockchain storage");
 
             // assert genesis state is correct
@@ -302,18 +295,18 @@ mod tests {
             let state = blockchain.provider().latest().expect("failed to get latest state");
 
             let actual_udc_class_hash =
-                state.class_hash_of_contract(*UDC_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_UDC_ADDRESS).unwrap().unwrap();
             let actual_udc_class = state.class(actual_udc_class_hash).unwrap().unwrap();
 
             let actual_fee_token_class_hash =
-                state.class_hash_of_contract(*FEE_TOKEN_ADDRESS).unwrap().unwrap();
+                state.class_hash_of_contract(DEFAULT_FEE_TOKEN_ADDRESS).unwrap().unwrap();
             let actual_fee_token_class = state.class(actual_fee_token_class_hash).unwrap().unwrap();
 
-            assert_eq!(actual_udc_class_hash, *UDC_CLASS_HASH);
-            assert_eq!(actual_udc_class, (*UDC_CONTRACT).clone());
+            assert_eq!(actual_udc_class_hash, DEFAULT_LEGACY_UDC_CLASS_HASH);
+            assert_eq!(actual_udc_class, DEFAULT_LEGACY_UDC_CASM.clone());
 
-            assert_eq!(actual_fee_token_class_hash, *ERC20_CONTRACT_CLASS_HASH);
-            assert_eq!(actual_fee_token_class, (*ERC20_CONTRACT).clone());
+            assert_eq!(actual_fee_token_class_hash, DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH);
+            assert_eq!(actual_fee_token_class, DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone());
 
             let block_number = blockchain.provider().latest_number().unwrap();
             let block_hash = blockchain.provider().latest_hash().unwrap();
