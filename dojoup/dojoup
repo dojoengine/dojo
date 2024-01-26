@@ -21,7 +21,7 @@ main() {
       -b|--branch)      shift; DOJOUP_BRANCH=$1;;
       -v|--version)     shift; DOJOUP_VERSION=$1;;
       -p|--path)        shift; DOJOUP_LOCAL_REPO=$1;;
-      -pr|--pr)          shift; DOJOUP_PR=$1;;
+      -P|--pr)          shift; DOJOUP_PR=$1;;
       -c|--commit)      shift; DOJOUP_COMMIT=$1;;
       -h|--help)
         usage
@@ -216,7 +216,7 @@ OPTIONS:
     -h, --help      Print help information
     -v, --version   Install a specific version
     -b, --branch    Install a specific branch
-    -pr, --pr        Install a specific Pull Request
+    -P, --pr        Install a specific Pull Request
     -c, --commit    Install a specific commit
     -r, --repo      Install from a remote GitHub repo (uses default branch if no other options are set)
     -p, --path      Install a local repository
