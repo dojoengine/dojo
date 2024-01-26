@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use ::serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 use cainome::cairo_serde::Error as CainomeError;
-use cairo_lang_starknet::abi;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -16,9 +17,9 @@ use starknet::core::utils::{
 use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
-use async_trait::async_trait;
 
-use crate::contracts::{ model::ModelError, WorldContractReader};
+use crate::contracts::model::ModelError;
+use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -70,9 +71,6 @@ impl From<dojo_types::schema::Member> for Member {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Model {
     pub members: Vec<Member>,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub abi: Option<abi::Contract>,
 }
 
 #[serde_as]
@@ -91,7 +89,6 @@ pub struct ComputedValueEntrypoint {
 pub struct Contract {
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
-    pub abi: Option<abi::Contract>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
     pub computed: Vec<ComputedValueEntrypoint>,
@@ -99,9 +96,7 @@ pub struct Contract {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Class {
-    pub abi: Option<abi::Contract>,
-}
+pub struct Class {}
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
@@ -110,6 +105,7 @@ pub struct Manifest {
     pub name: SmolStr,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
+    pub abi: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
@@ -205,17 +201,26 @@ impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for World {
             world: Manifest {
                 name: WORLD_CONTRACT_NAME.into(),
                 class_hash: world_class_hash,
-                kind: ManifestKind::Contract(Contract { address: Some(world_address), ..Default::default() }),
+                kind: ManifestKind::Contract(Contract {
+                    address: Some(world_address),
+                    ..Default::default()
+                }),
+                abi: None,
             },
             executor: Manifest {
                 name: EXECUTOR_CONTRACT_NAME.into(),
                 class_hash: executor_class_hash,
-                kind: ManifestKind::Contract(Contract { address: Some(executor_address.into()), ..Default::default() }),
+                kind: ManifestKind::Contract(Contract {
+                    address: Some(executor_address.into()),
+                    ..Default::default()
+                }),
+                abi: None,
             },
             base: Manifest {
                 name: BASE_CONTRACT_NAME.into(),
                 class_hash: base_class_hash.into(),
-                kind: ManifestKind::Class( Class { abi: None}),
+                kind: ManifestKind::Class(Class {}),
+                abi: None,
             },
         })
     }
@@ -375,6 +380,7 @@ fn parse_contracts_events(
                 }),
                 class_hash,
                 name: Default::default(),
+                abi: None,
             }
         })
         .collect()
@@ -407,6 +413,7 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest> {
             kind: ManifestKind::Model(Model { ..Default::default() }),
             name: name.into(),
             class_hash,
+            abi: None,
         })
         .collect()
 }

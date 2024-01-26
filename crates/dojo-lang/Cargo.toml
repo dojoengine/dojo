@@ -44,6 +44,7 @@ serde_with = "2.3.1"
 smol_str.workspace = true
 starknet.workspace = true
 thiserror = "1.0.32"
+toml.workspace = true
 tracing.workspace = true
 url = "2.2.2"
 

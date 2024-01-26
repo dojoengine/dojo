@@ -2786,6 +2786,7 @@ dependencies = [
  "starknet",
  "test-log",
  "thiserror",
+ "toml 0.7.8",
  "tracing",
  "url",
 ]
