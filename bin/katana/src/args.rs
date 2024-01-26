@@ -156,6 +156,7 @@ pub struct StarknetOptions {
 
     #[arg(long)]
     #[arg(value_parser = parse_genesis)]
+    #[arg(conflicts_with_all(["rpc_url", "seed", "total_accounts"]))]
     pub genesis: Option<Genesis>,
 }
 
