@@ -110,14 +110,8 @@ impl Backend {
             (blockchain, config.env.chain_id)
         };
 
-        // for acc in &accounts {
-        //     acc.deploy_and_fund(blockchain.provider())
-        //         .expect("should be able to deploy and fund dev account");
-        // }
-
         Self {
             chain_id,
-            // accounts,
             blockchain,
             config,
             block_context_generator: RwLock::new(block_context_generator),
