@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706227081187,
+  "lastUpdate": 1706247123790,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -325,6 +325,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 991201,
             "range": "± 30272",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "90423308+ponderingdemocritus@users.noreply.github.com",
+            "name": "Loaf",
+            "username": "ponderingdemocritus"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d12a3df3a9e024e68542e0919eade8109aabe97",
+          "message": "change casing to be consistent (#1235)\n\n* change casing to be consistent\r\n\r\n* pr\r\n\r\n* comments\r\n\r\n* casing",
+          "timestamp": "2024-01-25T23:22:51-06:00",
+          "tree_id": "2c004f68c3c1f4a6ed1a1b26b1530fb0e5d028ee",
+          "url": "https://github.com/dojoengine/dojo/commit/5d12a3df3a9e024e68542e0919eade8109aabe97"
+        },
+        "date": 1706247123356,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 987215,
+            "range": "± 30055",
             "unit": "ns/iter"
           }
         ]
