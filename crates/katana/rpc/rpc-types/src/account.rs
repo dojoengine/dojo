@@ -1,9 +1,7 @@
 use ethers::types::U256;
-use katana_primitives::{
-    contract::{ClassHash, ContractAddress},
-    genesis::allocation::GenesisAccountAlloc,
-    FieldElement,
-};
+use katana_primitives::contract::{ClassHash, ContractAddress};
+use katana_primitives::genesis::allocation::GenesisAccountAlloc;
+use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};

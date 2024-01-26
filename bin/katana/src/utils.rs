@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
-use katana_primitives::genesis::{json::GenesisJsonWithBasePath, Genesis};
+use katana_primitives::genesis::json::GenesisJsonWithBasePath;
+use katana_primitives::genesis::Genesis;
 
 pub fn parse_seed(seed: &str) -> [u8; 32] {
     let seed = seed.as_bytes();

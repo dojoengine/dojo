@@ -78,7 +78,7 @@ pub const ERC20_TOTAL_SUPPLY_STORAGE_SLOT: StorageKey = FieldElement::from_mont(
 /// The default fee token balance for dev accounts at genesis.
 pub const DEFAULT_PREFUNDED_ACCOUNT_BALANCE: u128 = 10 * u128::pow(10, 21);
 
-/// The class hash of [DEFAULT_LEGACY_ERC20_CONTRACT_CASM].
+/// The class hash of DEFAULT_LEGACY_ERC20_CONTRACT_CASM.
 /// Corresponds to 0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f
 pub const DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH: ClassHash = FieldElement::from_mont([
     5063404709606896214,
@@ -87,11 +87,11 @@ pub const DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH: ClassHash = FieldElement::fr
     396742056646423680,
 ]);
 
-/// The compiled class hash of [DEFAULT_LEGACY_ERC20_CONTRACT_CASM].
+/// The compiled class hash of DEFAULT_LEGACY_ERC20_CONTRACT_CASM.
 pub const DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
     DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH;
 
-/// The class hash of [DEFAULT_LEGACY_UDC_CASM].
+/// The class hash of DEFAULT_LEGACY_UDC_CASM.
 /// Corresponds to 0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69
 pub const DEFAULT_LEGACY_UDC_CLASS_HASH: ClassHash = FieldElement::from_mont([
     13364470047046544565,
@@ -100,10 +100,10 @@ pub const DEFAULT_LEGACY_UDC_CLASS_HASH: ClassHash = FieldElement::from_mont([
     179653587345909319,
 ]);
 
-/// The compiled class hash of [DEFAULT_LEGACY_UDC_CASM].
+/// The compiled class hash of DEFAULT_LEGACY_UDC_CASM.
 pub const DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH: CompiledClassHash = DEFAULT_LEGACY_UDC_CLASS_HASH;
 
-/// The class hash of [DEFAULT_OZ_ACCOUNT_CONTRACT].
+/// The class hash of DEFAULT_OZ_ACCOUNT_CONTRACT.
 /// Corresponds to 0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c
 pub const DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = FieldElement::from_mont([
     8460675502047588988,
@@ -112,7 +112,7 @@ pub const DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = FieldElement::from
     292243705759714441,
 ]);
 
-/// The compiled class hash of [DEFAULT_OZ_ACCOUNT_CONTRACT].
+/// The compiled class hash of DEFAULT_OZ_ACCOUNT_CONTRACT.
 /// Corresponds to 0x016c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc
 pub const DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
     FieldElement::from_mont([
