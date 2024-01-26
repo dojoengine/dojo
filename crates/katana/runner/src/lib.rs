@@ -1,4 +1,3 @@
-mod deployer;
 mod logs;
 mod prefunded;
 mod utils;
@@ -11,9 +10,11 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use katana_core::accounts::DevAccountGenerator;
+use katana_primitives::FieldElement;
 pub use runner_macro::{katana_test, runner};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use tokio::sync::Mutex;
 use url::Url;
 use utils::find_free_port;
 
@@ -24,6 +25,7 @@ pub struct KatanaRunner {
     provider: JsonRpcClient<HttpTransport>,
     accounts: Vec<katana_core::accounts::Account>,
     log_filename: PathBuf,
+    contract: Mutex<Option<FieldElement>>,
 }
 
 pub const BLOCK_TIME_IF_ENABLED: u64 = 3000;
@@ -109,19 +111,33 @@ impl KatanaRunner {
         let mut seed = [0; 32];
         seed[0] = 48;
         let accounts = DevAccountGenerator::new(n_accounts).with_seed(seed).generate();
+        let contract = Mutex::new(Option::None);
 
-        Ok(KatanaRunner { child, port, provider, accounts, log_filename })
+        Ok(KatanaRunner { child, port, provider, accounts, log_filename, contract })
     }
 
     pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
         &self.provider
     }
 
+    pub fn endpoint(&self) -> String {
+        format!("http://127.0.0.1:{}/", self.port)
+    }
+
     pub fn owned_provider(&self) -> JsonRpcClient<HttpTransport> {
-        let url = Url::parse(&format!("http://127.0.0.1:{}/", self.port))
-            .context("Failed to parse url")
-            .unwrap();
+        let url = Url::parse(&self.endpoint()).context("Failed to parse url").unwrap();
         JsonRpcClient::new(HttpTransport::new(url))
+    }
+
+    // A constract needs to be deployed only once for each instance
+    // In proptest runner is static but deployment would happen for each test, unless it is persisted here.
+    pub async fn set_contract(&self, contract_address: FieldElement) {
+        let mut lock = self.contract.lock().await;
+        *lock = Some(contract_address);
+    }
+
+    pub async fn contract(&self) -> Option<FieldElement> {
+        *self.contract.lock().await
     }
 }
 

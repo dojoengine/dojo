@@ -34,11 +34,11 @@ pub fn log(name: &str, gas: u64, calldata: &str) {
     file.flush().unwrap();
 }
 
-pub fn parse_calls(calls: Vec<BenchCall>, to: &FieldElement) -> Vec<Call> {
+pub fn parse_calls(calls: Vec<BenchCall>, to: FieldElement) -> Vec<Call> {
     calls
         .into_iter()
         .map(|BenchCall(name, calldata)| Call {
-            to: *to,
+            to,
             selector: get_selector_from_name(name).context("Failed to get selector").unwrap(),
             calldata,
         })
@@ -51,8 +51,7 @@ pub async fn estimate_calls(account: &OwnerAccount, calls: Vec<Call>) -> Result<
         .nonce(cached_nonce(account).await)
         .estimate_fee()
         .await
-        .context("Failed to estimate fee")
-        .unwrap();
+        .context("Failed to estimate fee")?;
 
     Ok(fee.gas_consumed)
 }

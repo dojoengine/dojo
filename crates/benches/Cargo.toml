@@ -22,9 +22,13 @@ starknet.workspace = true
 tokio.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = "1.0.111"
+clap.workspace = true
+scarb.workspace = true
+dojo-lang.workspace = true
+dojo-world.workspace = true
 
 [features]
-default = ["benchmarks"]
-benchmarks = ["skip-katana-benchmarks", "skip-gas-benchmarks"]
+default = []
+skip-benchmarks = ["skip-katana-benchmarks", "skip-gas-benchmarks"]
 skip-katana-benchmarks = []
 skip-gas-benchmarks = []

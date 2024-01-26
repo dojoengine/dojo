@@ -15,7 +15,7 @@ use crate::{parse_calls, BenchCall, ENOUGH_GAS};
 async fn spam_no_stats(
     runner: &KatanaRunner,
     accounts: &[SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>],
-    contract_address: &FieldElement,
+    contract_address: FieldElement,
     calldata: Vec<BenchCall>,
     wait_time: Duration,
 ) -> FieldElement {
@@ -62,17 +62,17 @@ pub async fn spam_katana(
 
     let calls = match sequential {
         true => {
-            let calls = parse_calls(calldata, &contract_address);
+            let calls = parse_calls(calldata, contract_address);
             calldata = vec![];
             calls
         }
-        false => parse_calls(vec![calldata.pop().unwrap()], &contract_address),
+        false => parse_calls(vec![calldata.pop().unwrap()], contract_address),
     };
 
     let expected_transactions = (calldata.len() + 1) * accounts.len();
 
     // transactions preparing for the benchmarked one
-    let nonce = spam_no_stats(&runner, &accounts, &contract_address, calldata, wait_time).await;
+    let nonce = spam_no_stats(&runner, &accounts, contract_address, calldata, wait_time).await;
 
     // the benchmarked transaction
     let final_transactions = accounts

@@ -1,11 +1,14 @@
 use std::env;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Ok, Result};
+use anyhow::{anyhow, bail, Context, Ok, Result};
 use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::Manifest;
+use futures::executor::block_on;
 use scarb::compiler::CompilerRepository;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
@@ -14,7 +17,63 @@ use sozo::ops::migration;
 use starknet::core::types::FieldElement;
 use tokio::process::Command;
 
-use crate::KatanaRunner;
+use katana_runner::KatanaRunner;
+
+use crate::{CONTRACT, CONTRACT_RELATIVE_TO_TESTS, RUNTIME};
+
+pub async fn deploy(runner: &KatanaRunner) -> Result<FieldElement> {
+    if let Some(contract) = runner.contract().await {
+        return Ok(contract);
+    }
+
+    let contract = if PathBuf::from(CONTRACT.0).exists() {
+        CONTRACT
+    } else {
+        if !PathBuf::from(CONTRACT_RELATIVE_TO_TESTS.0).exists() {
+            bail!("manifest not found")
+        }
+        // calls in the `tests` dir use paths relative to itselfs
+        CONTRACT_RELATIVE_TO_TESTS
+    };
+
+    let address = deploy_contract(runner, contract).await?;
+    runner.set_contract(address).await;
+    Ok(address)
+}
+
+pub fn deploy_sync(runner: &Arc<KatanaRunner>) -> Result<FieldElement> {
+    let _rt = RUNTIME.enter();
+    block_on(async move { deploy(&runner).await })
+}
+
+async fn deploy_contract(
+    runner: &KatanaRunner,
+    manifest_and_script: (&str, &str),
+) -> Result<FieldElement> {
+    let args = SozoArgs::parse_from([
+        "sozo",
+        "migrate",
+        "--rpc-url",
+        &runner.endpoint(),
+        "--manifest-path",
+        manifest_and_script.0,
+    ]);
+
+    let constract_address = prepare_migration_args(args).await?;
+
+    let out = Command::new("bash")
+        .arg(manifest_and_script.1)
+        .env("RPC_URL", &runner.endpoint())
+        .output()
+        .await
+        .context("failed to start script subprocess")?;
+
+    if !out.status.success() {
+        return Err(anyhow::anyhow!("script failed {:?}", out));
+    }
+
+    Ok(constract_address)
+}
 
 async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
     // Preparing config, as in https://github.com/dojoengine/dojo/blob/25fbb7fc973cff4ce1273625c4664545d9b088e9/bin/sozo/src/main.rs#L28-L29
@@ -61,34 +120,4 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
 
     migration::execute(&ws, migrate, target_dir).await?;
     Ok(manifest.contracts[0].address.unwrap())
-}
-
-impl KatanaRunner {
-    pub async fn deploy(&self, manifest: &str, script: &str) -> Result<FieldElement> {
-        let rpc_url = &format!("http://localhost:{}", self.port);
-
-        let args = SozoArgs::parse_from([
-            "sozo",
-            "migrate",
-            "--rpc-url",
-            rpc_url,
-            "--manifest-path",
-            manifest,
-        ]);
-
-        let constract_address = prepare_migration_args(args).await?;
-
-        let out = Command::new("bash")
-            .arg(script)
-            .env("RPC_URL", rpc_url)
-            .output()
-            .await
-            .context("failed to start script subprocess")?;
-
-        if !out.status.success() {
-            return Err(anyhow::anyhow!("script failed {:?}", out));
-        }
-
-        Ok(constract_address)
-    }
 }
