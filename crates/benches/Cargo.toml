@@ -28,7 +28,7 @@ dojo-lang.workspace = true
 dojo-world.workspace = true
 
 [features]
-default = []
+default = ["skip-benchmarks"]
 skip-benchmarks = ["skip-katana-benchmarks", "skip-gas-benchmarks"]
 skip-katana-benchmarks = []
 skip-gas-benchmarks = []
