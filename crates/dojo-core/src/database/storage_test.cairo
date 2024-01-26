@@ -32,7 +32,16 @@ fn test_storage_empty() {
     let mut keys = ArrayTrait::new();
     assert(storage::get(0, keys.span()) == 0x0, 'Value should be 0');
     let many = storage::get_many(0, keys.span(), array![251, 251, 251].span()).unwrap();
-    assert(many.len() == 0x0, 'Array should be empty');
+    assert(many.len() == 0x3, 'Array should be len 3');
+    assert((*many[0]) == 0x0, 'Array[0] should be 0');
+    assert((*many[1]) == 0x0, 'Array[1] should be 0');
+    assert((*many[2]) == 0x0, 'Array[2] should be 0');
+
+    let many = storage::get_many(0, keys.span(), array![8, 8, 32].span()).unwrap();
+    assert(many.len() == 0x3, 'Array should be len 3');
+    assert((*many[0]) == 0x0, 'Array[0] should be 0');
+    assert((*many[1]) == 0x0, 'Array[1] should be 0');
+    assert((*many[2]) == 0x0, 'Array[2] should be 0');
 }
 
 #[test]

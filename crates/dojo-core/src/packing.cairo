@@ -79,6 +79,7 @@ fn pack_inner(
     ref packed: Array<felt252>
 ) {
     assert(packing_offset <= PACKING_MAX_BITS, 'Invalid packing offset');
+    assert(size <= PACKING_MAX_BITS, 'Invalid layout size');
 
     // Cannot use all 252 bits because some bit arrangements (eg. 11111...11111) are not valid felt252 values. 
     // Thus only 251 bits are used.                               ^-252 times-^

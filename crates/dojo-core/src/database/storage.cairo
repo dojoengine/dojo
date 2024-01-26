@@ -26,7 +26,20 @@ fn get_many(address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>) -> S
         };
 
     if len == 0 {
-        return SyscallResult::<Span<felt252>>::Ok(array![].span());
+        // If the len is 0, the storage segment has never been written.
+        // We then return an array of 0 corresponding to the unpacked length.
+        let mut empty = array![];
+        let mut i: usize = 0;
+        loop {
+            if i == layout.len() {
+                break;
+            }
+
+            empty.append(0);
+            i += 1;
+        };
+
+        return SyscallResult::<Span<felt252>>::Ok(empty.span());
     }
 
     let mut chunk = 0;
