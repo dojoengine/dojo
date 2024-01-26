@@ -51,7 +51,6 @@ impl TestSequencer {
 
         let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 
-        // let account = sequencer.backend.accounts[0].clone();
         let account = sequencer.backend.config.genesis.accounts().next().unwrap();
         let account = TestAccount {
             private_key: account.1.private_key().unwrap(),

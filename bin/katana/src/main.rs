@@ -57,7 +57,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 })
             )
         } else {
-            // let accounts = accounts.map(|a| format!("{a}")).collect::<Vec<_>>().join("\n");
             print_intro(
                 accounts,
                 config.starknet.seed.clone(),

@@ -20,8 +20,6 @@ fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
     (
         SequencerConfig { block_time: None, ..Default::default() },
         StarknetConfig {
-            // seed: [0u8; 32],
-            // total_accounts: 2,
             genesis: Arc::new(genesis),
             disable_fee: true,
             env: Environment::default(),

@@ -437,8 +437,12 @@ mod tests {
         );
         assert_eq!(genesis.universal_deployer.unwrap().class, None);
 
-        let acc_1 = ContractAddress::from(felt!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"));
-        let acc_2 = ContractAddress::from(felt!("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
+        let acc_1 = ContractAddress::from(felt!(
+            "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
+        ));
+        let acc_2 = ContractAddress::from(felt!(
+            "0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
+        ));
 
         assert_eq!(genesis.accounts.len(), 2);
         assert_eq!(genesis.accounts[&acc_1].public_key, felt!("0x1"));
@@ -461,19 +465,26 @@ mod tests {
 
         assert_eq!(genesis.contracts.len(), 2);
 
-        assert_eq!(
-            genesis.contracts[&ContractAddress::from(felt!("0xbaba"))].balance,
-            Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
-        );
-        assert_eq!(genesis.contracts[&ContractAddress::from(felt!("0xbaba"))].nonce, None);
-        assert_eq!(genesis.contracts[&ContractAddress::from(felt!("0xbaba"))].class, felt!("0x8"));
+        let contract_1 = ContractAddress::from(felt!(
+            "0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af"
+        ));
+        let contract_2 = ContractAddress::from(felt!(
+            "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
+        ));
 
         assert_eq!(
-            genesis.contracts[&ContractAddress::from(felt!("0xbab1"))].balance,
+            genesis.contracts[&contract_1].balance,
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
-        assert_eq!(genesis.contracts[&ContractAddress::from(felt!("0xbab1"))].nonce, None);
-        assert_eq!(genesis.contracts[&ContractAddress::from(felt!("0xbab1"))].class, felt!("0x8"));
+        assert_eq!(genesis.contracts[&contract_1].nonce, None);
+        assert_eq!(genesis.contracts[&contract_1].class, felt!("0x8"));
+
+        assert_eq!(
+            genesis.contracts[&contract_2].balance,
+            Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
+        );
+        assert_eq!(genesis.contracts[&contract_2].nonce, None);
+        assert_eq!(genesis.contracts[&contract_2].class, felt!("0x8"));
 
         assert_eq!(
             genesis.classes,
@@ -553,9 +564,22 @@ mod tests {
             class_hash: felt!("0x8"),
         };
 
+        let acc_1 = ContractAddress::from(felt!(
+            "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
+        ));
+        let acc_2 = ContractAddress::from(felt!(
+            "0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
+        ));
+        let contract_1 = ContractAddress::from(felt!(
+            "0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af"
+        ));
+        let contract_2 = ContractAddress::from(felt!(
+            "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
+        ));
+
         let allocations = HashMap::from([
             (
-                ContractAddress::from(felt!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")),
+                acc_1,
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x1"),
                     balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
@@ -568,7 +592,7 @@ mod tests {
                 })),
             ),
             (
-                ContractAddress::from(felt!("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")),
+                acc_2,
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
                     balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
@@ -578,7 +602,7 @@ mod tests {
                 })),
             ),
             (
-                ContractAddress::from(felt!("0xbaba")),
+                contract_1,
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
                     nonce: None,
@@ -590,7 +614,7 @@ mod tests {
                 }),
             ),
             (
-                ContractAddress::from(felt!("0xbab1")),
+                contract_2,
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
                     nonce: None,
@@ -668,7 +692,7 @@ mod tests {
             },
             "universalDeployer": {},
             "accounts": {
-                "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
+                "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a": {
                     "publicKey": "0x1",
                     "balance": "0xD3C21BCECCEDA1000000"
                 }
@@ -723,7 +747,9 @@ mod tests {
         };
 
         let allocations = HashMap::from([(
-            ContractAddress::from(felt!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")),
+            ContractAddress::from(felt!(
+                "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
+            )),
             GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                 public_key: felt!("0x1"),
                 balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
