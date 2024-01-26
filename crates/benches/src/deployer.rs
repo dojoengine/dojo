@@ -9,6 +9,7 @@ use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::Manifest;
 use futures::executor::block_on;
+use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
@@ -16,8 +17,6 @@ use sozo::args::{Commands, SozoArgs};
 use sozo::ops::migration;
 use starknet::core::types::FieldElement;
 use tokio::process::Command;
-
-use katana_runner::KatanaRunner;
 
 use crate::{CONTRACT, CONTRACT_RELATIVE_TO_TESTS, RUNTIME};
 
@@ -43,7 +42,7 @@ pub async fn deploy(runner: &KatanaRunner) -> Result<FieldElement> {
 
 pub fn deploy_sync(runner: &Arc<KatanaRunner>) -> Result<FieldElement> {
     let _rt = RUNTIME.enter();
-    block_on(async move { deploy(&runner).await })
+    block_on(async move { deploy(runner).await })
 }
 
 async fn deploy_contract(

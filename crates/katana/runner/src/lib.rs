@@ -130,7 +130,8 @@ impl KatanaRunner {
     }
 
     // A constract needs to be deployed only once for each instance
-    // In proptest runner is static but deployment would happen for each test, unless it is persisted here.
+    // In proptest runner is static but deployment would happen for each test, unless it is
+    // persisted here.
     pub async fn set_contract(&self, contract_address: FieldElement) {
         let mut lock = self.contract.lock().await;
         *lock = Some(contract_address);

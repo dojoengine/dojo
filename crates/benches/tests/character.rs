@@ -3,7 +3,6 @@ pub use benches::{
     deploy, deploy_sync, estimate_gas, estimate_gas_last, log, runner, BenchCall, FieldElement,
     CONTRACT,
 };
-
 #[cfg(not(feature = "skip-gas-benchmarks"))]
 pub use proptest::prelude::*;
 
