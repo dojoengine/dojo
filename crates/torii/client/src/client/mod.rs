@@ -104,7 +104,7 @@ impl Client {
     /// Subscribes to a topic.
     /// Returns true if the topic was subscribed to.
     /// Returns false if the topic was already subscribed to.
-    pub async fn subscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
+    pub async fn subscribe_topic(&self, topic: String) -> Result<bool, Error> {
         self.relay_client
             .lock()
             .await
@@ -116,7 +116,7 @@ impl Client {
 
     /// Unsubscribes from a topic.
     /// Returns true if the topic was subscribed to.
-    pub async fn unsubscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
+    pub async fn unsubscribe_topic(&self, topic: String) -> Result<bool, Error> {
         self.relay_client
             .lock()
             .await
@@ -128,7 +128,7 @@ impl Client {
 
     /// Publishes a message to a topic.
     /// Returns the message id.
-    pub async fn publish_message(&mut self, topic: &str, message: &[u8]) -> Result<Vec<u8>, Error> {
+    pub async fn publish_message(&self, topic: &str, message: &[u8]) -> Result<Vec<u8>, Error> {
         self.relay_client
             .lock()
             .await
@@ -141,7 +141,7 @@ impl Client {
 
     /// Runs the libp2p event loop which processes incoming messages and commands.
     /// And sends events in the channel
-    pub async fn run_libp2p(&mut self) {
+    pub async fn run_libp2p(&self) {
         self.relay_client.lock().await.event_loop.run().await;
     }
 
