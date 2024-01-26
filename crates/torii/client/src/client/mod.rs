@@ -38,7 +38,7 @@ pub struct Client {
     /// The grpc client.
     inner: AsyncRwLock<torii_grpc::client::WorldClient>,
     /// Libp2p client.
-    relay_client: torii_relay::client::RelayClient,
+    relay_client: Mutex<torii_relay::client::RelayClient>,
     /// Model storage
     storage: Arc<ModelStorage>,
     /// Models the client are subscribed to.
@@ -96,7 +96,7 @@ impl Client {
             metadata: shared_metadata,
             sub_client_handle: OnceCell::new(),
             inner: AsyncRwLock::new(grpc_client),
-            relay_client: libp2p_client,
+            relay_client: Mutex::new(libp2p_client),
             subscribed_models: subbed_models,
         })
     }
@@ -105,19 +105,33 @@ impl Client {
     /// Returns true if the topic was subscribed to.
     /// Returns false if the topic was already subscribed to.
     pub async fn subscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
-        self.relay_client.command_sender.subscribe(topic).await.map_err(Error::RelayClient)
+        self.relay_client
+            .lock()
+            .await
+            .command_sender
+            .subscribe(topic)
+            .await
+            .map_err(Error::RelayClient)
     }
 
     /// Unsubscribes from a topic.
     /// Returns true if the topic was subscribed to.
     pub async fn unsubscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
-        self.relay_client.command_sender.unsubscribe(topic).await.map_err(Error::RelayClient)
+        self.relay_client
+            .lock()
+            .await
+            .command_sender
+            .unsubscribe(topic)
+            .await
+            .map_err(Error::RelayClient)
     }
 
     /// Publishes a message to a topic.
     /// Returns the message id.
     pub async fn publish_message(&mut self, topic: &str, message: &[u8]) -> Result<Vec<u8>, Error> {
         self.relay_client
+            .lock()
+            .await
             .command_sender
             .publish(topic.to_string(), message.to_vec())
             .await
@@ -128,11 +142,11 @@ impl Client {
     /// Runs the libp2p event loop which processes incoming messages and commands.
     /// And sends events in the channel
     pub async fn run_libp2p(&mut self) {
-        self.relay_client.event_loop.run().await;
+        self.relay_client.lock().await.event_loop.run().await;
     }
 
-    pub fn libp2p_message_stream(&self) -> Arc<Mutex<UnboundedReceiver<Message>>> {
-        self.relay_client.message_receiver.clone()
+    pub async fn libp2p_message_stream(&self) -> Arc<Mutex<UnboundedReceiver<Message>>> {
+        self.relay_client.lock().await.message_receiver.clone()
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.
