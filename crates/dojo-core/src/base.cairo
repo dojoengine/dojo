@@ -28,7 +28,7 @@ mod base {
         self.world_dispatcher.write(IWorldDispatcher { contract_address: get_caller_address() });
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl WorldProviderImpl of IWorldProvider<ContractState> {
         fn world(self: @ContractState) -> IWorldDispatcher {
             self.world_dispatcher.read()

@@ -53,7 +53,7 @@ mod bar {
         self.world.write(IWorldDispatcher { contract_address: world })
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl IbarImpl of super::Ibar<ContractState> {
         fn set_foo(self: @ContractState, a: felt252, b: u128) {
             set!(self.world.read(), Foo { caller: get_caller_address(), a, b });
@@ -503,7 +503,7 @@ mod worldupgrade {
         world: IWorldDispatcher,
     }
     
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl IWorldUpgradeImpl of super::IWorldUpgrade<ContractState> {
         fn hello(self: @ContractState) -> felt252{
             'dojo'

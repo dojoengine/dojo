@@ -10,18 +10,17 @@ use tokio_stream::StreamExt;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::types::Entity;
 
-use super::connection::{connection_arguments, connection_output, parse_connection_arguments};
-use super::inputs::keys_input::{keys_argument, parse_keys_argument};
-use super::{ObjectTrait, TypeMapping, ValueMapping};
-use crate::constants::{ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN};
+use super::inputs::keys_input::keys_argument;
+use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
+use crate::constants::{ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN};
 use crate::mapping::ENTITY_TYPE_MAPPING;
-use crate::query::data::{count_rows, fetch_multiple_rows};
+use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
 use crate::utils::extract;
 pub struct EntityObject;
 
-impl ObjectTrait for EntityObject {
+impl BasicObject for EntityObject {
     fn name(&self) -> (&str, &str) {
         ENTITY_NAMES
     }
@@ -34,54 +33,31 @@ impl ObjectTrait for EntityObject {
         &ENTITY_TYPE_MAPPING
     }
 
-    fn table_name(&self) -> Option<&str> {
-        Some(ENTITY_TABLE)
-    }
-
     fn related_fields(&self) -> Option<Vec<Field>> {
         Some(vec![model_union_field()])
     }
+}
 
-    fn resolve_many(&self) -> Option<Field> {
-        let mut field = Field::new(
-            self.name().1,
-            TypeRef::named(format!("{}Connection", self.type_name())),
-            |ctx| {
-                FieldFuture::new(async move {
-                    let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
-                    let connection = parse_connection_arguments(&ctx)?;
-                    let keys = parse_keys_argument(&ctx)?;
-                    let total_count = count_rows(&mut conn, ENTITY_TABLE, &keys, &None).await?;
-                    let (data, page_info) = fetch_multiple_rows(
-                        &mut conn,
-                        ENTITY_TABLE,
-                        EVENT_ID_COLUMN,
-                        &keys,
-                        &None,
-                        &None,
-                        &connection,
-                        total_count,
-                    )
-                    .await?;
-                    let results = connection_output(
-                        &data,
-                        &ENTITY_TYPE_MAPPING,
-                        &None,
-                        EVENT_ID_COLUMN,
-                        total_count,
-                        false,
-                        page_info,
-                    )?;
-
-                    Ok(Some(Value::Object(results)))
-                })
-            },
+impl ResolvableObject for EntityObject {
+    fn resolvers(&self) -> Vec<Field> {
+        let resolve_one = resolve_one(
+            ENTITY_TABLE,
+            ID_COLUMN,
+            self.name().0,
+            self.type_name(),
+            self.type_mapping(),
         );
 
-        field = connection_arguments(field);
-        field = keys_argument(field);
+        let mut resolve_many = resolve_many(
+            ENTITY_TABLE,
+            EVENT_ID_COLUMN,
+            self.name().1,
+            self.type_name(),
+            self.type_mapping(),
+        );
+        resolve_many = keys_argument(resolve_many);
 
-        Some(field)
+        vec![resolve_one, resolve_many]
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {

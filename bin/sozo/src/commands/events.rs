@@ -64,7 +64,6 @@ impl EventsArgs {
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-            // TODO: Check the updated scarb way to read profile specific values
             dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
         } else {
             None
@@ -131,5 +130,14 @@ mod test {
         assert!(arg.from_block.is_none());
         assert!(arg.to_block.is_none());
         assert!(arg.chunk_size == 1);
+    }
+
+    #[test]
+    fn extract_events_work_as_expected() {
+        let manifest = Manifest::load_from_path("./tests/test_data/manifest.json").unwrap();
+        let result = extract_events(&manifest);
+
+        // we are just collection all events from manifest file so just verifying count should work
+        assert!(result.len() == 13);
     }
 }

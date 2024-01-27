@@ -211,7 +211,7 @@ mod appchain_messaging {
         starknet_keccak(hash_data.span())
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl AppchainMessagingUpgradeImpl of IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, class_hash: ClassHash) {
             assert(
@@ -225,7 +225,7 @@ mod appchain_messaging {
         }
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl AppchainMessagingImpl of IAppchainMessaging<ContractState> {
         fn update_appchain_account_address(
             ref self: ContractState, appchain_address: ContractAddress

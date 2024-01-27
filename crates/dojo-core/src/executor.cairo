@@ -21,7 +21,7 @@ mod executor {
     #[storage]
     struct Storage {}
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl Executor of IExecutor<ContractState> {
         /// Call the provided `entrypoint` method on the given `class_hash`.
         ///
