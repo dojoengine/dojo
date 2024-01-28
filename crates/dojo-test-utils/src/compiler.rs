@@ -11,7 +11,7 @@ use scarb::ops;
 use scarb_ui::Verbosity;
 
 pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
-    let mut compilers = CompilerRepository::empty();
+    let mut compilers = CompilerRepository::std();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
     let cairo_plugins = CairoPluginRepository::default();

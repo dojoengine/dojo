@@ -295,6 +295,9 @@ fn update_manifest(
         }
     }
 
+    &models.iter().for_each(|model| println!("Model: {}", model.0));
+    &contracts.iter().for_each(|contract| println!("Contract: {}", contract.0));
+
     computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
         let contract_data =
             contracts.get_mut(&contract).expect("Error: Computed value contract doesn't exist.");
