@@ -1,8 +1,8 @@
 name = "dojo_examples::models::position"
-class_hash = "0x41b29bc6a73b6e963cff7f49c597e78d49f4353ff6d0c7c1bdfec8b3949dcf0"
-abi = "../../abis/position.json"
 
 [kind.contract]
+class_hash = "0x41b29bc6a73b6e963cff7f49c597e78d49f4353ff6d0c7c1bdfec8b3949dcf0"
+abi = "../../abis/position.json"
 reads = []
 writes = []
 computed = []

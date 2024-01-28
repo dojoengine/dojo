@@ -231,7 +231,7 @@ fn update_manifest(
         let abi_relative_path =
             Utf8PathBuf::new().join("../../abis").join(name).with_extension("json");
         if abi.is_some() {
-            manifest.abi = Some(abi_relative_path.to_string());
+            manifest.set_abi(Some(abi_relative_path.to_string()));
         }
 
         let manifest_toml = toml::to_string(&manifest)?;
@@ -267,10 +267,8 @@ fn update_manifest(
         &abi_dir,
         &mut Manifest {
             // abi path will be written by `write_manifest`
-            kind: ManifestKind::Class(Class {}),
+            kind: ManifestKind::Class(Class { class_hash: *hash, abi: None }),
             name: WORLD_CONTRACT_NAME.into(),
-            class_hash: *hash,
-            abi: None,
         },
         abi,
     )?;
@@ -280,10 +278,8 @@ fn update_manifest(
         &manifests_dir,
         &abi_dir,
         &mut Manifest {
-            kind: ManifestKind::Class(Class {}),
+            kind: ManifestKind::Class(Class { class_hash: *hash, abi: None }),
             name: EXECUTOR_CONTRACT_NAME.into(),
-            class_hash: *hash,
-            abi: None,
         },
         abi,
     )?;
@@ -293,10 +289,8 @@ fn update_manifest(
         &manifests_dir,
         &abi_dir,
         &mut Manifest {
-            kind: ManifestKind::Class(Class {}),
+            kind: ManifestKind::Class(Class { class_hash: *hash, abi: None }),
             name: BASE_CONTRACT_NAME.into(),
-            class_hash: *hash,
-            abi: None,
         },
         abi,
     )?;
@@ -402,11 +396,11 @@ fn get_dojo_model_artifacts(
                     (
                         Manifest {
                             kind: ManifestKind::Model(dojo_world::manifest::Model {
+                                class_hash,
+                                abi: None,
                                 members: model.members.clone(),
                             }),
-                            class_hash,
                             name: model_full_name.into(),
-                            abi: None,
                         },
                         abi,
                     ),
@@ -485,11 +479,11 @@ fn get_dojo_contract_artifacts(
                         kind: ManifestKind::Contract(Contract {
                             writes,
                             reads,
+                            class_hash,
+                            abi: None,
                             ..Default::default()
                         }),
                         name: module_name.into(),
-                        class_hash,
-                        abi: None,
                     },
                     abi,
                 ),

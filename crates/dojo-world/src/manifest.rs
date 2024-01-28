@@ -69,6 +69,9 @@ impl From<dojo_types::schema::Member> for Member {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Model {
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    pub abi: Option<String>,
     pub members: Vec<Member>,
 }
 
@@ -86,6 +89,9 @@ pub struct ComputedValueEntrypoint {
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Contract {
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    pub abi: Option<String>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
     pub reads: Vec<String>,
@@ -95,16 +101,51 @@ pub struct Contract {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Class {}
+pub struct Class {
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    pub abi: Option<String>,
+}
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct Manifest {
     pub kind: ManifestKind,
     pub name: SmolStr,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub abi: Option<String>,
+}
+
+impl Manifest {
+    pub fn class_hash(&self) -> FieldElement {
+        match &self.kind {
+            ManifestKind::Class(class) => class.class_hash,
+            ManifestKind::Contract(contract) => contract.class_hash,
+            ManifestKind::Model(model) => model.class_hash,
+        }
+    }
+
+    pub fn abi(&self) -> Option<&String> {
+        match &self.kind {
+            ManifestKind::Class(class) => class.abi.as_ref(),
+            ManifestKind::Contract(contract) => contract.abi.as_ref(),
+            ManifestKind::Model(model) => model.abi.as_ref(),
+        }
+    }
+
+    pub fn set_class_hash(&mut self, class_hash: FieldElement) {
+        match &mut self.kind {
+            ManifestKind::Class(class) => class.class_hash = class_hash,
+            ManifestKind::Contract(contract) => contract.class_hash = class_hash,
+            ManifestKind::Model(model) => model.class_hash = class_hash,
+        }
+    }
+
+    pub fn set_abi(&mut self, abi: Option<String>) {
+        match &mut self.kind {
+            ManifestKind::Class(class) => class.abi = abi,
+            ManifestKind::Contract(contract) => contract.abi = abi,
+            ManifestKind::Model(model) => model.abi = abi,
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
@@ -208,27 +249,25 @@ impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for World {
             contracts,
             world: Manifest {
                 name: WORLD_CONTRACT_NAME.into(),
-                class_hash: world_class_hash,
                 kind: ManifestKind::Contract(Contract {
                     address: Some(world_address),
+                    class_hash: world_class_hash,
+                    abi: None,
                     ..Default::default()
                 }),
-                abi: None,
             },
             executor: Manifest {
                 name: EXECUTOR_CONTRACT_NAME.into(),
-                class_hash: executor_class_hash,
                 kind: ManifestKind::Contract(Contract {
                     address: Some(executor_address.into()),
+                    class_hash: executor_class_hash,
+                    abi: None,
                     ..Default::default()
                 }),
-                abi: None,
             },
             base: Manifest {
                 name: BASE_CONTRACT_NAME.into(),
-                class_hash: base_class_hash.into(),
-                kind: ManifestKind::Class(Class {}),
-                abi: None,
+                kind: ManifestKind::Class(Class { class_hash: base_class_hash.into(), abi: None }),
             },
         })
     }
@@ -384,11 +423,11 @@ fn parse_contracts_events(
             Manifest {
                 kind: ManifestKind::Contract(Contract {
                     address: Some(address),
+                    class_hash,
+                    abi: None,
                     ..Default::default()
                 }),
-                class_hash,
                 name: Default::default(),
-                abi: None,
             }
         })
         .collect()
@@ -418,10 +457,8 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest> {
     models
         .into_iter()
         .map(|(name, class_hash)| Manifest {
-            kind: ManifestKind::Model(Model { ..Default::default() }),
+            kind: ManifestKind::Model(Model { class_hash, abi: None, ..Default::default() }),
             name: name.into(),
-            class_hash,
-            abi: None,
         })
         .collect()
 }
