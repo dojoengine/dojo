@@ -78,8 +78,8 @@ torii-client = { path = "crates/torii/client" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
-torii-server = { path = "crates/torii/server" }
 torii-relay = { path = "crates/torii/libp2p" }
+torii-server = { path = "crates/torii/server" }
 
 # sozo
 sozo-signers = { path = "crates/sozo/signers" }
@@ -152,6 +152,7 @@ toml = "0.7.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = "2.4.0"
+walkdir = "2"
 
 # server
 hyper = "0.14.27"

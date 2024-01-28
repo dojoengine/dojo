@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+use std::fs;
 
 use ::serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use cainome::cairo_serde::Error as CainomeError;
+use camino::Utf8PathBuf;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -165,43 +167,59 @@ pub struct World {
     pub models: Vec<Manifest>,
 }
 
-// impl World {
-//     pub fn load_deployed_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
-//         Ok(World {
-//             world: todo!(),
-//             executor: todo!(),
-//             base: todo!(),
-//             contracts: todo!(),
-//             models: todo!(),
-//         })
-//     }
+impl World {
+    // here expected path is path to the folder that contains manifest file
+    pub fn load_deployed_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
+        let base_dir = Utf8PathBuf::new().join(path).join("manifest").join("deployed");
+        Self::load_from_path(base_dir)
+    }
 
-// pub fn load_base_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
-//     let base_dir = Utf8PathBuf::new().join(path).join("manifest").join("base");
-//     let contract_dir =
-//         Utf8PathBuf::new().join(path).join("manifest").join("base").join("contracts");
-//     let model_dir =
-//         Utf8PathBuf::new().join(path).join("manifest").join("base").join("contracts");
+    // here expected path is path to the folder that contains manifest file
+    pub fn load_base_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
+        let base_dir = Utf8PathBuf::new().join(path).join("manifest").join("base");
+        Self::load_from_path(base_dir)
+    }
 
-//     let world: Manifest =
-//         toml::from_str(&fs::read_to_string(base_dir.join("world.toml"))?).unwrap();
-//     let executor: Manifest =
-//         toml::from_str(&fs::read_to_string(base_dir.join("executor.toml"))?).unwrap();
-//     let base: Manifest =
-//         toml::from_str(&fs::read_to_string(base_dir.join("base.toml"))?).unwrap();
+    fn load_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
+        let contract_dir = path.join("contracts");
+        let model_dir = path.join("models");
 
-//     contract_dir.iter()
+        let world: Manifest =
+            toml::from_str(&fs::read_to_string(path.join("world.toml"))?).unwrap();
+        let executor: Manifest =
+            toml::from_str(&fs::read_to_string(path.join("executor.toml"))?).unwrap();
+        let base: Manifest = toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
 
-//     Ok(World { world, executor, base, contracts: todo!(), models: todo!() })
-// }
+        let contracts = Self::manifests_from_path(contract_dir)?;
+        let models = Self::manifests_from_path(model_dir)?;
 
-// Writes the manifest into a file at the given path. Will return error if the file doesn't
-// exist.
-// pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-//     let fd = fs::File::options().write(true).open(path)?;
-//     Ok(serde_json::to_writer_pretty(fd, &self)?)
-// }
-// }
+        Ok(World { world, executor, base, contracts, models })
+    }
+
+    fn manifests_from_path(path: Utf8PathBuf) -> Result<Vec<Manifest>, std::io::Error> {
+        let mut manifests = vec![];
+
+        for entry in path.read_dir()? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                let manifest: Manifest = toml::from_str(&fs::read_to_string(path)?).unwrap();
+                manifests.push(manifest);
+            } else {
+                continue;
+            }
+        }
+
+        Ok(manifests)
+    }
+
+    // Writes the manifest into a file at the given path. Will return error if the file doesn't
+    // exist.
+    // pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
+    //     let fd = fs::File::options().write(true).open(path)?;
+    //     Ok(serde_json::to_writer_pretty(fd, &self)?)
+    // }
+}
 
 #[async_trait]
 pub trait RemoteLoadable<P: Provider + Sync + Send + 'static> {
