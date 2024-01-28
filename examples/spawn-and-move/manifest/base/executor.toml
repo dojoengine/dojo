@@ -2,4 +2,4 @@ name = "dojo::executor::executor"
 class_hash = "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d"
 abi = "../../abis/executor.json"
 
-[kind.Class]
+[kind.class]

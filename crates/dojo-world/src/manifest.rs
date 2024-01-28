@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::marker::PhantomData;
 
 use ::serde::{Deserialize, Serialize};
 use async_trait::async_trait;
@@ -109,6 +108,7 @@ pub struct Manifest {
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[serde(rename_all = "snake_case")]
 pub enum ManifestKind {
     Class(Class),
     Contract(Contract),
@@ -124,34 +124,42 @@ pub struct World {
     pub models: Vec<Manifest>,
 }
 
-// we wont be writing the whole `World` to file so these are no longer required
 // impl World {
-//     /// Load the manifest from a file at the given path.
-//     pub fn load_from_path(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
-//         let file = fs::File::open(path)?;
-//         Ok(Self::try_from(file)?)
+//     pub fn load_deployed_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
+//         Ok(World {
+//             world: todo!(),
+//             executor: todo!(),
+//             base: todo!(),
+//             contracts: todo!(),
+//             models: todo!(),
+//         })
 //     }
 
-//     /// Writes the manifest into a file at the given path. Will return error if the file doesn't
-//     /// exist.
-//     pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-//         let fd = fs::File::options().write(true).open(path)?;
-//         Ok(serde_json::to_writer_pretty(fd, &self)?)
-//     }
+// pub fn load_base_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
+//     let base_dir = Utf8PathBuf::new().join(path).join("manifest").join("base");
+//     let contract_dir =
+//         Utf8PathBuf::new().join(path).join("manifest").join("base").join("contracts");
+//     let model_dir =
+//         Utf8PathBuf::new().join(path).join("manifest").join("base").join("contracts");
+
+//     let world: Manifest =
+//         toml::from_str(&fs::read_to_string(base_dir.join("world.toml"))?).unwrap();
+//     let executor: Manifest =
+//         toml::from_str(&fs::read_to_string(base_dir.join("executor.toml"))?).unwrap();
+//     let base: Manifest =
+//         toml::from_str(&fs::read_to_string(base_dir.join("base.toml"))?).unwrap();
+
+//     contract_dir.iter()
+
+//     Ok(World { world, executor, base, contracts: todo!(), models: todo!() })
 // }
 
-// impl TryFrom<std::fs::File> for World {
-//     type Error = serde_json::Error;
-//     fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
-//         serde_json::from_reader(std::io::BufReader::new(file))
-//     }
+// Writes the manifest into a file at the given path. Will return error if the file doesn't
+// exist.
+// pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
+//     let fd = fs::File::options().write(true).open(path)?;
+//     Ok(serde_json::to_writer_pretty(fd, &self)?)
 // }
-
-// impl TryFrom<&std::fs::File> for World {
-//     type Error = serde_json::Error;
-//     fn try_from(file: &std::fs::File) -> Result<Self, Self::Error> {
-//         serde_json::from_reader(std::io::BufReader::new(file))
-//     }
 // }
 
 #[async_trait]

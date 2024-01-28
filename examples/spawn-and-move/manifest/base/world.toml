@@ -2,4 +2,4 @@ name = "dojo::world::world"
 class_hash = "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497"
 abi = "../../abis/world.json"
 
-[kind.Class]
+[kind.class]

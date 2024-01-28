@@ -217,7 +217,7 @@ fn update_manifest(
     fn write_manifest(
         manifest_base: &Utf8PathBuf,
         abi_base: &Utf8PathBuf,
-        mut manifest: Manifest,
+        manifest: &mut Manifest,
         abi: &Option<abi::Contract>,
     ) -> anyhow::Result<()> {
         let parts: Vec<&str> = manifest.name.split("::").collect();
@@ -265,7 +265,7 @@ fn update_manifest(
     write_manifest(
         &manifests_dir,
         &abi_dir,
-        Manifest {
+        &mut Manifest {
             // abi path will be written by `write_manifest`
             kind: ManifestKind::Class(Class {}),
             name: WORLD_CONTRACT_NAME.into(),
@@ -279,7 +279,7 @@ fn update_manifest(
     write_manifest(
         &manifests_dir,
         &abi_dir,
-        Manifest {
+        &mut Manifest {
             kind: ManifestKind::Class(Class {}),
             name: EXECUTOR_CONTRACT_NAME.into(),
             class_hash: *hash,
@@ -292,7 +292,7 @@ fn update_manifest(
     write_manifest(
         &manifests_dir,
         &abi_dir,
-        Manifest {
+        &mut Manifest {
             kind: ManifestKind::Class(Class {}),
             name: BASE_CONTRACT_NAME.into(),
             class_hash: *hash,
@@ -346,7 +346,7 @@ fn update_manifest(
     computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
         let contract_data =
             contracts.get_mut(&contract).expect("Error: Computed value contract doesn't exist.");
-        match contract_data.kind {
+        match contract_data.0.kind {
             ManifestKind::Contract(ref mut contract) => {
                 contract.computed = computed_value_entrypoint;
             }
@@ -356,6 +356,19 @@ fn update_manifest(
 
     for model in &models {
         contracts.remove(model.0.as_str());
+    }
+
+    for (_, (manifest, abi)) in contracts.iter_mut() {
+        write_manifest(
+            &manifests_dir.join("contracts"),
+            &abi_dir.join("contracts"),
+            manifest,
+            abi,
+        )?;
+    }
+
+    for (_, (manifest, abi)) in models.iter_mut() {
+        write_manifest(&manifests_dir.join("models"), &abi_dir.join("models"), manifest, abi)?;
     }
 
     Ok(())
@@ -368,7 +381,7 @@ fn get_dojo_model_artifacts(
     aux_data: &DojoAuxData,
     module_id: ModuleId,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
-) -> anyhow::Result<HashMap<String, Manifest>> {
+) -> anyhow::Result<HashMap<String, (Manifest, Option<abi::Contract>)>> {
     let mut models = HashMap::with_capacity(aux_data.models.len());
 
     let module_name = module_id.full_path(db);
@@ -383,17 +396,20 @@ fn get_dojo_model_artifacts(
 
             let compiled_class = compiled_classes.get(model_full_name.as_str()).cloned();
 
-            if let Some((class_hash, _)) = compiled_class {
+            if let Some((class_hash, abi)) = compiled_class {
                 models.insert(
                     model_full_name.clone(),
-                    Manifest {
-                        kind: ManifestKind::Model(dojo_world::manifest::Model {
-                            members: model.members.clone(),
-                        }),
-                        class_hash,
-                        name: model_full_name.into(),
-                        abi: None,
-                    },
+                    (
+                        Manifest {
+                            kind: ManifestKind::Model(dojo_world::manifest::Model {
+                                members: model.members.clone(),
+                            }),
+                            class_hash,
+                            name: model_full_name.into(),
+                            abi: None,
+                        },
+                        abi,
+                    ),
                 );
             } else {
                 println!("Model {} not found in target.", model_full_name.clone());
@@ -431,7 +447,7 @@ fn get_dojo_contract_artifacts(
     module_id: &ModuleId,
     aux_data: &StarkNetContractAuxData,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
-) -> anyhow::Result<HashMap<SmolStr, Manifest>> {
+) -> anyhow::Result<HashMap<SmolStr, (Manifest, Option<abi::Contract>)>> {
     aux_data
         .contracts
         .iter()
@@ -457,19 +473,26 @@ fn get_dojo_contract_artifacts(
                 None => vec![],
             };
 
-            let (class_hash, _) = compiled_classes
+            let (class_hash, abi) = compiled_classes
                 .get(module_name)
                 .cloned()
                 .ok_or(anyhow!("Contract {name} not found in target."))?;
 
             Ok((
                 SmolStr::from(module_name),
-                Manifest {
-                    kind: ManifestKind::Contract(Contract { writes, reads, ..Default::default() }),
-                    name: module_name.into(),
-                    class_hash,
-                    abi: None,
-                },
+                (
+                    Manifest {
+                        kind: ManifestKind::Contract(Contract {
+                            writes,
+                            reads,
+                            ..Default::default()
+                        }),
+                        name: module_name.into(),
+                        class_hash,
+                        abi: None,
+                    },
+                    abi,
+                ),
             ))
         })
         .collect::<anyhow::Result<_>>()
