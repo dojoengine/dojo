@@ -284,6 +284,7 @@ fn update_manifest(
                 }
 
                 if let Some(dojo_aux_data) = aux_data.downcast_ref::<DojoAuxData>() {
+                    dbg!("found models!");
                     models.extend(get_dojo_model_artifacts(
                         db,
                         dojo_aux_data,
@@ -295,8 +296,8 @@ fn update_manifest(
         }
     }
 
-    &models.iter().for_each(|model| println!("Model: {}", model.0));
-    &contracts.iter().for_each(|contract| println!("Contract: {}", contract.0));
+    let _ = &models.iter().for_each(|model| println!("Model: {}", model.0));
+    let _ = &contracts.iter().for_each(|contract| println!("Contract: {}", contract.0));
 
     computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
         let contract_data =

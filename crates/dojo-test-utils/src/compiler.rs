@@ -20,6 +20,8 @@ pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
     let config_dir = TempDir::new().unwrap();
     let target_dir = TempDir::new().unwrap();
 
+    dbg!(&target_dir);
+
     let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
     Config::builder(path.canonicalize_utf8().unwrap())
         .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
