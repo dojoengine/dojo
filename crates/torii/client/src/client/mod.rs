@@ -11,7 +11,7 @@ use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
 use futures::channel::mpsc::UnboundedReceiver;
-use futures_util::lock::MutexLockFuture;
+use futures_util::lock::MutexGuard;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -127,13 +127,13 @@ impl Client {
 
     /// Returns the event loop of the relay client.
     /// Which can then be used to run the relay client
-    pub async fn relay_client_runner(&self) -> MutexLockFuture<'_, EventLoop> {
-        self.relay_client.event_loop.lock()
+    pub async fn relay_client_runner(&self) -> MutexGuard<'_, EventLoop> {
+        self.relay_client.event_loop.lock().await
     }
 
     /// Returns the message receiver of the relay client.
-    pub async fn relay_client_stream(&self) -> MutexLockFuture<'_, UnboundedReceiver<Message>> {
-        self.relay_client.message_receiver.lock()
+    pub async fn relay_client_stream(&self) -> MutexGuard<'_, UnboundedReceiver<Message>> {
+        self.relay_client.message_receiver.lock().await
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.
