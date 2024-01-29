@@ -97,7 +97,12 @@ pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
 fn parse_simple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     let ty = parse_cairo_short_string(&data[0])?;
-    Ok(Ty::Primitive(Primitive::from_str(&ty).expect("must be valid schema")))
+    let primitive = match Primitive::from_str(&ty) {
+        Ok(primitive) => primitive,
+        Err(_) => return Err(ParseError::InvalidSchema),
+    };
+
+    Ok(Ty::Primitive(primitive))
 }
 
 fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
