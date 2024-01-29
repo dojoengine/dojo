@@ -3,6 +3,7 @@ pub mod chain;
 pub mod contract;
 pub mod env;
 pub mod event;
+pub mod genesis;
 pub mod receipt;
 pub mod transaction;
 pub mod version;

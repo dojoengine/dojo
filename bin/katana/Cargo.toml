@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 console.workspace = true
@@ -22,6 +23,7 @@ tokio.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
+shellexpand = "3.1.0"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
