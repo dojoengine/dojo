@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706247123790,
+  "lastUpdate": 1706566380780,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -355,6 +355,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 987215,
             "range": "± 30055",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10031f0abba7ca8dafc7040a52883e5af469863a",
+          "message": "feat(katana): genesis state configuration (#1490)\n\n* Define `katana` genesis configuration format (#1472)\r\n\r\n* feat(katana): integrate genesis config (#1483)\r\n\r\n* refactor(katana): update genesis with forked block (#1488)\r\n\r\n* fix(katana): set forked parent hash\r\n\r\n* Use `BTreeMap` for genesis allocations for sorted entries",
+          "timestamp": "2024-01-29T17:03:47-05:00",
+          "tree_id": "5eff66868db3553a0eb918b9c09f8bfa63b46374",
+          "url": "https://github.com/dojoengine/dojo/commit/10031f0abba7ca8dafc7040a52883e5af469863a"
+        },
+        "date": 1706566380309,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 989618,
+            "range": "± 30271",
             "unit": "ns/iter"
           }
         ]
