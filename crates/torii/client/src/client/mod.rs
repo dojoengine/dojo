@@ -11,7 +11,7 @@ use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
 use futures::channel::mpsc::UnboundedReceiver;
-use futures_util::lock::{Mutex, MutexLockFuture};
+use futures_util::lock::MutexLockFuture;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -60,7 +60,7 @@ impl Client {
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
-        let relay_client = torii_relay::client::RelayClient::new(relay_relay_url)?;
+        let relay_client = torii_relay::client::RelayClient::new(relay_url)?;
 
         let metadata = grpc_client.metadata().await?;
 
@@ -96,7 +96,7 @@ impl Client {
             metadata: shared_metadata,
             sub_client_handle: OnceCell::new(),
             inner: AsyncRwLock::new(grpc_client),
-            relay_client: relay_client,
+            relay_client,
             subscribed_models: subbed_models,
         })
     }
@@ -127,12 +127,12 @@ impl Client {
 
     /// Returns the event loop of the relay client.
     /// Which can then be used to run the relay client
-    pub async fn relay_client_runner(&self) -> MutexLockFuture<EventLoop> {
+    pub async fn relay_client_runner(&self) -> MutexLockFuture<'_, EventLoop> {
         self.relay_client.event_loop.lock()
     }
 
     /// Returns the message receiver of the relay client.
-    pub async fn relay_client_stream(&self) -> MutexLockFuture<UnboundedReceiver<Message>> {
+    pub async fn relay_client_stream(&self) -> MutexLockFuture<'_, UnboundedReceiver<Message>> {
         self.relay_client.message_receiver.lock()
     }
 
