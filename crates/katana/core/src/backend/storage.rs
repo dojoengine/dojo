@@ -98,7 +98,6 @@ impl Blockchain {
         Self::new_with_genesis(provider, genesis)
     }
 
-    // TODO: make this function to just accept a `Header` created from the forked block.
     /// Builds a new blockchain with a forked block.
     pub fn new_from_forked(
         provider: impl Database,
