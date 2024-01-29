@@ -1,12 +1,13 @@
 //! Core pool metrics.
+// This is an example of metrics implementation.
 
 use dojo_metrics_derive::Metrics;
 use crate::report_metrics::ReportMetrics;
 
 #[derive(Metrics)]
-#[metrics(scope = "core")]
+#[metrics(scope = "pool")]
 pub struct PoolMetrics {
-    /// Some doc comment
+    // Describe method on the struct, which internally calls the describe statements for all metric fields.
     #[metric(describe = "Number of transactions inserted in the pool.")]
     pub inserted_transactions: metrics::Counter,
 }
