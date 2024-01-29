@@ -45,8 +45,7 @@ pub struct Backend {
 }
 
 impl Backend {
-    pub async fn new(config: StarknetConfig) -> Self {
-        let mut block_env = config.block_env();
+    pub async fn new(mut config: StarknetConfig) -> Self {
         let block_context_generator = config.block_context_generator();
 
         let (blockchain, chain_id): (Blockchain, ChainId) = if let Some(forked_url) =
@@ -70,9 +69,14 @@ impl Backend {
                 panic!("block to be forked is a pending block")
             };
 
-            block_env.number = block.block_number;
-            block_env.timestamp = block.timestamp;
-            block_env.sequencer_address = block.sequencer_address.into();
+            // adjust the genesis to match the forked block
+            config.genesis.number = block.block_number;
+            config.genesis.state_root = block.new_root;
+            config.genesis.timestamp = block.timestamp;
+            config.genesis.sequencer_address = block.sequencer_address.into();
+            config.genesis.gas_prices.eth = block.l1_gas_price.price_in_wei;
+            config.genesis.gas_prices.strk =
+                block.l1_gas_price.price_in_strk.unwrap_or(config.env.gas_price);
 
             trace!(
                 target: "backend",
@@ -85,9 +89,7 @@ impl Backend {
             let blockchain = Blockchain::new_from_forked(
                 ForkedProvider::new(provider, forked_block_num.into()).unwrap(),
                 block.block_hash,
-                block.parent_hash,
-                &block_env,
-                block.new_root,
+                &config.genesis,
                 match block.status {
                     BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
                     BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
@@ -215,7 +217,6 @@ impl Backend {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     use katana_primitives::genesis::Genesis;
     use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
@@ -226,7 +227,7 @@ mod tests {
 
     fn create_test_starknet_config() -> StarknetConfig {
         StarknetConfig {
-            genesis: Arc::new(Genesis::default()),
+            genesis: Genesis::default(),
             disable_fee: true,
             env: Environment::default(),
             ..Default::default()

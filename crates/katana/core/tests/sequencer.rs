@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use ethers::types::U256;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
@@ -20,7 +18,7 @@ fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
     (
         SequencerConfig { block_time: None, ..Default::default() },
         StarknetConfig {
-            genesis: Arc::new(genesis),
+            genesis,
             disable_fee: true,
             env: Environment::default(),
             ..Default::default()

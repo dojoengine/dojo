@@ -132,6 +132,15 @@ impl Block {
     pub fn seal_with_hash(self, hash: BlockHash) -> SealedBlock {
         SealedBlock { header: SealedHeader { hash, header: self.header }, body: self.body }
     }
+
+    /// Seals the block with a given block hash and status.
+    pub fn seal_with_hash_and_status(
+        self,
+        hash: BlockHash,
+        status: FinalityStatus,
+    ) -> SealedBlockWithStatus {
+        SealedBlockWithStatus { block: self.seal_with_hash(hash), status }
+    }
 }
 
 #[derive(Debug, Clone)]

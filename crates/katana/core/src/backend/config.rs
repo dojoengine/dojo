@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use ethers::types::U256;
 use katana_primitives::block::GasPrices;
@@ -21,7 +20,7 @@ pub struct StarknetConfig {
     pub fork_block_number: Option<u64>,
     pub disable_validate: bool,
     pub db_dir: Option<PathBuf>,
-    pub genesis: Arc<Genesis>,
+    pub genesis: Genesis,
 }
 
 impl StarknetConfig {
@@ -53,7 +52,7 @@ impl Default for StarknetConfig {
             env: Environment::default(),
             disable_validate: false,
             db_dir: None,
-            genesis: Arc::new(genesis),
+            genesis,
         }
     }
 }
