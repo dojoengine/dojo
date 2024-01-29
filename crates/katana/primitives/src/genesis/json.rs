@@ -1,7 +1,7 @@
 //! JSON representation of the genesis configuration. Used to deserialize the genesis configuration
 //! from a JSON file.
 
-use std::collections::{hash_map, HashMap};
+use std::collections::{hash_map, BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{fs, io};
@@ -297,7 +297,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
             None
         };
 
-        let mut allocations: HashMap<ContractAddress, GenesisAllocation> = HashMap::new();
+        let mut allocations: BTreeMap<ContractAddress, GenesisAllocation> = BTreeMap::new();
 
         for (address, account) in value.accounts {
             // check that the class hash exists in the classes field
@@ -385,7 +385,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::{BTreeMap, HashMap};
     use std::path::PathBuf;
     use std::str::FromStr;
 
@@ -577,7 +577,7 @@ mod tests {
             "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
         ));
 
-        let allocations = HashMap::from([
+        let allocations = BTreeMap::from([
             (
                 acc_1,
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
@@ -746,7 +746,7 @@ mod tests {
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
         };
 
-        let allocations = HashMap::from([(
+        let allocations = BTreeMap::from([(
             ContractAddress::from(felt!(
                 "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
             )),

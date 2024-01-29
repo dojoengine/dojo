@@ -2,7 +2,7 @@ pub mod allocation;
 pub mod constant;
 pub mod json;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -96,7 +96,7 @@ pub struct Genesis {
     /// The universal deployer (UDC) configuration.
     pub universal_deployer: Option<UniversalDeployerConfig>,
     /// The genesis contract allocations.
-    pub allocations: HashMap<ContractAddress, GenesisAllocation>,
+    pub allocations: BTreeMap<ContractAddress, GenesisAllocation>,
 }
 
 impl Genesis {
@@ -280,7 +280,7 @@ impl Default for Genesis {
             gas_prices: GasPrices::default(),
             sequencer_address: FieldElement::ZERO.into(),
             classes,
-            allocations: HashMap::new(),
+            allocations: BTreeMap::new(),
             fee_token,
             universal_deployer: Some(universal_deployer),
         }
@@ -390,7 +390,7 @@ mod tests {
         let genesis = Genesis {
             classes,
             fee_token: fee_token.clone(),
-            allocations: HashMap::from(allocations.clone()),
+            allocations: BTreeMap::from(allocations.clone()),
             number: 0,
             timestamp: 5123512314u64,
             state_root: felt!("0x99"),
