@@ -72,6 +72,7 @@ impl Backend {
             // adjust the genesis to match the forked block
             config.genesis.number = block.block_number;
             config.genesis.state_root = block.new_root;
+            config.genesis.parent_hash = block.parent_hash;
             config.genesis.timestamp = block.timestamp;
             config.genesis.sequencer_address = block.sequencer_address.into();
             config.genesis.gas_prices.eth = block.l1_gas_price.price_in_wei;
