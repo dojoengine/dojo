@@ -2,12 +2,9 @@ use std::path::Path;
 
 use anyhow::{anyhow, Result};
 use katana_db::init_db;
-use katana_primitives::block::{Block, BlockHash, FinalityStatus, Header, SealedBlockWithStatus};
-use katana_primitives::env::BlockEnv;
+use katana_primitives::block::{BlockHash, FinalityStatus, SealedBlockWithStatus};
 use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::FieldElement;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
@@ -18,8 +15,6 @@ use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;
-
-use crate::constants::SEQUENCER_ADDRESS;
 
 pub trait Database:
     BlockProvider
@@ -107,28 +102,13 @@ impl Blockchain {
     /// Builds a new blockchain with a forked block.
     pub fn new_from_forked(
         provider: impl Database,
-        block_hash: BlockHash,
-        parent_hash: FieldElement,
-        block_env: &BlockEnv,
-        state_root: FieldElement,
+        genesis_hash: BlockHash,
+        genesis: &Genesis,
         block_status: FinalityStatus,
     ) -> Result<Self> {
-        let header = Header {
-            state_root,
-            parent_hash,
-            version: CURRENT_STARKNET_VERSION,
-            number: block_env.number,
-            timestamp: block_env.timestamp,
-            sequencer_address: *SEQUENCER_ADDRESS,
-            gas_prices: block_env.l1_gas_prices,
-        };
-
-        let block = SealedBlockWithStatus {
-            status: block_status,
-            block: Block { header, body: vec![] }.seal_with_hash(block_hash),
-        };
-
-        Self::new_with_block_and_state(provider, block, StateUpdatesWithDeclaredClasses::default())
+        let block = genesis.block().seal_with_hash_and_status(genesis_hash, block_status);
+        let state_updates = genesis.state_updates();
+        Self::new_with_block_and_state(provider, block, state_updates)
     }
 
     pub fn provider(&self) -> &BlockchainProvider<Box<dyn Database>> {
@@ -150,7 +130,6 @@ mod tests {
     use katana_primitives::block::{
         Block, FinalityStatus, GasPrices, Header, SealedBlockWithStatus,
     };
-    use katana_primitives::env::BlockEnv;
     use katana_primitives::genesis::constant::{
         DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
         DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_UDC_CASM,
@@ -194,19 +173,21 @@ mod tests {
     fn blockchain_from_fork() {
         let provider = InMemoryProvider::new();
 
-        let block_env = BlockEnv {
+        let genesis = Genesis {
             number: 23,
+            parent_hash: FieldElement::ZERO,
+            state_root: felt!("1334"),
             timestamp: 6868,
-            sequencer_address: Default::default(),
-            l1_gas_prices: GasPrices { eth: 9090, strk: 0 },
+            gas_prices: GasPrices { eth: 9090, strk: 8080 },
+            ..Default::default()
         };
+
+        let genesis_hash = felt!("1111");
 
         let blockchain = Blockchain::new_from_forked(
             provider,
-            felt!("1111"),
-            FieldElement::ZERO,
-            &block_env,
-            felt!("1334"),
+            genesis_hash,
+            &genesis,
             FinalityStatus::AcceptedOnL1,
         )
         .expect("failed to create fork blockchain");
@@ -217,14 +198,15 @@ mod tests {
         let block_status =
             blockchain.provider().block_status(latest_number.into()).unwrap().unwrap();
 
-        assert_eq!(latest_number, 23);
-        assert_eq!(latest_hash, felt!("1111"));
+        assert_eq!(latest_number, genesis.number);
+        assert_eq!(latest_hash, genesis_hash);
 
         assert_eq!(header.gas_prices.eth, 9090);
+        assert_eq!(header.gas_prices.strk, 8080);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
-        assert_eq!(header.state_root, felt!("1334"));
-        assert_eq!(header.parent_hash, FieldElement::ZERO);
+        assert_eq!(header.state_root, genesis.state_root);
+        assert_eq!(header.parent_hash, genesis.parent_hash);
         assert_eq!(block_status, FinalityStatus::AcceptedOnL1);
     }
 

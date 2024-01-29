@@ -12,7 +12,6 @@
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
@@ -262,7 +261,7 @@ impl KatanaArgs {
                     .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
             },
             db_dir: self.db_dir.clone(),
-            genesis: Arc::new(genesis),
+            genesis,
         }
     }
 }
