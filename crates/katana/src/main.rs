@@ -9,7 +9,6 @@ use katana_core::constants::{
     ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
 };
 use katana_core::sequencer::KatanaSequencer;
-use katana_db::init_db;
 use katana_rpc::{spawn, NodeHandle};
 use tokio::signal::ctrl_c;
 use tracing::info;
@@ -68,15 +67,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(listen_addr) = config.metrics {
+        let pool = Arc::clone(&sequencer.pool.metrics);
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
-
         info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
-        //        prometheus_exporter::serve(
-        //            listen_addr,
-        //            prometheus_handle,
-        //            metrics_process::Collector::default(),
-        //        )
-        //        .await?;
+                prometheus_exporter::serve(
+                    listen_addr,
+                    prometheus_handle,
+                    metrics_process::Collector::default(),
+                    Arc::clone(&pool),
+                )
+                .await?;
     }
 
     // Wait until Ctrl + C is pressed, then shutdown

@@ -1,16 +1,18 @@
+
 // Code adapted from Foundry's Anvil
-use crate::metrics::TxPoolMetrics;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use parking_lot::RwLock;
 use starknet::core::types::FieldElement;
 use tracing::{info, warn};
+use dojo_metrics::core_metrics::PoolMetrics;
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
 pub struct TransactionPool {
     transactions: RwLock<Vec<ExecutableTxWithHash>>,
     transaction_listeners: RwLock<Vec<Sender<FieldElement>>>,
-    metrics: TxPoolMetrics,
+    pub metrics: Arc<PoolMetrics>,
 }
 
 impl TransactionPool {

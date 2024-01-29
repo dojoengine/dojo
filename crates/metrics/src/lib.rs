@@ -1,8 +1,10 @@
 pub mod prometheus_exporter;
 pub mod utils;
+pub mod report_metrics;
 pub use dojo_metrics_derive::Metrics;
 pub use metrics;
 pub use metrics_util;
+pub mod core_metrics;
 
 #[cfg(all(feature = "jemalloc", unix))]
 use jemallocator as _;

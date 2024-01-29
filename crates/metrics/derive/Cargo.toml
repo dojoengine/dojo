@@ -3,9 +3,6 @@ edition.workspace = true
 name = "dojo-metrics-derive"
 version.workspace = true
 
-[lints]
-workspace = true
-
 [lib]
 proc-macro = true
 

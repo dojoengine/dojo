@@ -9,13 +9,11 @@ use std::path::Path;
 
 use self::tx::Tx;
 use crate::error::DatabaseError;
-use crate::models::database_metrics::{DbMetadata, DbMetadataValue, DbMetrics};
 use crate::tables::{TableType, Tables};
 use crate::utils;
 use libmdbx::{
     DatabaseFlags, Environment, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW,
 };
-use metrics::gauge;
 
 const GIGABYTE: usize = 1024 * 1024 * 1024;
 const TERABYTE: usize = GIGABYTE * 1024;
@@ -37,20 +35,6 @@ pub enum DbEnvKind {
 pub struct DbEnv {
     inner: Environment,
     with_metrics: bool,
-}
-
-impl DbMetrics for DbEnv {
-    fn report_metrics(&self) {
-        for (name, value, labels) in self.gauge_metrics() {
-            gauge!(name, value, labels);
-        }
-    }
-}
-
-impl DbMetadata for DbEnv {
-    fn metadata(&self) -> DbMetadataValue {
-        DbMetadataValue::new(self.inner.freelist().ok())
-    }
 }
 
 impl DbEnv {
