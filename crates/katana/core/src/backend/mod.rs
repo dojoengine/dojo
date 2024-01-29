@@ -5,7 +5,6 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
-use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
@@ -202,7 +201,7 @@ impl Backend {
             validate_max_n_steps: self.config.env.validate_max_steps,
             max_recursion_depth: MAX_RECURSION_DEPTH,
             fee_token_addresses: FeeTokenAddressses {
-                eth: DEFAULT_FEE_TOKEN_ADDRESS,
+                eth: self.config.genesis.fee_token.address,
                 strk: Default::default(),
             },
         }
