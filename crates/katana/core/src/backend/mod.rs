@@ -5,6 +5,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
+use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
@@ -27,8 +28,7 @@ pub mod storage;
 
 use self::config::StarknetConfig;
 use self::storage::Blockchain;
-use crate::accounts::{Account, DevAccountGenerator};
-use crate::constants::{DEFAULT_PREFUNDED_ACCOUNT_BALANCE, FEE_TOKEN_ADDRESS, MAX_RECURSION_DEPTH};
+use crate::constants::MAX_RECURSION_DEPTH;
 use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
 use crate::utils::get_current_timestamp;
@@ -42,19 +42,12 @@ pub struct Backend {
     pub chain_id: ChainId,
     /// The block context generator.
     pub block_context_generator: RwLock<BlockContextGenerator>,
-    /// Prefunded dev accounts
-    pub accounts: Vec<Account>,
 }
 
 impl Backend {
     pub async fn new(config: StarknetConfig) -> Self {
         let mut block_env = config.block_env();
         let block_context_generator = config.block_context_generator();
-
-        let accounts = DevAccountGenerator::new(config.total_accounts)
-            .with_seed(config.seed)
-            .with_balance(*DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
-            .generate();
 
         let (blockchain, chain_id): (Blockchain, ChainId) = if let Some(forked_url) =
             &config.fork_rpc_url
@@ -106,25 +99,19 @@ impl Backend {
             (blockchain, forked_chain_id.into())
         } else if let Some(db_path) = &config.db_dir {
             (
-                Blockchain::new_with_db(db_path, &block_env)
+                Blockchain::new_with_db(db_path, &config.genesis)
                     .expect("able to create blockchain from db"),
                 config.env.chain_id,
             )
         } else {
-            let blockchain = Blockchain::new_with_genesis(InMemoryProvider::new(), &block_env)
+            let blockchain = Blockchain::new_with_genesis(InMemoryProvider::new(), &config.genesis)
                 .expect("able to create blockchain from genesis block");
 
             (blockchain, config.env.chain_id)
         };
 
-        for acc in &accounts {
-            acc.deploy_and_fund(blockchain.provider())
-                .expect("should be able to deploy and fund dev account");
-        }
-
         Self {
             chain_id,
-            accounts,
             blockchain,
             config,
             block_context_generator: RwLock::new(block_context_generator),
@@ -212,7 +199,7 @@ impl Backend {
             validate_max_n_steps: self.config.env.validate_max_steps,
             max_recursion_depth: MAX_RECURSION_DEPTH,
             fee_token_addresses: FeeTokenAddressses {
-                eth: (*FEE_TOKEN_ADDRESS),
+                eth: DEFAULT_FEE_TOKEN_ADDRESS,
                 strk: Default::default(),
             },
         }
@@ -228,6 +215,9 @@ impl Backend {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use katana_primitives::genesis::Genesis;
     use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
     use katana_provider::traits::env::BlockEnvProvider;
 
@@ -236,8 +226,7 @@ mod tests {
 
     fn create_test_starknet_config() -> StarknetConfig {
         StarknetConfig {
-            seed: [0u8; 32],
-            total_accounts: 2,
+            genesis: Arc::new(Genesis::default()),
             disable_fee: true,
             env: Environment::default(),
             ..Default::default()

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
-use katana_core::accounts::Account;
 use katana_core::sequencer::KatanaSequencer;
 use katana_primitives::FieldElement;
 use katana_rpc_api::katana::KatanaApiServer;
+use katana_rpc_types::account::Account;
 use katana_rpc_types::error::katana::KatanaApiError;
 
 pub struct KatanaApi {
@@ -42,7 +42,14 @@ impl KatanaApiServer for KatanaApi {
     }
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.sequencer.backend().accounts.clone())
+        Ok(self
+            .sequencer
+            .backend()
+            .config
+            .genesis
+            .accounts()
+            .map(|e| Account::new(*e.0, e.1))
+            .collect())
     }
 
     async fn set_storage_at(
