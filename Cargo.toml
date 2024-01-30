@@ -4,6 +4,7 @@ resolver = "2"
 members = [
   "bin/dojo-language-server",
   "bin/katana",
+  "bin/saya",
   "bin/sozo",
   "bin/torii",
   "crates/benches",
@@ -27,6 +28,7 @@ members = [
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
   "crates/metrics",
+  "crates/saya/core",
   "crates/sozo/signers",
   "crates/torii/client",
   "crates/torii/server",
@@ -80,6 +82,9 @@ torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-server = { path = "crates/torii/server" }
 torii-relay = { path = "crates/torii/libp2p" }
+
+# saya
+saya-core = { path = "crates/saya/core" }
 
 # sozo
 sozo-signers = { path = "crates/sozo/signers" }

@@ -1,0 +1,32 @@
+[package]
+description = "Saya core implementation."
+edition.workspace = true
+license-file.workspace = true
+name = "saya-core"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+katana-db = { path = "../../katana/storage/db" }
+katana-executor = { path = "../../katana/executor" }
+katana-primitives = { path = "../../katana/primitives" }
+katana-provider = { path = "../../katana/storage/provider" }
+
+anyhow.workspace = true
+async-trait.workspace = true
+convert_case.workspace = true
+ethers = "2.0.11"
+flate2.workspace = true
+futures.workspace = true
+lazy_static = "1.4.0"
+parking_lot.workspace = true
+rand = { version = "0.8.5", features = [ "small_rng" ] }
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+starknet.workspace = true
+starknet_api.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+url.workspace = true

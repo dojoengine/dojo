@@ -9645,6 +9645,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "saya"
+version = "0.5.1-alpha.1"
+dependencies = [
+ "clap",
+ "clap_complete",
+ "console",
+ "katana-primitives",
+ "katana-rpc",
+ "katana-rpc-api",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "saya-core"
+version = "0.5.1-alpha.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "convert_case 0.6.0",
+ "ethers",
+ "flate2",
+ "futures",
+ "katana-db",
+ "katana-executor",
+ "katana-primitives",
+ "katana-provider",
+ "lazy_static",
+ "parking_lot 0.12.1",
+ "rand",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet",
+ "starknet_api",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "scale-info"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
