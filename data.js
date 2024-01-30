@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706583397212,
+  "lastUpdate": 1706614782451,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -415,6 +415,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1037600,
             "range": "± 32988",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jjmm1100@gmail.com",
+            "name": "Xuefei Han",
+            "username": "fishseabowl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f57b78cf0eed60a7000a1e6b13ee971fe0242e14",
+          "message": "Fixed panic on VariantNotFound (#1487)",
+          "timestamp": "2024-01-30T06:30:27-05:00",
+          "tree_id": "dd8984f194d0a406b705dbb2f4857548b0d0465f",
+          "url": "https://github.com/dojoengine/dojo/commit/f57b78cf0eed60a7000a1e6b13ee971fe0242e14"
+        },
+        "date": 1706614781964,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 983027,
+            "range": "± 101376",
             "unit": "ns/iter"
           }
         ]
