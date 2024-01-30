@@ -196,3 +196,17 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
     Ok(Ty::Tuple(children))
 }
+
+#[cfg(test)]
+mod tests {
+    use starknet::core::types::FieldElement;
+    
+    use crate::packing::ParseError;
+
+    #[test]
+    fn parse_simple_with_invalid_value() {
+        let data = &vec![FieldElement::default()];
+        assert!(matches!(super::parse_simple(data), Err(ParseError::InvalidSchema)));
+
+    }
+}
