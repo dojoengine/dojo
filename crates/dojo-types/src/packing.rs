@@ -200,7 +200,7 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
 #[cfg(test)]
 mod tests {
     use starknet::core::types::FieldElement;
-    
+
     use crate::packing::ParseError;
 
     #[test]
