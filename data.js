@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706643827087,
+  "lastUpdate": 1706643851143,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -505,6 +505,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 993664,
             "range": "± 50917",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jun.sugiura.jp@gmail.com",
+            "name": "Junichi Sugiura",
+            "username": "JunichiSugiura"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9ef75507b9f960aa385bc122482ceaf725eb558",
+          "message": "Switch to dedicated IPFS gateway (#1493)",
+          "timestamp": "2024-01-30T14:34:51-05:00",
+          "tree_id": "0c5fb39c13e22d618d22fcc71e9d40fc5ea7d489",
+          "url": "https://github.com/dojoengine/dojo/commit/d9ef75507b9f960aa385bc122482ceaf725eb558"
+        },
+        "date": 1706643850709,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1038208,
+            "range": "± 70725",
             "unit": "ns/iter"
           }
         ]
