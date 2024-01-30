@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706566380780,
+  "lastUpdate": 1706583397212,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -385,6 +385,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 989618,
             "range": "± 30271",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ce58ff20fcd93b67980dfd50cac75619a6b98929",
+          "message": "refactor(katana): display genesis state properly on startup (#1492)\n\n* refactor(katana): display genesis state properly\r\n\r\n* fix",
+          "timestamp": "2024-01-29T21:47:27-05:00",
+          "tree_id": "5039a8d3d4729bcc3374e63e6f9aa2fbca3d5a6c",
+          "url": "https://github.com/dojoengine/dojo/commit/ce58ff20fcd93b67980dfd50cac75619a6b98929"
+        },
+        "date": 1706583396774,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1037600,
+            "range": "± 32988",
             "unit": "ns/iter"
           }
         ]
