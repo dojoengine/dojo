@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706616888700,
+  "lastUpdate": 1706643827087,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -475,6 +475,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1031507,
             "range": "± 31660",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a5aee67e241385ee90804b209887c9e022d2aed",
+          "message": "fix(relay): borrow issues with wasm client  (#1494)\n\n* fix: borrow?\r\n\r\n* fix: mut?\r\n\r\n* feat: use mutex for eventloop and return it\r\n\r\n* chore: typo & fmt clippy\r\n\r\n* refactor: return mutexguard\r\n\r\n* refactor: return arc cloen",
+          "timestamp": "2024-01-30T14:34:26-05:00",
+          "tree_id": "6d3ca11e99a53829e22dadae26fd3aa2405b300a",
+          "url": "https://github.com/dojoengine/dojo/commit/0a5aee67e241385ee90804b209887c9e022d2aed"
+        },
+        "date": 1706643826417,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 993664,
+            "range": "± 50917",
             "unit": "ns/iter"
           }
         ]
