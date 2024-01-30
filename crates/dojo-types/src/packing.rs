@@ -207,6 +207,5 @@ mod tests {
     fn parse_simple_with_invalid_value() {
         let data = &vec![FieldElement::default()];
         assert!(matches!(super::parse_simple(data), Err(ParseError::InvalidSchema)));
-
     }
 }
