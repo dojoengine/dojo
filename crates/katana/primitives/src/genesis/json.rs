@@ -433,7 +433,9 @@ mod tests {
 
         assert_eq!(
             genesis.universal_deployer.clone().unwrap().address,
-            Some(ContractAddress::from(felt!("0x77")))
+            Some(ContractAddress::from(felt!(
+                "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
+            )))
         );
         assert_eq!(genesis.universal_deployer.unwrap().class, None);
 
@@ -636,7 +638,9 @@ mod tests {
             gas_prices: GasPrices { eth: 1111, strk: 2222 },
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
-                address: ContractAddress::from(felt!("0x77")),
+                address: ContractAddress::from(felt!(
+                    "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
+                )),
             }),
         };
 
