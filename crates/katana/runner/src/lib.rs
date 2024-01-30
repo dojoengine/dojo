@@ -9,7 +9,8 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use katana_core::accounts::DevAccountGenerator;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
 use katana_primitives::FieldElement;
 pub use runner_macro::{katana_test, runner};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -23,7 +24,7 @@ pub struct KatanaRunner {
     child: Child,
     port: u16,
     provider: JsonRpcClient<HttpTransport>,
-    accounts: Vec<katana_core::accounts::Account>,
+    accounts: Vec<(ContractAddress, DevGenesisAccount)>,
     log_filename: PathBuf,
     contract: Mutex<Option<FieldElement>>,
 }
@@ -110,7 +111,11 @@ impl KatanaRunner {
 
         let mut seed = [0; 32];
         seed[0] = 48;
-        let accounts = DevAccountGenerator::new(n_accounts).with_seed(seed).generate();
+        let accounts = DevAllocationsGenerator::new(n_accounts)
+            .with_seed(seed)
+            .generate()
+            .into_iter()
+            .collect();
         let contract = Mutex::new(Option::None);
 
         Ok(KatanaRunner { child, port, provider, accounts, log_filename, contract })
