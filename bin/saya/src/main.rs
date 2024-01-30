@@ -1,6 +1,7 @@
 //! Saya executable entry point.
 use clap::Parser;
 use console::Style;
+use saya_core::{Saya, SayaConfig};
 use tokio::signal::ctrl_c;
 
 mod args;
@@ -9,12 +10,14 @@ use args::SayaArgs;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = SayaArgs::parse();
-    config.init_logging()?;
+    let args = SayaArgs::parse();
+    args.init_logging()?;
 
-    print_intro();
+    let config = args.try_into()?;
+    print_intro(&config);
 
-    // Spin up saya main loop to gather data from Katana.
+    let saya = Saya::new(config).await?;
+    saya.start().await?;
 
     // Wait until Ctrl + C is pressed, then shutdown
     ctrl_c().await?;
@@ -23,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn print_intro() {
+fn print_intro(config: &SayaConfig) {
     println!(
         "{}",
         Style::new().color256(94).apply_to(
@@ -48,12 +51,15 @@ CONFIGURATION
     ",
     );
 
-    println!(
-        r"
+    if let Some(da_config) = &config.data_availability {
+        println!(
+            r"
 DATA AVAILBILITY
 ==================
+{da_config}
     ",
-    );
+        );
+    }
 
     println!(
         r"

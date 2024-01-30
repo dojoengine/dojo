@@ -4,12 +4,10 @@ use std::sync::Arc;
 use starknet::core::types::{BlockId, MaybePendingStateUpdate, StateUpdate};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tracing::{error, info, trace, warn};
+use tracing::{error, trace};
 use url::Url;
 
-use crate::data_availability::{
-    DataAvailabilityClient, DataAvailabilityConfig, DataAvailabilityMode,
-};
+use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
 
 pub mod data_availability;
@@ -21,7 +19,7 @@ pub mod verifier;
 pub struct SayaConfig {
     pub katana_rpc: Url,
     pub start_block: u64,
-    pub data_availability: DataAvailabilityConfig,
+    pub data_availability: Option<DataAvailabilityConfig>,
 }
 
 /// Saya.
@@ -29,7 +27,7 @@ pub struct Saya {
     /// The main Saya configuration.
     config: SayaConfig,
     /// The data availability client.
-    da_client: Box<dyn DataAvailabilityClient>,
+    da_client: Option<Box<dyn DataAvailabilityClient>>,
     /// The katana (for now JSON RPC) client.
     katana_client: Arc<JsonRpcClient<HttpTransport>>,
 }
@@ -44,8 +42,11 @@ impl Saya {
         let katana_client =
             Arc::new(JsonRpcClient::new(HttpTransport::new(config.katana_rpc.clone())));
 
-        let da_client: Box<dyn DataAvailabilityClient> =
-            data_availability::client_from_config(config.data_availability.clone()).await?;
+        let da_client = if let Some(da_conf) = &config.data_availability {
+            Some(data_availability::client_from_config(da_conf.clone()).await?)
+        } else {
+            None
+        };
 
         Ok(Self { config, da_client, katana_client })
     }
@@ -61,7 +62,7 @@ impl Saya {
         let mut block = self.config.start_block;
 
         loop {
-            let mut latest_block = match self.katana_client.block_number().await {
+            let latest_block = match self.katana_client.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
                     error!("Can't retrieve latest block: {}", e);
@@ -82,8 +83,6 @@ impl Saya {
 
             tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
         }
-
-        Ok(())
     }
 
     /// Processes the given block number.
@@ -109,12 +108,11 @@ impl Saya {
 
         self.fetch_publish_state_update(block_number).await?;
 
-        // do the other operations, depending on the configuration.
-
         Ok(())
     }
 
-    /// Fetches the state update for the given block and publish it to the data availability layer.
+    /// Fetches the state update for the given block and publish it to
+    /// the data availability layer (if any).
     /// Returns the [`StateUpdate`].
     ///
     /// # Arguments
@@ -124,9 +122,13 @@ impl Saya {
         let state_update =
             match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
                 MaybePendingStateUpdate::Update(su) => {
-                    let sd_felts =
-                        data_availability::state_diff::state_diff_to_felts(&su.state_diff);
-                    self.da_client.publish_state_diff_felts(&sd_felts).await?;
+                    if let Some(da) = &self.da_client {
+                        let sd_felts =
+                            data_availability::state_diff::state_diff_to_felts(&su.state_diff);
+
+                        da.publish_state_diff_felts(&sd_felts).await?;
+                    }
+
                     su
                 }
                 MaybePendingStateUpdate::PendingUpdate(_) => unreachable!("Should not be used"),

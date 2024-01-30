@@ -3,11 +3,10 @@
 //! For a starknet based sequencer, the data posted to the DA
 //! is the state diff as encoded here:
 //! https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/on-chain-data/#data_availability_v0_11_0_and_forward.
-use std::fmt;
-use std::str::FromStr;
+use std::fmt::Display;
 
 use async_trait::async_trait;
-use starknet::core::types::{FieldElement, StateUpdate};
+use starknet::core::types::FieldElement;
 
 pub mod celestia;
 
@@ -19,6 +18,16 @@ use error::DataAvailabilityResult;
 #[derive(Debug, Clone)]
 pub enum DataAvailabilityConfig {
     Celestia(celestia::CelestiaConfig),
+}
+
+impl Display for DataAvailabilityConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DataAvailabilityConfig::Celestia(conf) => {
+                write!(f, "chain: celestia\n{conf}")
+            }
+        }
+    }
 }
 
 /// The data availability mode.
@@ -66,6 +75,5 @@ pub async fn client_from_config(
         DataAvailabilityConfig::Celestia(c) => {
             Ok(Box::new(celestia::CelestiaClient::new(c).await?))
         }
-        _ => panic!("Missing config support for {:?}", config),
     }
 }

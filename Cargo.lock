@@ -10081,6 +10081,7 @@ dependencies = [
 name = "saya"
 version = "0.5.1-alpha.1"
 dependencies = [
+ "anyhow",
  "clap",
  "clap_complete",
  "console",
