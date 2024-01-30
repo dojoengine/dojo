@@ -17,7 +17,7 @@ use tracing::{error, info};
 use super::EventProcessor;
 use crate::sql::Sql;
 
-const IPFS_URL: &str = "https://ipfs.io/ipfs/";
+const IPFS_URL: &str = "https://cartridge.infura-ipfs.io/ipfs/";
 const MAX_RETRY: u8 = 3;
 
 #[derive(Default)]
