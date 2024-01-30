@@ -1,29 +1,38 @@
 //! Adapted from Paradigm's [`reth`](https://github.com/paradigmxyz/reth/blob/main/crates/storage/db/src/abstraction/database_metrics.rs)
 
-use metrics::{Counter, Gauge, Histogram};
+
+use metrics::{Label, gauge, counter, histogram};
 
 /// Represents a type that can report metrics. The `report_metrics`
 /// method can be used as a prometheus hook.
-pub trait ReportMetrics: Send + Sync + 'static {
+pub trait ReportMetrics {
     /// Reports metrics.
     fn report_metrics(&self) {
-        self.gauge_metrics();
-        self.counter_metrics();
-        self.histogram_metrics();
+        for (name, value, labels) in self.gauge_metrics() {
+            gauge!(name, value, labels);
+        }
+
+        for (name, value, labels) in self.counter_metrics() {
+            counter!(name, value, labels);
+        }
+
+        for (name, value, labels) in self.histogram_metrics() {
+            histogram!(name, value, labels);
+        }
     }
 
-    /// Returns a list of [Gauge](metrics::Gauge) metrics for the database.
-    fn gauge_metrics(&self) -> Vec<&'static Gauge> {
+     /// Returns a list of [Gauge](metrics::Gauge) metrics for the database.
+     fn gauge_metrics(&self) -> Vec<(&'static str, f64, Vec<Label>)> {
         vec![]
     }
 
     /// Returns a list of [Counter](metrics::Counter) metrics for the database.
-    fn counter_metrics(&self) -> Vec<&Counter> {
-        vec![] 
+    fn counter_metrics(&self) -> Vec<(&'static str, u64, Vec<Label>)> {
+        vec![]
     }
 
     /// Returns a list of [Histogram](metrics::Histogram) metrics for the database.
-    fn histogram_metrics(&self) -> Vec<&'static Histogram> {
+    fn histogram_metrics(&self) -> Vec<(&'static str, f64, Vec<Label>)> {
         vec![]
     }
 }

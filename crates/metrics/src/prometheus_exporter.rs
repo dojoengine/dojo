@@ -77,14 +77,14 @@ pub async fn serve(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     process: metrics_process::Collector,
-    pool_metrics: Arc<PoolMetrics>,
+    metrics: Arc<PoolMetrics>,
 ) -> anyhow::Result<()>
 {
+    let pool_metrics = move || metrics.report_metrics();
     // Clone `process` to move it into the hook and use the original `process` for describe below.
     let cloned_process = process.clone();
-    let pool_metrics = move || pool_metrics.report_metrics();
         let hooks: Vec<Box<dyn Hook<Output = ()>>> = vec![
-        Box::new(move || pool_metrics()),
+        Box::new(pool_metrics),
         Box::new(move || cloned_process.collect()),
         Box::new(collect_memory_stats),
     ];
@@ -92,7 +92,7 @@ pub async fn serve(
     
     process.describe();
     describe_memory_stats();
-    PoolMetrics::describe();
+    metrics::describe_gauge!("inserted_transactions","Number of transactions inserted in the pool.");
     Ok(())
 }
 
