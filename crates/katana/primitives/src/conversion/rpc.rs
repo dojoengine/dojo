@@ -416,7 +416,7 @@ mod tests {
     // is successful and that the converted class can be converted back
     #[test]
     fn legacy_rpc_to_inner_and_back() {
-        let class_json = include_str!("../../../core/contracts/compiled/account.json");
+        let class_json = include_str!("../../contracts/compiled/account.json");
         let class = parse_compiled_class_v0(class_json).unwrap();
 
         let Ok(ContractClass::Legacy(compressed_legacy_class)) = legacy_inner_to_rpc_class(class)
