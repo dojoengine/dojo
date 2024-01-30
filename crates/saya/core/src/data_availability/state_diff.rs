@@ -11,9 +11,13 @@
 //! to know if an address has been deployed or declared.
 //! To avoid this overhead, we may want to first generate an hashmap of such
 //! arrays to then have O(1) search.
-use ethers::types::U256;
-use starknet::core::types::{FieldElement, StateDiff, ContractStorageDiffItem, NonceUpdate, DeployedContractItem, DeclaredClassItem};
 use std::collections::HashSet;
+
+use ethers::types::U256;
+use starknet::core::types::{
+    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
+    StateDiff,
+};
 
 // 2 ^ 128
 const CLASS_INFO_FLAG_TRUE: &str = "0x100000000000000000000000000000000";
@@ -60,7 +64,10 @@ pub fn state_diff_to_felts(state_diff: &StateDiff) -> Vec<FieldElement> {
 ///
 /// * `state_diff` - The state diff to process.
 /// * `out` - The output buffer to serialize into.
-fn serialize_storage_updates(state_diff: &StateDiff, out: &mut Vec<FieldElement>) -> HashSet<FieldElement> {
+fn serialize_storage_updates(
+    state_diff: &StateDiff,
+    out: &mut Vec<FieldElement>,
+) -> HashSet<FieldElement> {
     let mut processed_addresses = HashSet::new();
 
     for contract_diff in &state_diff.storage_diffs {
@@ -68,10 +75,8 @@ fn serialize_storage_updates(state_diff: &StateDiff, out: &mut Vec<FieldElement>
 
         processed_addresses.insert(*address);
 
-        let deployed_replaced = state_diff
-            .deployed_contracts
-            .iter()
-            .find(|c| c.address == *address);
+        let deployed_replaced =
+            state_diff.deployed_contracts.iter().find(|c| c.address == *address);
         // Currently, Katana does not populate the replaced_classes.
         //.or_else(|| state_diff.replaced_classes.get(&addr));
 
@@ -104,7 +109,11 @@ fn serialize_storage_updates(state_diff: &StateDiff, out: &mut Vec<FieldElement>
 /// * `state_diff` - The state diff to process.
 /// * `processed_addresses` - A list of already processed addresses to avoid duplication.
 /// * `out` - The output buffer to serialize into.
-fn serialize_nonce_updates(state_diff: &StateDiff, processed_addresses: &mut HashSet<FieldElement>, out: &mut Vec<FieldElement>) {
+fn serialize_nonce_updates(
+    state_diff: &StateDiff,
+    processed_addresses: &mut HashSet<FieldElement>,
+    out: &mut Vec<FieldElement>,
+) {
     for nonce_update in &state_diff.nonces {
         let NonceUpdate { contract_address, nonce: new_nonce } = *nonce_update;
 
@@ -112,20 +121,14 @@ fn serialize_nonce_updates(state_diff: &StateDiff, processed_addresses: &mut Has
             continue;
         }
 
-        let deployed_replaced = state_diff
-            .deployed_contracts
-            .iter()
-            .find(|c| c.address == contract_address);
+        let deployed_replaced =
+            state_diff.deployed_contracts.iter().find(|c| c.address == contract_address);
         // Currently, Katana does not populate the replaced_classes.
         //.or_else(|| state_diff.replaced_classes.get(&addr));
 
         out.push(contract_address);
 
-        out.push(compute_update_meta_info(
-            Some(new_nonce),
-            0,
-            deployed_replaced.is_none(),
-        ));
+        out.push(compute_update_meta_info(Some(new_nonce), 0, deployed_replaced.is_none()));
 
         if let Some(c) = deployed_replaced {
             out.push(c.class_hash);
@@ -141,7 +144,11 @@ fn serialize_nonce_updates(state_diff: &StateDiff, processed_addresses: &mut Has
 /// * `state_diff` - The state diff to process.
 /// * `processed_addresses` - A list of already processed addresses to avoid duplication.
 /// * `out` - The output buffer to serialize into.
-fn serialize_deployed_updates(state_diff: &StateDiff, processed_addresses: &mut HashSet<FieldElement>, out: &mut Vec<FieldElement>) {
+fn serialize_deployed_updates(
+    state_diff: &StateDiff,
+    processed_addresses: &mut HashSet<FieldElement>,
+    out: &mut Vec<FieldElement>,
+) {
     for deployed in &state_diff.deployed_contracts {
         let DeployedContractItem { address, class_hash } = *deployed;
 
@@ -164,10 +171,13 @@ fn serialize_deployed_updates(state_diff: &StateDiff, processed_addresses: &mut 
 ///
 /// * `new_nonce` - The new nonce for the contract address, None otherwise.
 /// * `n_storage_updates` - The count of storage updates for the contract address.
-/// * `is_storage_only` - True if the contract address was only modified
-///   with storage updates. False if the contract was deployed or it's class hash
-///   replaced during this state update.
-fn compute_update_meta_info(new_nonce: Option<FieldElement>, n_storage_updates: u64, is_storage_only: bool) -> FieldElement {
+/// * `is_storage_only` - True if the contract address was only modified with storage updates. False
+///   if the contract was deployed or it's class hash replaced during this state update.
+fn compute_update_meta_info(
+    new_nonce: Option<FieldElement>,
+    n_storage_updates: u64,
+    is_storage_only: bool,
+) -> FieldElement {
     let mut meta = if is_storage_only {
         U256::from(0)
     } else {
@@ -187,9 +197,10 @@ fn compute_update_meta_info(new_nonce: Option<FieldElement>, n_storage_updates: 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use starknet::core::types::StorageEntry;
     use starknet::macros::{felt, selector};
+
+    use super::*;
 
     #[test]
     fn compute_update_meta_info_no_flag() {
@@ -208,21 +219,13 @@ mod tests {
         let contract_addr = selector!("addr1");
 
         let sd = StateDiff {
-            storage_diffs: vec![
-                ContractStorageDiffItem {
-                    address: contract_addr,
-                    storage_entries: vec![
-                        StorageEntry {
-                            key: felt!("0x0"),
-                            value: felt!("0x1"),
-                        },
-                        StorageEntry {
-                            key: felt!("0xa"),
-                            value: felt!("0xb"),
-                        }
-                    ],
-                },
-            ],
+            storage_diffs: vec![ContractStorageDiffItem {
+                address: contract_addr,
+                storage_entries: vec![
+                    StorageEntry { key: felt!("0x0"), value: felt!("0x1") },
+                    StorageEntry { key: felt!("0xa"), value: felt!("0xb") },
+                ],
+            }],
             deprecated_declared_classes: Default::default(),
             declared_classes: Default::default(),
             deployed_contracts: Default::default(),
@@ -254,12 +257,7 @@ mod tests {
             declared_classes: Default::default(),
             deployed_contracts: Default::default(),
             replaced_classes: Default::default(),
-            nonces: vec![
-                NonceUpdate {
-                    contract_address,
-                    nonce: felt!("0xff"),
-                },
-            ],
+            nonces: vec![NonceUpdate { contract_address, nonce: felt!("0xff") }],
         };
 
         let mut data = vec![];
@@ -281,12 +279,7 @@ mod tests {
             storage_diffs: Default::default(),
             deprecated_declared_classes: Default::default(),
             declared_classes: Default::default(),
-            deployed_contracts: vec![
-                DeployedContractItem {
-                    address,
-                    class_hash,
-                }
-            ],
+            deployed_contracts: vec![DeployedContractItem { address, class_hash }],
             replaced_classes: Default::default(),
             nonces: Default::default(),
         };
@@ -335,77 +328,34 @@ mod tests {
             storage_diffs: vec![
                 ContractStorageDiffItem {
                     address: a1_addr,
-                    storage_entries: vec![
-                        StorageEntry {
-                            key: felt!("0x0"),
-                            value: felt!("0xa1"),
-                        }
-                    ],
+                    storage_entries: vec![StorageEntry { key: felt!("0x0"), value: felt!("0xa1") }],
                 },
                 ContractStorageDiffItem {
                     address: c1_addr,
-                    storage_entries: vec![
-                        StorageEntry {
-                            key: felt!("0x0"),
-                            value: felt!("0xc1"),
-                        }
-                    ],
+                    storage_entries: vec![StorageEntry { key: felt!("0x0"), value: felt!("0xc1") }],
                 },
                 ContractStorageDiffItem {
                     address: c2_addr,
                     storage_entries: vec![
-                        StorageEntry {
-                            key: felt!("0x0"),
-                            value: felt!("0xc2"),
-                        },
-                        StorageEntry {
-                            key: felt!("0x1"),
-                            value: felt!("0xc2"),
-                        }
+                        StorageEntry { key: felt!("0x0"), value: felt!("0xc2") },
+                        StorageEntry { key: felt!("0x1"), value: felt!("0xc2") },
                     ],
                 },
             ],
             deployed_contracts: vec![
-                DeployedContractItem {
-                    address: a1_addr,
-                    class_hash: a1_ch,
-                },
-                DeployedContractItem {
-                    address: c1_addr,
-                    class_hash: c1_ch,
-                },
-                DeployedContractItem {
-                    address: c3_addr,
-                    class_hash: c3_ch,
-                }
+                DeployedContractItem { address: a1_addr, class_hash: a1_ch },
+                DeployedContractItem { address: c1_addr, class_hash: c1_ch },
+                DeployedContractItem { address: c3_addr, class_hash: c3_ch },
             ],
             nonces: vec![
-                NonceUpdate {
-                    contract_address: a1_addr,
-                    nonce: a1_nonce,
-                },
-                NonceUpdate {
-                    contract_address: a2_addr,
-                    nonce: a2_nonce,
-                }
+                NonceUpdate { contract_address: a1_addr, nonce: a1_nonce },
+                NonceUpdate { contract_address: a2_addr, nonce: a2_nonce },
             ],
             declared_classes: vec![
-                DeclaredClassItem {
-                    class_hash: a1_ch,
-                    compiled_class_hash: a1_cch,
-                },
-                DeclaredClassItem {
-                    class_hash: c1_ch,
-                    compiled_class_hash: c1_cch,
-                },
-                DeclaredClassItem {
-                    class_hash: c3_ch,
-                    compiled_class_hash: c3_cch,
-                },
-                DeclaredClassItem {
-                    class_hash: c4_ch,
-                    compiled_class_hash: c4_cch,
-                },
+                DeclaredClassItem { class_hash: a1_ch, compiled_class_hash: a1_cch },
+                DeclaredClassItem { class_hash: c1_ch, compiled_class_hash: c1_cch },
+                DeclaredClassItem { class_hash: c3_ch, compiled_class_hash: c3_cch },
+                DeclaredClassItem { class_hash: c4_ch, compiled_class_hash: c4_cch },
             ],
             deprecated_declared_classes: Default::default(),
             replaced_classes: Default::default(),

@@ -16,4 +16,3 @@ pub enum ProverIdentifier {
 pub trait ProverClient {
     fn identifier() -> ProverIdentifier;
 }
-
