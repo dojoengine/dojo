@@ -2,18 +2,14 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, parse_quote, Stmt};
 
-fn parse_metadata(metadata: String) -> (u16, String, Option<bool>) {
+fn parse_metadata(metadata: String) -> (u16, String, bool) {
     if metadata.is_empty() {
-        return (2, "katana".into(), Option::None);
+        return (2, "katana".into(), false);
     }
     let args = metadata.split(',').collect::<Vec<&str>>();
     let n_accounts = if !args.is_empty() { args[0].parse::<u16>().unwrap() } else { 1 };
 
-    let with_blocks = if args.len() >= 2 {
-        Option::Some(args[1].trim().parse::<bool>().unwrap())
-    } else {
-        Option::None
-    };
+    let with_blocks = if args.len() >= 2 { args[1].trim().parse::<bool>().unwrap() } else { false };
 
     let executable = if args.len() >= 3 { args[2].trim() } else { "katana" };
     let executable = executable.replace('"', "");
@@ -28,7 +24,6 @@ pub fn katana_test(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let function_name = test_function.sig.ident.to_string();
 
     let (n_accounts, executable, with_blocks) = parse_metadata(metadata.to_string());
-    let with_blocks = with_blocks.unwrap_or(true);
 
     let header: Stmt = parse_quote! {
         let runner =
@@ -58,23 +53,15 @@ pub fn runner(metadata: TokenStream) -> TokenStream {
     let function_name = args.remove(0);
 
     let (n_accounts, executable, with_blocks) = parse_metadata(args.join(","));
-    let with_blocks = with_blocks.unwrap_or(false);
     TokenStream::from(quote! {
-            static RUNNER: tokio::sync::OnceCell<std::sync::Arc<katana_runner::KatanaRunner>> = tokio::sync::OnceCell::const_new();
-            let runner = {
-                let runtime = tokio::runtime::Runtime::new().expect("Failed to create runtime");
-                let _rt = runtime.enter();
+        lazy_static::lazy_static! {
+            pub static ref RUNNER: std::sync::Arc<katana_runner::KatanaRunner> = std::sync::Arc::new(
+                katana_runner::KatanaRunner::new_with_args(#executable, #function_name, #n_accounts, #with_blocks)
+                    .expect("failed to start katana")
+            );
 
-                futures::executor::block_on(
-                    RUNNER
-                    .get_or_init(|| async {
-                        let runner =
-                            katana_runner::KatanaRunner::new_with_args(#executable, #function_name, #n_accounts, #with_blocks)
-                                .expect("failed to start katana");
+        }
 
-                        std::sync::Arc::new(runner)
-                    })
-                )
-            };
+        let runner = &RUNNER;
     })
 }

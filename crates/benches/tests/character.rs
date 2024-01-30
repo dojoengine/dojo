@@ -7,7 +7,7 @@ pub use benches::{
 pub use proptest::prelude::*;
 
 #[cfg(not(feature = "skip-gas-benchmarks"))]
-#[katana_runner::katana_test]
+#[katana_runner::katana_test(1, true)]
 async fn bench_complex_set_default() {
     let contract_address = deploy(&runner).await.unwrap();
 

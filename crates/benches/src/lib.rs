@@ -78,10 +78,9 @@ mod tests {
     use super::*;
 
     // does not need proptest, as it doesn't use any input
-    #[katana_runner::katana_test]
+    #[katana_runner::katana_test(1, true)]
     async fn bench_default_spawn() {
         let contract_address = deploy(&runner).await.unwrap();
-        println!("contract_address: {:?}", contract_address);
 
         let fee =
             estimate_gas(&runner.account(1), BenchCall("spawn", vec![]), contract_address).unwrap();
@@ -93,18 +92,12 @@ mod tests {
         #[test]
         fn bench_default_move(c in "0x[0-4]") {
             runner!(bench_default_move);
-            let contract_address = deploy_sync(runner).unwrap();
+            let contract_address = deploy_sync(&runner).unwrap();
 
-            println!("contract_address: {:?}", contract_address);
-
-            let fee =
-            estimate_gas(&runner.account(1), BenchCall("spawn", vec![]), contract_address).unwrap();
-
-            // let fee = estimate_gas_last(&runner.account(1), vec![
-            //     BenchCall("spawn", vec![]),
-            //     // BenchCall("move", vec![FieldElement::from_hex_be(&c).unwrap()])
-            // ], contract_address).unwrap();
-
+            let fee = estimate_gas_last(&runner.account(1), vec![
+                BenchCall("spawn", vec![]),
+                BenchCall("move", vec![FieldElement::from_hex_be(&c).unwrap()])
+            ], contract_address).unwrap();
 
             log("bench_move", fee, &c);
         }

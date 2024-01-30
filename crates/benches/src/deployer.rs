@@ -1,6 +1,5 @@
 use std::env;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Ok, Result};
 use clap::Parser;
@@ -40,7 +39,7 @@ pub async fn deploy(runner: &KatanaRunner) -> Result<FieldElement> {
     Ok(address)
 }
 
-pub fn deploy_sync(runner: &Arc<KatanaRunner>) -> Result<FieldElement> {
+pub fn deploy_sync(runner: &KatanaRunner) -> Result<FieldElement> {
     let _rt = RUNTIME.enter();
     block_on(async move { deploy(runner).await })
 }
