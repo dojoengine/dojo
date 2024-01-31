@@ -19,7 +19,7 @@ use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 
 abigen!(
     StarknetMessagingLocal,
-    "contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json",
+    "../primitives/contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json",
     event_derives(serde::Serialize, serde::Deserialize)
 );
 

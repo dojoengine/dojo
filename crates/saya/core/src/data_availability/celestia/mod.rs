@@ -37,7 +37,7 @@ pub struct CelestiaClient {
 impl CelestiaClient {
     pub async fn new(config: CelestiaConfig) -> DataAvailabilityResult<Self> {
         Ok(Self {
-            client: Client::new(&config.node_url.to_string(), config.node_auth_token.as_deref())
+            client: Client::new(config.node_url.as_ref(), config.node_auth_token.as_deref())
                 .await?,
             mode: DataAvailabilityMode::Validium,
             namespace: Namespace::new_v0(config.namespace.as_bytes())?,

@@ -5,10 +5,12 @@ use fixtures::{
     fork_provider_with_spawned_fork_network, in_memory_provider, provider_with_states,
     DOJO_WORLD_COMPILED_CLASS, DOJO_WORLD_SIERRA_CLASS,
 };
-use katana_core::constants::{ERC20_CONTRACT, UDC_CONTRACT};
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, FlattenedSierraClass,
+};
+use katana_primitives::genesis::constant::{
+    DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
 };
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -69,8 +71,8 @@ mod latest {
     #[rstest::rstest]
     #[case(
         vec![
-            (felt!("11"), Some(felt!("1000")), Some((*ERC20_CONTRACT).clone()), None),
-            (felt!("22"), Some(felt!("2000")), Some((*UDC_CONTRACT).clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
+            (felt!("22"), Some(felt!("2000")), Some(DEFAULT_LEGACY_UDC_CASM.clone()), None),
             (felt!("33"), Some(felt!("3000")), Some((*DOJO_WORLD_COMPILED_CLASS).clone()), Some((*DOJO_WORLD_SIERRA_CLASS).clone())),
         ]
     )]
@@ -139,7 +141,7 @@ mod historical {
     #[case::class_hash_at_block_1(
         1,
         vec![
-            (felt!("11"), Some(felt!("1000")), Some((*ERC20_CONTRACT).clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
             (felt!("22"), None, None, None),
             (felt!("33"), None, None, None),
         ])
@@ -147,16 +149,16 @@ mod historical {
     #[case::class_hash_at_block_4(
         4,
         vec![
-            (felt!("11"), Some(felt!("1000")), Some((*ERC20_CONTRACT).clone()), None),
-            (felt!("22"), Some(felt!("2000")), Some((*UDC_CONTRACT).clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
+            (felt!("22"), Some(felt!("2000")), Some(DEFAULT_LEGACY_UDC_CASM.clone()), None),
             (felt!("33"), None, None, None),
         ])
     ]
     #[case::class_hash_at_block_5(
         5,
         vec![
-            (felt!("11"), Some(felt!("1000")), Some((*ERC20_CONTRACT).clone()), None),
-            (felt!("22"), Some(felt!("2000")), Some((*UDC_CONTRACT).clone()), None),
+            (felt!("11"), Some(felt!("1000")), Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()), None),
+            (felt!("22"), Some(felt!("2000")), Some(DEFAULT_LEGACY_UDC_CASM.clone()), None),
             (felt!("33"), Some(felt!("3000")), Some((*DOJO_WORLD_COMPILED_CLASS).clone()), Some((*DOJO_WORLD_SIERRA_CLASS).clone())),
         ])
     ]
