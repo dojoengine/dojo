@@ -2236,6 +2236,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "common"
+version = "0.5.1-alpha.2"
+dependencies = [
+ "anyhow",
+ "reqwest",
+ "thiserror",
+]
+
+[[package]]
 name = "common-multipart-rfc7578"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6108,6 +6117,7 @@ dependencies = [
  "assert_matches",
  "clap",
  "clap_complete",
+ "common",
  "console",
  "katana-core",
  "katana-primitives",
@@ -11620,6 +11630,7 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
+ "common",
  "ctrlc",
  "dojo-types",
  "dojo-world",

@@ -7,6 +7,7 @@ members = [
   "bin/sozo",
   "bin/torii",
   "crates/benches",
+  "crates/common",
   "crates/dojo-bindgen",
   "crates/dojo-core",
   "crates/dojo-lang",
@@ -49,6 +50,8 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
+common = { path = "crates/common" }
+
 # metrics
 metrics = { path = "crates/metrics" }
 
@@ -79,8 +82,8 @@ torii-client = { path = "crates/torii/client" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
-torii-server = { path = "crates/torii/server" }
 torii-relay = { path = "crates/torii/libp2p" }
+torii-server = { path = "crates/torii/server" }
 
 # sozo
 sozo-signers = { path = "crates/sozo/signers" }
