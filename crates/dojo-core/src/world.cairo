@@ -445,8 +445,7 @@ mod world {
         fn upgrade_contract(
             ref self: ContractState, address: ContractAddress, class_hash: ClassHash
         ) -> ClassHash {
-            // Only owner can upgrade contract
-            assert_can_write(@self, address.into(), get_caller_address());
+            assert(is_account_owner(@self, address.into()), 'not owner');
             IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
             EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
             class_hash
@@ -618,10 +617,20 @@ mod world {
     /// * `caller` - The name of the caller writing.
     fn assert_can_write(self: @ContractState, resource: felt252, caller: ContractAddress) {
         assert(
-            IWorld::is_writer(self, resource, caller)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, resource)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
+            IWorld::is_writer(self, resource, caller) || is_account_owner(self, resource),
             'not writer'
         );
+    }
+
+    /// Returns true if the calling account is the owner of the resource
+    /// or the owner of the world.
+    /// False otherwise.
+    ///
+    /// # Arguments
+    ///
+    /// * `resource` - The name of the resource being verified.
+    fn is_account_owner(self: @ContractState, resource: felt252) -> bool {
+        IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, resource)
+            || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD)
     }
 }
