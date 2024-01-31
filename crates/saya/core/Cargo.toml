@@ -7,10 +7,10 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-katana-db = { path = "../../katana/storage/db" }
-katana-executor = { path = "../../katana/executor" }
-katana-primitives = { path = "../../katana/primitives" }
-katana-provider = { path = "../../katana/storage/provider" }
+katana-db.workspace = true
+katana-executor.workspace = true
+katana-primitives.workspace = true
+katana-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
