@@ -1,5 +1,4 @@
 pub mod prometheus_exporter;
-pub mod utils;
 
 #[cfg(all(feature = "jemalloc", unix))]
 use jemallocator as _;
