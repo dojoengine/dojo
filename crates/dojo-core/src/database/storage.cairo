@@ -4,7 +4,7 @@ use starknet::{SyscallResultTrait, StorageAddress, StorageBaseAddress, SyscallRe
 use traits::Into;
 use poseidon::poseidon_hash_span;
 use serde::Serde;
-use dojo::packing::{pack, unpack};
+use dojo::packing::{pack, unpack, calculate_packed_size};
 
 fn get(address_domain: u32, keys: Span<felt252>) -> felt252 {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
@@ -18,33 +18,12 @@ fn get_many(address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>) -> S
 
     let mut packed = ArrayTrait::new();
 
-    // Length of `packed` is always stored at the original address (offset 0 of the original segment).
-    let len: usize =
-        match starknet::syscalls::storage_read_syscall(address_domain, base_address)?.try_into() {
-            Option::Some(x) => x,
-            Option::None => { return SyscallResult::Err(array!['Invalid DojoStorageChunk length']); },
-        };
-
-    if len == 0 {
-        // If the len is 0, the storage segment has never been written.
-        // We then return an array of 0 corresponding to the unpacked length.
-        let mut empty = array![];
-        let mut i: usize = 0;
-        loop {
-            if i == layout.len() {
-                break;
-            }
-
-            empty.append(0);
-            i += 1;
-        };
-
-        return SyscallResult::<Span<felt252>>::Ok(empty.span());
-    }
+    let mut layout_calculate = layout;
+    let len: usize = calculate_packed_size(ref layout_calculate);
 
     let mut chunk = 0;
     let mut chunk_base = base;
-    let mut index_in_chunk = 1_u8;
+    let mut index_in_chunk = 0_u8;
 
     let mut packed_span = loop {
         let value =
@@ -96,15 +75,11 @@ fn set_many(address_domain: u32, keys: Span<felt252>, mut unpacked: Span<felt252
     let mut packed = ArrayTrait::new();
     pack(ref packed, ref unpacked, ref layout);
 
-    // Length of `packed` is always stored at the base address (offset 0 of the storage segment).
     let len = packed.len();
-    starknet::syscalls::storage_write_syscall(address_domain, base_address, len.into())?;
 
     let mut chunk = 0;
-    // The first chunk is stored right after the length, in the same storage segment.
     let mut chunk_base = base;
-    // The first chunk starts at offset 1 as the offset 0 contains the length of `packed`.
-    let mut index_in_chunk = 1_u8;
+    let mut index_in_chunk = 0_u8;
 
     loop {
         let curr_value = match packed.pop_front() {

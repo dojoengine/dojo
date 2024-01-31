@@ -65,7 +65,7 @@ fn test_storage_set_many() {
 }
 
 #[test]
-#[available_gas(200000000)]
+#[available_gas(2000000000)]
 fn test_storage_set_many_several_segments() {
     let mut keys = ArrayTrait::new();
     keys.append(0x966);
