@@ -2,7 +2,7 @@
 //!
 //! For a starknet based sequencer, the data posted to the DA
 //! is the state diff as encoded here:
-//! https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/on-chain-data/#data_availability_v0_11_0_and_forward.
+//! <https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/on-chain-data/#data_availability_v0_11_0_and_forward>.
 use std::fmt::Display;
 
 use async_trait::async_trait;

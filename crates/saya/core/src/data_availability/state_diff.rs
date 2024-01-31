@@ -2,7 +2,7 @@
 //! on a DA layer.
 //!
 //! All the specification is available here:
-//! https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/on-chain-data
+//! <https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/on-chain-data>.
 //!
 //! We use `U256` from ethers for easier computation (than working with felts).
 //!
@@ -25,7 +25,7 @@ const CLASS_INFO_FLAG_TRUE: &str = "0x100000000000000000000000000000000";
 /// Converts the [`StateDiff`] from RPC types into a [`Vec<FieldElement>`].
 ///
 /// Currently, Katana does not support `replaced_classes` and `deprecated_declared_classes`:
-/// https://github.com/dojoengine/dojo/blob/10031f0abba7ca8dafc7040a52883e5af469863a/crates/katana/rpc/rpc-types/src/state_update.rs#L66.
+/// <https://github.com/dojoengine/dojo/blob/10031f0abba7ca8dafc7040a52883e5af469863a/crates/katana/rpc/rpc-types/src/state_update.rs#L66>.
 ///
 /// For this reason, the [`StateDiff`] serialized here does not take in account
 /// the contracts that has only been upgraded via `replace_class` syscall.
