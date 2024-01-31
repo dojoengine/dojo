@@ -50,6 +50,23 @@ Some work to be done:
 1. Add a RPC server to query data from Saya and current progress.
 2. Add some parallelism when it's possible, as Saya will inevitably be lagging due to the settlement layer being slower than Katana.
 
+## Dependencies
+
+SNOS, responsible for the cairo execution trace generation, works with Cairo VM main branch with a specific feature.
+
+As one of it's inputs, SNOS in rust requires a `Vec<TransactionExecutionInfo>`, containing the execution info of each transaction of the block. This info is not (yet) stored by Katana neither serializable.
+
+To ensure we've the exact same result, Saya must run the same version (or at least compatible) of the Cairo VM of Katana to replay all the transaction and get their `TransactionExecutionInfo`.
+
+In new Cairo VM version, there are breaking changes as mentioned in the release not, which implies a bump of Cairo VM for Katana and at the same time we could bump to cairo `2.5.0`.
+However, papyrus and blockifier which we depend on are still in `-dev` version, where also some breaking changes must be addressed.
+
+* Cairo VM (currently dojo is using 0.8, and others are in 0.9)
+* Blockifier (uses Cairo VM and cairo-lang `-dev`)
+* Papyrus (used by blockifier and use blockifier and cairo-lang `-dev`)
+* cairo-lang (we should support `2.5` now)
+* scarb (breaking changes between 2.4 and 2.5 to be addresses, not required to only build saya and SNOS)
+
 ## Additional documentation
 
 [Hackmd note](https://hackmd.io/@glihm/saya)
