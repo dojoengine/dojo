@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706643851143,
+  "lastUpdate": 1706731581000,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -535,6 +535,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1038208,
             "range": "± 70725",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "128649481+neotheprogramist@users.noreply.github.com",
+            "name": "Neo",
+            "username": "neotheprogramist"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "df8a9bd82baf8f6f416c1f10482acf73e59ca681",
+          "message": "Katana Benchmarks (#1467)\n\n* updated dojo benches to work with the new version\r\n\r\n* basic bench\r\n\r\n* katana bench to separate file\r\n\r\n* prefunded account manager\r\n\r\n* iterating over prefunded\r\n\r\n* working benchmark\r\n\r\n* timing responses and cleanup\r\n\r\n* allowed for a greater number of prefunded\r\n\r\n* spawn before each move\r\n\r\n* auth writer fix\r\n\r\n* last touches\r\n\r\n* formatting\r\n\r\n* initial katana runner macro\r\n\r\n* working macro\r\n\r\n* working katana macro\r\n\r\n* changed runner to include accounts\r\n\r\n* katana_test test\r\n\r\n* deploying contract\r\n\r\n* running auth script\r\n\r\n* katana runner from a different executable\r\n\r\n* working but really slow\r\n\r\n* updated contracts in new format\r\n\r\n* added a deploy to function like macro\r\n\r\n* all benches passing\r\n\r\n* updated to new katana\r\n\r\n* overall cleanup\r\n\r\n* fmt and clippy\r\n\r\n* moved other uses of katan runner to macro\r\n\r\n* rust fmt fix\r\n\r\n* block sizes assert\r\n\r\n* block duration from logs\r\n\r\n* time for each 2 consecutive transactions\r\n\r\n* minor cleanup\r\n\r\n* bench for different numbers of tx\r\n\r\n* added tps estimation\r\n\r\n* benchmark logs now use json\r\n\r\n* loading contract address from sozo\r\n\r\n* heavy benchmark\r\n\r\n* small refactor of benchmarks\r\n\r\n* fixed one off account issue\r\n\r\n* minor benchmark fixes\r\n\r\n* heavy compute benchmarks\r\n\r\n* multicall bechmarks\r\n\r\n* final\r\n\r\n* results aftere rebase\r\n\r\n* Readme update and CI fix\r\n\r\n* fixed test issues\r\n\r\n* deployed using sozo depencency\r\n\r\n* moved runner to benches\r\n\r\n* parsing json before filtering logs\r\n\r\n* changed permalinks to point to the main repo\r\n\r\n* moved benchmarks behind a feature\r\n\r\n* reverset feature flag for benches\r\n\r\n* formatting\r\n\r\n* moved runner back to katana\r\n\r\n* moved the deployment logic to benches\r\n\r\n* skipping benchmarks by default\r\n\r\n* formatting after changes\r\n\r\n* sync runner init\r\n\r\n* fixes after rebase\r\n\r\n---------\r\n\r\nCo-authored-by: Mateusz Zając <matzayonc@gmail.com>",
+          "timestamp": "2024-01-31T14:57:05-05:00",
+          "tree_id": "2b4ae398f6f1a42063c402fd40c635626614caa9",
+          "url": "https://github.com/dojoengine/dojo/commit/df8a9bd82baf8f6f416c1f10482acf73e59ca681"
+        },
+        "date": 1706731580353,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 987719,
+            "range": "± 38288",
             "unit": "ns/iter"
           }
         ]
