@@ -139,7 +139,7 @@ pub struct StarknetOptions {
     #[arg(value_name = "NUM")]
     #[arg(default_value = "10")]
     #[arg(help = "Number of pre-funded accounts to generate.")]
-    pub total_accounts: u8,
+    pub total_accounts: u16,
 
     #[arg(long)]
     #[arg(help = "Disable charging fee when executing transactions.")]

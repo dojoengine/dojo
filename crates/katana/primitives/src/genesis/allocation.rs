@@ -224,7 +224,7 @@ impl From<DevGenesisAccount> for GenesisAllocation {
 /// A helper type for allocating dev accounts in the genesis block.
 #[must_use]
 pub struct DevAllocationsGenerator {
-    total: u8,
+    total: u16,
     seed: [u8; 32],
     balance: U256,
     class_hash: FieldElement,
@@ -234,7 +234,7 @@ impl DevAllocationsGenerator {
     /// Create a new dev account generator for `total` number of accounts.
     ///
     /// This will return a [DevAllocationsGenerator] with the default parameters.
-    pub fn new(total: u8) -> Self {
+    pub fn new(total: u16) -> Self {
         Self {
             total,
             seed: [0u8; 32],

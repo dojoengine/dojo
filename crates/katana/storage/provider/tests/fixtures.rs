@@ -28,7 +28,8 @@ use url::Url;
 
 lazy_static! {
     pub static ref FORKED_PROVIDER: (KatanaRunner, Arc<JsonRpcClient<HttpTransport>>) = {
-        let (runner, provider) = katana_runner::KatanaRunner::new().unwrap();
+        let runner = katana_runner::KatanaRunner::new().unwrap();
+        let provider = runner.owned_provider();
         (runner, Arc::new(provider))
     };
     pub static ref DOJO_WORLD_COMPILED_CLASS: CompiledContractClass =
