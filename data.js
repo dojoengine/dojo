@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706731581000,
+  "lastUpdate": 1706735146298,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -565,6 +565,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 987719,
             "range": "± 38288",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba036225ef1af0d5290a1a844097c1e5a78a4452",
+          "message": "Fix url parsing for torii rpc arg (#1499)",
+          "timestamp": "2024-01-31T15:56:31-05:00",
+          "tree_id": "7b9a485baec9dcbee6cee3d33e73362a5271d6e7",
+          "url": "https://github.com/dojoengine/dojo/commit/ba036225ef1af0d5290a1a844097c1e5a78a4452"
+        },
+        "date": 1706735145340,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1038188,
+            "range": "± 33891",
             "unit": "ns/iter"
           }
         ]
