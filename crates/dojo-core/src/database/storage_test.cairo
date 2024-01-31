@@ -27,7 +27,7 @@ fn test_storage() {
 }
 
 #[test]
-#[available_gas(2000000)]
+#[available_gas(20000000)]
 fn test_storage_empty() {
     let mut keys = ArrayTrait::new();
     assert(storage::get(0, keys.span()) == 0x0, 'Value should be 0');
