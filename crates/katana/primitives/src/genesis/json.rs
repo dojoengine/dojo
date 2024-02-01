@@ -54,6 +54,8 @@ pub struct FeeTokenConfigJson {
     /// The class hash of the fee token contract.
     /// If not provided, the default fee token class is used.
     pub class: Option<ClassHash>,
+    /// To initialize the fee token contract storage
+    pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -64,6 +66,8 @@ pub struct UniversalDeployerConfigJson {
     /// The class hash of the universal deployer contract.
     /// If not provided, the default UD class is used.
     pub class: Option<ClassHash>,
+    /// To initialize the UD contract storage
+    pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -241,6 +245,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
             decimals: value.fee_token.decimals,
             address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
             class_hash: value.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
+            storage: value.fee_token.storage,
         };
 
         match value.fee_token.class {
@@ -273,6 +278,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
                     Some(UniversalDeployerConfig {
                         class_hash: hash,
                         address: config.address.unwrap_or(DEFAULT_UDC_ADDRESS),
+                        storage: config.storage,
                     })
                 }
 
@@ -280,6 +286,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
                 None => {
                     let class_hash = DEFAULT_LEGACY_UDC_CLASS_HASH;
                     let address = config.address.unwrap_or(DEFAULT_UDC_ADDRESS);
+                    let storage = config.storage;
 
                     let _ = classes.insert(
                         DEFAULT_LEGACY_UDC_CLASS_HASH,
@@ -290,7 +297,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
                         },
                     );
 
-                    Some(UniversalDeployerConfig { class_hash, address })
+                    Some(UniversalDeployerConfig { class_hash, address, storage })
                 }
             }
         } else {
@@ -430,6 +437,10 @@ mod tests {
         assert_eq!(genesis.fee_token.symbol, String::from("ETH"));
         assert_eq!(genesis.fee_token.class, Some(felt!("0x8")));
         assert_eq!(genesis.fee_token.decimals, 18);
+        assert_eq!(
+            genesis.fee_token.storage,
+            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2"))]))
+        );
 
         assert_eq!(
             genesis.universal_deployer.clone().unwrap().address,
@@ -438,6 +449,10 @@ mod tests {
             )))
         );
         assert_eq!(genesis.universal_deployer.unwrap().class, None);
+        assert_eq!(
+            genesis.fee_token.storage,
+            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2")),]))
+        );
 
         let acc_1 = ContractAddress::from(felt!(
             "0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"
@@ -564,6 +579,10 @@ mod tests {
             total_supply: U256::from_str("0xD3C21BCECCEDA1000000").unwrap() * 4,
             decimals: 18,
             class_hash: felt!("0x8"),
+            storage: Some(HashMap::from([
+                (felt!("0x111"), felt!("0x1")),
+                (felt!("0x222"), felt!("0x2")),
+            ])),
         };
 
         let acc_1 = ContractAddress::from(felt!(
@@ -641,6 +660,7 @@ mod tests {
                 address: ContractAddress::from(felt!(
                     "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
                 )),
+                storage: Some([(felt!("0x10"), felt!("0x100"))].into()),
             }),
         };
 
@@ -748,6 +768,7 @@ mod tests {
             total_supply: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
             decimals: 18,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            storage: None,
         };
 
         let allocations = BTreeMap::from([(
@@ -776,6 +797,7 @@ mod tests {
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
                 address: DEFAULT_UDC_ADDRESS,
+                storage: None,
             }),
         };
 
