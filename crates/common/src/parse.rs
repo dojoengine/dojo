@@ -79,7 +79,6 @@ pub fn parse_url(value: &str) -> anyhow::Result<Url, URLParsingError> {
 
     match Url::parse(value) {
         Ok(url) => {
-            println!("{:?}", url);
             // Check if the scheme is http or https
             if url.scheme() != "https" && url.scheme() != "http" {
                 return Err(URLParsingError::InvalidScheme(url.scheme().to_string()));
