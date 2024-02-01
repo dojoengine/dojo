@@ -250,7 +250,7 @@ fn is_model_contract(tokens: &TokenizedAbi) -> bool {
 
     let mut funcs_counts = 0;
 
-    for functions in &tokens.interfaces.values() {
+    for functions in tokens.interfaces.values() {
         for f in functions {
             if expected_funcs.contains(&f.to_function().expect("Function expected").name.as_str()) {
                 funcs_counts += 1;
