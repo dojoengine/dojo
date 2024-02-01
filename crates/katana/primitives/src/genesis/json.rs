@@ -515,7 +515,6 @@ pub fn to_base64(genesis: GenesisJson) -> Result<Vec<u8>, GenesisJsonError> {
 pub fn from_base64(data: &[u8]) -> Result<GenesisJson, GenesisJsonError> {
     match data {
         [b'b', b'a', b's', b'e', b'6', b'4', b':', rest @ ..] => {
-            println!("bruh");
             let decoded = BASE64_STANDARD.decode(rest)?;
             Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
         }
