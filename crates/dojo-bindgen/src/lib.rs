@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 
 use cainome::parser::tokens::Token;
 use cainome::parser::{AbiParser, TokenizedAbi};
@@ -48,6 +49,8 @@ pub struct DojoData {
 // TODO: include the manifest to have more metadata when new manifest is available.
 #[derive(Debug)]
 pub struct PluginManager {
+    /// Path of generated files.
+    pub output_path: PathBuf,
     /// Path of contracts artifacts.
     pub artifacts_path: Utf8PathBuf,
     /// A list of builtin plugins to invoke.
@@ -72,7 +75,15 @@ impl PluginManager {
                 BuiltinPlugins::Unity => Box::new(UnityPlugin::new()),
             };
 
-            builder.generate_code(&data).await?;
+            let files = builder.generate_code(&data).await?;
+            for (path, content) in files.unwrap_or_default() {
+                let path = self.output_path.join(path);
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+
+                fs::write(path, content)?;
+            }
         }
         Ok(())
     }

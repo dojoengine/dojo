@@ -1,6 +1,5 @@
-use std::fs::File;
-use std::io::Write;
-use std::path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function};
@@ -303,40 +302,33 @@ public class {} : MonoBehaviour {{
 
 #[async_trait]
 impl BuiltinPlugin for UnityPlugin {
-    async fn generate_code(&self, data: &DojoData) -> BindgenResult<()> {
+    async fn generate_code(
+        &self,
+        data: &DojoData,
+    ) -> BindgenResult<Option<HashMap<PathBuf, Vec<u8>>>> {
+        let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
         let mut handled_tokens = Vec::<Composite>::new();
-
-        let base_path = path::PathBuf::from("./generated/unity");
 
         // Handle codegen for models
         for (name, model) in &data.models {
-            let models_path = base_path.join("Models");
-            std::fs::create_dir_all(models_path.clone())?;
-            let mut file =
-                File::create(path::Path::new(&models_path.join(format!("{}.gen.cs", name))))?;
+            let models_path = Path::new(&format!("Models/{}.gen.cs", name)).to_owned();
 
             println!("Generating model: {}", name);
             let code = self.handle_model(model, &mut handled_tokens);
 
-            file.write_all(code.as_bytes())?;
+            out.insert(models_path, code.as_bytes().to_vec());
         }
 
         // Handle codegen for systems
         for (name, contract) in &data.contracts {
-            let contracts_path = base_path.join("Contracts");
-            std::fs::create_dir_all(contracts_path.clone())?;
-
-            let mut file = File::create(
-                path::Path::new(&contracts_path)
-                    .join(format!("{}.gen.cs", UnityPlugin::formatted_contract_name(name))),
-            )?;
+            let contracts_path = Path::new(&format!("Contracts/{}.gen.cs", name)).to_owned();
 
             println!("Generating contract: {}", name);
             let code = self.handle_contract(contract, &handled_tokens);
 
-            file.write_all(code.as_bytes())?;
+            out.insert(contracts_path, code.as_bytes().to_vec());
         }
 
-        Ok(())
+        Ok(Some(out))
     }
 }

@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 
 use crate::error::BindgenResult;
@@ -19,5 +22,8 @@ pub trait BuiltinPlugin {
     /// # Arguments
     ///
     /// * `data` - Dojo data gathered from the compiled project.
-    async fn generate_code(&self, data: &DojoData) -> BindgenResult<()>;
+    async fn generate_code(
+        &self,
+        data: &DojoData,
+    ) -> BindgenResult<Option<HashMap<PathBuf, Vec<u8>>>>;
 }
