@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::BufReader;
 use std::path::PathBuf;
 
 use anyhow::Context;
@@ -30,10 +28,8 @@ pub fn parse_genesis(value: &str) -> Result<Genesis, anyhow::Error> {
 
         None => {
             let path = PathBuf::from(shellexpand::full(value)?.into_owned());
-            let file = BufReader::new(File::open(&path)?);
-
-            let json: GenesisJson = serde_json::from_reader(file)?;
-            let genesis: Genesis = json.into_genesis(path)?;
+            let (json, base_path) = GenesisJson::load(path)?;
+            let genesis: Genesis = json.into_genesis(base_path)?;
             Ok(genesis)
         }
     }

@@ -678,6 +678,32 @@ mod tests {
     }
 
     #[test]
+    fn deserialize_from_json_with_class() {
+        let path = PathBuf::from("./src/genesis/test-genesis.json");
+        let (genesis, _) = GenesisJson::load(path).unwrap();
+
+        assert_eq!(
+            genesis.classes,
+            vec![
+                GenesisClassJson {
+                    class_hash: Some(felt!("0x8")),
+                    class: PathBuf::from("../../contracts/compiled/erc20.json").into(),
+                },
+                GenesisClassJson {
+                    class_hash: Some(felt!("0x80085")),
+                    class: PathBuf::from("../../contracts/compiled/universal_deployer.json").into(),
+                },
+                GenesisClassJson {
+                    class_hash: Some(felt!("0xa55")),
+                    class: serde_json::to_value(DEFAULT_OZ_ACCOUNT_CONTRACT.clone())
+                        .unwrap()
+                        .into(),
+                },
+            ]
+        );
+    }
+
+    #[test]
     fn genesis_try_from_json() {
         let (genesis, base_path) = genesis_json();
         let actual_genesis = genesis.into_genesis(base_path).unwrap();
