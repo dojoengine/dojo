@@ -62,7 +62,7 @@ struct Args {
     start_block: u64,
 
     /// Address to serve api endpoints at.
-    #[arg(long, value_name = "SOCKET", default_value = ":8080", value_parser = parse_socket_address)]
+    #[arg(long, value_name = "SOCKET", default_value = "0.0.0.0:8080", value_parser = parse_socket_address)]
     addr: SocketAddr,
 
     /// Port to serve Libp2p TCP & UDP Quic transports
