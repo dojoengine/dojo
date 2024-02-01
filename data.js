@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706811504730,
+  "lastUpdate": 1706812993246,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -685,6 +685,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1052352,
             "range": "± 50496",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e29ec3eddaedef96715e37f41b46aa8ad69ed95",
+          "message": "Torii fix extra url parse (#1506)",
+          "timestamp": "2024-02-01T13:33:53-05:00",
+          "tree_id": "a0923217791398669b739f9614f82c9f785d5af7",
+          "url": "https://github.com/dojoengine/dojo/commit/1e29ec3eddaedef96715e37f41b46aa8ad69ed95"
+        },
+        "date": 1706812992240,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 978339,
+            "range": "± 29159",
             "unit": "ns/iter"
           }
         ]
