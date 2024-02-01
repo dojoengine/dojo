@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706738508163,
+  "lastUpdate": 1706799050048,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -625,6 +625,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1037440,
             "range": "± 45326",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "17c0b1479ea508eb65b6f36fffa97790f991aac7",
+          "message": "feat(katana): genesis storage for fee token and udc (#1503)",
+          "timestamp": "2024-02-01T22:41:42+08:00",
+          "tree_id": "5c6dae1777fc0aac13ebce982b3088423cf48cca",
+          "url": "https://github.com/dojoengine/dojo/commit/17c0b1479ea508eb65b6f36fffa97790f991aac7"
+        },
+        "date": 1706799049525,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1034456,
+            "range": "± 37132",
             "unit": "ns/iter"
           }
         ]
