@@ -96,6 +96,9 @@ public enum {} {{
         )
     }
 
+    // Token should be a model
+    // This will be formatted into a C# class inheriting from ModelInstance
+    // Fields are mapped using C# and unity SDK types
     fn format_model(model: &Composite) -> String {
         let fields = model
             .inners
@@ -132,6 +135,9 @@ public class {} : ModelInstance {{
         )
     }
 
+    // Handles a model definition and its referenced tokens
+    // Will map all structs and enums to C# types
+    // Will format the model into a C# class
     fn handle_model(&self, model: &DojoModel, handled_tokens: &mut Vec<Composite>) -> String {
         let mut out = String::new();
         out += UnityPlugin::generated_header().as_str();
@@ -165,6 +171,9 @@ public class {} : ModelInstance {{
         out
     }
 
+    // Formats a system into a C# method used by the contract class
+    // Handled tokens should be a list of all structs and enums used by the contract
+    // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
         let args = system
             .inputs
@@ -242,6 +251,8 @@ public class {} : ModelInstance {{
         )
     }
 
+    // Formats a contract file path into a pretty contract name
+    // eg. dojo_examples::actions::actions.json -> Actions
     fn formatted_contract_name(contract_file_name: &str) -> String {
         let contract_name =
             contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
@@ -249,6 +260,10 @@ public class {} : ModelInstance {{
         contract_name.chars().next().unwrap().to_uppercase().to_string() + &contract_name[1..]
     }
 
+    // Handles a contract definition and its underlying systems
+    // Will format the contract into a C# class and
+    // all systems into C# methods
+    // Handled tokens should be a list of all structs and enums used by the contract
     fn handle_contract(&self, contract: &DojoContract, handled_tokens: &[Composite]) -> String {
         let mut out = String::new();
         out += UnityPlugin::generated_header().as_str();
