@@ -29,9 +29,5 @@ pub fn parse_compiled_class_v0(class: &str) -> Result<CompiledContractClassV0, s
 
 /// Parse a [`str`] into a [`SierraClass`].
 pub fn parse_sierra_class(class: &str) -> Result<SierraClass, serde_json::Error> {
-    // Some Deserializer.
-    let jd = &mut serde_json::Deserializer::from_str(class);
-    let result = serde_path_to_error::deserialize(jd).unwrap();
-    // serde_json::from_str(class)
-    Ok(result)
+    serde_json::from_str(class)
 }
