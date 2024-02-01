@@ -353,8 +353,8 @@ mod tests {
             decimals: 18,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
             storage: Some(HashMap::from([
-                ((felt!("0x111"), felt!("0x1"))),
-                ((felt!("0x222"), felt!("0x2"))),
+                (felt!("0x111"), felt!("0x1")),
+                (felt!("0x222"), felt!("0x2")),
             ])),
         };
 
@@ -401,7 +401,7 @@ mod tests {
         let ud = UniversalDeployerConfig {
             address: ContractAddress(felt!("0xb00b1e5")),
             class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
-            storage: Some([((felt!("0x10"), felt!("0x100")))].into()),
+            storage: Some([(felt!("0x10"), felt!("0x100"))].into()),
         };
 
         let genesis = Genesis {

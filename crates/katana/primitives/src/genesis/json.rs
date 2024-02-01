@@ -439,10 +439,7 @@ mod tests {
         assert_eq!(genesis.fee_token.decimals, 18);
         assert_eq!(
             genesis.fee_token.storage,
-            Some(HashMap::from([
-                ((felt!("0x111"), felt!("0x1"))),
-                ((felt!("0x222"), felt!("0x2")))
-            ]))
+            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2"))]))
         );
 
         assert_eq!(
@@ -454,10 +451,7 @@ mod tests {
         assert_eq!(genesis.universal_deployer.unwrap().class, None);
         assert_eq!(
             genesis.fee_token.storage,
-            Some(HashMap::from([
-                ((felt!("0x111"), felt!("0x1"))),
-                ((felt!("0x222"), felt!("0x2"))),
-            ]))
+            Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2")),]))
         );
 
         let acc_1 = ContractAddress::from(felt!(
@@ -586,8 +580,8 @@ mod tests {
             decimals: 18,
             class_hash: felt!("0x8"),
             storage: Some(HashMap::from([
-                ((felt!("0x111"), felt!("0x1"))),
-                ((felt!("0x222"), felt!("0x2"))),
+                (felt!("0x111"), felt!("0x1")),
+                (felt!("0x222"), felt!("0x2")),
             ])),
         };
 
@@ -666,7 +660,7 @@ mod tests {
                 address: ContractAddress::from(felt!(
                     "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
                 )),
-                storage: Some([((felt!("0x10"), felt!("0x100")))].into()),
+                storage: Some([(felt!("0x10"), felt!("0x100"))].into()),
             }),
         };
 
