@@ -132,9 +132,7 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
-    let provider: Arc<_> =
-        JsonRpcClient::new(HttpTransport::new(format!("http://{}", args.rpc).parse::<Url>()?))
-            .into();
+    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
