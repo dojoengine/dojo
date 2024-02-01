@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706812993246,
+  "lastUpdate": 1706813773933,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -715,6 +715,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 978339,
             "range": "± 29159",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b6a43331f423426febefee51d10b83f701a5f34b",
+          "message": "Prepare release: v0.5.1-alpha.4 (#1507)",
+          "timestamp": "2024-02-01T13:47:08-05:00",
+          "tree_id": "29dcb81abd76f35cd6412a7d1ebe6f6b28288737",
+          "url": "https://github.com/dojoengine/dojo/commit/b6a43331f423426febefee51d10b83f701a5f34b"
+        },
+        "date": 1706813773473,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 985310,
+            "range": "± 38587",
             "unit": "ns/iter"
           }
         ]
