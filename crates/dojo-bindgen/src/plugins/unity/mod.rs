@@ -112,7 +112,7 @@ public enum {} {{
             .join("\n\n    ");
 
         format!(
-        "
+            "
 // Model definition for `{}` model
 public class {} : ModelInstance {{
     {}
@@ -132,17 +132,12 @@ public class {} : ModelInstance {{
         )
     }
 
-    fn handle_model(
-        &self,
-        model: &DojoModel,
-        handled_tokens: &mut Vec<Composite>,
-    ) -> String {
+    fn handle_model(&self, model: &DojoModel, handled_tokens: &mut Vec<Composite>) -> String {
         let mut out = String::new();
         out += "using System;\n";
         out += "using Dojo;\n";
         out += "using Dojo.Starknet;\n";
         out += UnityPlugin::generated_header().as_str();
-        
 
         let mut model_struct: Option<&Composite> = None;
         let tokens = &model.tokens;
@@ -170,10 +165,7 @@ public class {} : ModelInstance {{
         out
     }
 
-    fn format_system(
-        system: &Function,
-        handled_tokens: &[Composite],
-    ) -> String {
+    fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
         let args = system
             .inputs
             .iter()
@@ -254,11 +246,14 @@ public class {} : ModelInstance {{
         )
     }
 
-    fn handle_contract(
-        &self,
-        contract: &DojoContract,
-        handled_tokens: &[Composite],
-    ) -> String {
+    fn formatted_contract_name(contract_file_name: &str) -> String {
+        let contract_name =
+            contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
+        // capitalize contract name
+        contract_name.chars().next().unwrap().to_uppercase().to_string() + &contract_name[1..]
+    }
+
+    fn handle_contract(&self, contract: &DojoContract, handled_tokens: &[Composite]) -> String {
         let mut out = String::new();
         out += "using System;\n";
         out += "using System.Threading.Tasks;\n";
@@ -268,18 +263,10 @@ public class {} : ModelInstance {{
         out += "using dojo_bindings;\n";
         out += UnityPlugin::generated_header().as_str();
 
-        let contract_name =
-            contract.contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
-        // capitalize contract name
-        let contract_name =
-            contract_name.chars().next().unwrap().to_uppercase().to_string() + &contract_name[1..];
-
         let systems = contract
             .systems
             .iter()
-            .map(|system| {
-                UnityPlugin::format_system(system.to_function().unwrap(), handled_tokens)
-            })
+            .map(|system| UnityPlugin::format_system(system.to_function().unwrap(), handled_tokens))
             .collect::<Vec<String>>()
             .join("\n\n    ");
 
@@ -295,7 +282,7 @@ public class {} : MonoBehaviour {{
         ",
             contract.contract_file_name,
             // capitalize contract name
-            contract_name,
+            UnityPlugin::formatted_contract_name(&contract.contract_file_name),
             systems
         );
 
@@ -308,31 +295,33 @@ impl BuiltinPlugin for UnityPlugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<()> {
         let mut handled_tokens = Vec::<Composite>::new();
 
-        println!("{:?}", data.models);
+        std::fs::create_dir_all("./Unity")?;
         // Handle codegen for models
         for (name, model) in &data.models {
             // create Models directory if it doesn't exist
-            std::fs::create_dir_all("./Models")?;
-            let mut file = File::create(path::Path::new(&std::path::PathBuf::from("./Models").join(format!("{}.gen.cs", name))))?;
+            std::fs::create_dir_all("./Unity/Models")?;
+            let mut file = File::create(path::Path::new(
+                &std::path::PathBuf::from("./Unity/Models").join(format!("{}.gen.cs", name)),
+            ))?;
 
             println!("Generating model: {}", name);
-            let code = self
-                .handle_model(model, &mut handled_tokens);
-            
+            let code = self.handle_model(model, &mut handled_tokens);
+
             file.write_all(code.as_bytes())?;
         }
 
-        println!("{:?}", handled_tokens);
         // Handle codegen for systems
         for (name, contract) in &data.contracts {
             // create Contracts directory in the current directory if it doesn't exist
-            std::fs::create_dir_all("./Contracts")?;
-            let mut file = File::create(path::Path::new(&std::path::PathBuf::from("./Contracts").join(format!("{}.gen.cs", name))))?;
-            
+            std::fs::create_dir_all("./Unity/Contracts")?;
+            let mut file = File::create(path::Path::new(
+                &std::path::PathBuf::from("./Unity/Contracts")
+                    .join(format!("{}.gen.cs", UnityPlugin::formatted_contract_name(name))),
+            ))?;
 
             println!("Generating contract: {}", name);
             let code = self.handle_contract(contract, &handled_tokens);
-            
+
             file.write_all(code.as_bytes())?;
         }
 
