@@ -304,7 +304,7 @@ fn is_model_contract(tokens: &TokenizedAbi) -> bool {
 //     #[test]
 //     fn is_model_contract_ok() {
 //         let file_content =
-//             
+//
 // include_str!("test_data/spawn-and-move/target/dev/dojo_examples::models::moves.json");
 //         let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
 
@@ -333,7 +333,7 @@ fn is_model_contract(tokens: &TokenizedAbi) -> bool {
 //     #[test]
 //     fn gather_data_ok() {
 //         let data =
-// gather_dojo_data(&Utf8PathBuf::from("src/test_data/spawn-and-move/target/dev"))             
+// gather_dojo_data(&Utf8PathBuf::from("src/test_data/spawn-and-move/target/dev"))
 // .unwrap();
 
 //         assert_eq!(data.models.len(), 2);
