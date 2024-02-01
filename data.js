@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706829930705,
+  "lastUpdate": 1706830400587,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -775,6 +775,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 985125,
             "range": "± 32703",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1af041cd830ed5497b3e06f38d2eff005360538a",
+          "message": "Torii bind default addr to 0.0.0.0 (#1509)",
+          "timestamp": "2024-02-01T15:24:11-08:00",
+          "tree_id": "564aef7cbfc6c7a70a409c502179ce3e47c7ac1f",
+          "url": "https://github.com/dojoengine/dojo/commit/1af041cd830ed5497b3e06f38d2eff005360538a"
+        },
+        "date": 1706830400100,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 985612,
+            "range": "± 35794",
             "unit": "ns/iter"
           }
         ]
