@@ -49,6 +49,8 @@ pub struct FeeTokenConfig {
     /// The class hash of the fee token contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
+    /// To initialize the fee token contract storage
+    pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
 #[serde_with::serde_as]
@@ -65,10 +67,15 @@ pub struct GenesisClass {
     pub sierra: Option<Arc<FlattenedSierraClass>>,
 }
 
+/// The configuration of the universal deployer contract.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct UniversalDeployerConfig {
+    /// The class hash of the universal deployer contract.
     pub class_hash: ClassHash,
+    /// The address of the universal deployer contract.
     pub address: ContractAddress,
+    /// To initialize the UD contract storage
+    pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
 /// Genesis block configuration.
@@ -182,7 +189,7 @@ impl Genesis {
         // TODO: put this in a separate function
 
         // insert fee token related data
-        let mut fee_token_storage: HashMap<StorageKey, StorageValue> = HashMap::new();
+        let mut fee_token_storage = self.fee_token.storage.clone().unwrap_or_default();
 
         let name: FieldElement = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
         let symbol: FieldElement = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
@@ -219,7 +226,10 @@ impl Genesis {
 
         // insert universal deployer related data
         if let Some(udc) = &self.universal_deployer {
+            let storage = udc.storage.clone().unwrap_or_default();
+
             states.state_updates.contract_updates.insert(udc.address, udc.class_hash);
+            states.state_updates.storage_updates.insert(udc.address, storage);
         }
 
         states
@@ -238,11 +248,13 @@ impl Default for Genesis {
             total_supply: 0.into(),
             address: DEFAULT_FEE_TOKEN_ADDRESS,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            storage: None,
         };
 
         let universal_deployer = UniversalDeployerConfig {
             address: DEFAULT_UDC_ADDRESS,
             class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
+            storage: None,
         };
 
         let classes = HashMap::from([
@@ -340,6 +352,10 @@ mod tests {
             total_supply: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
             decimals: 18,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            storage: Some(HashMap::from([
+                ((felt!("0x111"), felt!("0x1"))),
+                ((felt!("0x222"), felt!("0x2"))),
+            ])),
         };
 
         let allocations = [
@@ -385,6 +401,7 @@ mod tests {
         let ud = UniversalDeployerConfig {
             address: ContractAddress(felt!("0xb00b1e5")),
             class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
+            storage: Some([((felt!("0x10"), felt!("0x100")))].into()),
         };
 
         let genesis = Genesis {
@@ -623,6 +640,11 @@ mod tests {
             Some(&total_supply_high)
         );
 
+        // check generic non-fee token specific storage
+
+        assert_eq!(fee_token_storage.get(&felt!("0x111")), Some(&felt!("0x1")));
+        assert_eq!(fee_token_storage.get(&felt!("0x222")), Some(&felt!("0x2")));
+
         // check for balance
         for (address, alloc) in &allocations {
             let balance = alloc.balance();
@@ -639,5 +661,12 @@ mod tests {
             assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
             assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
         }
+
+        let udc_storage =
+            actual_state_updates.state_updates.storage_updates.get(&ud.address).unwrap();
+
+        // check universal deployer contract storage
+
+        assert_eq!(udc_storage.get(&felt!("0x10")), Some(&felt!("0x100")));
     }
 }
