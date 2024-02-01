@@ -8,6 +8,7 @@ members = [
   "bin/sozo",
   "bin/torii",
   "crates/benches",
+  "crates/common",
   "crates/dojo-bindgen",
   "crates/dojo-core",
   "crates/dojo-lang",
@@ -22,11 +23,12 @@ members = [
   "crates/katana/rpc/rpc-api",
   "crates/katana/rpc/rpc-types",
   "crates/katana/rpc/rpc-types-builder",
-  "crates/katana/runner",
   "crates/katana/storage/codecs",
   "crates/katana/storage/codecs/derive",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
+  "crates/katana/runner",
+  "crates/katana/runner/runner-macro",
   "crates/metrics",
   "crates/saya/core",
   "crates/sozo/signers",
@@ -41,7 +43,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.5.1-alpha.2"
+version = "0.5.1-alpha.3"
 
 [profile.performance]
 codegen-units = 1
@@ -50,6 +52,8 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
+common = { path = "crates/common" }
+
 # metrics
 metrics = { path = "crates/metrics" }
 
@@ -80,8 +84,8 @@ torii-client = { path = "crates/torii/client" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
-torii-server = { path = "crates/torii/server" }
 torii-relay = { path = "crates/torii/libp2p" }
+torii-server = { path = "crates/torii/server" }
 
 # saya
 saya-core = { path = "crates/saya/core" }

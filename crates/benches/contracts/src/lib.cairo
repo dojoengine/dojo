@@ -1,5 +1,13 @@
-mod actions;
-mod models;
-mod utils;
-mod character;
+mod systems {
+    mod actions;
+}
 
+mod models {
+    mod moves;
+    mod position;
+    mod character;
+}
+
+mod tests {
+    mod test_world;
+}

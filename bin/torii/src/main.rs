@@ -15,9 +15,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::Parser;
+use common::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
 use metrics::prometheus_exporter;
-use metrics::utils::parse_socket_address;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
@@ -49,8 +49,8 @@ struct Args {
     world_address: FieldElement,
 
     /// The sequencer rpc endpoint to index.
-    #[arg(long, value_name = "SOCKET", default_value = ":5050", value_parser = parse_socket_address)]
-    rpc: SocketAddr,
+    #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
+    rpc: Url,
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database

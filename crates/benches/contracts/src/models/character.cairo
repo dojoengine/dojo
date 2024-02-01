@@ -54,3 +54,10 @@ struct Case {
     sword: Sword,
     material: felt252,
 }
+
+#[derive(Model, Copy, Drop, Serde)]
+struct Alias {
+    #[key]
+    player: ContractAddress,
+    name: felt252,
+}

@@ -15,6 +15,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
+use common::parse::parse_socket_address;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
@@ -26,7 +27,6 @@ use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::config::ServerConfig;
 use katana_rpc_api::ApiKind;
-use metrics::utils::parse_socket_address;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
@@ -139,7 +139,7 @@ pub struct StarknetOptions {
     #[arg(value_name = "NUM")]
     #[arg(default_value = "10")]
     #[arg(help = "Number of pre-funded accounts to generate.")]
-    pub total_accounts: u8,
+    pub total_accounts: u16,
 
     #[arg(long)]
     #[arg(help = "Disable charging fee when executing transactions.")]
