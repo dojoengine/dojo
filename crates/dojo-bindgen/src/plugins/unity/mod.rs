@@ -179,16 +179,6 @@ public class {} : ModelInstance {{
             .map(|arg| {
                 let token = arg.1.to_composite().unwrap();
                 // r#type doesnt seem to be working rn.
-                // match token.unwrap().r#type {
-                //     CompositeType::Struct => {
-                //         // doesnt support structs yet
-                //         format!("new FieldElement({})", arg.0)
-                //     }
-                //     _ => {
-                //         format!("new FieldElement({})", arg.0)
-                //     }
-                // }
-
                 // instead, we can take a look at our
                 // handled tokens db
                 let token =
@@ -301,11 +291,10 @@ impl BuiltinPlugin for UnityPlugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<()> {
         let mut handled_tokens = Vec::<Composite>::new();
 
-        std::fs::create_dir_all("./Unity")?;
         // Handle codegen for models
         for (name, model) in &data.models {
             // create Models directory if it doesn't exist
-            std::fs::create_dir_all("./Unity/Models")?;
+            std::fs::create_dir_all("./generated/unity/Models")?;
             let mut file = File::create(path::Path::new(
                 &std::path::PathBuf::from("./Unity/Models").join(format!("{}.gen.cs", name)),
             ))?;
@@ -319,7 +308,7 @@ impl BuiltinPlugin for UnityPlugin {
         // Handle codegen for systems
         for (name, contract) in &data.contracts {
             // create Contracts directory in the current directory if it doesn't exist
-            std::fs::create_dir_all("./Unity/Contracts")?;
+            std::fs::create_dir_all("./generated/unity/Contracts")?;
             let mut file = File::create(path::Path::new(
                 &std::path::PathBuf::from("./Unity/Contracts")
                     .join(format!("{}.gen.cs", UnityPlugin::formatted_contract_name(name))),
