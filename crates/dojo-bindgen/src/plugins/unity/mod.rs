@@ -1,3 +1,7 @@
+use std::fs::File;
+use std::io::Write;
+use std::path;
+
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function};
 
@@ -182,7 +186,6 @@ public class {} : ModelInstance {{
             .iter()
             .map(|arg| {
                 let token = arg.1.to_composite().unwrap();
-                println!("{:?}", token);
                 // r#type doesnt seem to be working rn.
                 // match token.unwrap().r#type {
                 //     CompositeType::Struct => {
@@ -305,23 +308,32 @@ impl BuiltinPlugin for UnityPlugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<()> {
         let mut handled_tokens = Vec::<Composite>::new();
 
+        println!("{:?}", data.models);
         // Handle codegen for models
         for (name, model) in &data.models {
+            // create Models directory if it doesn't exist
+            std::fs::create_dir_all("./Models")?;
+            let mut file = File::create(path::Path::new(&std::path::PathBuf::from("./Models").join(format!("{}.gen.cs", name))))?;
+
             println!("Generating model: {}", name);
             let code = self
                 .handle_model(model, &mut handled_tokens);
-                // .map_err(|e| Error::Format(format!("Failed to generate code for model: {}", e)))?;
-            println!("{}", code);
+            
+            file.write_all(code.as_bytes())?;
         }
 
+        println!("{:?}", handled_tokens);
         // Handle codegen for systems
         for (name, contract) in &data.contracts {
+            // create Contracts directory in the current directory if it doesn't exist
+            std::fs::create_dir_all("./Contracts")?;
+            let mut file = File::create(path::Path::new(&std::path::PathBuf::from("./Contracts").join(format!("{}.gen.cs", name))))?;
+            
+
             println!("Generating contract: {}", name);
             let code = self.handle_contract(contract, &handled_tokens);
-            // .map_err(|e| {
-            //     Error::Format(format!("Failed to generate code for contract: {}", e))
-            // })?;
-            println!("{}", code);
+            
+            file.write_all(code.as_bytes())?;
         }
 
         Ok(())
