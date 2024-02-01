@@ -14,6 +14,10 @@ pub struct BuildArgs {
     #[arg(long)]
     #[arg(help = "Generate Unity bindings.")]
     pub unity: bool,
+
+    #[arg(long)]
+    #[arg(help = "Output directory.", default_value = "bindings")]
+    pub bindings_output: String,
 }
 
 impl BuildArgs {
@@ -34,6 +38,7 @@ impl BuildArgs {
 
         // Custom plugins are always empty for now.
         let bindgen = PluginManager {
+            output_path: self.bindings_output.into(),
             artifacts_path: compile_info.target_dir,
             plugins: vec![],
             builtin_plugins,
@@ -58,7 +63,8 @@ mod tests {
     fn build_example_with_typescript_and_unity_bindings() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
 
-        let build_args = BuildArgs { typescript: true, unity: true };
+        let build_args =
+            BuildArgs { bindings_output: "generated".to_string(), typescript: true, unity: true };
         let result = build_args.run(&config);
         assert!(result.is_ok());
     }
