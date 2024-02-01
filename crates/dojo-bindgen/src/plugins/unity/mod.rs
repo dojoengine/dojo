@@ -291,13 +291,14 @@ impl BuiltinPlugin for UnityPlugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<()> {
         let mut handled_tokens = Vec::<Composite>::new();
 
+        let base_path = path::PathBuf::from("./generated/unity");
+
         // Handle codegen for models
         for (name, model) in &data.models {
-            // create Models directory if it doesn't exist
-            std::fs::create_dir_all("./generated/unity/Models")?;
-            let mut file = File::create(path::Path::new(
-                &std::path::PathBuf::from("./Unity/Models").join(format!("{}.gen.cs", name)),
-            ))?;
+            let models_path = base_path.join("Models");
+            std::fs::create_dir_all(models_path.clone())?;
+            let mut file =
+                File::create(path::Path::new(&models_path.join(format!("{}.gen.cs", name))))?;
 
             println!("Generating model: {}", name);
             let code = self.handle_model(model, &mut handled_tokens);
@@ -307,12 +308,13 @@ impl BuiltinPlugin for UnityPlugin {
 
         // Handle codegen for systems
         for (name, contract) in &data.contracts {
-            // create Contracts directory in the current directory if it doesn't exist
-            std::fs::create_dir_all("./generated/unity/Contracts")?;
-            let mut file = File::create(path::Path::new(
-                &std::path::PathBuf::from("./Unity/Contracts")
+            let contracts_path = base_path.join("Contracts");
+            std::fs::create_dir_all(contracts_path.clone())?;
+
+            let mut file = File::create(
+                path::Path::new(&contracts_path)
                     .join(format!("{}.gen.cs", UnityPlugin::formatted_contract_name(name))),
-            ))?;
+            )?;
 
             println!("Generating contract: {}", name);
             let code = self.handle_contract(contract, &handled_tokens);
