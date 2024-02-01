@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706813773933,
+  "lastUpdate": 1706829930705,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -745,6 +745,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 985310,
             "range": "± 38587",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8224b91075beb048df7c6c5ef0ffbfbf46e7df65",
+          "message": "feat(dojo-bindgen): fs & unity plugin for codegen (#1498)\n\n* fix: ensure correct model detection via interfaces\r\n\r\n* fix: clippy + attempt to fix test on windows\r\n\r\n* fix: clippy\r\n\r\n* fix: comment test until windows stack overflow is solved\r\n\r\n* fix: fmt\r\n\r\n* fix: fmt again\r\n\r\n* refactor: update to new bindgen version\r\n\r\n(cherry picked from commit 33106122a95ed6f7530c7a87a661207751a55d8d)\r\n\r\n* feat: contract class gen + system format\r\n\r\n(cherry picked from commit 87d7e4b521ff5de04de79539dd092233319002e0)\r\n\r\n* feat: correctly handle native types in codegen\r\n\r\n(cherry picked from commit ab0c5ba8b504d0ed500e188c7350d55a68f9e6bf)\r\n\r\n* feat: codegen metadata & cleaner code\r\n\r\n(cherry picked from commit 68bb60bb137b51f458087d1dc10ddf0f4e72e57f)\r\n\r\n* feat: write code to fs\r\n\r\n* fix: writing to fs and contract file name\r\n\r\n* refactor: generated code\r\n\r\n* chore: fmt\r\n\r\n* refactor: generated folder and .,gitignore\r\n\r\n* refactor: path structure for generated files\r\n\r\n* chore: added code comments\r\n\r\n* feat(bindgen): dynamic output directory\r\n\r\n* feat(bindgen): prepend plugin name to path\r\n\r\n* refactor(bindgen): remove option for bindgen result\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-02-01T17:16:04-06:00",
+          "tree_id": "e6fd5b2d5c5ec3c82a94adead6830d864cf0636e",
+          "url": "https://github.com/dojoengine/dojo/commit/8224b91075beb048df7c6c5ef0ffbfbf46e7df65"
+        },
+        "date": 1706829930173,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 985125,
+            "range": "± 32703",
             "unit": "ns/iter"
           }
         ]
