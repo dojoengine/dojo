@@ -76,10 +76,10 @@ impl PluginManager {
             };
 
             let files = builder.generate_code(&data).await?;
-            for (path, content) in files.unwrap_or_default() {
+            for (path, content) in files {
                 // Prepends the output directory and plugin name to the path.
                 let path = self.output_path.join(plugin.to_string()).join(path);
-                fs::create_dir_all(path.parent().expect("Parent path")).unwrap();
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
 
                 fs::write(path, content)?;
             }

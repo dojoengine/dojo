@@ -17,10 +17,7 @@ impl TypescriptPlugin {
 
 #[async_trait]
 impl BuiltinPlugin for TypescriptPlugin {
-    async fn generate_code(
-        &self,
-        data: &DojoData,
-    ) -> BindgenResult<Option<HashMap<PathBuf, Vec<u8>>>> {
+    async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
         println!("-> Typescript models bindings\n");
 
         for (name, model) in &data.models {
@@ -33,6 +30,6 @@ impl BuiltinPlugin for TypescriptPlugin {
             println!("{:?}\n", contract);
         }
 
-        Ok(None)
+        Ok(HashMap::new())
     }
 }

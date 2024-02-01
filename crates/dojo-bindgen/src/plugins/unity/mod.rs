@@ -302,10 +302,7 @@ public class {} : MonoBehaviour {{
 
 #[async_trait]
 impl BuiltinPlugin for UnityPlugin {
-    async fn generate_code(
-        &self,
-        data: &DojoData,
-    ) -> BindgenResult<Option<HashMap<PathBuf, Vec<u8>>>> {
+    async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
         let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
         let mut handled_tokens = Vec::<Composite>::new();
 
@@ -329,6 +326,6 @@ impl BuiltinPlugin for UnityPlugin {
             out.insert(contracts_path, code.as_bytes().to_vec());
         }
 
-        Ok(Some(out))
+        Ok(out)
     }
 }
