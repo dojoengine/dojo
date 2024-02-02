@@ -6,7 +6,7 @@ use ethers::types::U256;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
-use starknet::core::serde::unsigned_field_element::UfeHex;
+use starknet::core::serde::unsigned_field_element::{UfeHex, UfeHexOption};
 use starknet::core::utils::get_contract_address;
 use starknet::signers::SigningKey;
 
@@ -34,15 +34,15 @@ impl GenesisAllocation {
     }
 
     /// Get the contract class hash.
-    pub fn class_hash(&self) -> ClassHash {
+    pub fn class_hash(&self) -> Option<ClassHash> {
         match self {
             Self::Contract(contract) => contract.class_hash,
-            Self::Account(account) => account.class_hash(),
+            Self::Account(account) => Some(account.class_hash()),
         }
     }
 
     /// Get the balance to be allocated to this contract.
-    pub fn balance(&self) -> U256 {
+    pub fn balance(&self) -> Option<U256> {
         match self {
             Self::Contract(contract) => contract.balance,
             Self::Account(account) => account.balance(),
@@ -92,7 +92,7 @@ impl GenesisAccountAlloc {
         }
     }
 
-    pub fn balance(&self) -> U256 {
+    pub fn balance(&self) -> Option<U256> {
         match self {
             Self::Account(account) => account.balance,
             Self::DevAccount(account) => account.balance,
@@ -126,10 +126,10 @@ impl GenesisAccountAlloc {
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GenesisContractAlloc {
     /// The class hash of the contract.
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: ClassHash,
+    #[serde_as(as = "UfeHexOption")]
+    pub class_hash: Option<ClassHash>,
     /// The amount of the fee token allocated to the contract.
-    pub balance: U256,
+    pub balance: Option<U256>,
     /// The initial nonce of the contract.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<FieldElement>,
@@ -168,7 +168,7 @@ impl DevGenesisAccount {
         balance: U256,
     ) -> (ContractAddress, Self) {
         let (addr, mut account) = Self::new(private_key, class_hash);
-        account.balance = balance;
+        account.balance = Some(balance);
         (addr, account)
     }
 }
@@ -184,7 +184,7 @@ pub struct GenesisAccount {
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
     /// The amount of the fee token allocated to the account.
-    pub balance: U256,
+    pub balance: Option<U256>,
     /// The initial nonce of the account.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<FieldElement>,
@@ -211,7 +211,7 @@ impl GenesisAccount {
         balance: U256,
     ) -> (ContractAddress, Self) {
         let (address, account) = Self::new(public_key, class_hash);
-        (address, Self { balance, ..account })
+        (address, Self { balance: Some(balance), ..account })
     }
 }
 
