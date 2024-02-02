@@ -3,8 +3,9 @@
 
 use std::collections::{hash_map, BTreeMap, HashMap};
 use std::fs::File;
-use std::io::BufReader;
-use std::io::{self};
+use std::io::{
+    BufReader, {self},
+};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -186,10 +187,10 @@ pub enum GenesisJsonError {
 // The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
 /// the genesis configuration from a JSON file before being converted to a [Genesis] instance.
 ///
-/// The JSON format allows specifying either the path to the class artifact or the full artifact embedded
-/// directly inside the JSON file. As such, it is required that all paths must be resolved first
-/// before converting to [Genesis] using [`Genesis::try_from<GenesisJson>`], otherwise the conversion
-/// will fail.
+/// The JSON format allows specifying either the path to the class artifact or the full artifact
+/// embedded directly inside the JSON file. As such, it is required that all paths must be resolved
+/// first before converting to [Genesis] using [`Genesis::try_from<GenesisJson>`], otherwise the
+/// conversion will fail.
 ///
 /// It is recommended to use [GenesisJson::load] for loading the JSON file as it will resolve
 /// the class paths into their actual class artifacts, instead of deserializing it manually
@@ -992,10 +993,12 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(Genesis::try_from(json)
-            .unwrap_err()
-            .to_string()
-            .contains("Unresolved class artifact path"));
+        assert!(
+            Genesis::try_from(json)
+                .unwrap_err()
+                .to_string()
+                .contains("Unresolved class artifact path")
+        );
     }
 
     #[test]
