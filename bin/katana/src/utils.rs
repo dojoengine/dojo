@@ -16,6 +16,7 @@ pub fn parse_seed(seed: &str) -> [u8; 32] {
     }
 }
 
+/// Used as clap value parser for [Genesis].
 pub fn parse_genesis(value: &str) -> Result<Genesis, anyhow::Error> {
     // if the value is a base64 string, we assume it already resolves and includes
     // the classes artifacts and we can just deserialize into the main genesis type directly
@@ -31,5 +32,22 @@ pub fn parse_genesis(value: &str) -> Result<Genesis, anyhow::Error> {
             let genesis = Genesis::try_from(GenesisJson::load(path)?)?;
             Ok(genesis)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_base64_genesis() {
+        let base64 = std::fs::read_to_string("./tests/test-data/base64-genesis.txt").unwrap();
+        assert!(parse_genesis(&base64).is_ok())
+    }
+
+    #[test]
+    fn parse_genesis_file() {
+        let path = "./tests/test-data/genesis.json";
+        parse_genesis(path).unwrap();
     }
 }
