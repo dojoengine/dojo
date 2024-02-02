@@ -3,8 +3,8 @@
 
 use std::collections::{hash_map, BTreeMap, HashMap};
 use std::fs::File;
-use std::io;
 use std::io::BufReader;
+use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -14,6 +14,7 @@ use cairo_lang_starknet::casm_contract_class::{CasmContractClass, StarknetSierra
 use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_vm::types::errors::program_errors::ProgramError;
 use ethers::types::U256;
+use serde::de::value::MapAccessDeserializer;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -77,7 +78,7 @@ impl<'de> Deserialize<'de> for PathOrFullArtifact {
                 A: serde::de::MapAccess<'de>,
             {
                 Ok(PathOrFullArtifact::Artifact(Value::Object(Object::deserialize(
-                    serde::de::value::MapAccessDeserializer::new(map),
+                    MapAccessDeserializer::new(map),
                 )?)))
             }
         }
@@ -184,10 +185,17 @@ pub enum GenesisJsonError {
 
 // The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
 /// the genesis configuration from a JSON file before being converted to a [Genesis] instance.
-/// However, this type alone is inadequate for creating the [Genesis] type, for that you have to
-/// load the JSON file using [GenesisJsonWithBasePath] and then convert it to [Genesis] using
-/// [`Genesis::try_from<Genesis>`]. This is because the `classes` field of this type contains
-/// paths to the class files, which are set to be relative to the JSON file.
+///
+/// The JSON format allows specifying either the path to the class artifact or the full artifact embedded
+/// directly inside the JSON file. As such, it is required that all paths must be resolved first
+/// before converting to [Genesis] using [`Genesis::try_from<GenesisJson>`], otherwise the conversion
+/// will fail.
+///
+/// It is recommended to use [GenesisJson::load] for loading the JSON file as it will resolve
+/// the class paths into their actual class artifacts, instead of deserializing it manually
+/// (eg, using `serde_json`).
+///
+/// The path of the class artifact are computed **relative** to the JSON file.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisJson {
@@ -208,13 +216,10 @@ pub struct GenesisJson {
 }
 
 impl GenesisJson {
-    /// Load the genesis configuration from a JSON file at the given `path` and returns it along
-    /// with the base path of the file.
-    ///
-    /// The base path is used to calculate the paths of the class (if path is provided rather than
-    /// the full class artifact). The base path is just the path to the directory where the JSON
-    /// file is located.
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<(Self, PathBuf), GenesisJsonError> {
+    /// Load the genesis configuration from a JSON file at the given `path` and resolve all the
+    /// class paths to their corresponding class definitions. The paths will be resolved relative
+    /// to the JSON file itself.
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, GenesisJsonError> {
         let mut path = path.as_ref().to_path_buf();
 
         let file = File::open(&path)
@@ -223,12 +228,19 @@ impl GenesisJson {
         // Remove the file name from the path to get the base path.
         path.pop();
 
-        Ok((serde_json::from_reader(BufReader::new(file))?, path))
+        let mut genesis: Self = serde_json::from_reader(BufReader::new(file))?;
+        // resolves the class paths, if any
+        genesis.resolve_class_artifacts(path)?;
+
+        Ok(genesis)
     }
 
     /// Resolves the paths of the class files to their corresponding class definitions. The
     /// `base_path` is used to calculate the paths of the class files, which are relative to the
     /// JSON file itself.
+    ///
+    /// This needs to be called if the [GenesisJson] is instantiated without using the
+    /// [GenesisJson::load] before converting to [Genesis].
     pub fn resolve_class_artifacts(
         &mut self,
         base_path: impl AsRef<Path>,
@@ -242,29 +254,13 @@ impl GenesisJson {
         }
         Ok(())
     }
+}
 
-    /// Converts the JSON configuration to a [Genesis] instance. This method accepts the base path
-    /// of the JSON file, which is used to resolve the paths of the class files, in the case where
-    /// the full class artifact is not provided directly in the JSON file.
-    pub fn into_genesis(
-        mut self,
-        base_path: impl AsRef<Path>,
-    ) -> Result<Genesis, GenesisJsonError> {
-        // Resolve any paths to a class file to their corresponding class artifacts.
-        self.resolve_class_artifacts(&base_path)?;
-        self.into_genesis_unchecked()
-    }
+impl TryFrom<GenesisJson> for Genesis {
+    type Error = GenesisJsonError;
 
-    /// Converts the JSON configuration to a [Genesis] instance without resolving the paths of the
-    /// class files. This method is assumes that the class artifacts are already been resolved or
-    /// provided in the JSON file itself. As such, it is favourable to use
-    /// [GenesisJson::into_genesis] instead, which will resolve the class paths first.
-    ///
-    /// This is mainly used when converting the JSON file from a base64 encoded data, where the
-    /// class artifacts are assumed to already be provided in the JSON file itself, provided
-    /// that the [resolves_artifacts_and_to_base64] is used when encoding the file.
-    pub fn into_genesis_unchecked(self) -> Result<Genesis, GenesisJsonError> {
-        let mut classes: HashMap<ClassHash, GenesisClass> = self
+    fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
+        let mut classes: HashMap<ClassHash, GenesisClass> = value
             .classes
             .into_iter()
             .map(|entry| {
@@ -321,16 +317,16 @@ impl GenesisJson {
             .collect::<Result<_, GenesisJsonError>>()?;
 
         let mut fee_token = FeeTokenConfig {
-            name: self.fee_token.name,
-            symbol: self.fee_token.symbol,
+            name: value.fee_token.name,
+            symbol: value.fee_token.symbol,
             total_supply: U256::zero(),
-            decimals: self.fee_token.decimals,
-            address: self.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
-            class_hash: self.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
-            storage: self.fee_token.storage,
+            decimals: value.fee_token.decimals,
+            address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
+            class_hash: value.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
+            storage: value.fee_token.storage,
         };
 
-        match self.fee_token.class {
+        match value.fee_token.class {
             Some(hash) => {
                 if !classes.contains_key(&hash) {
                     return Err(GenesisJsonError::MissingClass(hash));
@@ -350,7 +346,7 @@ impl GenesisJson {
             }
         };
 
-        let universal_deployer = if let Some(config) = self.universal_deployer {
+        let universal_deployer = if let Some(config) = value.universal_deployer {
             match config.class {
                 Some(hash) => {
                     if !classes.contains_key(&hash) {
@@ -388,7 +384,7 @@ impl GenesisJson {
 
         let mut allocations: BTreeMap<ContractAddress, GenesisAllocation> = BTreeMap::new();
 
-        for (address, account) in self.accounts {
+        for (address, account) in value.accounts {
             // check that the class hash exists in the classes field
             let class_hash = match account.class {
                 Some(hash) => {
@@ -435,7 +431,7 @@ impl GenesisJson {
             );
         }
 
-        for (address, contract) in self.contracts {
+        for (address, contract) in value.contracts {
             // check that the class hash exists in the classes field
             let class_hash = contract.class;
             if !classes.contains_key(&contract.class) {
@@ -462,12 +458,12 @@ impl GenesisJson {
             fee_token,
             allocations,
             universal_deployer,
-            number: self.number,
-            sequencer_address: self.sequencer_address,
-            timestamp: self.timestamp,
-            gas_prices: self.gas_prices,
-            state_root: self.state_root,
-            parent_hash: self.parent_hash,
+            number: value.number,
+            sequencer_address: value.sequencer_address,
+            timestamp: value.timestamp,
+            gas_prices: value.gas_prices,
+            state_root: value.state_root,
+            parent_hash: value.parent_hash,
         })
     }
 }
@@ -479,8 +475,8 @@ impl FromStr for GenesisJson {
     }
 }
 
-/// A helper function to conveniently resolve the artifacts in the genesis json and then
-/// serialize it to base64 encoding.
+/// A helper function to conveniently resolve the artifacts in the genesis json if they
+/// weren't already resolved and then serialize it to base64 encoding.
 ///
 /// # Arguments
 /// * `genesis` - The [GenesisJson] to resolve and serialize.
@@ -494,19 +490,16 @@ pub fn resolves_artifacts_and_to_base64<P: AsRef<Path>>(
 }
 
 /// Serialize the [GenesisJson] into base64 encoding.
-///
-/// This function doesn't ensure that the class artifacts path are resolved into their
-/// actual class definitions. For that, use [resolves_artifacts_and_to_base64].
 pub fn to_base64(genesis: GenesisJson) -> Result<Vec<u8>, GenesisJsonError> {
     let data = serde_json::to_vec(&genesis)?;
 
     let mut buf = vec![b'b', b'a', b's', b'e', b'6', b'4', b':'];
     // make sure we'll have a slice big enough for base64 + padding
-    buf.resize(data.len() * 4 / 3 + 4, 0);
+    buf.resize((4 * data.len() / 3 + 4) + buf.len(), 0);
 
-    let len = BASE64_STANDARD.encode_slice(data, &mut buf)?;
+    let bytes_written = BASE64_STANDARD.encode_slice(data, &mut buf[7..])?;
     // shorten the buffer to the actual length written
-    buf.truncate(len);
+    buf.truncate(bytes_written + 7);
 
     Ok(buf)
 }
@@ -537,8 +530,7 @@ fn class_artifact_at_path(
         path.canonicalize().map_err(|e| GenesisJsonError::FileNotFound { source: e, path })?;
 
     let file = File::open(&path).map_err(|e| GenesisJsonError::FileNotFound { source: e, path })?;
-    let buffer = BufReader::new(file);
-    let content: Value = serde_json::from_reader(buffer)?;
+    let content: Value = serde_json::from_reader(BufReader::new(file))?;
 
     Ok(content)
 }
@@ -546,6 +538,8 @@ fn class_artifact_at_path(
 #[cfg(test)]
 mod tests {
     use std::collections::{BTreeMap, HashMap};
+    use std::fs::File;
+    use std::io::BufReader;
     use std::path::PathBuf;
     use std::str::FromStr;
 
@@ -564,20 +558,16 @@ mod tests {
         DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
         DEFAULT_UDC_ADDRESS,
     };
-    use crate::genesis::json::resolves_artifacts_and_to_base64;
+    use crate::genesis::json::to_base64;
     use crate::genesis::{
         ContractAddress, FeeTokenConfig, Genesis, GenesisAllocation, GenesisClass,
         UniversalDeployerConfig,
     };
 
-    fn genesis_json() -> (GenesisJson, PathBuf) {
-        let path = PathBuf::from("./src/genesis/test-genesis.json");
-        GenesisJson::load(path).unwrap()
-    }
-
     #[test]
     fn deserialize_from_json() {
-        let (genesis, _) = genesis_json();
+        let file = File::open("./src/genesis/test-genesis.json").unwrap();
+        let genesis: GenesisJson = serde_json::from_reader(file).unwrap();
 
         assert_eq!(genesis.number, 0);
         assert_eq!(genesis.parent_hash, felt!("0x999"));
@@ -678,8 +668,8 @@ mod tests {
 
     #[test]
     fn deserialize_from_json_with_class() {
-        let path = PathBuf::from("./src/genesis/test-genesis.json");
-        let (genesis, _) = GenesisJson::load(path).unwrap();
+        let file = File::open("./src/genesis/test-genesis-with-class.json").unwrap();
+        let genesis: GenesisJson = serde_json::from_reader(BufReader::new(file)).unwrap();
 
         assert_eq!(
             genesis.classes,
@@ -703,9 +693,11 @@ mod tests {
     }
 
     #[test]
-    fn genesis_try_from_json() {
-        let (genesis, base_path) = genesis_json();
-        let actual_genesis = genesis.into_genesis(base_path).unwrap();
+    fn genesis_load_from_json() {
+        let path = PathBuf::from("./src/genesis/test-genesis.json");
+
+        let json = GenesisJson::load(path).unwrap();
+        let actual_genesis = Genesis::try_from(json).unwrap();
 
         let classes = HashMap::from([
             (
@@ -907,8 +899,7 @@ mod tests {
         "#;
 
         let genesis_json: GenesisJson = GenesisJson::from_str(json).unwrap();
-        let base_path = PathBuf::from_str("../").unwrap().canonicalize().unwrap();
-        let actual_genesis = genesis_json.into_genesis(base_path).unwrap();
+        let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
         let classes = HashMap::from([
             (
@@ -998,12 +989,23 @@ mod tests {
     }
 
     #[test]
+    fn genesis_from_json_with_unresolved_paths() {
+        let file = File::open("./src/genesis/test-genesis.json").unwrap();
+        let json: GenesisJson = serde_json::from_reader(file).unwrap();
+        assert!(Genesis::try_from(json)
+            .unwrap_err()
+            .to_string()
+            .contains("Unresolved class artifact path"));
+    }
+
+    #[test]
     fn encode_decode_genesis_file_to_base64() {
-        let (mut genesis, base_path) = genesis_json();
-        genesis.resolve_class_artifacts(&base_path).unwrap();
+        let path = PathBuf::from("./src/genesis/test-genesis.json");
+
+        let genesis = GenesisJson::load(path).unwrap();
         let genesis_clone = genesis.clone();
 
-        let encoded = resolves_artifacts_and_to_base64(genesis_clone, base_path).unwrap();
+        let encoded = to_base64(genesis_clone).unwrap();
         let decoded = from_base64(encoded.as_slice()).unwrap();
 
         assert_eq!(genesis, decoded);

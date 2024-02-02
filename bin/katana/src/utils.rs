@@ -22,14 +22,13 @@ pub fn parse_genesis(value: &str) -> Result<Genesis, anyhow::Error> {
     match value.strip_prefix("base64:") {
         Some(data) => {
             let json = from_base64(data.as_bytes())?;
-            let genesis = json.into_genesis_unchecked().context("Parsing genesis file")?;
+            let genesis = Genesis::try_from(json).context("Parsing genesis file")?;
             Ok(genesis)
         }
 
         None => {
             let path = PathBuf::from(shellexpand::full(value)?.into_owned());
-            let (json, base_path) = GenesisJson::load(path)?;
-            let genesis: Genesis = json.into_genesis(base_path)?;
+            let genesis = Genesis::try_from(GenesisJson::load(path)?)?;
             Ok(genesis)
         }
     }
