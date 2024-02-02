@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706840037684,
+  "lastUpdate": 1706884729957,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -835,6 +835,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 985533,
             "range": "± 60305",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dfe390aff156e46f375c8d789a12e3ea1137e4b6",
+          "message": "refactor(katana): include class artifact in genesis file + base64 encoding (#1508)",
+          "timestamp": "2024-02-02T22:29:34+08:00",
+          "tree_id": "db1e5129d15afda2dd85dbfe5c584da3f9d2ebfa",
+          "url": "https://github.com/dojoengine/dojo/commit/dfe390aff156e46f375c8d789a12e3ea1137e4b6"
+        },
+        "date": 1706884729494,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1038380,
+            "range": "± 38143",
             "unit": "ns/iter"
           }
         ]
