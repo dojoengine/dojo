@@ -1,8 +1,7 @@
-name = "dojo_examples::actions::actions"
-
-[kind.contract]
+kind = "DojoContract"
 class_hash = "0x52d3920cfb6eef13c2bcd2c04eb1d7b7123325da7f16bbeeb0f83b8b33c00f"
-abi = "../../abis/actions.json"
+abi = "abis/actions.json"
 reads = []
 writes = []
 computed = []
+name = "dojo_examples::actions::actions"

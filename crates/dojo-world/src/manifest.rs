@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use std::fs;
+use std::{fs, io};
 
 use ::serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use cainome::cairo_serde::Error as CainomeError;
 use camino::Utf8PathBuf;
+use serde::de::DeserializeOwned;
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -31,7 +32,7 @@ pub const EXECUTOR_CONTRACT_NAME: &str = "dojo::executor::executor";
 pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
 
 #[derive(Error, Debug)]
-pub enum WorldError {
+pub enum AbstractManifestError {
     #[error("Remote World not found.")]
     RemoteWorldNotFound,
     #[error("Executor contract not found.")]
@@ -48,6 +49,8 @@ pub enum WorldError {
     ContractRead(#[from] CainomeError),
     #[error(transparent)]
     Model(#[from] ModelError),
+    #[error(transparent)]
+    IO(#[from] io::Error),
 }
 
 /// Represents a model member.
@@ -67,16 +70,6 @@ impl From<dojo_types::schema::Member> for Member {
     }
 }
 
-/// Represents a declaration of a model.
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Model {
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub abi: Option<String>,
-    pub members: Vec<Member>,
-}
-
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ComputedValueEntrypoint {
@@ -90,7 +83,8 @@ pub struct ComputedValueEntrypoint {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Contract {
+#[serde(tag = "kind")]
+pub struct DojoContract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub abi: Option<String>,
@@ -101,124 +95,197 @@ pub struct Contract {
     pub computed: Vec<ComputedValueEntrypoint>,
 }
 
+impl ManifestMethods for DojoContract {
+    fn abi(&self) -> Option<&String> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<String>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+}
+
+/// Represents a declaration of a model.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "kind")]
+pub struct DojoModel {
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    pub abi: Option<String>,
+    pub members: Vec<Member>,
+}
+
+impl ManifestMethods for DojoModel {
+    fn abi(&self) -> Option<&String> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<String>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "kind")]
+pub struct Contract {
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    pub abi: Option<String>,
+    #[serde_as(as = "Option<UfeHex>")]
+    pub address: Option<FieldElement>,
+}
+
+impl ManifestMethods for Contract {
+    fn abi(&self) -> Option<&String> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<String>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "kind")]
 pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     pub abi: Option<String>,
 }
 
-#[serde_as]
+impl ManifestMethods for Class {
+    fn abi(&self) -> Option<&String> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<String>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+}
+
+pub trait ManifestMethods {
+    fn abi(&self) -> Option<&String>;
+    fn set_abi(&mut self, abi: Option<String>);
+    fn class_hash(&self) -> &FieldElement;
+    fn set_class_hash(&mut self, class_hash: FieldElement);
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
-pub struct Manifest {
-    pub kind: ManifestKind,
+pub struct Manifest<T>
+where
+    T: ManifestMethods,
+{
+    #[serde(flatten)]
+    pub inner: T,
     pub name: SmolStr,
 }
 
-impl Manifest {
-    pub fn class_hash(&self) -> FieldElement {
-        match &self.kind {
-            ManifestKind::Class(class) => class.class_hash,
-            ManifestKind::Contract(contract) => contract.class_hash,
-            ManifestKind::Model(model) => model.class_hash,
-        }
-    }
-
-    pub fn abi(&self) -> Option<&String> {
-        match &self.kind {
-            ManifestKind::Class(class) => class.abi.as_ref(),
-            ManifestKind::Contract(contract) => contract.abi.as_ref(),
-            ManifestKind::Model(model) => model.abi.as_ref(),
-        }
-    }
-
-    pub fn set_class_hash(&mut self, class_hash: FieldElement) {
-        match &mut self.kind {
-            ManifestKind::Class(class) => class.class_hash = class_hash,
-            ManifestKind::Contract(contract) => contract.class_hash = class_hash,
-            ManifestKind::Model(model) => model.class_hash = class_hash,
-        }
-    }
-
-    pub fn set_abi(&mut self, abi: Option<String>) {
-        match &mut self.kind {
-            ManifestKind::Class(class) => class.abi = abi,
-            ManifestKind::Contract(contract) => contract.abi = abi,
-            ManifestKind::Model(model) => model.abi = abi,
-        }
-    }
+pub struct BaseManifest {
+    pub world: Manifest<Class>,
+    pub executor: Manifest<Class>,
+    pub base: Manifest<Class>,
+    pub contracts: Vec<Manifest<Class>>,
+    pub models: Vec<Manifest<DojoModel>>,
+}
+pub struct DeployedManifest {
+    pub world: Manifest<Contract>,
+    pub executor: Manifest<Contract>,
+    pub base: Manifest<Class>,
+    pub contracts: Vec<Manifest<DojoContract>>,
+    pub models: Vec<Manifest<DojoModel>>,
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum ManifestKind {
-    Class(Class),
-    Contract(Contract),
-    Model(Model),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct World {
-    pub world: Manifest,
-    pub executor: Manifest,
-    pub base: Manifest,
-    pub contracts: Vec<Manifest>,
-    pub models: Vec<Manifest>,
-}
-
-impl World {
-    // here expected path is path to the folder that contains manifest file
-    pub fn load_deployed_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
-        let base_dir = Utf8PathBuf::new().join(path).join("manifest").join("deployed");
-        Self::load_from_path(base_dir)
-    }
-
-    // here expected path is path to the folder that contains manifest file
-    pub fn load_base_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
-        let base_dir = Utf8PathBuf::new().join(path).join("manifest").join("base");
-        Self::load_from_path(base_dir)
-    }
-
-    fn load_from_path(path: Utf8PathBuf) -> Result<Self, std::io::Error> {
+impl BaseManifest {
+    pub fn load_from_path(path: Utf8PathBuf) -> Result<Self, AbstractManifestError> {
         let contract_dir = path.join("contracts");
         let model_dir = path.join("models");
 
-        let world: Manifest =
+        let world: Manifest<Class> =
             toml::from_str(&fs::read_to_string(path.join("world.toml"))?).unwrap();
-        let executor: Manifest =
+        let executor: Manifest<Class> =
             toml::from_str(&fs::read_to_string(path.join("executor.toml"))?).unwrap();
-        let base: Manifest = toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
+        let base: Manifest<Class> =
+            toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
 
-        let contracts = Self::manifests_from_path(contract_dir)?;
-        let models = Self::manifests_from_path(model_dir)?;
+        let contracts = elements_from_path::<Class>(contract_dir)?;
+        let models = elements_from_path::<DojoModel>(model_dir)?;
 
-        Ok(World { world, executor, base, contracts, models })
+        Ok(Self { world, executor, base, contracts, models })
     }
+}
 
-    fn manifests_from_path(path: Utf8PathBuf) -> Result<Vec<Manifest>, std::io::Error> {
-        let mut manifests = vec![];
+impl DeployedManifest {
+    pub fn load_from_path(path: Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let contract_dir = path.join("contracts");
+        let model_dir = path.join("models");
 
-        for entry in path.read_dir()? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                let manifest: Manifest = toml::from_str(&fs::read_to_string(path)?).unwrap();
-                manifests.push(manifest);
-            } else {
-                continue;
-            }
+        let world: Manifest<Contract> =
+            toml::from_str(&fs::read_to_string(path.join("world.toml"))?).unwrap();
+        let executor: Manifest<Contract> =
+            toml::from_str(&fs::read_to_string(path.join("executor.toml"))?).unwrap();
+        let base: Manifest<Class> =
+            toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
+
+        let contracts = elements_from_path::<DojoContract>(contract_dir)?;
+        let models = elements_from_path::<DojoModel>(model_dir)?;
+
+        Ok(Self { world, executor, base, contracts, models })
+    }
+}
+
+fn elements_from_path<'de, T>(path: Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
+where
+    T: Serialize + DeserializeOwned + ManifestMethods,
+{
+    let mut elements = vec![];
+
+    for entry in path.read_dir()? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            elements.push(manifest);
+        } else {
+            continue;
         }
-
-        Ok(manifests)
     }
 
-    // Writes the manifest into a file at the given path. Will return error if the file doesn't
-    // exist.
-    // pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-    //     let fd = fs::File::options().write(true).open(path)?;
-    //     Ok(serde_json::to_writer_pretty(fd, &self)?)
-    // }
+    Ok(elements)
 }
 
 #[async_trait]
@@ -226,21 +293,21 @@ pub trait RemoteLoadable<P: Provider + Sync + Send + 'static> {
     async fn load_from_remote(
         provider: P,
         world_address: FieldElement,
-    ) -> Result<World, WorldError>;
+    ) -> Result<DeployedManifest, AbstractManifestError>;
 }
 
 #[async_trait]
-impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for World {
+impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeployedManifest {
     async fn load_from_remote(
         provider: P,
         world_address: FieldElement,
-    ) -> Result<World, WorldError> {
+    ) -> Result<DeployedManifest, AbstractManifestError> {
         const BLOCK_ID: BlockId = BlockId::Tag(BlockTag::Pending);
 
         let world_class_hash =
             provider.get_class_hash_at(BLOCK_ID, world_address).await.map_err(|err| match err {
                 ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    WorldError::RemoteWorldNotFound
+                    AbstractManifestError::RemoteWorldNotFound
                 }
                 err => err.into(),
             })?;
@@ -253,7 +320,7 @@ impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for World {
             .await
             .map_err(|err| match err {
                 ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    WorldError::ExecutorNotFound
+                    AbstractManifestError::ExecutorNotFound
                 }
                 err => err.into(),
             })?;
@@ -262,30 +329,28 @@ impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for World {
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
 
         // Err(WorldError::RemoteWorldNotFound)
-        Ok(World {
+        Ok(DeployedManifest {
             models,
             contracts,
-            world: Manifest {
+            world: Manifest::<Contract> {
                 name: WORLD_CONTRACT_NAME.into(),
-                kind: ManifestKind::Contract(Contract {
+                inner: Contract {
                     address: Some(world_address),
                     class_hash: world_class_hash,
                     abi: None,
-                    ..Default::default()
-                }),
+                },
             },
-            executor: Manifest {
+            executor: Manifest::<Contract> {
                 name: EXECUTOR_CONTRACT_NAME.into(),
-                kind: ManifestKind::Contract(Contract {
+                inner: Contract {
                     address: Some(executor_address.into()),
                     class_hash: executor_class_hash,
                     abi: None,
-                    ..Default::default()
-                }),
+                },
             },
-            base: Manifest {
+            base: Manifest::<Class> {
                 name: BASE_CONTRACT_NAME.into(),
-                kind: ManifestKind::Class(Class { class_hash: base_class_hash.into(), abi: None }),
+                inner: Class { class_hash: base_class_hash.into(), abi: None },
             },
         })
     }
@@ -294,7 +359,7 @@ impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for World {
 async fn get_remote_models_and_contracts<P: Provider + Send + Sync>(
     world: FieldElement,
     provider: P,
-) -> Result<(Vec<Manifest>, Vec<Manifest>), WorldError>
+) -> Result<(Vec<Manifest<DojoModel>>, Vec<Manifest<DojoContract>>), AbstractManifestError>
 where
     P: Provider + Send + Sync,
 {
@@ -337,16 +402,12 @@ where
 
     // fetch contracts name
     for contract in &mut contracts {
-        let ManifestKind::Contract(ref inner) = contract.kind else {
-            unreachable!("we only pass expected kind of manifest");
-        };
-
         let name = match provider
             .call(
                 FunctionCall {
                     calldata: vec![],
                     entry_point_selector: selector!("dojo_resource"),
-                    contract_address: inner.address.expect("qed; missing address"),
+                    contract_address: contract.inner.address.expect("qed; missing address"),
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
@@ -396,7 +457,7 @@ async fn get_events<P: Provider + Send + Sync>(
 fn parse_contracts_events(
     deployed: Vec<EmittedEvent>,
     upgraded: Vec<EmittedEvent>,
-) -> Vec<Manifest> {
+) -> Vec<Manifest<DojoContract>> {
     fn retain_only_latest_upgrade_events(
         events: Vec<EmittedEvent>,
     ) -> HashMap<FieldElement, FieldElement> {
@@ -438,20 +499,20 @@ fn parse_contracts_events(
             if let Some(upgrade) = upgradeds.get(&address) {
                 class_hash = *upgrade;
             }
-            Manifest {
-                kind: ManifestKind::Contract(Contract {
+            Manifest::<DojoContract> {
+                inner: DojoContract {
                     address: Some(address),
                     class_hash,
                     abi: None,
                     ..Default::default()
-                }),
+                },
                 name: Default::default(),
             }
         })
         .collect()
 }
 
-fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest> {
+fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
     let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
 
     for event in events {
@@ -474,8 +535,8 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest> {
 
     models
         .into_iter()
-        .map(|(name, class_hash)| Manifest {
-            kind: ManifestKind::Model(Model { class_hash, abi: None, ..Default::default() }),
+        .map(|(name, class_hash)| Manifest::<DojoModel> {
+            inner: DojoModel { class_hash, abi: None, ..Default::default() },
             name: name.into(),
         })
         .collect()

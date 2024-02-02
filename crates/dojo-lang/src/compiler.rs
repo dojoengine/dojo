@@ -17,13 +17,14 @@ use cairo_lang_utils::UpcastMut;
 use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
-    Class, ComputedValueEntrypoint, Contract, Manifest, ManifestKind, BASE_CONTRACT_NAME,
-    EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
+    BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
 use scarb::compiler::{CompilationUnit, Compiler};
 use scarb::core::{PackageName, TargetKind, Workspace};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use starknet::core::types::contract::SierraClass;
@@ -214,24 +215,25 @@ fn update_manifest(
         ))
     }
 
-    fn write_manifest(
+    fn write_manifest_and_abi<T>(
         manifest_base: &Utf8PathBuf,
         abi_base: &Utf8PathBuf,
-        manifest: &mut Manifest,
+        manifest: &mut Manifest<T>,
         abi: &Option<abi::Contract>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<()>
+    where
+        T: Serialize + DeserializeOwned + ManifestMethods,
+    {
         let parts: Vec<&str> = manifest.name.split("::").collect();
         let name: Utf8PathBuf = parts.last().unwrap().into();
 
         let full_manifest_path = manifest_base.join(name.clone()).with_extension("toml");
         let full_abi_path = abi_base.join(name.clone()).with_extension("json");
 
-        // ASSUMPTION: abis are stored in same path as `manifests` and `Scarb.toml`
-        // should be updated if structure of storing manifests is changed.
-        let abi_relative_path =
-            Utf8PathBuf::new().join("../../abis").join(name).with_extension("json");
+        let abi_relative_path = Utf8PathBuf::new().join("abis").join(name).with_extension("json");
+
         if abi.is_some() {
-            manifest.set_abi(Some(abi_relative_path.to_string()));
+            manifest.inner.set_abi(Some(abi_relative_path.to_string()));
         }
 
         let manifest_toml = toml::to_string(&manifest)?;
@@ -262,34 +264,34 @@ fn update_manifest(
 
     // TODO: write abi to a separate location and only keep path in base manifest
     let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
-    write_manifest(
+    write_manifest_and_abi(
         &manifests_dir,
         &abi_dir,
-        &mut Manifest {
+        &mut Manifest::<Class> {
             // abi path will be written by `write_manifest`
-            kind: ManifestKind::Class(Class { class_hash: *hash, abi: None }),
+            inner: Class { class_hash: *hash, abi: None },
             name: WORLD_CONTRACT_NAME.into(),
         },
         abi,
     )?;
 
     let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, EXECUTOR_CONTRACT_NAME)?;
-    write_manifest(
+    write_manifest_and_abi(
         &manifests_dir,
         &abi_dir,
-        &mut Manifest {
-            kind: ManifestKind::Class(Class { class_hash: *hash, abi: None }),
+        &mut Manifest::<Class> {
+            inner: Class { class_hash: *hash, abi: None },
             name: EXECUTOR_CONTRACT_NAME.into(),
         },
         abi,
     )?;
 
     let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
-    write_manifest(
+    write_manifest_and_abi(
         &manifests_dir,
         &abi_dir,
-        &mut Manifest {
-            kind: ManifestKind::Class(Class { class_hash: *hash, abi: None }),
+        &mut Manifest::<Class> {
+            inner: Class { class_hash: *hash, abi: None },
             name: BASE_CONTRACT_NAME.into(),
         },
         abi,
@@ -340,12 +342,7 @@ fn update_manifest(
     computed.into_iter().for_each(|(contract, computed_value_entrypoint)| {
         let contract_data =
             contracts.get_mut(&contract).expect("Error: Computed value contract doesn't exist.");
-        match contract_data.0.kind {
-            ManifestKind::Contract(ref mut contract) => {
-                contract.computed = computed_value_entrypoint;
-            }
-            _ => unreachable!(),
-        }
+        contract_data.0.inner.computed = computed_value_entrypoint;
     });
 
     for model in &models {
@@ -353,7 +350,7 @@ fn update_manifest(
     }
 
     for (_, (manifest, abi)) in contracts.iter_mut() {
-        write_manifest(
+        write_manifest_and_abi(
             &manifests_dir.join("contracts"),
             &abi_dir.join("contracts"),
             manifest,
@@ -362,7 +359,12 @@ fn update_manifest(
     }
 
     for (_, (manifest, abi)) in models.iter_mut() {
-        write_manifest(&manifests_dir.join("models"), &abi_dir.join("models"), manifest, abi)?;
+        write_manifest_and_abi(
+            &manifests_dir.join("models"),
+            &abi_dir.join("models"),
+            manifest,
+            abi,
+        )?;
     }
 
     Ok(())
@@ -375,7 +377,7 @@ fn get_dojo_model_artifacts(
     aux_data: &DojoAuxData,
     module_id: ModuleId,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
-) -> anyhow::Result<HashMap<String, (Manifest, Option<abi::Contract>)>> {
+) -> anyhow::Result<HashMap<String, (Manifest<DojoModel>, Option<abi::Contract>)>> {
     let mut models = HashMap::with_capacity(aux_data.models.len());
 
     let module_name = module_id.full_path(db);
@@ -394,12 +396,12 @@ fn get_dojo_model_artifacts(
                 models.insert(
                     model_full_name.clone(),
                     (
-                        Manifest {
-                            kind: ManifestKind::Model(dojo_world::manifest::Model {
+                        Manifest::<DojoModel> {
+                            inner: dojo_world::manifest::DojoModel {
                                 class_hash,
                                 abi: None,
                                 members: model.members.clone(),
-                            }),
+                            },
                             name: model_full_name.into(),
                         },
                         abi,
@@ -441,7 +443,7 @@ fn get_dojo_contract_artifacts(
     module_id: &ModuleId,
     aux_data: &StarkNetContractAuxData,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
-) -> anyhow::Result<HashMap<SmolStr, (Manifest, Option<abi::Contract>)>> {
+) -> anyhow::Result<HashMap<SmolStr, (Manifest<DojoContract>, Option<abi::Contract>)>> {
     aux_data
         .contracts
         .iter()
@@ -475,14 +477,14 @@ fn get_dojo_contract_artifacts(
             Ok((
                 SmolStr::from(module_name),
                 (
-                    Manifest {
-                        kind: ManifestKind::Contract(Contract {
+                    Manifest::<DojoContract> {
+                        inner: DojoContract {
                             writes,
                             reads,
                             class_hash,
                             abi: None,
                             ..Default::default()
-                        }),
+                        },
                         name: module_name.into(),
                     },
                     abi,
