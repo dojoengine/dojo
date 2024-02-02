@@ -2,16 +2,24 @@
 //! from a JSON file.
 
 use std::collections::{hash_map, BTreeMap, HashMap};
+use std::fs::File;
+use std::io::{
+    BufReader, {self},
+};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
-use std::{fs, io};
 
+use base64::prelude::*;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, StarknetSierraCompilationError};
 use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_vm::types::errors::program_errors::ProgramError;
 use ethers::types::U256;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use serde::Deserialize;
+use rayon::prelude::*;
+use serde::de::value::MapAccessDeserializer;
+use serde::de::Visitor;
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{ComputeClassHashError, JsonError};
 use starknet::core::types::FromByteArrayError;
@@ -28,23 +36,70 @@ use super::constant::{
 use super::{FeeTokenConfig, Genesis, GenesisAllocation, UniversalDeployerConfig};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
 use crate::contract::{
-    ClassHash, CompiledContractClass, CompiledContractClassV1, ContractAddress, StorageKey,
-    StorageValue,
+    ClassHash, CompiledContractClass, CompiledContractClassV0, CompiledContractClassV1,
+    ContractAddress, SierraClass, StorageKey, StorageValue,
 };
 use crate::genesis::GenesisClass;
-use crate::utils::class::{parse_compiled_class_v0, parse_sierra_class};
 use crate::FieldElement;
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+type Object = Map<String, Value>;
+
+/// Represents the path to the class artifact or the full JSON artifact itself.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, derive_more::From)]
+#[serde(untagged)]
+pub enum PathOrFullArtifact {
+    /// A path to the file.
+    Path(PathBuf),
+    /// The full JSON artifact.
+    Artifact(Value),
+}
+
+impl<'de> Deserialize<'de> for PathOrFullArtifact {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct _Visitor;
+
+        impl<'de> Visitor<'de> for _Visitor {
+            type Value = PathOrFullArtifact;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a path to a file or the full json artifact")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<PathOrFullArtifact, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(PathOrFullArtifact::Path(PathBuf::from(v)))
+            }
+
+            fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                Ok(PathOrFullArtifact::Artifact(Value::Object(Object::deserialize(
+                    MapAccessDeserializer::new(map),
+                )?)))
+            }
+        }
+
+        deserializer.deserialize_any(_Visitor)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisClassJson {
-    pub path: PathBuf,
+    // pub class: PathBuf,
+    pub class: PathOrFullArtifact,
     /// The class hash of the contract. If not provided, the class hash is computed from the
     /// class at `path`.
     pub class_hash: Option<ClassHash>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeTokenConfigJson {
     pub name: String,
@@ -58,7 +113,7 @@ pub struct FeeTokenConfigJson {
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UniversalDeployerConfigJson {
     /// The address of the universal deployer contract.
     /// If not provided, the default UD address is used.
@@ -70,7 +125,7 @@ pub struct UniversalDeployerConfigJson {
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisContractJson {
     pub class: ClassHash,
@@ -79,7 +134,7 @@ pub struct GenesisContractJson {
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisAccountJson {
     /// The public key of the account.
@@ -91,48 +146,59 @@ pub struct GenesisAccountJson {
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
 
-/// A wrapper around [GenesisJson] that also contains the path to the JSON file. The `base_path` is
-/// needed to calculate the paths of the class files, which are relative to the JSON file.
-#[derive(Debug, Clone)]
-pub struct GenesisJsonWithBasePath {
-    pub base_path: PathBuf,
-    pub content: GenesisJson,
+#[derive(Debug, thiserror::Error)]
+pub enum GenesisJsonError {
+    #[error("Failed to read class file at path {path}: {source}")]
+    FileNotFound { source: io::Error, path: PathBuf },
+
+    #[error(transparent)]
+    ParsingError(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    ComputeClassHash(#[from] ComputeClassHashError),
+
+    #[error(transparent)]
+    ConversionError(#[from] FromByteArrayError),
+
+    #[error(transparent)]
+    SierraCompilation(#[from] StarknetSierraCompilationError),
+
+    #[error(transparent)]
+    ProgramError(#[from] ProgramError),
+
+    #[error("Missing class entry for class hash {0}")]
+    MissingClass(ClassHash),
+
+    #[error("Failed to flatten Sierra contract: {0}")]
+    FlattenSierraClass(#[from] JsonError),
+
+    #[error("Unresolved class artifact path {0}")]
+    UnresolvedClassPath(PathBuf),
+
+    #[error(transparent)]
+    Encode(#[from] base64::EncodeSliceError),
+
+    #[error(transparent)]
+    Decode(#[from] base64::DecodeError),
+
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
-impl GenesisJsonWithBasePath {
-    /// Loads the genesis configuration from a JSON file at `path`.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
-        let content = fs::read_to_string(path.as_ref())?;
-        let content: GenesisJson = serde_json::from_str(&content)?;
-
-        let mut base_path = path.as_ref().to_path_buf();
-        base_path.pop();
-
-        Ok(Self { content, base_path })
-    }
-
-    /// Creates a new instance of [GenesisJsonWithBasePath] with the given `base_path` and
-    /// `content`. If `base_path` is a path to a file, the parent directory is used as the base
-    /// path.
-    pub fn new_with_content_and_base_path(base_path: PathBuf, content: GenesisJson) -> Self {
-        let base_path = if !base_path.is_dir() {
-            let mut base_path = base_path;
-            base_path.pop();
-            base_path
-        } else {
-            base_path
-        };
-        Self { content, base_path }
-    }
-}
-
-/// The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
+// The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
 /// the genesis configuration from a JSON file before being converted to a [Genesis] instance.
-/// However, this type alone is inadequate for creating the [Genesis] type, for that you have to
-/// load the JSON file using [GenesisJsonWithBasePath] and then convert it to [Genesis] using
-/// [`Genesis::try_from<Genesis>`]. This is because the `classes` field of this type contains
-/// paths to the class files, which are set to be relative to the JSON file.
-#[derive(Debug, Clone, Deserialize)]
+///
+/// The JSON format allows specifying either the path to the class artifact or the full artifact
+/// embedded directly inside the JSON file. As such, it is required that all paths must be resolved
+/// first before converting to [Genesis] using [`Genesis::try_from<GenesisJson>`], otherwise the
+/// conversion will fail.
+///
+/// It is recommended to use [GenesisJson::load] for loading the JSON file as it will resolve
+/// the class paths into their actual class artifacts, instead of deserializing it manually
+/// (eg, using `serde_json`).
+///
+/// The path of the class artifact are computed **relative** to the JSON file.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisJson {
     pub parent_hash: BlockHash,
@@ -151,92 +217,106 @@ pub struct GenesisJson {
     pub contracts: HashMap<ContractAddress, GenesisContractJson>,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum GenesisTryFromJsonError {
-    #[error("Failed to read class file at path {path}: {source}")]
-    FileNotFound { source: io::Error, path: PathBuf },
-    #[error(transparent)]
-    ParsingError(#[from] serde_json::Error),
-    #[error(transparent)]
-    ComputeClassHash(#[from] ComputeClassHashError),
-    #[error(transparent)]
-    ConversionError(#[from] FromByteArrayError),
-    #[error(transparent)]
-    SierraCompilation(#[from] StarknetSierraCompilationError),
-    #[error(transparent)]
-    ProgramError(#[from] ProgramError),
-    #[error("Missing class entry for class hash {0}")]
-    MissingClass(ClassHash),
-    #[error("Failed to flatten Sierra contract: {0}")]
-    FlattenSierraClass(#[from] JsonError),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
+impl GenesisJson {
+    /// Load the genesis configuration from a JSON file at the given `path` and resolve all the
+    /// class paths to their corresponding class definitions. The paths will be resolved relative
+    /// to the JSON file itself.
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, GenesisJsonError> {
+        let mut path = path.as_ref().to_path_buf();
+
+        let file = File::open(&path)
+            .map_err(|source| GenesisJsonError::FileNotFound { path: path.clone(), source })?;
+
+        // Remove the file name from the path to get the base path.
+        path.pop();
+
+        let mut genesis: Self = serde_json::from_reader(BufReader::new(file))?;
+        // resolves the class paths, if any
+        genesis.resolve_class_artifacts(path)?;
+
+        Ok(genesis)
+    }
+
+    /// Resolves the paths of the class files to their corresponding class definitions. The
+    /// `base_path` is used to calculate the paths of the class files, which are relative to the
+    /// JSON file itself.
+    ///
+    /// This needs to be called if the [GenesisJson] is instantiated without using the
+    /// [GenesisJson::load] before converting to [Genesis].
+    pub fn resolve_class_artifacts(
+        &mut self,
+        base_path: impl AsRef<Path>,
+    ) -> Result<(), GenesisJsonError> {
+        for entry in &mut self.classes {
+            if let PathOrFullArtifact::Path(rel_path) = &entry.class {
+                let base_path = base_path.as_ref().to_path_buf();
+                let artifact = class_artifact_at_path(base_path, rel_path)?;
+                entry.class = PathOrFullArtifact::Artifact(artifact);
+            }
+        }
+        Ok(())
+    }
 }
 
-impl TryFrom<GenesisJsonWithBasePath> for Genesis {
-    type Error = GenesisTryFromJsonError;
+impl TryFrom<GenesisJson> for Genesis {
+    type Error = GenesisJsonError;
 
-    fn try_from(value: GenesisJsonWithBasePath) -> Result<Self, Self::Error> {
-        let GenesisJsonWithBasePath { content: value, base_path } = value;
-
+    fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
         let mut classes: HashMap<ClassHash, GenesisClass> = value
             .classes
             .into_par_iter()
             .map(|entry| {
-                let mut path = base_path.clone();
-                path.push(&entry.path);
+                let GenesisClassJson { class, class_hash } = entry;
 
-                let path = path
-                    .canonicalize()
-                    .map_err(|e| GenesisTryFromJsonError::FileNotFound { source: e, path })?;
+                let artifact = match class {
+                    PathOrFullArtifact::Artifact(artifact) => artifact,
+                    PathOrFullArtifact::Path(path) => {
+                        return Err(GenesisJsonError::UnresolvedClassPath(path));
+                    }
+                };
 
-                // read the file at the path
-                let content = fs::read_to_string(&path)
-                    .map_err(|e| GenesisTryFromJsonError::FileNotFound { source: e, path })?;
+                let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
 
-                let (class_hash, compiled_class_hash, sierra, casm) =
-                    match parse_sierra_class(&content) {
-                        Ok(sierra) => {
-                            let casm: ContractClass = serde_json::from_str(&content)?;
-                            let casm = CasmContractClass::from_contract_class(casm, true)?;
+                let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
+                    Ok(sierra) => {
+                        let casm: ContractClass = serde_json::from_value(artifact)?;
+                        let casm = CasmContractClass::from_contract_class(casm, true)?;
 
-                            // check if the class hash is provided, otherwise compute it form the
-                            // artifacts
-                            let class_hash = entry.class_hash.unwrap_or(sierra.class_hash()?);
-                            let compiled_hash = casm.compiled_class_hash().to_be_bytes();
+                        // check if the class hash is provided, otherwise compute it from the
+                        // artifacts
+                        let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
+                        let compiled_hash = casm.compiled_class_hash().to_be_bytes();
 
-                            (
-                                class_hash,
-                                FieldElement::from_bytes_be(&compiled_hash)?,
-                                Some(Arc::new(sierra.flatten()?)),
-                                Arc::new(CompiledContractClass::V1(
-                                    CompiledContractClassV1::try_from(casm)?,
-                                )),
-                            )
-                        }
+                        (
+                            class_hash,
+                            FieldElement::from_bytes_be(&compiled_hash)?,
+                            Some(Arc::new(sierra.flatten()?)),
+                            Arc::new(CompiledContractClass::V1(CompiledContractClassV1::try_from(
+                                casm,
+                            )?)),
+                        )
+                    }
 
-                        Err(_) => {
-                            let casm = parse_compiled_class_v0(&content)?;
+                    // if the artifact is not a sierra contract, we check if it's a legacy contract
+                    Err(_) => {
+                        let casm: CompiledContractClassV0 =
+                            serde_json::from_value(artifact.clone())?;
 
-                            let class_hash = if let Some(class_hash) = entry.class_hash {
-                                class_hash
-                            } else {
-                                let casm = serde_json::from_str::<LegacyContractClass>(&content)?;
-                                casm.class_hash()?
-                            };
+                        let class_hash = if let Some(class_hash) = class_hash {
+                            class_hash
+                        } else {
+                            let casm: LegacyContractClass =
+                                serde_json::from_value(artifact.clone())?;
+                            casm.class_hash()?
+                        };
 
-                            (
-                                class_hash,
-                                class_hash,
-                                None,
-                                Arc::new(CompiledContractClass::V0(casm)),
-                            )
-                        }
-                    };
+                        (class_hash, class_hash, None, Arc::new(CompiledContractClass::V0(casm)))
+                    }
+                };
 
                 Ok((class_hash, GenesisClass { compiled_class_hash, sierra, casm }))
             })
-            .collect::<Result<_, Self::Error>>()?;
+            .collect::<Result<_, GenesisJsonError>>()?;
 
         let mut fee_token = FeeTokenConfig {
             name: value.fee_token.name,
@@ -251,7 +331,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
         match value.fee_token.class {
             Some(hash) => {
                 if !classes.contains_key(&hash) {
-                    return Err(GenesisTryFromJsonError::MissingClass(hash));
+                    return Err(GenesisJsonError::MissingClass(hash));
                 }
             }
 
@@ -272,7 +352,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
             match config.class {
                 Some(hash) => {
                     if !classes.contains_key(&hash) {
-                        return Err(GenesisTryFromJsonError::MissingClass(hash));
+                        return Err(GenesisJsonError::MissingClass(hash));
                     }
 
                     Some(UniversalDeployerConfig {
@@ -311,7 +391,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
             let class_hash = match account.class {
                 Some(hash) => {
                     if !classes.contains_key(&hash) {
-                        return Err(GenesisTryFromJsonError::MissingClass(hash));
+                        return Err(GenesisJsonError::MissingClass(hash));
                     } else {
                         hash
                     }
@@ -357,7 +437,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
             // check that the class hash exists in the classes field
             let class_hash = contract.class;
             if !classes.contains_key(&contract.class) {
-                return Err(GenesisTryFromJsonError::MissingClass(class_hash));
+                return Err(GenesisJsonError::MissingClass(class_hash));
             }
 
             let balance = contract.balance.unwrap_or_default();
@@ -375,7 +455,7 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
             );
         }
 
-        Ok(Self {
+        Ok(Genesis {
             classes,
             fee_token,
             allocations,
@@ -390,16 +470,85 @@ impl TryFrom<GenesisJsonWithBasePath> for Genesis {
     }
 }
 
+impl FromStr for GenesisJson {
+    type Err = GenesisJsonError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s).map_err(GenesisJsonError::from)
+    }
+}
+
+/// A helper function to conveniently resolve the artifacts in the genesis json if they
+/// weren't already resolved and then serialize it to base64 encoding.
+///
+/// # Arguments
+/// * `genesis` - The [GenesisJson] to resolve and serialize.
+/// * `base_path` - The base path of the JSON file used to resolve the class artifacts
+pub fn resolve_artifacts_and_to_base64<P: AsRef<Path>>(
+    mut genesis: GenesisJson,
+    base_path: P,
+) -> Result<Vec<u8>, GenesisJsonError> {
+    genesis.resolve_class_artifacts(base_path)?;
+    to_base64(genesis)
+}
+
+/// Serialize the [GenesisJson] into base64 encoding.
+pub fn to_base64(genesis: GenesisJson) -> Result<Vec<u8>, GenesisJsonError> {
+    let data = serde_json::to_vec(&genesis)?;
+
+    let mut buf = vec![b'b', b'a', b's', b'e', b'6', b'4', b':'];
+    // make sure we'll have a slice big enough for base64 + padding
+    buf.resize((4 * data.len() / 3 + 4) + buf.len(), 0);
+
+    let bytes_written = BASE64_STANDARD.encode_slice(data, &mut buf[7..])?;
+    // shorten the buffer to the actual length written
+    buf.truncate(bytes_written + 7);
+
+    Ok(buf)
+}
+
+/// Deserialize the [GenesisJson] from base64 encoded bytes.
+pub fn from_base64(data: &[u8]) -> Result<GenesisJson, GenesisJsonError> {
+    match data {
+        [b'b', b'a', b's', b'e', b'6', b'4', b':', rest @ ..] => {
+            let decoded = BASE64_STANDARD.decode(rest)?;
+            Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
+        }
+
+        _ => {
+            let decoded = BASE64_STANDARD.decode(data)?;
+            Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
+        }
+    }
+}
+
+fn class_artifact_at_path(
+    base_path: PathBuf,
+    relative_path: &PathBuf,
+) -> Result<serde_json::Value, GenesisJsonError> {
+    let mut path = base_path;
+    path.push(relative_path);
+
+    let path =
+        path.canonicalize().map_err(|e| GenesisJsonError::FileNotFound { source: e, path })?;
+
+    let file = File::open(&path).map_err(|e| GenesisJsonError::FileNotFound { source: e, path })?;
+    let content: Value = serde_json::from_reader(BufReader::new(file))?;
+
+    Ok(content)
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::{BTreeMap, HashMap};
+    use std::fs::File;
+    use std::io::BufReader;
     use std::path::PathBuf;
     use std::str::FromStr;
 
     use ethers::types::U256;
     use starknet::macros::felt;
 
-    use super::{GenesisClassJson, GenesisJson};
+    use super::{from_base64, GenesisClassJson, GenesisJson};
     use crate::block::GasPrices;
     use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
     use crate::genesis::constant::{
@@ -411,19 +560,16 @@ mod tests {
         DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH, DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH,
         DEFAULT_UDC_ADDRESS,
     };
-    use crate::genesis::json::GenesisJsonWithBasePath;
+    use crate::genesis::json::to_base64;
     use crate::genesis::{
         ContractAddress, FeeTokenConfig, Genesis, GenesisAllocation, GenesisClass,
         UniversalDeployerConfig,
     };
 
-    fn genesis_json() -> GenesisJsonWithBasePath {
-        GenesisJsonWithBasePath::new("./src/genesis/test-genesis.json").unwrap()
-    }
-
     #[test]
     fn deserialize_from_json() {
-        let genesis: GenesisJson = genesis_json().content;
+        let file = File::open("./src/genesis/test-genesis.json").unwrap();
+        let genesis: GenesisJson = serde_json::from_reader(file).unwrap();
 
         assert_eq!(genesis.number, 0);
         assert_eq!(genesis.parent_hash, felt!("0x999"));
@@ -508,24 +654,52 @@ mod tests {
             vec![
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
-                    path: PathBuf::from("../../contracts/compiled/erc20.json"),
+                    class: PathBuf::from("../../contracts/compiled/erc20.json").into(),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
-                    path: PathBuf::from("../../contracts/compiled/universal_deployer.json"),
+                    class: PathBuf::from("../../contracts/compiled/universal_deployer.json").into(),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0xa55")),
-                    path: PathBuf::from("../../contracts/compiled/oz_account_080.json"),
+                    class: PathBuf::from("../../contracts/compiled/oz_account_080.json").into(),
                 },
             ]
         );
     }
 
     #[test]
-    fn genesis_try_from_json() {
-        let genesis = genesis_json();
-        let actual_genesis = Genesis::try_from(genesis).unwrap();
+    fn deserialize_from_json_with_class() {
+        let file = File::open("./src/genesis/test-genesis-with-class.json").unwrap();
+        let genesis: GenesisJson = serde_json::from_reader(BufReader::new(file)).unwrap();
+
+        assert_eq!(
+            genesis.classes,
+            vec![
+                GenesisClassJson {
+                    class_hash: Some(felt!("0x8")),
+                    class: PathBuf::from("../../contracts/compiled/erc20.json").into(),
+                },
+                GenesisClassJson {
+                    class_hash: Some(felt!("0x80085")),
+                    class: PathBuf::from("../../contracts/compiled/universal_deployer.json").into(),
+                },
+                GenesisClassJson {
+                    class_hash: Some(felt!("0xa55")),
+                    class: serde_json::to_value(DEFAULT_OZ_ACCOUNT_CONTRACT.clone())
+                        .unwrap()
+                        .into(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn genesis_load_from_json() {
+        let path = PathBuf::from("./src/genesis/test-genesis.json");
+
+        let json = GenesisJson::load(path).unwrap();
+        let actual_genesis = Genesis::try_from(json).unwrap();
 
         let classes = HashMap::from([
             (
@@ -726,12 +900,7 @@ mod tests {
         }
         "#;
 
-        let content: GenesisJson = serde_json::from_str(json).unwrap();
-
-        let base_path = PathBuf::from_str("../").unwrap().canonicalize().unwrap();
-        let genesis_json =
-            GenesisJsonWithBasePath::new_with_content_and_base_path(base_path, content);
-
+        let genesis_json: GenesisJson = GenesisJson::from_str(json).unwrap();
         let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
         let classes = HashMap::from([
@@ -819,5 +988,30 @@ mod tests {
             assert_eq!(class.casm, expected_class.casm);
             assert_eq!(class.sierra, expected_class.sierra.clone());
         }
+    }
+
+    #[test]
+    fn genesis_from_json_with_unresolved_paths() {
+        let file = File::open("./src/genesis/test-genesis.json").unwrap();
+        let json: GenesisJson = serde_json::from_reader(file).unwrap();
+        assert!(
+            Genesis::try_from(json)
+                .unwrap_err()
+                .to_string()
+                .contains("Unresolved class artifact path")
+        );
+    }
+
+    #[test]
+    fn encode_decode_genesis_file_to_base64() {
+        let path = PathBuf::from("./src/genesis/test-genesis.json");
+
+        let genesis = GenesisJson::load(path).unwrap();
+        let genesis_clone = genesis.clone();
+
+        let encoded = to_base64(genesis_clone).unwrap();
+        let decoded = from_base64(encoded.as_slice()).unwrap();
+
+        assert_eq!(genesis, decoded);
     }
 }

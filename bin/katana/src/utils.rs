@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use katana_primitives::genesis::json::GenesisJsonWithBasePath;
+use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 
 pub fn parse_seed(seed: &str) -> [u8; 32] {
@@ -15,8 +15,20 @@ pub fn parse_seed(seed: &str) -> [u8; 32] {
     }
 }
 
-pub fn parse_genesis(path: &str) -> Result<Genesis, anyhow::Error> {
-    let path = PathBuf::from(shellexpand::full(path)?.into_owned());
-    let genesis = Genesis::try_from(GenesisJsonWithBasePath::new(path)?)?;
+/// Used as clap value parser for [Genesis].
+pub fn parse_genesis(value: &str) -> Result<Genesis, anyhow::Error> {
+    let path = PathBuf::from(shellexpand::full(value)?.into_owned());
+    let genesis = Genesis::try_from(GenesisJson::load(path)?)?;
     Ok(genesis)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_genesis_file() {
+        let path = "./tests/test-data/genesis.json";
+        parse_genesis(path).unwrap();
+    }
 }

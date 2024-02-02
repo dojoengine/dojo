@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use ethers::types::U256;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::cairo_short_string_to_felt;
 
@@ -34,7 +34,7 @@ use crate::version::CURRENT_STARKNET_VERSION;
 use crate::FieldElement;
 
 #[serde_with::serde_as]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeTokenConfig {
     /// The name of the fee token.
     pub name: String,
@@ -68,7 +68,7 @@ pub struct GenesisClass {
 }
 
 /// The configuration of the universal deployer contract.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UniversalDeployerConfig {
     /// The class hash of the universal deployer contract.
     pub class_hash: ClassHash,

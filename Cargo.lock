@@ -6604,6 +6604,7 @@ name = "katana-primitives"
 version = "0.5.1-alpha.5"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
  "blockifier",
  "cairo-lang-starknet",
  "cairo-vm",

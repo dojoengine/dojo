@@ -5,7 +5,7 @@ use derive_more::{Deref, DerefMut};
 use ethers::types::U256;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::get_contract_address;
 use starknet::signers::SigningKey;
@@ -15,7 +15,7 @@ use crate::contract::{ClassHash, ContractAddress, StorageKey, StorageValue};
 use crate::FieldElement;
 
 /// Represents a contract allocation in the genesis block.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum GenesisAllocation {
     /// Account contract
@@ -67,7 +67,7 @@ impl GenesisAllocation {
 }
 
 /// Genesis allocation for account contract.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum GenesisAccountAlloc {
     /// Account contract with hidden private key.
@@ -123,7 +123,7 @@ impl GenesisAccountAlloc {
 
 /// A generic non-account contract.
 #[serde_with::serde_as]
-#[derive(Debug, Default, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GenesisContractAlloc {
     /// The class hash of the contract.
     #[serde_as(as = "UfeHex")]
@@ -141,7 +141,7 @@ pub struct GenesisContractAlloc {
 /// Used mainly for development purposes where the account info including the
 /// private key is printed to the console.
 #[serde_with::serde_as]
-#[derive(Debug, Default, Clone, Serialize, PartialEq, Eq, Deref, DerefMut)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Deref, DerefMut)]
 pub struct DevGenesisAccount {
     /// The private key associated with the public key of the account.
     #[serde_as(as = "UfeHex")]
@@ -175,7 +175,7 @@ impl DevGenesisAccount {
 
 /// Account contract allocated in the genesis block.
 #[serde_with::serde_as]
-#[derive(Debug, Default, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GenesisAccount {
     /// The public key associated with the account for validation.
     #[serde_as(as = "UfeHex")]
