@@ -15,6 +15,7 @@ use cairo_lang_starknet::casm_contract_class::{CasmContractClass, StarknetSierra
 use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_vm::types::errors::program_errors::ProgramError;
 use ethers::types::U256;
+use rayon::prelude::*;
 use serde::de::value::MapAccessDeserializer;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
@@ -263,7 +264,7 @@ impl TryFrom<GenesisJson> for Genesis {
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
         let mut classes: HashMap<ClassHash, GenesisClass> = value
             .classes
-            .into_iter()
+            .into_par_iter()
             .map(|entry| {
                 let GenesisClassJson { class, class_hash } = entry;
 
@@ -482,7 +483,7 @@ impl FromStr for GenesisJson {
 /// # Arguments
 /// * `genesis` - The [GenesisJson] to resolve and serialize.
 /// * `base_path` - The base path of the JSON file used to resolve the class artifacts
-pub fn resolves_artifacts_and_to_base64<P: AsRef<Path>>(
+pub fn resolve_artifacts_and_to_base64<P: AsRef<Path>>(
     mut genesis: GenesisJson,
     base_path: P,
 ) -> Result<Vec<u8>, GenesisJsonError> {
