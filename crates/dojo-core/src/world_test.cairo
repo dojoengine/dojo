@@ -8,7 +8,6 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
-use dojo::executor::executor;
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
     IUpgradeableWorldDispatcherTrait, ResourceMetadata

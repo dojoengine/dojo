@@ -8,7 +8,6 @@ use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 use debug::PrintTrait;
 
-use dojo::executor::executor;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::packing::{shl, shr};
 
@@ -41,17 +40,11 @@ fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> Co
 }
 
 fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
-    // deploy executor
-    let constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    )
-        .unwrap();
     // deploy world
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
         0,
-        array![executor_address.into(), dojo::base::base::TEST_CLASS_HASH].span(),
+        array![dojo::base::base::TEST_CLASS_HASH].span(),
         false
     )
         .unwrap();

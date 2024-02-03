@@ -23,8 +23,6 @@ trait IWorld<T> {
         values: Span<felt252>,
         layout: Span<u8>
     );
-    fn set_executor(ref self: T, contract_address: ContractAddress);
-    fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
     fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
     fn is_owner(self: @T, address: ContractAddress, resource: felt252) -> bool;
@@ -68,13 +66,9 @@ mod world {
     use dojo::database;
     use dojo::database::introspect::Introspect;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
-    use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
     use dojo::model::Model;
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
-
-    const NAME_ENTRYPOINT: felt252 =
-        0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
 
     const WORLD: felt252 = 0;
     const RESOURCE_METADATA: felt252 = 1;
@@ -92,7 +86,6 @@ mod world {
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
-        ExecutorUpdated: ExecutorUpdated
     }
 
     #[derive(Drop, starknet::Event)]
@@ -159,18 +152,11 @@ mod world {
         value: bool,
     }
 
-    #[derive(Drop, starknet::Event)]
-    struct ExecutorUpdated {
-        address: ContractAddress,
-        prev_address: ContractAddress,
-    }
-
-
     #[storage]
     struct Storage {
-        executor_dispatcher: IExecutorDispatcher,
         contract_base: ClassHash,
         nonce: usize,
+        models_count: usize,
         metadata_uri: LegacyMap::<felt252, felt252>,
         models: LegacyMap::<felt252, ClassHash>,
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
@@ -179,9 +165,8 @@ mod world {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, executor: ContractAddress, contract_base: ClassHash) {
+    fn constructor(ref self: ContractState, contract_base: ClassHash) {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
-        self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
 
@@ -199,24 +184,6 @@ mod world {
         );
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
-    }
-
-    /// Call Helper,
-    /// Call the provided `entrypoint` method on the given `class_hash`.
-    ///
-    /// # Arguments
-    ///
-    /// * `class_hash` - Class Hash to call.
-    /// * `entrypoint` - Entrypoint to call.
-    /// * `calldata` - The calldata to pass.
-    ///
-    /// # Returns
-    ///
-    /// The return value of the call.
-    fn class_call(
-        self: @ContractState, class_hash: ClassHash, entrypoint: felt252, calldata: Span<felt252>
-    ) -> Span<felt252> {
-        self.executor_dispatcher.read().call(class_hash, entrypoint, calldata)
     }
 
     #[external(v0)]
@@ -365,8 +332,11 @@ mod world {
         /// * `class_hash` - The class hash of the model to be registered.
         fn register_model(ref self: ContractState, class_hash: ClassHash) {
             let caller = get_caller_address();
-            let calldata = ArrayTrait::new();
-            let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, calldata.span())[0];
+
+            let salt = self.models_count.read();
+            let name = dojo::model::deploy_and_get_name(salt.into(), class_hash).unwrap_syscall();
+            self.models_count.write(salt + 1);
+
             let mut prev_class_hash = starknet::class_hash::ClassHashZeroable::zero();
 
             // Avoids a model name to conflict with already deployed contract,
@@ -546,34 +516,6 @@ mod world {
         ) -> Span<felt252> {
             let key = poseidon::poseidon_hash_span(keys);
             database::get(model, key, layout)
-        }
-
-        /// Sets the executor contract address.
-        ///
-        /// # Arguments
-        ///
-        /// * `contract_address` - The contract address of the executor.
-        fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
-            assert(contract_address.is_non_zero(), 'Invalid executor address');
-            assert(self.is_owner(get_caller_address(), WORLD), 'only owner can set executor');
-
-            let prev_address = self.executor_dispatcher.read().contract_address;
-            self
-                .executor_dispatcher
-                .write(IExecutorDispatcher { contract_address: contract_address });
-
-            EventEmitter::emit(
-                ref self, ExecutorUpdated { address: contract_address, prev_address }
-            );
-        }
-
-        /// Gets the executor contract address.
-        ///
-        /// # Returns
-        ///
-        /// * `ContractAddress` - The address of the executor contract.
-        fn executor(self: @ContractState) -> ContractAddress {
-            self.executor_dispatcher.read().contract_address
         }
 
         /// Gets the base contract class hash.
