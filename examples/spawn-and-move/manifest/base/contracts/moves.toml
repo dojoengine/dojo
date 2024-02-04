@@ -1,7 +1,0 @@
-kind = "DojoContract"
-class_hash = "0x27aab6611d2ddd2136e430b7c33f93f8b8921abe13782f1f134ebb53af34cb8"
-abi = "abis/moves.json"
-reads = []
-writes = []
-computed = []
-name = "dojo_examples::models::moves"

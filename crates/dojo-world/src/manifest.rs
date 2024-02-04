@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::{fs, io};
 
 use ::serde::{Deserialize, Serialize};
-use async_trait::async_trait;
+use anyhow::Result;
+// use async_trait::async_trait;
 use cainome::cairo_serde::Error as CainomeError;
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
@@ -215,6 +216,7 @@ where
     pub name: SmolStr,
 }
 
+#[derive(Debug, Clone)]
 pub struct BaseManifest {
     pub world: Manifest<Class>,
     pub executor: Manifest<Class>,
@@ -222,6 +224,7 @@ pub struct BaseManifest {
     pub contracts: Vec<Manifest<Class>>,
     pub models: Vec<Manifest<DojoModel>>,
 }
+#[derive(Debug, Clone)]
 pub struct DeployedManifest {
     pub world: Manifest<Contract>,
     pub executor: Manifest<Contract>,
@@ -249,8 +252,33 @@ impl BaseManifest {
     }
 }
 
+impl Into<Manifest<Contract>> for Manifest<Class> {
+    fn into(self) -> Manifest<Contract> {
+        Manifest::<Contract> {
+            inner: Contract {
+                class_hash: self.inner.class_hash,
+                abi: self.inner.abi,
+                address: None,
+            },
+            name: self.name,
+        }
+    }
+}
+
+impl Into<DeployedManifest> for BaseManifest {
+    fn into(self) -> DeployedManifest {
+        DeployedManifest {
+            world: self.world.into(),
+            executor: self.executor.into(),
+            base: self.base,
+            contracts: vec![],
+            models: self.models,
+        }
+    }
+}
+
 impl DeployedManifest {
-    pub fn load_from_path(path: Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
         let contract_dir = path.join("contracts");
         let model_dir = path.join("models");
 
@@ -266,39 +294,29 @@ impl DeployedManifest {
 
         Ok(Self { world, executor, base, contracts, models })
     }
-}
 
-fn elements_from_path<'de, T>(path: Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
-where
-    T: Serialize + DeserializeOwned + ManifestMethods,
-{
-    let mut elements = vec![];
+    pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
+        fs::create_dir_all(path)?;
 
-    for entry in path.read_dir()? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
-            elements.push(manifest);
-        } else {
-            continue;
-        }
+        let contract_dir = path.join("contracts");
+        let model_dir = path.join("models");
+
+        let world = toml::to_string_pretty(&self.world)?;
+        fs::write(path.join("world").with_extension("toml"), world)?;
+
+        let executor = toml::to_string_pretty(&self.executor)?;
+        fs::write(path.join("executor").with_extension("toml"), executor)?;
+
+        let base = toml::to_string_pretty(&self.base)?;
+        fs::write(path.join("base").with_extension("toml"), base)?;
+
+        elements_to_path(&contract_dir, &self.contracts)?;
+        elements_to_path(&model_dir, &self.models)?;
+
+        Ok(())
     }
 
-    Ok(elements)
-}
-
-#[async_trait]
-pub trait RemoteLoadable<P: Provider + Sync + Send + 'static> {
-    async fn load_from_remote(
-        provider: P,
-        world_address: FieldElement,
-    ) -> Result<DeployedManifest, AbstractManifestError>;
-}
-
-#[async_trait]
-impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeployedManifest {
-    async fn load_from_remote(
+    pub async fn load_from_remote<P: Provider + Sync + Send>(
         provider: P,
         world_address: FieldElement,
     ) -> Result<DeployedManifest, AbstractManifestError> {
@@ -355,6 +373,52 @@ impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeployedManifest
         })
     }
 }
+
+fn elements_to_path<T>(item_dir: &Utf8PathBuf, items: &Vec<Manifest<T>>) -> Result<()>
+where
+    T: Serialize + ManifestMethods,
+{
+    fs::create_dir_all(item_dir)?;
+    for item in items {
+        let item_toml = toml::to_string_pretty(&item)?;
+        let item_name = item.name.split("::").last().unwrap();
+        fs::write(item_dir.join(item_name).with_extension("toml"), item_toml)?;
+    }
+
+    Ok(())
+}
+
+fn elements_from_path<'de, T>(path: Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
+where
+    T: DeserializeOwned + ManifestMethods,
+{
+    let mut elements = vec![];
+
+    for entry in path.read_dir()? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            elements.push(manifest);
+        } else {
+            continue;
+        }
+    }
+
+    Ok(elements)
+}
+
+// TODO: currently implementing this method using trait is causing lifetime issue due to `async_trait` macro which is hard to debug. So moved it as a async method on type itself.
+// #[async_trait]
+// pub trait RemoteLoadable<P: Provider + Sync + Send + 'static> {
+//     async fn load_from_remote(
+//         provider: P,
+//         world_address: FieldElement,
+//     ) -> Result<DeployedManifest, AbstractManifestError>;
+// }
+
+// #[async_trait]
+// impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeployedManifest {}
 
 async fn get_remote_models_and_contracts<P: Provider + Send + Sync>(
     world: FieldElement,

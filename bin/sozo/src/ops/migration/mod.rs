@@ -1,9 +1,8 @@
-use std::path::Path;
-
 use anyhow::{anyhow, bail, Context, Result};
+use camino::Utf8PathBuf;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::manifest::World;
+use dojo_world::manifest::{AbstractManifestError, BaseManifest, DeployedManifest};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
@@ -37,10 +36,11 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::transaction::TransactionOptions;
 use crate::commands::options::world::WorldOptions;
 
-pub async fn execute<U>(ws: &Workspace<'_>, args: MigrateArgs, target_dir: U) -> Result<()>
-where
-    U: AsRef<Path>,
-{
+pub async fn execute(
+    ws: &Workspace<'_>,
+    args: MigrateArgs,
+    manifest_dir: Utf8PathBuf,
+) -> Result<()> {
     let ui = ws.config().ui();
     let MigrateArgs { account, starknet, world, name, .. } = args;
 
@@ -51,7 +51,7 @@ where
     // Load local and remote World manifests.
 
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&target_dir, &account, world_address, &ui).await?;
+        load_world_manifests(&manifest_dir, &account, world_address, &ui).await?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -66,7 +66,7 @@ where
         // Mirate according to the diff.
         let world_address = apply_diff(
             ws,
-            &target_dir,
+            &manifest_dir,
             diff,
             name,
             world_address,
@@ -75,47 +75,46 @@ where
         )
         .await?;
 
-        update_world_manifest(ws, local_manifest, remote_manifest, target_dir, world_address)
-            .await?;
+        update_world_manifest(ws, local_manifest, remote_manifest, &manifest_dir, world_address)
+            .await
+            .with_context(|| "Failed to update world manifest")?;
     }
 
     Ok(())
 }
 
-async fn update_world_manifest<U>(
+async fn update_world_manifest(
     ws: &Workspace<'_>,
-    mut local_manifest: World,
-    remote_manifest: Option<World>,
-    target_dir: U,
+    mut local_manifest: DeployedManifest,
+    remote_manifest: Option<DeployedManifest>,
+    manifest_dir: &Utf8PathBuf,
     world_address: FieldElement,
-) -> Result<()>
-where
-    U: AsRef<Path>,
-{
+) -> Result<()> {
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifest.json...");
-    local_manifest.world.address = Some(world_address);
+    local_manifest.world.inner.address = Some(world_address);
 
     let base_class_hash = match remote_manifest {
-        Some(manifest) => manifest.base.class_hash,
-        None => local_manifest.base.class_hash,
+        Some(manifest) => manifest.base.inner.class_hash,
+        None => local_manifest.base.inner.class_hash,
     };
 
     local_manifest.contracts.iter_mut().for_each(|c| {
         let salt = generate_salt(&c.name);
-        c.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
+        c.inner.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
 
-    local_manifest.write_to_path(target_dir.as_ref().join("manifest.json"))?;
+    local_manifest
+        .write_to_path(&manifest_dir.join("manifest").join("deployments").join("CHAIN_ID"))?;
     ui.print("\n✨ Done.");
 
     Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn apply_diff<U, P, S>(
+pub(crate) async fn apply_diff<P, S>(
     ws: &Workspace<'_>,
-    target_dir: U,
+    manifest_dir: &Utf8PathBuf,
     diff: WorldDiff,
     name: Option<String>,
     world_address: Option<FieldElement>,
@@ -123,12 +122,11 @@ pub(crate) async fn apply_diff<U, P, S>(
     txn_config: Option<TransactionOptions>,
 ) -> Result<FieldElement>
 where
-    U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
-    let strategy = prepare_migration(target_dir, diff, name, world_address, &ui)?;
+    let strategy = prepare_migration(manifest_dir, diff, name, world_address, &ui)?;
 
     println!("  ");
 
@@ -197,28 +195,38 @@ pub(crate) async fn setup_env(
     Ok((world_address, account))
 }
 
-async fn load_world_manifests<U, P, S>(
-    target_dir: U,
+async fn load_world_manifests<P, S>(
+    manifest_dir: &Utf8PathBuf,
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
-) -> Result<(World, Option<World>)>
+) -> Result<(DeployedManifest, Option<DeployedManifest>)>
 where
-    U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let local_manifest = World::load_from_path(target_dir.as_ref().join("manifest.json"))?;
+    let local_manifest;
+
+    let deployment_dir = manifest_dir.join("manifest").join("deployments").join("CHAIN_ID");
+    dbg!(&deployment_dir);
+
+    if deployment_dir.exists() {
+        local_manifest = DeployedManifest::load_from_path(&deployment_dir)?;
+    } else {
+        let base_manifest =
+            BaseManifest::load_from_path(manifest_dir.join("manifest").join("base"))?;
+        local_manifest = base_manifest.into();
+    }
 
     let remote_manifest = if let Some(address) = world_address {
-        match World::load_from_remote(account.provider(), address).await {
+        match DeployedManifest::load_from_remote(account.provider(), address).await {
             Ok(manifest) => {
                 ui.print_sub(format!("Found remote World: {address:#x}"));
                 Some(manifest)
             }
-            Err(ManifestError::RemoteWorldNotFound) => None,
+            Err(AbstractManifestError::RemoteWorldNotFound) => None,
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
                 return Err(anyhow!("Failed to build remote World state: {e}"));
@@ -236,7 +244,7 @@ where
 }
 
 fn prepare_migration(
-    target_dir: impl AsRef<Path>,
+    target_dir: &Utf8PathBuf,
     diff: WorldDiff,
     name: Option<String>,
     world_address: Option<FieldElement>,

@@ -236,7 +236,7 @@ fn update_manifest(
             manifest.inner.set_abi(Some(abi_relative_path.to_string()));
         }
 
-        let manifest_toml = toml::to_string(&manifest)?;
+        let manifest_toml = toml::to_string_pretty(&manifest)?;
         let abi_json = serde_json::to_string_pretty(&abi)?;
 
         // Create the directory if it doesn't exist

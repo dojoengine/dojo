@@ -1,9 +1,12 @@
 use std::collections::HashMap;
+use std::fs;
+use std::io::Error;
 
 use anyhow::{anyhow, Result};
 use cairo_lang_starknet::abi::{self, Event, Item};
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
-use dojo_world::manifest::World;
+use dojo_world::manifest::{DeployedManifest, ManifestMethods};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 use starknet::core::utils::starknet_keccak;
@@ -56,7 +59,10 @@ impl EventsArgs {
                 return Err(anyhow!("Run scarb migrate before running this command"));
             }
 
-            Some(extract_events(&World::load_from_path(manifest_path)?))
+            Some(extract_events(
+                &DeployedManifest::load_from_path(&manifest_path)?,
+                &manifest_path,
+            )?)
         } else {
             None
         };
@@ -73,8 +79,18 @@ impl EventsArgs {
     }
 }
 
-fn extract_events(manifest: &World) -> HashMap<String, Vec<Event>> {
-    fn inner_helper(events: &mut HashMap<String, Vec<Event>>, abi: abi::Contract) {
+fn extract_events(
+    manifest: &DeployedManifest,
+    manifest_dir: &Utf8PathBuf,
+) -> anyhow::Result<HashMap<String, Vec<Event>>> {
+    fn inner_helper(
+        events: &mut HashMap<String, Vec<Event>>,
+        abi_path: &String,
+        manifest_dir: &Utf8PathBuf,
+    ) -> Result<(), Error> {
+        let full_abi_path = manifest_dir.join(Utf8Path::new(abi_path));
+        let abi: abi::Contract = serde_json::from_str(&fs::read_to_string(full_abi_path)?)?;
+
         for item in abi.into_iter() {
             if let Item::Event(e) = item {
                 match e.kind {
@@ -93,31 +109,33 @@ fn extract_events(manifest: &World) -> HashMap<String, Vec<Event>> {
                 }
             }
         }
+
+        Ok(())
     }
 
     let mut events_map = HashMap::new();
 
-    if let Some(abi) = manifest.world.abi.clone() {
-        inner_helper(&mut events_map, abi);
+    if let Some(abi_path) = manifest.world.inner.abi() {
+        inner_helper(&mut events_map, abi_path, manifest_dir)?;
     }
 
-    if let Some(abi) = manifest.executor.abi.clone() {
-        inner_helper(&mut events_map, abi);
+    if let Some(abi_path) = manifest.executor.inner.abi() {
+        inner_helper(&mut events_map, abi_path, manifest_dir)?;
     }
 
     for contract in &manifest.contracts {
-        if let Some(abi) = contract.abi.clone() {
-            inner_helper(&mut events_map, abi);
+        if let Some(abi_path) = contract.inner.abi() {
+            inner_helper(&mut events_map, abi_path, manifest_dir)?;
         }
     }
 
     for model in &manifest.contracts {
-        if let Some(abi) = model.abi.clone() {
-            inner_helper(&mut events_map, abi);
+        if let Some(abi_path) = model.inner.abi() {
+            inner_helper(&mut events_map, abi_path, manifest_dir)?;
         }
     }
 
-    events_map
+    Ok(events_map)
 }
 
 #[cfg(test)]
@@ -134,7 +152,7 @@ mod test {
 
     #[test]
     fn extract_events_work_as_expected() {
-        let manifest = Manifest::load_from_path("./tests/test_data/manifest.json").unwrap();
+        let manifest = DeployedManifest::load_from_path("./tests/test_data/manifest.json").unwrap();
         let result = extract_events(&manifest);
 
         // we are just collection all events from manifest file so just verifying count should work

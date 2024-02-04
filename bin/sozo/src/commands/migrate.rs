@@ -46,17 +46,10 @@ impl MigrateArgs {
             }
         }
 
-        let target_dir = ws.target_dir().path_existent().unwrap();
-        let target_dir = target_dir.join(ws.config().profile().as_str());
+        // its path to a file so `parent` should never return `None`
+        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
-        if !target_dir.join("manifest.json").exists() {
-            compile_workspace(
-                config,
-                CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-            )?;
-        }
-
-        ws.config().tokio_handle().block_on(migration::execute(&ws, self, target_dir))?;
+        ws.config().tokio_handle().block_on(migration::execute(&ws, self, manifest_dir))?;
 
         Ok(())
     }
