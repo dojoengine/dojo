@@ -46,30 +46,6 @@ abigen!(
   },
   {
     "type": "enum",
-    "name": "core::option::Option::<core::felt252>",
-    "variants": [
-      {
-        "name": "Some",
-        "type": "core::felt252"
-      },
-      {
-        "name": "None",
-        "type": "()"
-      }
-    ]
-  },
-  {
-    "type": "struct",
-    "name": "core::array::Span::<core::array::Span::<core::felt252>>",
-    "members": [
-      {
-        "name": "snapshot",
-        "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
-      }
-    ]
-  },
-  {
-    "type": "enum",
     "name": "core::bool",
     "variants": [
       {
@@ -125,7 +101,7 @@ abigen!(
         ],
         "outputs": [
           {
-            "type": "core::starknet::class_hash::ClassHash"
+            "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
           }
         ],
         "state_mutability": "view"
@@ -222,14 +198,6 @@ abigen!(
             "type": "core::array::Span::<core::felt252>"
           },
           {
-            "name": "offset",
-            "type": "core::integer::u8"
-          },
-          {
-            "name": "length",
-            "type": "core::integer::u32"
-          },
-          {
             "name": "layout",
             "type": "core::array::Span::<core::integer::u8>"
           }
@@ -254,10 +222,6 @@ abigen!(
             "type": "core::array::Span::<core::felt252>"
           },
           {
-            "name": "offset",
-            "type": "core::integer::u8"
-          },
-          {
             "name": "values",
             "type": "core::array::Span::<core::felt252>"
           },
@@ -268,77 +232,6 @@ abigen!(
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "entities",
-        "inputs": [
-          {
-            "name": "model",
-            "type": "core::felt252"
-          },
-          {
-            "name": "index",
-            "type": "core::option::Option::<core::felt252>"
-          },
-          {
-            "name": "values",
-            "type": "core::array::Span::<core::felt252>"
-          },
-          {
-            "name": "values_length",
-            "type": "core::integer::u32"
-          },
-          {
-            "name": "values_layout",
-            "type": "core::array::Span::<core::integer::u8>"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "(core::array::Span::<core::felt252>, core::array::Span::<core::array::Span::<core::felt252>>)"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "entity_ids",
-        "inputs": [
-          {
-            "name": "model",
-            "type": "core::felt252"
-          }
-        ],
-        "outputs": [
-          {
-            "type": "core::array::Span::<core::felt252>"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "set_executor",
-        "inputs": [
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [],
-        "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "executor",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "state_mutability": "view"
       },
       {
         "type": "function",
@@ -505,10 +398,6 @@ abigen!(
     "name": "constructor",
     "inputs": [
       {
-        "name": "executor",
-        "type": "core::starknet::contract_address::ContractAddress"
-      },
-      {
         "name": "contract_base",
         "type": "core::starknet::class_hash::ClassHash"
       }
@@ -618,6 +507,16 @@ abigen!(
         "name": "prev_class_hash",
         "type": "core::starknet::class_hash::ClassHash",
         "kind": "data"
+      },
+      {
+        "name": "address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "prev_address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
       }
     ]
   },
@@ -634,11 +533,6 @@ abigen!(
       {
         "name": "keys",
         "type": "core::array::Span::<core::felt252>",
-        "kind": "data"
-      },
-      {
-        "name": "offset",
-        "type": "core::integer::u8",
         "kind": "data"
       },
       {
@@ -711,23 +605,6 @@ abigen!(
   },
   {
     "type": "event",
-    "name": "dojo::world::world::ExecutorUpdated",
-    "kind": "struct",
-    "members": [
-      {
-        "name": "address",
-        "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "data"
-      },
-      {
-        "name": "prev_address",
-        "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "data"
-      }
-    ]
-  },
-  {
-    "type": "event",
     "name": "dojo::world::world::Event",
     "kind": "enum",
     "variants": [
@@ -779,11 +656,6 @@ abigen!(
       {
         "name": "OwnerUpdated",
         "type": "dojo::world::world::OwnerUpdated",
-        "kind": "nested"
-      },
-      {
-        "name": "ExecutorUpdated",
-        "type": "dojo::world::world::ExecutorUpdated",
         "kind": "nested"
       }
     ]

@@ -102,10 +102,6 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
         inner_helper(&mut events_map, abi);
     }
 
-    if let Some(abi) = manifest.executor.abi.clone() {
-        inner_helper(&mut events_map, abi);
-    }
-
     for contract in &manifest.contracts {
         if let Some(abi) = contract.abi.clone() {
             inner_helper(&mut events_map, abi);

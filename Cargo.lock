@@ -1111,17 +1111,32 @@ checksum = "3a4f925191b4367301851c6d99b09890311d74b0d43f274c0b34c86d308a3663"
 [[package]]
 name = "cainome"
 version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+source = "git+https://github.com/cartridge-gg/cainome?rev=d29f86b9f8bea48194ebdb2fce6f4285de14adb6#d29f86b9f8bea48194ebdb2fce6f4285de14adb6"
 dependencies = [
+ "anyhow",
+ "async-trait",
  "cainome-cairo-serde",
  "cainome-parser",
  "cainome-rs",
+ "cainome-rs-macro",
+ "camino",
+ "clap",
+ "clap_complete",
+ "convert_case 0.6.0",
+ "serde",
+ "serde_json",
+ "starknet",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+source = "git+https://github.com/cartridge-gg/cainome?rev=d29f86b9f8bea48194ebdb2fce6f4285de14adb6#d29f86b9f8bea48194ebdb2fce6f4285de14adb6"
 dependencies = [
  "starknet",
  "thiserror",
@@ -1130,7 +1145,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+source = "git+https://github.com/cartridge-gg/cainome?rev=d29f86b9f8bea48194ebdb2fce6f4285de14adb6#d29f86b9f8bea48194ebdb2fce6f4285de14adb6"
 dependencies = [
  "quote",
  "serde_json",
@@ -1142,11 +1157,28 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+source = "git+https://github.com/cartridge-gg/cainome?rev=d29f86b9f8bea48194ebdb2fce6f4285de14adb6#d29f86b9f8bea48194ebdb2fce6f4285de14adb6"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
  "cainome-parser",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet",
+ "syn 2.0.41",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs-macro"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?rev=d29f86b9f8bea48194ebdb2fce6f4285de14adb6#d29f86b9f8bea48194ebdb2fce6f4285de14adb6"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde",
+ "cainome-parser",
+ "cainome-rs",
  "proc-macro2",
  "quote",
  "serde_json",
