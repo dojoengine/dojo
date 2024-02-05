@@ -3,9 +3,12 @@ use std::collections::HashMap;
 use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
 use tokio::sync::RwLock;
+use tokio_stream::StreamExt;
 
 use crate::error::{Error, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
+use crate::simple_broker::SimpleBroker;
+use crate::types::Model;
 
 type ModelName = String;
 
@@ -61,5 +64,16 @@ impl ModelCache {
 
     pub async fn clear(&self) {
         self.cache.write().await.clear();
+    }
+
+    pub async fn subscribe(&self) {
+        let mut broker = SimpleBroker::<Model>::subscribe();
+
+        loop {
+            // Break the loop if there are no more events
+            if broker.next().await.is_some() {
+                self.clear().await;
+            }
+        }
     }
 }
