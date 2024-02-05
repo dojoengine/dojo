@@ -495,30 +495,20 @@ pub fn resolve_artifacts_and_to_base64<P: AsRef<Path>>(
 pub fn to_base64(genesis: GenesisJson) -> Result<Vec<u8>, GenesisJsonError> {
     let data = serde_json::to_vec(&genesis)?;
 
-    let mut buf = vec![b'b', b'a', b's', b'e', b'6', b'4', b':'];
     // make sure we'll have a slice big enough for base64 + padding
-    buf.resize((4 * data.len() / 3 + 4) + buf.len(), 0);
+    let mut buf = vec![0; (4 * data.len() / 3) + 4];
 
-    let bytes_written = BASE64_STANDARD.encode_slice(data, &mut buf[7..])?;
+    let bytes_written = BASE64_STANDARD.encode_slice(data, &mut buf)?;
     // shorten the buffer to the actual length written
-    buf.truncate(bytes_written + 7);
+    buf.truncate(bytes_written);
 
     Ok(buf)
 }
 
 /// Deserialize the [GenesisJson] from base64 encoded bytes.
 pub fn from_base64(data: &[u8]) -> Result<GenesisJson, GenesisJsonError> {
-    match data {
-        [b'b', b'a', b's', b'e', b'6', b'4', b':', rest @ ..] => {
-            let decoded = BASE64_STANDARD.decode(rest)?;
-            Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
-        }
-
-        _ => {
-            let decoded = BASE64_STANDARD.decode(data)?;
-            Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
-        }
-    }
+    let decoded = BASE64_STANDARD.decode(data)?;
+    Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
 }
 
 fn class_artifact_at_path(
