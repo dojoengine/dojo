@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706884729957,
+  "lastUpdate": 1707143599106,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -865,6 +865,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1038380,
             "range": "± 38143",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fe87bab1ee4b4ecb2ce12f6385a9c934491c4ea",
+          "message": "refactor(katana-primitives): remove base64 genesis prefix  (#1518)",
+          "timestamp": "2024-02-05T22:23:57+08:00",
+          "tree_id": "ebc5eb4bc0eecfcba4211c02d2a9b189b0ff9071",
+          "url": "https://github.com/dojoengine/dojo/commit/4fe87bab1ee4b4ecb2ce12f6385a9c934491c4ea"
+        },
+        "date": 1707143598497,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1038107,
+            "range": "± 73532",
             "unit": "ns/iter"
           }
         ]
