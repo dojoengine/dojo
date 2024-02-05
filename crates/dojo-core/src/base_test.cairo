@@ -115,7 +115,7 @@ mod invalid_model {
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ('Invalid model name', 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('invalid model name', 'ENTRYPOINT_FAILED',))]
 fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 

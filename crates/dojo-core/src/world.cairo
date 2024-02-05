@@ -44,6 +44,14 @@ trait IWorldProvider<T> {
     fn world(self: @T) -> IWorldDispatcher;
 }
 
+mod Errors {
+    const METADATA_DESER: felt252 = 'metadata deser error';
+    const NOT_OWNER: felt252 = 'not owner';
+    const NOT_OWNER_WRITER: felt252 = 'not owner or writer';
+    const INVALID_MODEL_NAME: felt252 = 'invalid model name';
+    const OWNER_ONLY_UPGRADE: felt252 = 'only owner can upgrade';
+    const OWNER_ONLY_UPDATE: felt252 = 'only owner can update';
+}
 
 #[starknet::contract]
 mod world {
@@ -69,6 +77,8 @@ mod world {
     use dojo::model::Model;
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
+
+    use super::Errors;
 
     const WORLD: felt252 = 0;
     const RESOURCE_METADATA: felt252 = 1;
@@ -181,7 +191,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// `resource` - The resource id.
+        /// `resource_id` - The resource id.
         fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
             let mut layout = array![];
             Introspect::<ResourceMetadata>::layout(ref layout);
@@ -196,14 +206,14 @@ mod world {
 
             let mut model_span = model.span();
 
-            Serde::<ResourceMetadata>::deserialize(ref model_span).expect('metadata deser error')
+            Serde::<ResourceMetadata>::deserialize(ref model_span).expect(Errors::METADATA_DESER)
         }
 
         /// Sets the metadata of the resource.
         ///
         /// # Arguments
         ///
-        /// `metadata` - The metadata content for this resource.
+        /// `metadata` - The metadata content for the resource.
         fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
             assert_can_write(@self, metadata.resource_id, get_caller_address());
 
@@ -239,7 +249,7 @@ mod world {
         /// * `resource` - The resource.
         fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
+            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
             self.owners.write((resource, address), true);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: true });
@@ -254,7 +264,7 @@ mod world {
         /// * `resource` - The resource.
         fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
+            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
             self.owners.write((resource, address), false);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
@@ -285,7 +295,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, model) || self.is_owner(caller, WORLD), 'not owner or writer'
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD), Errors::NOT_OWNER_WRITER
             );
             self.writers.write((model, system), true);
 
@@ -306,7 +316,7 @@ mod world {
                 self.is_writer(model, caller)
                     || self.is_owner(caller, model)
                     || self.is_owner(caller, WORLD),
-                'not owner or writer'
+                Errors::NOT_OWNER_WRITER
             );
             self.writers.write((model, system), false);
 
@@ -334,13 +344,13 @@ mod world {
             // Avoids a model name to conflict with already deployed contract,
             // which can cause ACL issue with current ACL implementation.
             if self.deployed_contracts.read(name).is_non_zero() {
-                panic_with_felt252('Invalid model name');
+                panic_with_felt252(Errors::INVALID_MODEL_NAME);
             }
 
             // If model is already registered, validate permission to update.
             let (current_class_hash, current_address) = self.models.read(name);
             if current_class_hash.is_non_zero() {
-                assert(self.is_owner(caller, name), 'only owner can update');
+                assert(self.is_owner(caller, name), Errors::OWNER_ONLY_UPDATE);
                 prev_class_hash = current_class_hash;
                 prev_address = current_address;
             } else {
@@ -359,7 +369,7 @@ mod world {
         ///
         /// # Returns
         ///
-        /// * `ContractAddress` - The contract address of the model.
+        /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the model.
         fn model(self: @ContractState, name: felt252) -> (ClassHash, ContractAddress) {
             self.models.read(name)
         }
@@ -368,8 +378,8 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the contract.
-        /// * `class_hash` - The class_hash of the contract.
+        /// * `salt` - The salt use for contract deployment.
+        /// * `class_hash` - The class hash of the contract.
         ///
         /// # Returns
         ///
@@ -395,12 +405,12 @@ mod world {
             contract_address
         }
 
-        /// Upgrade an already deployed contract associated with the world.
+        /// Upgrades an already deployed contract associated with the world.
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the contract.
-        /// * `class_hash` - The class_hash of the contract.
+        /// * `address` - The contract address of the contract to upgrade.
+        /// * `class_hash` - The class hash of the contract.
         ///
         /// # Returns
         ///
@@ -408,7 +418,7 @@ mod world {
         fn upgrade_contract(
             ref self: ContractState, address: ContractAddress, class_hash: ClassHash
         ) -> ClassHash {
-            assert(is_account_owner(@self, address.into()), 'not owner');
+            assert(is_account_owner(@self, address.into()), Errors::NOT_OWNER);
             IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
             EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
             class_hash
@@ -461,6 +471,7 @@ mod world {
         }
 
         /// Deletes a model from an entity.
+        /// Deleting is setting all the values to 0 in the given layout.
         ///
         /// # Arguments
         ///
@@ -500,7 +511,7 @@ mod world {
         ///
         /// # Returns
         ///
-        /// * `Span<felt252>` - The value of the model, zero initialized if not set.
+        /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
             self: @ContractState,
             model: felt252,
@@ -524,7 +535,7 @@ mod world {
 
     #[external(v0)]
     impl UpgradeableWorld of IUpgradeableWorld<ContractState> {
-        /// Upgrade world with new_class_hash
+        /// Upgrades the world with new_class_hash
         ///
         /// # Arguments
         ///
@@ -533,7 +544,7 @@ mod world {
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
             assert(
                 IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD),
-                'only owner can upgrade'
+                Errors::OWNER_ONLY_UPGRADE,
             );
 
             // upgrade to new_class_hash
@@ -557,13 +568,17 @@ mod world {
         );
     }
 
-    /// Returns true if the calling account is the owner of the resource
-    /// or the owner of the world.
-    /// False otherwise.
+    /// Verifies if the calling account is owner of the resource or the
+    /// owner of the world.
     ///
     /// # Arguments
     ///
     /// * `resource` - The name of the resource being verified.
+    ///
+    /// # Returns
+    ///
+    /// * `bool` - True if the calling account is the owner of the resource or the owner of the world,
+    ///            false otherwise.
     fn is_account_owner(self: @ContractState, resource: felt252) -> bool {
         IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, resource)
             || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD)
