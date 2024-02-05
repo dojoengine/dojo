@@ -21,7 +21,7 @@ trait IModel<T> {
 /// # Arguments
 ///
 /// * `class_hash` - Class Hash of the model.
-fn deploy_and_get_name(salt: felt252, class_hash: starknet::ClassHash) -> SyscallResult<felt252> {
+fn deploy_and_get_name(salt: felt252, class_hash: starknet::ClassHash) -> SyscallResult<(starknet::ContractAddress, felt252)> {
     let (address, _) = starknet::deploy_syscall(
         class_hash,
         salt,
@@ -29,9 +29,11 @@ fn deploy_and_get_name(salt: felt252, class_hash: starknet::ClassHash) -> Syscal
         false,
     )?;
 
-    Result::Ok(*starknet::call_contract_syscall(
+    let name = *starknet::call_contract_syscall(
         address,
         selector!("name"),
         array![].span()
-    )?[0])
+    )?[0];
+
+    Result::Ok((address, name))
 }

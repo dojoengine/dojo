@@ -7,7 +7,7 @@ use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
 trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
-    fn model(self: @T, name: felt252) -> ClassHash;
+    fn model(self: @T, name: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
@@ -122,7 +122,9 @@ mod world {
     struct ModelRegistered {
         name: felt252,
         class_hash: ClassHash,
-        prev_class_hash: ClassHash
+        prev_class_hash: ClassHash,
+        address: ContractAddress,
+        prev_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -158,7 +160,7 @@ mod world {
         nonce: usize,
         models_count: usize,
         metadata_uri: LegacyMap::<felt252, felt252>,
-        models: LegacyMap::<felt252, ClassHash>,
+        models: LegacyMap::<felt252, (ClassHash, ContractAddress)>,
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
@@ -169,19 +171,6 @@ mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
-
-        // Register the resource metadata model, controlled only by the world's creator.
-        let resource_metadata = RESOURCE_METADATA.try_into().unwrap();
-        self.owners.write((RESOURCE_METADATA_MODEL, creator), true);
-        self.models.write(RESOURCE_METADATA_MODEL, resource_metadata);
-        EventEmitter::emit(
-            ref self,
-            ModelRegistered {
-                name: RESOURCE_METADATA_MODEL,
-                class_hash: resource_metadata,
-                prev_class_hash: 0.try_into().unwrap()
-            }
-        );
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -334,10 +323,13 @@ mod world {
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let name = dojo::model::deploy_and_get_name(salt.into(), class_hash).unwrap_syscall();
+            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash).unwrap_syscall();
             self.models_count.write(salt + 1);
 
-            let mut prev_class_hash = starknet::class_hash::ClassHashZeroable::zero();
+            let (mut prev_class_hash, mut prev_address) = (
+                starknet::class_hash::ClassHashZeroable::zero(),
+                starknet::contract_address::ContractAddressZeroable::zero(),
+            );
 
             // Avoids a model name to conflict with already deployed contract,
             // which can cause ACL issue with current ACL implementation.
@@ -346,16 +338,17 @@ mod world {
             }
 
             // If model is already registered, validate permission to update.
-            let current_class_hash = self.models.read(name);
+            let (current_class_hash, current_address) = self.models.read(name);
             if current_class_hash.is_non_zero() {
                 assert(self.is_owner(caller, name), 'only owner can update');
                 prev_class_hash = current_class_hash;
+                prev_address = current_address;
             } else {
                 self.owners.write((name, caller), true);
             };
 
-            self.models.write(name, class_hash);
-            EventEmitter::emit(ref self, ModelRegistered { name, class_hash, prev_class_hash });
+            self.models.write(name, (class_hash, address));
+            EventEmitter::emit(ref self, ModelRegistered { name, prev_address, address, class_hash, prev_class_hash });
         }
 
         /// Gets the class hash of a registered model.
@@ -366,8 +359,8 @@ mod world {
         ///
         /// # Returns
         ///
-        /// * `ClassHash` - The class hash of the model.
-        fn model(self: @ContractState, name: felt252) -> ClassHash {
+        /// * `ContractAddress` - The contract address of the model.
+        fn model(self: @ContractState, name: felt252) -> (ClassHash, ContractAddress) {
             self.models.read(name)
         }
 

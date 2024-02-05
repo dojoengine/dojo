@@ -9,7 +9,7 @@ const RESOURCE_METADATA_MODEL: felt252 = 'ResourceMetadata';
 struct ResourceMetadata {
     // #[key]
     resource_id: felt252,
-    // #[capacity(10)].
+    // #[capacity(3)].
     metadata_uri: Span<felt252>,
 }
 
@@ -50,22 +50,15 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<ResourceMetadata<>> {
     #[inline(always)]
     fn size() -> usize {
-        // len (1 felt) + capacity of 10 felts.
-        11
+        // Length of array first + capacity.
+        1 + 3
     }
 
     #[inline(always)]
     fn layout(ref layout: Array<u8>) {
-        // len
+        // Len of array first.
         layout.append(251);
-        // 10 capacity.
-        layout.append(251);
-        layout.append(251);
-        layout.append(251);
-        layout.append(251);
-        layout.append(251);
-        layout.append(251);
-        layout.append(251);
+        // Capacity.
         layout.append(251);
         layout.append(251);
         layout.append(251);
@@ -82,7 +75,7 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
                 attrs: array!['key'].span()
             }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
                 name: 'metadata_uri',
-                ty: dojo::database::introspect::Ty::Array(10),
+                ty: dojo::database::introspect::Ty::Array(3),
                 attrs: array![].span()
             })].span()
         })

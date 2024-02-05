@@ -106,8 +106,9 @@ mod invalid_model {
     impl InvalidModelName of super::INameOnly<ContractState> {
         fn name(self: @ContractState) -> felt252 {
             // world deployed first
+            // then resource metadata
             // then each registered model increments the address by 1.
-            0x2
+            0x3
         }
     }
 }

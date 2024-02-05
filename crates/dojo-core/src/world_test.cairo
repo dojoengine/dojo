@@ -171,8 +171,10 @@ fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let foo = world.model('Foo');
-    assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
+    let (foo_class_hash, foo_address) = world.model('Foo');
+    let foo_address_expected: ContractAddress = 0x3.try_into().unwrap();
+    assert(foo_address == foo_address_expected, 'foo wrong address');
+    assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
 }
 
 #[test]
@@ -251,7 +253,7 @@ fn deploy_world() -> IWorldDispatcher {
 fn test_set_metadata_world() {
     let world = deploy_world();
 
-    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json')).span() };
+    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: array_cap!(3, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json')).span() };
 
     world.set_metadata(metadata.clone());
 
@@ -269,7 +271,7 @@ fn test_set_metadata_model_owner() {
 
     bar_contract.set_foo(1337, 1337);
 
-    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: array_cap!(10, ('ipfs:bob',)).span(), };
+    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: array_cap!(3, ('ipfs:bob',)).span(), };
 
     // A system that has write access on a model should be able to update the metadata.
     // This follows conventional ACL model.
