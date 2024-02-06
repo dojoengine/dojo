@@ -5,6 +5,14 @@
 //!
 const RESOURCE_METADATA_MODEL: felt252 = 'ResourceMetadata';
 
+fn initial_address() -> starknet::ContractAddress {
+    starknet::contract_address_const::<0>()
+}
+
+fn initial_class_hash() -> starknet::ClassHash {
+    starknet::class_hash_const::<0x03f75587469e8101729b3b02a46150a3d99315bc9c5026d64f2e8a061e413255>()
+}
+
 #[derive(Drop, Serde, PartialEq, Clone)]
 struct ResourceMetadata {
     // #[key]

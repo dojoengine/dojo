@@ -32,6 +32,24 @@ struct Fizz {
 }
 
 #[starknet::interface]
+trait INameOnly<T> {
+    fn name(self: @T) -> felt252;
+}
+
+#[starknet::contract]
+mod resource_metadata_malicious {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::INameOnly<ContractState> {
+        fn name(self: @ContractState) -> felt252 {
+            'ResourceMetadata'
+        }
+    }
+}
+
+#[starknet::interface]
 trait Ibar<TContractState> {
     fn set_foo(self: @TContractState, a: felt252, b: u128);
     fn delete_foo(self: @TContractState);
@@ -262,12 +280,18 @@ fn test_set_metadata_world() {
 
 #[test]
 #[available_gas(60000000)]
-fn test_set_metadata_model_owner() {
+fn test_set_metadata_model_writer() {
     let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
 
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
+
+    world.grant_writer('Foo', bar_contract.contract_address);
+
+    let bob = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(bob);
+    starknet::testing::set_contract_address(bar_contract.contract_address);
 
     bar_contract.set_foo(1337, 1337);
 
@@ -275,8 +299,8 @@ fn test_set_metadata_model_owner() {
 
     // A system that has write access on a model should be able to update the metadata.
     // This follows conventional ACL model.
-    starknet::testing::set_contract_address(bar_contract.contract_address);
-    world.set_metadata(metadata);
+    world.set_metadata(metadata.clone());
+    assert(world.metadata('Foo') == metadata, 'bad metadata');
 }
 
 #[test]
@@ -292,9 +316,22 @@ fn test_set_metadata_same_model_rules() {
     starknet::testing::set_contract_address(bob);
     starknet::testing::set_account_contract_address(bob);
 
-    // Bob access follow the conventional ACL, he can't write the world
-    // metadata if he does not have access.
+    // Bob access follows the conventional ACL, he can't write the world
+    // metadata if he does not have access to it.
     world.set_metadata(metadata);
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('only owner can update', 'ENTRYPOINT_FAILED',))]
+fn test_metadata_update_owner_only() {
+    let world = deploy_world();
+
+    let bob = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_contract_address(bob);
+    starknet::testing::set_account_contract_address(bob);
+
+    world.register_model(resource_metadata_malicious::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]

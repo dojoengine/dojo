@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
-use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
+use dojo::resource_metadata::ResourceMetadata;
 
 #[starknet::interface]
 trait IWorld<T> {
@@ -76,6 +76,7 @@ mod world {
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::model::Model;
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
+    use dojo::resource_metadata;
     use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
 
     use super::Errors;
@@ -180,6 +181,13 @@ mod world {
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
 
+        // Ensure the creator of the world is the owner of the resource metadata model.
+        self.owners.write((RESOURCE_METADATA_MODEL, creator), true);
+        self.models.write(
+            RESOURCE_METADATA_MODEL,
+            (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
+        );
+
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
 
@@ -215,13 +223,15 @@ mod world {
         fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
             assert_can_write(@self, metadata.resource_id, get_caller_address());
 
-            self
-                .set_entity(
-                    Model::<ResourceMetadata>::name(@metadata),
-                    Model::<ResourceMetadata>::keys(@metadata),
-                    Model::<ResourceMetadata>::values(@metadata),
-                    Model::<ResourceMetadata>::layout(@metadata),
-                );
+            let model = Model::<ResourceMetadata>::name(@metadata);
+            let keys = Model::<ResourceMetadata>::keys(@metadata);
+            let values = Model::<ResourceMetadata>::values(@metadata);
+            let layout = Model::<ResourceMetadata>::layout(@metadata);
+
+            let key = poseidon::poseidon_hash_span(keys);
+            database::set(model, key, values, layout);
+
+            EventEmitter::emit(ref self, MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri });
         }
 
         /// Checks if the provided account is an owner of the resource.
