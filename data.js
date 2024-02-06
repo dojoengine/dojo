@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707143599106,
+  "lastUpdate": 1707204441768,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -895,6 +895,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1038107,
             "range": "± 73532",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad018324012c84b195e0788f4d193ad5e95852f4",
+          "message": "refactor(katana-primitives): make most fields for account/contract allocations optional (#1512)",
+          "timestamp": "2024-02-06T15:18:07+08:00",
+          "tree_id": "5c4bb8813c8ed6be67ef947e1b1c2fd0f3118cc8",
+          "url": "https://github.com/dojoengine/dojo/commit/ad018324012c84b195e0788f4d193ad5e95852f4"
+        },
+        "date": 1707204441132,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 982871,
+            "range": "± 35364",
             "unit": "ns/iter"
           }
         ]
