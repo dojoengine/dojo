@@ -131,8 +131,21 @@ mod invalid_model_world {
 #[test]
 #[available_gas(6000000)]
 #[should_panic(expected: ('invalid model name', 'ENTRYPOINT_FAILED',))]
-fn test_deploy_from_world_invalid_model_world() {
+fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
+    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
+
+    base_address.print();
+
+    world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(expected: ('invalid model name', 'ENTRYPOINT_FAILED',))]
+fn test_deploy_from_world_invalid_model_world() {
+    let world = deploy_world();
     world.register_model(invalid_model_world::TEST_CLASS_HASH.try_into().unwrap());
 }
