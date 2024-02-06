@@ -29,7 +29,7 @@ struct Behaviour {
 pub struct RelayClient {
     pub message_receiver: Arc<Mutex<UnboundedReceiver<Message>>>,
     pub command_sender: CommandSender,
-    pub event_loop: EventLoop,
+    pub event_loop: Arc<Mutex<EventLoop>>,
 }
 
 pub struct EventLoop {
@@ -106,7 +106,7 @@ impl RelayClient {
         Ok(Self {
             command_sender: CommandSender::new(command_sender),
             message_receiver: Arc::new(Mutex::new(message_receiver)),
-            event_loop: EventLoop { swarm, message_sender, command_receiver },
+            event_loop: Arc::new(Mutex::new(EventLoop { swarm, message_sender, command_receiver })),
         })
     }
 
@@ -153,7 +153,7 @@ impl RelayClient {
         Ok(Self {
             command_sender: CommandSender::new(command_sender),
             message_receiver: Arc::new(Mutex::new(message_receiver)),
-            event_loop: EventLoop { swarm, message_sender, command_receiver },
+            event_loop: Arc::new(Mutex::new(EventLoop { swarm, message_sender, command_receiver })),
         })
     }
 }

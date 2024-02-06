@@ -1,14 +1,24 @@
+use ethers::types::U256;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
+use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use katana_primitives::genesis::Genesis;
 use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::env::BlockEnvProvider;
 
 fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
+    let accounts = DevAllocationsGenerator::new(2)
+        .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+        .generate();
+
+    let mut genesis = Genesis::default();
+    genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+
     (
         SequencerConfig { block_time: None, ..Default::default() },
         StarknetConfig {
-            seed: [0u8; 32],
-            total_accounts: 2,
+            genesis,
             disable_fee: true,
             env: Environment::default(),
             ..Default::default()

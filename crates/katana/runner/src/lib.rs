@@ -1,54 +1,104 @@
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
-use std::path::Path;
-use std::process::{Child, ChildStdout, Command, Stdio};
-use std::sync::mpsc::{self, Sender};
+mod logs;
+mod prefunded;
+mod utils;
+
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
+use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
+use katana_primitives::FieldElement;
+pub use runner_macro::{katana_test, runner};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-#[cfg(test)]
-use starknet::providers::Provider;
+use tokio::sync::Mutex;
 use url::Url;
+use utils::find_free_port;
 
 #[derive(Debug)]
 pub struct KatanaRunner {
     child: Child,
+    port: u16,
+    provider: JsonRpcClient<HttpTransport>,
+    accounts: Vec<(ContractAddress, DevGenesisAccount)>,
+    log_filename: PathBuf,
+    contract: Mutex<Option<FieldElement>>,
 }
 
-fn find_free_port() -> u16 {
-    TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port() // This might need to me mutexed
-}
+pub const BLOCK_TIME_IF_ENABLED: u64 = 3000;
 
 impl KatanaRunner {
-    pub fn new() -> Result<(Self, JsonRpcClient<HttpTransport>)> {
+    pub fn new() -> Result<Self> {
         Self::new_with_port(find_free_port())
     }
 
-    pub fn new_with_port(port: u16) -> Result<(Self, JsonRpcClient<HttpTransport>)> {
-        let mut temp_dir = std::env::temp_dir();
-        temp_dir.push("dojo");
-        temp_dir.push("logs");
-        temp_dir.push(format!("katana-{}.log", port));
+    pub fn new_with_name(name: &str) -> Result<Self> {
+        Self::new_with_port_and_filename(
+            "katana",
+            find_free_port(),
+            format!("logs/katana-{}.log", name),
+            2,
+            false,
+        )
+    }
 
-        eprintln!("Writing katana logs to {}", temp_dir.to_str().unwrap());
+    pub fn new_with_args(
+        program: &str,
+        name: &str,
+        n_accounts: u16,
+        with_blocks: bool,
+    ) -> Result<Self> {
+        Self::new_with_port_and_filename(
+            program,
+            find_free_port(),
+            format!("katana-logs/{}.log", name),
+            n_accounts,
+            with_blocks,
+        )
+    }
 
-        let mut child = Command::new("katana")
+    pub fn new_with_port(port: u16) -> Result<Self> {
+        Self::new_with_port_and_filename(
+            "katana",
+            port,
+            format!("katana-logs/{}.log", port),
+            2,
+            false,
+        )
+    }
+
+    fn new_with_port_and_filename(
+        program: &str,
+        port: u16,
+        log_filename: String,
+        n_accounts: u16,
+        with_blocks: bool,
+    ) -> Result<Self> {
+        let mut command = Command::new(program);
+        command
             .args(["-p", &port.to_string()])
             .args(["--json-log"])
-            .stdout(Stdio::piped())
-            .spawn()
-            .context("failed to start subprocess")?;
+            .args(["--max-connections", &format!("{}", 10000)])
+            .args(["--accounts", &format!("{}", n_accounts)]);
+
+        if with_blocks {
+            command.args(["--block-time", &format!("{}", BLOCK_TIME_IF_ENABLED)]);
+        }
+
+        let mut child =
+            command.stdout(Stdio::piped()).spawn().context("failed to start subprocess")?;
 
         let stdout = child.stdout.take().context("failed to take subprocess stdout")?;
 
+        let log_filename_sent = PathBuf::from(log_filename);
+        let log_filename = log_filename_sent.clone();
         let (sender, receiver) = mpsc::channel();
-
         thread::spawn(move || {
-            KatanaRunner::wait_for_server_started_and_signal(temp_dir.as_path(), stdout, sender);
+            utils::wait_for_server_started_and_signal(&log_filename_sent, stdout, sender);
         });
 
         receiver
@@ -59,27 +109,41 @@ impl KatanaRunner {
             Url::parse(&format!("http://127.0.0.1:{}/", port)).context("Failed to parse url")?;
         let provider = JsonRpcClient::new(HttpTransport::new(url));
 
-        Ok((KatanaRunner { child }, provider))
+        let mut seed = [0; 32];
+        seed[0] = 48;
+        let accounts = DevAllocationsGenerator::new(n_accounts)
+            .with_seed(seed)
+            .generate()
+            .into_iter()
+            .collect();
+        let contract = Mutex::new(Option::None);
+
+        Ok(KatanaRunner { child, port, provider, accounts, log_filename, contract })
     }
 
-    fn wait_for_server_started_and_signal(path: &Path, stdout: ChildStdout, sender: Sender<()>) {
-        let reader = BufReader::new(stdout);
+    pub fn provider(&self) -> &JsonRpcClient<HttpTransport> {
+        &self.provider
+    }
 
-        if let Some(dir_path) = path.parent() {
-            if !dir_path.exists() {
-                fs::create_dir_all(dir_path).unwrap();
-            }
-        }
-        let mut log_writer = File::create(path).expect("failed to create log file");
+    pub fn endpoint(&self) -> String {
+        format!("http://127.0.0.1:{}/", self.port)
+    }
 
-        for line in reader.lines() {
-            let line = line.expect("failed to read line from subprocess stdout");
-            writeln!(log_writer, "{}", line).expect("failed to write to log file");
+    pub fn owned_provider(&self) -> JsonRpcClient<HttpTransport> {
+        let url = Url::parse(&self.endpoint()).context("Failed to parse url").unwrap();
+        JsonRpcClient::new(HttpTransport::new(url))
+    }
 
-            if line.contains(r#""target":"katana""#) {
-                sender.send(()).expect("failed to send start signal");
-            }
-        }
+    // A constract needs to be deployed only once for each instance
+    // In proptest runner is static but deployment would happen for each test, unless it is
+    // persisted here.
+    pub async fn set_contract(&self, contract_address: FieldElement) {
+        let mut lock = self.contract.lock().await;
+        *lock = Some(contract_address);
+    }
+
+    pub async fn contract(&self) -> Option<FieldElement> {
+        *self.contract.lock().await
     }
 }
 
@@ -91,19 +155,5 @@ impl Drop for KatanaRunner {
         if let Err(e) = self.child.wait() {
             eprintln!("Failed to wait for katana subprocess: {}", e);
         }
-    }
-}
-
-#[tokio::test]
-async fn test_run() {
-    let (_katana_guard, long_lived_provider) =
-        KatanaRunner::new_with_port(21370).expect("failed to start katana");
-
-    for _ in 0..10 {
-        let (_katana_guard, provider) =
-            KatanaRunner::new().expect("failed to start another katana");
-
-        let _block_number = provider.block_number().await.unwrap();
-        let _other_block_number = long_lived_provider.block_number().await.unwrap();
     }
 }

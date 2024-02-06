@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 
 use crate::error::BindgenResult;
@@ -14,7 +17,7 @@ impl TypescriptPlugin {
 
 #[async_trait]
 impl BuiltinPlugin for TypescriptPlugin {
-    async fn generate_code(&self, data: &DojoData) -> BindgenResult<()> {
+    async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
         println!("-> Typescript models bindings\n");
 
         for (name, model) in &data.models {
@@ -27,6 +30,6 @@ impl BuiltinPlugin for TypescriptPlugin {
             println!("{:?}\n", contract);
         }
 
-        Ok(())
+        Ok(HashMap::new())
     }
 }

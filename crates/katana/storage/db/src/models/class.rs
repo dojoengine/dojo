@@ -484,7 +484,7 @@ mod tests {
     #[test]
     fn compress_and_decompress_legacy_contract_class() {
         let class: ContractClassV0 = serde_json::from_slice(include_bytes!(
-            "../../../../core/contracts/compiled/account.json"
+            "../../../../primitives/contracts/compiled/account.json"
         ))
         .unwrap();
 

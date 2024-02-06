@@ -1,29 +1,31 @@
 use std::io;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
-use katana_core::constants::{
-    ERC20_CONTRACT_CLASS_HASH, FEE_TOKEN_ADDRESS, UDC_ADDRESS, UDC_CLASS_HASH,
-};
 use katana_core::sequencer::KatanaSequencer;
+use katana_primitives::contract::{ClassHash, ContractAddress};
+use katana_primitives::genesis::allocation::GenesisAccountAlloc;
+use katana_primitives::genesis::Genesis;
 use katana_rpc::{spawn, NodeHandle};
 use metrics::prometheus_exporter;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
 mod args;
+mod utils;
 
 use args::Commands::Completions;
 use args::KatanaArgs;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = KatanaArgs::parse();
-    config.init_logging()?;
+    let args = KatanaArgs::parse();
+    args.init_logging()?;
 
-    if let Some(command) = config.command {
+    if let Some(command) = args.command {
         match command {
             Completions { shell } => {
                 print_completion(shell);
@@ -32,41 +34,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let server_config = config.server_config();
-    let sequencer_config = config.sequencer_config();
-    let starknet_config = config.starknet_config();
+    let server_config = args.server_config();
+    let sequencer_config = args.sequencer_config();
+    let starknet_config = args.starknet_config();
 
     let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await?);
     let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
 
-    if !config.silent {
-        let mut accounts = sequencer.backend.accounts.iter().peekable();
-        let account_class_hash = accounts.peek().unwrap().class_hash;
-
-        if config.json_log {
-            info!(
-                "{}",
-                serde_json::json!({
-                    "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),
-                    "seed": format!("{}", config.starknet.seed),
-                    "address": format!("{addr}"),
-                })
-            )
-        } else {
-            let accounts = accounts.map(|a| format!("{a}")).collect::<Vec<_>>().join("\n");
-            print_intro(
-                accounts,
-                config.starknet.seed.clone(),
-                format!(
-                    "🚀 JSON-RPC server started: {}",
-                    Style::new().red().apply_to(format!("http://{addr}"))
-                ),
-                format!("{:#064x}", account_class_hash),
-            );
-        }
+    if !args.silent {
+        let genesis = &sequencer.backend().config.genesis;
+        print_intro(&args, genesis, addr);
     }
 
-    if let Some(listen_addr) = config.metrics {
+    if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
         info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
@@ -91,61 +71,116 @@ fn print_completion(shell: Shell) {
     generate(shell, &mut command, name, &mut io::stdout());
 }
 
-fn print_intro(accounts: String, seed: String, address: String, account_class_hash: String) {
-    println!(
-        "{}",
-        Style::new().red().apply_to(
-            r"
+fn print_intro(args: &KatanaArgs, genesis: &Genesis, address: SocketAddr) {
+    let mut accounts = genesis.accounts().peekable();
+    let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
+    let seed = &args.starknet.seed;
+
+    if args.json_log {
+        info!(
+            "{}",
+            serde_json::json!({
+                "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),
+                "seed": format!("{}", seed),
+                "address": format!("{address}"),
+            })
+        )
+    } else {
+        println!(
+            "{}",
+            Style::new().red().apply_to(
+                r"
 
 
-██╗  ██╗ █████╗ ████████╗ █████╗ ███╗   ██╗ █████╗ 
+██╗  ██╗ █████╗ ████████╗ █████╗ ███╗   ██╗ █████╗
 ██║ ██╔╝██╔══██╗╚══██╔══╝██╔══██╗████╗  ██║██╔══██╗
 █████╔╝ ███████║   ██║   ███████║██╔██╗ ██║███████║
 ██╔═██╗ ██╔══██║   ██║   ██╔══██║██║╚██╗██║██╔══██║
 ██║  ██╗██║  ██║   ██║   ██║  ██║██║ ╚████║██║  ██║
 ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
 "
-        )
-    );
+            )
+        );
 
-    println!(
-        r"
-PREDEPLOYED CONTRACTS  
-================== 
+        print_genesis_contracts(genesis, account_class_hash);
+        print_genesis_accounts(accounts);
 
-| Contract        | Fee Token
-| Address         | {}
-| Class Hash      | {:#064x}
+        println!(
+            r"
 
-| Contract        | Universal Deployer
-| Address         | {}
-| Class Hash      | {:#064x}
-
-| Contract        | Account Contract
-| Class Hash      | {}
-    ",
-        *FEE_TOKEN_ADDRESS,
-        *ERC20_CONTRACT_CLASS_HASH,
-        *UDC_ADDRESS,
-        *UDC_CLASS_HASH,
-        account_class_hash
-    );
-
-    println!(
-        r"        
-PREFUNDED ACCOUNTS
-==================
-{accounts}
-    "
-    );
-
-    println!(
-        r"
 ACCOUNTS SEED
 =============
 {seed}
     "
+        );
+
+        let addr = format!(
+            "🚀 JSON-RPC server started: {}",
+            Style::new().red().apply_to(format!("http://{address}"))
+        );
+
+        println!("\n{addr}\n\n",);
+    }
+}
+
+fn print_genesis_contracts(genesis: &Genesis, account_class_hash: Option<ClassHash>) {
+    println!(
+        r"
+PREDEPLOYED CONTRACTS
+==================
+
+| Contract        | Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}",
+        genesis.fee_token.address, genesis.fee_token.class_hash,
     );
 
-    println!("\n{address}\n\n");
+    if let Some(ref udc) = genesis.universal_deployer {
+        println!(
+            r"
+| Contract        | Universal Deployer
+| Address         | {}
+| Class Hash      | {:#064x}",
+            udc.address, udc.class_hash
+        )
+    }
+
+    if let Some(hash) = account_class_hash {
+        println!(
+            r"
+| Contract        | Account Contract
+| Class Hash      | {hash:#064x}"
+        )
+    }
+}
+
+fn print_genesis_accounts<'a, Accounts>(accounts: Accounts)
+where
+    Accounts: Iterator<Item = (&'a ContractAddress, &'a GenesisAccountAlloc)>,
+{
+    println!(
+        r"
+
+PREFUNDED ACCOUNTS
+=================="
+    );
+
+    for (addr, account) in accounts {
+        if let Some(pk) = account.private_key() {
+            println!(
+                r"
+| Account address |  {addr}
+| Private key     |  {pk:#x}
+| Public key      |  {:#x}",
+                account.public_key()
+            )
+        } else {
+            println!(
+                r"
+| Account address |  {addr}
+| Public key      |  {:#x}",
+                account.public_key()
+            )
+        }
+    }
 }

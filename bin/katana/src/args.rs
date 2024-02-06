@@ -15,18 +15,23 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
+use common::parse::parse_socket_address;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::chain::ChainId;
+use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use katana_primitives::genesis::Genesis;
 use katana_rpc::config::ServerConfig;
 use katana_rpc_api::ApiKind;
-use metrics::utils::parse_socket_address;
 use tracing::Subscriber;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
+
+use crate::utils::{parse_genesis, parse_seed};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -134,7 +139,7 @@ pub struct StarknetOptions {
     #[arg(value_name = "NUM")]
     #[arg(default_value = "10")]
     #[arg(help = "Number of pre-funded accounts to generate.")]
-    pub total_accounts: u8,
+    pub total_accounts: u16,
 
     #[arg(long)]
     #[arg(help = "Disable charging fee when executing transactions.")]
@@ -147,6 +152,11 @@ pub struct StarknetOptions {
     #[command(flatten)]
     #[command(next_help_heading = "Environment options")]
     pub environment: EnvironmentOptions,
+
+    #[arg(long)]
+    #[arg(value_parser = parse_genesis)]
+    #[arg(conflicts_with_all(["rpc_url", "seed", "total_accounts"]))]
+    pub genesis: Option<Genesis>,
 }
 
 #[derive(Debug, Args, Clone)]
@@ -217,9 +227,21 @@ impl KatanaArgs {
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {
+        let genesis = match self.starknet.genesis.clone() {
+            Some(genesis) => genesis,
+            None => {
+                let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
+                    .with_seed(parse_seed(&self.starknet.seed))
+                    .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+                    .generate();
+
+                let mut genesis = Genesis::default();
+                genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+                genesis
+            }
+        };
+
         StarknetConfig {
-            total_accounts: self.starknet.total_accounts,
-            seed: parse_seed(&self.starknet.seed),
             disable_fee: self.starknet.disable_fee,
             disable_validate: self.starknet.disable_validate,
             fork_rpc_url: self.rpc_url.clone(),
@@ -239,19 +261,8 @@ impl KatanaArgs {
                     .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
             },
             db_dir: self.db_dir.clone(),
+            genesis,
         }
-    }
-}
-
-fn parse_seed(seed: &str) -> [u8; 32] {
-    let seed = seed.as_bytes();
-
-    if seed.len() >= 32 {
-        unsafe { *(seed[..32].as_ptr() as *const [u8; 32]) }
-    } else {
-        let mut actual_seed = [0u8; 32];
-        seed.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
-        actual_seed
     }
 }
 

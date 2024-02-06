@@ -12,6 +12,7 @@ base64 = "0.21.2"
 camino.workspace = true
 chrono.workspace = true
 clap.workspace = true
+common.workspace = true
 ctrlc = { version = "3.4", features = [ "termination" ] }
 dojo-types.workspace = true
 dojo-world.workspace = true

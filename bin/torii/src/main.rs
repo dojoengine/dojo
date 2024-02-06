@@ -15,9 +15,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::Parser;
+use common::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
 use metrics::prometheus_exporter;
-use metrics::utils::parse_socket_address;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
@@ -49,8 +49,8 @@ struct Args {
     world_address: FieldElement,
 
     /// The sequencer rpc endpoint to index.
-    #[arg(long, value_name = "SOCKET", default_value = ":5050", value_parser = parse_socket_address)]
-    rpc: SocketAddr,
+    #[arg(long, value_name = "URL", default_value = ":5050", value_parser = parse_url)]
+    rpc: Url,
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database
@@ -62,7 +62,7 @@ struct Args {
     start_block: u64,
 
     /// Address to serve api endpoints at.
-    #[arg(long, value_name = "SOCKET", default_value = ":8080", value_parser = parse_socket_address)]
+    #[arg(long, value_name = "SOCKET", default_value = "0.0.0.0:8080", value_parser = parse_socket_address)]
     addr: SocketAddr,
 
     /// Port to serve Libp2p TCP & UDP Quic transports
@@ -132,9 +132,7 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
-    let provider: Arc<_> =
-        JsonRpcClient::new(HttpTransport::new(format!("http://{}", args.rpc).parse::<Url>()?))
-            .into();
+    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
 
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);

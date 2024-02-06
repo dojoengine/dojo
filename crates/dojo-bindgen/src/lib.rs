@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 
 use cainome::parser::tokens::Token;
 use cainome::parser::{AbiParser, TokenizedAbi};
@@ -48,6 +49,8 @@ pub struct DojoData {
 // TODO: include the manifest to have more metadata when new manifest is available.
 #[derive(Debug)]
 pub struct PluginManager {
+    /// Path of generated files.
+    pub output_path: PathBuf,
     /// Path of contracts artifacts.
     pub artifacts_path: Utf8PathBuf,
     /// A list of builtin plugins to invoke.
@@ -72,7 +75,14 @@ impl PluginManager {
                 BuiltinPlugins::Unity => Box::new(UnityPlugin::new()),
             };
 
-            builder.generate_code(&data).await?;
+            let files = builder.generate_code(&data).await?;
+            for (path, content) in files {
+                // Prepends the output directory and plugin name to the path.
+                let path = self.output_path.join(plugin.to_string()).join(path);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+
+                fs::write(path, content)?;
+            }
         }
         Ok(())
     }
@@ -250,97 +260,100 @@ fn is_model_contract(tokens: &TokenizedAbi) -> bool {
 
     let mut funcs_counts = 0;
 
-    // This hashmap is not that good at devex level.. one must check the
-    // code to know the keys.
-    for f in &tokens.functions {
-        if expected_funcs.contains(&f.to_function().expect("Function expected").name.as_str()) {
-            funcs_counts += 1;
+    for functions in tokens.interfaces.values() {
+        for f in functions {
+            if expected_funcs.contains(&f.to_function().expect("Function expected").name.as_str()) {
+                funcs_counts += 1;
+            }
         }
     }
 
     funcs_counts == expected_funcs.len()
 }
 
+// Uncomment tests once windows issue is solved.
 // #[cfg(test)]
 // mod tests {
-// use super::*;
+//     use super::*;
+
+//     #[test]
+//     fn is_system_contract_ok() {
+//         let file_name = "dojo_examples::actions::actions.json";
+//         let file_content = include_str!(
+//             "test_data/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
+//         );
+
+//         assert!(is_systems_contract(file_name, file_content));
+//     }
+
+//     #[test]
+//     fn is_system_contract_ignore_dojo_files() {
+//         let file_name = "dojo::world::world.json";
+//         let file_content = "";
+//         assert!(!is_systems_contract(file_name, file_content));
+
+//         let file_name = "manifest.json";
+//         assert!(!is_systems_contract(file_name, file_content));
+//     }
+
+//     #[test]
+//     fn test_is_system_contract_ignore_models() {
+//         let file_name = "dojo_examples::models::position.json";
+//         let file_content = include_str!(
+//             "test_data/spawn-and-move/target/dev/dojo_examples::models::position.json"
+//         );
+//         assert!(!is_systems_contract(file_name, file_content));
+//     }
+
+//     #[test]
+//     fn model_name_from_artifact_filename_ok() {
+//         let file_name = "dojo_examples::models::position.json";
+//         assert_eq!(model_name_from_artifact_filename(file_name), Some("position".to_string()));
+//     }
+
+//     #[test]
+//     fn is_model_contract_ok() {
+//         let file_content =
 //
-// #[test]
-// fn is_system_contract_ok() {
-// let file_name = "dojo_examples::actions::actions.json";
-// let file_content = include_str!(
-// "test_data/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
-// );
-//
-// assert!(is_systems_contract(file_name, file_content));
-// }
-//
-// #[test]
-// fn is_system_contract_ignore_dojo_files() {
-// let file_name = "dojo::world::world.json";
-// let file_content = "";
-// assert!(!is_systems_contract(file_name, file_content));
-//
-// let file_name = "manifest.json";
-// assert!(!is_systems_contract(file_name, file_content));
-// }
-//
-// #[test]
-// fn test_is_system_contract_ignore_models() {
-// let file_name = "dojo_examples::models::position.json";
-// let file_content = include_str!(
-// "test_data/spawn-and-move/target/dev/dojo_examples::models::position.json"
-// );
-// assert!(!is_systems_contract(file_name, file_content));
-// }
-//
-// #[test]
-// fn model_name_from_artifact_filename_ok() {
-// let file_name = "dojo_examples::models::position.json";
-// assert_eq!(model_name_from_artifact_filename(file_name), Some("position".to_string()));
-// }
-//
-// #[test]
-// fn is_model_contract_ok() {
-// let file_content =
 // include_str!("test_data/spawn-and-move/target/dev/dojo_examples::models::moves.json");
-// let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
-//
-// assert!(is_model_contract(&tokens));
-// }
-//
-// #[test]
-// fn is_model_contract_ignore_systems() {
-// let file_content = include_str!(
-// "test_data/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
-// );
-// let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
-//
-// assert!(!is_model_contract(&tokens));
-// }
-//
-// #[test]
-// fn is_model_contract_ignore_dojo_files() {
-// let file_content =
-// include_str!("test_data/spawn-and-move/target/dev/dojo::world::world.json");
-// let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
-//
-// assert!(!is_model_contract(&tokens));
-// }
-//
-// #[test]
-// fn gather_data_ok() {
-// let data = gather_dojo_data(&Utf8PathBuf::from("src/test_data/spawn-and-move/target/dev"))
+//         let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
+
+//         assert!(is_model_contract(&tokens));
+//     }
+
+//     #[test]
+//     fn is_model_contract_ignore_systems() {
+//         let file_content = include_str!(
+//             "test_data/spawn-and-move/target/dev/dojo_examples::actions::actions.json"
+//         );
+//         let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
+
+//         assert!(!is_model_contract(&tokens));
+//     }
+
+//     #[test]
+//     fn is_model_contract_ignore_dojo_files() {
+//         let file_content =
+//             include_str!("test_data/spawn-and-move/target/dev/dojo::world::world.json");
+//         let tokens = AbiParser::tokens_from_abi_string(file_content, &HashMap::new()).unwrap();
+
+//         assert!(!is_model_contract(&tokens));
+//     }
+
+//     #[test]
+//     fn gather_data_ok() {
+//         let data =
+// gather_dojo_data(&Utf8PathBuf::from("src/test_data/spawn-and-move/target/dev"))
 // .unwrap();
-//
-// assert_eq!(data.models.len(), 2);
-//
-// let pos = data.models.get("Position").unwrap();
-// assert_eq!(pos.name, "Position");
-// assert_eq!(pos.qualified_path, "dojo_examples::models::Position");
-//
-// let moves = data.models.get("Moves").unwrap();
-// assert_eq!(moves.name, "Moves");
-// assert_eq!(moves.qualified_path, "dojo_examples::models::Moves");
-// }
+
+//         assert_eq!(data.models.len(), 2);
+
+//         let pos = data.models.get("Position").unwrap();
+//         assert_eq!(pos.name, "Position");
+//         assert_eq!(pos.qualified_path, "dojo_examples::models::Position");
+
+//         let moves = data.models.get("Moves").unwrap();
+//         assert_eq!(moves.name, "Moves");
+//         assert_eq!(moves.qualified_path, "dojo_examples::models::Moves");
+//     }
 // }
