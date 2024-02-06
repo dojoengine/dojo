@@ -169,7 +169,6 @@ mod world {
         contract_base: ClassHash,
         nonce: usize,
         models_count: usize,
-        metadata_uri: LegacyMap::<felt252, felt252>,
         models: LegacyMap::<felt252, (ClassHash, ContractAddress)>,
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
