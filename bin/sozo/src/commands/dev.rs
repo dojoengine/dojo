@@ -10,6 +10,7 @@ use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
 use dojo_lang::scarb_internal::build_scarb_root_database;
 use dojo_world::manifest::DeployedManifest;
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
@@ -186,6 +187,14 @@ fn handle_reload_action(context: &mut DevContext<'_>) {
 
 impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let env_metadata = if config.manifest_path().exists() {
+            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+        } else {
+            None
+        };
+
         let mut context = load_context(config)?;
         let (tx, rx) = channel();
         let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
@@ -198,7 +207,7 @@ impl DevArgs {
         let mut previous_manifest: Option<DeployedManifest> = Option::None;
         let result = build(&mut context);
 
-        let Some((mut world_address, account)) = context
+        let Some((mut world_address, account, _)) = context
             .ws
             .config()
             .tokio_handle()
@@ -208,6 +217,7 @@ impl DevArgs {
                 self.starknet,
                 self.world,
                 name.as_ref(),
+                env_metadata.as_ref(),
             ))
             .ok()
         else {

@@ -262,16 +262,16 @@ fn update_manifest(
 
     let mut crate_ids = crate_ids.to_vec();
 
-    // TODO: write abi to a separate location and only keep path in base manifest
     let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
+
     write_manifest_and_abi(
         &manifests_dir,
         &abi_dir,
-        &mut Manifest::<Class> {
+        &mut Manifest::new(
             // abi path will be written by `write_manifest`
-            inner: Class { class_hash: *hash, abi: None },
-            name: WORLD_CONTRACT_NAME.into(),
-        },
+            Class { class_hash: *hash, abi: None },
+            WORLD_CONTRACT_NAME.into(),
+        ),
         abi,
     )?;
 
@@ -279,10 +279,7 @@ fn update_manifest(
     write_manifest_and_abi(
         &manifests_dir,
         &abi_dir,
-        &mut Manifest::<Class> {
-            inner: Class { class_hash: *hash, abi: None },
-            name: EXECUTOR_CONTRACT_NAME.into(),
-        },
+        &mut Manifest::new(Class { class_hash: *hash, abi: None }, EXECUTOR_CONTRACT_NAME.into()),
         abi,
     )?;
 
@@ -290,10 +287,7 @@ fn update_manifest(
     write_manifest_and_abi(
         &manifests_dir,
         &abi_dir,
-        &mut Manifest::<Class> {
-            inner: Class { class_hash: *hash, abi: None },
-            name: BASE_CONTRACT_NAME.into(),
-        },
+        &mut Manifest::new(Class { class_hash: *hash, abi: None }, BASE_CONTRACT_NAME.into()),
         abi,
     )?;
 

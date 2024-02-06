@@ -1,0 +1,5 @@
+kind = "Contract"
+class_hash = "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497"
+abi = "abis/world.json"
+address = "0x33ac2f528bb97cc7b79148fd1756dc368be0e95d391d8c6d6473ecb60b4560e"
+name = "dojo::world::world"

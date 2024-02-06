@@ -216,6 +216,15 @@ where
     pub name: SmolStr,
 }
 
+impl<T> Manifest<T>
+where
+    T: ManifestMethods,
+{
+    pub fn new(inner: T, name: SmolStr) -> Self {
+        Self { inner, name }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct BaseManifest {
     pub world: Manifest<Class>,
@@ -350,26 +359,22 @@ impl DeployedManifest {
         Ok(DeployedManifest {
             models,
             contracts,
-            world: Manifest::<Contract> {
-                name: WORLD_CONTRACT_NAME.into(),
-                inner: Contract {
-                    address: Some(world_address),
-                    class_hash: world_class_hash,
-                    abi: None,
-                },
-            },
-            executor: Manifest::<Contract> {
-                name: EXECUTOR_CONTRACT_NAME.into(),
-                inner: Contract {
+            world: Manifest::new(
+                Contract { address: Some(world_address), class_hash: world_class_hash, abi: None },
+                WORLD_CONTRACT_NAME.into(),
+            ),
+            executor: Manifest::new(
+                Contract {
                     address: Some(executor_address.into()),
                     class_hash: executor_class_hash,
                     abi: None,
                 },
-            },
-            base: Manifest::<Class> {
-                name: BASE_CONTRACT_NAME.into(),
-                inner: Class { class_hash: base_class_hash.into(), abi: None },
-            },
+                EXECUTOR_CONTRACT_NAME.into(),
+            ),
+            base: Manifest::new(
+                Class { class_hash: base_class_hash.into(), abi: None },
+                BASE_CONTRACT_NAME.into(),
+            ),
         })
     }
 }
@@ -408,7 +413,8 @@ where
     Ok(elements)
 }
 
-// TODO: currently implementing this method using trait is causing lifetime issue due to `async_trait` macro which is hard to debug. So moved it as a async method on type itself.
+// TODO: currently implementing this method using trait is causing lifetime issue due to
+// `async_trait` macro which is hard to debug. So moved it as a async method on type itself.
 // #[async_trait]
 // pub trait RemoteLoadable<P: Provider + Sync + Send + 'static> {
 //     async fn load_from_remote(

@@ -1,8 +1,7 @@
 use anyhow::Result;
 use clap::Args;
-use dojo_lang::scarb_internal::compile_workspace;
-use scarb::core::{Config, TargetKind};
-use scarb::ops::CompileOpts;
+use dojo_world::metadata::dojo_metadata_from_workspace;
+use scarb::core::Config;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -45,11 +44,16 @@ impl MigrateArgs {
                 self.name = Some(root_package.id.name.to_string());
             }
         }
+        // TODO: have a way to check if project is already build
+        let env_metadata = if config.manifest_path().exists() {
+            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        // its path to a file so `parent` should never return `None`
-        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+        } else {
+            None
+        };
 
-        ws.config().tokio_handle().block_on(migration::execute(&ws, self, manifest_dir))?;
+        ws.config().tokio_handle().block_on(migration::execute(&ws, self, env_metadata))?;
 
         Ok(())
     }
