@@ -81,7 +81,6 @@ mod world {
     use super::Errors;
 
     const WORLD: felt252 = 0;
-    const RESOURCE_METADATA: felt252 = 1;
 
     #[event]
     #[derive(Drop, starknet::Event)]
