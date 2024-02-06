@@ -172,7 +172,9 @@ impl Genesis {
         for (address, alloc) in &self.allocations {
             let address = *address;
 
-            states.state_updates.contract_updates.insert(address, alloc.class_hash());
+            if let Some(hash) = alloc.class_hash() {
+                states.state_updates.contract_updates.insert(address, hash);
+            }
 
             if let Some(nonce) = alloc.nonce() {
                 states.state_updates.nonce_updates.insert(address, nonce);
@@ -203,19 +205,20 @@ impl Genesis {
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
 
         for (address, alloc) in &self.allocations {
-            let balance = alloc.balance();
-            let (low, high) = split_u256(balance);
+            if let Some(balance) = alloc.balance() {
+                let (low, high) = split_u256(balance);
 
-            // the base storage address for a standard ERC20 contract balance
-            let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
+                // the base storage address for a standard ERC20 contract balance
+                let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
 
-            // the storage address of low u128 of the balance
-            let low_bal_storage_var = bal_base_storage_var;
-            // the storage address of high u128 of the balance
-            let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                // the storage address of low u128 of the balance
+                let low_bal_storage_var = bal_base_storage_var;
+                // the storage address of high u128 of the balance
+                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
 
-            fee_token_storage.insert(low_bal_storage_var, low);
-            fee_token_storage.insert(high_bal_storage_var, high);
+                fee_token_storage.insert(low_bal_storage_var, low);
+                fee_token_storage.insert(high_bal_storage_var, high);
+            }
         }
 
         states
@@ -318,6 +321,8 @@ mod tests {
 
     #[test]
     fn genesis_block_and_state_updates() {
+        // setup initial states to test
+
         let classes = HashMap::from([
             (
                 DEFAULT_LEGACY_UDC_CLASS_HASH,
@@ -349,7 +354,7 @@ mod tests {
             address: DEFAULT_FEE_TOKEN_ADDRESS,
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
-            total_supply: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+            total_supply: U256::from_str("0x1a784379d99db42000000").unwrap(),
             decimals: 18,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
             storage: Some(HashMap::from([
@@ -365,7 +370,7 @@ mod tests {
                     public_key: felt!(
                         "0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
                     ),
-                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                     nonce: Some(felt!("0x99")),
                     storage: Some(HashMap::from([
@@ -377,8 +382,8 @@ mod tests {
             (
                 ContractAddress::from(felt!("0xdeadbeef")),
                 GenesisAllocation::Contract(GenesisContractAlloc {
-                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
-                    class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
+                    class_hash: Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH),
                     nonce: Some(felt!("0x100")),
                     storage: Some(HashMap::from([
                         (felt!("0x100"), felt!("0x111")),
@@ -390,7 +395,7 @@ mod tests {
                 ContractAddress::from(felt!("0x2")),
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
-                    balance: U256::zero(),
+                    balance: Some(U256::zero()),
                     class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                     nonce: None,
                     storage: None,
@@ -432,19 +437,20 @@ mod tests {
         fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
 
         for (address, alloc) in &allocations {
-            let balance = alloc.balance();
-            let (low, high) = split_u256(balance);
+            if let Some(balance) = alloc.balance() {
+                let (low, high) = split_u256(balance);
 
-            // the base storage address for a standard ERC20 contract balance
-            let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
+                // the base storage address for a standard ERC20 contract balance
+                let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
 
-            // the storage address of low u128 of the balance
-            let low_bal_storage_var = bal_base_storage_var;
-            // the storage address of high u128 of the balance
-            let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                // the storage address of low u128 of the balance
+                let low_bal_storage_var = bal_base_storage_var;
+                // the storage address of high u128 of the balance
+                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
 
-            fee_token_storage.insert(low_bal_storage_var, low);
-            fee_token_storage.insert(high_bal_storage_var, high);
+                fee_token_storage.insert(low_bal_storage_var, low);
+                fee_token_storage.insert(high_bal_storage_var, high);
+            }
         }
 
         let expected_block = Block {
@@ -573,7 +579,7 @@ mod tests {
 
         assert_eq!(
             actual_state_updates.state_updates.contract_updates.get(&alloc_1_addr),
-            Some(&allocations[0].1.class_hash()),
+            allocations[0].1.class_hash().as_ref(),
             "allocation should exist"
         );
         assert_eq!(
@@ -591,7 +597,7 @@ mod tests {
 
         assert_eq!(
             actual_state_updates.state_updates.contract_updates.get(&alloc_2_addr),
-            Some(&allocations[1].1.class_hash()),
+            allocations[1].1.class_hash().as_ref(),
             "allocation should exist"
         );
         assert_eq!(
@@ -609,7 +615,7 @@ mod tests {
 
         assert_eq!(
             actual_state_updates.state_updates.contract_updates.get(&alloc_3_addr),
-            Some(&allocations[2].1.class_hash()),
+            allocations[2].1.class_hash().as_ref(),
             "allocation should exist"
         );
         assert_eq!(
@@ -645,22 +651,32 @@ mod tests {
         assert_eq!(fee_token_storage.get(&felt!("0x111")), Some(&felt!("0x1")));
         assert_eq!(fee_token_storage.get(&felt!("0x222")), Some(&felt!("0x2")));
 
+        let mut actual_total_supply = U256::zero();
+
         // check for balance
         for (address, alloc) in &allocations {
-            let balance = alloc.balance();
-            let (low, high) = split_u256(balance);
+            if let Some(balance) = alloc.balance() {
+                let (low, high) = split_u256(balance);
 
-            // the base storage address for a standard ERC20 contract balance
-            let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
+                // the base storage address for a standard ERC20 contract balance
+                let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
 
-            // the storage address of low u128 of the balance
-            let low_bal_storage_var = bal_base_storage_var;
-            // the storage address of high u128 of the balance
-            let high_bal_storage_var = bal_base_storage_var + 1u8.into();
+                // the storage address of low u128 of the balance
+                let low_bal_storage_var = bal_base_storage_var;
+                // the storage address of high u128 of the balance
+                let high_bal_storage_var = bal_base_storage_var + 1u8.into();
 
-            assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
-            assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
+                assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
+                assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
+
+                actual_total_supply += balance;
+            }
         }
+
+        assert_eq!(
+            actual_total_supply, fee_token.total_supply,
+            "total supply should match the total balances of all allocations"
+        );
 
         let udc_storage =
             actual_state_updates.state_updates.storage_updates.get(&ud.address).unwrap();

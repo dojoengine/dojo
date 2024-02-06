@@ -128,7 +128,7 @@ pub struct UniversalDeployerConfigJson {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisContractJson {
-    pub class: ClassHash,
+    pub class: Option<ClassHash>,
     pub balance: Option<U256>,
     pub nonce: Option<FieldElement>,
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
@@ -417,14 +417,15 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             };
 
-            let balance = account.balance.unwrap_or_default();
-            // increase the total supply of the fee token
-            fee_token.total_supply += balance;
+            // increase the total supply of the fee token if balance is given
+            if let Some(balance) = account.balance {
+                fee_token.total_supply += balance;
+            }
 
             allocations.insert(
                 address,
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
-                    balance,
+                    balance: account.balance,
                     class_hash,
                     nonce: account.nonce,
                     storage: account.storage,
@@ -435,20 +436,22 @@ impl TryFrom<GenesisJson> for Genesis {
 
         for (address, contract) in value.contracts {
             // check that the class hash exists in the classes field
-            let class_hash = contract.class;
-            if !classes.contains_key(&contract.class) {
-                return Err(GenesisJsonError::MissingClass(class_hash));
+            if let Some(hash) = contract.class {
+                if !classes.contains_key(&hash) {
+                    return Err(GenesisJsonError::MissingClass(hash));
+                }
             }
 
-            let balance = contract.balance.unwrap_or_default();
-            // increase the total supply of the fee token
-            fee_token.total_supply += balance;
+            // increase the total supply of the fee token if balance is given
+            if let Some(balance) = contract.balance {
+                fee_token.total_supply += balance;
+            }
 
             allocations.insert(
                 address,
                 GenesisAllocation::Contract(GenesisContractAlloc {
-                    balance,
-                    class_hash,
+                    balance: contract.balance,
+                    class_hash: contract.class,
                     nonce: contract.nonce,
                     storage: contract.storage,
                 }),
@@ -559,34 +562,34 @@ mod tests {
     #[test]
     fn deserialize_from_json() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
-        let genesis: GenesisJson = serde_json::from_reader(file).unwrap();
+        let json: GenesisJson = serde_json::from_reader(file).unwrap();
 
-        assert_eq!(genesis.number, 0);
-        assert_eq!(genesis.parent_hash, felt!("0x999"));
-        assert_eq!(genesis.timestamp, 5123512314u64);
-        assert_eq!(genesis.state_root, felt!("0x99"));
-        assert_eq!(genesis.gas_prices.eth, 1111);
-        assert_eq!(genesis.gas_prices.strk, 2222);
+        assert_eq!(json.number, 0);
+        assert_eq!(json.parent_hash, felt!("0x999"));
+        assert_eq!(json.timestamp, 5123512314u64);
+        assert_eq!(json.state_root, felt!("0x99"));
+        assert_eq!(json.gas_prices.eth, 1111);
+        assert_eq!(json.gas_prices.strk, 2222);
 
-        assert_eq!(genesis.fee_token.address, Some(ContractAddress::from(felt!("0x55"))));
-        assert_eq!(genesis.fee_token.name, String::from("ETHER"));
-        assert_eq!(genesis.fee_token.symbol, String::from("ETH"));
-        assert_eq!(genesis.fee_token.class, Some(felt!("0x8")));
-        assert_eq!(genesis.fee_token.decimals, 18);
+        assert_eq!(json.fee_token.address, Some(ContractAddress::from(felt!("0x55"))));
+        assert_eq!(json.fee_token.name, String::from("ETHER"));
+        assert_eq!(json.fee_token.symbol, String::from("ETH"));
+        assert_eq!(json.fee_token.class, Some(felt!("0x8")));
+        assert_eq!(json.fee_token.decimals, 18);
         assert_eq!(
-            genesis.fee_token.storage,
+            json.fee_token.storage,
             Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2"))]))
         );
 
         assert_eq!(
-            genesis.universal_deployer.clone().unwrap().address,
+            json.universal_deployer.clone().unwrap().address,
             Some(ContractAddress::from(felt!(
                 "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
             )))
         );
-        assert_eq!(genesis.universal_deployer.unwrap().class, None);
+        assert_eq!(json.universal_deployer.unwrap().class, None);
         assert_eq!(
-            genesis.fee_token.storage,
+            json.fee_token.storage,
             Some(HashMap::from([(felt!("0x111"), felt!("0x1")), (felt!("0x222"), felt!("0x2")),]))
         );
 
@@ -596,27 +599,40 @@ mod tests {
         let acc_2 = ContractAddress::from(felt!(
             "0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
         ));
+        let acc_3 = ContractAddress::from(felt!(
+            "0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9"
+        ));
 
-        assert_eq!(genesis.accounts.len(), 2);
-        assert_eq!(genesis.accounts[&acc_1].public_key, felt!("0x1"));
+        assert_eq!(json.accounts.len(), 3);
+
+        assert_eq!(json.accounts[&acc_1].public_key, felt!("0x1"));
         assert_eq!(
-            genesis.accounts[&acc_1].balance,
+            json.accounts[&acc_1].balance,
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
-        assert_eq!(genesis.accounts[&acc_1].nonce, Some(felt!("0x1")));
-        assert_eq!(genesis.accounts[&acc_1].class, Some(felt!("0x80085")));
+        assert_eq!(json.accounts[&acc_1].nonce, Some(felt!("0x1")));
+        assert_eq!(json.accounts[&acc_1].class, Some(felt!("0x80085")));
         assert_eq!(
-            genesis.accounts[&acc_1].storage,
+            json.accounts[&acc_1].storage,
             Some(HashMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2")),]))
         );
 
-        assert_eq!(genesis.accounts[&acc_2].public_key, felt!("0x2"));
+        assert_eq!(json.accounts[&acc_2].public_key, felt!("0x2"));
         assert_eq!(
-            genesis.accounts[&acc_2].balance,
+            json.accounts[&acc_2].balance,
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
+        assert_eq!(json.accounts[&acc_3].nonce, None);
+        assert_eq!(json.accounts[&acc_2].class, None);
+        assert_eq!(json.accounts[&acc_2].storage, None);
 
-        assert_eq!(genesis.contracts.len(), 2);
+        assert_eq!(json.accounts[&acc_3].public_key, felt!("0x3"));
+        assert_eq!(json.accounts[&acc_3].balance, None);
+        assert_eq!(json.accounts[&acc_3].nonce, None);
+        assert_eq!(json.accounts[&acc_3].class, None);
+        assert_eq!(json.accounts[&acc_3].storage, None);
+
+        assert_eq!(json.contracts.len(), 3);
 
         let contract_1 = ContractAddress::from(felt!(
             "0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af"
@@ -624,23 +640,39 @@ mod tests {
         let contract_2 = ContractAddress::from(felt!(
             "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
         ));
+        let contract_3 = ContractAddress::from(felt!(
+            "0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
+        ));
 
         assert_eq!(
-            genesis.contracts[&contract_1].balance,
+            json.contracts[&contract_1].balance,
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
-        assert_eq!(genesis.contracts[&contract_1].nonce, None);
-        assert_eq!(genesis.contracts[&contract_1].class, felt!("0x8"));
+        assert_eq!(json.contracts[&contract_1].nonce, None);
+        assert_eq!(json.contracts[&contract_1].class, Some(felt!("0x8")));
+        assert_eq!(
+            json.contracts[&contract_1].storage,
+            Some(HashMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2"))]))
+        );
 
         assert_eq!(
-            genesis.contracts[&contract_2].balance,
+            json.contracts[&contract_2].balance,
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
-        assert_eq!(genesis.contracts[&contract_2].nonce, None);
-        assert_eq!(genesis.contracts[&contract_2].class, felt!("0x8"));
+        assert_eq!(json.contracts[&contract_2].nonce, None);
+        assert_eq!(json.contracts[&contract_2].class, None);
+        assert_eq!(json.contracts[&contract_2].storage, None);
+
+        assert_eq!(json.contracts[&contract_3].balance, None);
+        assert_eq!(json.contracts[&contract_3].nonce, None);
+        assert_eq!(json.contracts[&contract_3].class, None);
+        assert_eq!(
+            json.contracts[&contract_3].storage,
+            Some(HashMap::from([(felt!("0x1"), felt!("0x1"))]))
+        );
 
         assert_eq!(
-            genesis.classes,
+            json.classes,
             vec![
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
@@ -691,7 +723,7 @@ mod tests {
         let json = GenesisJson::load(path).unwrap();
         let actual_genesis = Genesis::try_from(json).unwrap();
 
-        let classes = HashMap::from([
+        let expected_classes = HashMap::from([
             (
                 felt!("0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69"),
                 GenesisClass {
@@ -736,7 +768,7 @@ mod tests {
             ),
         ]);
 
-        let fee_token = FeeTokenConfig {
+        let expected_fee_token = FeeTokenConfig {
             address: ContractAddress::from(felt!("0x55")),
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
@@ -755,19 +787,25 @@ mod tests {
         let acc_2 = ContractAddress::from(felt!(
             "0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
         ));
+        let acc_3 = ContractAddress::from(felt!(
+            "0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9"
+        ));
         let contract_1 = ContractAddress::from(felt!(
             "0x29873c310fbefde666dc32a1554fea6bb45eecc84f680f8a2b0a8fbb8cb89af"
         ));
         let contract_2 = ContractAddress::from(felt!(
             "0xe29882a1fcba1e7e10cad46212257fea5c752a4f9b1b1ec683c503a2cf5c8a"
         ));
+        let contract_3 = ContractAddress::from(felt!(
+            "0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
+        ));
 
-        let allocations = BTreeMap::from([
+        let expected_allocations = BTreeMap::from([
             (
                 acc_1,
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x1"),
-                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: Some(felt!("0x1")),
                     class_hash: felt!("0x80085"),
                     storage: Some(HashMap::from([
@@ -780,7 +818,17 @@ mod tests {
                 acc_2,
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
-                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
+                    class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
+                    nonce: None,
+                    storage: None,
+                })),
+            ),
+            (
+                acc_3,
+                GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
+                    public_key: felt!("0x3"),
+                    balance: None,
                     class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                     nonce: None,
                     storage: None,
@@ -789,9 +837,9 @@ mod tests {
             (
                 contract_1,
                 GenesisAllocation::Contract(GenesisContractAlloc {
-                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: None,
-                    class_hash: felt!("0x8"),
+                    class_hash: Some(felt!("0x8")),
                     storage: Some(HashMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
@@ -801,19 +849,28 @@ mod tests {
             (
                 contract_2,
                 GenesisAllocation::Contract(GenesisContractAlloc {
-                    balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: None,
-                    class_hash: felt!("0x8"),
+                    class_hash: None,
                     storage: None,
+                }),
+            ),
+            (
+                contract_3,
+                GenesisAllocation::Contract(GenesisContractAlloc {
+                    balance: None,
+                    nonce: None,
+                    class_hash: None,
+                    storage: Some(HashMap::from([(felt!("0x1"), felt!("0x1"))])),
                 }),
             ),
         ]);
 
         let expected_genesis = Genesis {
-            classes,
+            classes: expected_classes,
             number: 0,
-            fee_token,
-            allocations,
+            fee_token: expected_fee_token,
+            allocations: expected_allocations,
             timestamp: 5123512314u64,
             sequencer_address: ContractAddress::from(felt!("0x100")),
             state_root: felt!("0x99"),
@@ -936,7 +993,7 @@ mod tests {
             )),
             GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                 public_key: felt!("0x1"),
-                balance: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
+                balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                 class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                 nonce: None,
                 storage: None,

@@ -28,7 +28,7 @@ impl Account {
             public_key: account.public_key(),
             private_key: account.private_key(),
             class_hash: account.class_hash(),
-            balance: account.balance(),
+            balance: account.balance().unwrap_or_default(),
         }
     }
 }
