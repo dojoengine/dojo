@@ -1,7 +1,5 @@
 use anyhow::Result;
-use async_graphql::dynamic::{
-    Field, Object, Scalar, Schema, Subscription, SubscriptionField, Union,
-};
+use async_graphql::dynamic::{Object, Scalar, Schema, Subscription, Union};
 use convert_case::{Case, Casing};
 use sqlx::SqlitePool;
 use torii_core::types::Model;
@@ -10,7 +8,6 @@ use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;
 use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
-use super::object::ObjectTrait;
 use super::types::ScalarType;
 use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
 use crate::object::metadata::content::ContentObject;
@@ -18,6 +15,7 @@ use crate::object::metadata::social::SocialObject;
 use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
 use crate::object::transaction::TransactionObject;
+use crate::object::ObjectVariant;
 use crate::query::type_mapping_query;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
@@ -28,19 +26,9 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
     // build world gql objects
     let (objects, union) = build_objects(pool).await?;
 
-    // collect resolvers for single and plural queries
-    let queries: Vec<Field> = objects
-        .iter()
-        .flat_map(|object| vec![object.resolve_one(), object.resolve_many()].into_iter().flatten())
-        .collect();
-
-    // add field resolvers to query root
-    let mut query_root = Object::new(QUERY_TYPE_NAME);
-    for query in queries {
-        query_root = query_root.field(query);
-    }
-
     let mut schema_builder = Schema::build(QUERY_TYPE_NAME, None, Some(SUBSCRIPTION_TYPE_NAME));
+    let mut query_root = Object::new(QUERY_TYPE_NAME);
+    let mut subscription_root = Subscription::new(SUBSCRIPTION_TYPE_NAME);
 
     // register model data unions
     schema_builder = schema_builder.register(union);
@@ -50,49 +38,55 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         schema_builder = schema_builder.register(Scalar::new(scalar_type));
     }
 
+    // register objects
     for object in &objects {
-        // register enum objects
-        if let Some(input_objects) = object.enum_objects() {
-            for input in input_objects {
-                schema_builder = schema_builder.register(input);
+        match object {
+            ObjectVariant::Basic(object) => {
+                // register objects
+                for inner_object in object.objects() {
+                    schema_builder = schema_builder.register(inner_object)
+                }
+            }
+            ObjectVariant::Resolvable(object) => {
+                // register objects
+                for inner_object in object.objects() {
+                    schema_builder = schema_builder.register(inner_object)
+                }
+
+                // register resolvers
+                for resolver in object.resolvers() {
+                    query_root = query_root.field(resolver);
+                }
+
+                // register connection types, relay
+                if let Some(conn_objects) = object.connection_objects() {
+                    for conn in conn_objects {
+                        schema_builder = schema_builder.register(conn);
+                    }
+                }
+
+                // register enum objects
+                if let Some(input_objects) = object.enum_objects() {
+                    for input in input_objects {
+                        schema_builder = schema_builder.register(input);
+                    }
+                }
+
+                // register input objects, whereInput and orderBy
+                if let Some(input_objects) = object.input_objects() {
+                    for input in input_objects {
+                        schema_builder = schema_builder.register(input);
+                    }
+                }
+
+                // register subscription
+                if let Some(subscriptions) = object.subscriptions() {
+                    for sub in subscriptions {
+                        subscription_root = subscription_root.field(sub);
+                    }
+                }
             }
         }
-
-        // register input objects, whereInput and orderBy
-        if let Some(input_objects) = object.input_objects() {
-            for input in input_objects {
-                schema_builder = schema_builder.register(input);
-            }
-        }
-
-        // register connection types, relay
-        if let Some(conn_objects) = object.connection() {
-            for object in conn_objects {
-                schema_builder = schema_builder.register(object);
-            }
-        }
-
-        // register gql objects
-        let object_collection = object.objects();
-        for object in object_collection {
-            schema_builder = schema_builder.register(object);
-        }
-    }
-
-    // collect resolvers for single subscriptions
-    let mut subscription_fields: Vec<SubscriptionField> = Vec::new();
-    for object in &objects {
-        if let Some(subscriptions) = object.subscriptions() {
-            for sub in subscriptions {
-                subscription_fields.push(sub);
-            }
-        }
-    }
-
-    // add field resolvers to subscription root
-    let mut subscription_root = Subscription::new(SUBSCRIPTION_TYPE_NAME);
-    for field in subscription_fields {
-        subscription_root = subscription_root.field(field);
     }
 
     schema_builder
@@ -103,20 +97,20 @@ pub async fn build_schema(pool: &SqlitePool) -> Result<Schema> {
         .map_err(|e| e.into())
 }
 
-async fn build_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, Union)> {
+async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)> {
     let mut conn = pool.acquire().await?;
     let models: Vec<Model> = sqlx::query_as("SELECT * FROM models").fetch_all(&mut *conn).await?;
 
     // predefined objects
-    let mut objects: Vec<Box<dyn ObjectTrait>> = vec![
-        Box::new(EntityObject),
-        Box::new(EventObject),
-        Box::new(SocialObject),
-        Box::new(ContentObject),
-        Box::new(MetadataObject),
-        Box::new(ModelObject),
-        Box::new(PageInfoObject),
-        Box::new(TransactionObject),
+    let mut objects: Vec<ObjectVariant> = vec![
+        ObjectVariant::Resolvable(Box::new(EntityObject)),
+        ObjectVariant::Resolvable(Box::new(EventObject)),
+        ObjectVariant::Resolvable(Box::new(MetadataObject)),
+        ObjectVariant::Resolvable(Box::new(ModelObject)),
+        ObjectVariant::Resolvable(Box::new(TransactionObject)),
+        ObjectVariant::Basic(Box::new(SocialObject)),
+        ObjectVariant::Basic(Box::new(ContentObject)),
+        ObjectVariant::Basic(Box::new(PageInfoObject)),
     ];
 
     // model union object
@@ -132,7 +126,11 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<Box<dyn ObjectTrait>>, 
 
             union = union.possible_type(&type_name);
 
-            objects.push(Box::new(ModelDataObject::new(field_name, type_name, type_mapping)));
+            objects.push(ObjectVariant::Resolvable(Box::new(ModelDataObject::new(
+                field_name,
+                type_name,
+                type_mapping,
+            ))));
         }
     }
 

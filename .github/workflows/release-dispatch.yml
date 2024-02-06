@@ -14,7 +14,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       # Workaround described here: https://github.com/actions/checkout/issues/760
       - uses: actions/checkout@v3

@@ -23,11 +23,11 @@ pub fn parse_compiled_class_v1(class: &str) -> Result<CompiledContractClassV1> {
 }
 
 /// Parse a [`str`] into a [`CompiledContractClassV0`].
-pub fn parse_compiled_class_v0(class: &str) -> Result<CompiledContractClassV0, std::io::Error> {
-    Ok(serde_json::from_str(class)?)
+pub fn parse_compiled_class_v0(class: &str) -> Result<CompiledContractClassV0, serde_json::Error> {
+    serde_json::from_str(class)
 }
 
 /// Parse a [`str`] into a [`SierraClass`].
-pub fn parse_sierra_class(class: &str) -> Result<SierraClass, std::io::Error> {
-    Ok(serde_json::from_str(class)?)
+pub fn parse_sierra_class(class: &str) -> Result<SierraClass, serde_json::Error> {
+    serde_json::from_str(class)
 }

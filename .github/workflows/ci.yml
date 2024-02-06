@@ -14,21 +14,21 @@ jobs:
   test:
     runs-on: ubuntu-latest-16-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: cargo llvm-cov nextest --all-features --lcov --output-path lcov.info
+      - run: cargo build -r --bin katana && cargo llvm-cov nextest --all-features --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v3
+        if: github.ref != 'refs/heads/main'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
-          fail_ci_if_error: true
 
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -61,7 +61,7 @@ jobs:
   dojo-core-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -70,7 +70,7 @@ jobs:
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -79,7 +79,7 @@ jobs:
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -88,7 +88,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -97,7 +97,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -106,7 +106,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:136a67a
+      image: ghcr.io/dojoengine/dojo-dev:5d61184
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2

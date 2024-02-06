@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use katana_core::constants::{ERC20_CONTRACT, UDC_CONTRACT};
 use katana_db::mdbx;
 use katana_primitives::block::{
     BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
 use katana_primitives::contract::{
     CompiledContractClass, ContractAddress, FlattenedSierraClass, SierraClass,
+};
+use katana_primitives::genesis::constant::{
+    DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
 };
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::utils::class::parse_compiled_class;
@@ -26,7 +28,8 @@ use url::Url;
 
 lazy_static! {
     pub static ref FORKED_PROVIDER: (KatanaRunner, Arc<JsonRpcClient<HttpTransport>>) = {
-        let (runner, provider) = katana_runner::KatanaRunner::new().unwrap();
+        let runner = katana_runner::KatanaRunner::new().unwrap();
+        let provider = runner.owned_provider();
         (runner, Arc::new(provider))
     };
     pub static ref DOJO_WORLD_COMPILED_CLASS: CompiledContractClass =
@@ -101,7 +104,10 @@ pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
             declared_classes: HashMap::from([(class_hash_1, compiled_class_hash_1)]),
             contract_updates: HashMap::from([(address_1, class_hash_1), (address_2, class_hash_1)]),
         },
-        declared_compiled_classes: HashMap::from([(class_hash_1, (*ERC20_CONTRACT).clone())]),
+        declared_compiled_classes: HashMap::from([(
+            class_hash_1,
+            DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone(),
+        )]),
         ..Default::default()
     };
 
@@ -115,7 +121,7 @@ pub fn mock_state_updates() -> [StateUpdatesWithDeclaredClasses; 3] {
             declared_classes: HashMap::from([(class_hash_2, compiled_class_hash_2)]),
             contract_updates: HashMap::from([(address_2, class_hash_2)]),
         },
-        declared_compiled_classes: HashMap::from([(class_hash_2, (*UDC_CONTRACT).clone())]),
+        declared_compiled_classes: HashMap::from([(class_hash_2, DEFAULT_LEGACY_UDC_CASM.clone())]),
         ..Default::default()
     };
 

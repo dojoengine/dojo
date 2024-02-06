@@ -8,7 +8,7 @@ use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{
-    BlockHashProvider, BlockProvider, BlockStatusProvider, BlockWriter,
+    BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
 };
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::StateRootProvider;
@@ -69,6 +69,9 @@ where
             Default::default(),
             receipts.clone(),
         )?;
+
+        assert_eq!(provider.latest_number().unwrap(), block.block.header.header.number);
+        assert_eq!(provider.latest_hash().unwrap(), block.block.header.hash);
     }
 
     let actual_blocks_in_range = provider.blocks_in_range(0..=count)?;

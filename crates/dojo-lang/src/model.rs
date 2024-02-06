@@ -117,49 +117,50 @@ pub fn handle_model_struct(
             $schema_introspection$
 
             #[starknet::interface]
-            trait I$type_name$<T> {
-                fn name(self: @T) -> felt252;
+            trait I$contract_name$<T> {
+                fn ensure_abi(self: @T, model: $type_name$);
             }
 
             #[starknet::contract]
             mod $contract_name$ {
                 use super::$type_name$;
+                use super::I$contract_name$;
 
                 #[storage]
                 struct Storage {}
 
-                #[external(v0)]
-                fn name(self: @ContractState) -> felt252 {
-                    '$type_name$'
+                #[abi(embed_v0)]
+                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
+                    fn name(self: @ContractState) -> felt252 {
+                        '$type_name$'
+                    }
+
+                    fn unpacked_size(self: @ContractState) -> usize {
+                        dojo::database::introspect::Introspect::<$type_name$>::size()
+                    }
+
+                    fn packed_size(self: @ContractState) -> usize {
+                        let mut layout = core::array::ArrayTrait::new();
+                        dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+                        let mut layout_span = layout.span();
+                        dojo::packing::calculate_packed_size(ref layout_span)
+                    }
+
+                    fn layout(self: @ContractState) -> Span<u8> {
+                        let mut layout = core::array::ArrayTrait::new();
+                        dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+                        core::array::ArrayTrait::span(@layout)
+                    }
+
+                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+                        dojo::database::introspect::Introspect::<$type_name$>::ty()
+                    }
                 }
 
-                #[external(v0)]
-                fn unpacked_size(self: @ContractState) -> usize {
-                    dojo::database::introspect::Introspect::<$type_name$>::size()
-                }
-
-                #[external(v0)]
-                fn packed_size(self: @ContractState) -> usize {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
-                    let mut layout_span = layout.span();
-                    dojo::packing::calculate_packed_size(ref layout_span)
-                }
-
-                #[external(v0)]
-                fn layout(self: @ContractState) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
-
-                #[external(v0)]
-                fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                    dojo::database::introspect::Introspect::<$type_name$>::ty()
-                }
-
-                #[external(v0)]
-                fn ensure_abi(self: @ContractState, model: $type_name$) {
+                #[abi(embed_v0)]
+                impl $contract_name$Impl of I$contract_name$<ContractState>{
+                    fn ensure_abi(self: @ContractState, model: $type_name$) {
+                    }
                 }
             }
         ",

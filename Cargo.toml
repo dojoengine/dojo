@@ -2,29 +2,36 @@
 resolver = "2"
 
 members = [
+  "bin/dojo-language-server",
+  "bin/katana",
+  "bin/saya",
+  "bin/sozo",
+  "bin/torii",
   "crates/benches",
+  "crates/common",
+  "crates/dojo-bindgen",
   "crates/dojo-core",
   "crates/dojo-lang",
-  "crates/dojo-language-server",
   "crates/dojo-test-utils",
   "crates/dojo-types",
   "crates/dojo-world",
   "crates/dojo-world/abigen",
-  "crates/katana",
   "crates/katana/core",
   "crates/katana/executor",
   "crates/katana/primitives",
-  "crates/katana/rpc",
+  "crates/katana/rpc/rpc",
+  "crates/katana/rpc/rpc-api",
   "crates/katana/rpc/rpc-types",
   "crates/katana/rpc/rpc-types-builder",
-  "crates/katana/runner",
   "crates/katana/storage/codecs",
   "crates/katana/storage/codecs/derive",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
+  "crates/katana/runner",
+  "crates/katana/runner/runner-macro",
   "crates/metrics",
+  "crates/saya/core",
   "crates/metrics/derive",
-  "crates/sozo",
   "crates/sozo/signers",
   "crates/torii/client",
   "crates/torii/server",
@@ -37,7 +44,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.5.1-alpha.0"
+version = "0.5.1-alpha.5"
 
 [profile.performance]
 codegen-units = 1
@@ -46,12 +53,54 @@ inherits = "release"
 lto = "fat"
 
 [workspace.dependencies]
+common = { path = "crates/common" }
+
+# metrics
+metrics = "0.21.1"
+dojo-metrics = { path = "crates/metrics" }
+dojo-metrics-derive = { path = "crates/metrics/derive" }
+
+# dojo-lang
+dojo-bindgen = { path = "crates/dojo-bindgen" }
+dojo-core = { path = "crates/dojo-core" }
+dojo-lang = { path = "crates/dojo-lang" }
+dojo-test-utils = { path = "crates/dojo-test-utils" }
+dojo-types = { path = "crates/dojo-types" }
+dojo-world = { path = "crates/dojo-world" }
+
+# katana
+katana-codecs = { path = "crates/katana/storage/codecs" }
+katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
+katana-core = { path = "crates/katana/core" }
+katana-db = { path = "crates/katana/storage/db" }
+katana-executor = { path = "crates/katana/executor" }
+katana-primitives = { path = "crates/katana/primitives" }
+katana-provider = { path = "crates/katana/storage/provider" }
+katana-rpc = { path = "crates/katana/rpc/rpc" }
+katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
+katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
+katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
+katana-runner = { path = "crates/katana/runner" }
+
+# torii
+torii-client = { path = "crates/torii/client" }
+torii-core = { path = "crates/torii/core" }
+torii-graphql = { path = "crates/torii/graphql" }
+torii-grpc = { path = "crates/torii/grpc" }
+torii-relay = { path = "crates/torii/libp2p" }
+torii-server = { path = "crates/torii/server" }
+
+# saya
+saya-core = { path = "crates/saya/core" }
+
+# sozo
+sozo-signers = { path = "crates/sozo/signers" }
+
 anyhow = "1.0.75"
 assert_matches = "1.5.0"
 async-trait = "0.1.68"
 base64 = "0.21.2"
 blockifier = { git = "https://github.com/starkware-libs/blockifier", tag = "v0.4.0-rc9.2" }
-cairo-lang-casm = "2.4.0"
 cairo-lang-compiler = "2.4.0"
 cairo-lang-debug = "2.4.0"
 cairo-lang-defs = "2.4.0"
@@ -78,20 +127,18 @@ camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.2", features = [ "derive" ] }
 clap_complete = "4.3"
-colored = "2"
 console = "0.15.7"
 convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 derive_more = "0.99.17"
-env_logger = "0.10.0"
 flate2 = "1.0.24"
 futures = "0.3.28"
 hex = "0.4.3"
 indoc = "1.0.7"
 itertools = "0.10.3"
+jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
 metrics-process = "1.0.9"
-num-bigint = "0.4"
 once_cell = "1.0"
 parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"
@@ -117,9 +164,6 @@ toml = "0.7.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = "2.4.0"
-metrics = "0.21.1"
-dojo-metrics = { path = "crates/metrics" }
-dojo-metrics-derive = { path = "crates/metrics/derive" }
 
 # server
 hyper = "0.14.27"

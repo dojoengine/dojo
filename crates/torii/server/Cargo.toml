@@ -50,7 +50,3 @@ camino.workspace = true
 default = [ "jemalloc", "sqlite" ]
 jemalloc = [ "dojo-metrics/jemalloc" ]
 sqlite = [ "sqlx/sqlite" ]
-
-[[bin]]
-name = "torii"
-path = "src/cli.rs"

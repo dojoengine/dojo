@@ -13,10 +13,10 @@ tokio.workspace = true
 tracing.workspace = true
 
 # Metrics
-metrics = "0.21.1"
 metrics-exporter-prometheus = "0.12.1"
 metrics-process.workspace = true
 metrics-util = "0.15.0"
+metrics = "0.21.1"
 dojo-metrics-derive = { path = "derive" }
 
 [target.'cfg(not(windows))'.dependencies]

@@ -1,5 +1,5 @@
 {
-    "cairo1.languageServerPath": "$HOME/.dojo/bin/dojo-language-server",
     "cairo1.enableLanguageServer": true,
-    "cairo1.enableScarb": false
+    "cairo1.enableScarb": false,
+    "cairo1.languageServerPath": "${userHome}/.dojo/bin/dojo-language-server"
 }
