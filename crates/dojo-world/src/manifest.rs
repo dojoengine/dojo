@@ -263,14 +263,10 @@ impl BaseManifest {
 
 impl Into<Manifest<Contract>> for Manifest<Class> {
     fn into(self) -> Manifest<Contract> {
-        Manifest::<Contract> {
-            inner: Contract {
-                class_hash: self.inner.class_hash,
-                abi: self.inner.abi,
-                address: None,
-            },
-            name: self.name,
-        }
+        Manifest::new(
+            Contract { class_hash: self.inner.class_hash, abi: self.inner.abi, address: None },
+            self.name,
+        )
     }
 }
 
@@ -569,15 +565,15 @@ fn parse_contracts_events(
             if let Some(upgrade) = upgradeds.get(&address) {
                 class_hash = *upgrade;
             }
-            Manifest::<DojoContract> {
-                inner: DojoContract {
+            Manifest::new(
+                DojoContract {
                     address: Some(address),
                     class_hash,
                     abi: None,
                     ..Default::default()
                 },
-                name: Default::default(),
-            }
+                Default::default(),
+            )
         })
         .collect()
 }

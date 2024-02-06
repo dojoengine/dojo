@@ -390,14 +390,14 @@ fn get_dojo_model_artifacts(
                 models.insert(
                     model_full_name.clone(),
                     (
-                        Manifest::<DojoModel> {
-                            inner: dojo_world::manifest::DojoModel {
+                        Manifest::new(
+                            dojo_world::manifest::DojoModel {
                                 class_hash,
                                 abi: None,
                                 members: model.members.clone(),
                             },
-                            name: model_full_name.into(),
-                        },
+                            model_full_name.into(),
+                        ),
                         abi,
                     ),
                 );
@@ -471,16 +471,10 @@ fn get_dojo_contract_artifacts(
             Ok((
                 SmolStr::from(module_name),
                 (
-                    Manifest::<DojoContract> {
-                        inner: DojoContract {
-                            writes,
-                            reads,
-                            class_hash,
-                            abi: None,
-                            ..Default::default()
-                        },
-                        name: module_name.into(),
-                    },
+                    Manifest::new(
+                        DojoContract { writes, reads, class_hash, abi: None, ..Default::default() },
+                        module_name.into(),
+                    ),
                     abi,
                 ),
             ))
