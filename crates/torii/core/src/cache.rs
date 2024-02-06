@@ -3,12 +3,9 @@ use std::collections::HashMap;
 use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
 use tokio::sync::RwLock;
-use tokio_stream::StreamExt;
 
 use crate::error::{Error, QueryError};
 use crate::model::{parse_sql_model_members, SqlModelMember};
-use crate::simple_broker::SimpleBroker;
-use crate::types::Model;
 
 type ModelName = String;
 
@@ -18,8 +15,23 @@ pub struct ModelCache {
 }
 
 impl ModelCache {
-    pub fn new(pool: SqlitePool) -> Self {
-        Self { pool, cache: RwLock::new(HashMap::new()) }
+    pub async fn new(pool: SqlitePool) -> Self {
+        let model_cache = Self { pool, cache: RwLock::new(HashMap::new()) };
+
+        let schema = build_schema(pool).await.unwrap();
+        let subscription_query = r#"
+        subscription {
+            modelRegistered {
+                    id
+                }
+        }"#;
+        tokio::spawn(async move {
+            let mut stream = schema.execute_stream(subscription_query);
+            while stream.next().await.is_some() {
+                model_cache.clear().await;
+            }
+        });
+        model_cache
     }
 
     pub async fn schemas(&self, models: Vec<&str>) -> Result<Vec<Ty>, Error> {
@@ -64,16 +76,5 @@ impl ModelCache {
 
     pub async fn clear(&self) {
         self.cache.write().await.clear();
-    }
-
-    pub async fn subscribe(&self) {
-        let mut broker = SimpleBroker::<Model>::subscribe();
-
-        loop {
-            // Break the loop if there are no more events
-            if broker.next().await.is_some() {
-                self.clear().await;
-            }
-        }
     }
 }

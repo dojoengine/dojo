@@ -69,13 +69,6 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
-        // Run a subscribe method which clear the cache
-        tokio::spawn(async move {
-            model_cache.subscribe().await;
-        });
-        //  Or Should we create a Service struct?
-        //tokio::task::spawn(subscriptions::model::Service::new())
-
         Self { pool, world_address, model_cache, entity_manager, state_diff_manager }
     }
 }
