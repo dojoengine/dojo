@@ -342,7 +342,7 @@ mod world {
 
             // Avoids a model name to conflict with already deployed contract,
             // which can cause ACL issue with current ACL implementation.
-            if self.deployed_contracts.read(name).is_non_zero() {
+            if name.is_zero() || self.deployed_contracts.read(name).is_non_zero() {
                 panic_with_felt252(Errors::INVALID_MODEL_NAME);
             }
 
