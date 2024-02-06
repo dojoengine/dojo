@@ -23,7 +23,7 @@ pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
         .push(PrefixLayer::new(prefix))
         .install()
         .map_err(|e| anyhow::anyhow!("Couldn't set metrics recorder: {}", e))?;
-
+    println!("here : install_recorder !");
     Ok(handle)
 }
 
@@ -37,7 +37,6 @@ pub(crate) async fn serve_with_hooks<F: Hook + 'static>(
     hooks: impl IntoIterator<Item = F>,
 ) -> anyhow::Result<()> {
     let hooks: Vec<_> = hooks.into_iter().collect();
-
     // Start endpoint
     start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook: &F| hook())))
         .await
@@ -73,18 +72,17 @@ async fn start_endpoint<F: Hook + 'static>(
 }
 
 /// Serves Prometheus metrics over HTTP with database and process metrics.
-pub async fn serve(
+pub async fn serve_katana(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     process: metrics_process::Collector,
     metrics: Arc<PoolMetrics>,
 ) -> anyhow::Result<()>
 {
-    let pool_metrics = move || metrics.report_metrics();
     // Clone `process` to move it into the hook and use the original `process` for describe below.
     let cloned_process = process.clone();
         let hooks: Vec<Box<dyn Hook<Output = ()>>> = vec![
-        Box::new(pool_metrics),
+        Box::new(move || metrics.report_metrics()),
         Box::new(move || cloned_process.collect()),
         Box::new(collect_memory_stats),
     ];
@@ -92,7 +90,28 @@ pub async fn serve(
     
     process.describe();
     describe_memory_stats();
-    metrics::describe_gauge!("inserted_transactions","Number of transactions inserted in the pool.");
+    metrics::describe_gauge!("pool_inserted_transactions", "Number of transactions inserted in the pool.");
+    metrics::describe_gauge!("pool_removed_transactions", "Number of transactions removed from the pool.");
+    metrics::describe_gauge!("pool_invalid_transactions", "Number of invalid transactions received by the pool.");
+    Ok(())
+}
+
+pub async fn serve_torii(
+    listen_addr: SocketAddr,
+    handle: PrometheusHandle,
+    process: metrics_process::Collector,
+) -> anyhow::Result<()>
+{
+    // Clone `process` to move it into the hook and use the original `process` for describe below.
+    let cloned_process = process.clone();
+        let hooks: Vec<Box<dyn Hook<Output = ()>>> = vec![
+        Box::new(move || cloned_process.collect()),
+        Box::new(collect_memory_stats),
+    ];
+    serve_with_hooks(listen_addr, handle, hooks).await?;
+    
+    process.describe();
+    describe_memory_stats();
     Ok(())
 }
 

@@ -25,7 +25,7 @@ impl TransactionPool {
     pub fn add_transaction(&self, transaction: ExecutableTxWithHash) {
         let hash = transaction.hash;
         self.transactions.write().push(transaction);
-        self.metrics.inserted_transactions.fetch_add(1, Ordering::SeqCst);
+        self.metrics.pool_inserted_transactions.fetch_add(1, Ordering::SeqCst);
         info!(target: "txpool", "Transaction received | Hash: {hash:#x}");
         // notify listeners of new tx added to the pool
         self.notify_listener(hash)

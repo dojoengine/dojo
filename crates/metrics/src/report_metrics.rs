@@ -1,11 +1,11 @@
 //! Adapted from Paradigm's [`reth`](https://github.com/paradigmxyz/reth/blob/main/crates/storage/db/src/abstraction/database_metrics.rs)
 
 
-use metrics::{Label, gauge, counter, histogram};
+use metrics::{Label, absolute_counter, gauge, histogram};
 
 /// Represents a type that can report metrics. The `report_metrics`
 /// method can be used as a prometheus hook.
-pub trait ReportMetrics {
+pub trait ReportMetrics : Send + Sync + 'static {
     /// Reports metrics.
     fn report_metrics(&self) {
         for (name, value, labels) in self.gauge_metrics() {
@@ -13,7 +13,7 @@ pub trait ReportMetrics {
         }
 
         for (name, value, labels) in self.counter_metrics() {
-            counter!(name, value, labels);
+            absolute_counter!(name, value, labels);
         }
 
         for (name, value, labels) in self.histogram_metrics() {

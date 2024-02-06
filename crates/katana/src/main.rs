@@ -67,13 +67,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(listen_addr) = config.metrics {
+        let pool_metrics = Arc::clone(&sequencer.pool.metrics);
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
         info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
-                prometheus_exporter::serve(
+                prometheus_exporter::serve_katana(
                     listen_addr,
                     prometheus_handle,
                     metrics_process::Collector::default(),
-                    Arc::clone(&sequencer.pool.metrics),
+                    pool_metrics,
                 )
                 .await?;
     }
