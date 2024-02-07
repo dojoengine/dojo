@@ -9,8 +9,6 @@ use cairo_lang_lowering::Statement;
 use cairo_lang_semantic as semantic;
 use cairo_lang_syntax::node::{ast, SyntaxNode, TypedSyntaxNode};
 use semantic::db::SemanticGroup;
-use semantic::diagnostic::SemanticDiagnostics;
-use semantic::expr::compute::{ComputationContext, Environment};
 use semantic::expr::inference::InferenceId;
 use semantic::items::function_with_body::SemanticExprLookup;
 use semantic::resolve::Resolver;
@@ -167,13 +165,4 @@ pub fn nearest_semantic_expr(
         }
         node = node.parent()?;
     }
-}
-
-pub fn semantic_computation_ctx<'a>(
-    db: &'a RootDatabase,
-    fn_id: FunctionWithBodyId,
-    resolver: Resolver<'a>,
-    diagnostics: &'a mut SemanticDiagnostics,
-) -> ComputationContext<'a> {
-    ComputationContext::new(db, diagnostics, Some(fn_id), resolver, None, Environment::default())
 }

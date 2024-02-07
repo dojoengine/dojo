@@ -1,7 +1,4 @@
 //! Compiles and runs tests for a Dojo project.
-use std::fmt::Display;
-use std::str::FromStr;
-
 use anyhow::{bail, Result};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
@@ -10,9 +7,8 @@ use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
-use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig, RunProfilerConfig};
-use clap::{Args, ValueEnum};
-use clap::builder::PossibleValue;
+use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig};
+use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
@@ -34,9 +30,9 @@ pub struct TestArgs {
     /// Should we run only the ignored tests.
     #[arg(long, default_value_t = false)]
     ignored: bool,
-    /// Configuration to run the profiler during the tests.
-    #[arg(long)]
-    profiler: ProfilerConfig,
+    /// Should we run the profiler.
+    #[arg(long, default_value_t = false)]
+    run_profiler: bool,
 }
 
 impl TestArgs {
@@ -77,8 +73,7 @@ impl TestArgs {
                 filter: self.filter.clone(),
                 ignored: self.ignored,
                 include_ignored: self.include_ignored,
-                // TODO: this run_profiler 
-                run_profiler: RunProfilerConfig
+                run_profiler: self.run_profiler,
             };
 
             let compiler = TestCompiler { db, main_crate_ids, test_crate_ids, starknet: true };
@@ -123,66 +118,4 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
     trace!(?project_config);
 
     Ok(project_config)
-}
-
-/// Whether to run the profiler, and what results to produce.
-/// With `Sierra`, run the profiler and produce sierra profiling information.
-/// With `Cairo`, run the profiler and additionally produce cairo profiling information (e.g.
-///     filtering out generated functions).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProfilerConfig {
-    Cairo,
-    Sierra,
-}
-
-impl Default for ProfilerConfig {
-    fn default() -> Self {
-        Self::Cairo
-    }
-}
-
-impl ValueEnum for ProfilerConfig {
-    fn value_variants<'a>() -> &'a [Self] {
-        &[Self::Cairo, Self::Sierra]
-    }
-
-    fn to_possible_value(&self) -> Option<PossibleValue> {
-        match self {
-            Self::Cairo => Some(PossibleValue::new("cairo")),
-            Self::Sierra => Some(PossibleValue::new("sierra")),
-        }
-    }
-}
-
-impl FromStr for ProfilerConfig {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "cairo" => Ok(Self::Cairo),
-            "sierra" => Ok(Self::Sierra),
-            _ => Err(anyhow::anyhow!("unknown profiler config: {}", s)),
-        }
-    }
-}
-
-impl Display for ProfilerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ProfilerConfig::Cairo => write!(f, "cairo"),
-            ProfilerConfig::Sierra => write!(f, "sierra"),
-        }
-    }
-}
-
-impl From<Option<ProfilerConfig>> for RunProfilerConfig {
-    fn from(value: Option<ProfilerConfig>) -> Self {
-        match value {
-            None => RunProfilerConfig::None,
-            Some(v) => match v {
-                ProfilerConfig::Cairo => RunProfilerConfig::Cairo,
-                ProfilerConfig::Sierra => RunProfilerConfig::Sierra,
-            }
-        }
-    }
 }
