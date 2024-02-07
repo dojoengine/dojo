@@ -193,6 +193,16 @@ impl CommandSender {
 
         rx.await.expect("Failed to receive response")
     }
+
+    pub async fn wait_for_connection(&mut self) -> Result<(), Error> {
+        let (tx, rx) = oneshot::channel();
+
+        self.sender
+            .unbounded_send(Command::WaitForConnection(tx))
+            .expect("Failed to send command");
+
+        rx.await.expect("Failed to receive response")
+    }
 }
 
 impl EventLoop {
