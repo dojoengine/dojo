@@ -34,6 +34,16 @@ error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models
 get!()
 ^****^
 
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:10:22
+fn test_func() { let key: felt252 = 0xb0b;
+                     ^*^
+
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:11:5
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
+    ^***^
+
 //! > ==========================================================================
 
 //! > Test wrong params
@@ -71,6 +81,16 @@ error: Plugin diagnostic: Invalid arguments. Expected "get!(world, keys, (models
  --> lib.cairo:12:1
 get!(world)
 ^*********^
+
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:10:22
+fn test_func() { let key: felt252 = 0xb0b;
+                     ^*^
+
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:11:5
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
+    ^***^
 
 //! > ==========================================================================
 
@@ -645,23 +665,7 @@ Block(
                                                                                                 EnumVariantCtor(
                                                                                                     ExprEnumVariantCtor {
                                                                                                         variant: ConcreteVariant {
-                                                                                                            concrete_enum_id: ConcreteEnumLongId {
-                                                                                                                enum_id: EnumId(
-                                                                                                                    5,
-                                                                                                                ),
-                                                                                                                generic_args: [
-                                                                                                                    Type(
-                                                                                                                        TypeId(
-                                                                                                                            3,
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                    Type(
-                                                                                                                        TypeId(
-                                                                                                                            328,
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ],
-                                                                                                            },
+                                                                                                            concrete_enum_id: core::result::Result::<(), core::fmt::Error>,
                                                                                                             id: VariantId(core::result::Ok),
                                                                                                             ty: (),
                                                                                                             idx: 0,
