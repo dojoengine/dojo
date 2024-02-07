@@ -24,7 +24,9 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::contract::{ComputeClassHashError, JsonError};
 use starknet::core::types::FromByteArrayError;
 
-use super::allocation::{DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
+use super::allocation::{
+    DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
+};
 use super::constant::{
     DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
     DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH, DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
@@ -561,7 +563,9 @@ mod tests {
 
     use super::{from_base64, GenesisClassJson, GenesisJson};
     use crate::block::GasPrices;
-    use crate::genesis::allocation::{DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
+    use crate::genesis::allocation::{
+        DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
+    };
     use crate::genesis::constant::{
         DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CONTRACT_CASM,
         DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
@@ -620,7 +624,7 @@ mod tests {
         let acc_3 = ContractAddress::from(felt!(
             "0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9"
         ));
-        let acc_4 =ContractAddress::from(felt!(
+        let acc_4 = ContractAddress::from(felt!(
             "0x053a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
         ));
 
@@ -662,7 +666,6 @@ mod tests {
         assert_eq!(json.accounts[&acc_4].nonce, None);
         assert_eq!(json.accounts[&acc_4].class, None);
         assert_eq!(json.accounts[&acc_4].storage, None);
-
 
         assert_eq!(json.contracts.len(), 3);
 
@@ -822,7 +825,7 @@ mod tests {
         let acc_3 = ContractAddress::from(felt!(
             "0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9"
         ));
-        let acc_4 =ContractAddress::from(felt!(
+        let acc_4 = ContractAddress::from(felt!(
             "0x053a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"
         ));
         let contract_1 = ContractAddress::from(felt!(
@@ -1089,12 +1092,10 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(
-            Genesis::try_from(json)
-                .unwrap_err()
-                .to_string()
-                .contains("Unresolved class artifact path")
-        );
+        assert!(Genesis::try_from(json)
+            .unwrap_err()
+            .to_string()
+            .contains("Unresolved class artifact path"));
     }
 
     #[test]
