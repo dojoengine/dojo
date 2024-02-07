@@ -8,8 +8,12 @@ use crate::sql::Sql;
 
 pub mod metadata_update;
 pub mod register_model;
+pub mod store_del_record;
 pub mod store_set_record;
 pub mod store_transaction;
+
+const MODEL_INDEX: usize = 0;
+const NUM_KEYS_INDEX: usize = 1;
 
 #[async_trait]
 pub trait EventProcessor<P>

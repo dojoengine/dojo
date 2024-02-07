@@ -4,9 +4,10 @@ use jsonrpsee::core::Error;
 pub use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::KatanaSequencer;
 pub use katana_core::sequencer::SequencerConfig;
-use katana_rpc::api::ApiKind;
+use katana_primitives::chain::ChainId;
 use katana_rpc::config::ServerConfig;
 use katana_rpc::{spawn, NodeHandle};
+use katana_rpc_api::ApiKind;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::FieldElement;
@@ -30,7 +31,11 @@ pub struct TestSequencer {
 
 impl TestSequencer {
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
-        let sequencer = Arc::new(KatanaSequencer::new(config, starknet_config).await);
+        let sequencer = Arc::new(
+            KatanaSequencer::new(config, starknet_config)
+                .await
+                .expect("Failed to create sequencer"),
+        );
 
         let handle = spawn(
             Arc::clone(&sequencer),
@@ -46,9 +51,11 @@ impl TestSequencer {
 
         let url = Url::parse(&format!("http://{}", handle.addr)).expect("Failed to parse URL");
 
-        let account = sequencer.backend.accounts[0].clone();
-        let account =
-            TestAccount { private_key: account.private_key, account_address: account.address };
+        let account = sequencer.backend.config.genesis.accounts().next().unwrap();
+        let account = TestAccount {
+            private_key: account.1.private_key().unwrap(),
+            account_address: (*account.0).into(),
+        };
 
         TestSequencer { sequencer, account, handle, url }
     }
@@ -79,7 +86,7 @@ impl TestSequencer {
 pub fn get_default_test_starknet_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
-        env: Environment { chain_id: "SN_GOERLI".into(), ..Default::default() },
+        env: Environment { chain_id: ChainId::GOERLI, ..Default::default() },
         ..Default::default()
     }
 }

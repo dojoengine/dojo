@@ -10,6 +10,8 @@ use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
+use futures::channel::mpsc::UnboundedReceiver;
+use futures_util::lock::Mutex;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -20,6 +22,7 @@ use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
+use torii_relay::client::{EventLoop, Message};
 
 use crate::client::error::{Error, ParseError};
 use crate::client::storage::ModelStorage;
@@ -34,6 +37,8 @@ pub struct Client {
     metadata: Arc<RwLock<WorldMetadata>>,
     /// The grpc client.
     inner: AsyncRwLock<torii_grpc::client::WorldClient>,
+    /// Relay client.
+    relay_client: torii_relay::client::RelayClient,
     /// Model storage
     storage: Arc<ModelStorage>,
     /// Models the client are subscribed to.
@@ -49,10 +54,13 @@ impl Client {
     pub async fn new(
         torii_url: String,
         rpc_url: String,
+        relay_url: String,
         world: FieldElement,
         models_keys: Option<Vec<KeysClause>>,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
+
+        let relay_client = torii_relay::client::RelayClient::new(relay_url)?;
 
         let metadata = grpc_client.metadata().await?;
 
@@ -88,8 +96,44 @@ impl Client {
             metadata: shared_metadata,
             sub_client_handle: OnceCell::new(),
             inner: AsyncRwLock::new(grpc_client),
+            relay_client,
             subscribed_models: subbed_models,
         })
+    }
+
+    /// Subscribes to a topic.
+    /// Returns true if the topic was subscribed to.
+    /// Returns false if the topic was already subscribed to.
+    pub async fn subscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
+        self.relay_client.command_sender.subscribe(topic).await.map_err(Error::RelayClient)
+    }
+
+    /// Unsubscribes from a topic.
+    /// Returns true if the topic was subscribed to.
+    pub async fn unsubscribe_topic(&mut self, topic: String) -> Result<bool, Error> {
+        self.relay_client.command_sender.unsubscribe(topic).await.map_err(Error::RelayClient)
+    }
+
+    /// Publishes a message to a topic.
+    /// Returns the message id.
+    pub async fn publish_message(&mut self, topic: &str, message: &[u8]) -> Result<Vec<u8>, Error> {
+        self.relay_client
+            .command_sender
+            .publish(topic.to_string(), message.to_vec())
+            .await
+            .map_err(Error::RelayClient)
+            .map(|m| m.0)
+    }
+
+    /// Returns the event loop of the relay client.
+    /// Which can then be used to run the relay client
+    pub fn relay_client_runner(&self) -> Arc<Mutex<EventLoop>> {
+        self.relay_client.event_loop.clone()
+    }
+
+    /// Returns the message receiver of the relay client.
+    pub fn relay_client_stream(&self) -> Arc<Mutex<UnboundedReceiver<Message>>> {
+        self.relay_client.message_receiver.clone()
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.
@@ -166,7 +210,8 @@ impl Client {
     /// Initiate the model subscriptions and returns a [SubscriptionService] which when await'ed
     /// will execute the subscription service and starts the syncing process.
     pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
-        let models_keys = self.subscribed_models.models_keys.read().clone().into_iter().collect();
+        let models_keys: Vec<KeysClause> =
+            self.subscribed_models.models_keys.read().clone().into_iter().collect();
         let sub_res_stream = self.initiate_subscription(models_keys).await?;
 
         let (service, handle) = SubscriptionService::new(

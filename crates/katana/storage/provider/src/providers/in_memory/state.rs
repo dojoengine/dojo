@@ -10,7 +10,7 @@ use katana_primitives::contract::{
 use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
 use crate::traits::contract::{ContractClassProvider, ContractInfoProvider};
 use crate::traits::state::StateProvider;
-use crate::Result;
+use crate::ProviderResult;
 
 pub struct StateSnapshot<Db> {
     // because the classes are shared between snapshots, when trying to fetch check the compiled
@@ -118,14 +118,14 @@ impl InMemoryStateDb {
 }
 
 impl ContractInfoProvider for InMemorySnapshot {
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
         let info = self.inner.contract_state.get(&address).cloned();
         Ok(info)
     }
 }
 
 impl StateProvider for InMemorySnapshot {
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+    fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         let nonce = ContractInfoProvider::contract(&self, address)?.map(|i| i.nonce);
         Ok(nonce)
     }
@@ -134,19 +134,22 @@ impl StateProvider for InMemorySnapshot {
         &self,
         address: ContractAddress,
         storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
+    ) -> ProviderResult<Option<StorageValue>> {
         let value = self.inner.storage.get(&address).and_then(|s| s.get(&storage_key)).copied();
         Ok(value)
     }
 
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+    fn class_hash_of_contract(
+        &self,
+        address: ContractAddress,
+    ) -> ProviderResult<Option<ClassHash>> {
         let class_hash = ContractInfoProvider::contract(&self, address)?.map(|i| i.class_hash);
         Ok(class_hash)
     }
 }
 
 impl ContractClassProvider for InMemorySnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
             Ok(self.classes.sierra_classes.read().get(&hash).cloned())
         } else {
@@ -154,7 +157,7 @@ impl ContractClassProvider for InMemorySnapshot {
         }
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
             Ok(self.classes.compiled_classes.read().get(&hash).cloned())
         } else {
@@ -165,7 +168,7 @@ impl ContractClassProvider for InMemorySnapshot {
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
+    ) -> ProviderResult<Option<CompiledClassHash>> {
         let hash = self.inner.compiled_class_hashes.get(&hash).cloned();
         Ok(hash)
     }
@@ -174,14 +177,14 @@ impl ContractClassProvider for InMemorySnapshot {
 pub(super) struct LatestStateProvider(pub(super) Arc<InMemoryStateDb>);
 
 impl ContractInfoProvider for LatestStateProvider {
-    fn contract(&self, address: ContractAddress) -> Result<Option<GenericContractInfo>> {
+    fn contract(&self, address: ContractAddress) -> ProviderResult<Option<GenericContractInfo>> {
         let info = self.0.contract_state.read().get(&address).cloned();
         Ok(info)
     }
 }
 
 impl StateProvider for LatestStateProvider {
-    fn nonce(&self, address: ContractAddress) -> Result<Option<Nonce>> {
+    fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         let nonce = ContractInfoProvider::contract(&self, address)?.map(|i| i.nonce);
         Ok(nonce)
     }
@@ -190,24 +193,27 @@ impl StateProvider for LatestStateProvider {
         &self,
         address: ContractAddress,
         storage_key: StorageKey,
-    ) -> Result<Option<StorageValue>> {
+    ) -> ProviderResult<Option<StorageValue>> {
         let value = self.0.storage.read().get(&address).and_then(|s| s.get(&storage_key)).copied();
         Ok(value)
     }
 
-    fn class_hash_of_contract(&self, address: ContractAddress) -> Result<Option<ClassHash>> {
+    fn class_hash_of_contract(
+        &self,
+        address: ContractAddress,
+    ) -> ProviderResult<Option<ClassHash>> {
         let class_hash = ContractInfoProvider::contract(&self, address)?.map(|i| i.class_hash);
         Ok(class_hash)
     }
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> Result<Option<FlattenedSierraClass>> {
+    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         let class = self.0.shared_contract_classes.sierra_classes.read().get(&hash).cloned();
         Ok(class)
     }
 
-    fn class(&self, hash: ClassHash) -> Result<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
         let class = self.0.shared_contract_classes.compiled_classes.read().get(&hash).cloned();
         Ok(class)
     }
@@ -215,7 +221,7 @@ impl ContractClassProvider for LatestStateProvider {
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
-    ) -> Result<Option<CompiledClassHash>> {
+    ) -> ProviderResult<Option<CompiledClassHash>> {
         let hash = self.0.compiled_class_hashes.read().get(&hash).cloned();
         Ok(hash)
     }

@@ -97,7 +97,12 @@ pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
 
 fn parse_simple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     let ty = parse_cairo_short_string(&data[0])?;
-    Ok(Ty::Primitive(Primitive::from_str(&ty).expect("must be valid schema")))
+    let primitive = match Primitive::from_str(&ty) {
+        Ok(primitive) => primitive,
+        Err(_) => return Err(ParseError::InvalidSchema),
+    };
+
+    Ok(Ty::Primitive(primitive))
 }
 
 fn parse_struct(data: &[FieldElement]) -> Result<Ty, ParseError> {
@@ -190,4 +195,17 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     }
 
     Ok(Ty::Tuple(children))
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet::core::types::FieldElement;
+
+    use crate::packing::ParseError;
+
+    #[test]
+    fn parse_simple_with_invalid_value() {
+        let data = &vec![FieldElement::default()];
+        assert!(matches!(super::parse_simple(data), Err(ParseError::InvalidSchema)));
+    }
 }

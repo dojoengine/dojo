@@ -99,7 +99,7 @@ pub fn handle_introspect_struct(db: &dyn SyntaxGroup, struct_ast: ItemStruct) ->
 /// A handler for Dojo code derives Introspect for an enum
 /// Parameters:
 /// * db: The semantic database.
-/// * struct_ast: The AST of the struct.
+/// * enum_ast: The AST of the enum.
 /// Returns:
 /// * A RewriteNode containing the generated code.
 pub fn handle_introspect_enum(

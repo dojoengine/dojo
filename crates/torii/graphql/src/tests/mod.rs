@@ -27,6 +27,7 @@ use tokio::sync::broadcast;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
+use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
@@ -135,6 +136,14 @@ pub struct Subrecord {
     pub record_id: u32,
     pub subrecord_id: u32,
     pub type_u8: u8,
+    pub random_u8: u8,
+    pub entity: Option<Entity>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct RecordSibling {
+    pub __typename: String,
+    pub record_id: u32,
     pub random_u8: u8,
     pub entity: Option<Entity>,
 }
@@ -270,14 +279,28 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let manifest =
         Manifest::load_from_remote(&provider, migration.world_address().unwrap()).await.unwrap();
 
-    //  Execute `create` and insert 10 records into storage
+    //  Execute `create` and insert 11 records into storage
     let records_contract =
         manifest.contracts.iter().find(|contract| contract.name.eq("records")).unwrap();
+    let record_contract_address = records_contract.address.unwrap();
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],
-            to: records_contract.address.unwrap(),
+            to: record_contract_address,
             selector: selector!("create"),
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(transaction_hash, &provider).await?;
+
+    // Execute `delete` and delete Record with id 20
+    let InvokeTransactionResult { transaction_hash } = account
+        .execute(vec![Call {
+            calldata: vec![FieldElement::from_str("0x14").unwrap()],
+            to: record_contract_address,
+            selector: selector!("delete"),
         }])
         .send()
         .await
@@ -291,7 +314,11 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         &mut db,
         &provider,
         Processors {
-            event: vec![Box::new(RegisterModelProcessor), Box::new(StoreSetRecordProcessor)],
+            event: vec![
+                Box::new(RegisterModelProcessor),
+                Box::new(StoreSetRecordProcessor),
+                Box::new(StoreDelRecordProcessor),
+            ],
             ..Processors::default()
         },
         EngineConfig::default(),

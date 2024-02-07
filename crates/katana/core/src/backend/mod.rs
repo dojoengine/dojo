@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use blockifier::block_context::BlockContext;
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::chain::ChainId;
+use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
@@ -19,8 +19,6 @@ use starknet::core::types::{BlockId, BlockStatus, MaybePendingBlockWithTxHashes}
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::ChainId;
 use tracing::{info, trace};
 
 pub mod config;
@@ -29,35 +27,29 @@ pub mod storage;
 
 use self::config::StarknetConfig;
 use self::storage::Blockchain;
-use crate::accounts::{Account, DevAccountGenerator};
-use crate::constants::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
-use crate::env::{BlockContextGenerator, Env};
-use crate::service::block_producer::MinedBlockOutcome;
+use crate::constants::MAX_RECURSION_DEPTH;
+use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
+use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
 use crate::utils::get_current_timestamp;
 
 pub struct Backend {
     /// The config used to generate the backend.
-    pub config: RwLock<StarknetConfig>,
+    pub config: StarknetConfig,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
-    /// The chain environment values.
-    pub env: Arc<RwLock<Env>>,
+    /// The chain id.
+    pub chain_id: ChainId,
+    /// The block context generator.
     pub block_context_generator: RwLock<BlockContextGenerator>,
-    /// Prefunded dev accounts
-    pub accounts: Vec<Account>,
 }
 
 impl Backend {
-    pub async fn new(config: StarknetConfig) -> Self {
-        let mut block_context = config.block_context();
+    pub async fn new(mut config: StarknetConfig) -> Self {
         let block_context_generator = config.block_context_generator();
 
-        let accounts = DevAccountGenerator::new(config.total_accounts)
-            .with_seed(config.seed)
-            .with_balance(*DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
-            .generate();
-
-        let blockchain: Blockchain = if let Some(forked_url) = &config.fork_rpc_url {
+        let (blockchain, chain_id): (Blockchain, ChainId) = if let Some(forked_url) =
+            &config.fork_rpc_url
+        {
             let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(forked_url.clone())));
             let forked_chain_id = provider.chain_id().await.unwrap();
 
@@ -76,10 +68,15 @@ impl Backend {
                 panic!("block to be forked is a pending block")
             };
 
-            block_context.block_number = BlockNumber(block.block_number);
-            block_context.block_timestamp = BlockTimestamp(block.timestamp);
-            block_context.sequencer_address = ContractAddress(block.sequencer_address).into();
-            block_context.chain_id = ChainId(parse_cairo_short_string(&forked_chain_id).unwrap());
+            // adjust the genesis to match the forked block
+            config.genesis.number = block.block_number;
+            config.genesis.state_root = block.new_root;
+            config.genesis.parent_hash = block.parent_hash;
+            config.genesis.timestamp = block.timestamp;
+            config.genesis.sequencer_address = block.sequencer_address.into();
+            config.genesis.gas_prices.eth = block.l1_gas_price.price_in_wei;
+            config.genesis.gas_prices.strk =
+                block.l1_gas_price.price_in_strk.unwrap_or(config.env.gas_price);
 
             trace!(
                 target: "backend",
@@ -89,36 +86,36 @@ impl Backend {
                 forked_url
             );
 
-            Blockchain::new_from_forked(
-                ForkedProvider::new(provider, forked_block_num.into()),
+            let blockchain = Blockchain::new_from_forked(
+                ForkedProvider::new(provider, forked_block_num.into()).unwrap(),
                 block.block_hash,
-                block.parent_hash,
-                &block_context,
-                block.new_root,
+                &config.genesis,
                 match block.status {
                     BlockStatus::AcceptedOnL1 => FinalityStatus::AcceptedOnL1,
                     BlockStatus::AcceptedOnL2 => FinalityStatus::AcceptedOnL2,
                     _ => panic!("unable to fork for non-accepted block"),
                 },
             )
-            .expect("able to create forked blockchain")
+            .expect("able to create forked blockchain");
+
+            (blockchain, forked_chain_id.into())
+        } else if let Some(db_path) = &config.db_dir {
+            (
+                Blockchain::new_with_db(db_path, &config.genesis)
+                    .expect("able to create blockchain from db"),
+                config.env.chain_id,
+            )
         } else {
-            Blockchain::new_with_genesis(InMemoryProvider::new(), &block_context)
-                .expect("able to create blockchain from genesis block")
+            let blockchain = Blockchain::new_with_genesis(InMemoryProvider::new(), &config.genesis)
+                .expect("able to create blockchain from genesis block");
+
+            (blockchain, config.env.chain_id)
         };
 
-        let env = Env { block: block_context };
-
-        for acc in &accounts {
-            acc.deploy_and_fund(blockchain.provider())
-                .expect("should be able to deploy and fund dev account");
-        }
-
         Self {
-            accounts,
+            chain_id,
             blockchain,
-            config: RwLock::new(config),
-            env: Arc::new(RwLock::new(env)),
+            config,
             block_context_generator: RwLock::new(block_context_generator),
         }
     }
@@ -129,38 +126,38 @@ impl Backend {
     /// is running in `interval` mining mode.
     pub fn mine_pending_block(
         &self,
+        block_env: &BlockEnv,
         tx_receipt_pairs: Vec<(TxWithHash, Receipt)>,
         state_updates: StateUpdatesWithDeclaredClasses,
-    ) -> (MinedBlockOutcome, Box<dyn StateProvider>) {
-        let block_context = self.env.read().block.clone();
-        let outcome = self.do_mine_block(block_context, tx_receipt_pairs, state_updates);
-        let new_state = StateFactoryProvider::latest(&self.blockchain.provider()).unwrap();
-        (outcome, new_state)
+    ) -> Result<(MinedBlockOutcome, Box<dyn StateProvider>), BlockProductionError> {
+        let outcome = self.do_mine_block(block_env, tx_receipt_pairs, state_updates)?;
+        let new_state = StateFactoryProvider::latest(&self.blockchain.provider())?;
+        Ok((outcome, new_state))
     }
 
     pub fn do_mine_block(
         &self,
-        block_context: BlockContext,
+        block_env: &BlockEnv,
         tx_receipt_pairs: Vec<(TxWithHash, Receipt)>,
         state_updates: StateUpdatesWithDeclaredClasses,
-    ) -> MinedBlockOutcome {
+    ) -> Result<MinedBlockOutcome, BlockProductionError> {
         let (txs, receipts): (Vec<TxWithHash>, Vec<Receipt>) = tx_receipt_pairs.into_iter().unzip();
 
-        let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider()).unwrap();
+        let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
 
         let partial_header = PartialHeader {
             parent_hash: prev_hash,
             version: CURRENT_STARKNET_VERSION,
-            timestamp: block_context.block_timestamp.0,
-            sequencer_address: block_context.sequencer_address.into(),
+            timestamp: block_env.timestamp,
+            sequencer_address: block_env.sequencer_address,
             gas_prices: GasPrices {
-                eth_gas_price: block_context.gas_prices.eth_l1_gas_price.try_into().unwrap(),
-                strk_gas_price: block_context.gas_prices.strk_l1_gas_price.try_into().unwrap(),
+                eth: block_env.l1_gas_prices.eth,
+                strk: block_env.l1_gas_prices.strk,
             },
         };
 
         let tx_count = txs.len();
-        let block_number = block_context.block_number.0;
+        let block_number = block_env.number;
 
         let header = Header::new(partial_header, block_number, FieldElement::ZERO);
         let block = Block { header, body: txs }.seal();
@@ -171,17 +168,15 @@ impl Backend {
             block,
             state_updates,
             receipts,
-        )
-        .unwrap();
+        )?;
 
         info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
 
-        MinedBlockOutcome { block_number }
+        Ok(MinedBlockOutcome { block_number })
     }
 
-    pub fn update_block_context(&self) {
+    pub fn update_block_env(&self, block_env: &mut BlockEnv) {
         let mut context_gen = self.block_context_generator.write();
-        let block_context = &mut self.env.write().block;
         let current_timestamp_secs = get_current_timestamp().as_secs() as i64;
 
         let timestamp = if context_gen.next_block_start_time == 0 {
@@ -193,14 +188,86 @@ impl Backend {
             timestamp
         };
 
-        block_context.block_number = block_context.block_number.next();
-        block_context.block_timestamp = BlockTimestamp(timestamp);
+        block_env.number += 1;
+        block_env.timestamp = timestamp;
     }
 
-    /// Updates the block context and mines an empty block.
-    pub fn mine_empty_block(&self) -> MinedBlockOutcome {
-        self.update_block_context();
-        let block_context = self.env.read().block.clone();
-        self.do_mine_block(block_context, Default::default(), Default::default())
+    /// Retrieves the chain configuration environment values.
+    pub(crate) fn chain_cfg_env(&self) -> CfgEnv {
+        CfgEnv {
+            chain_id: self.chain_id,
+            vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
+            invoke_tx_max_n_steps: self.config.env.invoke_max_steps,
+            validate_max_n_steps: self.config.env.validate_max_steps,
+            max_recursion_depth: MAX_RECURSION_DEPTH,
+            fee_token_addresses: FeeTokenAddressses {
+                eth: self.config.genesis.fee_token.address,
+                strk: Default::default(),
+            },
+        }
+    }
+
+    pub fn mine_empty_block(
+        &self,
+        block_env: &BlockEnv,
+    ) -> Result<MinedBlockOutcome, BlockProductionError> {
+        self.do_mine_block(block_env, Default::default(), Default::default())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use katana_primitives::genesis::Genesis;
+    use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
+    use katana_provider::traits::env::BlockEnvProvider;
+
+    use super::Backend;
+    use crate::backend::config::{Environment, StarknetConfig};
+
+    fn create_test_starknet_config() -> StarknetConfig {
+        StarknetConfig {
+            genesis: Genesis::default(),
+            disable_fee: true,
+            env: Environment::default(),
+            ..Default::default()
+        }
+    }
+
+    async fn create_test_backend() -> Backend {
+        Backend::new(create_test_starknet_config()).await
+    }
+
+    #[tokio::test]
+    async fn test_creating_blocks() {
+        let backend = create_test_backend().await;
+
+        let provider = backend.blockchain.provider();
+
+        assert_eq!(BlockNumberProvider::latest_number(provider).unwrap(), 0);
+
+        let block_num = provider.latest_number().unwrap();
+        let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+        backend.update_block_env(&mut block_env);
+        backend.mine_empty_block(&block_env).unwrap();
+
+        let block_num = provider.latest_number().unwrap();
+        let mut block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+        backend.update_block_env(&mut block_env);
+        backend.mine_empty_block(&block_env).unwrap();
+
+        let block_num = provider.latest_number().unwrap();
+        let block_env = provider.block_env_at(block_num.into()).unwrap().unwrap();
+
+        assert_eq!(BlockNumberProvider::latest_number(provider).unwrap(), 2);
+        assert_eq!(block_env.number, 2);
+
+        let block0 = BlockProvider::block_by_number(provider, 0).unwrap().unwrap();
+        let block1 = BlockProvider::block_by_number(provider, 1).unwrap().unwrap();
+        let block2 = BlockProvider::block_by_number(provider, 2).unwrap().unwrap();
+
+        assert_eq!(block0.header.number, 0);
+        assert_eq!(block1.header.number, 1);
+        assert_eq!(block2.header.number, 2);
     }
 }

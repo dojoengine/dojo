@@ -1,19 +1,19 @@
 use katana_primitives::block::{Block, BlockHash, BlockNumber, FinalityStatus, PartialHeader};
 use katana_primitives::transaction::{TxHash, TxWithHash};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{BlockStatus, ResourcePrice};
 
 pub type BlockTxCount = u64;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockWithTxs(starknet::core::types::BlockWithTxs);
 
 impl BlockWithTxs {
     pub fn new(block_hash: BlockHash, block: Block, finality_status: FinalityStatus) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: block.header.gas_prices.eth_gas_price,
-            price_in_strk: Some(block.header.gas_prices.strk_gas_price),
+            price_in_wei: block.header.gas_prices.eth,
+            price_in_strk: Some(block.header.gas_prices.strk),
         };
 
         let transactions =
@@ -37,7 +37,7 @@ impl BlockWithTxs {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PendingBlockWithTxs(starknet::core::types::PendingBlockWithTxs);
 
@@ -47,8 +47,8 @@ impl PendingBlockWithTxs {
             transactions.into_iter().map(|tx| crate::transaction::Tx::from(tx).0).collect();
 
         let l1_gas_price = ResourcePrice {
-            price_in_wei: header.gas_prices.eth_gas_price,
-            price_in_strk: Some(header.gas_prices.strk_gas_price),
+            price_in_wei: header.gas_prices.eth,
+            price_in_strk: Some(header.gas_prices.strk),
         };
 
         Self(starknet::core::types::PendingBlockWithTxs {
@@ -62,14 +62,14 @@ impl PendingBlockWithTxs {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MaybePendingBlockWithTxs {
     Pending(PendingBlockWithTxs),
     Block(BlockWithTxs),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockWithTxHashes(starknet::core::types::BlockWithTxHashes);
 
@@ -80,8 +80,8 @@ impl BlockWithTxHashes {
         finality_status: FinalityStatus,
     ) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: block.header.gas_prices.eth_gas_price,
-            price_in_strk: Some(block.header.gas_prices.strk_gas_price),
+            price_in_wei: block.header.gas_prices.eth,
+            price_in_strk: Some(block.header.gas_prices.strk),
         };
 
         Self(starknet::core::types::BlockWithTxHashes {
@@ -102,15 +102,15 @@ impl BlockWithTxHashes {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PendingBlockWithTxHashes(starknet::core::types::PendingBlockWithTxHashes);
 
 impl PendingBlockWithTxHashes {
     pub fn new(header: PartialHeader, transactions: Vec<TxHash>) -> Self {
         let l1_gas_price = ResourcePrice {
-            price_in_wei: header.gas_prices.eth_gas_price,
-            price_in_strk: Some(header.gas_prices.strk_gas_price),
+            price_in_wei: header.gas_prices.eth,
+            price_in_strk: Some(header.gas_prices.strk),
         };
 
         Self(starknet::core::types::PendingBlockWithTxHashes {
@@ -124,14 +124,14 @@ impl PendingBlockWithTxHashes {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MaybePendingBlockWithTxHashes {
     Pending(PendingBlockWithTxHashes),
     Block(BlockWithTxHashes),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct BlockHashAndNumber(starknet::core::types::BlockHashAndNumber);
 

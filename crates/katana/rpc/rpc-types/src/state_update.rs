@@ -1,20 +1,20 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, NonceUpdate, StorageEntry,
 };
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MaybePendingStateUpdate {
     Pending(PendingStateUpdate),
     Update(StateUpdate),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct StateUpdate(starknet::core::types::StateUpdate);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct PendingStateUpdate(starknet::core::types::PendingStateUpdate);
 

@@ -11,6 +11,7 @@ pub const ID_COLUMN: &str = "id";
 pub const EVENT_ID_COLUMN: &str = "event_id";
 pub const ENTITY_ID_COLUMN: &str = "entity_id";
 pub const JSON_COLUMN: &str = "json";
+pub const TRANSACTION_HASH_COLUMN: &str = "transaction_hash";
 
 pub const INTERNAL_ENTITY_ID_KEY: &str = "$entity_id$";
 
@@ -36,6 +37,7 @@ pub const SOCIAL_NAMES: (&str, &str) = ("social", "socials");
 pub const CONTENT_NAMES: (&str, &str) = ("content", "contents");
 pub const METADATA_NAMES: (&str, &str) = ("metadata", "metadatas");
 pub const TRANSACTION_NAMES: (&str, &str) = ("transaction", "transactions");
+pub const PAGE_INFO_NAMES: (&str, &str) = ("pageInfo", "");
 
 // misc
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";
