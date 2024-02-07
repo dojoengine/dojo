@@ -11,7 +11,7 @@ use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
-use tracing::{error, info, warn};
+use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
@@ -48,6 +48,11 @@ pub struct Engine<'db, P: Provider + Sync> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
+}
+
+struct UnprocessedEvent {
+    keys: Vec<String>,
+    data: Vec<String>,
 }
 
 impl<'db, P: Provider + Sync> Engine<'db, P> {
@@ -253,6 +258,17 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 processor
                     .process(&self.world, self.db, block, invoke_receipt, event_id, event)
                     .await?;
+            } else {
+                let unprocessed_event = UnprocessedEvent {
+                    keys: event.keys.iter().map(|k| format!("{:#x}", k)).collect(),
+                    data: event.data.iter().map(|d| format!("{:#x}", d)).collect(),
+                };
+
+                trace!(
+                    keys = ?unprocessed_event.keys,
+                    data = ?unprocessed_event.data,
+                    "unprocessed event",
+                );
             }
         }
         Ok(())
