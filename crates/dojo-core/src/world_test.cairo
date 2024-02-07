@@ -293,7 +293,7 @@ fn test_entities() {
 
     let mut query_keys = ArrayTrait::new();
     let layout = array![251].span();
-    let (keys, values) = world.entities('Foo', Option::None, query_keys.span(), 2, layout);
+    let (keys, _values) = world.entities('Foo', Option::None, query_keys.span(), 2, layout);
     let ids = world.entity_ids('Foo');
     assert(keys.len() == ids.len(), 'result differs in entity_ids');
     assert(keys.len() == 0, 'found value for unindexed');
@@ -410,7 +410,6 @@ fn test_set_writer_fails_for_non_owner() {
     world.grant_writer(42, 69.try_into().unwrap());
 }
 
-
 #[test]
 #[available_gas(60000000)]
 fn test_execute_multiple_worlds() {
@@ -436,6 +435,7 @@ fn test_execute_multiple_worlds() {
 
     let data1 = get!(world1, alice, Foo);
     let data2 = get!(world2, alice, Foo);
+
     assert(data1.a == 1337, 'data1 not stored');
     assert(data2.a == 7331, 'data2 not stored');
 }
