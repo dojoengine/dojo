@@ -13,13 +13,7 @@ use katana_db::models::contract::{
 use katana_db::models::storage::{
     ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
 };
-use katana_db::tables::{
-    BlockBodyIndices, BlockHashes, BlockNumbers, BlockStatusses, ClassDeclarationBlock,
-    ClassDeclarations, CompiledClassHashes, CompiledContractClasses, ContractClassChanges,
-    ContractInfo, ContractInfoChangeSet, ContractStorage, DupSort, Headers, NonceChanges, Receipts,
-    SierraClasses, StorageChangeSet, StorageChanges, Table, Transactions, TxBlocks, TxHashes,
-    TxNumbers,
-};
+use katana_db::tables::{self, DupSort, Table};
 use katana_db::utils::KeyValue;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
@@ -91,14 +85,14 @@ impl StateFactoryProvider for DbProvider {
 impl BlockNumberProvider for DbProvider {
     fn block_number_by_hash(&self, hash: BlockHash) -> ProviderResult<Option<BlockNumber>> {
         let db_tx = self.0.tx()?;
-        let block_num = db_tx.get::<BlockNumbers>(hash)?;
+        let block_num = db_tx.get::<tables::BlockNumbers>(hash)?;
         db_tx.commit()?;
         Ok(block_num)
     }
 
     fn latest_number(&self) -> ProviderResult<BlockNumber> {
         let db_tx = self.0.tx()?;
-        let res = db_tx.cursor::<BlockHashes>()?.last()?.map(|(num, _)| num);
+        let res = db_tx.cursor::<tables::BlockHashes>()?.last()?.map(|(num, _)| num);
         let total_blocks = res.ok_or(ProviderError::MissingLatestBlockNumber)?;
         db_tx.commit()?;
         Ok(total_blocks)
@@ -109,14 +103,14 @@ impl BlockHashProvider for DbProvider {
     fn latest_hash(&self) -> ProviderResult<BlockHash> {
         let latest_block = self.latest_number()?;
         let db_tx = self.0.tx()?;
-        let latest_hash = db_tx.get::<BlockHashes>(latest_block)?;
+        let latest_hash = db_tx.get::<tables::BlockHashes>(latest_block)?;
         db_tx.commit()?;
         latest_hash.ok_or(ProviderError::MissingLatestBlockHash)
     }
 
     fn block_hash_by_num(&self, num: BlockNumber) -> ProviderResult<Option<BlockHash>> {
         let db_tx = self.0.tx()?;
-        let block_hash = db_tx.get::<BlockHashes>(num)?;
+        let block_hash = db_tx.get::<tables::BlockHashes>(num)?;
         db_tx.commit()?;
         Ok(block_hash)
     }
@@ -128,12 +122,12 @@ impl HeaderProvider for DbProvider {
 
         let num = match id {
             BlockHashOrNumber::Num(num) => Some(num),
-            BlockHashOrNumber::Hash(hash) => db_tx.get::<BlockNumbers>(hash)?,
+            BlockHashOrNumber::Hash(hash) => db_tx.get::<tables::BlockNumbers>(hash)?,
         };
 
         if let Some(num) = num {
             let header =
-                db_tx.get::<Headers>(num)?.ok_or(ProviderError::MissingBlockHeader(num))?;
+                db_tx.get::<tables::Headers>(num)?.ok_or(ProviderError::MissingBlockHeader(num))?;
             db_tx.commit()?;
             Ok(Some(header))
         } else {
@@ -151,11 +145,11 @@ impl BlockProvider for DbProvider {
 
         let block_num = match id {
             BlockHashOrNumber::Num(num) => Some(num),
-            BlockHashOrNumber::Hash(hash) => db_tx.get::<BlockNumbers>(hash)?,
+            BlockHashOrNumber::Hash(hash) => db_tx.get::<tables::BlockNumbers>(hash)?,
         };
 
         if let Some(num) = block_num {
-            let indices = db_tx.get::<BlockBodyIndices>(num)?;
+            let indices = db_tx.get::<tables::BlockBodyIndices>(num)?;
             db_tx.commit()?;
             Ok(indices)
         } else {
@@ -185,13 +179,13 @@ impl BlockProvider for DbProvider {
 
         let block_num = match id {
             BlockHashOrNumber::Num(num) => Some(num),
-            BlockHashOrNumber::Hash(hash) => db_tx.get::<BlockNumbers>(hash)?,
+            BlockHashOrNumber::Hash(hash) => db_tx.get::<tables::BlockNumbers>(hash)?,
         };
 
         let Some(block_num) = block_num else { return Ok(None) };
 
-        if let Some(header) = db_tx.get::<Headers>(block_num)? {
-            let res = db_tx.get::<BlockBodyIndices>(block_num)?;
+        if let Some(header) = db_tx.get::<tables::Headers>(block_num)? {
+            let res = db_tx.get::<tables::BlockBodyIndices>(block_num)?;
             let body_indices = res.ok_or(ProviderError::MissingBlockTxs(block_num))?;
 
             let body = self.transaction_hashes_in_range(Range::from(body_indices))?;
@@ -212,8 +206,8 @@ impl BlockProvider for DbProvider {
         let mut blocks = Vec::with_capacity(total as usize);
 
         for num in range {
-            if let Some(header) = db_tx.get::<Headers>(num)? {
-                let res = db_tx.get::<BlockBodyIndices>(num)?;
+            if let Some(header) = db_tx.get::<tables::Headers>(num)? {
+                let res = db_tx.get::<tables::BlockBodyIndices>(num)?;
                 let body_indices = res.ok_or(ProviderError::MissingBlockBodyIndices(num))?;
 
                 let body = self.transaction_in_range(Range::from(body_indices))?;
@@ -236,7 +230,7 @@ impl BlockStatusProvider for DbProvider {
         };
 
         if let Some(block_num) = block_num {
-            let res = db_tx.get::<BlockStatusses>(block_num)?;
+            let res = db_tx.get::<tables::BlockStatusses>(block_num)?;
             let status = res.ok_or(ProviderError::MissingBlockStatus(block_num))?;
 
             db_tx.commit()?;
@@ -253,11 +247,11 @@ impl StateRootProvider for DbProvider {
 
         let block_num = match block_id {
             BlockHashOrNumber::Num(num) => Some(num),
-            BlockHashOrNumber::Hash(hash) => db_tx.get::<BlockNumbers>(hash)?,
+            BlockHashOrNumber::Hash(hash) => db_tx.get::<tables::BlockNumbers>(hash)?,
         };
 
         if let Some(block_num) = block_num {
-            let header = db_tx.get::<Headers>(block_num)?;
+            let header = db_tx.get::<tables::Headers>(block_num)?;
             db_tx.commit()?;
             Ok(header.map(|h| h.state_root))
         } else {
@@ -291,17 +285,17 @@ impl StateUpdateProvider for DbProvider {
         let block_num = self.block_number_by_id(block_id)?;
 
         if let Some(block_num) = block_num {
-            let nonce_updates = dup_entries::<NonceChanges, HashMap<ContractAddress, Nonce>, _>(
-                &db_tx,
-                block_num,
-                |entry| {
-                    let (_, ContractNonceChange { contract_address, nonce }) = entry?;
-                    Ok((contract_address, nonce))
-                },
-            )?;
+            let nonce_updates = dup_entries::<
+                tables::NonceChanges,
+                HashMap<ContractAddress, Nonce>,
+                _,
+            >(&db_tx, block_num, |entry| {
+                let (_, ContractNonceChange { contract_address, nonce }) = entry?;
+                Ok((contract_address, nonce))
+            })?;
 
             let contract_updates = dup_entries::<
-                ContractClassChanges,
+                tables::ContractClassChanges,
                 HashMap<ContractAddress, ClassHash>,
                 _,
             >(&db_tx, block_num, |entry| {
@@ -310,14 +304,14 @@ impl StateUpdateProvider for DbProvider {
             })?;
 
             let declared_classes = dup_entries::<
-                ClassDeclarations,
+                tables::ClassDeclarations,
                 HashMap<ClassHash, CompiledClassHash>,
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, class_hash) = entry?;
 
                 let compiled_hash = db_tx
-                    .get::<CompiledClassHashes>(class_hash)?
+                    .get::<tables::CompiledClassHashes>(class_hash)?
                     .ok_or(ProviderError::MissingCompiledClassHash(class_hash))?;
 
                 Ok((class_hash, compiled_hash))
@@ -325,7 +319,7 @@ impl StateUpdateProvider for DbProvider {
 
             let storage_updates = {
                 let entries = dup_entries::<
-                    StorageChanges,
+                    tables::StorageChanges,
                     Vec<(ContractAddress, (StorageKey, StorageValue))>,
                     _,
                 >(&db_tx, block_num, |entry| {
@@ -359,8 +353,8 @@ impl TransactionProvider for DbProvider {
     fn transaction_by_hash(&self, hash: TxHash) -> ProviderResult<Option<TxWithHash>> {
         let db_tx = self.0.tx()?;
 
-        if let Some(num) = db_tx.get::<TxNumbers>(hash)? {
-            let res = db_tx.get::<Transactions>(num)?;
+        if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
+            let res = db_tx.get::<tables::Transactions>(num)?;
             let transaction = res.ok_or(ProviderError::MissingTx(num))?;
             let transaction = TxWithHash { hash, transaction };
             db_tx.commit()?;
@@ -389,8 +383,8 @@ impl TransactionProvider for DbProvider {
         let mut transactions = Vec::with_capacity(total as usize);
 
         for i in range {
-            if let Some(transaction) = db_tx.get::<Transactions>(i)? {
-                let res = db_tx.get::<TxHashes>(i)?;
+            if let Some(transaction) = db_tx.get::<tables::Transactions>(i)? {
+                let res = db_tx.get::<tables::TxHashes>(i)?;
                 let hash = res.ok_or(ProviderError::MissingTxHash(i))?;
 
                 transactions.push(TxWithHash { hash, transaction });
@@ -406,11 +400,11 @@ impl TransactionProvider for DbProvider {
         hash: TxHash,
     ) -> ProviderResult<Option<(BlockNumber, BlockHash)>> {
         let db_tx = self.0.tx()?;
-        if let Some(num) = db_tx.get::<TxNumbers>(hash)? {
+        if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
             let block_num =
-                db_tx.get::<TxBlocks>(num)?.ok_or(ProviderError::MissingTxBlock(num))?;
+                db_tx.get::<tables::TxBlocks>(num)?.ok_or(ProviderError::MissingTxBlock(num))?;
 
-            let res = db_tx.get::<BlockHashes>(block_num)?;
+            let res = db_tx.get::<tables::BlockHashes>(block_num)?;
             let block_hash = res.ok_or(ProviderError::MissingBlockHash(num))?;
 
             db_tx.commit()?;
@@ -432,10 +426,10 @@ impl TransactionProvider for DbProvider {
             Some(indices) if idx < indices.tx_count => {
                 let num = indices.tx_offset + idx;
 
-                let res = db_tx.get::<TxHashes>(num)?;
+                let res = db_tx.get::<tables::TxHashes>(num)?;
                 let hash = res.ok_or(ProviderError::MissingTxHash(num))?;
 
-                let res = db_tx.get::<Transactions>(num)?;
+                let res = db_tx.get::<tables::Transactions>(num)?;
                 let transaction = res.ok_or(ProviderError::MissingTx(num))?;
 
                 db_tx.commit()?;
@@ -468,7 +462,7 @@ impl TransactionsProviderExt for DbProvider {
         let mut hashes = Vec::with_capacity(total as usize);
 
         for i in range {
-            if let Some(hash) = db_tx.get::<TxHashes>(i)? {
+            if let Some(hash) = db_tx.get::<tables::TxHashes>(i)? {
                 hashes.push(hash);
             }
         }
@@ -481,11 +475,11 @@ impl TransactionsProviderExt for DbProvider {
 impl TransactionStatusProvider for DbProvider {
     fn transaction_status(&self, hash: TxHash) -> ProviderResult<Option<FinalityStatus>> {
         let db_tx = self.0.tx()?;
-        if let Some(tx_num) = db_tx.get::<TxNumbers>(hash)? {
-            let res = db_tx.get::<TxBlocks>(tx_num)?;
+        if let Some(tx_num) = db_tx.get::<tables::TxNumbers>(hash)? {
+            let res = db_tx.get::<tables::TxBlocks>(tx_num)?;
             let block_num = res.ok_or(ProviderError::MissingTxBlock(tx_num))?;
 
-            let res = db_tx.get::<BlockStatusses>(block_num)?;
+            let res = db_tx.get::<tables::BlockStatusses>(block_num)?;
             let status = res.ok_or(ProviderError::MissingBlockStatus(block_num))?;
 
             db_tx.commit()?;
@@ -499,7 +493,7 @@ impl TransactionStatusProvider for DbProvider {
 impl ReceiptProvider for DbProvider {
     fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
         let db_tx = self.0.tx()?;
-        if let Some(num) = db_tx.get::<TxNumbers>(hash)? {
+        if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
             let receipt = db_tx
                 .get::<katana_db::tables::Receipts>(num)?
                 .ok_or(ProviderError::MissingTxReceipt(num))?;
@@ -521,7 +515,7 @@ impl ReceiptProvider for DbProvider {
 
             let range = indices.tx_offset..indices.tx_offset + indices.tx_count;
             for i in range {
-                if let Some(receipt) = db_tx.get::<Receipts>(i)? {
+                if let Some(receipt) = db_tx.get::<tables::Receipts>(i)? {
                     receipts.push(receipt);
                 }
             }
@@ -562,47 +556,47 @@ impl BlockWriter for DbProvider {
             let transactions = block.block.body;
 
             let tx_count = transactions.len() as u64;
-            let tx_offset = db_tx.entries::<Transactions>()? as u64;
+            let tx_offset = db_tx.entries::<tables::Transactions>()? as u64;
             let block_body_indices = StoredBlockBodyIndices { tx_offset, tx_count };
 
-            db_tx.put::<BlockHashes>(block_number, block_hash)?;
-            db_tx.put::<BlockNumbers>(block_hash, block_number)?;
-            db_tx.put::<BlockStatusses>(block_number, block.status)?;
+            db_tx.put::<tables::BlockHashes>(block_number, block_hash)?;
+            db_tx.put::<tables::BlockNumbers>(block_hash, block_number)?;
+            db_tx.put::<tables::BlockStatusses>(block_number, block.status)?;
 
-            db_tx.put::<Headers>(block_number, block_header)?;
-            db_tx.put::<BlockBodyIndices>(block_number, block_body_indices)?;
+            db_tx.put::<tables::Headers>(block_number, block_header)?;
+            db_tx.put::<tables::BlockBodyIndices>(block_number, block_body_indices)?;
 
             for (i, (transaction, receipt)) in transactions.into_iter().zip(receipts).enumerate() {
                 let tx_number = tx_offset + i as u64;
                 let tx_hash = transaction.hash;
 
-                db_tx.put::<TxHashes>(tx_number, tx_hash)?;
-                db_tx.put::<TxNumbers>(tx_hash, tx_number)?;
-                db_tx.put::<TxBlocks>(tx_number, block_number)?;
-                db_tx.put::<Transactions>(tx_number, transaction.transaction)?;
-                db_tx.put::<Receipts>(tx_number, receipt)?;
+                db_tx.put::<tables::TxHashes>(tx_number, tx_hash)?;
+                db_tx.put::<tables::TxNumbers>(tx_hash, tx_number)?;
+                db_tx.put::<tables::TxBlocks>(tx_number, block_number)?;
+                db_tx.put::<tables::Transactions>(tx_number, transaction.transaction)?;
+                db_tx.put::<tables::Receipts>(tx_number, receipt)?;
             }
 
             // insert classes
 
             for (class_hash, compiled_hash) in states.state_updates.declared_classes {
-                db_tx.put::<CompiledClassHashes>(class_hash, compiled_hash)?;
+                db_tx.put::<tables::CompiledClassHashes>(class_hash, compiled_hash)?;
 
-                db_tx.put::<ClassDeclarationBlock>(class_hash, block_number)?;
-                db_tx.put::<ClassDeclarations>(block_number, class_hash)?
+                db_tx.put::<tables::ClassDeclarationBlock>(class_hash, block_number)?;
+                db_tx.put::<tables::ClassDeclarations>(block_number, class_hash)?
             }
 
             for (hash, compiled_class) in states.declared_compiled_classes {
-                db_tx.put::<CompiledContractClasses>(hash, compiled_class.into())?;
+                db_tx.put::<tables::CompiledContractClasses>(hash, compiled_class.into())?;
             }
 
             for (class_hash, sierra_class) in states.declared_sierra_classes {
-                db_tx.put::<SierraClasses>(class_hash, sierra_class)?;
+                db_tx.put::<tables::SierraClasses>(class_hash, sierra_class)?;
             }
 
             // insert storage changes
             {
-                let mut storage_cursor = db_tx.cursor::<ContractStorage>()?;
+                let mut storage_cursor = db_tx.cursor::<tables::ContractStorage>()?;
                 for (addr, entries) in states.state_updates.storage_updates {
                     let entries =
                         entries.into_iter().map(|(key, value)| StorageEntry { key, value });
@@ -616,7 +610,7 @@ impl BlockWriter for DbProvider {
                             _ => {}
                         }
 
-                        let mut change_set_cursor = db_tx.cursor::<StorageChangeSet>()?;
+                        let mut change_set_cursor = db_tx.cursor::<tables::StorageChangeSet>()?;
                         let new_block_list =
                             match change_set_cursor.seek_by_key_subkey(addr, entry.key)? {
                                 Some(StorageEntryChangeList { mut block_list, key })
@@ -643,7 +637,7 @@ impl BlockWriter for DbProvider {
                         let storage_change_sharded_key =
                             ContractStorageKey { contract_address: addr, key: entry.key };
 
-                        db_tx.put::<StorageChanges>(
+                        db_tx.put::<tables::StorageChanges>(
                             block_number,
                             ContractStorageEntry {
                                 key: storage_change_sharded_key,
@@ -657,55 +651,57 @@ impl BlockWriter for DbProvider {
             // update contract info
 
             for (addr, class_hash) in states.state_updates.contract_updates {
-                let value = if let Some(info) = db_tx.get::<ContractInfo>(addr)? {
+                let value = if let Some(info) = db_tx.get::<tables::ContractInfo>(addr)? {
                     GenericContractInfo { class_hash, ..info }
                 } else {
                     GenericContractInfo { class_hash, ..Default::default() }
                 };
 
-                let new_change_set =
-                    if let Some(mut change_set) = db_tx.get::<ContractInfoChangeSet>(addr)? {
-                        change_set.class_change_list.push(block_number);
-                        change_set.class_change_list.sort();
-                        change_set
-                    } else {
-                        ContractInfoChangeList {
-                            class_change_list: vec![block_number],
-                            ..Default::default()
-                        }
-                    };
+                let new_change_set = if let Some(mut change_set) =
+                    db_tx.get::<tables::ContractInfoChangeSet>(addr)?
+                {
+                    change_set.class_change_list.push(block_number);
+                    change_set.class_change_list.sort();
+                    change_set
+                } else {
+                    ContractInfoChangeList {
+                        class_change_list: vec![block_number],
+                        ..Default::default()
+                    }
+                };
 
-                db_tx.put::<ContractInfo>(addr, value)?;
+                db_tx.put::<tables::ContractInfo>(addr, value)?;
 
                 let class_change_key = ContractClassChange { contract_address: addr, class_hash };
-                db_tx.put::<ContractClassChanges>(block_number, class_change_key)?;
-                db_tx.put::<ContractInfoChangeSet>(addr, new_change_set)?;
+                db_tx.put::<tables::ContractClassChanges>(block_number, class_change_key)?;
+                db_tx.put::<tables::ContractInfoChangeSet>(addr, new_change_set)?;
             }
 
             for (addr, nonce) in states.state_updates.nonce_updates {
-                let value = if let Some(info) = db_tx.get::<ContractInfo>(addr)? {
+                let value = if let Some(info) = db_tx.get::<tables::ContractInfo>(addr)? {
                     GenericContractInfo { nonce, ..info }
                 } else {
                     GenericContractInfo { nonce, ..Default::default() }
                 };
 
-                let new_change_set =
-                    if let Some(mut change_set) = db_tx.get::<ContractInfoChangeSet>(addr)? {
-                        change_set.nonce_change_list.push(block_number);
-                        change_set.nonce_change_list.sort();
-                        change_set
-                    } else {
-                        ContractInfoChangeList {
-                            nonce_change_list: vec![block_number],
-                            ..Default::default()
-                        }
-                    };
+                let new_change_set = if let Some(mut change_set) =
+                    db_tx.get::<tables::ContractInfoChangeSet>(addr)?
+                {
+                    change_set.nonce_change_list.push(block_number);
+                    change_set.nonce_change_list.sort();
+                    change_set
+                } else {
+                    ContractInfoChangeList {
+                        nonce_change_list: vec![block_number],
+                        ..Default::default()
+                    }
+                };
 
-                db_tx.put::<ContractInfo>(addr, value)?;
+                db_tx.put::<tables::ContractInfo>(addr, value)?;
 
                 let nonce_change_key = ContractNonceChange { contract_address: addr, nonce };
-                db_tx.put::<NonceChanges>(block_number, nonce_change_key)?;
-                db_tx.put::<ContractInfoChangeSet>(addr, new_change_set)?;
+                db_tx.put::<tables::NonceChanges>(block_number, nonce_change_key)?;
+                db_tx.put::<tables::ContractInfoChangeSet>(addr, new_change_set)?;
             }
 
             Ok(())
