@@ -49,6 +49,7 @@ impl DojoSemanticDatabase {
 
         db.set_macro_plugins(suite.plugins);
         db.set_inline_macro_plugins(suite.inline_macro_plugins.into());
+        db.set_analyzer_plugins(suite.analyzer_plugins);
 
         init_dev_corelib(&mut db, corelib());
         let dojo_path = Utf8PathBuf::from_path_buf("../../crates/dojo-core/src".into()).unwrap();
