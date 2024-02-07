@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707328585576,
+  "lastUpdate": 1707332138913,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1045,6 +1045,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 987314,
             "range": "± 31761",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "anofiujelailah@gmail.com",
+            "name": "Jelilat Anofiu",
+            "username": "jelilat"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4a6cad5f21d8da71714ae6ff48c9cc6ecaae642a",
+          "message": "update dead links (#1523)",
+          "timestamp": "2024-02-07T12:46:12-06:00",
+          "tree_id": "f2d012c3f626815f8cf29e8a3ca02f17e25ce44d",
+          "url": "https://github.com/dojoengine/dojo/commit/4a6cad5f21d8da71714ae6ff48c9cc6ecaae642a"
+        },
+        "date": 1707332137892,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 990072,
+            "range": "± 49705",
             "unit": "ns/iter"
           }
         ]
