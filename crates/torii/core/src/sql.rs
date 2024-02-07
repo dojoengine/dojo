@@ -251,20 +251,14 @@ impl Sql {
 
         let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
             match transaction {
-                Transaction::Invoke(invoke_transaction) => {
-                    if let InvokeTransaction::V1(invoke_v1_transaction) = invoke_transaction {
-                        (
-                            Argument::FieldElement(invoke_v1_transaction.transaction_hash),
-                            Argument::FieldElement(invoke_v1_transaction.sender_address),
-                            Argument::String(felts_sql_string(&invoke_v1_transaction.calldata)),
-                            Argument::FieldElement(invoke_v1_transaction.max_fee),
-                            Argument::String(felts_sql_string(&invoke_v1_transaction.signature)),
-                            Argument::FieldElement(invoke_v1_transaction.nonce),
-                        )
-                    } else {
-                        return;
-                    }
-                }
+                Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
+                    Argument::FieldElement(invoke_v1_transaction.transaction_hash),
+                    Argument::FieldElement(invoke_v1_transaction.sender_address),
+                    Argument::String(felts_sql_string(&invoke_v1_transaction.calldata)),
+                    Argument::FieldElement(invoke_v1_transaction.max_fee),
+                    Argument::String(felts_sql_string(&invoke_v1_transaction.signature)),
+                    Argument::FieldElement(invoke_v1_transaction.nonce),
+                ),
                 Transaction::L1Handler(l1_handler_transaction) => (
                     Argument::FieldElement(l1_handler_transaction.transaction_hash),
                     Argument::FieldElement(l1_handler_transaction.contract_address),

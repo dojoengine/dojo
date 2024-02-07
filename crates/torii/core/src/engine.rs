@@ -214,13 +214,13 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 let event_id =
                     format!("0x{:064x}:0x{:04x}:0x{:04x}", block.block_number, tx_idx, event_idx);
 
-                Self::process_event(self, &block, &receipt, &event_id, event).await?;
+                Self::process_event(self, block, &receipt, &event_id, event).await?;
             }
 
             if world_event {
                 let transaction_id = format!("0x{:064x}:0x{:04x}", block.block_number, tx_idx);
 
-                Self::process_transaction(self, &block, &receipt, &transaction_id, transaction)
+                Self::process_transaction(self, block, &receipt, &transaction_id, transaction)
                     .await?;
             }
 
@@ -273,7 +273,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
             TransactionReceipt::L1Handler(l1_handler_receipt) => {
                 l1_handler_receipt.transaction_hash
             }
-            _ => return Err(anyhow::anyhow!("Failed to match transaction receipt")), //TODO: Don't use anyhow
+            _ => return Err(anyhow::anyhow!("Failed to match transaction receipt")),
         };
         self.db.store_event(event_id, event, transaction_hash);
         for processor in &self.processors.event {
