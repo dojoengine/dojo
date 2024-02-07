@@ -183,5 +183,5 @@ wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "3c138d606a46c88ecd656808f14dfca78de1926b" }
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "0d574e088e81924a14e8b2e728c6814fb5decb1c" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "0d574e088e81924a14e8b2e728c6814fb5decb1c" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "368c713f8545af435b1b0a8d3e56b616f66f955a" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "368c713f8545af435b1b0a8d3e56b616f66f955a" }
