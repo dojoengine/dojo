@@ -387,10 +387,18 @@ fn get_dojo_contract_artifacts(
         let module_name: SmolStr = module_id.full_path(db).into();
 
         if let Some((class_hash, abi)) = compiled_classes.get(&module_name as &str) {
-            let reads = SYSTEM_READS.lock().unwrap().get(&module_name as &str)
-                .map_or_else(Vec::new, |models| models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect());
+            let reads = SYSTEM_READS
+                .lock()
+                .unwrap()
+                .get(&module_name as &str)
+                .map_or_else(Vec::new, |models| {
+                    models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect()
+                });
 
-            let writes = SYSTEM_WRITES.lock().unwrap().get(&module_name as &str)
+            let writes = SYSTEM_WRITES
+                .lock()
+                .unwrap()
+                .get(&module_name as &str)
                 .map_or_else(Vec::new, |write_ops| find_module_rw(db, module_id, write_ops));
 
             let contract = Contract {

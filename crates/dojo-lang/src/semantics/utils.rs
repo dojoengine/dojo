@@ -140,7 +140,9 @@ pub fn function_resolver(db: &RootDatabase, fn_id: FunctionWithBodyId) -> Resolv
                 .clone_with_inference_id(db, interference)
         }
         FunctionWithBodyId::Impl(fn_id) => {
-            let interference = InferenceId::LookupItemDefinition(LookupItemId::ImplItem(ImplItemId::Function(fn_id)));
+            let interference = InferenceId::LookupItemDefinition(LookupItemId::ImplItem(
+                ImplItemId::Function(fn_id),
+            ));
             db.impl_function_body_resolver_data(fn_id)
                 .unwrap()
                 .clone_with_inference_id(db, interference)

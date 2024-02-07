@@ -1,8 +1,8 @@
 use anyhow::Result;
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
-    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, PluginDiagnostic,
-    PluginGeneratedFile, PluginResult, MacroPluginMetadata,
+    DynGeneratedFileAuxData, GeneratedFileAuxData, MacroPlugin, MacroPluginMetadata,
+    PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::plugin::PluginSuite;
@@ -232,7 +232,12 @@ pub fn dojo_plugin_suite() -> PluginSuite {
 impl MacroPlugin for BuiltinDojoPlugin {
     // New metadata field: <https://github.com/starkware-libs/cairo/blob/60340c801125b25baaaddce64dd89c6c1524b59d/crates/cairo-lang-defs/src/plugin.rs#L81>
     // Not used for now, but it contains a key-value BTreeSet. TBD what we can do with this.
-    fn generate_code(&self, db: &dyn SyntaxGroup, item_ast: ast::ModuleItem, _metadata: &MacroPluginMetadata<'_>) -> PluginResult {
+    fn generate_code(
+        &self,
+        db: &dyn SyntaxGroup,
+        item_ast: ast::ModuleItem,
+        _metadata: &MacroPluginMetadata<'_>,
+    ) -> PluginResult {
         match item_ast {
             ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::ModuleItem::Enum(enum_ast) => {
