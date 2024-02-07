@@ -1424,7 +1424,7 @@ dependencies = [
 [[package]]
 name = "cairo-felt"
 version = "0.9.1"
-source = "git+https://github.com/dojoengine/cairo-rs.git?rev=0d574e088e81924a14e8b2e728c6814fb5decb1c#0d574e088e81924a14e8b2e728c6814fb5decb1c"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=368c713f8545af435b1b0a8d3e56b616f66f955a#368c713f8545af435b1b0a8d3e56b616f66f955a"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1982,7 +1982,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.9.2"
-source = "git+https://github.com/dojoengine/cairo-rs.git?rev=0d574e088e81924a14e8b2e728c6814fb5decb1c#0d574e088e81924a14e8b2e728c6814fb5decb1c"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=368c713f8545af435b1b0a8d3e56b616f66f955a#368c713f8545af435b1b0a8d3e56b616f66f955a"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",

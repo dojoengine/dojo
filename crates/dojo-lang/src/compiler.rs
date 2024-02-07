@@ -403,14 +403,14 @@ fn get_dojo_contract_artifacts(
 
             let contract = Contract {
                 name: module_name.clone(),
-                class_hash: class_hash.clone(),
+                class_hash: *class_hash,
                 abi: abi.clone(),
                 writes,
                 reads,
                 ..Default::default()
             };
 
-            result.insert(SmolStr::from(module_name), contract);
+            result.insert(module_name, contract);
         }
     }
 

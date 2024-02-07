@@ -37,9 +37,7 @@ mod primitives {
     pub use crate::FieldElement;
 }
 
-use cairo_vm::serde::deserialize_program::{
-    serialize_program_data, Attribute, BuiltinName, DebugInfo, HintParams, Member,
-};
+use cairo_vm::serde::deserialize_program::{Attribute, BuiltinName, DebugInfo, HintParams, Member};
 use cairo_vm::types::relocatable::MaybeRelocatable;
 
 /// Converts the legacy inner compiled class type [CompiledContractClassV0] into its RPC equivalent
@@ -255,11 +253,10 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
     struct SerializableProgramJson {
         prime: String,
         builtins: Vec<BuiltinName>,
-        #[serde(serialize_with = "serialize_program_data")]
         #[serde(deserialize_with = "deserialize_array_of_bigint_hex")]
         data: Vec<MaybeRelocatable>,
         identifiers: HashMap<String, Identifier>,
-        hints: HashMap<usize, Vec<HintParams>>,
+        hints: BTreeMap<usize, Vec<HintParams>>,
         reference_manager: ReferenceManager,
         attributes: Vec<Attribute>,
         debug_info: Option<DebugInfo>,
