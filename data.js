@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707284555096,
+  "lastUpdate": 1707318541606,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -985,6 +985,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 984522,
             "range": "± 74358",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "santiagodgalvan@gmail.com",
+            "name": "Santiago Galván (Dub)",
+            "username": "dubzn"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "58a50d12c77b53bf649b7d70dd42bd6d1d6f1487",
+          "message": "[Torii] Debug output of all indexed Events (#1464)\n\n* torii - Log events in debug!() as hex\r\n\r\n* change debug!() for trace!()\r\n\r\n* structured logging\r\n\r\n* fix: fmt\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-02-07T08:59:35-06:00",
+          "tree_id": "d64dbb8416860993507ee1257e3c5d715255aa1d",
+          "url": "https://github.com/dojoengine/dojo/commit/58a50d12c77b53bf649b7d70dd42bd6d1d6f1487"
+        },
+        "date": 1707318541171,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 986579,
+            "range": "± 71863",
             "unit": "ns/iter"
           }
         ]
