@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707332138913,
+  "lastUpdate": 1707349581567,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1075,6 +1075,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 990072,
             "range": "± 49705",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "118ed84f7b5cb9e4e0c1963fca88b71a222ae50d",
+          "message": "feat(libp2p): command to wait for the relay to be ready (#1525)\n\n* feat(libp2p): handle connection estbalished event & add waitforconnection command\r\n\r\n* feat: add wait for connection in torii client\r\n\r\n* refactor: wait for relay ready & better logging\r\n\r\n* feat: use wait_for_relay in tests\r\n\r\n* feat: update torii client",
+          "timestamp": "2024-02-07T18:36:37-05:00",
+          "tree_id": "d68703d7448f1666f7df5738a0e1e6bf6d0788f1",
+          "url": "https://github.com/dojoengine/dojo/commit/118ed84f7b5cb9e4e0c1963fca88b71a222ae50d"
+        },
+        "date": 1707349580601,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1051644,
+            "range": "± 33360",
             "unit": "ns/iter"
           }
         ]
