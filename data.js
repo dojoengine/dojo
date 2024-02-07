@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707204441768,
+  "lastUpdate": 1707282941489,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -925,6 +925,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 982871,
             "range": "± 35364",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jjmm1100@gmail.com",
+            "name": "Xuefei Han",
+            "username": "fishseabowl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e8edf9fcbcfddbca5b5ae43415ed938f9566b150",
+          "message": "feat(katana): allow dev accounts to be allocated from the JSON file (#1515)\n\n* Add private_key field to GenesisAccountJson\r\n\r\n* Fixed cargo fmt\r\n\r\n* Fixed cargo fmt\r\n\r\n---------\r\n\r\nCo-authored-by: fishseabowl <xuefei.han@domichain.io>",
+          "timestamp": "2024-02-07T13:06:21+08:00",
+          "tree_id": "037b60270ac13ff4a5feb354a8e715ccbc6b5918",
+          "url": "https://github.com/dojoengine/dojo/commit/e8edf9fcbcfddbca5b5ae43415ed938f9566b150"
+        },
+        "date": 1707282940961,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 985861,
+            "range": "± 42024",
             "unit": "ns/iter"
           }
         ]
