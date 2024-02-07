@@ -240,6 +240,15 @@ impl Sql {
 
     pub fn store_transaction(&mut self, transaction: &Transaction, transaction_id: &str) {
         let id = Argument::String(transaction_id.to_string());
+
+        let transaction_type = match transaction {
+            Transaction::Invoke(_) => "INVOKE",
+            Transaction::L1Handler(_) => "L1_HANDLER",
+            Transaction::Declare(_) => "DECLARE",
+            Transaction::Deploy(_) => "DEPLOY",
+            Transaction::DeployAccount(_) => "DEPLOY_ACCOUNT",
+        };
+
         let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
             match transaction {
                 Transaction::Invoke(invoke_transaction) => {
@@ -269,8 +278,17 @@ impl Sql {
 
         self.query_queue.enqueue(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            vec![id, transaction_hash, sender_address, calldata, max_fee, signature, nonce],
+             max_fee, signature, nonce, transaction_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            vec![
+                id,
+                transaction_hash,
+                sender_address,
+                calldata,
+                max_fee,
+                signature,
+                nonce,
+                Argument::String(transaction_type.to_string()),
+            ],
         );
     }
 
