@@ -263,9 +263,7 @@ impl EventLoop {
                                         tx.send(Ok(())).expect("Failed to send response");
                                     }
                                 }
-                                _ => {
-                                    info!(target: "torii::relay::client::gossipsub", event = ?event, "Unhandled behaviour event");
-                                }
+                                _ => {}
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
@@ -276,9 +274,7 @@ impl EventLoop {
                                 return;
                             }
                         }
-                        evt => {
-                            info!(target: "torii::relay::client", event = ?evt, "Unhandled event");
-                        }
+                        _ => {}
                     }
                 },
             }

@@ -81,10 +81,8 @@ mod test {
             client.event_loop.lock().await.run().await;
         });
 
-        client.command_sender.wait_for_connection().await?;
-
         client.command_sender.subscribe("mawmaw".to_string()).await?;
-        let _ = wasm_timer::Delay::new(std::time::Duration::from_secs(1)).await;
+        client.command_sender.wait_for_relay().await?;
         client.command_sender.publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()).await?;
 
         let timeout = wasm_timer::Delay::new(std::time::Duration::from_secs(2));
