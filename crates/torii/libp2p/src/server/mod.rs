@@ -190,7 +190,10 @@ impl Relay {
                                 "Subscribed to topic"
                             );
                         }
-                        ServerEvent::Gossipsub(gossipsub::Event::Unsubscribed { peer_id, topic }) => {
+                        ServerEvent::Gossipsub(gossipsub::Event::Unsubscribed {
+                            peer_id,
+                            topic,
+                        }) => {
                             info!(
                                 target: "torii::relay::server::gossipsub",
                                 peer_id = %peer_id,

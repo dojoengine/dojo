@@ -101,9 +101,9 @@ impl Client {
         })
     }
 
-    /// Waits for the relay connection to be established.
-    pub async fn wait_for_connection(&mut self) -> Result<(), Error> {
-        self.relay_client.command_sender.wait_for_connection().await.map_err(Error::RelayClient)
+    /// Waits for the relay to be ready and listening for messages.
+    pub async fn wait_for_relay(&mut self) -> Result<(), Error> {
+        self.relay_client.command_sender.wait_for_relay().await.map_err(Error::RelayClient)
     }
 
     /// Subscribes to a topic.

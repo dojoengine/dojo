@@ -73,7 +73,7 @@ mod test {
         // Make sure the cert hash is correct - corresponding to the cert in the relay server
         let mut client = RelayClient::new(
             "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/\
-            uEiCAoeHQh49fCHDolECesXO0CPR7fpz0sv0PWVaIahzT4g"
+             uEiCAoeHQh49fCHDolECesXO0CPR7fpz0sv0PWVaIahzT4g"
                 .to_string(),
         )?;
 

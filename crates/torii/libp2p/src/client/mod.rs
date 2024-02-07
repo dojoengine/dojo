@@ -4,7 +4,7 @@ use std::time::Duration;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
-use futures::{select, FutureExt, StreamExt};
+use futures::{select, StreamExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId, TopicHash};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
