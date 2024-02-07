@@ -90,7 +90,7 @@ pub struct KatanaArgs {
     #[arg(help = "Configure the messaging with an other chain.")]
     #[arg(long_help = "Configure the messaging to allow Katana listening/sending messages on a \
                        settlement chain that can be Ethereum or an other Starknet sequencer. \
-                       The configuration file details and examples can be found here: https://book.dojoengine.org/toolchain/katana/reference.html#messaging")]
+                       The configuration file details and examples can be found here: https://book.dojoengine.org/toolchain/katana/reference#messaging")]
     pub messaging: Option<katana_core::service::messaging::MessagingConfig>,
 
     #[command(flatten)]
