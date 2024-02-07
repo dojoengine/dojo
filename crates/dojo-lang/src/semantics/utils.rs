@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_defs::db::DefsGroup;
-use cairo_lang_defs::ids::{FunctionWithBodyId, LookupItemId, ModuleId, ModuleItemId};
+use cairo_lang_defs::ids::{FunctionWithBodyId, ImplItemId, LookupItemId, ModuleId, ModuleItemId};
 use cairo_lang_lowering::db::LoweringGroup;
 use cairo_lang_lowering::ids::{self as low, SemanticFunctionWithBodyIdEx};
 use cairo_lang_lowering::Statement;
@@ -142,7 +142,7 @@ pub fn function_resolver(db: &RootDatabase, fn_id: FunctionWithBodyId) -> Resolv
                 .clone_with_inference_id(db, interference)
         }
         FunctionWithBodyId::Impl(fn_id) => {
-            let interference = InferenceId::LookupItemDefinition(LookupItemId::ImplFunction(fn_id));
+            let interference = InferenceId::LookupItemDefinition(LookupItemId::ImplItem(ImplItemId::Function(fn_id)));
             db.impl_function_body_resolver_data(fn_id)
                 .unwrap()
                 .clone_with_inference_id(db, interference)
