@@ -244,9 +244,7 @@ impl Sql {
         let transaction_type = match transaction {
             Transaction::Invoke(_) => "INVOKE",
             Transaction::L1Handler(_) => "L1_HANDLER",
-            Transaction::Declare(_) => "DECLARE",
-            Transaction::Deploy(_) => "DEPLOY",
-            Transaction::DeployAccount(_) => "DEPLOY_ACCOUNT",
+            _ => return,
         };
 
         let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
