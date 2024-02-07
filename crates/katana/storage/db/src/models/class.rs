@@ -209,9 +209,9 @@ impl From<SerializableHintParams> for HintParams {
 type HintRange = Option<(usize, NonZeroUsize)>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct SerializableHintsCollection {
-    hints: Vec<SerializableHintParams>,
-    hints_ranges: Vec<HintRange>,
+pub struct SerializableHintsCollection {
+    pub hints: Vec<SerializableHintParams>,
+    pub hints_ranges: Vec<HintRange>,
 }
 
 impl From<HintsCollection> for SerializableHintsCollection {

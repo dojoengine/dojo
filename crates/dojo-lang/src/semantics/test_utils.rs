@@ -134,16 +134,16 @@ pub fn setup_test_crate(db: &dyn SemanticGroup, content: &str) -> CrateId {
         parent: None,
         name: "lib.cairo".into(),
         content: Arc::new(content.into()),
-        diagnostics_mappings: Default::default(),
+        code_mappings: Default::default(),
         kind: FileKind::Module,
     }));
 
     db.intern_crate(CrateLongId::Virtual {
         name: "test".into(),
-        root: Directory::Virtual {
+        config: CrateConfiguration::default_for_root(Directory::Virtual {
             files: BTreeMap::from([("lib.cairo".into(), file_id)]),
             dirs: Default::default(),
-        },
+        }),
     })
 }
 
