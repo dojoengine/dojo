@@ -13,6 +13,7 @@ use katana_db::models::contract::{
 use katana_db::models::storage::{
     ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
 };
+use katana_db::tables::{self, DupSort, Table};
 use katana_db::utils::KeyValue;
 use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
@@ -40,7 +41,6 @@ use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
 use crate::ProviderResult;
-use katana_db::tables::{self, DupSort, Table};
 
 /// A provider implementation that uses a persistent database as the backend.
 #[derive(Debug)]
