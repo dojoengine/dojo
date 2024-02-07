@@ -4,7 +4,7 @@ use std::time::Duration;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
-use futures::{select, StreamExt};
+use futures::{select, FutureExt, StreamExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId, TopicHash};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
@@ -56,6 +56,7 @@ enum Command {
     Subscribe(String, oneshot::Sender<Result<bool, Error>>),
     Unsubscribe(String, oneshot::Sender<Result<bool, Error>>),
     Publish(String, Vec<u8>, oneshot::Sender<Result<MessageId, Error>>),
+    WaitForConnection(oneshot::Sender<Result<(), Error>>),
 }
 
 impl RelayClient {
@@ -196,6 +197,9 @@ impl CommandSender {
 
 impl EventLoop {
     pub async fn run(&mut self) {
+        let mut is_connected = false;
+        let mut connection_tx = None;
+
         loop {
             // Poll the swarm for new events.
             select! {
@@ -210,6 +214,13 @@ impl EventLoop {
                         Command::Publish(topic, data, sender) => {
                             sender.send(self.publish(topic, data)).expect("Failed to send response");
                         },
+                        Command::WaitForConnection(sender) => {
+                            if is_connected {
+                                sender.send(Ok(())).expect("Failed to send response");
+                            } else {
+                                connection_tx = Some(sender);
+                            }
+                        }
                     }
                 },
                 event = self.swarm.select_next_some() => {
@@ -244,7 +255,15 @@ impl EventLoop {
                                 info!(target: "torii::relay::client", "Connection closed due to keep alive timeout. Shutting down client.");
                                 return;
                             }
-                        }
+                        },
+                        SwarmEvent::ConnectionEstablished { peer_id, endpoint, established_in, .. } => {
+                            info!(target: "torii::relay::client", peer_id = %peer_id, endpoint = ?endpoint, established_in = ?established_in, "Connection established");
+                            is_connected = true;
+
+                            if let Some(tx) = connection_tx.take() {
+                                tx.send(Ok(())).expect("Failed to send response");
+                            }
+                        },
                         evt => {
                             info!(target: "torii::relay::client", event = ?evt, "Unhandled event");
                         }
