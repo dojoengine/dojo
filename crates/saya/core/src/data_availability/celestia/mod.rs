@@ -6,14 +6,17 @@ use celestia_rpc::{BlobClient, Client};
 use celestia_types::blob::SubmitOptions;
 use celestia_types::nmt::Namespace;
 use celestia_types::Blob;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use url::Url;
 
 use crate::data_availability::error::{DataAvailabilityResult, Error};
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityMode};
+use crate::url_deserializer;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CelestiaConfig {
+    #[serde(deserialize_with = "url_deserializer")]
     pub node_url: Url,
     pub node_auth_token: Option<String>,
     pub namespace: String,
