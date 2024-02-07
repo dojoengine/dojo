@@ -11,7 +11,7 @@ use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
-use tracing::{error, info, trace, warn };
+use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
