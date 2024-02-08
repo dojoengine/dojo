@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707349581567,
+  "lastUpdate": 1707433834543,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1105,6 +1105,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1051644,
             "range": "± 33360",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c839363c5f561873355ca84da1173352f9955957",
+          "message": "fix(katana-core): crate can't be build without any feature (#1527)",
+          "timestamp": "2024-02-09T07:01:08+08:00",
+          "tree_id": "1c32ed4f31c44c80e2371b36546298cd49f6fb9a",
+          "url": "https://github.com/dojoengine/dojo/commit/c839363c5f561873355ca84da1173352f9955957"
+        },
+        "date": 1707433833550,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 987318,
+            "range": "± 72898",
             "unit": "ns/iter"
           }
         ]
