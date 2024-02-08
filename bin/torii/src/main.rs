@@ -17,7 +17,7 @@ use std::sync::Arc;
 use clap::Parser;
 use common::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
-use metrics::prometheus_exporter;
+use dojo_metrics::prometheus_exporter;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
@@ -195,7 +195,7 @@ async fn main() -> anyhow::Result<()> {
         let prometheus_handle = prometheus_exporter::install_recorder("torii")?;
 
         info!(target: "torii::cli", addr = %listen_addr, "Starting metrics endpoint");
-        prometheus_exporter::serve(
+        prometheus_exporter::serve_torii(
             listen_addr,
             prometheus_handle,
             metrics_process::Collector::default(),

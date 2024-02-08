@@ -304,7 +304,11 @@ impl<T: Table> Walker<'_, RW, T> {
 impl<K: TransactionKind, T: Table> std::iter::Iterator for Walker<'_, K, T> {
     type Item = Result<KeyValue<T>, DatabaseError>;
     fn next(&mut self) -> Option<Self::Item> {
-        if let value @ Some(_) = self.start.take() { value } else { self.cursor.next().transpose() }
+        if let value @ Some(_) = self.start.take() {
+            value
+        } else {
+            self.cursor.next().transpose()
+        }
     }
 }
 

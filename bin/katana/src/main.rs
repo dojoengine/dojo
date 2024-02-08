@@ -10,7 +10,7 @@ use katana_primitives::contract::{ClassHash, ContractAddress};
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::{spawn, NodeHandle};
-use metrics::prometheus_exporter;
+use dojo_metrics::prometheus_exporter;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
@@ -48,12 +48,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
+        let pool_metrics = Arc::clone(&sequencer.pool.metrics);
 
         info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
-        prometheus_exporter::serve(
+        prometheus_exporter::serve_katana(
             listen_addr,
             prometheus_handle,
             metrics_process::Collector::default(),
+            pool_metrics,
         )
         .await?;
     }

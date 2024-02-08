@@ -7,12 +7,13 @@ pub mod tx;
 
 use std::path::Path;
 
-use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW};
-
 use self::tx::Tx;
 use crate::error::DatabaseError;
 use crate::tables::{TableType, Tables};
 use crate::utils;
+use libmdbx::{
+    DatabaseFlags, Environment, EnvironmentFlags, Geometry, Mode, PageSize, SyncMode, RO, RW,
+};
 
 const GIGABYTE: usize = 1024 * 1024 * 1024;
 const TERABYTE: usize = GIGABYTE * 1024;
@@ -31,7 +32,10 @@ pub enum DbEnvKind {
 
 /// Wrapper for `libmdbx-sys` environment.
 #[derive(Debug)]
-pub struct DbEnv(libmdbx::Environment);
+pub struct DbEnv {
+    inner: Environment,
+    with_metrics: bool,
+}
 
 impl DbEnv {
     /// Opens the database at the specified path with the given `EnvKind`.
@@ -43,7 +47,7 @@ impl DbEnv {
             DbEnvKind::RW => Mode::ReadWrite { sync_mode: SyncMode::Durable },
         };
 
-        let mut builder = libmdbx::Environment::builder();
+        let mut builder = Environment::builder();
         builder
             .set_max_dbs(Tables::ALL.len())
             .set_geometry(Geometry {
@@ -64,13 +68,22 @@ impl DbEnv {
                 ..Default::default()
             })
             .set_max_readers(DEFAULT_MAX_READERS);
+        let env = DbEnv {
+            inner: builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?,
+            with_metrics: false,
+        };
 
-        Ok(DbEnv(builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?))
+        Ok(env)
+    }
+
+    pub fn with_metrics(mut self) -> Self {
+        self.with_metrics = true;
+        self
     }
 
     /// Creates all the defined tables in [`Tables`], if necessary.
     pub fn create_tables(&self) -> Result<(), DatabaseError> {
-        let tx = self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
+        let tx = self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
 
         for table in Tables::ALL {
             let flags = match table.table_type() {
@@ -88,12 +101,12 @@ impl DbEnv {
 
     /// Begin a read-only transaction.
     pub fn tx(&self) -> Result<Tx<RO>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
+        Ok(Tx::new(self.inner.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
     }
 
     /// Begin a read-write transaction.
     pub fn tx_mut(&self) -> Result<Tx<RW>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
+        Ok(Tx::new(self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
 
     /// Takes a function and passes a read-write transaction into it, making sure it's always

@@ -1,15 +1,18 @@
 // Code adapted from Foundry's Anvil
-
+use std::sync::Arc;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use parking_lot::RwLock;
 use starknet::core::types::FieldElement;
 use tracing::{info, warn};
+use dojo_metrics::core_metrics::PoolMetrics;
+use std::sync::atomic::Ordering;
 
 #[derive(Debug, Default)]
 pub struct TransactionPool {
     transactions: RwLock<Vec<ExecutableTxWithHash>>,
     transaction_listeners: RwLock<Vec<Sender<FieldElement>>>,
+    pub metrics: Arc<PoolMetrics>,
 }
 
 impl TransactionPool {
@@ -22,9 +25,8 @@ impl TransactionPool {
     pub fn add_transaction(&self, transaction: ExecutableTxWithHash) {
         let hash = transaction.hash;
         self.transactions.write().push(transaction);
-
+        self.metrics.pool_inserted_transactions.fetch_add(1, Ordering::SeqCst);
         info!(target: "txpool", "Transaction received | Hash: {hash:#x}");
-
         // notify listeners of new tx added to the pool
         self.notify_listener(hash)
     }

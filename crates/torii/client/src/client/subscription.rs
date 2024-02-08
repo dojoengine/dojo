@@ -192,7 +192,11 @@ impl SubscriptionService {
         let storage_entries = diff.storage_diffs.into_iter().find_map(|d| {
             let expected = self.world_metadata.read().world_address;
             let current = d.address;
-            if current == expected { Some(d.storage_entries) } else { None }
+            if current == expected {
+                Some(d.storage_entries)
+            } else {
+                None
+            }
         });
 
         let Some(entries) = storage_entries else {

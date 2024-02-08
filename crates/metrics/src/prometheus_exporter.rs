@@ -3,15 +3,15 @@
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
-
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
-use metrics::{describe_gauge, gauge};
+use metrics::{describe_gauge,gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use metrics_util::layers::{PrefixLayer, Stack};
-
+use crate::core_metrics::PoolMetrics;
+use crate::report_metrics::ReportMetrics;
 pub(crate) trait Hook: Fn() + Send + Sync {}
-impl<T: Fn() + Send + Sync> Hook for T {}
+impl<T: Fn() + 'static + Send + Sync> Hook for T {}
 
 /// Installs Prometheus as the metrics recorder.
 pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
@@ -23,7 +23,7 @@ pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
         .push(PrefixLayer::new(prefix))
         .install()
         .map_err(|e| anyhow::anyhow!("Couldn't set metrics recorder: {}", e))?;
-
+    println!("here : install_recorder !");
     Ok(handle)
 }
 
@@ -37,9 +37,8 @@ pub(crate) async fn serve_with_hooks<F: Hook + 'static>(
     hooks: impl IntoIterator<Item = F>,
 ) -> anyhow::Result<()> {
     let hooks: Vec<_> = hooks.into_iter().collect();
-
     // Start endpoint
-    start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook| hook())))
+    start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook: &F| hook())))
         .await
         .map_err(|e| anyhow::anyhow!("Could not start Prometheus endpoint: {}", e))?;
 
@@ -73,20 +72,46 @@ async fn start_endpoint<F: Hook + 'static>(
 }
 
 /// Serves Prometheus metrics over HTTP with database and process metrics.
-pub async fn serve(
+pub async fn serve_katana(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     process: metrics_process::Collector,
-) -> anyhow::Result<()> {
+    metrics: Arc<PoolMetrics>,
+) -> anyhow::Result<()>
+{
     // Clone `process` to move it into the hook and use the original `process` for describe below.
     let cloned_process = process.clone();
-    let hooks: Vec<Box<dyn Hook<Output = ()>>> =
-        vec![Box::new(move || cloned_process.collect()), Box::new(collect_memory_stats)];
+        let hooks: Vec<Box<dyn Hook<Output = ()>>> = vec![
+        Box::new(move || metrics.report_metrics()),
+        Box::new(move || cloned_process.collect()),
+        Box::new(collect_memory_stats),
+    ];
     serve_with_hooks(listen_addr, handle, hooks).await?;
-
+    
     process.describe();
     describe_memory_stats();
+    metrics::describe_gauge!("pool_inserted_transactions", "Number of transactions inserted in the pool.");
+    metrics::describe_gauge!("pool_removed_transactions", "Number of transactions removed from the pool.");
+    metrics::describe_gauge!("pool_invalid_transactions", "Number of invalid transactions received by the pool.");
+    Ok(())
+}
 
+pub async fn serve_torii(
+    listen_addr: SocketAddr,
+    handle: PrometheusHandle,
+    process: metrics_process::Collector,
+) -> anyhow::Result<()>
+{
+    // Clone `process` to move it into the hook and use the original `process` for describe below.
+    let cloned_process = process.clone();
+        let hooks: Vec<Box<dyn Hook<Output = ()>>> = vec![
+        Box::new(move || cloned_process.collect()),
+        Box::new(collect_memory_stats),
+    ];
+    serve_with_hooks(listen_addr, handle, hooks).await?;
+    
+    process.describe();
+    describe_memory_stats();
     Ok(())
 }
 

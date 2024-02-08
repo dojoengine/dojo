@@ -31,6 +31,7 @@ members = [
   "crates/katana/runner/runner-macro",
   "crates/metrics",
   "crates/saya/core",
+  "crates/metrics/derive",
   "crates/sozo/signers",
   "crates/torii/client",
   "crates/torii/server",
@@ -55,7 +56,9 @@ lto = "fat"
 common = { path = "crates/common" }
 
 # metrics
-metrics = { path = "crates/metrics" }
+metrics = "0.21.1"
+dojo-metrics = { path = "crates/metrics" }
+dojo-metrics-derive = { path = "crates/metrics/derive" }
 
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo-bindgen" }
