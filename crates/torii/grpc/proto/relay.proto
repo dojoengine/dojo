@@ -1,0 +1,40 @@
+syntax = "proto3";
+package relay;
+
+import "google/protobuf/timestamp.proto";
+
+// The Relay service exposes messages sent through the libp2p relay server
+service Relay {
+    // Subscribe to new messages in a specific topic
+    rpc SubscribeMessages(SubscribeMessagesRequest) returns (stream SubscribeMessagesResponse);
+
+    // Retrieve messages from a specific topic
+    rpc RetrieveMessages(RetrieveMessagesRequest) returns (RetrieveMessagesResponse);
+}
+
+
+message SubscribeMessagesRequest {
+    string topic = 1;
+}
+
+message SubscribeMessagesResponse {
+    Message message = 1;
+}
+
+message RetrieveMessagesRequest {
+    string topic = 1;
+    uint64 limit = 2;
+    uint64 offset = 3;
+}
+
+message RetrieveMessagesResponse {
+    repeated Message messages = 1;
+}
+
+message Message {
+    string message_id = 1;
+    string source_id = 2;
+    string topic = 5;
+    bytes data = 4;
+    google.protobuf.Timestamp timestamp = 6;
+}

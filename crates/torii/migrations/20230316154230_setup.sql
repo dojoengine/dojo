@@ -84,3 +84,15 @@ CREATE TABLE events (
 );
 
 CREATE INDEX idx_events_keys ON events (keys);
+
+CREATE TABLE messages (
+    id TEXT NOT NULL PRIMARY KEY,
+    source_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    data TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
+
+CREATE INDEX idx_messages_source_id ON messages (source_id);
+
+CREATE INDEX idx_messages_topic ON messages (topic);
