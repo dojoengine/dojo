@@ -41,6 +41,12 @@ const CAIRO_PATH_SEPARATOR: &str = "::";
 #[path = "compiler_test.rs"]
 mod test;
 
+pub const MANIFESTS_DIR: &str = "manifests";
+pub const BASE_DIR: &str = "base";
+pub const DEPLOYMENTS_DIR: &str = "deployments";
+pub const CONTRACTS_DIR: &str = "contracts";
+pub const MODELS_DIR: &str = "models";
+
 pub struct DojoCompiler;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -203,7 +209,7 @@ fn update_manifest(
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
-    let manifests_dir = ws.manifest_path().parent().unwrap().join("manifest").join("base");
+    let manifests_dir = ws.manifest_path().parent().unwrap().join(MANIFESTS_DIR).join(BASE_DIR);
     let abi_dir = ws.manifest_path().parent().unwrap().join("abis");
 
     fn get_compiled_artifact_from_map<'a>(
@@ -345,8 +351,8 @@ fn update_manifest(
 
     for (_, (manifest, abi)) in contracts.iter_mut() {
         write_manifest_and_abi(
-            &manifests_dir.join("contracts"),
-            &abi_dir.join("contracts"),
+            &manifests_dir.join(CONTRACTS_DIR),
+            &abi_dir.join(CONTRACTS_DIR),
             manifest,
             abi,
         )?;
@@ -354,8 +360,8 @@ fn update_manifest(
 
     for (_, (manifest, abi)) in models.iter_mut() {
         write_manifest_and_abi(
-            &manifests_dir.join("models"),
-            &abi_dir.join("models"),
+            &manifests_dir.join(MODELS_DIR),
+            &abi_dir.join(MODELS_DIR),
             manifest,
             abi,
         )?;

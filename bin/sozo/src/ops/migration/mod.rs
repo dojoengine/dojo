@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
+use dojo_lang::compiler::{BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{AbstractManifestError, BaseManifest, DeployedManifest};
@@ -108,7 +109,7 @@ async fn update_world_manifest(
     chain_id: &str,
 ) -> Result<()> {
     let ui = ws.config().ui();
-    ui.print("\n✨ Updating manifest.json...");
+    ui.print("\n✨ Updating manifests...");
     local_manifest.world.inner.address = Some(world_address);
 
     let base_class_hash = match remote_manifest {
@@ -122,7 +123,7 @@ async fn update_world_manifest(
     });
 
     local_manifest
-        .write_to_path(&manifest_dir.join("manifest").join("deployments").join(chain_id))?;
+        .write_to_path(&manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id))?;
     ui.print("\n✨ Done.");
 
     Ok(())
@@ -233,13 +234,13 @@ where
 
     let local_manifest;
 
-    let deployment_dir = manifest_dir.join("manifest").join("deployments").join(chain_id);
+    let deployment_dir = manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id);
 
     if deployment_dir.exists() {
         local_manifest = DeployedManifest::load_from_path(&deployment_dir)?;
     } else {
         let base_manifest =
-            BaseManifest::load_from_path(manifest_dir.join("manifest").join("base"))?;
+            BaseManifest::load_from_path(manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
         local_manifest = base_manifest.into();
     }
 

@@ -125,6 +125,7 @@ where
         return Err(anyhow!("manifest.json not found"));
     }
 
+    // `parent` returns `None` only when its root path, so its safe to unwrap
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
     let new_manifest = DeployedManifest::load_from_path(&manifest_dir)?;
 
