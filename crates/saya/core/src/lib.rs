@@ -1,4 +1,5 @@
 //! Saya core library.
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use starknet::core::types::{BlockId, MaybePendingStateUpdate, StateUpdate};
@@ -9,11 +10,13 @@ use url::Url;
 
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
+use crate::blockchain::Blockchain;
 
 pub mod data_availability;
 pub mod error;
 pub mod prover;
 pub mod verifier;
+pub mod blockchain;
 
 /// Saya's main configuration.
 pub struct SayaConfig {
@@ -30,6 +33,8 @@ pub struct Saya {
     da_client: Option<Box<dyn DataAvailabilityClient>>,
     /// The katana (for now JSON RPC) client.
     katana_client: Arc<JsonRpcClient<HttpTransport>>,
+    /// The blockchain state.
+    blockchain: Blockchain,
 }
 
 impl Saya {
@@ -48,7 +53,9 @@ impl Saya {
             None
         };
 
-        Ok(Self { config, da_client, katana_client })
+        let blockchain = Blockchain::new();
+
+        Ok(Self { config, da_client, katana_client, blockchain })
     }
 
     /// Starts the Saya mainloop to fetch and process data.
@@ -105,6 +112,10 @@ impl Saya {
     /// * `block_number` - The block number.
     async fn process_block(&self, block_number: u64) -> SayaResult<()> {
         trace!("Processing block {block_number}");
+
+        // If block 0 => initialize the blockchain with genesis block update.
+        // There's no transaction for the genesis block see how to have the
+        // execution trace of it?
 
         self.fetch_publish_state_update(block_number).await?;
 

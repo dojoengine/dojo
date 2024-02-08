@@ -3304,7 +3304,7 @@ dependencies = [
  "dojo-world",
  "jsonrpsee 0.16.3",
  "katana-core",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
  "scarb",
@@ -5636,7 +5636,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.5",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -5735,7 +5735,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "windows-core 0.52.0",
+ "windows-core 0.51.1",
 ]
 
 [[package]]
@@ -6540,7 +6540,7 @@ dependencies = [
  "common",
  "console",
  "katana-core",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
  "metrics 0.5.1-alpha.5",
@@ -6559,7 +6559,7 @@ name = "katana-codecs"
 version = "0.5.1-alpha.5"
 dependencies = [
  "bytes",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
 ]
 
 [[package]]
@@ -6590,7 +6590,7 @@ dependencies = [
  "hex",
  "katana-db",
  "katana-executor",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-provider",
  "lazy_static",
  "parking_lot 0.12.1",
@@ -6616,7 +6616,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-vm 0.9.2",
  "criterion",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "page_size",
  "parking_lot 0.12.1",
  "postcard",
@@ -6636,7 +6636,7 @@ dependencies = [
  "anyhow",
  "blockifier",
  "convert_case 0.6.0",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-provider",
  "parking_lot 0.12.1",
  "starknet",
@@ -6648,32 +6648,6 @@ dependencies = [
 [[package]]
 name = "katana-primitives"
 version = "0.5.1-alpha.5"
-dependencies = [
- "anyhow",
- "base64 0.21.7",
- "blockifier",
- "cairo-lang-starknet",
- "cairo-vm 0.9.2",
- "derive_more",
- "ethers",
- "flate2",
- "lazy_static",
- "rand",
- "rayon",
- "serde",
- "serde_json",
- "serde_with 2.3.3",
- "starknet",
- "starknet_api",
- "strum 0.25.0",
- "strum_macros 0.25.3",
- "thiserror",
-]
-
-[[package]]
-name = "katana-primitives"
-version = "0.5.1-alpha.5"
-source = "git+https://github.com/cartridge-gg/snos?branch=dojo-cairo-2.5#1041e664871113044e4627b2b012f26fd2bff73d"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -6705,7 +6679,7 @@ dependencies = [
  "futures",
  "katana-core",
  "katana-db",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-runner",
  "lazy_static",
  "parking_lot 0.12.1",
@@ -6736,7 +6710,7 @@ dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
  "katana-executor",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-provider",
  "katana-rpc-api",
  "katana-rpc-types",
@@ -6761,7 +6735,7 @@ version = "0.5.1-alpha.5"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-rpc-types",
  "starknet",
 ]
@@ -6775,7 +6749,7 @@ dependencies = [
  "ethers",
  "jsonrpsee 0.16.3",
  "katana-core",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-provider",
  "serde",
  "serde_json",
@@ -6790,7 +6764,7 @@ version = "0.5.1-alpha.5"
 dependencies = [
  "anyhow",
  "katana-executor",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-provider",
  "katana-rpc-types",
  "starknet",
@@ -6804,7 +6778,7 @@ dependencies = [
  "chrono",
  "home",
  "katana-core",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "lazy_static",
  "runner-macro",
  "serde",
@@ -10225,7 +10199,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "console",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
  "saya-core",
@@ -10250,7 +10224,7 @@ dependencies = [
  "futures",
  "katana-db",
  "katana-executor",
- "katana-primitives 0.5.1-alpha.5",
+ "katana-primitives",
  "katana-provider",
  "lazy_static",
  "parking_lot 0.12.1",
@@ -10874,7 +10848,7 @@ version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da03fa3b94cc19e3ebfc88c4229c49d8f08cdbd1228870a45f0ffdf84988e14b"
 dependencies = [
- "dirs 5.0.1",
+ "dirs 4.0.0",
 ]
 
 [[package]]
@@ -10991,7 +10965,7 @@ dependencies = [
 [[package]]
 name = "snos"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/snos?branch=dojo-cairo-2.5#1041e664871113044e4627b2b012f26fd2bff73d"
+source = "git+https://github.com/cartridge-gg/snos?branch=dojo-cairo-2.5#3927435f5134404b4472eaae9c60f6eb3515b99b"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -11002,7 +10976,6 @@ dependencies = [
  "hex",
  "indexmap 1.9.3",
  "indoc 2.0.4",
- "katana-primitives 0.5.1-alpha.5 (git+https://github.com/cartridge-gg/snos?branch=dojo-cairo-2.5)",
  "lazy_static",
  "log",
  "num-integer",
