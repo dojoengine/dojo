@@ -16,7 +16,7 @@ pub mod events;
 use crate::client::events::ClientEvent;
 use crate::constants;
 use crate::errors::Error;
-use crate::types::{ClientMessage, ServerMessage};
+use crate::types::ClientMessage;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClientEvent")]

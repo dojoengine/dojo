@@ -14,8 +14,11 @@ use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
+use prost_types::Timestamp;
 use rand::thread_rng;
+use sqlx::types::chrono;
 use tokio::sync::{mpsc, Mutex};
+use torii_grpc::proto;
 use tracing::info;
 use webrtc::tokio::Certificate;
 
@@ -26,7 +29,7 @@ mod events;
 mod storage;
 
 use crate::server::events::ServerEvent;
-use crate::types::{ClientMessage, ServerMessage};
+use crate::types::ClientMessage;
 
 use sqlx::{Pool, Sqlite};
 
@@ -44,8 +47,8 @@ pub struct Behaviour {
 pub struct Relay {
     swarm: Swarm<Behaviour>,
     storage: RelayStorage,
-    message_sender: mpsc::UnboundedSender<ServerMessage>,
-    pub message_receiver: Arc<Mutex<mpsc::UnboundedReceiver<ServerMessage>>>,
+    message_sender: mpsc::UnboundedSender<proto::relay::Message>,
+    pub message_receiver: Arc<Mutex<mpsc::UnboundedReceiver<proto::relay::Message>>>,
 }
 
 impl Relay {
@@ -161,17 +164,17 @@ impl Relay {
                         }) => {
                             // Deserialize message.
                             // We shouldn't panic here
-                            let message = serde_json::from_slice::<ClientMessage>(&message.data);
-                            if let Err(e) = message {
-                                info!(
-                                    target: "torii::relay::server::gossipsub",
-                                    error = %e,
-                                    "Failed to deserialize message"
-                                );
-                                continue;
-                            }
-
-                            let message = message.unwrap();
+                            let message = match serde_json::from_slice::<ClientMessage>(&message.data) {
+                                Ok(message) => message,
+                                Err(e) => {
+                                    info!(
+                                        target: "torii::relay::server::gossipsub",
+                                        error = %e,
+                                        "Failed to deserialize message"
+                                    );
+                                    continue;
+                                }
+                            };
 
                             info!(
                                 target: "torii::relay::server",
@@ -183,10 +186,36 @@ impl Relay {
                             );
 
                             // forward message to room
-                            let server_message =
-                                ServerMessage { peer_id: peer_id.to_bytes(), data: message.data };
+                            let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+                            let message = proto::relay::Message {
+                                source_id: peer_id.to_string(),
+                                topic: message.topic,
+                                message_id: message_id.to_string(),
+                                data: message.data,
+                                // now
+                                timestamp: Some(Timestamp {
+                                    seconds: now.timestamp(),
+                                    nanos: now.timestamp_subsec_nanos() as i32,
+                                }),
+                            };
 
-                            
+                            self.storage
+                                .store_message(message.clone())
+                                .await
+                                .expect("Failed to store message");
+
+                            self.message_sender
+                                .send(message.clone())
+                                .expect("Failed to send message");
+
+                            info!(
+                                target: "torii::relay::server",
+                                message_id = %message_id,
+                                peer_id = %peer_id,
+                                topic = %message.topic,
+                                data = %String::from_utf8_lossy(&message.data),
+                                "Received message"
+                            );
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(
