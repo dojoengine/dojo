@@ -24,7 +24,7 @@ flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"
 parking_lot.workspace = true
-primitive-types = { version = "0.12.2", features = [ "serde" ] }
+primitive-types = "0.12.2"
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
