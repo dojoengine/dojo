@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use dojo_types::schema::Ty;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
@@ -36,22 +37,9 @@ pub struct EventLoop {
     command_receiver: UnboundedReceiver<Command>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Message {
-    // PeerId of the relay that propagated the message
-    pub propagation_source: PeerId,
-    // Peer that published the message
-    pub source: PeerId,
-    pub message_id: MessageId,
-    // Hash of the topic message was published to
-    pub topic: TopicHash,
-    // Raw message payload
-    pub data: Vec<u8>,
-}
-
 #[derive(Debug)]
 enum Command {
-    Publish(String, Vec<u8>, oneshot::Sender<Result<MessageId, Error>>),
+    Publish(String, Ty, oneshot::Sender<Result<MessageId, Error>>),
     WaitForRelay(oneshot::Sender<Result<(), Error>>)
 }
 
@@ -160,7 +148,7 @@ impl CommandSender {
         Self { sender }
     }
 
-    pub async fn publish(&mut self, topic: String, data: Vec<u8>) -> Result<MessageId, Error> {
+    pub async fn publish(&mut self, topic: String, data: Ty) -> Result<MessageId, Error> {
         let (tx, rx) = oneshot::channel();
 
         self.sender
@@ -232,7 +220,7 @@ impl EventLoop {
         }
     }
 
-    fn publish(&mut self, topic: String, data: Vec<u8>) -> Result<MessageId, Error> {
+    fn publish(&mut self, topic: String, data: Ty) -> Result<MessageId, Error> {
         self.swarm
             .behaviour_mut()
             .gossipsub

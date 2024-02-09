@@ -2,7 +2,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, io};
 
@@ -14,10 +13,7 @@ use libp2p::gossipsub::{self, IdentTopic};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
-use prost_types::Timestamp;
 use rand::thread_rng;
-use sqlx::types::chrono;
-use tokio::sync::{mpsc, Mutex};
 use torii_core::sql::Sql;
 use tracing::info;
 use webrtc::tokio::Certificate;
@@ -26,14 +22,9 @@ use crate::constants;
 use crate::errors::Error;
 
 mod events;
-mod storage;
 
 use crate::server::events::ServerEvent;
 use crate::types::ClientMessage;
-
-use sqlx::{Pool, Sqlite};
-
-use self::storage::RelayStorage;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -174,23 +165,14 @@ impl<'db> Relay<'db> {
                                 message_id = %message_id,
                                 peer_id = %peer_id,
                                 topic = %message.topic,
-                                data = %String::from_utf8_lossy(&message.data),
+                                data = %message.data,
                                 "Received message"
                             );
 
                             self.pool
-                                .store_message(message.clone())
+                                .set_message(message.data, &message_id.to_string())
                                 .await
                                 .expect("Failed to store message");
-
-                            info!(
-                                target: "torii::relay::server",
-                                message_id = %message_id,
-                                peer_id = %peer_id,
-                                topic = %message.topic,
-                                data = %String::from_utf8_lossy(&message.data),
-                                "Received message"
-                            );
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(

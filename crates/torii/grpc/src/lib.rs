@@ -22,12 +22,4 @@ pub mod proto {
     pub mod types {
         tonic::include_proto!("types");
     }
-
-    pub mod relay {
-        tonic::include_proto!("relay");
-
-        #[cfg(feature = "server")]
-        pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
-            tonic::include_file_descriptor_set!("descriptor");
-    }
 }

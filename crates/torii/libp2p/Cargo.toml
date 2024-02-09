@@ -20,6 +20,7 @@ regex = "1.10.3"
 anyhow.workspace = true
 sqlx.workspace = true
 torii-core.workspace = true
+dojo-types.workspace = true
 prost-types = "0.12.3"
 starknet-ff = "0.3.6"
 

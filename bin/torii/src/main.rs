@@ -161,6 +161,7 @@ async fn main() -> anyhow::Result<()> {
         Some(block_tx),
     );
 
+    
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(
         shutdown_rx,
@@ -171,6 +172,15 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
+    let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        &mut db,
+        args.relay_port,
+        args.relay_webrtc_port,
+        args.relay_local_key_path,
+        args.relay_cert_path,
+    )
+    .expect("Failed to start libp2p relay server");
+
     let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
 
     let graphql_server = spawn_rebuilding_graphql_server(
@@ -179,14 +189,6 @@ async fn main() -> anyhow::Result<()> {
         args.external_url,
         proxy_server.clone(),
     );
-
-    let mut libp2p_relay_server = torii_relay::server::Relay::new(
-        args.relay_port,
-        args.relay_webrtc_port,
-        args.relay_local_key_path,
-        args.relay_cert_path,
-    )
-    .expect("Failed to start libp2p relay server");
 
     info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", args.addr));
     info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", args.addr));
