@@ -1,5 +1,4 @@
 //! Blockchain fetched from Katana.
-//!
 use std::path::Path;
 
 use katana_db::init_db;
@@ -16,6 +15,12 @@ use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;
+use starknet::core::types::{
+    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
+    StateDiff,
+};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 
 use crate::error::SayaResult;
 
@@ -70,5 +75,35 @@ impl Blockchain {
 
     pub fn provider(&self) -> &BlockchainProvider<Box<dyn Database>> {
         &self.inner
+    }
+
+    pub fn init_from_state_diff(&mut self, state_diff: &StateDiff) -> SayaResult<()> {
+        for contract_diff in &state_diff.storage_diffs {
+            let ContractStorageDiffItem { address, storage_entries: entries } = contract_diff;
+
+            for e in entries {
+                self.inner.set_storage((*address).into(), e.key, e.value)?;
+            }
+        }
+
+        for nonce_update in &state_diff.nonces {
+            let NonceUpdate { contract_address, nonce: new_nonce } = *nonce_update;
+            self.inner.set_nonce(contract_address.into(), new_nonce)?;
+        }
+
+        for deployed in &state_diff.deployed_contracts {
+            let DeployedContractItem { address, class_hash } = *deployed;
+            self.inner.set_class_hash_of_contract(address.into(), class_hash)?;
+        }
+
+        for decl in &state_diff.declared_classes {
+            let DeclaredClassItem { class_hash, compiled_class_hash } = decl;
+            self.inner.set_compiled_class_hash_of_class_hash(
+                (*class_hash).into(),
+                *compiled_class_hash,
+            )?;
+        }
+
+        Ok(())
     }
 }

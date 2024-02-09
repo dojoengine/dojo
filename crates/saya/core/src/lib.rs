@@ -1,22 +1,24 @@
 //! Saya core library.
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::collections::HashMap;
 
-use starknet::core::types::{BlockId, MaybePendingStateUpdate, StateUpdate};
+use katana_primitives::contract::ClassHash;
+use starknet::core::types::{BlockId, MaybePendingStateUpdate, MaybePendingBlockWithTxs, StateUpdate, ContractClass, DeclaredClassItem};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tracing::{error, trace};
 use url::Url;
 
+use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::blockchain::Blockchain;
 
+pub mod blockchain;
 pub mod data_availability;
 pub mod error;
 pub mod prover;
 pub mod verifier;
-pub mod blockchain;
 
 /// Saya's main configuration.
 pub struct SayaConfig {
@@ -64,7 +66,7 @@ impl Saya {
     /// First naive version to have an overview of all the components
     /// and the process.
     /// Should be refacto in crates as necessary.
-    pub async fn start(&self) -> SayaResult<()> {
+    pub async fn start(&mut self) -> SayaResult<()> {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block;
 
@@ -110,14 +112,60 @@ impl Saya {
     /// # Arguments
     ///
     /// * `block_number` - The block number.
-    async fn process_block(&self, block_number: u64) -> SayaResult<()> {
+    async fn process_block(&mut self, block_number: u64) -> SayaResult<()> {
         trace!("Processing block {block_number}");
+
+        let state_update =
+            match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
+                MaybePendingStateUpdate::Update(su) => su,
+                MaybePendingStateUpdate::PendingUpdate(_) => {
+                    panic!("PendingUpdate should not be fetched")
+                }
+            };
+
+        if block_number == 0 {
+            // Init the blockchain with state update.
+            self.blockchain.init_from_state_diff(&state_update.state_diff)?;
+        }
+
+        // Fetch all decl contract classes.
+        // Classes are not included in the declare transactions.
+        // TODO: opti in Katana -> fetch all classes for a list of hashes instead
+        // of fetching each?
+        let mut contract_classes: HashMap<ClassHash, ContractClass> = HashMap::new();
+
+        for decl in &state_update.state_diff.declared_classes {
+            let DeclaredClassItem { class_hash, .. } = decl;
+
+            let contract_class = self.katana_client.get_class(BlockId::Number(block_number), class_hash).await?;
+
+            contract_classes.insert(*class_hash, contract_class);
+        }
+
+        let block_with_txs =
+            match self.katana_client.get_block_with_txs(BlockId::Number(block_number)).await? {
+                MaybePendingBlockWithTxs::Block(b) => b,
+                MaybePendingBlockWithTxs::PendingBlock(_) => {
+                    panic!("PendingBlock should not be fetched")
+                }
+            };
+
+        // Convert all txs into InternalTransation and write them into the file with
+        // other input fields.
+
+        // Fetch all decl contract classes.
+        // Fetch all txns.
+
+        // Fetch all declared classes and insert them into blockchain to then
+        // run the transactions?
+
+        // If block 0 -> update state locally and go to next block.
+
+        // If txns -> execute them against the state, which will update the state normally?
 
         // If block 0 => initialize the blockchain with genesis block update.
         // There's no transaction for the genesis block see how to have the
         // execution trace of it?
-
-        self.fetch_publish_state_update(block_number).await?;
 
         Ok(())
     }
