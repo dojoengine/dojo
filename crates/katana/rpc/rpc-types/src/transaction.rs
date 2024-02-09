@@ -306,3 +306,15 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPageCursor {
+    pub block_number: u64,
+    pub transaction_index: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPage {
+    pub transactions: Vec<Tx>,
+    pub cursor: TransactionsPageCursor,
+}
