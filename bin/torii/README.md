@@ -4,4 +4,4 @@
 curl -L https://install.dojoengine.org | bash
 ```
 
-[Documentation](https://book.dojoengine.org/toolchain/torii/overview.html)
+[Documentation](https://book.dojoengine.org/toolchain/torii/overview)

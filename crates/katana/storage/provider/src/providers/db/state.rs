@@ -3,11 +3,7 @@ use std::cmp::Ordering;
 use katana_db::mdbx::{self};
 use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
-use katana_db::tables::{
-    ClassDeclarationBlock, CompiledClassHashes, CompiledContractClasses, ContractClassChanges,
-    ContractInfo, ContractInfoChangeSet, ContractStorage, NonceChanges, SierraClasses,
-    StorageChangeSet, StorageChanges,
-};
+use katana_db::tables;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
@@ -23,12 +19,12 @@ use crate::ProviderResult;
 impl StateWriter for DbProvider {
     fn set_nonce(&self, address: ContractAddress, nonce: Nonce) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            let value = if let Some(info) = db_tx.get::<ContractInfo>(address)? {
+            let value = if let Some(info) = db_tx.get::<tables::ContractInfo>(address)? {
                 GenericContractInfo { nonce, ..info }
             } else {
                 GenericContractInfo { nonce, ..Default::default() }
             };
-            db_tx.put::<ContractInfo>(address, value)?;
+            db_tx.put::<tables::ContractInfo>(address, value)?;
             Ok(())
         })?
     }
@@ -40,7 +36,7 @@ impl StateWriter for DbProvider {
         storage_value: StorageValue,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            let mut cursor = db_tx.cursor::<ContractStorage>()?;
+            let mut cursor = db_tx.cursor::<tables::ContractStorage>()?;
             let entry = cursor.seek_by_key_subkey(address, storage_key)?;
 
             match entry {
@@ -61,12 +57,12 @@ impl StateWriter for DbProvider {
         class_hash: ClassHash,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            let value = if let Some(info) = db_tx.get::<ContractInfo>(address)? {
+            let value = if let Some(info) = db_tx.get::<tables::ContractInfo>(address)? {
                 GenericContractInfo { class_hash, ..info }
             } else {
                 GenericContractInfo { class_hash, ..Default::default() }
             };
-            db_tx.put::<ContractInfo>(address, value)?;
+            db_tx.put::<tables::ContractInfo>(address, value)?;
             Ok(())
         })?
     }
@@ -75,7 +71,7 @@ impl StateWriter for DbProvider {
 impl ContractClassWriter for DbProvider {
     fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<CompiledContractClasses>(hash, class.into())?;
+            db_tx.put::<tables::CompiledContractClasses>(hash, class.into())?;
             Ok(())
         })?
     }
@@ -86,7 +82,7 @@ impl ContractClassWriter for DbProvider {
         compiled_hash: CompiledClassHash,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<CompiledClassHashes>(hash, compiled_hash)?;
+            db_tx.put::<tables::CompiledClassHashes>(hash, compiled_hash)?;
             Ok(())
         })?
     }
@@ -97,7 +93,7 @@ impl ContractClassWriter for DbProvider {
         sierra: FlattenedSierraClass,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<SierraClasses>(hash, sierra)?;
+            db_tx.put::<tables::SierraClasses>(hash, sierra)?;
             Ok(())
         })?
     }
@@ -114,7 +110,7 @@ impl LatestStateProvider {
 
 impl ContractClassProvider for LatestStateProvider {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
-        let class = self.0.get::<CompiledContractClasses>(hash)?;
+        let class = self.0.get::<tables::CompiledContractClasses>(hash)?;
         Ok(class.map(CompiledContractClass::from))
     }
 
@@ -122,19 +118,19 @@ impl ContractClassProvider for LatestStateProvider {
         &self,
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
-        let hash = self.0.get::<CompiledClassHashes>(hash)?;
+        let hash = self.0.get::<tables::CompiledClassHashes>(hash)?;
         Ok(hash)
     }
 
     fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        let class = self.0.get::<SierraClasses>(hash)?;
+        let class = self.0.get::<tables::SierraClasses>(hash)?;
         Ok(class)
     }
 }
 
 impl StateProvider for LatestStateProvider {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        let info = self.0.get::<ContractInfo>(address)?;
+        let info = self.0.get::<tables::ContractInfo>(address)?;
         Ok(info.map(|info| info.nonce))
     }
 
@@ -142,7 +138,7 @@ impl StateProvider for LatestStateProvider {
         &self,
         address: ContractAddress,
     ) -> ProviderResult<Option<katana_primitives::contract::ClassHash>> {
-        let info = self.0.get::<ContractInfo>(address)?;
+        let info = self.0.get::<tables::ContractInfo>(address)?;
         Ok(info.map(|info| info.class_hash))
     }
 
@@ -151,7 +147,7 @@ impl StateProvider for LatestStateProvider {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> ProviderResult<Option<StorageValue>> {
-        let mut cursor = self.0.cursor::<ContractStorage>()?;
+        let mut cursor = self.0.cursor::<tables::ContractStorage>()?;
         let entry = cursor.seek_by_key_subkey(address, storage_key)?;
         match entry {
             Some(entry) if entry.key == storage_key => Ok(Some(entry.value)),
@@ -215,8 +211,12 @@ impl ContractClassProvider for HistoricalStateProvider {
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
         // check that the requested class hash was declared before the pinned block number
-        if self.tx.get::<ClassDeclarationBlock>(hash)?.is_some_and(|num| num <= self.block_number) {
-            Ok(self.tx.get::<CompiledClassHashes>(hash)?)
+        if self
+            .tx
+            .get::<tables::ClassDeclarationBlock>(hash)?
+            .is_some_and(|num| num <= self.block_number)
+        {
+            Ok(self.tx.get::<tables::CompiledClassHashes>(hash)?)
         } else {
             Ok(None)
         }
@@ -224,7 +224,7 @@ impl ContractClassProvider for HistoricalStateProvider {
 
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            let contract = self.tx.get::<CompiledContractClasses>(hash)?;
+            let contract = self.tx.get::<tables::CompiledContractClasses>(hash)?;
             Ok(contract.map(CompiledContractClass::from))
         } else {
             Ok(None)
@@ -233,7 +233,7 @@ impl ContractClassProvider for HistoricalStateProvider {
 
     fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            self.tx.get::<SierraClasses>(hash).map_err(|e| e.into())
+            self.tx.get::<tables::SierraClasses>(hash).map_err(|e| e.into())
         } else {
             Ok(None)
         }
@@ -242,7 +242,7 @@ impl ContractClassProvider for HistoricalStateProvider {
 
 impl StateProvider for HistoricalStateProvider {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        let change_list = self.tx.get::<ContractInfoChangeSet>(address)?;
+        let change_list = self.tx.get::<tables::ContractInfoChangeSet>(address)?;
 
         if let Some(num) = change_list.and_then(|entry| {
             Self::recent_block_change_relative_to_pinned_block_num(
@@ -250,7 +250,7 @@ impl StateProvider for HistoricalStateProvider {
                 &entry.nonce_change_list,
             )
         }) {
-            let mut cursor = self.tx.cursor::<NonceChanges>()?;
+            let mut cursor = self.tx.cursor::<tables::NonceChanges>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractNonceChangeEntry {
                     block: num,
@@ -271,7 +271,7 @@ impl StateProvider for HistoricalStateProvider {
         address: ContractAddress,
     ) -> ProviderResult<Option<ClassHash>> {
         let change_list: Option<ContractInfoChangeList> =
-            self.tx.get::<ContractInfoChangeSet>(address)?;
+            self.tx.get::<tables::ContractInfoChangeSet>(address)?;
 
         if let Some(num) = change_list.and_then(|entry| {
             Self::recent_block_change_relative_to_pinned_block_num(
@@ -279,7 +279,7 @@ impl StateProvider for HistoricalStateProvider {
                 &entry.class_change_list,
             )
         }) {
-            let mut cursor = self.tx.cursor::<ContractClassChanges>()?;
+            let mut cursor = self.tx.cursor::<tables::ContractClassChanges>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractClassChangeEntry {
                     block: num,
@@ -300,7 +300,7 @@ impl StateProvider for HistoricalStateProvider {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> ProviderResult<Option<StorageValue>> {
-        let mut cursor = self.tx.cursor::<StorageChangeSet>()?;
+        let mut cursor = self.tx.cursor::<tables::StorageChangeSet>()?;
 
         if let Some(num) = cursor.seek_by_key_subkey(address, storage_key)?.and_then(|entry| {
             Self::recent_block_change_relative_to_pinned_block_num(
@@ -308,7 +308,7 @@ impl StateProvider for HistoricalStateProvider {
                 &entry.block_list,
             )
         }) {
-            let mut cursor = self.tx.cursor::<StorageChanges>()?;
+            let mut cursor = self.tx.cursor::<tables::StorageChanges>()?;
             let sharded_key = ContractStorageKey { contract_address: address, key: storage_key };
 
             let entry = cursor.seek_by_key_subkey(num, sharded_key)?.ok_or(
