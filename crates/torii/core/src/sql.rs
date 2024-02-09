@@ -141,7 +141,53 @@ impl Sql {
             .await?;
 
         let path = vec![entity.name()];
-        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
+        self.build_set_ty_queries_recursive(
+            path,
+            vec!["entity_id".to_string(), "event_id".to_string()],
+            vec![Argument::String(entity_id.clone()), Argument::String(event_id.to_string())],
+            &entity,
+        );
+        self.query_queue.execute_all().await?;
+
+        SimpleBroker::publish(entity_updated);
+
+        Ok(())
+    }
+
+    pub async fn set_message(&mut self, message: Ty, topic: &str) -> Result<()> {
+        let keys = if let Ty::Struct(s) = &message {
+            let mut keys = Vec::new();
+            for m in s.keys() {
+                keys.extend(m.serialize()?);
+            }
+            keys
+        } else {
+            return Err(anyhow!("Entity is not a struct"));
+        };
+
+        let message_id = format!("{:#x}", poseidon_hash_many(&keys));
+        self.query_queue.enqueue(
+            "INSERT INTO message_model (message_id, model_id) VALUES (?, ?)",
+            vec![Argument::String(message_id.clone()), Argument::String(message.name())],
+        );
+
+        let keys_str = felts_sql_string(&keys);
+        let insert_entities = "INSERT INTO messages (id, keys, topic) VALUES (?, ?, ?)";
+        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+            .bind(&message_id)
+            .bind(&keys_str)
+            .bind(topic)
+            .fetch_one(&self.pool)
+            .await?;
+
+        let path = vec![message.name()];
+        self.build_set_ty_queries_recursive(path, vec![
+            "message_id".to_string(),
+            "topic".to_string(),
+        ], vec![
+            Argument::String(message_id.clone()),
+            Argument::String(topic.to_string()),
+        ], &message);
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(entity_updated);
@@ -152,7 +198,7 @@ impl Sql {
     pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let path = vec![entity.name()];
-        self.build_delete_entity_queries_recursive(path, &entity_id, &entity);
+        self.build_ty_entity_queries_recursive(path, &entity_id, &entity);
         self.query_queue.execute_all().await?;
         Ok(())
     }
@@ -302,21 +348,16 @@ impl Sql {
         }
     }
 
-    fn build_set_entity_queries_recursive(
+    fn build_set_ty_queries_recursive(
         &mut self,
         path: Vec<String>,
-        event_id: &str,
-        entity_id: &str,
-        entity: &Ty,
+        mut columns: Vec<String>,
+        mut arguments: Vec<Argument>,
+        ty: &Ty,
     ) {
-        match entity {
+        match ty {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
-                let mut columns = vec!["entity_id".to_string(), "event_id".to_string()];
-                let mut arguments = vec![
-                    Argument::String(entity_id.to_string()),
-                    Argument::String(event_id.to_string()),
-                ];
 
                 for member in s.children.iter() {
                     match &member.ty {
@@ -339,14 +380,14 @@ impl Sql {
                     placeholders.join(",")
                 );
 
-                self.query_queue.enqueue(statement, arguments);
+                self.query_queue.enqueue(statement, arguments.clone());
 
                 for member in s.children.iter() {
                     if let Ty::Struct(_) = &member.ty {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
-                        self.build_set_entity_queries_recursive(
-                            path_clone, event_id, entity_id, &member.ty,
+                        self.build_set_ty_queries_recursive(
+                            path_clone, columns.clone(), arguments.clone(), &member.ty,
                         );
                     }
                 }
@@ -355,16 +396,14 @@ impl Sql {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
-                    self.build_set_entity_queries_recursive(
-                        path_clone, event_id, entity_id, &child.ty,
-                    );
+                    self.build_set_ty_queries_recursive(path_clone, columns.clone(), arguments.clone(), &child.ty);
                 }
             }
             _ => {}
         }
     }
 
-    fn build_delete_entity_queries_recursive(
+    fn build_ty_entity_queries_recursive(
         &mut self,
         path: Vec<String>,
         entity_id: &str,
@@ -380,9 +419,7 @@ impl Sql {
                     if let Ty::Struct(_) = &member.ty {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
-                        self.build_delete_entity_queries_recursive(
-                            path_clone, entity_id, &member.ty,
-                        );
+                        self.build_ty_entity_queries_recursive(path_clone, entity_id, &member.ty);
                     }
                 }
             }
@@ -390,7 +427,7 @@ impl Sql {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
-                    self.build_delete_entity_queries_recursive(path_clone, entity_id, &child.ty);
+                    self.build_ty_entity_queries_recursive(path_clone, entity_id, &child.ty);
                 }
             }
             _ => {}
