@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
@@ -5,6 +7,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
+use tokio::sync::RwLock;
 use tracing::info;
 
 use super::EventProcessor;
@@ -37,7 +40,7 @@ where
     async fn process(
         &self,
         world: &WorldContractReader<P>,
-        db: &mut Sql,
+        db: Arc<RwLock<Sql>>,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         _event_id: &str,
@@ -54,7 +57,7 @@ where
 
         info!("Registered model: {}", name);
 
-        db.register_model(schema, layout, event.data[1], packed_size, unpacked_size).await?;
+        db.write().await.register_model(schema, layout, event.data[1], packed_size, unpacked_size).await?;
 
         Ok(())
     }

@@ -1,21 +1,28 @@
 use std::convert::TryInto;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
+use futures_util::future::BoxFuture;
+use futures_util::FutureExt;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
+use tokio::sync::Mutex;
 
 use super::World;
 use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
-use crate::types::{Entity as EntityUpdated, Event as EventEmitted, Message, Model as ModelRegistered};
+use crate::types::{
+    Entity as EntityUpdated, Event as EventEmitted, Message, Model as ModelRegistered,
+};
+use async_recursion::async_recursion;
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -57,7 +64,7 @@ impl Sql {
         Ok(indexer.0.try_into().expect("doesn't fit in u64"))
     }
 
-    pub fn set_head(&mut self, head: u64) {
+    pub async fn set_head(&mut self, head: u64) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::String(format!("{:#x}", self.world_address));
 
@@ -181,13 +188,12 @@ impl Sql {
             .await?;
 
         let path = vec![message.name()];
-        self.build_set_ty_queries_recursive(path, vec![
-            "message_id".to_string(),
-            "topic".to_string(),
-        ], vec![
-            Argument::String(message_id.clone()),
-            Argument::String(topic.to_string()),
-        ], &message);
+        self.build_set_ty_queries_recursive(
+            path,
+            vec!["message_id".to_string(), "topic".to_string()],
+            vec![Argument::String(message_id.clone()), Argument::String(topic.to_string())],
+            &message,
+        );
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(entity_updated);
@@ -203,7 +209,7 @@ impl Sql {
         Ok(())
     }
 
-    pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str) {
+    pub async fn set_metadata(&mut self, resource: &FieldElement, uri: &str) {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
 
@@ -281,7 +287,11 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    pub fn store_transaction(&mut self, transaction: &InvokeTransactionV1, transaction_id: &str) {
+    pub async fn store_transaction(
+        &mut self,
+        transaction: &InvokeTransactionV1,
+        transaction_id: &str,
+    ) {
         let id = Argument::String(transaction_id.to_string());
         let transaction_hash = Argument::FieldElement(transaction.transaction_hash);
         let sender_address = Argument::FieldElement(transaction.sender_address);
@@ -297,7 +307,12 @@ impl Sql {
         );
     }
 
-    pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {
+    pub async fn store_event(
+        &mut self,
+        event_id: &str,
+        event: &Event,
+        transaction_hash: FieldElement,
+    ) {
         let id = Argument::String(event_id.to_string());
         let keys = Argument::String(felts_sql_string(&event.keys));
         let data = Argument::String(felts_sql_string(&event.data));
@@ -387,7 +402,10 @@ impl Sql {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
                         self.build_set_ty_queries_recursive(
-                            path_clone, columns.clone(), arguments.clone(), &member.ty,
+                            path_clone,
+                            columns.clone(),
+                            arguments.clone(),
+                            &member.ty,
                         );
                     }
                 }
@@ -396,7 +414,12 @@ impl Sql {
                 for child in e.options.iter() {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
-                    self.build_set_ty_queries_recursive(path_clone, columns.clone(), arguments.clone(), &child.ty);
+                    self.build_set_ty_queries_recursive(
+                        path_clone,
+                        columns.clone(),
+                        arguments.clone(),
+                        &child.ty,
+                    );
                 }
             }
             _ => {}

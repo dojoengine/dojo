@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
@@ -5,6 +7,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
+use tokio::sync::RwLock;
 use tracing::info;
 
 use super::EventProcessor;
@@ -38,7 +41,7 @@ where
     async fn process(
         &self,
         _world: &WorldContractReader<P>,
-        db: &mut Sql,
+        db: Arc<RwLock<Sql>>,
         _block: &BlockWithTxs,
         _transaction_receipt: &InvokeTransactionReceipt,
         _event_id: &str,
@@ -47,12 +50,12 @@ where
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
         info!("store delete record: {}", name);
 
-        let model = db.model(&name).await?;
+        let model = db.read().await.model(&name).await?;
 
         let keys_start = NUM_KEYS_INDEX + 1;
         let keys = event.data[keys_start..].to_vec();
         let entity = model.schema().await?;
-        db.delete_entity(keys, entity).await?;
+        db.write().await.delete_entity(keys, entity).await?;
         Ok(())
     }
 }

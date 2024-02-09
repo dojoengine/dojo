@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Error, Result};
@@ -11,6 +12,7 @@ use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
+use tokio::sync::RwLock;
 use tokio_util::bytes::Bytes;
 use tracing::{error, info};
 
@@ -47,7 +49,7 @@ where
     async fn process(
         &self,
         _world: &WorldContractReader<P>,
-        db: &mut Sql,
+        db: Arc<RwLock<Sql>>,
         _block: &BlockWithTxs,
         _invoke_receipt: &InvokeTransactionReceipt,
         _event_id: &str,
@@ -67,7 +69,7 @@ where
         };
 
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
-        db.set_metadata(resource, &uri_str);
+        db.write().await.set_metadata(resource, &uri_str);
 
         let db = db.clone();
         let resource = *resource;
@@ -79,10 +81,10 @@ where
     }
 }
 
-async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
+async fn try_retrieve(db: Arc<RwLock<Sql>>, resource: FieldElement, uri_str: String) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
-            db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
+            db.write().await.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
                 .await
                 .unwrap();
             info!("Updated resource {resource:#x} metadata from ipfs");

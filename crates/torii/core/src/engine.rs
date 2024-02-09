@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -10,6 +11,7 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
@@ -40,9 +42,9 @@ impl Default for EngineConfig {
     }
 }
 
-pub struct Engine<'db, P: Provider + Sync> {
+pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
-    db: &'db mut Sql,
+    db: Arc<RwLock<Sql>>,
     provider: Box<P>,
     processors: Processors<P>,
     config: EngineConfig,
@@ -55,10 +57,10 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<'db, P: Provider + Sync> Engine<'db, P> {
+impl<P: Provider + Sync> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
-        db: &'db mut Sql,
+        db: Arc<RwLock<Sql>>,
         provider: P,
         processors: Processors<P>,
         config: EngineConfig,
@@ -69,7 +71,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        let mut head = self.db.head().await?;
+        let mut head = self.db.read().await.head().await?;
         if head == 0 {
             head = self.config.start_block;
         } else if self.config.start_block != 0 {
@@ -137,8 +139,8 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
 
             self.process(block_with_txs).await?;
 
-            self.db.set_head(from);
-            self.db.execute().await?;
+            self.db.write().await.set_head(from);
+            self.db.write().await.execute().await?;
             from += 1;
         }
 
@@ -215,7 +217,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
 
     async fn process_block(&mut self, block: &BlockWithTxs) -> Result<()> {
         for processor in &self.processors.block {
-            processor.process(self.db, self.provider.as_ref(), block).await?;
+            processor.process(self.db.clone(), self.provider.as_ref(), block).await?;
         }
         Ok(())
     }
@@ -230,7 +232,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
         for processor in &self.processors.transaction {
             processor
                 .process(
-                    self.db,
+                    self.db.clone(),
                     self.provider.as_ref(),
                     block,
                     invoke_receipt,
@@ -250,13 +252,13 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
         event_id: &str,
         event: &Event,
     ) -> Result<()> {
-        self.db.store_event(event_id, event, invoke_receipt.transaction_hash);
+        self.db.write().await.store_event(event_id, event, invoke_receipt.transaction_hash);
         for processor in &self.processors.event {
             if get_selector_from_name(&processor.event_key())? == event.keys[0]
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, self.db, block, invoke_receipt, event_id, event)
+                    .process(&self.world, self.db.clone(), block, invoke_receipt, event_id, event)
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {

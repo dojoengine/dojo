@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
@@ -13,7 +14,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, RwLock};
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
@@ -22,11 +23,11 @@ use crate::sql::Sql;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
-    db: &mut Sql,
+    db: Arc<RwLock<Sql>>,
     provider: P,
     migration: MigrationStrategy,
     sequencer: TestSequencer,
-) -> Result<Engine<'_, P>, Box<dyn std::error::Error>>
+) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
     P: Provider + Send + Sync,
 {
@@ -70,8 +71,8 @@ async fn test_load_from_remote() {
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
-    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
-    let _ = bootstrap_engine(world, &mut db, &provider, migration, sequencer).await;
+    let db = Arc::new(RwLock::new(Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap()));
+    let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 2);
@@ -101,7 +102,7 @@ async fn test_load_from_remote() {
     assert_eq!(unpacked_size, 2);
 
     let event_id = format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 42, 69);
-    db.store_event(
+    db.write().await.store_event(
         &event_id,
         &Event {
             from_address: FieldElement::ONE,
@@ -111,7 +112,7 @@ async fn test_load_from_remote() {
         FieldElement::THREE,
     );
 
-    db.execute().await.unwrap();
+    db.write().await.execute().await.unwrap();
 
     let query =
         format!("SELECT keys, data, transaction_hash FROM events WHERE id = '{}'", event_id);
