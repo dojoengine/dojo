@@ -1,5 +1,4 @@
-use sqlx::{Pool, Row, Sqlite};
-use torii_grpc::proto;
+use sqlx::{Pool, Sqlite};
 
 pub(crate) struct RelayStorage {
     pub(crate) pool: Pool<Sqlite>,
@@ -34,46 +33,5 @@ impl RelayStorage {
         .await?;
 
         Ok(())
-    }
-
-    pub(crate) async fn get_messages(
-        &self,
-        topic: String,
-        limit: i64,
-        offset: i64,
-    ) -> Result<Vec<proto::relay::Message>, sqlx::Error> {
-        let messages = sqlx::query(
-            r#"
-            SELECT id, source_id, topic, data, created_at
-            FROM messages
-            WHERE topic = ?
-            ORDER BY created_at DESC
-            LIMIT ?
-            OFFSET ?
-            "#,
-        )
-        .bind(topic)
-        .bind(limit)
-        .bind(offset)
-        // Convert the SQL rows into protobuf messages.
-        .map(|row: sqlx::sqlite::SqliteRow| {
-            let timestamp = row.get::<sqlx::types::chrono::DateTime<sqlx::types::chrono::Utc>, _>(4);
-            let timestamp = prost_types::Timestamp {
-                seconds: timestamp.timestamp(),
-                nanos: timestamp.timestamp_subsec_nanos() as i32,
-            };
-
-            proto::relay::Message {
-                message_id: row.get(0),
-                source_id: row.get(1),
-                topic: row.get(2),
-                data: row.get(3),
-                timestamp: Some(timestamp),
-            }
-        })
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(messages)
     }
 }

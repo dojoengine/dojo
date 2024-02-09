@@ -25,8 +25,12 @@ mod test {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
             .try_init();
+
+        // Database
+        let pool = sqlx::sqlite::SqlitePool::connect("sqlite::memory:").await?;
+
         // Initialize the relay server
-        let mut relay_server: Relay = Relay::new(9900, 9901, None, None)?;
+        let mut relay_server: Relay = Relay::new(&pool, 9900, 9901, None, None)?;
         tokio::spawn(async move {
             relay_server.run().await;
         });

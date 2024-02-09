@@ -18,7 +18,7 @@ use prost_types::Timestamp;
 use rand::thread_rng;
 use sqlx::types::chrono;
 use tokio::sync::{mpsc, Mutex};
-use torii_grpc::proto;
+use torii_core::sql::Sql;
 use tracing::info;
 use webrtc::tokio::Certificate;
 
@@ -44,16 +44,14 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
-pub struct Relay {
+pub struct Relay<'db> {
     swarm: Swarm<Behaviour>,
-    storage: RelayStorage,
-    message_sender: mpsc::UnboundedSender<proto::relay::Message>,
-    pub message_receiver: Arc<Mutex<mpsc::UnboundedReceiver<proto::relay::Message>>>,
+    pool: &'db mut Sql,
 }
 
-impl Relay {
+impl<'db> Relay<'db> {
     pub fn new(
-        pool: &Pool<Sqlite>,
+        pool: &'db mut Sql,
         port: u16,
         port_webrtc: u16,
         local_key_path: Option<String>,
@@ -143,13 +141,7 @@ impl Relay {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
-        let (message_sender, message_receiver) = mpsc::unbounded_channel();
-        Ok(Self {
-            swarm,
-            storage: RelayStorage::new(pool.clone()),
-            message_sender,
-            message_receiver: Arc::new(Mutex::new(message_receiver)),
-        })
+        Ok(Self { swarm, pool })
     }
 
     pub async fn run(&mut self) {
@@ -164,17 +156,18 @@ impl Relay {
                         }) => {
                             // Deserialize message.
                             // We shouldn't panic here
-                            let message = match serde_json::from_slice::<ClientMessage>(&message.data) {
-                                Ok(message) => message,
-                                Err(e) => {
-                                    info!(
-                                        target: "torii::relay::server::gossipsub",
-                                        error = %e,
-                                        "Failed to deserialize message"
-                                    );
-                                    continue;
-                                }
-                            };
+                            let message =
+                                match serde_json::from_slice::<ClientMessage>(&message.data) {
+                                    Ok(message) => message,
+                                    Err(e) => {
+                                        info!(
+                                            target: "torii::relay::server::gossipsub",
+                                            error = %e,
+                                            "Failed to deserialize message"
+                                        );
+                                        continue;
+                                    }
+                                };
 
                             info!(
                                 target: "torii::relay::server",
@@ -185,28 +178,10 @@ impl Relay {
                                 "Received message"
                             );
 
-                            // forward message to room
-                            let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
-                            let message = proto::relay::Message {
-                                source_id: peer_id.to_string(),
-                                topic: message.topic,
-                                message_id: message_id.to_string(),
-                                data: message.data,
-                                // now
-                                timestamp: Some(Timestamp {
-                                    seconds: now.timestamp(),
-                                    nanos: now.timestamp_subsec_nanos() as i32,
-                                }),
-                            };
-
-                            self.storage
+                            self.pool
                                 .store_message(message.clone())
                                 .await
                                 .expect("Failed to store message");
-
-                            self.message_sender
-                                .send(message.clone())
-                                .expect("Failed to send message");
 
                             info!(
                                 target: "torii::relay::server",

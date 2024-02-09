@@ -19,8 +19,9 @@ async-trait = "0.1.77"
 regex = "1.10.3"
 anyhow.workspace = true
 sqlx.workspace = true
-torii-grpc = { path = "../grpc", features = [ "server" ] }
+torii-core.workspace = true
 prost-types = "0.12.3"
+starknet-ff = "0.3.6"
 
 [dev-dependencies]
 tempfile = "3.9.0"
