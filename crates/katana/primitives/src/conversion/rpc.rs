@@ -121,11 +121,15 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
 pub fn legacy_rpc_to_inner_compiled_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
 ) -> Result<(ClassHash, CompiledContractClass)> {
+    println!("bbb");
+
     let class_json = json!({
         "abi": compressed_legacy_contract.abi.clone().unwrap_or_default(),
         "entry_points_by_type": compressed_legacy_contract.entry_points_by_type,
         "program": decompress_legacy_program_data(&compressed_legacy_contract.program)?,
     });
+
+    println!("ahah");
 
     #[allow(unused)]
     #[derive(Deserialize)]
@@ -169,9 +173,11 @@ pub fn legacy_rpc_to_inner_compiled_class(
     // both types are using default Rust repr, which means there is no guarantee by the compiler
     // that the memory layout of both types will be the same despite comprised of the same
     // fields and types.
+    println!("1");
     let class: LegacyContractClassJson = serde_json::from_value(class_json.clone())?;
     let class: LegacyContractClass = unsafe { mem::transmute(class) };
 
+    println!("2");
     let inner_class: ContractClassV0 = serde_json::from_value(class_json)?;
     let class_hash = class.class_hash()?;
 
@@ -285,6 +291,7 @@ fn decompress_legacy_program_data(data: &[u8]) -> Result<LegacyProgram, io::Erro
         #[serde(default)]
         accessible_scopes: Vec<String>,
         end_pc: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
         flow_tracking_data: Option<LegacyFlowTrackingData>,
         name: String,
         start_pc: u64,
@@ -305,8 +312,10 @@ fn decompress_legacy_program_data(data: &[u8]) -> Result<LegacyProgram, io::Erro
     #[allow(unused)]
     #[derive(Deserialize)]
     struct LegacyProgramJson {
+        #[serde(skip_serializing_if = "Option::is_none")]
         attributes: Option<Vec<LegacyAttribute>>,
         builtins: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         compiler_version: Option<String>,
         #[serde_as(as = "Vec<UfeHex>")]
         data: Vec<FieldElement>,
@@ -404,7 +413,7 @@ fn parse_value_address_to_str(value_address: ValueAddress) -> String {
 
 #[cfg(test)]
 mod tests {
-    use starknet::core::types::ContractClass;
+    use starknet::core::types::{ContractClass, CompressedLegacyContractClass};
 
     use super::{legacy_inner_to_rpc_class, legacy_rpc_to_inner_compiled_class};
     use crate::utils::class::parse_compiled_class_v0;
@@ -415,7 +424,7 @@ mod tests {
     // is successful and that the converted class can be converted back
     #[test]
     fn legacy_rpc_to_inner_and_back() {
-        let class_json = include_str!("../../contracts/compiled/account.json");
+        let class_json = include_str!("../../contracts/compiled/erc20.json");
         let class = parse_compiled_class_v0(class_json).unwrap();
 
         let Ok(ContractClass::Legacy(compressed_legacy_class)) = legacy_inner_to_rpc_class(class)
@@ -424,5 +433,12 @@ mod tests {
         };
 
         legacy_rpc_to_inner_compiled_class(&compressed_legacy_class).unwrap();
+    }
+
+    #[test]
+    fn legacy_rpc_to_inner_erc20() {
+        let class_json = include_str!("../../contracts/test_erc20_legacy_rpc.json");
+        let legacy_class: CompressedLegacyContractClass = serde_json::from_str(class_json).unwrap();
+        legacy_rpc_to_inner_compiled_class(&legacy_class).unwrap();
     }
 }

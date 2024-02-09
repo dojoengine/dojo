@@ -124,14 +124,15 @@ impl Blockchain {
         for (class_hash, class) in contract_classes {
             match class {
                 ContractClass::Legacy(legacy) => {
-                    let (hash, class) = rpc_converter::legacy_rpc_to_inner_compiled_class(legacy)?;
-
                     trace!(
                         target: LOG_TARGET,
                         version = "cairo 0",
-                        class_hash = %hash,
+                        %class_hash,
                         "set contract class");
 
+                    println!("{:?}", legacy);
+
+                    let (hash, class) = rpc_converter::legacy_rpc_to_inner_compiled_class(legacy)?;
                     self.inner.set_class(hash, class)?;
                 }
                 ContractClass::Sierra(s) => {
