@@ -2,7 +2,7 @@
 cairo-version = "2.4.0"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
-version = "0.5.0"
+version = "0.5.1"
 
 [dependencies]
 dojo_plugin = { git = "https://github.com/dojoengine/dojo", tag = "v0.3.11" }

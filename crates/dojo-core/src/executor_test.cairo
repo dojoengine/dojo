@@ -18,16 +18,21 @@ struct Foo {
     b: u128,
 }
 
+#[starknet::interface]
+trait IBar<T> {
+    fn dojo_resource(self: @T) -> felt252;
+    fn execute(self: @T, foo: Foo) -> Foo;
+}
+
 #[starknet::contract]
 mod bar {
-    use super::{Foo};
+    use super::{Foo, IBar};
 
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
-    #[generate_trait]
-    impl IbarImpl of IBar {
+    impl IbarImpl of IBar<ContractState> {
         fn dojo_resource(self: @ContractState) -> felt252 {
             'bar'
         }

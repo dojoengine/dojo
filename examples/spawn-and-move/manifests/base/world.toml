@@ -1,4 +1,4 @@
 kind = "Class"
-class_hash = "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497"
+class_hash = "0x54afaf1c0d052df74af180637871455cafeee493e2f98a1e09fadcd8b36ef14"
 abi = "abis/world.json"
 name = "dojo::world::world"

@@ -148,7 +148,6 @@ fn test_pack_unpack_types() {
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
-    let mut i: u8 = 0;
     pack_inner(@3, 8, ref packing, ref offset, ref packed);
     pack_inner(@14, 16, ref packing, ref offset, ref packed);
     pack_inner(@59, 32, ref packing, ref offset, ref packed);

@@ -403,48 +403,44 @@ fn get_dojo_contract_artifacts(
     aux_data: &StarkNetContractAuxData,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<SmolStr, (Manifest<DojoContract>, Option<abi::Contract>)>> {
-    aux_data
-        .contracts
-        .iter()
-        .filter(|name| !matches!(name.as_ref(), "world" | "executor" | "base"))
-        .filter(|_name| {
-            let module_name = module_id.full_path(db);
-            compiled_classes.get(module_name.as_str()).cloned().is_some()
-        })
-        .map(|name| {
-            let module_name = module_id.full_path(db);
-            let module_name = module_name.as_str();
+    let contract_name = &aux_data.contract_name;
 
-            let reads = match SYSTEM_READS.lock().unwrap().get(module_name) {
-                Some(models) => {
+    let mut result = HashMap::new();
+
+    if !matches!(contract_name.as_ref(), "world" | "executor" | "base") {
+        let module_name: SmolStr = module_id.full_path(db).into();
+
+        if let Some((class_hash, abi)) = compiled_classes.get(&module_name as &str) {
+            let reads = SYSTEM_READS
+                .lock()
+                .unwrap()
+                .get(&module_name as &str)
+                .map_or_else(Vec::new, |models| {
                     models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect()
-                }
-                None => vec![],
-            };
+                });
 
-            let write_entries = SYSTEM_WRITES.lock().unwrap();
-            let writes = match write_entries.get(module_name) {
-                Some(write_ops) => find_module_rw(db, module_id, write_ops),
-                None => vec![],
-            };
+            let writes = SYSTEM_WRITES
+                .lock()
+                .unwrap()
+                .get(&module_name as &str)
+                .map_or_else(Vec::new, |write_ops| find_module_rw(db, module_id, write_ops));
 
-            let (class_hash, abi) = compiled_classes
-                .get(module_name)
-                .cloned()
-                .ok_or(anyhow!("Contract {name} not found in target."))?;
+            let manifest = Manifest::new(
+                DojoContract {
+                    writes,
+                    reads,
+                    class_hash: *class_hash,
+                    abi: None,
+                    ..Default::default()
+                },
+                module_name.clone(),
+            );
 
-            Ok((
-                SmolStr::from(module_name),
-                (
-                    Manifest::new(
-                        DojoContract { writes, reads, class_hash, abi: None, ..Default::default() },
-                        module_name.into(),
-                    ),
-                    abi,
-                ),
-            ))
-        })
-        .collect::<anyhow::Result<_>>()
+            result.insert(module_name, (manifest, abi.clone()));
+        }
+    }
+
+    Ok(result)
 }
 
 fn write_manifest_and_abi<T>(

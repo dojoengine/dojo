@@ -10,7 +10,7 @@ use ::blockifier::execution::entry_point::{
 use ::blockifier::execution::errors::EntryPointExecutionError;
 use ::blockifier::state::cached_state::{CachedState, GlobalContractCache, MutRefState};
 use ::blockifier::transaction::objects::AccountTransactionContext;
-use blockifier::block_context::{FeeTokenAddresses, GasPrices};
+use blockifier::block_context::{BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
 use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
 use blockifier::state::state_api::State;
 use blockifier::transaction::errors::TransactionExecutionError;
@@ -142,7 +142,7 @@ pub fn calculate_execution_fee(
     // For now let's only consider eth to be compatible with V2.
     // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/block_context.rs#L19C26-L19C26
     // https://github.com/starkware-libs/blockifier/blob/51b343fe38139a309a69b2482f4b484e8caa5edf/crates/blockifier/src/block_context.rs#L49
-    let gas_price = block_context.gas_prices.eth_l1_gas_price as u64;
+    let gas_price = block_context.block_info.gas_prices.eth_l1_gas_price as u64;
     let gas_consumed = total_l1_gas_usage.ceil() as u64;
     let overall_fee = total_l1_gas_usage.ceil() as u64 * gas_price;
 
@@ -159,19 +159,23 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     let gas_prices = GasPrices {
         eth_l1_gas_price: block_env.l1_gas_prices.eth.try_into().unwrap(),
         strk_l1_gas_price: block_env.l1_gas_prices.strk.try_into().unwrap(),
+        eth_l1_data_gas_price: 0,
+        strk_l1_data_gas_price: 0,
     };
 
     BlockContext {
-        gas_prices,
-        fee_token_addresses,
-        chain_id: cfg_env.chain_id.into(),
-        block_number: BlockNumber(block_env.number),
-        block_timestamp: BlockTimestamp(block_env.timestamp),
-        sequencer_address: block_env.sequencer_address.into(),
-        vm_resource_fee_cost: cfg_env.vm_resource_fee_cost.clone().into(),
-        validate_max_n_steps: cfg_env.validate_max_n_steps,
-        invoke_tx_max_n_steps: cfg_env.invoke_tx_max_n_steps,
-        max_recursion_depth: cfg_env.max_recursion_depth,
+        block_info: BlockInfo {
+            gas_prices,
+            block_number: BlockNumber(block_env.number),
+            block_timestamp: BlockTimestamp(block_env.timestamp),
+            sequencer_address: block_env.sequencer_address.into(),
+            vm_resource_fee_cost: cfg_env.vm_resource_fee_cost.clone().into(),
+            validate_max_n_steps: cfg_env.validate_max_n_steps,
+            invoke_tx_max_n_steps: cfg_env.invoke_tx_max_n_steps,
+            max_recursion_depth: cfg_env.max_recursion_depth,
+            use_kzg_da: false,
+        },
+        chain_info: ChainInfo { fee_token_addresses, chain_id: cfg_env.chain_id.into() },
     }
 }
 

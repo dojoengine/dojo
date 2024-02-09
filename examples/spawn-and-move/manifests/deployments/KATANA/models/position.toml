@@ -1,5 +1,5 @@
 kind = "DojoModel"
-class_hash = "0x41b29bc6a73b6e963cff7f49c597e78d49f4353ff6d0c7c1bdfec8b3949dcf0"
+class_hash = "0x1e0fd72622c19b91620327ee05e4c226e6d383ec95ba67f2b3830b8c9aa5e4a"
 abi = "abis/position.json"
 name = "dojo_examples::models::position"
 

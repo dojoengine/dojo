@@ -246,7 +246,7 @@ pub struct BaseManifest {
     pub world: Manifest<Class>,
     pub executor: Manifest<Class>,
     pub base: Manifest<Class>,
-    pub contracts: Vec<Manifest<Class>>,
+    pub contracts: Vec<Manifest<DojoContract>>,
     pub models: Vec<Manifest<DojoModel>>,
 }
 #[derive(Debug, Clone)]
@@ -270,7 +270,7 @@ impl BaseManifest {
         let base: Manifest<Class> =
             toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
 
-        let contracts = elements_from_path::<Class>(contract_dir)?;
+        let contracts = elements_from_path::<DojoContract>(contract_dir)?;
         let models = elements_from_path::<DojoModel>(model_dir)?;
 
         Ok(Self { world, executor, base, contracts, models })

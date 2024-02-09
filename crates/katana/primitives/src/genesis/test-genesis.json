@@ -42,6 +42,11 @@
 		},
 		"0x79156ecb3d8f084001bb498c95e37fa1c4b40dbb35a3ae47b77b1ad535edcb9": {
 			"publicKey": "0x3"
+		},
+		"0x053a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf": {
+			"publicKey": "0x4",
+			"balance": "0xD3C21BCECCEDA1000000",
+			"privateKey": "0x115"
 		}
 	},
 	"contracts": {

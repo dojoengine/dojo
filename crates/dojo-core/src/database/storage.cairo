@@ -45,7 +45,7 @@ fn set(address_domain: u32, keys: Span<felt252>, value: felt252) {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     starknet::storage_write_syscall(
         address_domain, starknet::storage_address_from_base(base), value
-    );
+    ).unwrap_syscall();
 }
 
 fn set_many(address_domain: u32, keys: Span<felt252>, offset: u8, mut unpacked: Span<felt252>, mut layout: Span<u8>) {
@@ -60,7 +60,7 @@ fn set_many(address_domain: u32, keys: Span<felt252>, offset: u8, mut unpacked: 
             Option::Some(v) => {
                 starknet::storage_write_syscall(
                     address_domain, starknet::storage_address_from_base_and_offset(base, offset), v
-                );
+                ).unwrap_syscall();
                 offset += 1
             },
             Option::None(_) => {

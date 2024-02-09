@@ -1,6 +1,7 @@
 //! Serializable without using custome functions
 
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 use blockifier::execution::contract_class::{
@@ -12,7 +13,7 @@ use cairo_vm::serde::deserialize_program::{
     ApTracking, Attribute, BuiltinName, FlowTrackingData, HintParams, Identifier,
     InstructionLocation, Member, OffsetValue,
 };
-use cairo_vm::types::program::{Program, SharedProgramData};
+use cairo_vm::types::program::{HintsCollection, Program, SharedProgramData};
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use serde::{Deserialize, Serialize};
 use starknet_api::core::EntryPointSelector;
@@ -128,7 +129,7 @@ impl From<SerializableProgram> for Program {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableSharedProgramData {
     pub data: Vec<MaybeRelocatable>,
-    pub hints: HashMap<usize, Vec<SerializableHintParams>>,
+    pub hints_collection: SerializableHintsCollection,
     pub main: Option<usize>,
     pub start: Option<usize>,
     pub end: Option<usize>,
@@ -142,11 +143,7 @@ impl From<SharedProgramData> for SerializableSharedProgramData {
     fn from(value: SharedProgramData) -> Self {
         Self {
             data: value.data,
-            hints: value
-                .hints
-                .into_iter()
-                .map(|(k, v)| (k, v.into_iter().map(|h| h.into()).collect()))
-                .collect(),
+            hints_collection: value.hints_collection.into(),
             main: value.main,
             start: value.start,
             end: value.end,
@@ -166,11 +163,7 @@ impl From<SerializableSharedProgramData> for SharedProgramData {
     fn from(value: SerializableSharedProgramData) -> Self {
         Self {
             data: value.data,
-            hints: value
-                .hints
-                .into_iter()
-                .map(|(k, v)| (k, v.into_iter().map(|h| h.into()).collect()))
-                .collect(),
+            hints_collection: value.hints_collection.into(),
             main: value.main,
             start: value.start,
             end: value.end,
@@ -209,6 +202,32 @@ impl From<SerializableHintParams> for HintParams {
             code: value.code,
             accessible_scopes: value.accessible_scopes,
             flow_tracking_data: value.flow_tracking_data.into(),
+        }
+    }
+}
+
+type HintRange = Option<(usize, NonZeroUsize)>;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SerializableHintsCollection {
+    pub hints: Vec<SerializableHintParams>,
+    pub hints_ranges: Vec<HintRange>,
+}
+
+impl From<HintsCollection> for SerializableHintsCollection {
+    fn from(value: HintsCollection) -> Self {
+        Self {
+            hints_ranges: value.hints_ranges,
+            hints: value.hints.into_iter().map(|h| h.into()).collect(),
+        }
+    }
+}
+
+impl From<SerializableHintsCollection> for HintsCollection {
+    fn from(value: SerializableHintsCollection) -> Self {
+        Self {
+            hints_ranges: value.hints_ranges,
+            hints: value.hints.into_iter().map(|h| h.into()).collect(),
         }
     }
 }
