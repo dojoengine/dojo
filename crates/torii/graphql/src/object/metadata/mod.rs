@@ -24,7 +24,7 @@ pub struct MetadataObject;
 impl MetadataObject {
     fn row_types(&self) -> TypeMapping {
         let mut row_types = self.type_mapping().clone();
-        row_types.remove("worldAddress");
+        row_types.swap_remove("worldAddress");
         row_types
     }
 }

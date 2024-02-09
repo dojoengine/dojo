@@ -30,7 +30,7 @@ starknet_api.workspace = true
 ethers = "2.0.11"
 
 [features]
-default = [ "blockifier", "rpc", "serde" ]
+default = [ "blockifier", "serde" ]
 
 blockifier = [  ]
 rpc = [  ]

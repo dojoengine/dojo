@@ -79,7 +79,7 @@ impl StateReader for StateRefDb {
 
     fn get_compiled_contract_class(
         &mut self,
-        class_hash: &starknet_api::core::ClassHash,
+        class_hash: starknet_api::core::ClassHash,
     ) -> blockifier::state::state_api::StateResult<
         blockifier::execution::contract_class::ContractClass,
     > {
@@ -88,7 +88,7 @@ impl StateReader for StateRefDb {
         {
             Ok(class)
         } else {
-            Err(StateError::UndeclaredClassHash(*class_hash))
+            Err(StateError::UndeclaredClassHash(class_hash))
         }
     }
 }
@@ -142,7 +142,7 @@ where
         &self,
         hash: katana_primitives::contract::ClassHash,
     ) -> ProviderResult<Option<katana_primitives::contract::CompiledContractClass>> {
-        let Ok(class) = self.inner().get_compiled_contract_class(&ClassHash(hash.into())) else {
+        let Ok(class) = self.inner().get_compiled_contract_class(ClassHash(hash.into())) else {
             return Ok(None);
         };
         Ok(Some(class))

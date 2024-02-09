@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{
     Expr, GenericParam, ItemEnum, ItemStruct, OptionTypeClause, OptionWrappedGenericParamList,
 };
@@ -146,6 +147,7 @@ pub fn handle_introspect_enum(
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: types_tuple.stable_ptr().0,
                 message: "Only tuple and type paths are supported.".to_string(),
+                severity: Severity::Error,
             });
         }
     }
@@ -166,6 +168,7 @@ pub fn handle_introspect_enum(
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: member_type.stable_ptr(),
                 message: format!("Enum arms need to have same type - {}.", variant_type_text),
+                severity: Severity::Error,
             });
         }
 

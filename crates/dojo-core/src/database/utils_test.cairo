@@ -103,7 +103,6 @@ fn test_find_matching() {
 fn test_find_matching_wrong_arg_len() {
     let mut ids1: Array<felt252> = ArrayTrait::new();
     let mut ids2: Array<felt252> = ArrayTrait::new();
-    let mut ids3: Array<felt252> = ArrayTrait::new();
 
     ids1.append(1);
     ids1.append(3);
@@ -141,5 +140,5 @@ fn test_find_matching_wrong_arg_len() {
     entities.append(e2.span());
     entities.append(e3.span());
 
-    let matching = find_matching(ids.span(), entities.span());
+    let _matching = find_matching(ids.span(), entities.span());
 }

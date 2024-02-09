@@ -49,6 +49,7 @@ impl DojoSemanticDatabase {
 
         db.set_macro_plugins(suite.plugins);
         db.set_inline_macro_plugins(suite.inline_macro_plugins.into());
+        db.set_analyzer_plugins(suite.analyzer_plugins);
 
         init_dev_corelib(&mut db, corelib());
         let dojo_path = Utf8PathBuf::from_path_buf("../../crates/dojo-core/src".into()).unwrap();
@@ -134,16 +135,16 @@ pub fn setup_test_crate(db: &dyn SemanticGroup, content: &str) -> CrateId {
         parent: None,
         name: "lib.cairo".into(),
         content: Arc::new(content.into()),
-        diagnostics_mappings: Default::default(),
+        code_mappings: Default::default(),
         kind: FileKind::Module,
     }));
 
     db.intern_crate(CrateLongId::Virtual {
         name: "test".into(),
-        root: Directory::Virtual {
+        config: CrateConfiguration::default_for_root(Directory::Virtual {
             files: BTreeMap::from([("lib.cairo".into(), file_id)]),
             dirs: Default::default(),
-        },
+        }),
     })
 }
 

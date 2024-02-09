@@ -151,9 +151,11 @@ impl PlainEnumSerde of core::serde::Serde::<PlainEnum> {
     fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<PlainEnum> {
         let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
         core::option::Option::Some(
-            if idx == 0 { PlainEnum::Left(core::serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { PlainEnum::Right(core::serde::Serde::deserialize(ref serialized)?) }
-            else { return core::option::Option::None; }
+            match idx {
+                0 => PlainEnum::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => PlainEnum::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
         )
     }
 }
@@ -202,9 +204,11 @@ impl EnumPrimitiveSerde of core::serde::Serde::<EnumPrimitive> {
     fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumPrimitive> {
         let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
         core::option::Option::Some(
-            if idx == 0 { EnumPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { EnumPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?) }
-            else { return core::option::Option::None; }
+            match idx {
+                0 => EnumPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
         )
     }
 }
@@ -258,9 +262,11 @@ impl EnumTupleSerde of core::serde::Serde::<EnumTuple> {
     fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTuple> {
         let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
         core::option::Option::Some(
-            if idx == 0 { EnumTuple::Left(core::serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { EnumTuple::Right(core::serde::Serde::deserialize(ref serialized)?) }
-            else { return core::option::Option::None; }
+            match idx {
+                0 => EnumTuple::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumTuple::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
         )
     }
 }
@@ -319,9 +325,11 @@ impl EnumCustomSerde of core::serde::Serde::<EnumCustom> {
     fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumCustom> {
         let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
         core::option::Option::Some(
-            if idx == 0 { EnumCustom::Left(core::serde::Serde::deserialize(ref serialized)?) }
-            else if idx == 1 { EnumCustom::Right(core::serde::Serde::deserialize(ref serialized)?) }
-            else { return core::option::Option::None; }
+            match idx {
+                0 => EnumCustom::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumCustom::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
         )
     }
 }
