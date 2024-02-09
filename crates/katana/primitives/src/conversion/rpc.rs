@@ -121,15 +121,11 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
 pub fn legacy_rpc_to_inner_compiled_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
 ) -> Result<(ClassHash, CompiledContractClass)> {
-    println!("bbb");
-
     let class_json = json!({
         "abi": compressed_legacy_contract.abi.clone().unwrap_or_default(),
         "entry_points_by_type": compressed_legacy_contract.entry_points_by_type,
         "program": decompress_legacy_program_data(&compressed_legacy_contract.program)?,
     });
-
-    println!("ahah");
 
     #[allow(unused)]
     #[derive(Deserialize)]
@@ -173,11 +169,9 @@ pub fn legacy_rpc_to_inner_compiled_class(
     // both types are using default Rust repr, which means there is no guarantee by the compiler
     // that the memory layout of both types will be the same despite comprised of the same
     // fields and types.
-    println!("1");
     let class: LegacyContractClassJson = serde_json::from_value(class_json.clone())?;
     let class: LegacyContractClass = unsafe { mem::transmute(class) };
 
-    println!("2");
     let inner_class: ContractClassV0 = serde_json::from_value(class_json)?;
     let class_hash = class.class_hash()?;
 

@@ -3,7 +3,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::collections::HashMap;
 
+use blockifier::state::cached_state::CachedState;
 use katana_primitives::contract::ClassHash;
+use katana_primitives::block::BlockIdOrTag;
+use katana_executor::blockifier::state::StateRefDb;
+use snos::{SnOsRunner, state::SharedState, state::storage::TrieStorage};
 use starknet::core::types::{BlockId, MaybePendingStateUpdate, MaybePendingBlockWithTxs, StateUpdate, ContractClass, DeclaredClassItem};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -142,8 +146,6 @@ impl Saya {
 
         self.blockchain.set_contract_classes(&contract_classes)?;
 
-        // register classes in the inner?
-
         let block_with_txs =
             match self.katana_client.get_block_with_txs(BlockId::Number(block_number)).await? {
                 MaybePendingBlockWithTxs::Block(b) => b,
@@ -152,24 +154,51 @@ impl Saya {
                 }
             };
 
+        // TODO: need to insert a block into the storage to be able to retrieve it.
+        // So instead of registering manually -> use https://github.com/dojoengine/dojo/blob/c839363c5f561873355ca84da1173352f9955957/crates/katana/storage/provider/src/providers/in_memory/mod.rs#L409.
+        //
+        // This will update the storage automatically. But we need to populate also the fetched
+        // classes. So pass the state diff + the fetched classes to construct the primitive types.
+        // WE ALSO NEED THE TXNS! So instead of registring, pass all that to the function
+        // and the conversions will be done in there.
+
+        // Then Convert TXNs + block data into SNOS Input.
+        // Add a module with SNOS compat.
+
+        // To have the TXN execution info -> Need to be done on a copy of the state...?!
+        // or at least we don't update the state if possible.
+
+        // Take logic from here: https://github.com/dojoengine/dojo/blob/c839363c5f561873355ca84da1173352f9955957/crates/katana/core/src/service/block_producer.rs#L342
+        // And don't register the state when getting txs output.
+        // But then, when the block is processed -> we can apply the state to increment
+        // the block and ensure we have the block - 1 for the next block.
+
+        // RUN!
+
         trace!(block_number, txs_count = block_with_txs.transactions.len(), "block fetched");
 
+        if block_number == 0 {
+            return Ok(());
+        }
+
         // Convert all txs into InternalTransation and write them into the file with
-        // other input fields.
+        // other input fields -> SNOS INPUTs file.
 
-        // Fetch all decl contract classes.
-        // Fetch all txns.
+        // If txns -> execute txns against the state to have the execution info.
+        // run SNOS.
 
-        // Fetch all declared classes and insert them into blockchain to then
-        // run the transactions?
+        let snos = SnOsRunner::with_input_path("/tmp");
+        let state_reader = StateRefDb::from(self.blockchain.state(&BlockIdOrTag::Number(block_number - 1))?);
 
-        // If block 0 -> update state locally and go to next block.
-
-        // If txns -> execute them against the state, which will update the state normally?
-
-        // If block 0 => initialize the blockchain with genesis block update.
-        // There's no transaction for the genesis block see how to have the
-        // execution trace of it?
+        let state = SharedState {
+            cache: CachedState::from(state_reader),
+            block_context: self.blockchain.block_context_default(),
+            commitment_storage: TrieStorage::default(),
+            contract_storage: TrieStorage::default(),
+            class_storage: TrieStorage::default(),
+        };
+        
+        snos.run(state, vec![])?;
 
         Ok(())
     }

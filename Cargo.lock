@@ -10216,6 +10216,7 @@ version = "0.5.1-alpha.5"
 dependencies = [
  "anyhow",
  "async-trait",
+ "blockifier",
  "celestia-rpc",
  "celestia-types",
  "convert_case 0.6.0",

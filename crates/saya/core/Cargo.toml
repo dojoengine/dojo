@@ -14,6 +14,7 @@ katana-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
+blockifier.workspace = true
 convert_case.workspace = true
 ethers = "2.0.11"
 flate2.workspace = true
