@@ -74,14 +74,14 @@ impl Saya {
             let latest_block = match self.katana_client.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
-                    error!("Can't retrieve latest block: {}", e);
+                    error!(?e, "fetch block number");
                     tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                     continue;
                 }
             };
 
             if block > latest_block {
-                trace!("Nothing to process yet, waiting for block {block}");
+                trace!(block_number = block, "waiting block number");
                 tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                 continue;
             }
@@ -89,8 +89,6 @@ impl Saya {
             self.process_block(block).await?;
 
             block += 1;
-
-            tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
         }
     }
 
@@ -113,7 +111,7 @@ impl Saya {
     ///
     /// * `block_number` - The block number.
     async fn process_block(&mut self, block_number: u64) -> SayaResult<()> {
-        trace!("Processing block {block_number}");
+        trace!(block_number, "processing block");
 
         let state_update =
             match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
@@ -124,7 +122,7 @@ impl Saya {
             };
 
         if block_number == 0 {
-            // Init the blockchain with state update.
+            trace!("initializing state from genesis block state diff");
             self.blockchain.init_from_state_diff(&state_update.state_diff)?;
         }
 
@@ -142,6 +140,10 @@ impl Saya {
             contract_classes.insert(*class_hash, contract_class);
         }
 
+        self.blockchain.set_contract_classes(&contract_classes)?;
+
+        // register classes in the inner?
+
         let block_with_txs =
             match self.katana_client.get_block_with_txs(BlockId::Number(block_number)).await? {
                 MaybePendingBlockWithTxs::Block(b) => b,
@@ -149,6 +151,8 @@ impl Saya {
                     panic!("PendingBlock should not be fetched")
                 }
             };
+
+        trace!(block_number, txs_count = block_with_txs.transactions.len(), "block fetched");
 
         // Convert all txs into InternalTransation and write them into the file with
         // other input fields.

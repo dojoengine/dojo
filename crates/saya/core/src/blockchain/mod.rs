@@ -1,8 +1,11 @@
 //! Blockchain fetched from Katana.
 use std::path::Path;
+use std::collections::HashMap;
 
 use katana_db::init_db;
+use katana_primitives::conversion::rpc as rpc_converter;
 use katana_primitives::block::{BlockHash, FinalityStatus, SealedBlockWithStatus};
+use katana_primitives::contract::ClassHash;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -17,12 +20,15 @@ use katana_provider::traits::transaction::{
 use katana_provider::BlockchainProvider;
 use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
-    StateDiff,
+    StateDiff, ContractClass,
 };
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use tracing::{error, trace};
 
 use crate::error::SayaResult;
+
+const LOG_TARGET: &str = "blockchain";
 
 pub trait Database:
     BlockProvider
@@ -78,6 +84,13 @@ impl Blockchain {
     }
 
     pub fn init_from_state_diff(&mut self, state_diff: &StateDiff) -> SayaResult<()> {
+        trace!(target: LOG_TARGET,
+               storage_updates = &state_diff.storage_diffs.len(),
+               nonce_updates = &state_diff.nonces.len(),
+               deployed_updates = &state_diff.deployed_contracts.len(),
+               declared_updates = &state_diff.declared_classes.len(),
+               "genesis updates");
+
         for contract_diff in &state_diff.storage_diffs {
             let ContractStorageDiffItem { address, storage_entries: entries } = contract_diff;
 
@@ -102,6 +115,35 @@ impl Blockchain {
                 (*class_hash).into(),
                 *compiled_class_hash,
             )?;
+        }
+
+        Ok(())
+    }
+
+    pub fn set_contract_classes(&mut self, contract_classes: &HashMap<ClassHash, ContractClass>) -> SayaResult<()> {
+        for (class_hash, class) in contract_classes {
+            match class {
+                ContractClass::Legacy(legacy) => {
+                    let (hash, class) = rpc_converter::legacy_rpc_to_inner_compiled_class(legacy)?;
+
+                    trace!(
+                        target: LOG_TARGET,
+                        version = "cairo 0",
+                        class_hash = %hash,
+                        "set contract class");
+
+                    self.inner.set_class(hash, class)?;
+                }
+                ContractClass::Sierra(s) => {
+                    trace!(
+                        target: LOG_TARGET,
+                        version = "cairo 1",
+                        %class_hash,
+                        "set contract class");
+
+                    self.inner.set_sierra_class(*class_hash, s.clone())?;
+                }
+            }
         }
 
         Ok(())
