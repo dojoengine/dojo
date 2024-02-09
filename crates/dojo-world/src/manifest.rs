@@ -277,23 +277,23 @@ impl BaseManifest {
     }
 }
 
-impl Into<Manifest<Contract>> for Manifest<Class> {
-    fn into(self) -> Manifest<Contract> {
+impl From<Manifest<Class>> for Manifest<Contract> {
+    fn from(value: Manifest<Class>) -> Self {
         Manifest::new(
-            Contract { class_hash: self.inner.class_hash, abi: self.inner.abi, address: None },
-            self.name,
+            Contract { class_hash: value.inner.class_hash, abi: value.inner.abi, address: None },
+            value.name,
         )
     }
 }
 
-impl Into<DeployedManifest> for BaseManifest {
-    fn into(self) -> DeployedManifest {
+impl From<BaseManifest> for DeployedManifest {
+    fn from(value: BaseManifest) -> Self {
         DeployedManifest {
-            world: self.world.into(),
-            executor: self.executor.into(),
-            base: self.base,
+            world: value.world.into(),
+            executor: value.executor.into(),
+            base: value.base,
             contracts: vec![],
-            models: self.models,
+            models: value.models,
         }
     }
 }
@@ -405,7 +405,7 @@ where
     Ok(())
 }
 
-fn elements_from_path<'de, T>(path: Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
+fn elements_from_path<T>(path: Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
 where
     T: DeserializeOwned + ManifestMethods,
 {

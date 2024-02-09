@@ -328,6 +328,7 @@ fn update_manifest(
 
 /// Finds the inline modules annotated as models in the given crate_ids and
 /// returns the corresponding Models.
+#[allow(clippy::type_complexity)]
 fn get_dojo_model_artifacts(
     db: &RootDatabase,
     aux_data: &DojoAuxData,
@@ -372,6 +373,7 @@ fn get_dojo_model_artifacts(
     Ok(models)
 }
 
+#[allow(clippy::type_complexity)]
 fn get_dojo_computed_values(
     db: &RootDatabase,
     module_id: &ModuleId,
@@ -394,6 +396,7 @@ fn get_dojo_computed_values(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
@@ -491,8 +494,8 @@ where
     }
 
     std::fs::write(full_manifest_path.clone(), manifest_toml)
-        .expect(&format!("Unable to write manifest file to path: {full_manifest_path}"));
+        .unwrap_or_else(|_| panic!("Unable to write manifest file to path: {full_manifest_path}"));
     std::fs::write(full_abi_path.clone(), abi_json)
-        .expect(&format!("Unable to write abi file to path: {full_abi_path}"));
+        .unwrap_or_else(|_| panic!("Unable to write abi file to path: {full_abi_path}"));
     Ok(())
 }
