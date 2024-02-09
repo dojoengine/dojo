@@ -407,7 +407,7 @@ fn parse_value_address_to_str(value_address: ValueAddress) -> String {
 
 #[cfg(test)]
 mod tests {
-    use starknet::core::types::{ContractClass, CompressedLegacyContractClass};
+    use starknet::core::types::{CompressedLegacyContractClass, ContractClass};
 
     use super::{legacy_inner_to_rpc_class, legacy_rpc_to_inner_compiled_class};
     use crate::utils::class::parse_compiled_class_v0;

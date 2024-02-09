@@ -8,6 +8,8 @@ pub enum Error {
     KatanaClient(String),
     #[error(transparent)]
     KatanaProvider(#[from] katana_provider::error::ProviderError),
+    #[error(transparent)]
+    SayaProvider(#[from] saya_provider::error::ProviderError),
     #[error("Block {0:?} not found.")]
     BlockNotFound(katana_primitives::block::BlockIdOrTag),
     #[error(transparent)]

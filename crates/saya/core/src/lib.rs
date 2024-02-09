@@ -1,16 +1,19 @@
 //! Saya core library.
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::collections::HashMap;
 
 use blockifier::state::cached_state::CachedState;
-use katana_primitives::contract::ClassHash;
-use katana_primitives::block::BlockIdOrTag;
 use katana_executor::blockifier::state::StateRefDb;
-use snos::{SnOsRunner, state::SharedState, state::storage::TrieStorage};
-use starknet::core::types::{BlockId, MaybePendingStateUpdate, MaybePendingBlockWithTxs, StateUpdate, ContractClass, DeclaredClassItem};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use katana_primitives::block::{BlockIdOrTag, BlockNumber, SealedBlockWithStatus, FinalityStatus};
+use katana_primitives::chain::ChainId;
+use katana_primitives::contract::ClassHash;
+use katana_primitives::transaction::Tx;
+use saya_provider::rpc::JsonRpcProvider;
+use saya_provider::Provider as SayaProvider;
+use snos::state::storage::TrieStorage;
+use snos::state::SharedState;
+use snos::SnOsRunner;
 use tracing::{error, trace};
 use url::Url;
 
@@ -37,8 +40,8 @@ pub struct Saya {
     config: SayaConfig,
     /// The data availability client.
     da_client: Option<Box<dyn DataAvailabilityClient>>,
-    /// The katana (for now JSON RPC) client.
-    katana_client: Arc<JsonRpcClient<HttpTransport>>,
+    /// The provider to fetch dojo from Katana.
+    provider: Arc<dyn SayaProvider>,
     /// The blockchain state.
     blockchain: Blockchain,
 }
@@ -50,8 +53,9 @@ impl Saya {
     ///
     /// * `config` - The main Saya configuration.
     pub async fn new(config: SayaConfig) -> SayaResult<Self> {
-        let katana_client =
-            Arc::new(JsonRpcClient::new(HttpTransport::new(config.katana_rpc.clone())));
+        // Currently it's only RPC. But it can be the database
+        // file directly in the future or other transports.
+        let provider = Arc::new(JsonRpcProvider::new(config.katana_rpc.clone()).await?);
 
         let da_client = if let Some(da_conf) = &config.data_availability {
             Some(data_availability::client_from_config(da_conf.clone()).await?)
@@ -61,7 +65,7 @@ impl Saya {
 
         let blockchain = Blockchain::new();
 
-        Ok(Self { config, da_client, katana_client, blockchain })
+        Ok(Self { config, da_client, provider, blockchain })
     }
 
     /// Starts the Saya mainloop to fetch and process data.
@@ -75,7 +79,7 @@ impl Saya {
         let mut block = self.config.start_block;
 
         loop {
-            let latest_block = match self.katana_client.block_number().await {
+            let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
                     error!(?e, "fetch block number");
@@ -114,45 +118,19 @@ impl Saya {
     /// # Arguments
     ///
     /// * `block_number` - The block number.
-    async fn process_block(&mut self, block_number: u64) -> SayaResult<()> {
+    async fn process_block(&mut self, block_number: BlockNumber) -> SayaResult<()> {
         trace!(block_number, "processing block");
 
-        let state_update =
-            match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
-                MaybePendingStateUpdate::Update(su) => su,
-                MaybePendingStateUpdate::PendingUpdate(_) => {
-                    panic!("PendingUpdate should not be fetched")
-                }
-            };
+        let block = self.provider.fetch_block(block_number).await?;
+        let state_updates = self.provider.fetch_state_updates(block_number).await?;
 
-        if block_number == 0 {
-            trace!("initializing state from genesis block state diff");
-            self.blockchain.init_from_state_diff(&state_update.state_diff)?;
-        }
+        let block = SealedBlockWithStatus {
+            block,
+            // If the block is fetched, it's because it is not yet proven.
+            status: FinalityStatus::AcceptedOnL2,
+        };
 
-        // Fetch all decl contract classes.
-        // Classes are not included in the declare transactions.
-        // TODO: opti in Katana -> fetch all classes for a list of hashes instead
-        // of fetching each?
-        let mut contract_classes: HashMap<ClassHash, ContractClass> = HashMap::new();
-
-        for decl in &state_update.state_diff.declared_classes {
-            let DeclaredClassItem { class_hash, .. } = decl;
-
-            let contract_class = self.katana_client.get_class(BlockId::Number(block_number), class_hash).await?;
-
-            contract_classes.insert(*class_hash, contract_class);
-        }
-
-        self.blockchain.set_contract_classes(&contract_classes)?;
-
-        let block_with_txs =
-            match self.katana_client.get_block_with_txs(BlockId::Number(block_number)).await? {
-                MaybePendingBlockWithTxs::Block(b) => b,
-                MaybePendingBlockWithTxs::PendingBlock(_) => {
-                    panic!("PendingBlock should not be fetched")
-                }
-            };
+        self.blockchain.update_state_with_block(block, state_updates)?;
 
         // TODO: need to insert a block into the storage to be able to retrieve it.
         // So instead of registering manually -> use https://github.com/dojoengine/dojo/blob/c839363c5f561873355ca84da1173352f9955957/crates/katana/storage/provider/src/providers/in_memory/mod.rs#L409.
@@ -175,7 +153,7 @@ impl Saya {
 
         // RUN!
 
-        trace!(block_number, txs_count = block_with_txs.transactions.len(), "block fetched");
+        // trace!(block_number, txs_count = block_with_txs.transactions.len(), "block fetched");
 
         if block_number == 0 {
             return Ok(());
@@ -187,8 +165,9 @@ impl Saya {
         // If txns -> execute txns against the state to have the execution info.
         // run SNOS.
 
-        let snos = SnOsRunner::with_input_path("/tmp");
-        let state_reader = StateRefDb::from(self.blockchain.state(&BlockIdOrTag::Number(block_number - 1))?);
+        let snos = SnOsRunner::with_input_path("/tmp/input.json");
+        let state_reader =
+            StateRefDb::from(self.blockchain.state(&BlockIdOrTag::Number(block_number - 1))?);
 
         let state = SharedState {
             cache: CachedState::from(state_reader),
@@ -197,37 +176,37 @@ impl Saya {
             contract_storage: TrieStorage::default(),
             class_storage: TrieStorage::default(),
         };
-        
+
         snos.run(state, vec![])?;
 
         Ok(())
     }
 
-    /// Fetches the state update for the given block and publish it to
-    /// the data availability layer (if any).
-    /// Returns the [`StateUpdate`].
-    ///
-    /// # Arguments
-    ///
-    /// * `block_number` - The block number to get state update for.
-    async fn fetch_publish_state_update(&self, block_number: u64) -> SayaResult<StateUpdate> {
-        let state_update =
-            match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
-                MaybePendingStateUpdate::Update(su) => {
-                    if let Some(da) = &self.da_client {
-                        let sd_felts =
-                            data_availability::state_diff::state_diff_to_felts(&su.state_diff);
-
-                        da.publish_state_diff_felts(&sd_felts).await?;
-                    }
-
-                    su
-                }
-                MaybePendingStateUpdate::PendingUpdate(_) => unreachable!("Should not be used"),
-            };
-
-        Ok(state_update)
-    }
+    // Fetches the state update for the given block and publish it to
+    // the data availability layer (if any).
+    // Returns the [`StateUpdate`].
+    //
+    // # Arguments
+    //
+    // * `block_number` - The block number to get state update for.
+    // async fn fetch_publish_state_update(&self, block_number: u64) -> SayaResult<StateUpdate> {
+    // let state_update =
+    // match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
+    // MaybePendingStateUpdate::Update(su) => {
+    // if let Some(da) = &self.da_client {
+    // let sd_felts =
+    // data_availability::state_diff::state_diff_to_felts(&su.state_diff);
+    //
+    // da.publish_state_diff_felts(&sd_felts).await?;
+    // }
+    //
+    // su
+    // }
+    // MaybePendingStateUpdate::PendingUpdate(_) => unreachable!("Should not be used"),
+    // };
+    //
+    // Ok(state_update)
+    // }
 }
 
 impl From<starknet::providers::ProviderError> for error::Error {

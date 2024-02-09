@@ -31,6 +31,7 @@ members = [
   "crates/katana/storage/provider",
   "crates/metrics",
   "crates/saya/core",
+  "crates/saya/provider",
   "crates/sozo/signers",
   "crates/torii/client",
   "crates/torii/server",
@@ -89,6 +90,7 @@ torii-server = { path = "crates/torii/server" }
 
 # saya
 saya-core = { path = "crates/saya/core" }
+saya-provider = { path = "crates/saya/provider" }
 
 # sozo
 sozo-signers = { path = "crates/sozo/signers" }
