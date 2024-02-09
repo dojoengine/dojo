@@ -10238,6 +10238,7 @@ dependencies = [
  "serde_with 2.3.3",
  "snos",
  "starknet",
+ "starknet-types-core",
  "starknet_api",
  "thiserror",
  "tokio",
