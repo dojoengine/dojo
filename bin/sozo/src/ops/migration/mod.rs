@@ -61,7 +61,7 @@ pub async fn execute(
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&manifest_dir, &account, world_address, &ui, &chain_id).await?;
+        load_world_manifests(&manifest_dir, &account, world_address, &ui).await?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -224,7 +224,6 @@ async fn load_world_manifests<P, S>(
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
-    chain_id: &str,
 ) -> Result<(DeployedManifest, Option<DeployedManifest>)>
 where
     P: Provider + Sync + Send + 'static,
@@ -232,17 +231,8 @@ where
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let local_manifest;
-
-    let deployment_dir = manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id);
-
-    if deployment_dir.exists() {
-        local_manifest = DeployedManifest::load_from_path(&deployment_dir)?;
-    } else {
-        let base_manifest =
-            BaseManifest::load_from_path(manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
-        local_manifest = base_manifest.into();
-    }
+    let local_manifest =
+        BaseManifest::load_from_path(manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?.into();
 
     let remote_manifest = if let Some(address) = world_address {
         match DeployedManifest::load_from_remote(account.provider(), address).await {

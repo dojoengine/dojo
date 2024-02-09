@@ -112,6 +112,11 @@ impl ManifestMethods for DojoContract {
     fn set_class_hash(&mut self, class_hash: FieldElement) {
         self.class_hash = class_hash;
     }
+
+    fn merge(&mut self, old: Self) {
+        self.reads = old.reads;
+        self.writes = old.writes;
+    }
 }
 
 /// Represents a declaration of a model.
@@ -141,6 +146,8 @@ impl ManifestMethods for DojoModel {
     fn set_class_hash(&mut self, class_hash: FieldElement) {
         self.class_hash = class_hash;
     }
+
+    fn merge(&mut self, _: Self) {}
 }
 
 #[serde_as]
@@ -170,6 +177,8 @@ impl ManifestMethods for Contract {
     fn set_class_hash(&mut self, class_hash: FieldElement) {
         self.class_hash = class_hash;
     }
+
+    fn merge(&mut self, _: Self) {}
 }
 
 #[serde_as]
@@ -197,6 +206,8 @@ impl ManifestMethods for Class {
     fn set_class_hash(&mut self, class_hash: FieldElement) {
         self.class_hash = class_hash;
     }
+
+    fn merge(&mut self, _: Self) {}
 }
 
 pub trait ManifestMethods {
@@ -204,6 +215,11 @@ pub trait ManifestMethods {
     fn set_abi(&mut self, abi: Option<String>);
     fn class_hash(&self) -> &FieldElement;
     fn set_class_hash(&mut self, class_hash: FieldElement);
+
+    /// This method is called when during compilation base manifest file already exists.
+    /// Manifest generated during compilation won't contains properties manually updated by users
+    /// (like calldata) so this method should override those fields
+    fn merge(&mut self, old: Self);
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]

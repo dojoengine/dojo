@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fs::read_to_string;
 use std::iter::zip;
 use std::ops::DerefMut;
 
@@ -221,51 +222,6 @@ fn update_manifest(
         ))
     }
 
-    fn write_manifest_and_abi<T>(
-        manifest_base: &Utf8PathBuf,
-        abi_base: &Utf8PathBuf,
-        manifest: &mut Manifest<T>,
-        abi: &Option<abi::Contract>,
-    ) -> anyhow::Result<()>
-    where
-        T: Serialize + DeserializeOwned + ManifestMethods,
-    {
-        let parts: Vec<&str> = manifest.name.split("::").collect();
-        let name: Utf8PathBuf = parts.last().unwrap().into();
-
-        let full_manifest_path = manifest_base.join(name.clone()).with_extension("toml");
-        let full_abi_path = abi_base.join(name.clone()).with_extension("json");
-
-        let abi_relative_path = Utf8PathBuf::new().join("abis").join(name).with_extension("json");
-
-        if abi.is_some() {
-            manifest.inner.set_abi(Some(abi_relative_path.to_string()));
-        }
-
-        let manifest_toml = toml::to_string_pretty(&manifest)?;
-        let abi_json = serde_json::to_string_pretty(&abi)?;
-
-        // Create the directory if it doesn't exist
-        if let Some(parent) = full_manifest_path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent)?;
-            }
-        }
-
-        // Create the directory if it doesn't exist
-        if let Some(parent) = full_abi_path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent)?;
-            }
-        }
-
-        std::fs::write(full_manifest_path.clone(), manifest_toml)
-            .expect(&format!("Unable to write manifest file to path: {full_manifest_path}"));
-        std::fs::write(full_abi_path.clone(), abi_json)
-            .expect(&format!("Unable to write abi file to path: {full_abi_path}"));
-        Ok(())
-    }
-
     let mut crate_ids = crate_ids.to_vec();
 
     let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
@@ -486,4 +442,57 @@ fn get_dojo_contract_artifacts(
             ))
         })
         .collect::<anyhow::Result<_>>()
+}
+
+fn write_manifest_and_abi<T>(
+    manifest_base: &Utf8PathBuf,
+    abi_base: &Utf8PathBuf,
+    manifest: &mut Manifest<T>,
+    abi: &Option<abi::Contract>,
+) -> anyhow::Result<()>
+where
+    T: Serialize + DeserializeOwned + ManifestMethods,
+{
+    let parts: Vec<&str> = manifest.name.split("::").collect();
+    let name: Utf8PathBuf = parts.last().unwrap().into();
+
+    let full_manifest_path = manifest_base.join(name.clone()).with_extension("toml");
+    let full_abi_path = abi_base.join(name.clone()).with_extension("json");
+
+    let abi_relative_path = Utf8PathBuf::new().join("abis").join(name).with_extension("json");
+
+    // if file already exists we read it and update `manifest` to make sure immutable properties
+    // don't get overriden
+    if full_manifest_path.exists() {
+        let old_manifest: Manifest<T> =
+            toml::from_str(&read_to_string(full_manifest_path.clone())?)?;
+        manifest.inner.merge(old_manifest.inner);
+    }
+
+    if abi.is_some() {
+        manifest.inner.set_abi(Some(abi_relative_path.to_string()));
+    }
+
+    let manifest_toml = toml::to_string_pretty(&manifest)?;
+    let abi_json = serde_json::to_string_pretty(&abi)?;
+
+    // Create the directory if it doesn't exist
+    if let Some(parent) = full_manifest_path.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+
+    // Create the directory if it doesn't exist
+    if let Some(parent) = full_abi_path.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+
+    std::fs::write(full_manifest_path.clone(), manifest_toml)
+        .expect(&format!("Unable to write manifest file to path: {full_manifest_path}"));
+    std::fs::write(full_abi_path.clone(), abi_json)
+        .expect(&format!("Unable to write abi file to path: {full_abi_path}"));
+    Ok(())
 }
