@@ -1,15 +1,12 @@
 //! State updates.
 use std::collections::HashMap;
 
-use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use starknet::core::types::{
-    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, MaybePendingStateUpdate,
-    NonceUpdate, StateUpdate,
+    ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, NonceUpdate, StateUpdate,
 };
-use starknet::providers::Provider;
 
-use crate::error::ProviderError;
 use crate::ProviderResult;
 
 pub fn state_updates_from_rpc(state_update: &StateUpdate) -> ProviderResult<StateUpdates> {

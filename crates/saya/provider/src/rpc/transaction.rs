@@ -3,10 +3,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeployAccountTx, InvokeTx, L1HandlerTx, Tx, TxWithHash,
 };
-use starknet::core::types::{
-    DeclareTransaction, DeployAccountTransaction, FieldElement, InvokeTransaction,
-    L1HandlerTransaction, Transaction,
-};
+use starknet::core::types::{DeclareTransaction, FieldElement, InvokeTransaction, Transaction};
 
 use crate::ProviderResult;
 

@@ -1,22 +1,9 @@
 //! Blockchain fetched from Katana.
 use std::collections::HashMap;
-use std::path::Path;
 
 use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
-use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_and_vm_usage};
-use blockifier::state::state_api::State;
-use blockifier::transaction::errors::TransactionExecutionError;
-use blockifier::transaction::objects::{
-    DeprecatedAccountTransactionContext, ResourcesMapping, TransactionExecutionInfo,
-};
-use katana_db::init_db;
-use katana_primitives::block::{
-    BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockTag, FinalityStatus, SealedBlockWithStatus,
-};
+use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus};
 use katana_primitives::chain::ChainId;
-use katana_primitives::contract::ClassHash;
-use katana_primitives::conversion::rpc as rpc_converter;
-use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -30,14 +17,7 @@ use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;
-use starknet::core::types::{
-    ContractClass, ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement,
-    NonceUpdate, StateDiff,
-};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
 use starknet_api::block::{BlockNumber, BlockTimestamp};
-use tracing::{error, trace};
 
 use crate::error::{Error as SayaError, SayaResult};
 

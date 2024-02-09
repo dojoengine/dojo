@@ -12,13 +12,10 @@ use katana_primitives::conversion::rpc as rpc_converter;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::TxWithHash;
 use katana_primitives::version::Version;
-use starknet::core::types::{
-    BlockId, ContractClass, DeclaredClassItem, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
-    StateUpdate, Transaction,
-};
+use starknet::core::types::{ContractClass, MaybePendingBlockWithTxs, MaybePendingStateUpdate};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider as StarknetProvider};
-use tracing::{error, trace};
+use tracing::trace;
 use url::Url;
 
 use crate::provider::Provider;

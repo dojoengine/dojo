@@ -1,14 +1,10 @@
 //! Saya core library.
-use std::collections::HashMap;
-use std::path::PathBuf;
+
 use std::sync::Arc;
 
 use blockifier::state::cached_state::CachedState;
 use katana_executor::blockifier::state::StateRefDb;
-use katana_primitives::block::{BlockIdOrTag, BlockNumber, SealedBlockWithStatus, FinalityStatus};
-use katana_primitives::chain::ChainId;
-use katana_primitives::contract::ClassHash;
-use katana_primitives::transaction::Tx;
+use katana_primitives::block::{BlockIdOrTag, BlockNumber, FinalityStatus, SealedBlockWithStatus};
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use snos::state::storage::TrieStorage;
@@ -25,6 +21,7 @@ pub mod blockchain;
 pub mod data_availability;
 pub mod error;
 pub mod prover;
+pub mod starknet_os;
 pub mod verifier;
 
 /// Saya's main configuration.
@@ -165,7 +162,13 @@ impl Saya {
         // If txns -> execute txns against the state to have the execution info.
         // run SNOS.
 
-        let snos = SnOsRunner::with_input_path("/tmp/input.json");
+        let snos = SnOsRunner {
+            layout: String::from("starknet_with_keccak"),
+            os_path: String::from("/tmp/os.json"),
+            input_path: String::from("/tmp/input.json"),
+            block_context: self.blockchain.block_context_default(),
+        };
+
         let state_reader =
             StateRefDb::from(self.blockchain.state(&BlockIdOrTag::Number(block_number - 1))?);
 
