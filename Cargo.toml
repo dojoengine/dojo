@@ -23,12 +23,12 @@ members = [
   "crates/katana/rpc/rpc-api",
   "crates/katana/rpc/rpc-types",
   "crates/katana/rpc/rpc-types-builder",
+  "crates/katana/runner",
+  "crates/katana/runner/runner-macro",
   "crates/katana/storage/codecs",
   "crates/katana/storage/codecs/derive",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
-  "crates/katana/runner",
-  "crates/katana/runner/runner-macro",
   "crates/metrics",
   "crates/saya/core",
   "crates/sozo/signers",
@@ -180,8 +180,8 @@ wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codege
 wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "prost" ], package = "tonic-build" }
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "3c138d606a46c88ecd656808f14dfca78de1926b" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "8860946" }
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "368c713f8545af435b1b0a8d3e56b616f66f955a" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "368c713f8545af435b1b0a8d3e56b616f66f955a" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }

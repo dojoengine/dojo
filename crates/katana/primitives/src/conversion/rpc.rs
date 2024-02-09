@@ -7,7 +7,9 @@ use anyhow::{anyhow, Result};
 use blockifier::execution::contract_class::ContractClassV0;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
-use cairo_vm::serde::deserialize_program::{ApTracking, OffsetValue, ProgramJson, ValueAddress};
+use cairo_vm::serde::deserialize_program::{
+    serialize_program_data, ApTracking, OffsetValue, ProgramJson, ValueAddress,
+};
 use cairo_vm::types::instruction::Register;
 use cairo_vm::types::program::Program;
 use serde::{Deserialize, Serialize, Serializer};
@@ -253,7 +255,7 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
     struct SerializableProgramJson {
         prime: String,
         builtins: Vec<BuiltinName>,
-        #[serde(deserialize_with = "deserialize_array_of_bigint_hex")]
+        #[serde(serialize_with = "serialize_program_data")]
         data: Vec<MaybeRelocatable>,
         identifiers: HashMap<String, Identifier>,
         hints: BTreeMap<usize, Vec<HintParams>>,
@@ -270,9 +272,9 @@ fn compress_legacy_program_data(legacy_program: Program) -> Result<Vec<u8>, io::
     let program: ProgramJson = ProgramJson::from(legacy_program);
     let program: SerializableProgramJson = unsafe { mem::transmute(program) };
 
-    let buffer = serde_json::to_vec(&program)?;
+    let bytes = serde_json::to_vec(&program)?;
     let mut gzip_encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
-    Write::write_all(&mut gzip_encoder, &buffer)?;
+    Write::write_all(&mut gzip_encoder, &bytes)?;
     gzip_encoder.finish()
 }
 

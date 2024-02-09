@@ -1110,7 +1110,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.5.0-dev.0"
-source = "git+https://github.com/dojoengine/blockifier?rev=3c138d606a46c88ecd656808f14dfca78de1926b#3c138d606a46c88ecd656808f14dfca78de1926b"
+source = "git+https://github.com/dojoengine/blockifier?rev=8860946#886094680ea5ead4ba1227f46172e02468901488"
 dependencies = [
  "ark-ec",
  "ark-ff 0.4.2",
@@ -1424,7 +1424,7 @@ dependencies = [
 [[package]]
 name = "cairo-felt"
 version = "0.9.1"
-source = "git+https://github.com/dojoengine/cairo-rs.git?rev=368c713f8545af435b1b0a8d3e56b616f66f955a#368c713f8545af435b1b0a8d3e56b616f66f955a"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=1031381#10313816b4ba7891e3c8ba90f6d0068a9149d682"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1982,7 +1982,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.9.2"
-source = "git+https://github.com/dojoengine/cairo-rs.git?rev=368c713f8545af435b1b0a8d3e56b616f66f955a#368c713f8545af435b1b0a8d3e56b616f66f955a"
+source = "git+https://github.com/dojoengine/cairo-rs.git?rev=1031381#10313816b4ba7891e3c8ba90f6d0068a9149d682"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
