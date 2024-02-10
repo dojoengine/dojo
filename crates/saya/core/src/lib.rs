@@ -2,6 +2,8 @@
 
 use std::sync::Arc;
 
+use katana_primitives::chain::ChainId;
+use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
 use blockifier::state::cached_state::CachedState;
 use katana_executor::blockifier::state::StateRefDb;
 use katana_primitives::block::{BlockIdOrTag, BlockNumber, FinalityStatus, SealedBlockWithStatus};
@@ -127,44 +129,46 @@ impl Saya {
             status: FinalityStatus::AcceptedOnL2,
         };
 
-        self.blockchain.update_state_with_block(block, state_updates)?;
-
-        // TODO: need to insert a block into the storage to be able to retrieve it.
-        // So instead of registering manually -> use https://github.com/dojoengine/dojo/blob/c839363c5f561873355ca84da1173352f9955957/crates/katana/storage/provider/src/providers/in_memory/mod.rs#L409.
-        //
-        // This will update the storage automatically. But we need to populate also the fetched
-        // classes. So pass the state diff + the fetched classes to construct the primitive types.
-        // WE ALSO NEED THE TXNS! So instead of registring, pass all that to the function
-        // and the conversions will be done in there.
-
-        // Then Convert TXNs + block data into SNOS Input.
-        // Add a module with SNOS compat.
-
-        // To have the TXN execution info -> Need to be done on a copy of the state...?!
-        // or at least we don't update the state if possible.
-
-        // Take logic from here: https://github.com/dojoengine/dojo/blob/c839363c5f561873355ca84da1173352f9955957/crates/katana/core/src/service/block_producer.rs#L342
-        // And don't register the state when getting txs output.
-        // But then, when the block is processed -> we can apply the state to increment
-        // the block and ensure we have the block - 1 for the next block.
-
-        // RUN!
+        self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
         if block_number == 0 {
             return Ok(());
         }
 
-        // Convert all txs into InternalTransation and write them into the file with
-        // other input fields -> SNOS INPUTs file.
+        // TODO: all this must come from katana if we keep execution here.
+        // But this should not be the case and all the execution info
+        // should be fetched from Katana.
+        let invoke_tx_max_n_steps = 100000000;
+        let validate_max_n_steps = 100000000;
+        let chain_id = ChainId::parse("KATANA").unwrap();
+        let fee_token_addresses = FeeTokenAddresses {
+            eth_fee_token_address: 0_u128.into(),
+            strk_fee_token_address: 0_u128.into(),
+        };
 
-        // If txns -> execute txns against the state to have the execution info.
-        // run SNOS.
+        let block_info = blockchain::block_info_from_header(&block.block.header, invoke_tx_max_n_steps, validate_max_n_steps);
+
+        let block_context = BlockContext {
+            block_info,
+            chain_info: ChainInfo {
+                fee_token_addresses,
+                chain_id: chain_id.into(),
+            },
+        };
+
+        // TODO: fetch this from a new katana endpoints when
+        // katana stored [`TransactionExecutionInfo`].
+        let exec_infos = self.blockchain.execute_transactions(&block.block, &block_context)?;
+
+        let input_path = std::path::PathBuf::from("/tmp/input.json");
+        let snos_input = crate::starknet_os::input::snos_input_from_block(&block.block);
+        snos_input.dump(&input_path)?;
 
         let snos = SnOsRunner {
             layout: String::from("starknet_with_keccak"),
             os_path: String::from("/tmp/os.json"),
-            input_path: String::from("/tmp/input.json"),
-            block_context: self.blockchain.block_context_default(),
+            input_path: input_path.to_string_lossy().into(),
+            block_context: block_context.clone(),
         };
 
         let state_reader =
@@ -172,7 +176,7 @@ impl Saya {
 
         let state = SharedState {
             cache: CachedState::from(state_reader),
-            block_context: self.blockchain.block_context_default(),
+            block_context: block_context,
             commitment_storage: TrieStorage::default(),
             contract_storage: TrieStorage::default(),
             class_storage: TrieStorage::default(),

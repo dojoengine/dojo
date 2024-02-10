@@ -31,4 +31,3 @@ pub fn snos_input_from_block(block: &SealedBlock) -> StarknetOsInput {
         // general_config: StarknetGeneralConfig,
     }    
 }
-

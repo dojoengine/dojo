@@ -7,7 +7,7 @@ use blockifier::transaction::objects::TransactionExecutionInfo;
 use katana_executor::blockifier::TransactionExecutor;
 use katana_executor::blockifier::state::StateRefDb;
 use katana_primitives::receipt::Receipt;
-use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus, SealedBlock};
+use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus, SealedBlock, SealedHeader};
 use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
 use katana_primitives::chain::ChainId;
 use katana_primitives::transaction::{Tx, TxWithHash, ExecutableTxWithHash};
@@ -25,10 +25,16 @@ use katana_provider::traits::transaction::{
 };
 use katana_provider::BlockchainProvider;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
+use cairo_vm::vm::runners::builtin_runner::{
+    BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
+    OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
+    SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
+};
 
 use crate::error::{Error as SayaError, SayaResult};
 
 const LOG_TARGET: &str = "blockchain";
+const MAX_RECURSION_DEPTH: usize = 1000;
 
 pub trait Database:
     BlockProvider
@@ -136,56 +142,17 @@ impl Blockchain {
         Ok(provider.insert_block_with_states_and_receipts(block, states, receipts)?)
     }
 
-    /// TEMP: initializes a default block context of the blockifier.
-    /// TODO: must be init from a SealedBlockHeader.
-    pub fn block_context_default(&self) -> BlockContext {
-        let fee_token_addresses = FeeTokenAddresses {
-            eth_fee_token_address: 0_u128.into(),
-            strk_fee_token_address: 0_u128.into(),
-        };
-
-        let gas_prices = GasPrices {
-            eth_l1_gas_price: 0,
-            strk_l1_gas_price: 0,
-            eth_l1_data_gas_price: 0,
-            strk_l1_data_gas_price: 0,
-        };
-
-        BlockContext {
-            block_info: BlockInfo {
-                gas_prices,
-                block_number: BlockNumber(0),
-                block_timestamp: BlockTimestamp(0),
-                sequencer_address: 0_u128.into(),
-                vm_resource_fee_cost: HashMap::new().into(),
-                validate_max_n_steps: 100000000,
-                invoke_tx_max_n_steps: 100000000,
-                max_recursion_depth: 100,
-                use_kzg_da: false,
-            },
-            chain_info: ChainInfo {
-                fee_token_addresses,
-                chain_id: ChainId::parse("KATANA").unwrap().into(),
-            },
-        }
-    }
-
     /// Executes the transactions against the given state to retrieve
     /// the transaction execution info.
-    pub fn execute_transactions(&self, block: &SealedBlock) -> SayaResult<()> {
+    ///
+    /// TODO: to be replaced by Katana endpoint that exposes the execution info
+    /// for all transactions in a block.
+    pub fn execute_transactions(&self, block: &SealedBlock, block_context: &BlockContext) -> SayaResult<Vec<TransactionExecutionInfo>> {
         let provider = self.provider();
 
         let block_number = block.header.header.number;
-
-        // TODO: get context from block header.
-        let block_context = self.block_context_default();
-
         let state_reader = self.state(&BlockIdOrTag::Number(block_number - 1))?;
         let state: CachedStateWrapper<StateRefDb> = CachedStateWrapper::new(state_reader.into());
-
-        // TODO: from config based on katana config?
-        let disable_fee = false;
-        let disable_validate = false;
 
         let mut exec_txs: Vec<ExecutableTxWithHash> = vec![];
         for tx_with_hash in &block.body {
@@ -194,14 +161,26 @@ impl Blockchain {
                     hash: tx_with_hash.hash,
                     transaction: (*t).clone().into(),
                 }),
-                // TODO others.
+                Tx::L1Handler(t) => exec_txs.push(ExecutableTxWithHash {
+                    hash: tx_with_hash.hash,
+                    transaction: (*t).clone().into(),
+                }),
+                Tx::DeployAccount(t) => exec_txs.push(ExecutableTxWithHash {
+                    hash: tx_with_hash.hash,
+                    transaction: (*t).clone().into(),
+                }),
+                // TODO DECLARE with class.
                 _ => {}
             }
         }
 
-        let tx_receipt_pairs: Vec<TransactionExecutionInfo> = TransactionExecutor::new(
+        // TODO: this must be the same as katana.
+        let disable_fee = false;
+        let disable_validate = false;
+
+        let exec_infos: Vec<TransactionExecutionInfo> = TransactionExecutor::new(
             &state,
-            &block_context,
+            block_context,
             !disable_fee,
             !disable_validate,
             exec_txs.into_iter(),
@@ -218,6 +197,49 @@ impl Blockchain {
             })
             .collect();
 
-        Ok(())
+        Ok(exec_infos)
     }
+}
+
+/// Initializes a [`BlockInfo`] from a [`SealedHeader`] and additional information.
+///
+/// # Arguments
+///
+/// * `header` - The header to get information from.
+/// * `invoke_tx_max_n_steps` - Maximum number of steps for invoke tx.
+/// * `validate_max_n_steps` - Maximum number of steps to validate a tx.
+pub fn block_info_from_header(header: &SealedHeader, invoke_tx_max_n_steps: u32, validate_max_n_steps: u32) -> BlockInfo {
+    let gas_prices = GasPrices {
+        eth_l1_gas_price: header.header.gas_prices.eth as u128,
+        strk_l1_gas_price: header.header.gas_prices.strk as u128,
+        eth_l1_data_gas_price: 0,
+        strk_l1_data_gas_price: 0,
+    };
+
+    BlockInfo {
+        gas_prices,
+        block_number: BlockNumber(header.header.number),
+        block_timestamp: BlockTimestamp(header.header.timestamp),
+        sequencer_address: header.header.sequencer_address.into(),
+        vm_resource_fee_cost: get_default_vm_resource_fee_cost().into(),
+        validate_max_n_steps,
+        invoke_tx_max_n_steps,
+        max_recursion_depth: MAX_RECURSION_DEPTH,
+        use_kzg_da: false,
+    }
+}
+
+fn get_default_vm_resource_fee_cost() -> HashMap<String, f64> {
+    HashMap::from([
+        (String::from("n_steps"), 1_f64),
+        (HASH_BUILTIN_NAME.to_string(), 1_f64),
+        (RANGE_CHECK_BUILTIN_NAME.to_string(), 1_f64),
+        (SIGNATURE_BUILTIN_NAME.to_string(), 1_f64),
+        (BITWISE_BUILTIN_NAME.to_string(), 1_f64),
+        (POSEIDON_BUILTIN_NAME.to_string(), 1_f64),
+        (OUTPUT_BUILTIN_NAME.to_string(), 1_f64),
+        (EC_OP_BUILTIN_NAME.to_string(), 1_f64),
+        (KECCAK_BUILTIN_NAME.to_string(), 1_f64),
+        (SEGMENT_ARENA_BUILTIN_NAME.to_string(), 1_f64),
+    ])
 }
