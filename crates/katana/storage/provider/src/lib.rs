@@ -170,6 +170,10 @@ where
     ) -> ProviderResult<Option<(BlockNumber, BlockHash)>> {
         TransactionProvider::transaction_block_num_and_hash(&self.provider, hash)
     }
+
+    fn transaction_in_range(&self, range: Range<TxNumber>) -> ProviderResult<Vec<TxWithHash>> {
+        self.provider.transaction_in_range(range)
+    }
 }
 
 impl<Db> TransactionStatusProvider for BlockchainProvider<Db>
