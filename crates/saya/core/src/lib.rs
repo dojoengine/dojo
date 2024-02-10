@@ -150,8 +150,6 @@ impl Saya {
 
         // RUN!
 
-        // trace!(block_number, txs_count = block_with_txs.transactions.len(), "block fetched");
-
         if block_number == 0 {
             return Ok(());
         }
