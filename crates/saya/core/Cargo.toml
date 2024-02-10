@@ -34,8 +34,8 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
-#snos = { git = "https://github.com/cartridge-gg/snos", branch = "dojo-cairo-2.5" }
-snos = { path = "/mnt/data/snos" }
+snos = { git = "https://github.com/cartridge-gg/snos", branch = "dojo-cairo-2.5" }
+#snos = { path = "/mnt/data/snos" }
 starknet-types-core = { version = "0.0.6", default-features = false, features = ["serde", "curve", "num-traits"] }
 
 # TODO: use features for each possible DA.

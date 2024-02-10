@@ -10998,6 +10998,7 @@ dependencies = [
 [[package]]
 name = "snos"
 version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/snos?branch=dojo-cairo-2.5#2fa3dafc656793039a9efb85a8563d81ab9923b5"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
