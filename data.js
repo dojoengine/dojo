@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707490642700,
+  "lastUpdate": 1707607960735,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1195,6 +1195,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1024834,
             "range": "± 31390",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad97e8f981f6f8052b768cebe40e22e5f2523dc5",
+          "message": "refactor(katana-provider): implement `transaction_in_range` for in-memory and fork providers (#1530)",
+          "timestamp": "2024-02-11T07:23:11+08:00",
+          "tree_id": "ec5892ea9b88c79b5dec804f753cac630fb2bfa7",
+          "url": "https://github.com/dojoengine/dojo/commit/ad97e8f981f6f8052b768cebe40e22e5f2523dc5"
+        },
+        "date": 1707607960291,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1017643,
+            "range": "± 38656",
             "unit": "ns/iter"
           }
         ]
