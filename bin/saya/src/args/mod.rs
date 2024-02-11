@@ -23,6 +23,7 @@ pub struct SayaArgs {
     #[arg(long)]
     #[arg(value_name = "KATANA URL")]
     #[arg(help = "The Katana RPC URL to fetch data from.")]
+    #[arg(default_value = "http://localhost:5050")]
     pub rpc_url: Url,
 
     /// Enable JSON logging.
@@ -34,7 +35,7 @@ pub struct SayaArgs {
     #[arg(long)]
     #[arg(value_name = "CONFIG FILE")]
     #[arg(help = "The path to a JSON configuration file. This takes precedence over other CLI \
-+                  arguments.")]
+                  arguments.")]
     pub config_file: Option<PathBuf>,
 
     /// Specify a block to start fetching data from.
@@ -71,8 +72,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
         if let Some(config_file) = args.config_file {
             let file = File::open(config_file).map_err(|_| "Failed to open config file")?;
             let reader = BufReader::new(file);
-            let config: Result<SayaConfig, _> = serde_json::from_reader(reader);
-            config.map_err(|e| e.into())
+            serde_json::from_reader(reader).map_err(|e| e.into())
         } else {
             let da_config = match args.data_availability.da_chain {
                 Some(chain) => Some(match chain {

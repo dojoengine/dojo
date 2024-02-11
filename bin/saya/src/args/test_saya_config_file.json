@@ -5,7 +5,7 @@
         "Celestia": {
             "node_url": "http://localhost:26657",
             "node_auth_token": "your_auth_token",
-            "namespace": "your_namespace"
+            "namespace": "katana"
         }
     }
 }
