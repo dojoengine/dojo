@@ -148,7 +148,7 @@ mod tests {
         if let Some(DataAvailabilityConfig::Celestia(celestia_config)) = config.data_availability {
             assert_eq!(celestia_config.node_url.as_str(), "http://localhost:26657/");
             assert_eq!(celestia_config.node_auth_token, Some("your_auth_token".to_string()));
-            assert_eq!(celestia_config.namespace, "your_namespace");
+            assert_eq!(celestia_config.namespace, "katana");
         } else {
             panic!("Expected Celestia config");
         }
