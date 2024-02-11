@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707607960735,
+  "lastUpdate": 1707624416751,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1225,6 +1225,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1017643,
             "range": "± 38656",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jonathan.chaverri12@gmail.com",
+            "name": "Jonatan Chaverri",
+            "username": "Jonatan-Chaverri"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e6ed14e0508b7cdf6b1551cd918e84044bbc2a9",
+          "message": "feat(saya): add config file arg for saya bin (#1513)\n\n* feat(saya): add config file arg for saya bin\r\n\r\n* fix: minor fixes and valid celestia namespace\r\n\r\n* fix: adjust config test with new celestia namespace\r\n\r\n---------\r\n\r\nCo-authored-by: Jonatan Chaverri <jonatan.chaverri@kyndryl.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-02-10T21:57:36-06:00",
+          "tree_id": "368c146322f67820f0469f39723a9d4bdd2fbbea",
+          "url": "https://github.com/dojoengine/dojo/commit/1e6ed14e0508b7cdf6b1551cd918e84044bbc2a9"
+        },
+        "date": 1707624416291,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 985581,
+            "range": "± 47408",
             "unit": "ns/iter"
           }
         ]
