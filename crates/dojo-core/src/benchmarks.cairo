@@ -74,7 +74,7 @@ fn bench_native_storage() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    starknet::storage_write_syscall(0, address, 42);
+    starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
     end(gas, 'native write');
 
     let gas = testing::get_available_gas();
@@ -97,7 +97,7 @@ fn bench_native_storage_offset() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    starknet::storage_write_syscall(0, address, 42);
+    starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
     end(gas, 'native writ of');
 
     let gas = testing::get_available_gas();
@@ -228,7 +228,7 @@ fn bench_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let second_res = database::get('table', 'key', 3, 8, array![251, 251, 251, 251, 251].span());
+    let second_res = database::get('table', 'key', 3, 8, half_layout);
     end(gas, 'db get half arr');
 
     assert(second_res.len() == 5, 'wrong number of values');
@@ -254,7 +254,7 @@ fn bench_indexed_database_array() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), 2, layout);
+    let (_keys, _values) = database::scan('table', Option::None(()), 2, layout);
     end(gas, 'dbi scan arr 1');
 
     let gas = testing::get_available_gas();
@@ -410,7 +410,7 @@ fn bench_nested_struct() {
         material: 'wooden',
     };
     end(gas, 'case init');
-    let gas = testing::get_available_gas();
+    let _gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
 
 

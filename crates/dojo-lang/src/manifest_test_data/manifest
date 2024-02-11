@@ -8,7 +8,7 @@ test_manifest_file
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
+    "class_hash": "0x54afaf1c0d052df74af180637871455cafeee493e2f98a1e09fadcd8b36ef14",
     "abi": [
       {
         "type": "impl",
@@ -791,7 +791,7 @@ test_manifest_file
   "executor": {
     "name": "dojo::executor::executor",
     "address": null,
-    "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
+    "class_hash": "0x55865ef05f918b04b08aa1588e9a49e80cbaecdf13e1438c142957e9aedaf73",
     "abi": [
       {
         "type": "impl",
@@ -851,7 +851,7 @@ test_manifest_file
   },
   "base": {
     "name": "dojo::base::base",
-    "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
+    "class_hash": "0x48bca802a22c7d7e447cf62c62581acf5f1eae00554d49e2279b0b0132a1777",
     "abi": [
       {
         "type": "impl",
@@ -955,7 +955,7 @@ test_manifest_file
     {
       "name": "dojo_examples::actions::actions",
       "address": null,
-      "class_hash": "0x52d3920cfb6eef13c2bcd2c04eb1d7b7123325da7f16bbeeb0f83b8b33c00f",
+      "class_hash": "0x2b6fa193f3bc891a7508ebd94ecc57777a576d9b49a84b786aed378176499ca",
       "abi": [
         {
           "type": "impl",
@@ -1227,7 +1227,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::moves",
       "address": null,
-      "class_hash": "0x27aab6611d2ddd2136e430b7c33f93f8b8921abe13782f1f134ebb53af34cb8",
+      "class_hash": "0x572a5030f1e283e3cc2ab9e7d5d2d185a43e141fd4606f376691e8abc127d76",
       "abi": [
         {
           "type": "impl",
@@ -1474,7 +1474,7 @@ test_manifest_file
     {
       "name": "dojo_examples::models::position",
       "address": null,
-      "class_hash": "0x41b29bc6a73b6e963cff7f49c597e78d49f4353ff6d0c7c1bdfec8b3949dcf0",
+      "class_hash": "0x1e0fd72622c19b91620327ee05e4c226e6d383ec95ba67f2b3830b8c9aa5e4a",
       "abi": [
         {
           "type": "impl",

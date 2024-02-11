@@ -19,11 +19,12 @@ cairo-lang-casm = "2.3.1"
 cairo-lang-starknet = "2.3.1"
 cairo-vm.workspace = true
 convert_case.workspace = true
-ethers = { version = "2.0.11", optional = true }
+ethers = "2.0.11"
 flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"
 parking_lot.workspace = true
+primitive-types = "0.12.2"
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
@@ -41,5 +42,5 @@ hex = "0.4.3"
 tempfile = "3.8.1"
 
 [features]
-messaging = [ "ethers" ]
+messaging = [  ]
 starknet-messaging = [  ]

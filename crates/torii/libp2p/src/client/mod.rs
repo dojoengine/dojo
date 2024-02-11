@@ -56,6 +56,7 @@ enum Command {
     Subscribe(String, oneshot::Sender<Result<bool, Error>>),
     Unsubscribe(String, oneshot::Sender<Result<bool, Error>>),
     Publish(String, Vec<u8>, oneshot::Sender<Result<MessageId, Error>>),
+    WaitForRelay(oneshot::Sender<Result<(), Error>>),
 }
 
 impl RelayClient {
@@ -192,10 +193,21 @@ impl CommandSender {
 
         rx.await.expect("Failed to receive response")
     }
+
+    pub async fn wait_for_relay(&mut self) -> Result<(), Error> {
+        let (tx, rx) = oneshot::channel();
+
+        self.sender.unbounded_send(Command::WaitForRelay(tx)).expect("Failed to send command");
+
+        rx.await.expect("Failed to receive response")
+    }
 }
 
 impl EventLoop {
     pub async fn run(&mut self) {
+        let mut is_relay_ready = false;
+        let mut relay_ready_tx = None;
+
         loop {
             // Poll the swarm for new events.
             select! {
@@ -210,31 +222,48 @@ impl EventLoop {
                         Command::Publish(topic, data, sender) => {
                             sender.send(self.publish(topic, data)).expect("Failed to send response");
                         },
+                        Command::WaitForRelay(sender) => {
+                            if is_relay_ready {
+                                sender.send(Ok(())).expect("Failed to send response");
+                            } else {
+                                relay_ready_tx = Some(sender);
+                            }
+                        }
                     }
                 },
                 event = self.swarm.select_next_some() => {
                     match event {
                         SwarmEvent::Behaviour(event) => {
-                            // Handle behaviour events.
-                            if let ClientEvent::Gossipsub(gossipsub::Event::Message {
-                                propagation_source: peer_id,
-                                message_id,
-                                message,
-                            }) = event
-                            {
-                                // deserialize message payload
-                                let message_payload: ServerMessage = serde_json::from_slice(&message.data)
-                                    .expect("Failed to deserialize message");
-
-                                let message = Message {
+                            match event {
+                                // Handle behaviour events.
+                                ClientEvent::Gossipsub(gossipsub::Event::Message {
                                     propagation_source: peer_id,
-                                    source: PeerId::from_bytes(&message_payload.peer_id).expect("Failed to parse peer id"),
                                     message_id,
-                                    topic: message.topic,
-                                    data: message_payload.data,
-                                };
+                                    message,
+                                }) => {
+                                    // deserialize message payload
+                                    let message_payload: ServerMessage = serde_json::from_slice(&message.data)
+                                        .expect("Failed to deserialize message");
 
-                                self.message_sender.unbounded_send(message).expect("Failed to send message");
+                                    let message = Message {
+                                        propagation_source: peer_id,
+                                        source: PeerId::from_bytes(&message_payload.peer_id).expect("Failed to parse peer id"),
+                                        message_id,
+                                        topic: message.topic,
+                                        data: message_payload.data,
+                                    };
+
+                                    self.message_sender.unbounded_send(message).expect("Failed to send message");
+                                }
+                                ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. }) => {
+                                    info!(target: "torii::relay::client::gossipsub", topic = ?topic, "Relay ready. Received subscription confirmation");
+
+                                    is_relay_ready = true;
+                                    if let Some(tx) = relay_ready_tx.take() {
+                                        tx.send(Ok(())).expect("Failed to send response");
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
@@ -245,9 +274,7 @@ impl EventLoop {
                                 return;
                             }
                         }
-                        evt => {
-                            info!(target: "torii::relay::client", event = ?evt, "Unhandled event");
-                        }
+                        _ => {}
                     }
                 },
             }

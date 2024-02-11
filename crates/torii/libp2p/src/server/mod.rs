@@ -147,7 +147,7 @@ impl Relay {
                             let message = serde_json::from_slice::<ClientMessage>(&message.data);
                             if let Err(e) = message {
                                 info!(
-                                    target: "torii::relay::server",
+                                    target: "torii::relay::server::gossipsub",
                                     error = %e,
                                     "Failed to deserialize message"
                                 );
@@ -176,18 +176,37 @@ impl Relay {
                                     .as_bytes(),
                             ) {
                                 info!(
-                                    target: "torii::relay::server",
+                                    target: "torii::relay::server::gossipsub",
                                     error = %e,
                                     "Failed to publish message"
                                 );
                             }
+                        }
+                        ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
+                            info!(
+                                target: "torii::relay::server::gossipsub",
+                                peer_id = %peer_id,
+                                topic = %topic,
+                                "Subscribed to topic"
+                            );
+                        }
+                        ServerEvent::Gossipsub(gossipsub::Event::Unsubscribed {
+                            peer_id,
+                            topic,
+                        }) => {
+                            info!(
+                                target: "torii::relay::server::gossipsub",
+                                peer_id = %peer_id,
+                                topic = %topic,
+                                "Unsubscribed from topic"
+                            );
                         }
                         ServerEvent::Identify(identify::Event::Received {
                             info: identify::Info { observed_addr, .. },
                             peer_id,
                         }) => {
                             info!(
-                                target: "torii::relay::server",
+                                target: "torii::relay::server::identify",
                                 peer_id = %peer_id,
                                 observed_addr = %observed_addr,
                                 "Received identify event"
@@ -196,7 +215,7 @@ impl Relay {
                         }
                         ServerEvent::Ping(ping::Event { peer, result, .. }) => {
                             info!(
-                                target: "torii::relay::server",
+                                target: "torii::relay::server::ping",
                                 peer_id = %peer,
                                 result = ?result,
                                 "Received ping event"

@@ -26,19 +26,19 @@ mod test {
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
             .try_init();
         // Initialize the relay server
-        let mut relay_server: Relay = Relay::new(9090, 9091, None, None)?;
+        let mut relay_server: Relay = Relay::new(9900, 9901, None, None)?;
         tokio::spawn(async move {
             relay_server.run().await;
         });
 
         // Initialize the first client (listener)
-        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9090".to_string())?;
+        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9900".to_string())?;
         tokio::spawn(async move {
             client.event_loop.lock().await.run().await;
         });
 
         client.command_sender.subscribe("mawmaw".to_string()).await?;
-        sleep(Duration::from_secs(1)).await;
+        client.command_sender.wait_for_relay().await?;
         client.command_sender.publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()).await?;
 
         let message_receiver = client.message_receiver.clone();
@@ -73,7 +73,7 @@ mod test {
         // Make sure the cert hash is correct - corresponding to the cert in the relay server
         let mut client = RelayClient::new(
             "/ip4/127.0.0.1/udp/9091/webrtc-direct/certhash/\
-             uEiD6v3wzt8XU3s3SqgNSBJPvn9E0VMVFm8-G0iSEsIIDxw"
+             uEiCAoeHQh49fCHDolECesXO0CPR7fpz0sv0PWVaIahzT4g"
                 .to_string(),
         )?;
 
@@ -81,15 +81,13 @@ mod test {
             client.event_loop.lock().await.run().await;
         });
 
-        // Give some time for the client to start up
-        let _ = wasm_timer::Delay::new(std::time::Duration::from_secs(10)).await;
-
         client.command_sender.subscribe("mawmaw".to_string()).await?;
-        let _ = wasm_timer::Delay::new(std::time::Duration::from_secs(1)).await;
+        client.command_sender.wait_for_relay().await?;
         client.command_sender.publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()).await?;
 
-        let timeout = wasm_timer::Delay::new(std::time::Duration::from_secs(5));
-        let message_future = client.message_receiver.next();
+        let timeout = wasm_timer::Delay::new(std::time::Duration::from_secs(2));
+        let mut message_future = client.message_receiver.lock().await;
+        let message_future = message_future.next();
 
         match select(message_future, timeout).await {
             Either::Left((Some(_message), _)) => {

@@ -515,8 +515,6 @@ mod world {
         ) {
             assert_can_write(@self, model, get_caller_address());
 
-            let model_class_hash = self.models.read(model);
-
             let mut empty_values = ArrayTrait::new();
             let mut i = 0;
 

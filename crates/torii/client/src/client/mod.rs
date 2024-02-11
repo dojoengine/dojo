@@ -101,6 +101,11 @@ impl Client {
         })
     }
 
+    /// Waits for the relay to be ready and listening for messages.
+    pub async fn wait_for_relay(&mut self) -> Result<(), Error> {
+        self.relay_client.command_sender.wait_for_relay().await.map_err(Error::RelayClient)
+    }
+
     /// Subscribes to a topic.
     /// Returns true if the topic was subscribed to.
     /// Returns false if the topic was already subscribed to.

@@ -371,7 +371,7 @@ error: Unsupported attribute.
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:42:5
+ --> test_src/lib.cairo:41:5
     #[abi(embed_v0)]
     ^**************^
 
@@ -406,12 +406,12 @@ error: Unsupported attribute.
                     ^**************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withcomponent]:30:5
+ --> test_src/lib.cairo:62:5
     component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
     ^*********************************************************************************************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo[withcomponent]:31:5
+ --> test_src/lib.cairo:63:5
     component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
     ^*********************************************************************************************^
 
@@ -446,6 +446,7 @@ error: Unsupported attribute.
                         ^*****^
 
 //! > expanded_cairo_code
+
 #[starknet::component]
 mod testcomponent1 {
     #[storage]

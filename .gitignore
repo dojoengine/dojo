@@ -14,3 +14,4 @@ crates/benches/gas_usage.txt
 output.txt
 **/katana-logs
 crates/benches/bench_results.txt
+**/generated

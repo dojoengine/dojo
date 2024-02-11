@@ -4,6 +4,7 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule};
 use cairo_lang_syntax::node::kind::SyntaxKind;
@@ -39,6 +40,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
+                    severity: Severity::Error,
                 }],
             };
         }
@@ -72,6 +74,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
                     diagnostics: vec![PluginDiagnostic {
                         message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
                         stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
+                        severity: Severity::Error,
                     }],
                 };
             }
@@ -83,6 +86,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
                 diagnostics: vec![PluginDiagnostic {
                     message: "Invalid arguments: No models provided.".to_string(),
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
+                    severity: Severity::Error,
                 }],
             };
         }
@@ -155,7 +159,7 @@ impl InlineMacroExprPlugin for DeleteMacro {
             code: Some(PluginGeneratedFile {
                 name: "delete_inline_macro".into(),
                 content: builder.code,
-                diagnostics_mappings: builder.diagnostics_mappings,
+                code_mappings: builder.code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],
