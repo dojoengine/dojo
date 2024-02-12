@@ -83,6 +83,10 @@ impl Service {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
+            if sub.topic != topic {
+                continue;
+            }
+
             let models_query = r#"
                     SELECT group_concat(message_model.model_id) as model_names
                     FROM messages

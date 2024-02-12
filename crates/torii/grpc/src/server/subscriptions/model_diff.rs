@@ -51,7 +51,7 @@ impl StateDiffManager {
         &self,
         reqs: Vec<ModelDiffRequest>,
     ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
-        let id = rand::thread_rng().gen::<usize>();
+        let id: usize = rand::thread_rng().gen::<usize>();
 
         let (sender, receiver) = channel(1);
 
