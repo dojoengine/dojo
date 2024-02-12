@@ -3,6 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
+use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -286,34 +287,6 @@ where
 {
     let ui = ws.config().ui();
 
-    match &strategy.executor {
-        Some(executor) => {
-            ui.print_header("# Executor");
-            deploy_contract(executor, "executor", vec![], migrator, &ui, &txn_config).await?;
-
-            // There is no world migration, so it exists already.
-            if strategy.world.is_none() {
-                let addr = strategy.world_address()?;
-                let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(addr, &migrator)
-                        .set_executor(&executor.contract_address.into())
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            ui.verbose(format!("{e:?}"));
-                            e
-                        })?;
-
-                TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
-
-                ui.print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
-            }
-
-            ui.print_sub(format!("Contract address: {:#x}", executor.contract_address));
-        }
-        None => {}
-    };
-
     match &strategy.base {
         Some(base) => {
             ui.print_header("# Base Contract");
@@ -342,7 +315,6 @@ where
             ui.print_header("# World");
 
             let calldata = vec![
-                strategy.executor.as_ref().unwrap().contract_address,
                 strategy.base.as_ref().unwrap().diff.local,
             ];
             deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
@@ -358,11 +330,21 @@ where
             if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
                 match meta.upload().await {
                     Ok(hash) => {
-                        let encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+                        let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+
+                        // Metadata is expecting an array of capacity 3.
+                        if encoded_uri.len() < 3 {
+                            encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
+                        }
+
+                        let world_metadata = ResourceMetadata {
+                            resource_id: FieldElement::ZERO,
+                            metadata_uri: encoded_uri,
+                        };
 
                         let InvokeTransactionResult { transaction_hash } =
                             WorldContract::new(world.contract_address, migrator)
-                                .set_metadata_uri(&FieldElement::ZERO, &encoded_uri)
+                                .set_metadata(&world_metadata)
                                 .send()
                                 .await
                                 .map_err(|e| {
@@ -381,6 +363,8 @@ where
         }
         None => {}
     };
+
+    declare_register_resource_metadata(strategy, migrator, &ui, txn_config.clone()).await?;
 
     register_models(strategy, migrator, &ui, txn_config.clone()).await?;
     deploy_contracts(strategy, migrator, &ui, txn_config).await?;
@@ -436,6 +420,60 @@ where
             ui.verbose(format!("{e:?}"));
             Err(anyhow!("Failed to migrate {contract_id}: {e}"))
         }
+    }
+}
+
+async fn declare_register_resource_metadata<P, S>(
+    strategy: &MigrationStrategy,
+    migrator: &SingleOwnerAccount<P, S>,
+    ui: &Ui,
+    txn_config: Option<TransactionOptions>,
+) -> Result<Option<RegisterOutput>>
+where
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
+    let mut declare_output = vec![];
+
+    let res: anyhow::Result<FieldElement> = match &strategy.resource_metadata {
+        Some(resource_metadata) => {
+            ui.print_header("# Resource Metadata Model");
+
+            match resource_metadata
+                .declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default())
+                .await
+            {
+                Ok(res) => {
+                    ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
+                    declare_output.push(res.clone());
+                    Ok(res.class_hash)
+                }
+                Err(MigrationError::ClassAlreadyDeclared) => {
+                    ui.print_sub(format!("Already declared: {:#x}", resource_metadata.diff.local));
+                    Ok(resource_metadata.diff.local)
+                }
+                Err(e) => return Err(anyhow!("Failed to register resource metadata to World: {e}")),
+            }
+        }
+        None => return Ok(None),
+    };
+
+    if let Ok(class_hash) = res {
+        let world_address = strategy.world_address()?;
+        let world = WorldContract::new(world_address, migrator);
+
+        let InvokeTransactionResult { transaction_hash } = world.register_model(&class_hash.into())
+            .send()
+            .await
+            .map_err(|e| anyhow!("Failed to register resource metadata to World: {e}"))?;
+
+        TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+        ui.print_sub(format!("Registered at: {transaction_hash:#x}"));
+
+        Ok(Some(RegisterOutput { transaction_hash, declare_output }))
+    } else {
+        Err(anyhow!("Failed to register resource metadata"))
     }
 }
 

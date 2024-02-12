@@ -16,8 +16,7 @@ use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_utils::UpcastMut;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
-    Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME,
-    WORLD_CONTRACT_NAME,
+    Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -187,7 +186,6 @@ fn find_project_contracts(
 pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
         ContractSelector(BASE_CONTRACT_NAME.to_string()),
-        ContractSelector(EXECUTOR_CONTRACT_NAME.to_string()),
         ContractSelector(WORLD_CONTRACT_NAME.to_string()),
     ]
     .iter()
@@ -231,17 +229,6 @@ fn update_manifest(
         let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
         Contract {
             name: WORLD_CONTRACT_NAME.into(),
-            abi: abi.clone(),
-            class_hash: *hash,
-            ..Default::default()
-        }
-    };
-
-    let executor = {
-        let (hash, abi) =
-            get_compiled_artifact_from_map(&compiled_artifacts, EXECUTOR_CONTRACT_NAME)?;
-        Contract {
-            name: EXECUTOR_CONTRACT_NAME.into(),
             abi: abi.clone(),
             class_hash: *hash,
             ..Default::default()
@@ -305,7 +292,7 @@ fn update_manifest(
         contracts.remove(model.0.as_str());
     }
 
-    do_update_manifest(manifest, world, executor, base, models, contracts)?;
+    do_update_manifest(manifest, world, base, models, contracts)?;
 
     Ok(())
 }
@@ -383,7 +370,7 @@ fn get_dojo_contract_artifacts(
 
     let mut result = HashMap::new();
 
-    if !matches!(contract_name.as_ref(), "world" | "executor" | "base") {
+    if !matches!(contract_name.as_ref(), "world" | "resource_metadata" | "base") {
         let module_name: SmolStr = module_id.full_path(db).into();
 
         if let Some((class_hash, abi)) = compiled_classes.get(&module_name as &str) {
@@ -420,17 +407,12 @@ fn get_dojo_contract_artifacts(
 fn do_update_manifest(
     current_manifest: &mut dojo_world::manifest::Manifest,
     world: dojo_world::manifest::Contract,
-    executor: dojo_world::manifest::Contract,
     base: dojo_world::manifest::Class,
     models: BTreeMap<String, dojo_world::manifest::Model>,
     contracts: BTreeMap<SmolStr, dojo_world::manifest::Contract>,
 ) -> anyhow::Result<()> {
     if current_manifest.world.class_hash != world.class_hash {
         current_manifest.world = world;
-    }
-
-    if current_manifest.executor.class_hash != executor.class_hash {
-        current_manifest.executor = executor;
     }
 
     if current_manifest.base.class_hash != base.class_hash {

@@ -4,6 +4,8 @@ enum Ty {
     Struct: Struct,
     Enum: Enum,
     Tuple: Span<Span<felt252>>,
+    // Store the capacity of the array.
+    Array: u32,
 }
 
 #[derive(Copy, Drop, Serde)]

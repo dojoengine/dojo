@@ -8,7 +8,7 @@ use crate::commands::model::ModelCommands;
 
 pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) -> Result<()> {
     match command {
-        ModelCommands::ClassHash { name, world, starknet } => {
+        ModelCommands::ContractAddress { name, world, starknet } => {
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
@@ -17,7 +17,7 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
 
             let model = world.model_reader(&name).await?;
 
-            println!("{:#x}", model.class_hash());
+            println!("{:#x}", model.contract_address());
         }
 
         ModelCommands::Schema { name, world, starknet, to_json } => {

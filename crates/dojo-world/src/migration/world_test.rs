@@ -12,13 +12,6 @@ fn no_diff_when_local_and_remote_are_equal() {
         ..Default::default()
     };
 
-    let executor_contract = Contract {
-        address: Some(88_u32.into()),
-        class_hash: 99_u32.into(),
-        name: EXECUTOR_CONTRACT_NAME.into(),
-        ..Default::default()
-    };
-
     let models = vec![Model {
         members: vec![],
         name: "dojo_mock::models::model".into(),
@@ -36,7 +29,6 @@ fn no_diff_when_local_and_remote_are_equal() {
     let local = Manifest {
         models,
         world: world_contract,
-        executor: executor_contract,
         ..Default::default()
     };
 
@@ -53,12 +45,6 @@ fn diff_when_local_and_remote_are_different() {
     let world_contract = Contract {
         class_hash: 66_u32.into(),
         name: WORLD_CONTRACT_NAME.into(),
-        ..Default::default()
-    };
-
-    let executor_contract = Contract {
-        class_hash: 99_u32.into(),
-        name: EXECUTOR_CONTRACT_NAME.into(),
         ..Default::default()
     };
 
@@ -111,19 +97,18 @@ fn diff_when_local_and_remote_are_different() {
         models,
         contracts,
         world: world_contract,
-        executor: executor_contract,
         ..Default::default()
     };
 
     let mut remote = local.clone();
     remote.models = remote_models;
     remote.world.class_hash = 44_u32.into();
-    remote.executor.class_hash = 55_u32.into();
+    remote.models[1].class_hash = 33_u32.into();
     remote.contracts[0].class_hash = felt!("0x1112");
 
     let diff = WorldDiff::compute(local, Some(remote));
 
-    assert_eq!(diff.count_diffs(), 4);
+    assert_eq!(diff.count_diffs(), 3);
     assert!(diff.models.iter().any(|m| m.name == "dojo_mock::models::model_2"));
     assert!(diff.contracts.iter().any(|c| c.name == "dojo_mock::contracts::my_contract"));
 }

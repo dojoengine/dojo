@@ -5,7 +5,7 @@ use std::{env, fs};
 use cairo_lang_test_utils::parse_test_file::TestRunnerResult;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use dojo_test_utils::compiler::build_test_config;
-use dojo_world::manifest::{BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use dojo_world::manifest::{BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 use scarb::core::TargetKind;
 use scarb::ops::CompileOpts;
 use smol_str::SmolStr;
@@ -23,16 +23,15 @@ fn build_mock_manifest() -> dojo_world::manifest::Manifest {
             class_hash: felt!("0xdeadbeef"),
             ..Default::default()
         },
-        executor: dojo_world::manifest::Contract {
-            name: EXECUTOR_CONTRACT_NAME.into(),
-            abi: None,
-            address: Some(felt!("0x1234")),
-            class_hash: felt!("0x4567"),
-            ..Default::default()
-        },
         base: dojo_world::manifest::Class {
             name: BASE_CONTRACT_NAME.into(),
             class_hash: felt!("0x9090"),
+            ..Default::default()
+        },
+        resource_metadata: dojo_world::manifest::Contract {
+            name: RESOURCE_METADATA_CONTRACT_NAME.into(),
+            class_hash: felt!("0x1111"),
+            address: Some(felt!("0x1234")),
             ..Default::default()
         },
         contracts: vec![
@@ -76,7 +75,6 @@ fn update_manifest_correctly() {
     let mut mock_manifest = build_mock_manifest();
 
     let world = mock_manifest.world.clone();
-    let executor = mock_manifest.executor.clone();
     let base = mock_manifest.base.clone();
     let contracts = mock_manifest.contracts.clone();
 
@@ -124,7 +122,6 @@ fn update_manifest_correctly() {
     do_update_manifest(
         &mut mock_manifest,
         world.clone(),
-        executor.clone(),
         base.clone(),
         new_models.clone(),
         new_contracts,
@@ -132,7 +129,6 @@ fn update_manifest_correctly() {
     .unwrap();
 
     assert!(mock_manifest.world == world, "world should not change");
-    assert!(mock_manifest.executor == executor, "executor should not change");
     assert!(mock_manifest.base == base, "base should not change");
 
     assert!(mock_manifest.models == new_models.into_values().collect::<Vec<_>>());
