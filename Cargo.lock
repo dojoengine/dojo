@@ -12321,7 +12321,6 @@ dependencies = [
  "parking_lot 0.12.1",
  "prost 0.11.9",
  "prost 0.12.3",
- "prost-types 0.12.3",
  "rand",
  "rayon",
  "serde",
