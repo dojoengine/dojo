@@ -35,7 +35,6 @@ tokio = { version = "1.32.0", features = [ "sync" ], default-features = true }
 tokio-stream = "0.1.11"
 tokio-util = "0.7.7"
 tracing.workspace = true
-async-recursion = "1.0.5"
 
 [dev-dependencies]
 camino.workspace = true

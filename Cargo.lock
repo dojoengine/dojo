@@ -12237,7 +12237,6 @@ name = "torii-core"
 version = "0.5.1"
 dependencies = [
  "anyhow",
- "async-recursion",
  "async-trait",
  "base64 0.21.7",
  "camino",
@@ -12360,7 +12359,6 @@ dependencies = [
  "libp2p",
  "libp2p-webrtc",
  "libp2p-webrtc-websys",
- "prost-types 0.12.3",
  "rand",
  "regex",
  "serde",

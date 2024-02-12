@@ -262,7 +262,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let migration = prepare_migration("../types-test/target/dev".into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
-    let db = Arc::new(RwLock::new(Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap()));
+    let db = Arc::new(RwLock::new(
+        Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap(),
+    ));
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
