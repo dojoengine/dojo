@@ -24,4 +24,3 @@ pub fn encode_uri(uri: &str) -> Result<Vec<FieldElement>> {
         })
         .collect::<Result<Vec<_>, _>>()?)
 }
-

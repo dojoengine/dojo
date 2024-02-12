@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -314,9 +314,7 @@ where
         Some(world) => {
             ui.print_header("# World");
 
-            let calldata = vec![
-                strategy.base.as_ref().unwrap().diff.local,
-            ];
+            let calldata = vec![strategy.base.as_ref().unwrap().diff.local];
             deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
                 .await
                 .map_err(|e| {
@@ -452,7 +450,9 @@ where
                     ui.print_sub(format!("Already declared: {:#x}", resource_metadata.diff.local));
                     Ok(resource_metadata.diff.local)
                 }
-                Err(e) => return Err(anyhow!("Failed to register resource metadata to World: {e}")),
+                Err(e) => {
+                    return Err(anyhow!("Failed to register resource metadata to World: {e}"));
+                }
             }
         }
         None => return Ok(None),
@@ -462,7 +462,8 @@ where
         let world_address = strategy.world_address()?;
         let world = WorldContract::new(world_address, migrator);
 
-        let InvokeTransactionResult { transaction_hash } = world.register_model(&class_hash.into())
+        let InvokeTransactionResult { transaction_hash } = world
+            .register_model(&class_hash.into())
             .send()
             .await
             .map_err(|e| anyhow!("Failed to register resource metadata to World: {e}"))?;

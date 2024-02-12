@@ -5,7 +5,9 @@ use std::{env, fs};
 use cairo_lang_test_utils::parse_test_file::TestRunnerResult;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use dojo_test_utils::compiler::build_test_config;
-use dojo_world::manifest::{BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use dojo_world::manifest::{
+    BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+};
 use scarb::core::TargetKind;
 use scarb::ops::CompileOpts;
 use smol_str::SmolStr;

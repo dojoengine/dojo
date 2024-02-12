@@ -147,8 +147,8 @@ pub trait Deployable: Declarable + Sync {
             Err(MigrationError::ClassAlreadyDeclared) => None,
             Err(e) => {
                 println!("{:?}", e);
-                return Err(e)
-            },
+                return Err(e);
+            }
         };
 
         let base_class_hash = account
@@ -221,8 +221,8 @@ pub trait Deployable: Declarable + Sync {
             Err(MigrationError::ClassAlreadyDeclared) => None,
             Err(e) => {
                 println!("{:?}", e);
-                return Err(e)
-            },
+                return Err(e);
+            }
         };
 
         let calldata = [

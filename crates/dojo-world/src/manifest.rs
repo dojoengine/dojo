@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
-use cainome::cairo_serde::{Error as CainomeError, ContractAddress};
+use cainome::cairo_serde::{ContractAddress, Error as CainomeError};
 use cairo_lang_starknet::abi;
 use serde_with::serde_as;
 use smol_str::SmolStr;
@@ -20,8 +20,8 @@ use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 use crate::contracts::model::ModelError;
-use crate::contracts::WorldContractReader;
 use crate::contracts::world::WorldEvent;
+use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -176,13 +176,18 @@ impl Manifest {
 
         let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
 
-        let (resource_metadata_class_hash, resource_metadata_address) = match world.model(&FieldElement::from_hex_be(RESOURCE_METADATA_MODEL_NAME).unwrap()).block_id(BLOCK_ID).call().await? {
-            (ch, addr) => if addr == ContractAddress(FieldElement::ZERO) {
-                (ch, None)
+        let (resource_metadata_class_hash, resource_metadata_address) = world
+            .model(&FieldElement::from_hex_be(RESOURCE_METADATA_MODEL_NAME).unwrap())
+            .block_id(BLOCK_ID)
+            .call()
+            .await?;
+
+        let resource_metadata_address =
+            if resource_metadata_address == ContractAddress(FieldElement::ZERO) {
+                None
             } else {
-                (ch, Some(addr.into()))
-            }
-        };
+                Some(resource_metadata_address.into())
+            };
 
         let (models, contracts) =
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
@@ -378,7 +383,9 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Model> {
     let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
 
     for e in events {
-        let model_event = if let WorldEvent::ModelRegistered(m) = e.try_into().expect("ModelRegistered event is expected to be parseable") {
+        let model_event = if let WorldEvent::ModelRegistered(m) =
+            e.try_into().expect("ModelRegistered event is expected to be parseable")
+        {
             m
         } else {
             panic!("ModelRegistered expected");

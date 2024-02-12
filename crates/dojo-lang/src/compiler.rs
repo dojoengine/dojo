@@ -16,7 +16,8 @@ use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_utils::UpcastMut;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
-    Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME,
+    WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
 use scarb::compiler::helpers::{build_compiler_config, collect_main_crate_ids};
@@ -241,7 +242,8 @@ fn update_manifest(
     };
 
     let resource_metadata = {
-        let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, RESOURCE_METADATA_CONTRACT_NAME)?;
+        let (hash, abi) =
+            get_compiled_artifact_from_map(&compiled_artifacts, RESOURCE_METADATA_CONTRACT_NAME)?;
         Contract {
             name: RESOURCE_METADATA_CONTRACT_NAME.into(),
             abi: abi.clone(),

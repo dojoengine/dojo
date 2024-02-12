@@ -5,7 +5,9 @@ use convert_case::{Case, Casing};
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::{Manifest, BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use crate::manifest::{
+    Manifest, BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+};
 
 #[cfg(test)]
 #[path = "world_test.rs"]

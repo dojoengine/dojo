@@ -1,6 +1,9 @@
 use std::result::Result;
 
-pub use abigen::world::{WorldContract, WorldContractReader, Event as WorldEvent, ModelRegistered, ContractDeployed, ContractUpgraded};
+pub use abigen::world::{
+    ContractDeployed, ContractUpgraded, Event as WorldEvent, ModelRegistered, WorldContract,
+    WorldContractReader,
+};
 use starknet::providers::Provider;
 
 use super::model::{ModelError, ModelRPCReader};

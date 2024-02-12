@@ -1,3 +1,4 @@
+pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
 use cainome::cairo_serde::Error as CainomeError;
 use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
@@ -5,16 +6,13 @@ use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
 use starknet::core::types::{FieldElement, StarknetError};
 use starknet::core::utils::{
-    cairo_short_string_to_felt, CairoShortStringToFeltError,
-    ParseCairoShortStringError,
+    cairo_short_string_to_felt, CairoShortStringToFeltError, ParseCairoShortStringError,
 };
 use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::poseidon_hash_many;
 
 use crate::contracts::WorldContractReader;
-
-pub use abigen::model::ModelContractReader;
 
 #[cfg(test)]
 #[path = "model_test.rs"]
@@ -90,7 +88,13 @@ where
 
         let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
 
-        Ok(Self { world_reader: world, class_hash: class_hash.into(), contract_address: contract_address.into(), name, model_reader })
+        Ok(Self {
+            world_reader: world,
+            class_hash: class_hash.into(),
+            contract_address: contract_address.into(),
+            name,
+            model_reader,
+        })
     }
 
     pub async fn entity_storage(

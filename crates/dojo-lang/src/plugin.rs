@@ -241,7 +241,8 @@ impl MacroPlugin for BuiltinDojoPlugin {
         item_ast: ast::ModuleItem,
         _metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
-        let do_expand: bool = std::env::var(DOJO_PLUGIN_EXPAND_VAR_ENV).map_or(false, |v| v == "true" || v == "1");
+        let do_expand: bool =
+            std::env::var(DOJO_PLUGIN_EXPAND_VAR_ENV).map_or(false, |v| v == "true" || v == "1");
 
         match item_ast {
             ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast),

@@ -6,7 +6,7 @@ use dojo_test_utils::sequencer::{
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{EmittedEvent, FieldElement};
-use starknet::macros::{felt, short_string, selector};
+use starknet::macros::{felt, selector, short_string};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{parse_contracts_events, Contract, Manifest, Model};
@@ -43,7 +43,7 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
 #[test]
 fn parse_registered_model_events() {
     let expected_models = vec![
-        Model { name: "Model1".into(), class_hash: felt!("0x5555"),  ..Default::default() },
+        Model { name: "Model1".into(), class_hash: felt!("0x5555"), ..Default::default() },
         Model { name: "Model2".into(), class_hash: felt!("0x6666"), ..Default::default() },
     ];
 
@@ -51,7 +51,13 @@ fn parse_registered_model_events() {
 
     let events = vec![
         EmittedEvent {
-            data: vec![short_string!("Model1"), felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")],
+            data: vec![
+                short_string!("Model1"),
+                felt!("0x5555"),
+                felt!("0xbeef"),
+                felt!("0xa1"),
+                felt!("0"),
+            ],
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -59,7 +65,13 @@ fn parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![short_string!("Model1"), felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")],
+            data: vec![
+                short_string!("Model1"),
+                felt!("0xbeef"),
+                felt!("0"),
+                felt!("0xa1"),
+                felt!("0xa1"),
+            ],
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -67,7 +79,13 @@ fn parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![short_string!("Model2"), felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")],
+            data: vec![
+                short_string!("Model2"),
+                felt!("0x6666"),
+                felt!("0"),
+                felt!("0xa3"),
+                felt!("0"),
+            ],
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),

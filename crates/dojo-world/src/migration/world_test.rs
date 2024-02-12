@@ -26,11 +26,7 @@ fn no_diff_when_local_and_remote_are_equal() {
         ..Default::default()
     }];
 
-    let local = Manifest {
-        models,
-        world: world_contract,
-        ..Default::default()
-    };
+    let local = Manifest { models, world: world_contract, ..Default::default() };
 
     let mut remote = local.clone();
     remote.models = remote_models;
@@ -93,12 +89,7 @@ fn diff_when_local_and_remote_are_different() {
         },
     ];
 
-    let local = Manifest {
-        models,
-        contracts,
-        world: world_contract,
-        ..Default::default()
-    };
+    let local = Manifest { models, contracts, world: world_contract, ..Default::default() };
 
     let mut remote = local.clone();
     remote.models = remote_models;

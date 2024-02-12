@@ -28,10 +28,7 @@ async fn test_world_contract_reader() {
     let _world = WorldContractReader::new(world_address, provider);
 }
 
-pub async fn deploy_world(
-    sequencer: &TestSequencer,
-    path: Utf8PathBuf,
-) -> FieldElement {
+pub async fn deploy_world(sequencer: &TestSequencer, path: Utf8PathBuf) -> FieldElement {
     let manifest = Manifest::load_from_path(path.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();

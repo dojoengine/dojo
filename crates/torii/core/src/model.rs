@@ -35,7 +35,8 @@ impl ModelSQLReader {
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM models WHERE id = ?",
+            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
+             models WHERE id = ?",
         )
         .bind(name)
         .fetch_one(&pool)
