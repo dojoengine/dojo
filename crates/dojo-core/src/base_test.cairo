@@ -30,7 +30,7 @@ mod contract_upgrade {
         }
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl WorldProviderImpl of IWorldProvider<ContractState> {
         fn world(self: @ContractState) -> IWorldDispatcher {
             IWorldDispatcher { contract_address: starknet::contract_address_const::<'world'>() }
@@ -105,10 +105,8 @@ mod invalid_model {
     #[abi(embed_v0)]
     impl InvalidModelName of super::INameOnly<ContractState> {
         fn name(self: @ContractState) -> felt252 {
-            // world deployed first
-            // then resource metadata
-            // then each registered model increments the address by 1.
-            0x3
+            // Pre-computed address of a contract deployed through the world.
+            0x34534b116332dd9459bfde65280822d84c130e3f1faeb63af8455f83e733f4f
         }
     }
 }
@@ -134,9 +132,7 @@ mod invalid_model_world {
 fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
-    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
-    let new_class_hash: ClassHash = contract_upgrade::TEST_CLASS_HASH.try_into().unwrap();
-
+    let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
     base_address.print();
 
     world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());

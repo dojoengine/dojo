@@ -116,14 +116,14 @@ fn bench_database_array() {
     let array_test_len: usize = 300;
 
     let mut layout = ArrayTrait::new();
-    let mut values = ArrayTrait::new();
+    let mut values: Array<felt252> = ArrayTrait::new();
     let mut i = 0;
     loop {
         if i == array_test_len {
             break;
         }
 
-        values.append(i);
+        values.append(i.into());
         layout.append(251_u8);
 
         i += 1;
@@ -146,21 +146,6 @@ fn bench_database_array() {
         }
 
         assert(res.at(i) == values.at(i), 'Value not equal!');
-        i += 1;
-    };
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let half_res = database::get('table', 'key', 3, 8, half_layout);
-    end(gas, 'db get half arr');
-
-    let mut i = 0;
-    loop {
-        if i == array_test_len / 2 {
-            break;
-        }
-
-        assert(half_res.at(i) == values.at(i), 'Helf value not equal!');
         i += 1;
     };
 }

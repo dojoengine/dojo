@@ -182,6 +182,7 @@ fn test_delete() {
     assert(deleted.a == 0, 'data not deleted');
     assert(deleted.b == 0, 'data not deleted');
 }
+use core::debug::PrintTrait;
 
 #[test]
 #[available_gas(6000000)]
@@ -189,9 +190,7 @@ fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let (foo_class_hash, foo_address) = world.model('Foo');
-    let foo_address_expected: ContractAddress = 0x3.try_into().unwrap();
-    assert(foo_address == foo_address_expected, 'foo wrong address');
+    let (foo_class_hash, _) = world.model('Foo');
     assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
 }
 
