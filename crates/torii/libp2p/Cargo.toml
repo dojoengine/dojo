@@ -21,6 +21,8 @@ anyhow.workspace = true
 dojo-types.workspace = true
 
 [dev-dependencies]
+dojo-world = { path = "../../dojo-world", features = ["metadata"]}
+sqlx.workspace = true
 starknet-ff = "0.3.6"
 tempfile = "3.9.0"
 

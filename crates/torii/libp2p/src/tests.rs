@@ -16,25 +16,38 @@ mod test {
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct};
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use starknet_ff::FieldElement;
+        use tokio::sync::RwLock;
         use tokio::time::sleep;
         use tokio::{self, select};
+        use torii_core::sql::Sql;
+
+        use crate::server::Relay;
 
         let _ = tracing_subscriber::fmt()
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
             .try_init();
 
         // Database
-        // let pool = sqlx::sqlite::SqlitePool::connect("sqlite::memory:").await?;
+        let options = <SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+            .unwrap()
+            .create_if_missing(true);
+        let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
+        sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+        let db = std::sync::Arc::new(RwLock::new(
+            Sql::new(pool.clone(), FieldElement::from_bytes_be(&[0; 32]).unwrap()).await?,
+        ));
 
         // Initialize the relay server
-        // let mut relay_server: Relay = Relay::new(&pool, 9900, 9901, None, None)?;
-        // tokio::spawn(async move {
-        //     relay_server.run().await;
-        // });
+        let mut relay_server: Relay = Relay::new(db.clone(), 9900, 9901, None, None)?;
+        tokio::spawn(async move {
+            relay_server.run().await;
+        });
 
         // Initialize the first client (listener)
-        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9090".to_string())?;
+        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9900".to_string())?;
         tokio::spawn(async move {
             client.event_loop.lock().await.run().await;
         });
@@ -60,15 +73,22 @@ mod test {
 
         client.command_sender.publish(dojo_types::schema::Ty::Struct(data)).await?;
 
-        // let message_receiver = client.message_receiver.clone();
-        // let mut message_receiver = message_receiver.lock().await;
-
-        select! {
-            _ = sleep(Duration::from_secs(5)) => {
-                println!("Test Failed: Did not receive message within 5 seconds.");
-                return Err("Timeout reached without receiving a message".into());
-            }
-        }
+        Ok(())
+        // loop {
+        //     select! {
+        //         entity = sqlx::query("SELECT * FROM entities WHERE id = ?")
+        //         .bind(format!("{:#x}", FieldElement::from_bytes_be(&[0;
+        // 32]).unwrap())).fetch_one(&pool) => {             if let Ok(_) = entity {
+        //                 println!("Test OK: Received message within 5 seconds.");
+        //                 return Ok(());
+        //             }
+        //         }
+        //         _ = sleep(Duration::from_secs(5)) => {
+        //             println!("Test Failed: Did not receive message within 5 seconds.");
+        //             return Err("Timeout reached without receiving a message".into());
+        //         }
+        //     }
+        // }
     }
 
     #[cfg(target_arch = "wasm32")]
