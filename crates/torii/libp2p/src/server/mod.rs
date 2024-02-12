@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, io};
 
+use dojo_types::schema::Ty;
 use futures::StreamExt;
 use libp2p::core::multiaddr::Protocol;
 use libp2p::core::muxing::StreamMuxerBox;
@@ -26,7 +27,6 @@ use crate::errors::Error;
 mod events;
 
 use crate::server::events::ServerEvent;
-use crate::types::ClientMessage;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -150,7 +150,7 @@ impl Relay {
                             // Deserialize message.
                             // We shouldn't panic here
                             let message =
-                                match serde_json::from_slice::<ClientMessage>(&message.data) {
+                                match serde_json::from_slice::<Ty>(&message.data) {
                                     Ok(message) => message,
                                     Err(e) => {
                                         info!(
@@ -166,8 +166,7 @@ impl Relay {
                                 target: "torii::relay::server",
                                 message_id = %message_id,
                                 peer_id = %peer_id,
-                                topic = %message.topic,
-                                data = %message.data,
+                                data = %message,
                                 "Received message"
                             );
 
@@ -175,7 +174,8 @@ impl Relay {
                                 .pool
                                 .write()
                                 .await
-                                .set_message(message.data, &message_id.to_string())
+                                // event id is message id
+                                .set_entity(message, &message_id.to_string())
                                 .await
                             {
                                 info!(

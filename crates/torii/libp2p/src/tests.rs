@@ -64,7 +64,7 @@ mod test {
 
         client
             .command_sender
-            .publish("mawmaw".to_string(), dojo_types::schema::Ty::Struct(data))
+            .publish(dojo_types::schema::Ty::Struct(data))
             .await?;
 
         // let message_receiver = client.message_receiver.clone();

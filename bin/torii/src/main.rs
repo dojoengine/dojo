@@ -23,8 +23,8 @@ use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
+use tokio::sync::{broadcast, Mutex, RwLock};
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
@@ -137,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
-    let mut db = Sql::new(pool.clone(), args.world_address).await?;
+    let db = Arc::new(RwLock::new(Sql::new(pool.clone(), args.world_address).await?));
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
@@ -153,7 +153,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut engine = Engine::new(
         world,
-        &mut db,
+        db.clone(),
         &provider,
         processors,
         EngineConfig { start_block: args.start_block, ..Default::default() },
@@ -161,7 +161,6 @@ async fn main() -> anyhow::Result<()> {
         Some(block_tx),
     );
 
-    
     let shutdown_rx = shutdown_tx.subscribe();
     let (grpc_addr, grpc_server) = torii_grpc::server::new(
         shutdown_rx,
@@ -173,7 +172,7 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
-        &mut db,
+        db.clone(),
         args.relay_port,
         args.relay_webrtc_port,
         args.relay_local_key_path,

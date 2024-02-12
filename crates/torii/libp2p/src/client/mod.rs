@@ -17,7 +17,6 @@ pub mod events;
 use crate::client::events::ClientEvent;
 use crate::constants;
 use crate::errors::Error;
-use crate::types::ClientMessage;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClientEvent")]
@@ -39,7 +38,7 @@ pub struct EventLoop {
 
 #[derive(Debug)]
 enum Command {
-    Publish(String, Ty, oneshot::Sender<Result<MessageId, Error>>),
+    Publish(Ty, oneshot::Sender<Result<MessageId, Error>>),
     WaitForRelay(oneshot::Sender<Result<(), Error>>)
 }
 
@@ -148,11 +147,11 @@ impl CommandSender {
         Self { sender }
     }
 
-    pub async fn publish(&mut self, topic: String, data: Ty) -> Result<MessageId, Error> {
+    pub async fn publish(&mut self, data: Ty) -> Result<MessageId, Error> {
         let (tx, rx) = oneshot::channel();
 
         self.sender
-            .unbounded_send(Command::Publish(topic, data, tx))
+            .unbounded_send(Command::Publish(data, tx))
             .expect("Failed to send command");
 
         rx.await.expect("Failed to receive response")
@@ -177,8 +176,8 @@ impl EventLoop {
             select! {
                 command = self.command_receiver.select_next_some() => {
                     match command {
-                        Command::Publish(topic, data, sender) => {
-                            sender.send(self.publish(topic, data)).expect("Failed to send response");
+                        Command::Publish(data, sender) => {
+                            sender.send(self.publish(&data)).expect("Failed to send response");
                         }
                         Command::WaitForRelay(sender) => {
                             if is_relay_ready {
@@ -220,13 +219,13 @@ impl EventLoop {
         }
     }
 
-    fn publish(&mut self, topic: String, data: Ty) -> Result<MessageId, Error> {
+    fn publish(&mut self, data: &Ty) -> Result<MessageId, Error> {
         self.swarm
             .behaviour_mut()
             .gossipsub
             .publish(
                 IdentTopic::new(constants::MESSAGING_TOPIC),
-                serde_json::to_string(&ClientMessage { topic, data }).unwrap(),
+                serde_json::to_string(data).unwrap(),
             )
             .map_err(Error::PublishError)
     }

@@ -12237,6 +12237,7 @@ name = "torii-core"
 version = "0.5.1"
 dependencies = [
  "anyhow",
+ "async-recursion",
  "async-trait",
  "base64 0.21.7",
  "camino",
@@ -12354,6 +12355,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "dojo-types",
+ "dojo-world",
  "futures",
  "libp2p",
  "libp2p-webrtc",

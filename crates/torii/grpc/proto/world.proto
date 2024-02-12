@@ -16,12 +16,6 @@ service World {
 
     // Retrieve entities
     rpc RetrieveEntities (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
-
-    // Subscribe to messages
-    rpc SubscribeMessages (SubscribeMessagesRequest) returns (stream SubscribeMessagesResponse);
-
-    // Retrieve messages
-    rpc RetrieveMessages (RetrieveMessagesRequest) returns (RetrieveMessagesResponse);
 }
 
 
@@ -60,21 +54,4 @@ message RetrieveEntitiesRequest {
 
 message RetrieveEntitiesResponse {
     repeated types.Entity entities = 1;
-}
-
-message SubscribeMessagesRequest {
-    string topic = 1;
-}
-
-message SubscribeMessagesResponse {
-    types.Message message = 1;
-}
-
-message RetrieveMessagesRequest {
-    // The models to retrieve
-    types.Query query = 1;
-}
-
-message RetrieveMessagesResponse {
-    repeated types.Message messages = 1;
 }

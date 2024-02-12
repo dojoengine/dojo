@@ -43,15 +43,6 @@ message Entity {
     repeated Model models = 2;
 }
 
-message Message {
-    // The message's hashed keys
-    bytes hashed_keys = 1;
-    // The message's topic
-    string topic = 2;
-    // Models of the topic
-    repeated Model models = 3;
-}
-
 message StorageEntry {
     // The key of the changed value
     string key = 1;
