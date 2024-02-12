@@ -69,7 +69,7 @@ where
         };
 
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
-        db.write().await.set_metadata(resource, &uri_str).await;
+        db.write().await.set_metadata(resource, &uri_str);
 
         let db = db.clone();
         let resource = *resource;

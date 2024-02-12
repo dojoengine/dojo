@@ -139,7 +139,7 @@ impl<P: Provider + Sync> Engine<P> {
 
             self.process(block_with_txs).await?;
 
-            self.db.write().await.set_head(from).await;
+            self.db.write().await.set_head(from);
             self.db.write().await.execute().await?;
             from += 1;
         }
@@ -252,7 +252,7 @@ impl<P: Provider + Sync> Engine<P> {
         event_id: &str,
         event: &Event,
     ) -> Result<()> {
-        self.db.write().await.store_event(event_id, event, invoke_receipt.transaction_hash).await;
+        self.db.write().await.store_event(event_id, event, invoke_receipt.transaction_hash);
         for processor in &self.processors.event {
             if get_selector_from_name(&processor.event_key())? == event.keys[0]
                 && processor.validate(event)

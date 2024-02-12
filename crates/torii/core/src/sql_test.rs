@@ -112,7 +112,7 @@ async fn test_load_from_remote() {
             data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
         },
         FieldElement::THREE,
-    ).await;
+    );
 
     db.write().await.execute().await.unwrap();
 
