@@ -17,7 +17,7 @@ pub mod proto {
 
         #[cfg(feature = "server")]
         pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
-            tonic::include_file_descriptor_set!("descriptor");
+            tonic::include_file_descriptor_set!("world_descriptor");
     }
     pub mod types {
         tonic::include_proto!("types");

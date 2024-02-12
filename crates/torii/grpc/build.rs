@@ -15,13 +15,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         wasm_tonic_build::configure()
             .build_server(false)
             .build_client(feature_client.is_ok())
-            .file_descriptor_set_path(out_dir.join("descriptor.bin"))
+            .file_descriptor_set_path(out_dir.join("world_descriptor.bin"))
             .compile(&["proto/world.proto"], &["proto"])?;
     } else {
         tonic_build::configure()
             .build_server(feature_server.is_ok())
             .build_client(feature_client.is_ok())
-            .file_descriptor_set_path(out_dir.join("descriptor.bin"))
+            .file_descriptor_set_path(out_dir.join("world_descriptor.bin"))
             .compile(&["proto/world.proto"], &["proto"])?;
     }
     Ok(())
