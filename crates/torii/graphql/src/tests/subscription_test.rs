@@ -35,7 +35,7 @@ mod tests {
                         "depth": "Zero",
                         "record_id": 0,
                         "typeU16": 1,
-                        "type_u64": 1,
+                        "type_u64": "0x1",
                         "typeBool": true,
                         "type_felt": format!("{:#x}", FieldElement::from(1u128)),
                         "typeContractAddress": format!("{:#x}", FieldElement::ONE)
