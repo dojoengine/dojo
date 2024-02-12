@@ -94,7 +94,7 @@ mod tests {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
-        db.set_metadata(&RESOURCE, URI);
+        db.set_metadata(&RESOURCE, URI).await;
         db.execute().await.unwrap();
 
         let result = run_graphql_query(&schema, QUERY).await;

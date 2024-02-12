@@ -2,8 +2,6 @@
 mod test {
     use std::error::Error;
 
-    use futures::StreamExt;
-
     use crate::client::RelayClient;
 
     #[cfg(target_arch = "wasm32")]
@@ -21,8 +19,6 @@ mod test {
         use starknet_ff::FieldElement;
         use tokio::time::sleep;
         use tokio::{self, select};
-
-        use crate::server::Relay;
 
         let _ = tracing_subscriber::fmt()
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
@@ -62,26 +58,15 @@ mod test {
             key: false,
         });
 
-        client
-            .command_sender
-            .publish(dojo_types::schema::Ty::Struct(data))
-            .await?;
+        client.command_sender.publish(dojo_types::schema::Ty::Struct(data)).await?;
 
         // let message_receiver = client.message_receiver.clone();
         // let mut message_receiver = message_receiver.lock().await;
 
-        loop {
-            select! {
-                // event = message_receiver.next() => {
-                //     if let Some(message) = event {
-                //         println!("Received message from {:?} with id {:?}: {:?}", message.source, message.message_id, message);
-                //         return Ok(());
-                //     }
-                // }
-                _ = sleep(Duration::from_secs(5)) => {
-                    println!("Test Failed: Did not receive message within 5 seconds.");
-                    return Err("Timeout reached without receiving a message".into());
-                }
+        select! {
+            _ = sleep(Duration::from_secs(5)) => {
+                println!("Test Failed: Did not receive message within 5 seconds.");
+                return Err("Timeout reached without receiving a message".into());
             }
         }
     }

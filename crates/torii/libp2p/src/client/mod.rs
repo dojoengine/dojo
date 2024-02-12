@@ -6,7 +6,7 @@ use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::{select, StreamExt};
-use libp2p::gossipsub::{self, IdentTopic, MessageId, TopicHash};
+use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
 #[cfg(not(target_arch = "wasm32"))]
@@ -39,7 +39,7 @@ pub struct EventLoop {
 #[derive(Debug)]
 enum Command {
     Publish(Ty, oneshot::Sender<Result<MessageId, Error>>),
-    WaitForRelay(oneshot::Sender<Result<(), Error>>)
+    WaitForRelay(oneshot::Sender<Result<(), Error>>),
 }
 
 impl RelayClient {
@@ -150,9 +150,7 @@ impl CommandSender {
     pub async fn publish(&mut self, data: Ty) -> Result<MessageId, Error> {
         let (tx, rx) = oneshot::channel();
 
-        self.sender
-            .unbounded_send(Command::Publish(data, tx))
-            .expect("Failed to send command");
+        self.sender.unbounded_send(Command::Publish(data, tx)).expect("Failed to send command");
 
         rx.await.expect("Failed to receive response")
     }
@@ -190,18 +188,13 @@ impl EventLoop {
                 },
                 event = self.swarm.select_next_some() => {
                     match event {
-                        SwarmEvent::Behaviour(event) => {
-                            match event {
-                                // Handle behaviour events.
-                                ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. }) => {
-                                    info!(target: "torii::relay::client::gossipsub", topic = ?topic, "Relay ready. Received subscription confirmation");
+                        SwarmEvent::Behaviour(ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. })) => {
+                            // Handle behaviour events.
+                            info!(target: "torii::relay::client::gossipsub", topic = ?topic, "Relay ready. Received subscription confirmation");
 
-                                    is_relay_ready = true;
-                                    if let Some(tx) = relay_ready_tx.take() {
-                                        tx.send(Ok(())).expect("Failed to send response");
-                                    }
-                                }
-                                _ => {}
+                            is_relay_ready = true;
+                            if let Some(tx) = relay_ready_tx.take() {
+                                tx.send(Ok(())).expect("Failed to send response");
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {

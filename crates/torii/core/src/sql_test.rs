@@ -71,7 +71,9 @@ async fn test_load_from_remote() {
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
-    let db = Arc::new(RwLock::new(Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap()));
+    let db = Arc::new(RwLock::new(
+        Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap(),
+    ));
     let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
@@ -110,7 +112,7 @@ async fn test_load_from_remote() {
             data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
         },
         FieldElement::THREE,
-    );
+    ).await;
 
     db.write().await.execute().await.unwrap();
 

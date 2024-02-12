@@ -1,19 +1,15 @@
 use std::convert::TryInto;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
-use futures_util::future::BoxFuture;
-use futures_util::FutureExt;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
 use starknet_crypto::poseidon_hash_many;
-use tokio::sync::Mutex;
 
 use super::World;
 use crate::model::ModelSQLReader;
@@ -22,7 +18,6 @@ use crate::simple_broker::SimpleBroker;
 use crate::types::{
     Entity as EntityUpdated, Event as EventEmitted, Message, Model as ModelRegistered,
 };
-use async_recursion::async_recursion;
 
 pub const FELT_DELIMITER: &str = "/";
 

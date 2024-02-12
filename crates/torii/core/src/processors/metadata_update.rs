@@ -69,7 +69,7 @@ where
         };
 
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
-        db.write().await.set_metadata(resource, &uri_str);
+        db.write().await.set_metadata(resource, &uri_str).await;
 
         let db = db.clone();
         let resource = *resource;
@@ -84,7 +84,9 @@ where
 async fn try_retrieve(db: Arc<RwLock<Sql>>, resource: FieldElement, uri_str: String) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
-            db.write().await.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
+            db.write()
+                .await
+                .update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
                 .await
                 .unwrap();
             info!("Updated resource {resource:#x} metadata from ipfs");

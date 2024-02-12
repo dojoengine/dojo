@@ -149,18 +149,17 @@ impl Relay {
                         }) => {
                             // Deserialize message.
                             // We shouldn't panic here
-                            let message =
-                                match serde_json::from_slice::<Ty>(&message.data) {
-                                    Ok(message) => message,
-                                    Err(e) => {
-                                        info!(
-                                            target: "torii::relay::server::gossipsub",
-                                            error = %e,
-                                            "Failed to deserialize message"
-                                        );
-                                        continue;
-                                    }
-                                };
+                            let message = match serde_json::from_slice::<Ty>(&message.data) {
+                                Ok(message) => message,
+                                Err(e) => {
+                                    info!(
+                                        target: "torii::relay::server::gossipsub",
+                                        error = %e,
+                                        "Failed to deserialize message"
+                                    );
+                                    continue;
+                                }
+                            };
 
                             info!(
                                 target: "torii::relay::server",

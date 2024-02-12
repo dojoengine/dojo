@@ -1,21 +1,18 @@
+pub mod entities;
 pub mod logger;
 pub mod subscriptions;
-pub mod entities;
 
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
-use std::str::FromStr;
 use std::sync::Arc;
 
-use dojo_types::schema::Ty;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     SubscribeModelsRequest, SubscribeModelsResponse,
 };
-use sqlx::sqlite::SqliteRow;
-use sqlx::{Pool, Row, Sqlite};
+use sqlx::{Pool, Sqlite};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -27,7 +24,6 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
-use torii_core::model::{build_sql_query, map_row_to_ty};
 
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
@@ -35,7 +31,6 @@ use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
-use crate::types::ComparisonOperator;
 
 #[derive(Clone)]
 pub struct DojoWorld {
@@ -70,13 +65,7 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
-        Self {
-            pool,
-            world_address,
-            model_cache,
-            entity_manager,
-            state_diff_manager,
-        }
+        Self { pool, world_address, model_cache, entity_manager, state_diff_manager }
     }
 }
 
@@ -122,8 +111,6 @@ impl DojoWorld {
             models: models_metadata,
         })
     }
-
-    
 
     pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
         let (name, class_hash, packed_size, unpacked_size, layout): (

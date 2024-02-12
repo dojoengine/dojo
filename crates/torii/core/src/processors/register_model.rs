@@ -57,7 +57,10 @@ where
 
         info!("Registered model: {}", name);
 
-        db.write().await.register_model(schema, layout, event.data[1], packed_size, unpacked_size).await?;
+        db.write()
+            .await
+            .register_model(schema, layout, event.data[1], packed_size, unpacked_size)
+            .await?;
 
         Ok(())
     }

@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::Result;
 use async_graphql::dynamic::Schema;
@@ -23,7 +24,7 @@ use starknet::core::types::{BlockId, BlockTag, FieldElement, InvokeTransactionRe
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, RwLock};
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
@@ -261,7 +262,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let migration = prepare_migration("../types-test/target/dev".into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
-    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+    let db = Arc::new(RwLock::new(Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap()));
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -311,7 +312,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
-        &mut db,
+        db,
         &provider,
         Processors {
             event: vec![
