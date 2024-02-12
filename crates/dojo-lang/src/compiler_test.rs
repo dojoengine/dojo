@@ -76,6 +76,7 @@ fn update_manifest_correctly() {
 
     let world = mock_manifest.world.clone();
     let base = mock_manifest.base.clone();
+    let resource_metadata = mock_manifest.resource_metadata.clone();
     let contracts = mock_manifest.contracts.clone();
 
     let new_models: BTreeMap<String, dojo_world::manifest::Model> = [(
@@ -123,6 +124,7 @@ fn update_manifest_correctly() {
         &mut mock_manifest,
         world.clone(),
         base.clone(),
+        resource_metadata.clone(),
         new_models.clone(),
         new_contracts,
     )
