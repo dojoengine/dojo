@@ -21,6 +21,7 @@ anyhow.workspace = true
 sqlx.workspace = true
 torii-core.workspace = true
 dojo-types.workspace = true
+dojo-world = { path = "../../dojo-world", features = ["metadata"]}
 prost-types = "0.12.3"
 starknet-ff = "0.3.6"
 

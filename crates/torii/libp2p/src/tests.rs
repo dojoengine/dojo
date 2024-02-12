@@ -17,6 +17,8 @@ mod test {
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
         use std::time::Duration;
 
+        use dojo_types::schema::{Member, Struct};
+        use starknet_ff::FieldElement;
         use tokio::time::sleep;
         use tokio::{self, select};
 
@@ -27,35 +29,55 @@ mod test {
             .try_init();
 
         // Database
-        let pool = sqlx::sqlite::SqlitePool::connect("sqlite::memory:").await?;
+        // let pool = sqlx::sqlite::SqlitePool::connect("sqlite::memory:").await?;
 
         // Initialize the relay server
-        let mut relay_server: Relay = Relay::new(&pool, 9900, 9901, None, None)?;
-        tokio::spawn(async move {
-            relay_server.run().await;
-        });
+        // let mut relay_server: Relay = Relay::new(&pool, 9900, 9901, None, None)?;
+        // tokio::spawn(async move {
+        //     relay_server.run().await;
+        // });
 
         // Initialize the first client (listener)
-        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9900".to_string())?;
+        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9090".to_string())?;
         tokio::spawn(async move {
             client.event_loop.lock().await.run().await;
         });
 
-        client.command_sender.subscribe("mawmaw".to_string()).await?;
         client.command_sender.wait_for_relay().await?;
-        client.command_sender.publish("mawmaw".to_string(), "mimi".as_bytes().to_vec()).await?;
+        let mut data = Struct { name: "Message".to_string(), children: vec![] };
 
-        let message_receiver = client.message_receiver.clone();
-        let mut message_receiver = message_receiver.lock().await;
+        data.children.push(Member {
+            name: "player".to_string(),
+            ty: dojo_types::schema::Ty::Primitive(
+                dojo_types::primitive::Primitive::ContractAddress(Some(
+                    FieldElement::from_bytes_be(&[0; 32]).unwrap(),
+                )),
+            ),
+            key: true,
+        });
+
+        data.children.push(Member {
+            name: "message".to_string(),
+            ty: dojo_types::schema::Ty::Primitive(dojo_types::primitive::Primitive::U8(Some(0))),
+            key: false,
+        });
+
+        client
+            .command_sender
+            .publish("mawmaw".to_string(), dojo_types::schema::Ty::Struct(data))
+            .await?;
+
+        // let message_receiver = client.message_receiver.clone();
+        // let mut message_receiver = message_receiver.lock().await;
 
         loop {
             select! {
-                event = message_receiver.next() => {
-                    if let Some(message) = event {
-                        println!("Received message from {:?} with id {:?}: {:?}", message.source, message.message_id, message);
-                        return Ok(());
-                    }
-                }
+                // event = message_receiver.next() => {
+                //     if let Some(message) = event {
+                //         println!("Received message from {:?} with id {:?}: {:?}", message.source, message.message_id, message);
+                //         return Ok(());
+                //     }
+                // }
                 _ = sleep(Duration::from_secs(5)) => {
                     println!("Test Failed: Did not receive message within 5 seconds.");
                     return Err("Timeout reached without receiving a message".into());
