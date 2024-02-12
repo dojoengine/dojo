@@ -18,13 +18,11 @@ tracing.workspace = true
 async-trait = "0.1.77"
 regex = "1.10.3"
 anyhow.workspace = true
-sqlx.workspace = true
 torii-core.workspace = true
 dojo-types.workspace = true
-dojo-world = { path = "../../dojo-world", features = ["metadata"]}
-starknet-ff = "0.3.6"
 
 [dev-dependencies]
+starknet-ff = "0.3.6"
 tempfile = "3.9.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

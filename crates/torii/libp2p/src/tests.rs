@@ -16,9 +16,10 @@ mod test {
         use std::time::Duration;
 
         use dojo_types::schema::{Member, Struct};
-        use starknet_ff::FieldElement;
         use tokio::time::sleep;
         use tokio::{self, select};
+
+        use starknet_ff::FieldElement;
 
         let _ = tracing_subscriber::fmt()
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
