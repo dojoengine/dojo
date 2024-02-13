@@ -182,7 +182,7 @@ wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codege
 wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "prost" ], package = "tonic-build" }
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "8860946" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "7459891173b64b148a7ce870c0b1d5907af15b8d" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }

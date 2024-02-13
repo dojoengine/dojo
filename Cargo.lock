@@ -1111,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.5.0-dev.0"
-source = "git+https://github.com/dojoengine/blockifier?rev=8860946#886094680ea5ead4ba1227f46172e02468901488"
+source = "git+https://github.com/dojoengine/blockifier?rev=7459891173b64b148a7ce870c0b1d5907af15b8d#7459891173b64b148a7ce870c0b1d5907af15b8d"
 dependencies = [
  "ark-ec",
  "ark-ff 0.4.2",
@@ -10998,7 +10998,7 @@ dependencies = [
 [[package]]
 name = "snos"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/snos?branch=dojo-cairo-2.5#2fa3dafc656793039a9efb85a8563d81ab9923b5"
+source = "git+https://github.com/cartridge-gg/snos?rev=2fa3dafc656793039a9efb85a8563d81ab9923b5#2fa3dafc656793039a9efb85a8563d81ab9923b5"
 dependencies = [
  "anyhow",
  "base64 0.21.7",

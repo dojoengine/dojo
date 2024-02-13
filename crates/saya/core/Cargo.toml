@@ -34,7 +34,7 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
-snos = { git = "https://github.com/cartridge-gg/snos", branch = "dojo-cairo-2.5" }
+snos = { git = "https://github.com/cartridge-gg/snos", rev = "2fa3dafc656793039a9efb85a8563d81ab9923b5" }
 #snos = { path = "/mnt/data/snos" }
 starknet-types-core = { version = "0.0.6", default-features = false, features = ["serde", "curve", "num-traits"] }
 
