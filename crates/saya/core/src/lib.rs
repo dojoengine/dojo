@@ -12,6 +12,7 @@ use saya_provider::Provider as SayaProvider;
 use snos::state::storage::TrieStorage;
 use snos::state::SharedState;
 use snos::SnOsRunner;
+use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 use url::Url;
 
@@ -27,10 +28,20 @@ pub mod starknet_os;
 pub mod verifier;
 
 /// Saya's main configuration.
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SayaConfig {
+    #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
+}
+
+fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    Url::parse(&s).map_err(serde::de::Error::custom)
 }
 
 /// Saya.

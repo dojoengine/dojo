@@ -4,6 +4,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::env::BlockEnv;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::transaction::TxWithHash;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
@@ -62,6 +63,9 @@ where
         + BlockEnvProvider,
 {
     let blocks = generate_dummy_blocks_and_receipts(count);
+    let txs: Vec<TxWithHash> =
+        blocks.iter().flat_map(|(block, _)| block.block.body.clone()).collect();
+    let total_txs = txs.len() as u64;
 
     for (block, receipts) in &blocks {
         provider.insert_block_with_states_and_receipts(
@@ -75,7 +79,11 @@ where
         assert_eq!(provider.latest_hash().unwrap(), block.block.header.hash);
     }
 
+    let actual_transactions_in_range = provider.transaction_in_range(0..total_txs).unwrap();
     let actual_blocks_in_range = provider.blocks_in_range(0..=count)?;
+
+    assert_eq!(total_txs, actual_transactions_in_range.len() as u64);
+    assert_eq!(txs, actual_transactions_in_range);
 
     assert_eq!(actual_blocks_in_range.len(), count as usize);
     assert_eq!(

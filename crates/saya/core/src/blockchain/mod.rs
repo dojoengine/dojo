@@ -140,7 +140,7 @@ impl Blockchain {
         // information about the transaction is missing.
         let receipts = vec![];
 
-        Ok(provider.insert_block_with_states_and_receipts(block, states, receipts)?)
+        Ok(provider.insert_block_with_states_and_receipts(block, states, receipts, vec![])?)
     }
 
     /// Executes the transactions against the given state to retrieve

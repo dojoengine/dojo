@@ -1,0 +1,11 @@
+{
+    "katana_rpc": "http://localhost:5050",
+    "start_block": 0,
+    "data_availability": {
+        "Celestia": {
+            "node_url": "http://localhost:26657",
+            "node_auth_token": "your_auth_token",
+            "namespace": "katana"
+        }
+    }
+}
