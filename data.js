@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707624416751,
+  "lastUpdate": 1707788901496,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1255,6 +1255,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 985581,
             "range": "± 47408",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jonathan.chaverri12@gmail.com",
+            "name": "Jonatan Chaverri",
+            "username": "Jonatan-Chaverri"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68e81f65df92837cffcdd4f0b498a3b71edb55a9",
+          "message": "Update ahash versions to fix missing feature stdsimd error (#1534)\n\nCo-authored-by: Jonatan Chaverri <jonatan.chaverri@kyndryl.com>",
+          "timestamp": "2024-02-12T20:38:50-05:00",
+          "tree_id": "ee1225975ce9c134c95c230b66098a2f83905006",
+          "url": "https://github.com/dojoengine/dojo/commit/68e81f65df92837cffcdd4f0b498a3b71edb55a9"
+        },
+        "date": 1707788901045,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 971316,
+            "range": "± 40348",
             "unit": "ns/iter"
           }
         ]
