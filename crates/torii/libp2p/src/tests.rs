@@ -13,14 +13,10 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
-        use std::time::Duration;
-
         use dojo_types::schema::{Member, Struct};
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use starknet_ff::FieldElement;
         use tokio::sync::RwLock;
-        use tokio::time::sleep;
-        use tokio::{self, select};
         use torii_core::sql::Sql;
 
         use crate::server::Relay;

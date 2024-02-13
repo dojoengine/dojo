@@ -19,7 +19,7 @@ use rand::thread_rng;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::RwLock;
 use torii_core::sql::Sql;
-use tracing::info;
+use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 
 use crate::constants;
@@ -171,23 +171,39 @@ impl Relay {
                             );
 
                             // Check if message already exists
-                            let keys = if let Ty::Struct(s) = &entity {
+                            let keys = if let Ty::Struct(s) = &message {
                                 let mut keys: Vec<starknet_ff::FieldElement> = Vec::new();
                                 for m in s.keys() {
-                                    keys.extend(m.serialize()?);
+                                    let key = match m.serialize() {
+                                        Ok(key) => key,
+                                        Err(e) => {
+                                            info!(
+                                                target: "torii::relay::server",
+                                                error = %e,
+                                                "Failed to serialize key"
+                                            );
+                                            continue;
+                                        }
+                                    };
+                                    keys.extend(key);
                                 }
                                 keys
                             } else {
-                                return Err(anyhow!("Entity is not a struct"));
+                                warn!(
+                                    target: "torii::relay::server",
+                                    message_id = %message_id,
+                                    "Message is not a struct"
+                                );
+                                continue;
                             };
-                            let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-                            
-                            if let Ok(_) = self
+
+                            if self
                                 .pool
                                 .read()
                                 .await
-                                .entity(message.name(), keys)
+                                .entity(message.name(), poseidon_hash_many(&keys))
                                 .await
+                                .is_ok()
                             {
                                 info!(
                                     target: "torii::relay::server",

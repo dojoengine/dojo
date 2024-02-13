@@ -20,11 +20,11 @@ regex = "1.10.3"
 anyhow.workspace = true
 dojo-types.workspace = true
 starknet-crypto.workspace = true
+starknet-ff = "0.3.6"
 
 [dev-dependencies]
 dojo-world = { path = "../../dojo-world", features = ["metadata"]}
 sqlx.workspace = true
-starknet-ff = "0.3.6"
 tempfile = "3.9.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
