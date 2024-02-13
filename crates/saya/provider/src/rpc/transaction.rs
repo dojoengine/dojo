@@ -31,9 +31,8 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     version: FieldElement::ZERO,
                     calldata: tx.calldata.clone(),
                     signature: tx.signature.clone(),
-                    nonce: tx.nonce.into(),
+                    nonce: tx.nonce,
                     sender_address: tx.sender_address.into(),
-                    ..Default::default()
                 }),
             }),
         },
@@ -60,7 +59,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                 transaction: Tx::Declare(DeclareTx::V1(DeclareTxV1 {
                     max_fee: tx.max_fee.try_into()?,
                     chain_id,
-                    class_hash: tx.class_hash.into(),
+                    class_hash: tx.class_hash,
                     signature: tx.signature.clone(),
                     sender_address: tx.sender_address.into(),
                     ..Default::default()
@@ -72,10 +71,9 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     nonce: tx.nonce,
                     max_fee: tx.max_fee.try_into()?,
                     chain_id,
-                    class_hash: tx.class_hash.into(),
+                    class_hash: tx.class_hash,
                     signature: tx.signature.clone(),
                     sender_address: tx.sender_address.into(),
-                    ..Default::default()
                 })),
             }),
             DeclareTransaction::V2(tx) => Ok(TxWithHash {
@@ -84,11 +82,10 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     nonce: tx.nonce,
                     max_fee: tx.max_fee.try_into()?,
                     chain_id,
-                    class_hash: tx.class_hash.into(),
+                    class_hash: tx.class_hash,
                     signature: tx.signature.clone(),
                     sender_address: tx.sender_address.into(),
                     compiled_class_hash: tx.compiled_class_hash,
-                    ..Default::default()
                 })),
             }),
         },
@@ -101,7 +98,7 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     max_fee: tx.max_fee.try_into()?,
                     chain_id,
                     version: FieldElement::ONE,
-                    class_hash: tx.class_hash.into(),
+                    class_hash: tx.class_hash,
                     signature: tx.signature.clone(),
                     contract_address_salt: tx.contract_address_salt,
                     constructor_calldata: tx.constructor_calldata.clone(),

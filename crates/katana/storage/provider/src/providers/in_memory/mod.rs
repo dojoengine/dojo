@@ -15,7 +15,7 @@ use katana_primitives::contract::{
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
+use katana_primitives::transaction::{Tx, TxExecInfo, TxHash, TxNumber, TxWithHash};
 use parking_lot::RwLock;
 
 use self::cache::CacheDb;
@@ -29,7 +29,8 @@ use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
+    ReceiptProvider, TransactionExecutionProvider, TransactionProvider, TransactionStatusProvider,
+    TransactionsProviderExt,
 };
 use crate::ProviderResult;
 
@@ -319,6 +320,47 @@ impl TransactionStatusProvider for InMemoryProvider {
     }
 }
 
+impl TransactionExecutionProvider for InMemoryProvider {
+    fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        let exec = self.storage.read().transaction_numbers.get(&hash).and_then(|num| {
+            self.storage.read().transactions_executions.get(*num as usize).cloned()
+        });
+
+        Ok(exec)
+    }
+
+    fn transactions_executions_by_block(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
+        let block_num = match block_id {
+            BlockHashOrNumber::Num(num) => Some(num),
+            BlockHashOrNumber::Hash(hash) => self.storage.read().block_numbers.get(&hash).cloned(),
+        };
+
+        let Some(StoredBlockBodyIndices { tx_offset, tx_count }) =
+            block_num.and_then(|num| self.storage.read().block_body_indices.get(&num).cloned())
+        else {
+            return Ok(None);
+        };
+
+        let offset = tx_offset as usize;
+        let count = tx_count as usize;
+
+        let execs = self
+            .storage
+            .read()
+            .transactions_executions
+            .iter()
+            .skip(offset)
+            .take(count)
+            .cloned()
+            .collect();
+
+        Ok(Some(execs))
+    }
+}
+
 impl ReceiptProvider for InMemoryProvider {
     fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
         let receipt = self
@@ -411,6 +453,7 @@ impl BlockWriter for InMemoryProvider {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
+        executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         let mut storage = self.storage.write();
 
@@ -444,6 +487,7 @@ impl BlockWriter for InMemoryProvider {
         storage.block_body_indices.insert(block_number, block_body_indices);
 
         storage.transactions.extend(txs);
+        storage.transactions_executions.extend(executions);
         storage.transaction_hashes.extend(txs_id);
         storage.transaction_numbers.extend(txs_num);
         storage.transaction_block.extend(txs_block);

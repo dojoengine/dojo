@@ -38,7 +38,7 @@ pub fn state_updates_from_rpc(state_update: &StateUpdate) -> ProviderResult<Stat
 
     for decl in &state_diff.declared_classes {
         let DeclaredClassItem { class_hash, compiled_class_hash } = decl;
-        out.declared_classes.insert((*class_hash).into(), *compiled_class_hash);
+        out.declared_classes.insert(*class_hash, *compiled_class_hash);
     }
 
     Ok(out)

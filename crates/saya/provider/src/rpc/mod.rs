@@ -75,9 +75,9 @@ impl Provider for JsonRpcProvider {
 
         Ok(SealedBlock {
             header: SealedHeader {
-                hash: block.block_hash.into(),
+                hash: block.block_hash,
                 header: Header {
-                    parent_hash: block.parent_hash.into(),
+                    parent_hash: block.parent_hash,
                     number: block.block_number,
                     gas_prices: GasPrices::new(
                         block.l1_gas_price.price_in_wei,
@@ -110,7 +110,7 @@ impl Provider for JsonRpcProvider {
         let mut state_updates_with_classes =
             StateUpdatesWithDeclaredClasses { state_updates, ..Default::default() };
 
-        for (class_hash, _) in &state_updates_with_classes.state_updates.declared_classes {
+        for class_hash in state_updates_with_classes.state_updates.declared_classes.keys() {
             match self.provider.get_class(BlockIdOrTag::Number(block_number), class_hash).await? {
                 ContractClass::Legacy(legacy) => {
                     trace!(target: LOG_TARGET, version = "cairo 0", %class_hash, "set contract class");

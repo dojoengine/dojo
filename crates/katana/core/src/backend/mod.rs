@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+// TODO: TxReceiptWithExecInfo need to also be a primitive to not depend on the executor.
+use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
@@ -7,7 +9,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::env::{BlockEnv, CfgEnv, FeeTokenAddressses};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::transaction::TxWithHash;
+use katana_primitives::transaction::{TxExecInfo, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
@@ -127,10 +129,10 @@ impl Backend {
     pub fn mine_pending_block(
         &self,
         block_env: &BlockEnv,
-        tx_receipt_pairs: Vec<(TxWithHash, Receipt)>,
+        txs_receipts_executions: Vec<(TxWithHash, TxReceiptWithExecInfo)>,
         state_updates: StateUpdatesWithDeclaredClasses,
     ) -> Result<(MinedBlockOutcome, Box<dyn StateProvider>), BlockProductionError> {
-        let outcome = self.do_mine_block(block_env, tx_receipt_pairs, state_updates)?;
+        let outcome = self.do_mine_block(block_env, txs_receipts_executions, state_updates)?;
         let new_state = StateFactoryProvider::latest(&self.blockchain.provider())?;
         Ok((outcome, new_state))
     }
@@ -138,10 +140,19 @@ impl Backend {
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
-        tx_receipt_pairs: Vec<(TxWithHash, Receipt)>,
+        txs_receipts_executions: Vec<(TxWithHash, TxReceiptWithExecInfo)>,
         state_updates: StateUpdatesWithDeclaredClasses,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        let (txs, receipts): (Vec<TxWithHash>, Vec<Receipt>) = tx_receipt_pairs.into_iter().unzip();
+        // TODO: not sure if this is the best way to achieve that.
+        let mut txs: Vec<TxWithHash> = vec![];
+        let mut receipts: Vec<Receipt> = vec![];
+        let mut executions: Vec<TxExecInfo> = vec![];
+
+        txs_receipts_executions.into_iter().for_each(|(tx, rct)| {
+            txs.push(tx);
+            receipts.push(rct.receipt);
+            executions.push(rct.execution_info);
+        });
 
         let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
 
@@ -168,6 +179,7 @@ impl Backend {
             block,
             state_updates,
             receipts,
+            executions,
         )?;
 
         info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");

@@ -15,7 +15,6 @@ use katana_executor::blockifier::utils::{
 use katana_executor::blockifier::{PendingState, TransactionExecutor};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
 use katana_provider::error::ProviderError;
@@ -223,13 +222,10 @@ impl IntervalBlockProducer {
         trace!(target: "miner", "creating new block");
 
         let (txs, _) = pending_state.take_txs_all();
-        let tx_receipt_pairs =
-            txs.into_iter().map(|(tx, rct)| (tx, rct.receipt)).collect::<Vec<_>>();
 
         let (mut block_env, cfg_env) = pending_state.block_execution_envs();
 
-        let (outcome, new_state) =
-            backend.mine_pending_block(&block_env, tx_receipt_pairs, state_updates)?;
+        let (outcome, new_state) = backend.mine_pending_block(&block_env, txs, state_updates)?;
 
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
@@ -359,7 +355,7 @@ impl InstantBlockProducer {
 
         let txs = transactions.iter().map(TxWithHash::from);
 
-        let tx_receipt_pairs: Vec<(TxWithHash, Receipt)> = TransactionExecutor::new(
+        let tx_receipt_pairs: Vec<(TxWithHash, TxReceiptWithExecInfo)> = TransactionExecutor::new(
             &state,
             &block_context,
             !backend.config.disable_fee,
@@ -373,7 +369,7 @@ impl InstantBlockProducer {
         .filter_map(|(res, tx)| {
             if let Ok(info) = res {
                 let receipt = TxReceiptWithExecInfo::new(&tx, info);
-                Some((tx, receipt.receipt))
+                Some((tx, receipt))
             } else {
                 None
             }

@@ -1,12 +1,9 @@
-use std::ops::Range;
 use std::sync::Arc;
 
-use futures::StreamExt;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::sequencer::KatanaSequencer;
 use katana_primitives::block::BlockHashOrNumber;
-use katana_provider::traits::block::BlockProvider;
-use katana_provider::traits::transaction::TransactionProvider;
+use katana_provider::traits::transaction::TransactionExecutionProvider;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_types::error::saya::SayaApiError;
 use katana_rpc_types::transaction::{TransactionsExecutionsPage, TransactionsPageCursor};
@@ -39,11 +36,17 @@ impl SayaApiServer for SayaApi {
         cursor: TransactionsPageCursor,
     ) -> RpcResult<TransactionsExecutionsPage> {
         self.on_io_blocking_task(move |this| {
-            let mut transactions_executions = Vec::new();
             let mut next_cursor = cursor.clone();
 
             let provider = this.sequencer.backend.blockchain.provider();
-            let latest_block_number = this.sequencer.block_number().map_err(SayaApiError::from)?;
+
+            let transactions_executions = provider
+                .transactions_executions_by_block(BlockHashOrNumber::Num(cursor.block_number))
+                .map_err(SayaApiError::from)?
+                .unwrap_or_default();
+
+            // TODO: limit the maximum number of exec info that are sent back to the client.
+            // If reach the end -> cursor block is +1, the client can choose to stop.
 
             Ok(TransactionsExecutionsPage { transactions_executions, cursor: next_cursor })
         })

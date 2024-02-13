@@ -26,7 +26,7 @@ use katana_primitives::contract::{
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
+use katana_primitives::transaction::{TxExecInfo, TxHash, TxNumber, TxWithHash};
 use katana_primitives::FieldElement;
 
 use crate::error::ProviderError;
@@ -38,7 +38,8 @@ use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
+    ReceiptProvider, TransactionExecutionProvider, TransactionProvider, TransactionStatusProvider,
+    TransactionsProviderExt,
 };
 use crate::ProviderResult;
 
@@ -490,6 +491,19 @@ impl TransactionStatusProvider for DbProvider {
     }
 }
 
+impl TransactionExecutionProvider for DbProvider {
+    fn transaction_execution(&self, _hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        todo!()
+    }
+
+    fn transactions_executions_by_block(
+        &self,
+        _block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
+        todo!()
+    }
+}
+
 impl ReceiptProvider for DbProvider {
     fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
         let db_tx = self.0.tx()?;
@@ -547,6 +561,7 @@ impl BlockWriter for DbProvider {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
+        _executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
             let block_hash = block.block.header.hash;
@@ -805,6 +820,7 @@ mod tests {
             block.clone(),
             state_updates,
             vec![Receipt::Invoke(Default::default())],
+            vec![],
         )
         .expect("failed to insert block");
 
@@ -882,6 +898,7 @@ mod tests {
             block.clone(),
             state_updates1,
             vec![Receipt::Invoke(Default::default())],
+            vec![],
         )
         .expect("failed to insert block");
 
@@ -891,6 +908,7 @@ mod tests {
             block,
             state_updates2,
             vec![Receipt::Invoke(Default::default())],
+            vec![],
         )
         .expect("failed to insert block");
 

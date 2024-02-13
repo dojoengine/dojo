@@ -1,21 +1,20 @@
 use std::collections::HashMap;
 
-use blockifier::transaction::objects::TransactionExecutionInfo;
 use katana_primitives::receipt::{
     DeclareTxReceipt, DeployAccountTxReceipt, InvokeTxReceipt, L1HandlerTxReceipt, Receipt,
     TxExecutionResources,
 };
-use katana_primitives::transaction::Tx;
+use katana_primitives::transaction::{Tx, TxExecInfo};
 
 use super::utils::{events_from_exec_info, l2_to_l1_messages_from_exec_info};
 
 pub struct TxReceiptWithExecInfo {
     pub receipt: Receipt,
-    pub execution_info: TransactionExecutionInfo,
+    pub execution_info: TxExecInfo,
 }
 
 impl TxReceiptWithExecInfo {
-    pub fn new(tx: impl AsRef<Tx>, execution_info: TransactionExecutionInfo) -> Self {
+    pub fn new(tx: impl AsRef<Tx>, execution_info: TxExecInfo) -> Self {
         let actual_fee = execution_info.actual_fee.0;
         let events = events_from_exec_info(&execution_info);
         let revert_error = execution_info.revert_error.clone();

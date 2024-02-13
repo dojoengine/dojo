@@ -15,7 +15,7 @@ use katana_primitives::contract::{
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
+use katana_primitives::transaction::{Tx, TxExecInfo, TxHash, TxNumber, TxWithHash};
 use parking_lot::RwLock;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -33,7 +33,8 @@ use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
+    ReceiptProvider, TransactionExecutionProvider, TransactionProvider, TransactionStatusProvider,
+    TransactionsProviderExt,
 };
 use crate::ProviderResult;
 
@@ -325,6 +326,19 @@ impl TransactionStatusProvider for ForkedProvider {
     }
 }
 
+impl TransactionExecutionProvider for ForkedProvider {
+    fn transaction_execution(&self, _hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        todo!()
+    }
+
+    fn transactions_executions_by_block(
+        &self,
+        _block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
+        todo!()
+    }
+}
+
 impl ReceiptProvider for ForkedProvider {
     fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
         let receipt = self
@@ -417,6 +431,7 @@ impl BlockWriter for ForkedProvider {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
+        _executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         let mut storage = self.storage.write();
 

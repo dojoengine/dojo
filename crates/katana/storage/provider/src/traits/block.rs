@@ -7,6 +7,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::transaction::TxExecInfo;
 
 use super::transaction::{TransactionProvider, TransactionsProviderExt};
 use crate::ProviderResult;
@@ -147,5 +148,6 @@ pub trait BlockWriter: Send + Sync {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
+        executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()>;
 }
