@@ -363,10 +363,10 @@ where
     };
 
     // We don't declare and register the model for Resource Metadata for two reasons:
-    // 1. Having the ModelRegistered event is occupying space for data that are redundant
-    //    with `MetadataUpdate` event.
-    // 2. This model is never used from outside world queries, only to set metadata.
-    //    It should then remain internal.
+    // 1. Having the ModelRegistered event is occupying space for data that are redundant with
+    //    `MetadataUpdate` event.
+    // 2. This model is never used from outside world queries, only to set metadata. It should then
+    //    remain internal.
 
     register_models(strategy, migrator, &ui, txn_config.clone()).await?;
     deploy_contracts(strategy, migrator, &ui, txn_config).await?;

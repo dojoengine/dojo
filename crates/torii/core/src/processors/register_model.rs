@@ -56,9 +56,19 @@ where
         let contract_address = event.data[3];
 
         info!(name, "Registered model");
-        debug!(name, ?schema, ?layout, ?class_hash, ?contract_address, packed_size, unpacked_size, "Registered model content");
+        debug!(
+            name,
+            ?schema,
+            ?layout,
+            ?class_hash,
+            ?contract_address,
+            packed_size,
+            unpacked_size,
+            "Registered model content"
+        );
 
-        db.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size).await?;
+        db.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size)
+            .await?;
 
         Ok(())
     }

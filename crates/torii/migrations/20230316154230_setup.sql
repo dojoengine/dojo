@@ -42,7 +42,7 @@ CREATE TABLE model_members(
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     type_enum TEXT DEFAULT 'Primitive' CHECK(
-        type_enum IN ('Primitive', 'Struct', 'Enum', 'Tuple')
+        type_enum IN ('Primitive', 'Struct', 'Enum', 'Tuple', 'Array')
     ) NOT NULL,
     enum_options TEXT NULL,  -- TEMP: Remove once enum support is properly added
     key BOOLEAN NOT NULL,

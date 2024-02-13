@@ -27,6 +27,7 @@ pub struct ModelMetadata {
     pub packed_size: u32,
     pub unpacked_size: u32,
     pub class_hash: FieldElement,
+    pub contract_address: FieldElement,
     pub layout: Vec<FieldElement>,
 }
 
@@ -120,7 +121,7 @@ impl Ty {
                     }
                 }
                 Ty::Array(size) => {
-                    felts.extend(vec![FieldElement::from(*size as u64)]);
+                    felts.push(FieldElement::from(*size as u64));
                 }
             }
             Ok(())
