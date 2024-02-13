@@ -1,6 +1,4 @@
 //! Starknet OS types.
-//!
-pub mod transaction;
-pub mod input;
 mod felt;
-
+pub mod input;
+pub mod transaction;

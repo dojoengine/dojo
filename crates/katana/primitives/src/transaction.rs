@@ -1,3 +1,4 @@
+use blockifier::transaction::objects::TransactionExecutionInfo;
 use derive_more::{AsRef, Deref};
 use ethers::types::H256;
 
@@ -16,6 +17,8 @@ use crate::FieldElement;
 pub type TxHash = FieldElement;
 /// The sequential number for all the transactions..
 pub type TxNumber = u64;
+/// Execution info of a transaction.
+pub type TxExecInfo = TransactionExecutionInfo;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

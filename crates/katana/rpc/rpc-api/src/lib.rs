@@ -1,4 +1,5 @@
 pub mod katana;
+pub mod saya;
 pub mod starknet;
 
 /// List of APIs supported by Katana.
@@ -6,4 +7,5 @@ pub mod starknet;
 pub enum ApiKind {
     Starknet,
     Katana,
+    Saya,
 }

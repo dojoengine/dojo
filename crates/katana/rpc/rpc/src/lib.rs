@@ -1,5 +1,6 @@
 pub mod config;
 pub mod katana;
+pub mod saya;
 pub mod starknet;
 
 use std::net::SocketAddr;
@@ -17,11 +18,13 @@ use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
 use katana_core::sequencer::KatanaSequencer;
 use katana_rpc_api::katana::KatanaApiServer;
+use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_api::ApiKind;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::katana::KatanaApi;
+use crate::saya::SayaApi;
 use crate::starknet::StarknetApi;
 
 pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Result<NodeHandle> {
@@ -35,6 +38,9 @@ pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Res
             }
             ApiKind::Katana => {
                 methods.merge(KatanaApi::new(sequencer.clone()).into_rpc())?;
+            }
+            ApiKind::Saya => {
+                methods.merge(SayaApi::new(sequencer.clone()).into_rpc())?;
             }
         }
     }

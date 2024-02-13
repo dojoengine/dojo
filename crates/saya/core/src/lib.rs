@@ -2,11 +2,11 @@
 
 use std::sync::Arc;
 
-use katana_primitives::chain::ChainId;
 use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
 use blockifier::state::cached_state::CachedState;
 use katana_executor::blockifier::state::StateRefDb;
 use katana_primitives::block::{BlockIdOrTag, BlockNumber, FinalityStatus, SealedBlockWithStatus};
+use katana_primitives::chain::ChainId;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use snos::state::storage::TrieStorage;
@@ -146,14 +146,15 @@ impl Saya {
             strk_fee_token_address: 0_u128.into(),
         };
 
-        let block_info = blockchain::block_info_from_header(&block.block.header, invoke_tx_max_n_steps, validate_max_n_steps);
+        let block_info = blockchain::block_info_from_header(
+            &block.block.header,
+            invoke_tx_max_n_steps,
+            validate_max_n_steps,
+        );
 
         let block_context = BlockContext {
             block_info,
-            chain_info: ChainInfo {
-                fee_token_addresses,
-                chain_id: chain_id.into(),
-            },
+            chain_info: ChainInfo { fee_token_addresses, chain_id: chain_id.into() },
         };
 
         // TODO: fetch this from a new katana endpoints when
@@ -176,7 +177,7 @@ impl Saya {
 
         let state = SharedState {
             cache: CachedState::from(state_reader),
-            block_context: block_context,
+            block_context,
             commitment_storage: TrieStorage::default(),
             contract_storage: TrieStorage::default(),
             class_storage: TrieStorage::default(),

@@ -3,7 +3,6 @@
 //! Starknet-rs should normally migrate to starknet types core.
 //! To be removed once it's ok as the CairoVM is already using
 //! the core types.
-//!
 use starknet::core::types::FieldElement;
 use starknet_types_core::felt::Felt;
 

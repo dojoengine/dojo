@@ -4,19 +4,16 @@
 //! <https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/business_logic/transaction/objects.py#L28>
 //! Transaction types:
 //! <https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/definitions/transaction_type.py#L13>
-//!
 use std::fmt;
 
-use katana_primitives::transaction::{TxWithHash, Tx, DeclareTx};
+use katana_primitives::transaction::{DeclareTx, Tx, TxWithHash};
 use snos::io::InternalTransaction;
 
 use super::felt;
 
 pub fn snos_internal_from_tx(tx_with_hash: &TxWithHash) -> InternalTransaction {
-    let mut internal = InternalTransaction {
-        hash_value: felt::from_ff(&tx_with_hash.hash),
-        ..Default::default()
-    };
+    let mut internal =
+        InternalTransaction { hash_value: felt::from_ff(&tx_with_hash.hash), ..Default::default() };
 
     match &tx_with_hash.transaction {
         Tx::Invoke(tx) => {
@@ -28,23 +25,21 @@ pub fn snos_internal_from_tx(tx_with_hash: &TxWithHash) -> InternalTransaction {
             internal.signature = Some(felt::from_ff_vec(&tx.signature));
             internal.calldata = Some(felt::from_ff_vec(&tx.calldata));
             // Entrypoint selector can be retrieved from Call?
-        },
-        Tx::Declare(tx_e) => {
-            match tx_e {
-                DeclareTx::V1(tx) => {
-                    internal.r#type = TransactionType::Declare.to_string();
-                    internal.nonce = Some(felt::from_ff(&tx.nonce));
-                    internal.sender_address = Some(felt::from_ff(&(*tx.sender_address)));
-                    internal.signature = Some(felt::from_ff_vec(&tx.signature));
-                    internal.class_hash = Some(felt::from_ff(&tx.class_hash));
-                }
-                DeclareTx::V2(tx) => {
-                    internal.r#type = TransactionType::Declare.to_string();
-                    internal.nonce = Some(felt::from_ff(&tx.nonce));
-                    internal.sender_address = Some(felt::from_ff(&(*tx.sender_address)));
-                    internal.signature = Some(felt::from_ff_vec(&tx.signature));
-                    internal.class_hash = Some(felt::from_ff(&tx.class_hash));
-                }
+        }
+        Tx::Declare(tx_e) => match tx_e {
+            DeclareTx::V1(tx) => {
+                internal.r#type = TransactionType::Declare.to_string();
+                internal.nonce = Some(felt::from_ff(&tx.nonce));
+                internal.sender_address = Some(felt::from_ff(&(*tx.sender_address)));
+                internal.signature = Some(felt::from_ff_vec(&tx.signature));
+                internal.class_hash = Some(felt::from_ff(&tx.class_hash));
+            }
+            DeclareTx::V2(tx) => {
+                internal.r#type = TransactionType::Declare.to_string();
+                internal.nonce = Some(felt::from_ff(&tx.nonce));
+                internal.sender_address = Some(felt::from_ff(&(*tx.sender_address)));
+                internal.signature = Some(felt::from_ff_vec(&tx.signature));
+                internal.class_hash = Some(felt::from_ff(&tx.class_hash));
             }
         },
         Tx::L1Handler(tx) => {
@@ -54,7 +49,7 @@ pub fn snos_internal_from_tx(tx_with_hash: &TxWithHash) -> InternalTransaction {
             internal.contract_address = Some(felt::from_ff(&(*tx.contract_address)));
             internal.entry_point_selector = Some(felt::from_ff(&tx.entry_point_selector));
             internal.calldata = Some(felt::from_ff_vec(&tx.calldata));
-        },
+        }
         Tx::DeployAccount(tx) => {
             internal.r#type = TransactionType::DeployAccount.to_string();
             internal.nonce = Some(felt::from_ff(&tx.nonce));
@@ -63,7 +58,7 @@ pub fn snos_internal_from_tx(tx_with_hash: &TxWithHash) -> InternalTransaction {
             internal.class_hash = Some(felt::from_ff(&tx.class_hash));
             internal.constructor_calldata = Some(felt::from_ff_vec(&tx.constructor_calldata));
             internal.signature = Some(felt::from_ff_vec(&tx.signature));
-        },
+        }
         _ => {}
     };
 

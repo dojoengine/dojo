@@ -216,6 +216,7 @@ impl KatanaArgs {
         // only enable `katana` API in dev mode
         if self.dev {
             apis.push(ApiKind::Katana);
+            apis.push(ApiKind::Saya);
         }
 
         ServerConfig {

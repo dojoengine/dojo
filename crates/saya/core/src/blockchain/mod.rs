@@ -2,16 +2,22 @@
 use std::collections::HashMap;
 
 use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
-use katana_executor::blockifier::state::CachedStateWrapper;
 use blockifier::transaction::objects::TransactionExecutionInfo;
-use katana_executor::blockifier::TransactionExecutor;
-use katana_executor::blockifier::state::StateRefDb;
-use katana_primitives::receipt::Receipt;
-use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus, SealedBlock, SealedHeader};
+use cairo_vm::vm::runners::builtin_runner::{
+    BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
+    OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
+    SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
+};
 use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
+use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
+use katana_executor::blockifier::TransactionExecutor;
+use katana_primitives::block::{
+    BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlock, SealedBlockWithStatus, SealedHeader,
+};
 use katana_primitives::chain::ChainId;
-use katana_primitives::transaction::{Tx, TxWithHash, ExecutableTxWithHash};
+use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxWithHash};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
@@ -25,11 +31,6 @@ use katana_provider::traits::transaction::{
 };
 use katana_provider::BlockchainProvider;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
-use cairo_vm::vm::runners::builtin_runner::{
-    BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
-    OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
-    SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
-};
 
 use crate::error::{Error as SayaError, SayaResult};
 
@@ -147,7 +148,11 @@ impl Blockchain {
     ///
     /// TODO: to be replaced by Katana endpoint that exposes the execution info
     /// for all transactions in a block.
-    pub fn execute_transactions(&self, block: &SealedBlock, block_context: &BlockContext) -> SayaResult<Vec<TransactionExecutionInfo>> {
+    pub fn execute_transactions(
+        &self,
+        block: &SealedBlock,
+        block_context: &BlockContext,
+    ) -> SayaResult<Vec<TransactionExecutionInfo>> {
         let provider = self.provider();
 
         let block_number = block.header.header.number;
@@ -185,17 +190,11 @@ impl Blockchain {
             !disable_validate,
             exec_txs.into_iter(),
         )
-            .with_error_log()
-            .with_events_log()
-            .with_resources_log()
-            .filter_map(|res| {
-                if let Ok(info) = res {
-                    Some(info)
-                } else {
-                    None
-                }
-            })
-            .collect();
+        .with_error_log()
+        .with_events_log()
+        .with_resources_log()
+        .filter_map(|res| if let Ok(info) = res { Some(info) } else { None })
+        .collect();
 
         Ok(exec_infos)
     }
@@ -208,7 +207,11 @@ impl Blockchain {
 /// * `header` - The header to get information from.
 /// * `invoke_tx_max_n_steps` - Maximum number of steps for invoke tx.
 /// * `validate_max_n_steps` - Maximum number of steps to validate a tx.
-pub fn block_info_from_header(header: &SealedHeader, invoke_tx_max_n_steps: u32, validate_max_n_steps: u32) -> BlockInfo {
+pub fn block_info_from_header(
+    header: &SealedHeader,
+    invoke_tx_max_n_steps: u32,
+    validate_max_n_steps: u32,
+) -> BlockInfo {
     let gas_prices = GasPrices {
         eth_l1_gas_price: header.header.gas_prices.eth as u128,
         strk_l1_gas_price: header.header.gas_prices.strk as u128,

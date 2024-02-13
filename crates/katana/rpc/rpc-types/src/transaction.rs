@@ -9,8 +9,8 @@ use katana_primitives::conversion::rpc::{
     legacy_rpc_to_inner_compiled_class,
 };
 use katana_primitives::transaction::{
-    DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, InvokeTx, TxHash,
-    TxWithHash,
+    DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, InvokeTx, TxExecInfo,
+    TxHash, TxWithHash,
 };
 use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};
@@ -305,4 +305,22 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
             max_fee: tx.0.max_fee.try_into().expect("max_fee is too big"),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPageCursor {
+    pub block_number: u64,
+    pub transaction_index: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPage {
+    pub transactions: Vec<Tx>,
+    pub cursor: TransactionsPageCursor,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsExecutionsPage {
+    pub transactions_executions: Vec<TxExecInfo>,
+    pub cursor: TransactionsPageCursor,
 }
