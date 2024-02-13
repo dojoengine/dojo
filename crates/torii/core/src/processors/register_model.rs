@@ -52,10 +52,13 @@ where
         let unpacked_size: u32 = model.unpacked_size().await?.try_into()?;
         let packed_size: u32 = model.packed_size().await?.try_into()?;
 
-        info!(name, "Registered model");
-        debug!(name, ?schema, ?layout, class_hash = ?event.data[1], packed_size, unpacked_size, "Registered model content");
+        let class_hash = event.data[1];
+        let contract_address = event.data[3];
 
-        db.register_model(schema, layout, event.data[1], packed_size, unpacked_size).await?;
+        info!(name, "Registered model");
+        debug!(name, ?schema, ?layout, ?class_hash, ?contract_address, packed_size, unpacked_size, "Registered model content");
+
+        db.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size).await?;
 
         Ok(())
     }

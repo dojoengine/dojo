@@ -26,6 +26,7 @@ CREATE TABLE models (
     layout BLOB NOT NULL,
     transaction_hash TEXT,
     class_hash TEXT NOT NULL,
+    contract_address TEXT NOT NULL,
     packed_size INTEGER NOT NULL,
     unpacked_size INTEGER NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

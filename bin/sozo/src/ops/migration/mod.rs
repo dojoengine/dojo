@@ -362,7 +362,11 @@ where
         None => {}
     };
 
-    declare_register_resource_metadata(strategy, migrator, &ui, txn_config.clone()).await?;
+    // We don't declare and register the model for Resource Metadata for two reasons:
+    // 1. Having the ModelRegistered event is occupying space for data that are redundant
+    //    with `MetadataUpdate` event.
+    // 2. This model is never used from outside world queries, only to set metadata.
+    //    It should then remain internal.
 
     register_models(strategy, migrator, &ui, txn_config.clone()).await?;
     deploy_contracts(strategy, migrator, &ui, txn_config).await?;
@@ -418,63 +422,6 @@ where
             ui.verbose(format!("{e:?}"));
             Err(anyhow!("Failed to migrate {contract_id}: {e}"))
         }
-    }
-}
-
-async fn declare_register_resource_metadata<P, S>(
-    strategy: &MigrationStrategy,
-    migrator: &SingleOwnerAccount<P, S>,
-    ui: &Ui,
-    txn_config: Option<TransactionOptions>,
-) -> Result<Option<RegisterOutput>>
-where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
-{
-    let mut declare_output = vec![];
-
-    let res: anyhow::Result<FieldElement> = match &strategy.resource_metadata {
-        Some(resource_metadata) => {
-            ui.print_header("# Resource Metadata Model");
-
-            match resource_metadata
-                .declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default())
-                .await
-            {
-                Ok(res) => {
-                    ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
-                    declare_output.push(res.clone());
-                    Ok(res.class_hash)
-                }
-                Err(MigrationError::ClassAlreadyDeclared) => {
-                    ui.print_sub(format!("Already declared: {:#x}", resource_metadata.diff.local));
-                    Ok(resource_metadata.diff.local)
-                }
-                Err(e) => {
-                    return Err(anyhow!("Failed to register resource metadata to World: {e}"));
-                }
-            }
-        }
-        None => return Ok(None),
-    };
-
-    if let Ok(class_hash) = res {
-        let world_address = strategy.world_address()?;
-        let world = WorldContract::new(world_address, migrator);
-
-        let InvokeTransactionResult { transaction_hash } = world
-            .register_model(&class_hash.into())
-            .send()
-            .await
-            .map_err(|e| anyhow!("Failed to register resource metadata to World: {e}"))?;
-
-        TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
-
-        ui.print_sub(format!("Registered at: {transaction_hash:#x}"));
-
-        Ok(Some(RegisterOutput { transaction_hash, declare_output }))
-    } else {
-        Err(anyhow!("Failed to register resource metadata"))
     }
 }
 
