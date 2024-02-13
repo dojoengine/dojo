@@ -19,6 +19,7 @@ async-trait = "0.1.77"
 regex = "1.10.3"
 anyhow.workspace = true
 dojo-types.workspace = true
+starknet-crypto.workspace = true
 
 [dev-dependencies]
 dojo-world = { path = "../../dojo-world", features = ["metadata"]}

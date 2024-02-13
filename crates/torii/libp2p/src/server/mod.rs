@@ -16,6 +16,7 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
+use starknet_crypto::poseidon_hash_many;
 use tokio::sync::RwLock;
 use torii_core::sql::Sql;
 use tracing::info;
@@ -168,6 +169,33 @@ impl Relay {
                                 data = %message,
                                 "Received message"
                             );
+
+                            // Check if message already exists
+                            let keys = if let Ty::Struct(s) = &entity {
+                                let mut keys: Vec<starknet_ff::FieldElement> = Vec::new();
+                                for m in s.keys() {
+                                    keys.extend(m.serialize()?);
+                                }
+                                keys
+                            } else {
+                                return Err(anyhow!("Entity is not a struct"));
+                            };
+                            let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+                            
+                            if let Ok(_) = self
+                                .pool
+                                .read()
+                                .await
+                                .entity(message.name(), keys)
+                                .await
+                            {
+                                info!(
+                                    target: "torii::relay::server",
+                                    message_id = %message_id,
+                                    "Message already exists"
+                                );
+                                continue;
+                            }
 
                             if let Err(e) = self
                                 .pool

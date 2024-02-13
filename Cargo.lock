@@ -12363,6 +12363,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "starknet-crypto 0.6.1",
  "starknet-ff",
  "tempfile",
  "thiserror",
