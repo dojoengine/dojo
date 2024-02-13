@@ -2,10 +2,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
-use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::HttpClientBuilder;
-use jsonrpsee::rpc_params;
 use katana_core::sequencer::SequencerConfig;
+use katana_rpc_api::katana::KatanaApiClient;
+use katana_rpc_api::torii::ToriiApiClient;
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 use starknet::accounts::{Account, Call};
 use starknet::core::types::FieldElement;
@@ -33,8 +33,9 @@ async fn test_get_transactions() {
 
     // Should return successfully when no transactions have been mined.
     let cursor = TransactionsPageCursor { block_number: 0, transaction_index: 0 };
-    let response: TransactionsPage =
-        client.request("torii_getTransactions", rpc_params![cursor]).await.unwrap();
+
+    let response: TransactionsPage = client.get_transactions(cursor).await.unwrap();
+
     assert!(response.transactions.is_empty());
     assert!(response.cursor.block_number == 1);
     assert!(response.cursor.transaction_index == 0);
@@ -42,23 +43,23 @@ async fn test_get_transactions() {
     let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
 
     // Should return successfully with single pending txn.
-    let response: TransactionsPage =
-        client.request("torii_getTransactions", rpc_params![response.cursor]).await.unwrap();
+    let response: TransactionsPage = client.get_transactions(response.cursor).await.unwrap();
+
     assert!(response.transactions.len() == 1);
     assert!(response.cursor.block_number == 1);
     assert!(response.cursor.transaction_index == 1);
 
-    let _: () = client.request("katana_generateBlock", rpc_params![]).await.unwrap();
+    let _: () = client.generate_block().await.unwrap();
 
     // Should properly increment to new empty pending block
-    let response: TransactionsPage =
-        client.request("torii_getTransactions", rpc_params![response.cursor]).await.unwrap();
+    let response: TransactionsPage = client.get_transactions(response.cursor).await.unwrap();
+
     assert!(response.transactions.is_empty());
     assert!(response.cursor.block_number == 2);
     assert!(response.cursor.transaction_index == 0);
 
     // Should block on cursor at end of page and return on new txn
-    let long_poll_future = client.request("torii_getTransactions", rpc_params![response.cursor]);
+    let long_poll_future = client.get_transactions(response.cursor);
 
     // Yield the current task, allowing the long poll to be established.
     tokio::task::yield_now().await;
