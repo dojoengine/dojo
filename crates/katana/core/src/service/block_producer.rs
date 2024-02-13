@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
 use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
@@ -12,7 +13,7 @@ use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
 use katana_executor::blockifier::utils::{
     block_context_from_envs, get_state_update_from_cached_state,
 };
-use katana_executor::blockifier::{PendingState, TransactionExecutor};
+use katana_executor::blockifier::{AcceptedTxPair, PendingState, TransactionExecutor};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::Receipt;
@@ -24,7 +25,7 @@ use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::StateFactoryProvider;
 use parking_lot::RwLock;
 use tokio::time::{interval_at, Instant, Interval};
-use tracing::trace;
+use tracing::{trace, warn};
 
 use crate::backend::Backend;
 
@@ -161,6 +162,8 @@ pub struct IntervalBlockProducer {
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
     /// The state of the pending block after executing all the transactions within the interval.
     state: Arc<PendingState>,
+    /// Listeners notified when a new executed tx is added.
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<AcceptedTxPair>>>>,
 }
 
 impl IntervalBlockProducer {
@@ -185,6 +188,7 @@ impl IntervalBlockProducer {
             block_mining: None,
             interval: Some(interval),
             queued: VecDeque::default(),
+            tx_execution_listeners: RwLock::new(vec![]),
         }
     }
 
@@ -198,7 +202,14 @@ impl IntervalBlockProducer {
     ) -> Self {
         let state = Arc::new(PendingState::new(db, block_exec_envs.0, block_exec_envs.1));
 
-        Self { state, backend, interval: None, block_mining: None, queued: VecDeque::default() }
+        Self {
+            state,
+            backend,
+            interval: None,
+            block_mining: None,
+            queued: VecDeque::default(),
+            tx_execution_listeners: RwLock::new(vec![]),
+        }
     }
 
     pub fn state(&self) -> Arc<PendingState> {
@@ -267,7 +278,41 @@ impl IntervalBlockProducer {
             .collect::<Vec<_>>()
         };
 
-        self.state.executed_txs.write().extend(results);
+        self.state.executed_txs.write().extend(results.clone());
+        self.notify_listener(results);
+    }
+
+    pub fn add_listener(&self) -> Receiver<Vec<AcceptedTxPair>> {
+        const TX_LISTENER_BUFFER_SIZE: usize = 2048;
+        let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
+        self.tx_execution_listeners.write().push(tx);
+        rx
+    }
+
+    /// notifies all listeners about the transaction
+    fn notify_listener(&self, txs: Vec<AcceptedTxPair>) {
+        let mut listener = self.tx_execution_listeners.write();
+        // this is basically a retain but with mut reference
+        for n in (0..listener.len()).rev() {
+            let mut listener_tx = listener.swap_remove(n);
+            let retain = match listener_tx.try_send(txs.clone()) {
+                Ok(()) => true,
+                Err(e) => {
+                    if e.is_full() {
+                        warn!(
+                            target: "miner",
+                            "failed to send new txs notification because channel is full",
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+            if retain {
+                listener.push(listener_tx)
+            }
+        }
     }
 
     fn outcome(&self) -> StateUpdatesWithDeclaredClasses {

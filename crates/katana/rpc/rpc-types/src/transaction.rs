@@ -21,6 +21,8 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
+use crate::receipt::MaybePendingTxReceipt;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
@@ -315,6 +317,6 @@ pub struct TransactionsPageCursor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPage {
-    pub transactions: Vec<Tx>,
+    pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
     pub cursor: TransactionsPageCursor,
 }

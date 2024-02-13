@@ -1,16 +1,19 @@
-use std::ops::Range;
 use std::sync::Arc;
 
 use futures::StreamExt;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::sequencer::KatanaSequencer;
+use katana_core::service::block_producer::BlockProducerMode;
 use katana_primitives::block::BlockHashOrNumber;
-use katana_provider::traits::block::BlockProvider;
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
+use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
+use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::TokioTaskSpawner;
+
+const MAX_PAGE_SIZE: usize = 100;
 
 #[derive(Clone)]
 pub struct ToriiApi {
@@ -51,76 +54,115 @@ impl ToriiApiServer for ToriiApi {
 
             if latest_block_number >= cursor.block_number {
                 for block_number in cursor.block_number..=latest_block_number {
-                    let tx_range = BlockProvider::block_body_indices(
-                        provider,
-                        BlockHashOrNumber::Num(block_number),
-                    )
-                    .map_err(ToriiApiError::from)?
-                    .ok_or(ToriiApiError::BlockNotFound)?;
-
                     let mut block_transactions = provider
-                        .transaction_in_range(Range::from(tx_range))
+                        .transactions_by_block(BlockHashOrNumber::Num(block_number))
                         .map_err(ToriiApiError::from)?
-                        .into_iter()
-                        .map(|tx| tx.clone().into())
-                        .collect::<Vec<_>>();
+                        .ok_or(ToriiApiError::BlockNotFound)?;
 
                     // If the block_number is the cursor block, slice the transactions from the txn
                     // offset
                     if block_number == cursor.block_number {
                         block_transactions = block_transactions
-                            .iter()
+                            .into_iter()
                             .skip(cursor.transaction_index as usize)
-                            .cloned()
                             .collect();
                     }
 
-                    transactions.extend(block_transactions);
+                    let block_transactions = block_transactions
+                        .into_iter()
+                        .map(|tx| {
+                            let receipt = ReceiptBuilder::new(tx.hash, provider)
+                                .build()
+                                .expect("Receipt should exist for tx")
+                                .expect("Receipt should exist for tx");
+                            (tx, MaybePendingTxReceipt::Receipt(receipt))
+                        })
+                        .collect::<Vec<_>>();
+
+                    // Add transactions to the total and break if MAX_PAGE_SIZE is reached
+                    for transaction in block_transactions {
+                        transactions.push(transaction);
+                        if transactions.len() >= MAX_PAGE_SIZE {
+                            next_cursor.block_number = block_number;
+                            next_cursor.transaction_index = MAX_PAGE_SIZE as u64;
+                            return Ok(TransactionsPage { transactions, cursor: next_cursor });
+                        }
+                    }
                 }
             }
 
             if let Some(pending_state) = this.sequencer.pending_state() {
-                let pending_transactions = pending_state
-                    .executed_txs
-                    .read()
-                    .iter()
-                    .map(|(tx, _)| tx.clone().into())
-                    .collect::<Vec<_>>();
+                let remaining = MAX_PAGE_SIZE - transactions.len();
 
                 // If cursor is in the pending block
                 if cursor.block_number == latest_block_number + 1 {
-                    if cursor.transaction_index as usize > pending_transactions.len() {
-                        return Err(ToriiApiError::TransactionOutOfBounds.into());
-                    }
-
-                    let mut pending_transactions = pending_transactions
+                    let mut pending_transactions = pending_state
+                        .executed_txs
+                        .read()
                         .iter()
                         .skip(cursor.transaction_index as usize)
-                        .cloned()
+                        .take(remaining)
+                        .map(|(tx, info)| {
+                            (
+                                tx.clone(),
+                                MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                    tx.hash,
+                                    info.receipt.clone(),
+                                )),
+                            )
+                        })
                         .collect::<Vec<_>>();
 
                     // If there are no transactions after the index in the pending block
                     if pending_transactions.is_empty() {
                         // Wait for a new transaction to be added to the pool
-                        let mut rx = this.sequencer.pool.add_listener();
-                        pending_transactions = match futures::executor::block_on(rx.next()) {
-                            // TODO: Consider waiting here for more txns
-                            Some(_) => pending_state
-                                .executed_txs
-                                .read()
-                                .iter()
-                                .map(|(tx, _)| tx.clone().into())
-                                .collect::<Vec<_>>(),
-                            None => return Err(ToriiApiError::ChannelDisconnected.into()),
+                        let maybe_listener = {
+                            let inner = this.sequencer.block_producer().inner.read();
+                            if let BlockProducerMode::Interval(block_producer) = &*inner {
+                                Some(block_producer.add_listener())
+                            } else {
+                                None
+                            }
                         };
+
+                        if let Some(mut rx) = maybe_listener {
+                            pending_transactions = futures::executor::block_on(rx.next())
+                                .ok_or(ToriiApiError::ChannelDisconnected)?
+                                .into_iter()
+                                .map(|(tx, info)| {
+                                    (
+                                        tx.clone(),
+                                        MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                            tx.hash,
+                                            info.receipt,
+                                        )),
+                                    )
+                                })
+                                .collect::<Vec<_>>();
+                        }
                     }
 
                     next_cursor.transaction_index += pending_transactions.len() as u64;
                     transactions.extend(pending_transactions);
                 } else {
+                    let pending_transactions = pending_state
+                        .executed_txs
+                        .read()
+                        .iter()
+                        .take(remaining)
+                        .map(|(tx, info)| {
+                            (
+                                tx.clone(),
+                                MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                    tx.hash,
+                                    info.receipt.clone(),
+                                )),
+                            )
+                        })
+                        .collect::<Vec<_>>();
                     next_cursor.block_number += 1;
                     next_cursor.transaction_index = pending_transactions.len() as u64;
-                    transactions.extend(pending_transactions.clone());
+                    transactions.extend(pending_transactions);
                 };
             }
 

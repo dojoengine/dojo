@@ -7,24 +7,27 @@ use katana_provider::error::ProviderError;
 #[derive(Debug, thiserror::Error, Clone)]
 #[repr(i32)]
 pub enum ToriiApiError {
-    #[error("Transaction index out of bounds")]
-    TransactionOutOfBounds,
     #[error("Block not found")]
     BlockNotFound,
+    #[error("Transaction index out of bounds")]
+    TransactionOutOfBounds,
     #[error("Transaction not found")]
     TransactionNotFound,
+    #[error("Transaction receipt not found")]
+    TransactionReceiptNotFound,
     #[error("Long poll expired")]
     ChannelDisconnected,
-    #[error("An unexpected error occured")]
+    #[error("An unexpected error occured: {reason}")]
     UnexpectedError { reason: String },
 }
 
 impl ToriiApiError {
     fn code(&self) -> i32 {
         match self {
-            ToriiApiError::TransactionOutOfBounds => 1,
             ToriiApiError::BlockNotFound => 24,
-            ToriiApiError::TransactionNotFound => 25,
+            ToriiApiError::TransactionOutOfBounds => 34,
+            ToriiApiError::TransactionNotFound => 35,
+            ToriiApiError::TransactionReceiptNotFound => 36,
             ToriiApiError::ChannelDisconnected => 42,
             ToriiApiError::UnexpectedError { .. } => 63,
         }
