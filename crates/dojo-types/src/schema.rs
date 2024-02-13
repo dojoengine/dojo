@@ -40,7 +40,7 @@ pub enum Ty {
     Struct(Struct),
     Enum(Enum),
     Tuple(Vec<Ty>),
-    Array(u32),
+    Array(Vec<Primitive>),
 }
 
 impl Ty {
@@ -50,7 +50,7 @@ impl Ty {
             Ty::Struct(s) => s.name.clone(),
             Ty::Enum(e) => e.name.clone(),
             Ty::Tuple(tys) => format!("({})", tys.iter().map(|ty| ty.name()).join(", ")),
-            Ty::Array(size) => size.to_string(),
+            Ty::Array(elts) => format!("[{}]", elts.iter().map(|e| e.to_string()).join(", ")),
         }
     }
 
@@ -120,8 +120,11 @@ impl Ty {
                         serialize_inner(ty, felts)?;
                     }
                 }
-                Ty::Array(size) => {
-                    felts.push(FieldElement::from(*size as u64));
+                Ty::Array(elts) => {
+                    felts.push(FieldElement::from(elts.len() as u64));
+                    for e in elts.iter() {
+                        felts.extend(e.serialize()?);
+                    }
                 }
             }
             Ok(())
@@ -154,8 +157,17 @@ impl Ty {
                     ty.deserialize(felts)?;
                 }
             }
-            Ty::Array(_size) => {
-                *self = Ty::Array(felts.remove(0).try_into()?);
+            Ty::Array(_) => {
+                let mut arr = vec![];
+
+                let len: u32 = felts.remove(0).try_into()?;
+                let len = len as usize;
+
+                for _ in 0..len {
+                    arr.push(Primitive::Felt252(Some(felts.remove(0))));
+                }
+
+                *self = Ty::Array(arr);
             }
         }
         Ok(())
@@ -217,7 +229,7 @@ impl std::fmt::Display for Ty {
                         Some(ty.name())
                     }
                 }
-                Ty::Array(size) => Some(format!("Array<felt252> of size {size}")),
+                Ty::Array(arr) => Some(format!("Array<felt252> of size {}", arr.len())),
             })
             .collect::<Vec<_>>()
             .join("\n\n");

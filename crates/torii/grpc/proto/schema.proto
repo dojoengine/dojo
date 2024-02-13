@@ -37,7 +37,8 @@ message Struct {
 }
 
 message Array {
-    uint32 size = 1;
+    uint32 len = 1;
+    repeated Primitive elements = 2;
 }
 
 message Ty {

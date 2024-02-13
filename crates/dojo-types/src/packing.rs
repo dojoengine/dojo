@@ -199,11 +199,16 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
 }
 
 fn parse_array(data: &[FieldElement]) -> Result<Ty, ParseError> {
-    if data.len() != 1 {
-        return Err(ParseError::InvalidSchema);
+    let mut arr = vec![];
+
+    let len: u64 = data[0].try_into()?;
+    let len = len as usize;
+
+    for felt in data.iter().take(len) {
+        arr.push(Primitive::Felt252(Some(*felt)));
     }
 
-    Ok(Ty::Array(data[0].try_into().unwrap()))
+    Ok(Ty::Array(arr))
 }
 
 #[cfg(test)]
