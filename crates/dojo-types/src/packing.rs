@@ -91,6 +91,7 @@ pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
         1 => parse_struct(&data[1..]),
         2 => parse_enum(&data[1..]),
         3 => parse_tuple(&data[1..]),
+        4 => parse_array(&data[1..]),
         _ => Err(ParseError::InvalidSchema),
     }
 }
@@ -195,6 +196,14 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     }
 
     Ok(Ty::Tuple(children))
+}
+
+fn parse_array(data: &[FieldElement]) -> Result<Ty, ParseError> {
+    if data.len() != 1 {
+        return Err(ParseError::InvalidSchema);
+    }
+
+    Ok(Ty::Array(data[0].try_into().unwrap()))
 }
 
 #[cfg(test)]

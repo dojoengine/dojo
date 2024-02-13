@@ -5,7 +5,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use tracing::info;
+use tracing::{debug, info};
 
 use super::EventProcessor;
 use crate::sql::Sql;
@@ -52,7 +52,8 @@ where
         let unpacked_size: u32 = model.unpacked_size().await?.try_into()?;
         let packed_size: u32 = model.packed_size().await?.try_into()?;
 
-        info!("Registered model: {}", name);
+        info!(name, "Registered model");
+        debug!(name, ?schema, ?layout, class_hash = ?event.data[1], packed_size, unpacked_size, "Registered model content");
 
         db.register_model(schema, layout, event.data[1], packed_size, unpacked_size).await?;
 

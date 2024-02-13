@@ -36,11 +36,16 @@ message Struct {
     repeated Member children = 2;
 }
 
+message Array {
+    uint32 size = 1;
+}
+
 message Ty {
     oneof ty_type {
         Primitive primitive = 2;
         Enum enum = 3;
         Struct struct = 4;
+        Array array = 5;
         // TODO: Tuple
     }
 }
