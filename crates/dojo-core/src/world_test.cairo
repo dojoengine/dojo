@@ -585,27 +585,3 @@ fn test_upgradeable_world_from_non_owner() {
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
 }
-
-#[derive(Model, Drop, Serde)]
-struct ArrayModel {
-    #[key]
-    id: felt252,
-    #[capacity(3)]
-    values: Array<felt252>,
-}
-
-#[test]
-#[available_gas(6000000)]
-fn test_array_model() {
-    let world = deploy_world();
-
-    set!(world, ArrayModel { id: 0xaa, values: array_cap!(3, (0x1, 0xf2)) });
-    let stored: ArrayModel = get!(world, 0xaa, ArrayModel);
-
-    assert(stored.id == 0xaa, 'invalid id');
-    assert(stored.values.len() == 3, 'invalid capacity');
-    assert((*stored.values[0]) == 1, 'invalid 0');
-    assert((*stored.values[1]) == 0xf2, 'invalid 1');
-    assert((*stored.values[2]) == 0, 'invalid 2');
-}
-

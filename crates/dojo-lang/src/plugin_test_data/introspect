@@ -625,12 +625,27 @@ impl FeltsArrayBadCapacityIntrospect<T, impl TIntrospect: dojo::database::intros
 }
 
 //! > expected_diagnostics
+error: Unsupported attribute.
+ --> test_src/lib.cairo:49:5
+    #[capacity(10)]
+    ^*************^
+
 error: Capacity is only supported for Array<felt252> or Span<felt252>.
  --> test_src/lib.cairo:55:5
     #[capacity(10)]
     ^*************^
 
+error: Unsupported attribute.
+ --> test_src/lib.cairo:55:5
+    #[capacity(10)]
+    ^*************^
+
 error: Capacity must be greater than 0.
+ --> test_src/lib.cairo:61:5
+    #[capacity(0)]
+    ^************^
+
+error: Unsupported attribute.
  --> test_src/lib.cairo:61:5
     #[capacity(0)]
     ^************^

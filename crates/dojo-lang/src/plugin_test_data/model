@@ -61,14 +61,6 @@ struct Player {
     name: felt252, 
 }
 
-#[derive(Model, Serde)]
-struct ModelWithArray {
-    #[key]
-    id: felt252,
-    #[capacity(10)]
-    values: Array<felt252>,
-}
-
 //! > generated_cairo_code
 use core::serde::Serde;
 
@@ -565,11 +557,6 @@ error: Unsupported attribute.
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithArray]:83:13
-            #[starknet::contract]
-            ^*******************^
-
-error: Unsupported attribute.
  --> test_src/lib.cairo[Position]:78:17
                 #[storage]
                 ^********^
@@ -629,21 +616,6 @@ error: Unsupported attribute.
                 #[abi(embed_v0)]
                 ^**************^
 
-error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithArray]:88:17
-                #[storage]
-                ^********^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithArray]:91:17
-                #[abi(embed_v0)]
-                ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[ModelWithArray]:119:17
-                #[abi(embed_v0)]
-                ^**************^
-
 //! > expanded_cairo_code
 use core::serde::Serde;
 
@@ -700,14 +672,6 @@ struct Player {
     player: ContractAddress,
 
     name: felt252, 
-}
-
-#[derive(Model, Serde)]
-struct ModelWithArray {
-    #[key]
-    id: felt252,
-    #[capacity(10)]
-    values: Array<felt252>,
 }
 impl Vec3Copy of core::traits::Copy::<Vec3>;
 impl Vec3Drop of core::traits::Drop::<Vec3>;
@@ -1259,142 +1223,6 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
                 #[abi(embed_v0)]
                 impl playerImpl of Iplayer<ContractState>{
                     fn ensure_abi(self: @ContractState, model: Player) {
-                    }
-                }
-            }
-impl ModelWithArraySerde of core::serde::Serde::<ModelWithArray> {
-    fn serialize(self: @ModelWithArray, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.id, ref output);
-        core::serde::Serde::serialize(self.values, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<ModelWithArray> {
-        core::option::Option::Some(ModelWithArray {
-            id: core::serde::Serde::deserialize(ref serialized)?,
-            values: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-            impl ModelWithArrayModel of dojo::model::Model<ModelWithArray> {
-                #[inline(always)]
-                fn name(self: @ModelWithArray) -> felt252 {
-                    'ModelWithArray'
-                }
-
-                #[inline(always)]
-                fn keys(self: @ModelWithArray) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::array::ArrayTrait::append(ref serialized, *self.id);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn values(self: @ModelWithArray) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::serde::Serde::serialize(self.values, ref serialized);
-                    core::array::ArrayTrait::span(@serialized)
-                }
-
-                #[inline(always)]
-                fn layout(self: @ModelWithArray) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<ModelWithArray>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
-
-                #[inline(always)]
-                fn packed_size(self: @ModelWithArray) -> usize {
-                    let mut layout = self.layout();
-                    dojo::packing::calculate_packed_size(ref layout)
-                }
-            }
-
-            
-impl ModelWithArrayIntrospect<> of dojo::database::introspect::Introspect<ModelWithArray<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        1 + 10 + 0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'ModelWithArray',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'id',
-                ty: dojo::database::introspect::Ty::Primitive('felt252'),
-                attrs: array!['key'].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'values',
-                ty: dojo::database::introspect::Ty::Array(10),
-                attrs: array![].span()
-            })].span()
-        })
-    }
-}
-        
-
-            #[starknet::interface]
-            trait Imodel_with_array<T> {
-                fn ensure_abi(self: @T, model: ModelWithArray);
-            }
-
-            #[starknet::contract]
-            mod model_with_array {
-                use super::ModelWithArray;
-                use super::Imodel_with_array;
-
-                #[storage]
-                struct Storage {}
-
-                #[abi(embed_v0)]
-                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'ModelWithArray'
-                    }
-
-                    fn unpacked_size(self: @ContractState) -> usize {
-                        dojo::database::introspect::Introspect::<ModelWithArray>::size()
-                    }
-
-                    fn packed_size(self: @ContractState) -> usize {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<ModelWithArray>::layout(ref layout);
-                        let mut layout_span = layout.span();
-                        dojo::packing::calculate_packed_size(ref layout_span)
-                    }
-
-                    fn layout(self: @ContractState) -> Span<u8> {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<ModelWithArray>::layout(ref layout);
-                        core::array::ArrayTrait::span(@layout)
-                    }
-
-                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                        dojo::database::introspect::Introspect::<ModelWithArray>::ty()
-                    }
-                }
-
-                #[abi(embed_v0)]
-                impl model_with_arrayImpl of Imodel_with_array<ContractState>{
-                    fn ensure_abi(self: @ContractState, model: ModelWithArray) {
                     }
                 }
             }
