@@ -17,7 +17,8 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use starknet_crypto::poseidon_hash_many;
+use starknet_crypto::{poseidon_hash_many, Signature};
+use starknet_ff::FieldElement;
 use tokio::sync::RwLock;
 use torii_core::sql::Sql;
 use tracing::{info, warn};
@@ -173,16 +174,17 @@ impl Relay {
 
                             // Message has to be a struct
                             // that contains an identity & signature
+                            let mut identity: FieldElement;
+                            let mut signature: Vec<FieldElement>;
                             let message_struct = match message {
                                 Ty::Struct(message) => {
-                                    let mut identity: Primitive::ContractAddress;
-                                    let mut signature: Primitive::Felt252;
                                     for member in message.keys() {
                                         match member.name.as_str() {
                                             "identity" => {
                                                 // check if identity is correct primitive type
-                                                if let Ty::Primitive(Primitive::ContractAddress(identity)) =
-                                                    &member.value
+                                                if let Ty::Primitive(Primitive::ContractAddress(
+                                                    identity,
+                                                )) = &member.value
                                                 {
                                                     identity = &identity.clone();
                                                 } else {
@@ -195,16 +197,28 @@ impl Relay {
                                                 }
                                             }
                                             "signature" => {
-                                                // check if signature is correct primitive type
-                                                if let Ty::Primitive(Primitive::Felt252(signature)) =
-                                                    &member.value
-                                                {
-                                                    signature = &signature.clone();
+                                                // must be a Ty::Tuple and children must be Primitive::Felt252
+                                                if let Ty::Tuple(signature) = &member.value {
+                                                    for component in signature {
+                                                        if let Ty::Primitive(Primitive::Felt252(
+                                                            sig,
+                                                        )) = &member.value
+                                                        {
+                                                            signature.push(sig.clone());
+                                                        } else {
+                                                            warn!(
+                                                                target: "torii::relay::server",
+                                                                message_id = %message_id,
+                                                                "Signature component is not a Felt252"
+                                                            );
+                                                            continue;
+                                                        }
+                                                    }
                                                 } else {
                                                     warn!(
                                                         target: "torii::relay::server",
                                                         message_id = %message_id,
-                                                        "Signature is not a u8"
+                                                        "Signature is not a tuple"
                                                     );
                                                     continue;
                                                 }
@@ -213,8 +227,9 @@ impl Relay {
                                         }
                                     }
 
+                                    signature = Signature::new(sig_r, sig_s);
                                     message
-                                },
+                                }
                                 _ => {
                                     warn!(
                                         target: "torii::relay::server",
@@ -224,7 +239,6 @@ impl Relay {
                                     continue;
                                 }
                             };
-                            
 
                             if let Err(e) = self
                                 .pool
