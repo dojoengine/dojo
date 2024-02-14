@@ -1,7 +1,7 @@
 use array::ArrayTrait;
 use starknet::{ContractAddress, ClassHash};
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Model, Drop, Serde)]
 struct Record {
     #[key]
     record_id: u32,
