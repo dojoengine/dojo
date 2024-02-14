@@ -163,6 +163,7 @@ impl Ty {
                 let len: u32 = felts.remove(0).try_into()?;
                 let len = len as usize;
 
+                // Currently only Felt252 is supported.
                 for _ in 0..len {
                     arr.push(Primitive::Felt252(Some(felts.remove(0))));
                 }
