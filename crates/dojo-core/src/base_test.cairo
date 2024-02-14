@@ -90,8 +90,6 @@ fn test_upgrade_direct() {
     upgradeable_dispatcher.upgrade(new_class_hash);
 }
 
-use debug::PrintTrait;
-
 #[starknet::interface]
 trait INameOnly<T> {
     fn name(self: @T) -> felt252;
@@ -133,7 +131,6 @@ fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
     let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
-    base_address.print();
 
     world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
 }
