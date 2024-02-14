@@ -150,6 +150,10 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
                     }),
                 },
 
+                "Array" => {
+                    Member { key: child.key, name: child.name.to_owned(), ty: Ty::Array(vec![]) }
+                }
+
                 ty => {
                     unimplemented!("unimplemented type_enum: {ty}");
                 }
