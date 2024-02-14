@@ -26,7 +26,6 @@ CREATE TABLE models (
     layout BLOB NOT NULL,
     transaction_hash TEXT,
     class_hash TEXT NOT NULL,
-    contract_address TEXT NOT NULL,
     packed_size INTEGER NOT NULL,
     unpacked_size INTEGER NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -42,7 +41,7 @@ CREATE TABLE model_members(
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     type_enum TEXT DEFAULT 'Primitive' CHECK(
-        type_enum IN ('Primitive', 'Struct', 'Enum', 'Tuple', 'Array')
+        type_enum IN ('Primitive', 'Struct', 'Enum', 'Tuple')
     ) NOT NULL,
     enum_options TEXT NULL,  -- TEMP: Remove once enum support is properly added
     key BOOLEAN NOT NULL,
