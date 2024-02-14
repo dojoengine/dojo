@@ -16,7 +16,7 @@ mod test {
         use dojo_types::schema::{Member, Struct};
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use starknet_ff::FieldElement;
-        use tokio::sync::RwLock;
+        use tokio::{sync::RwLock, time::sleep};
         use torii_core::sql::Sql;
 
         use crate::server::Relay;
@@ -68,6 +68,8 @@ mod test {
         });
 
         client.command_sender.publish(dojo_types::schema::Ty::Struct(data)).await?;
+
+        sleep(std::time::Duration::from_secs(2)).await;
 
         Ok(())
         // loop {

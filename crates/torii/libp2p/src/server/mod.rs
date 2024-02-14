@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, io};
 
+use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use futures::StreamExt;
 use libp2p::core::multiaddr::Protocol;
@@ -170,48 +171,60 @@ impl Relay {
                                 "Received message"
                             );
 
-                            // Check if message already exists
-                            let keys = if let Ty::Struct(s) = &message {
-                                let mut keys: Vec<starknet_ff::FieldElement> = Vec::new();
-                                for m in s.keys() {
-                                    let key = match m.serialize() {
-                                        Ok(key) => key,
-                                        Err(e) => {
-                                            info!(
-                                                target: "torii::relay::server",
-                                                error = %e,
-                                                "Failed to serialize key"
-                                            );
-                                            continue;
+                            // Message has to be a struct
+                            // that contains an identity & signature
+                            let message_struct = match message {
+                                Ty::Struct(message) => {
+                                    let mut identity: Primitive::ContractAddress;
+                                    let mut signature: Primitive::Felt252;
+                                    for member in message.keys() {
+                                        match member.name.as_str() {
+                                            "identity" => {
+                                                // check if identity is correct primitive type
+                                                if let Ty::Primitive(Primitive::ContractAddress(identity)) =
+                                                    &member.value
+                                                {
+                                                    identity = &identity.clone();
+                                                } else {
+                                                    warn!(
+                                                        target: "torii::relay::server",
+                                                        message_id = %message_id,
+                                                        "Identity is not a contract address"
+                                                    );
+                                                    continue;
+                                                }
+                                            }
+                                            "signature" => {
+                                                // check if signature is correct primitive type
+                                                if let Ty::Primitive(Primitive::Felt252(signature)) =
+                                                    &member.value
+                                                {
+                                                    signature = &signature.clone();
+                                                } else {
+                                                    warn!(
+                                                        target: "torii::relay::server",
+                                                        message_id = %message_id,
+                                                        "Signature is not a u8"
+                                                    );
+                                                    continue;
+                                                }
+                                            }
+                                            _ => {}
                                         }
-                                    };
-                                    keys.extend(key);
-                                }
-                                keys
-                            } else {
-                                warn!(
-                                    target: "torii::relay::server",
-                                    message_id = %message_id,
-                                    "Message is not a struct"
-                                );
-                                continue;
-                            };
+                                    }
 
-                            if self
-                                .pool
-                                .read()
-                                .await
-                                .entity(message.name(), poseidon_hash_many(&keys))
-                                .await
-                                .is_ok()
-                            {
-                                info!(
-                                    target: "torii::relay::server",
-                                    message_id = %message_id,
-                                    "Message already exists"
-                                );
-                                continue;
-                            }
+                                    message
+                                },
+                                _ => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        message_id = %message_id,
+                                        "Message is not a struct"
+                                    );
+                                    continue;
+                                }
+                            };
+                            
 
                             if let Err(e) = self
                                 .pool
