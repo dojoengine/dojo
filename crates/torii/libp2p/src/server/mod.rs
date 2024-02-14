@@ -306,6 +306,52 @@ impl Relay {
     }
 }
 
+// Validates the message model 
+// and returns the identity and signature
+fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), Error> {
+    let mut identity: FieldElement;
+    let mut signature: Vec<FieldElement>;
+    let message_struct = match message {
+        Ty::Struct(message) => {
+            for member in message.keys() {
+                match member.name.as_str() {
+                    "identity" => {
+                        // check if identity is correct primitive type
+                        if let Ty::Primitive(Primitive::ContractAddress(identity)) = &member.value {
+                            identity = &identity.clone();
+                        } else {
+                            return Err(Error::InvalidIdentity);
+                        }
+                    }
+                    "signature" => {
+                        // must be a Ty::Tuple and children must be Primitive::Felt252
+                        if let Ty::Tuple(signature) = &member.value {
+                            for component in signature {
+                                if let Ty::Primitive(Primitive::Felt252(sig)) = &member.value {
+                                    signature.push(sig.clone());
+                                } else {
+                                    return Err(Error::InvalidSignature);
+                                }
+                            }
+                        } else {
+                            return Err(Error::InvalidSignature);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            signature = Signature::new(sig_r, sig_s);
+            message
+        }
+        _ => {
+            return Err(Error::InvalidMessage);
+        }
+    };
+
+    Ok((identity, signature))
+}
+
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
     if path.exists() {
         let bytes = fs::read(path)?;
