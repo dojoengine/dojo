@@ -91,7 +91,6 @@ pub fn parse_ty(data: &[FieldElement]) -> Result<Ty, ParseError> {
         1 => parse_struct(&data[1..]),
         2 => parse_enum(&data[1..]),
         3 => parse_tuple(&data[1..]),
-        4 => parse_array(&data[1..]),
         _ => Err(ParseError::InvalidSchema),
     }
 }
@@ -196,19 +195,6 @@ fn parse_tuple(data: &[FieldElement]) -> Result<Ty, ParseError> {
     }
 
     Ok(Ty::Tuple(children))
-}
-
-fn parse_array(data: &[FieldElement]) -> Result<Ty, ParseError> {
-    let mut arr = vec![];
-
-    let len: u64 = data[0].try_into()?;
-    let len = len as usize;
-
-    for felt in data.iter().take(len) {
-        arr.push(Primitive::Felt252(Some(*felt)));
-    }
-
-    Ok(Ty::Array(arr))
 }
 
 #[cfg(test)]

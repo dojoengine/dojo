@@ -22,8 +22,6 @@ struct Record {
     random_u8: u8,
     random_u128: u128,
     composite_u256: u256,
-    #[capacity(5)]
-    felts: Array<felt252>,
 }
 
 #[derive(Model, Copy, Drop, Serde)]

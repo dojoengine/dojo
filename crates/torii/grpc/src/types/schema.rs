@@ -58,17 +58,6 @@ impl TryFrom<Ty> for proto::types::Ty {
             Ty::Enum(r#enum) => Some(proto::types::ty::TyType::Enum(r#enum.into())),
             Ty::Struct(r#struct) => Some(proto::types::ty::TyType::Struct(r#struct.try_into()?)),
             Ty::Tuple(_) => unimplemented!("unimplemented typle type"),
-            Ty::Array(elements) => {
-                let mut arr = vec![];
-                for e in elements {
-                    arr.push(e.try_into()?);
-                }
-
-                Some(proto::types::ty::TyType::Array(proto::types::Array {
-                    len: arr.len() as u32,
-                    elements: arr,
-                }))
-            }
         };
 
         Ok(proto::types::Ty { ty_type })
@@ -271,13 +260,6 @@ impl TryFrom<proto::types::Ty> for Ty {
             }
             proto::types::ty::TyType::Struct(r#struct) => Ok(Ty::Struct(r#struct.try_into()?)),
             proto::types::ty::TyType::Enum(r#enum) => Ok(Ty::Enum(r#enum.into())),
-            proto::types::ty::TyType::Array(array) => {
-                let mut arr = vec![];
-                for e in array.elements {
-                    arr.push(e.try_into()?);
-                }
-                Ok(Ty::Array(arr))
-            }
         }
     }
 }
