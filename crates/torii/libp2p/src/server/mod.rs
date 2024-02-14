@@ -174,67 +174,13 @@ impl Relay {
 
                             // Message has to be a struct
                             // that contains an identity & signature
-                            let mut identity: FieldElement;
-                            let mut signature: Vec<FieldElement>;
-                            let message_struct = match message {
-                                Ty::Struct(message) => {
-                                    for member in message.keys() {
-                                        match member.name.as_str() {
-                                            "identity" => {
-                                                // check if identity is correct primitive type
-                                                if let Ty::Primitive(Primitive::ContractAddress(
-                                                    identity,
-                                                )) = &member.value
-                                                {
-                                                    identity = &identity.clone();
-                                                } else {
-                                                    warn!(
-                                                        target: "torii::relay::server",
-                                                        message_id = %message_id,
-                                                        "Identity is not a contract address"
-                                                    );
-                                                    continue;
-                                                }
-                                            }
-                                            "signature" => {
-                                                // must be a Ty::Tuple and children must be Primitive::Felt252
-                                                if let Ty::Tuple(signature) = &member.value {
-                                                    for component in signature {
-                                                        if let Ty::Primitive(Primitive::Felt252(
-                                                            sig,
-                                                        )) = &member.value
-                                                        {
-                                                            signature.push(sig.clone());
-                                                        } else {
-                                                            warn!(
-                                                                target: "torii::relay::server",
-                                                                message_id = %message_id,
-                                                                "Signature component is not a Felt252"
-                                                            );
-                                                            continue;
-                                                        }
-                                                    }
-                                                } else {
-                                                    warn!(
-                                                        target: "torii::relay::server",
-                                                        message_id = %message_id,
-                                                        "Signature is not a tuple"
-                                                    );
-                                                    continue;
-                                                }
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-
-                                    signature = Signature::new(sig_r, sig_s);
-                                    message
-                                }
-                                _ => {
-                                    warn!(
+                            let (identity, signature) = match validate_message(&message) {
+                                Ok((identity, signature)) => (identity, signature),
+                                Err(e) => {
+                                    info!(
                                         target: "torii::relay::server",
-                                        message_id = %message_id,
-                                        "Message is not a struct"
+                                        error = %e,
+                                        "Failed to validate message"
                                     );
                                     continue;
                                 }
@@ -309,8 +255,8 @@ impl Relay {
 // Validates the message model 
 // and returns the identity and signature
 fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), Error> {
-    let mut identity: FieldElement;
-    let mut signature: Vec<FieldElement>;
+    let mut identity: FieldElement = FieldElement::ZERO;
+    let mut signature: Vec<FieldElement> = Vec::new();
     let message_struct = match message {
         Ty::Struct(message) => {
             for member in message.keys() {
@@ -320,7 +266,7 @@ fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), E
                         if let Ty::Primitive(Primitive::ContractAddress(identity)) = &member.value {
                             identity = &identity.clone();
                         } else {
-                            return Err(Error::InvalidIdentity);
+                            return Err(Error::InvalidMessageError("Identity is not a contract address".to_string()));
                         }
                     }
                     "signature" => {
@@ -330,11 +276,11 @@ fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), E
                                 if let Ty::Primitive(Primitive::Felt252(sig)) = &member.value {
                                     signature.push(sig.clone());
                                 } else {
-                                    return Err(Error::InvalidSignature);
+                                    return Err(Error::InvalidMessageError("Signature component is not a Felt252".to_string()));
                                 }
                             }
                         } else {
-                            return Err(Error::InvalidSignature);
+                            return Err(Error::InvalidMessageError("Signature is not a tuple".to_string()));
                         }
                     }
                     _ => {}
@@ -345,9 +291,17 @@ fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), E
             message
         }
         _ => {
-            return Err(Error::InvalidMessage);
+            return Err(Error::InvalidMessageError("Message is not a struct".to_string()));
         }
     };
+
+    if identity == FieldElement::ZERO {
+        return Err(Error::InvalidMessageError("Missing identity".to_string()));
+    }
+
+    if signature.is_empty() {
+        return Err(Error::InvalidMessageError("Missing signature".to_string()));
+    }
 
     Ok((identity, signature))
 }
