@@ -33,6 +33,11 @@ We welcome contributions of all kinds from anyone. See our [Contribution Guide](
 
 See our [Environment setup](https://book.dojoengine.org/getting-started) for more information.
 
+## 🛡️Audit
+
+Dojo core smart contracts have been audited:
+feb-24: [Nethermind security](https://github.com/NethermindEth/PublicAuditReports/blob/main/NM0159-FINAL_DOJO.pdf)
+
 ## Releasing
 
 Propose a new release by manually triggering the `release-dispatch` github action. The version value can be an semver or a level: `[patch, minor, major]`.
