@@ -53,6 +53,8 @@ mod records {
                 );
                 let composite_u256 = u256 { low: random_u128, high: random_u128 };
 
+                let felts = array![1, 2, 3, 4, 5];
+
                 let record_id = world.uuid();
                 let subrecord_id = world.uuid();
 
@@ -99,7 +101,8 @@ mod records {
                             },
                             random_u8,
                             random_u128,
-                            composite_u256
+                            composite_u256,
+                            felts,
                         },
                         RecordSibling { record_id, random_u8 },
                         Subrecord {
