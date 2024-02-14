@@ -77,7 +77,6 @@ pub struct WorldModel {
     pub id: String,
     pub name: String,
     pub class_hash: String,
-    pub contract_address: String,
     pub transaction_hash: String,
     pub created_at: String,
 }
