@@ -8,6 +8,18 @@ use crate::commands::model::ModelCommands;
 
 pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) -> Result<()> {
     match command {
+        ModelCommands::ClassHash { name, world, starknet } => {
+            let world_address = world.address(env_metadata.as_ref())?;
+            let provider = starknet.provider(env_metadata.as_ref())?;
+
+            let world = WorldContractReader::new(world_address, &provider)
+                .with_block(BlockId::Tag(BlockTag::Pending));
+
+            let model = world.model_reader(&name).await?;
+
+            println!("{:#x}", model.class_hash());
+        }
+
         ModelCommands::ContractAddress { name, world, starknet } => {
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;

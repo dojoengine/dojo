@@ -16,6 +16,18 @@ pub struct ModelArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum ModelCommands {
+    #[command(about = "Retrieve the class hash of a model")]
+    ClassHash {
+        #[arg(help = "The name of the model")]
+        name: String,
+
+        #[command(flatten)]
+        world: WorldOptions,
+
+        #[command(flatten)]
+        starknet: StarknetOptions,
+    },
+
     #[command(about = "Retrieve the contract address of a model")]
     ContractAddress {
         #[arg(help = "The name of the model")]
