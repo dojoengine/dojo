@@ -20,9 +20,6 @@ fn test_database_basic() {
     set('table', 'key', values.span(), array![251, 251].span());
     let res = get('table', 'key', array![251, 251].span());
 
-    let len1: felt252 = res.len().into();
-    let len2: felt252 = values.len().into();
-
     assert(res.at(0) == values.at(0), 'Value at 0 not equal!');
     assert(res.at(1) == values.at(1), 'Value at 0 not equal!');
     assert(res.len() == values.len(), 'Lengths not equal');

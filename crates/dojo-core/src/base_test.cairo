@@ -1,3 +1,4 @@
+use debug::PrintTrait;
 use option::OptionTrait;
 use starknet::ClassHash;
 use traits::TryInto;
@@ -131,6 +132,9 @@ fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
     let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
+    // The print is required for invalid_model name to be a valid address as the
+    // register_model will use the gas consumed as salt.
+    base_address.print();
 
     world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
 }
