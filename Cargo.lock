@@ -11231,7 +11231,7 @@ checksum = "5eb139c5e6f6c6da627080e33cc00b3fc1c9733403034ca1ee9c42a95c337c7f"
 dependencies = [
  "starknet-accounts",
  "starknet-contract",
- "starknet-core",
+ "starknet-core 0.8.0",
  "starknet-crypto 0.6.1",
  "starknet-ff",
  "starknet-macros",
@@ -11247,7 +11247,7 @@ checksum = "3743932c80ad2a5868c2dd4ef729de4e12060c88e73e4bb678a5f8e51b105e53"
 dependencies = [
  "async-trait",
  "auto_impl",
- "starknet-core",
+ "starknet-core 0.8.0",
  "starknet-providers",
  "starknet-signers",
  "thiserror",
@@ -11263,7 +11263,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet-accounts",
- "starknet-core",
+ "starknet-core 0.8.0",
  "starknet-providers",
  "thiserror",
 ]
@@ -11273,6 +11273,24 @@ name = "starknet-core"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff50e281d4fdb97988a3d5c7b7cae22b9d67bb2ef9be2cfafc17a1e35542cb53"
+dependencies = [
+ "base64 0.21.7",
+ "flate2",
+ "hex",
+ "serde",
+ "serde_json",
+ "serde_json_pythonic",
+ "serde_with",
+ "sha3",
+ "starknet-crypto 0.6.1",
+ "starknet-ff",
+]
+
+[[package]]
+name = "starknet-core"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b15034c07557615f6bea248cb2ac91a103f56792c515319025a5edc4de2a60e"
 dependencies = [
  "base64 0.21.7",
  "flate2",
@@ -11376,7 +11394,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "840be1a7eb5735863eee47d3a3f26df45b9be2c519e8da294e74b4d0524d77d1"
 dependencies = [
- "starknet-core",
+ "starknet-core 0.8.0",
  "syn 2.0.48",
 ]
 
@@ -11395,7 +11413,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "starknet-core",
+ "starknet-core 0.8.0",
  "thiserror",
  "url",
 ]
@@ -11411,7 +11429,7 @@ dependencies = [
  "crypto-bigint",
  "eth-keystore",
  "rand",
- "starknet-core",
+ "starknet-core 0.8.0",
  "starknet-crypto 0.6.1",
  "thiserror",
 ]
@@ -12352,6 +12370,7 @@ version = "0.5.1"
 dependencies = [
  "anyhow",
  "async-trait",
+ "crypto-bigint",
  "dojo-types",
  "dojo-world",
  "futures",
@@ -12363,6 +12382,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "starknet-core 0.9.0",
  "starknet-crypto 0.6.1",
  "starknet-ff",
  "tempfile",

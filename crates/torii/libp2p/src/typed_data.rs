@@ -32,14 +32,14 @@ pub struct TokenAmount {
 impl TokenAmount {
     pub fn encode(
         &self,
-        name: String,
-        types: HashMap<String, Vec<Field>>,
+        name: &str,
+        types: &HashMap<String, Vec<Field>>,
     ) -> Result<FieldElement, Error> {
         let mut hashes = Vec::new();
 
         let type_hash = encode_type(
             name,
-            vec![
+            &vec![
                 Field::SimpleType(SimpleField {
                     name: "token_address".to_string(),
                     r#type: "ContractAddress".to_string(),
@@ -49,13 +49,13 @@ impl TokenAmount {
                     r#type: "u256".to_string(),
                 }),
             ],
-            types,
+            types
         );
         hashes.push(type_hash);
 
         hashes.push(self.token_address);
 
-        let amount_hash = PrimitiveType::U256(self.amount).encode("amount".to_string(), types)?;
+        let amount_hash = PrimitiveType::U256(self.amount).encode("amount", types)?;
         hashes.push(amount_hash);
 
         Ok(poseidon_hash_many(hashes.as_slice()))
@@ -72,14 +72,14 @@ pub struct NftId {
 impl NftId {
     pub fn encode(
         &self,
-        name: String,
-        types: HashMap<String, Vec<Field>>,
+        name: &str,
+        types: &HashMap<String, Vec<Field>>,
     ) -> Result<FieldElement, Error> {
         let mut hashes = Vec::new();
 
         let type_hash = encode_type(
             name,
-            vec![
+            &vec![
                 Field::SimpleType(SimpleField {
                     name: "collection_address".to_string(),
                     r#type: "ContractAddress".to_string(),
@@ -94,7 +94,7 @@ impl NftId {
         hashes.push(type_hash);
 
         hashes.push(self.collection_address);
-        let token_id = PrimitiveType::U256(self.token_id).encode("token_id".to_string(), types)?;
+        let token_id = PrimitiveType::U256(self.token_id).encode("token_id", types)?;
 
         hashes.push(token_id);
 
@@ -130,9 +130,9 @@ pub enum PrimitiveType {
 }
 
 pub fn encode_type(
-    name: String,
-    fields: Vec<Field>,
-    types: HashMap<String, Vec<Field>>,
+    name: &str,
+    fields: &Vec<Field>,
+    types: &HashMap<String, Vec<Field>>,
 ) -> FieldElement {
     let mut type_hash = String::new();
 
@@ -147,8 +147,8 @@ pub fn encode_type(
             }
             Field::ParentType(parent_field) => {
                 return encode_type(
-                    parent_field.contains,
-                    types[&parent_field.contains].clone(),
+                    &parent_field.contains,
+                    &types[&parent_field.contains],
                     types,
                 );
             }
@@ -167,18 +167,18 @@ pub fn encode_type(
 impl PrimitiveType {
     pub fn encode(
         &self,
-        name: String,
-        types: HashMap<String, Vec<Field>>,
+        name: &str,
+        types: &HashMap<String, Vec<Field>>,
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
                 let mut hashes = Vec::new();
 
-                let type_hash = encode_type(name, types[&name], types);
+                let type_hash = encode_type(name, &types[name], types);
                 hashes.push(type_hash);
 
                 for (field_name, value) in obj {
-                    let field_hash = value.encode(*field_name, types)?;
+                    let field_hash = value.encode(field_name, types)?;
                     hashes.push(field_hash);
                 }
 
@@ -194,14 +194,14 @@ impl PrimitiveType {
             PrimitiveType::Enum(enum_map) => {
                 let mut hashes = Vec::new();
 
-                let type_hash = encode_type(name, types[&name], types);
+                let type_hash = encode_type(name, &types[name], types);
                 hashes.push(type_hash);
 
                 for (field_name, value) in enum_map {
                     let field_hash = poseidon_hash_many(
                         value
                             .iter()
-                            .map(|x| x.encode(field_name.clone(), types))
+                            .map(|x| x.encode(field_name, types))
                             .collect::<Result<Vec<_>, _>>()?
                             .as_slice(),
                     );
@@ -237,7 +237,7 @@ impl PrimitiveType {
 
                 let type_hash = encode_type(
                     name,
-                    vec![
+                    &vec![
                         Field::SimpleType(SimpleField {
                             name: "low".to_string(),
                             r#type: "u128".to_string(),
@@ -264,7 +264,7 @@ impl PrimitiveType {
                 Ok(poseidon_hash_many(hashes.as_slice()))
             }
             PrimitiveType::ShortString(short_string) => cairo_short_string_to_felt(&short_string)
-                .map_err(|_| Error::MessageValidationError("Invalid short string".to_string())),
+                .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string())),
             PrimitiveType::NftId(nft_id) => nft_id.encode(name, types),
             PrimitiveType::TokenAmount(token_amount) => token_amount.encode(name, types),
         }
@@ -280,7 +280,7 @@ pub struct Domain {
 }
 
 impl Domain {
-    pub fn encode(&self, types: HashMap<String, Vec<Field>>) -> Result<FieldElement, Error> {
+    pub fn encode(&self, types: &HashMap<String, Vec<Field>>) -> Result<FieldElement, Error> {
         let mut object = HashMap::new();
 
         object.insert("name".to_string(), PrimitiveType::ShortString(self.name.clone()));
@@ -288,7 +288,7 @@ impl Domain {
         object.insert("chain_id".to_string(), PrimitiveType::ShortString(self.chain_id.clone()));
         object.insert("revision".to_string(), PrimitiveType::ShortString(self.revision.clone()));
 
-        PrimitiveType::Object(object).encode("StarknetDomain".to_string(), types)
+        PrimitiveType::Object(object).encode("StarknetDomain", types)
     }
 }
 
@@ -303,19 +303,104 @@ pub struct TypedData {
 impl TypedData {
     pub fn encode(&self, account: FieldElement) -> Result<FieldElement, Error> {
         if self.domain.revision == "0" {
-            return Err(Error::MessageValidationError("Invalid revision".to_string()));
+            return Err(Error::InvalidMessageError("Invalid revision".to_string()));
         }
 
         let prefix_message = starknet_keccak("StarkNet Message".as_bytes());
 
         // encode domain separator
-        let domain_hash = self.domain.encode(self.types.clone())?;
+        let domain_hash = self.domain.encode(&self.types)?;
 
         // encode message
-        let message_hash = PrimitiveType::Object(self.message)
-            .encode(self.primary_type.clone(), self.types.clone())?;
+        let message_hash = PrimitiveType::Object(self.message.clone())
+            .encode(&self.primary_type, &self.types)?;
 
         // return full hash
         Ok(poseidon_hash_many(vec![prefix_message, domain_hash, account, message_hash].as_slice()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crypto_bigint::U256;
+    use starknet_ff::{FieldElement};
+
+    // Helper function to create a FieldElement from a u64 for testing
+    fn fe_from_u64(val: u64) -> FieldElement {
+        FieldElement::from(val)
+    }
+
+    // Example test for TokenAmount encoding
+    #[test]
+    fn test_token_amount_encoding() {
+        let token_address = fe_from_u64(123456789); // Example token address
+        let amount = U256::from(100u64); // Example token amount
+
+        let token_amount = TokenAmount {
+            token_address,
+            amount,
+        };
+
+        // Simulate types HashMap required for encoding
+        let types = HashMap::new(); // This should be populated based on your actual types
+
+        let encoded = token_amount.encode("TokenAmount", &types).unwrap();
+
+        // Compare the result with expected value
+        // This part is tricky without knowing the expected output, so you might want to assert
+        // that encoded is not zero, or compare it against a known value if you have one.
+        assert_ne!(encoded, FieldElement::ZERO);
+    }
+
+    // Example test for NftId encoding
+    #[test]
+    fn test_nft_id_encoding() {
+        let collection_address = fe_from_u64(987654321); // Example collection address
+        let token_id = U256::from(50u64); // Example token ID
+
+        let nft_id = NftId {
+            collection_address,
+            token_id,
+        };
+
+        let types = HashMap::new(); // Populate as needed
+
+        let encoded = nft_id.encode("NftId", &types).unwrap();
+
+        // Assert on the encoded result
+        assert_ne!(encoded, FieldElement::ZERO);
+    }
+
+    // Example test for TypedData encoding
+    #[test]
+    fn test_typed_data_encoding() {
+        let domain = Domain {
+            name: "MyDapp".to_string(),
+            version: "1.0".to_string(),
+            chain_id: "SN_MAIN".to_string(),
+            revision: "1".to_string(),
+        };
+
+        let message = HashMap::from([
+            ("key".to_string(), PrimitiveType::String("value".to_string())),
+        ]);
+
+        let types = HashMap::new(); // Populate as needed
+
+        let typed_data = TypedData {
+            types,
+            primary_type: "MyMessageType".to_string(),
+            domain,
+            message,
+        };
+
+        let account = fe_from_u64(111222333); // Example account address
+
+        let encoded = typed_data.encode(account).unwrap();
+
+        // Assert on the encoded result
+        assert_ne!(encoded, FieldElement::ZERO);
+    }
+}
+

@@ -17,7 +17,7 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use starknet_crypto::{poseidon_hash_many, Signature};
+use starknet_crypto::{poseidon_hash_many, verify, Signature};
 use starknet_ff::FieldElement;
 use tokio::sync::RwLock;
 use torii_core::sql::Sql;
@@ -30,6 +30,7 @@ use crate::errors::Error;
 mod events;
 
 use crate::server::events::ServerEvent;
+use crate::typed_data::TypedData;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -150,9 +151,9 @@ impl Relay {
                             message_id,
                             message,
                         }) => {
-                            // Deserialize message.
+                            // Deserialize typed data.
                             // We shouldn't panic here
-                            let message = match serde_json::from_slice::<Ty>(&message.data) {
+                            let data = match serde_json::from_slice::<TypedData>(&message.data) {
                                 Ok(message) => message,
                                 Err(e) => {
                                     info!(
@@ -168,38 +169,39 @@ impl Relay {
                                 target: "torii::relay::server",
                                 message_id = %message_id,
                                 peer_id = %peer_id,
-                                data = %message,
+                                data = ?data,
                                 "Received message"
                             );
 
                             // Message has to be a struct
                             // that contains an identity & signature
-                            let (identity, signature) = match validate_message(&message) {
-                                Ok((identity, signature)) => (identity, signature),
-                                Err(e) => {
-                                    info!(
-                                        target: "torii::relay::server",
-                                        error = %e,
-                                        "Failed to validate message"
-                                    );
-                                    continue;
-                                }
-                            };
+                            // let (identity, signature) = match validate_message(&data.message) {
+                            //     Ok((identity, signature)) => (identity, signature),
+                            //     Err(e) => {
+                            //         warn!(
+                            //             target: "torii::relay::server",
+                            //             error = %e,
+                            //             "Failed to validate message"
+                            //         );
+                            //         continue;
+                            //     }
+                            // };
 
-                            if let Err(e) = self
-                                .pool
-                                .write()
-                                .await
-                                // event id is message id
-                                .set_entity(message, &message_id.to_string())
-                                .await
-                            {
-                                info!(
-                                    target: "torii::relay::server",
-                                    error = %e,
-                                    "Failed to set message"
-                                );
-                            }
+                            // // Verify the signature
+                            // if let Err(e) = self
+                            //     .pool
+                            //     .write()
+                            //     .await
+                            //     // event id is message id
+                            //     .set_entity(, &message_id.to_string())
+                            //     .await
+                            // {
+                            //     info!(
+                            //         target: "torii::relay::server",
+                            //         error = %e,
+                            //         "Failed to set message"
+                            //     );
+                            // }
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(
@@ -252,7 +254,7 @@ impl Relay {
     }
 }
 
-// Validates the message model 
+// Validates the message model
 // and returns the identity and signature
 fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), Error> {
     let mut identity: FieldElement = FieldElement::ZERO;
@@ -263,31 +265,48 @@ fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), E
                 match member.name.as_str() {
                     "identity" => {
                         // check if identity is correct primitive type
-                        if let Ty::Primitive(Primitive::ContractAddress(identity)) = &member.value {
-                            identity = &identity.clone();
+                        if let Ty::Primitive(Primitive::ContractAddress(address)) = &member.ty {
+                            if let Some(address) = address {
+                                identity = *address;
+                            } else {
+                                return Err(Error::InvalidMessageError(
+                                    "Identity is not a contract address".to_string(),
+                                ));
+                            }
                         } else {
-                            return Err(Error::InvalidMessageError("Identity is not a contract address".to_string()));
+                            return Err(Error::InvalidMessageError(
+                                "Identity is not a contract address".to_string(),
+                            ));
                         }
                     }
                     "signature" => {
                         // must be a Ty::Tuple and children must be Primitive::Felt252
-                        if let Ty::Tuple(signature) = &member.value {
-                            for component in signature {
-                                if let Ty::Primitive(Primitive::Felt252(sig)) = &member.value {
-                                    signature.push(sig.clone());
+                        if let Ty::Tuple(tuple) = &member.ty {
+                            for component in tuple {
+                                if let Ty::Primitive(Primitive::Felt252(sig)) = &component {
+                                    if let Some(sig) = sig {
+                                        signature.push(*sig);
+                                    } else {
+                                        return Err(Error::InvalidMessageError(
+                                            "Signature component is not a Felt252".to_string(),
+                                        ));
+                                    }
                                 } else {
-                                    return Err(Error::InvalidMessageError("Signature component is not a Felt252".to_string()));
+                                    return Err(Error::InvalidMessageError(
+                                        "Signature component is not a Felt252".to_string(),
+                                    ));
                                 }
                             }
                         } else {
-                            return Err(Error::InvalidMessageError("Signature is not a tuple".to_string()));
+                            return Err(Error::InvalidMessageError(
+                                "Signature is not a tuple".to_string(),
+                            ));
                         }
                     }
                     _ => {}
                 }
             }
 
-            signature = Signature::new(sig_r, sig_s);
             message
         }
         _ => {

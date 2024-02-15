@@ -41,5 +41,5 @@ pub enum Error {
     ReadCertificateError(anyhow::Error),
 
     #[error("Invalid message provided: {0}")]
-    MessageValidationError(String),
+    InvalidMessageError(String),
 }
