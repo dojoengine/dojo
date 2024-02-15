@@ -13,7 +13,7 @@ use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
 use katana_executor::blockifier::utils::{
     block_context_from_envs, get_state_update_from_cached_state,
 };
-use katana_executor::blockifier::{AcceptedTxPair, PendingState, TransactionExecutor};
+use katana_executor::blockifier::{PendingState, TransactionExecutor};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::Receipt;
@@ -43,6 +43,9 @@ type ServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + Sync>>;
 
 type BlockProductionResult = Result<MinedBlockOutcome, BlockProductionError>;
 type BlockProductionFuture = ServiceFuture<BlockProductionResult>;
+type BlockProductionWithTxnsFuture =
+    ServiceFuture<Result<(Vec<TxWithHashAndReceiptPair>, MinedBlockOutcome), BlockProductionError>>;
+pub type TxWithHashAndReceiptPair = (TxWithHash, Receipt);
 
 /// The type which responsible for block production.
 #[must_use = "BlockProducer does nothing unless polled"]
@@ -163,7 +166,7 @@ pub struct IntervalBlockProducer {
     /// The state of the pending block after executing all the transactions within the interval.
     state: Arc<PendingState>,
     /// Listeners notified when a new executed tx is added.
-    tx_execution_listeners: RwLock<Vec<Sender<Vec<(TxWithHash, Receipt)>>>>,
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithHashAndReceiptPair>>>>,
 }
 
 impl IntervalBlockProducer {
@@ -282,7 +285,7 @@ impl IntervalBlockProducer {
         self.notify_listener(results.into_iter().map(|(tx, info)| (tx, info.receipt)).collect());
     }
 
-    pub fn add_listener(&self) -> Receiver<Vec<(TxWithHash, Receipt)>> {
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithHashAndReceiptPair>> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.tx_execution_listeners.write().push(tx);
@@ -290,7 +293,7 @@ impl IntervalBlockProducer {
     }
 
     /// notifies all listeners about the transaction
-    fn notify_listener(&self, txs: Vec<(TxWithHash, Receipt)>) {
+    fn notify_listener(&self, txs: Vec<TxWithHashAndReceiptPair>) {
         let mut listener = self.tx_execution_listeners.write();
         // this is basically a retain but with mut reference
         for n in (0..listener.len()).rev() {
@@ -365,11 +368,11 @@ pub struct InstantBlockProducer {
     /// Holds the backend if no block is being mined
     backend: Arc<Backend>,
     /// Single active future that mines a new block
-    block_mining: Option<BlockProductionFuture>,
+    block_mining: Option<BlockProductionWithTxnsFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
     /// Listeners notified when a new executed tx is added.
-    tx_execution_listeners: RwLock<Vec<Sender<Vec<(TxWithHash, Receipt)>>>>,
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithHashAndReceiptPair>>>>,
 }
 
 impl InstantBlockProducer {
@@ -394,7 +397,7 @@ impl InstantBlockProducer {
     fn do_mine(
         backend: Arc<Backend>,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> Result<(Vec<(TxWithHash, Receipt)>, MinedBlockOutcome), BlockProductionError> {
+    ) -> Result<(Vec<TxWithHashAndReceiptPair>, MinedBlockOutcome), BlockProductionError> {
         trace!(target: "miner", "creating new block");
 
         let provider = backend.blockchain.provider();
@@ -411,7 +414,7 @@ impl InstantBlockProducer {
 
         let txs = transactions.iter().map(TxWithHash::from);
 
-        let tx_receipt_pairs: Vec<(TxWithHash, Receipt)> = TransactionExecutor::new(
+        let tx_receipt_pairs: Vec<TxWithHashAndReceiptPair> = TransactionExecutor::new(
             &state,
             &block_context,
             !backend.config.disable_fee,
@@ -434,7 +437,7 @@ impl InstantBlockProducer {
 
         let outcome = backend.do_mine_block(
             &block_env,
-            tx_receipt_pairs,
+            tx_receipt_pairs.clone(),
             get_state_update_from_cached_state(&state),
         )?;
 
@@ -443,7 +446,7 @@ impl InstantBlockProducer {
         Ok((tx_receipt_pairs, outcome))
     }
 
-    pub fn add_listener(&self) -> Receiver<Vec<(TxWithHash, Receipt)>> {
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithHashAndReceiptPair>> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.tx_execution_listeners.write().push(tx);
@@ -451,7 +454,7 @@ impl InstantBlockProducer {
     }
 
     /// notifies all listeners about the transaction
-    fn notify_listener(&self, txs: Vec<(TxWithHash, Receipt)>) {
+    fn notify_listener(&self, txs: Vec<TxWithHashAndReceiptPair>) {
         let mut listener = self.tx_execution_listeners.write();
         // this is basically a retain but with mut reference
         for n in (0..listener.len()).rev() {
@@ -479,7 +482,7 @@ impl InstantBlockProducer {
 
 impl Stream for InstantBlockProducer {
     // mined block outcome and the new state
-    type Item = (Vec<(TxWithHash, Receipt)>, BlockProductionResult);
+    type Item = Result<MinedBlockOutcome, BlockProductionError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();
@@ -495,10 +498,19 @@ impl Stream for InstantBlockProducer {
 
         // poll the mining future
         if let Some(mut mining) = pin.block_mining.take() {
-            if let Poll::Ready(outcome) = mining.poll_unpin(cx) {
-                return Poll::Ready(Some(outcome));
-            } else {
-                pin.block_mining = Some(mining)
+            match mining.poll_unpin(cx) {
+                Poll::Ready(Ok((txs, outcome))) => {
+                    pin.notify_listener(txs);
+                    return Poll::Ready(Some(Ok(outcome)));
+                }
+
+                Poll::Ready(Err(e)) => {
+                    return Poll::Ready(Some(Err(e)));
+                }
+
+                Poll::Pending => {
+                    pin.block_mining = Some(mining);
+                }
             }
         }
 
