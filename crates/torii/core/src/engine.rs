@@ -136,11 +136,17 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 block_tx.send(from).await.expect("failed to send block number to gRPC server");
             }
 
-            self.process(block_with_txs).await?;
-
-            self.db.set_head(from);
-            self.db.execute().await?;
-            from += 1;
+            match self.process(block_with_txs).await {
+                Ok(_) => {
+                    self.db.set_head(from);
+                    self.db.execute().await?;
+                    from += 1;
+                }
+                Err(e) => {
+                    error!("processing block: {}", e);
+                    continue;
+                }
+            }
         }
 
         Ok(())
@@ -185,8 +191,8 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
         block: &BlockWithTxs,
         tx_idx: usize,
     ) -> Result<()> {
-        let receipt = self.provider.get_transaction_receipt(transaction_hash).await.ok().and_then(
-            |receipt| match receipt {
+        let receipt = match self.provider.get_transaction_receipt(transaction_hash).await {
+            Ok(receipt) => match receipt {
                 MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
                     Some(TransactionReceipt::Invoke(receipt))
                 }
@@ -195,7 +201,11 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 }
                 _ => None,
             },
-        );
+            Err(e) => {
+                error!("getting transaction receipt: {}", e);
+                return Err(e.into());
+            }
+        };
 
         if let Some(receipt) = receipt {
             let events = match &receipt {
@@ -223,12 +233,9 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 Self::process_transaction(self, block, &receipt, &transaction_id, transaction)
                     .await?;
             }
-
-            Ok(())
-        } else {
-            warn!("transaction receipt not found: {}", transaction_hash);
-            Ok(())
         }
+
+        Ok(())
     }
 
     async fn process_block(&mut self, block: &BlockWithTxs) -> Result<()> {
@@ -273,7 +280,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
             TransactionReceipt::L1Handler(l1_handler_receipt) => {
                 l1_handler_receipt.transaction_hash
             }
-            _ => return Err(anyhow::anyhow!("Failed to match transaction receipt")),
+            _ => return Ok(()),
         };
         self.db.store_event(event_id, event, transaction_hash);
         for processor in &self.processors.event {
