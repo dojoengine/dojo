@@ -163,7 +163,7 @@ pub struct IntervalBlockProducer {
     /// The state of the pending block after executing all the transactions within the interval.
     state: Arc<PendingState>,
     /// Listeners notified when a new executed tx is added.
-    tx_execution_listeners: RwLock<Vec<Sender<Vec<AcceptedTxPair>>>>,
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<(TxWithHash, Receipt)>>>>,
 }
 
 impl IntervalBlockProducer {
@@ -279,10 +279,10 @@ impl IntervalBlockProducer {
         };
 
         self.state.executed_txs.write().extend(results.clone());
-        self.notify_listener(results);
+        self.notify_listener(results.into_iter().map(|(tx, info)| (tx, info.receipt)).collect());
     }
 
-    pub fn add_listener(&self) -> Receiver<Vec<AcceptedTxPair>> {
+    pub fn add_listener(&self) -> Receiver<Vec<(TxWithHash, Receipt)>> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.tx_execution_listeners.write().push(tx);
@@ -290,7 +290,7 @@ impl IntervalBlockProducer {
     }
 
     /// notifies all listeners about the transaction
-    fn notify_listener(&self, txs: Vec<AcceptedTxPair>) {
+    fn notify_listener(&self, txs: Vec<(TxWithHash, Receipt)>) {
         let mut listener = self.tx_execution_listeners.write();
         // this is basically a retain but with mut reference
         for n in (0..listener.len()).rev() {
@@ -368,11 +368,18 @@ pub struct InstantBlockProducer {
     block_mining: Option<BlockProductionFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
+    /// Listeners notified when a new executed tx is added.
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<(TxWithHash, Receipt)>>>>,
 }
 
 impl InstantBlockProducer {
     pub fn new(backend: Arc<Backend>) -> Self {
-        Self { backend, block_mining: None, queued: VecDeque::default() }
+        Self {
+            backend,
+            block_mining: None,
+            queued: VecDeque::default(),
+            tx_execution_listeners: RwLock::new(vec![]),
+        }
     }
 
     pub fn force_mine(&mut self) {
@@ -387,7 +394,7 @@ impl InstantBlockProducer {
     fn do_mine(
         backend: Arc<Backend>,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> Result<MinedBlockOutcome, BlockProductionError> {
+    ) -> Result<(Vec<(TxWithHash, Receipt)>, MinedBlockOutcome), BlockProductionError> {
         trace!(target: "miner", "creating new block");
 
         let provider = backend.blockchain.provider();
@@ -417,8 +424,8 @@ impl InstantBlockProducer {
         .zip(txs)
         .filter_map(|(res, tx)| {
             if let Ok(info) = res {
-                let receipt = TxReceiptWithExecInfo::new(&tx, info);
-                Some((tx, receipt.receipt))
+                let info = TxReceiptWithExecInfo::new(&tx, info);
+                Some((tx, info.receipt))
             } else {
                 None
             }
@@ -433,13 +440,46 @@ impl InstantBlockProducer {
 
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
-        Ok(outcome)
+        Ok((tx_receipt_pairs, outcome))
+    }
+
+    pub fn add_listener(&self) -> Receiver<Vec<(TxWithHash, Receipt)>> {
+        const TX_LISTENER_BUFFER_SIZE: usize = 2048;
+        let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
+        self.tx_execution_listeners.write().push(tx);
+        rx
+    }
+
+    /// notifies all listeners about the transaction
+    fn notify_listener(&self, txs: Vec<(TxWithHash, Receipt)>) {
+        let mut listener = self.tx_execution_listeners.write();
+        // this is basically a retain but with mut reference
+        for n in (0..listener.len()).rev() {
+            let mut listener_tx = listener.swap_remove(n);
+            let retain = match listener_tx.try_send(txs.clone()) {
+                Ok(()) => true,
+                Err(e) => {
+                    if e.is_full() {
+                        warn!(
+                            target: "miner",
+                            "failed to send new txs notification because channel is full",
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+            if retain {
+                listener.push(listener_tx)
+            }
+        }
     }
 }
 
 impl Stream for InstantBlockProducer {
     // mined block outcome and the new state
-    type Item = BlockProductionResult;
+    type Item = (Vec<(TxWithHash, Receipt)>, BlockProductionResult);
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();

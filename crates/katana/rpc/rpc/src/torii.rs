@@ -115,7 +115,7 @@ impl ToriiApiServer for ToriiApi {
 
                     // If there are no transactions after the index in the pending block
                     if pending_transactions.is_empty() {
-                        // Wait for a new transaction to be added to the pool
+                        // Wait for a new transaction to be executed
                         let maybe_listener = {
                             let inner = this.sequencer.block_producer().inner.read();
                             if let BlockProducerMode::Interval(block_producer) = &*inner {
@@ -129,12 +129,11 @@ impl ToriiApiServer for ToriiApi {
                             pending_transactions = futures::executor::block_on(rx.next())
                                 .ok_or(ToriiApiError::ChannelDisconnected)?
                                 .into_iter()
-                                .map(|(tx, info)| {
+                                .map(|(tx, receipt)| {
                                     (
                                         tx.clone(),
                                         MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
-                                            tx.hash,
-                                            info.receipt,
+                                            tx.hash, receipt,
                                         )),
                                     )
                                 })
@@ -164,6 +163,40 @@ impl ToriiApiServer for ToriiApi {
                     next_cursor.transaction_index = pending_transactions.len() as u64;
                     transactions.extend(pending_transactions);
                 };
+            } else {
+                // If there are no transactions after the index in the pending block
+                if transactions.is_empty() {
+                    // Wait for a new transaction to be executed
+                    let maybe_listener = {
+                        let inner = this.sequencer.block_producer().inner.read();
+                        if let BlockProducerMode::Instant(block_producer) = &*inner {
+                            Some(block_producer.add_listener())
+                        } else {
+                            None
+                        }
+                    };
+
+                    if let Some(mut rx) = maybe_listener {
+                        println!("2");
+                        transactions = futures::executor::block_on(rx.next())
+                            .ok_or(ToriiApiError::ChannelDisconnected)?
+                            .into_iter()
+                            .map(|(tx, info)| {
+                                (
+                                    tx.clone(),
+                                    MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                        tx.hash,
+                                        info.receipt,
+                                    )),
+                                )
+                            })
+                            .collect::<Vec<_>>();
+                    }
+                }
+
+                // If there is no pending state, we are instant mining.
+                next_cursor.block_number += 1;
+                next_cursor.transaction_index = 0;
             }
 
             Ok(TransactionsPage { transactions, cursor: next_cursor })
