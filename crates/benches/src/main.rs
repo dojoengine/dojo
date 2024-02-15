@@ -1,42 +1,64 @@
-use std::collections::HashMap;
-use std::env;
-use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader};
+use std::{
+    collections::HashMap,
+    env,
+    fs::{self, File, OpenOptions},
+    io::{self, BufRead, BufReader},
+};
 
 const DEFAULT_FILENAME: &str = "crates/benches/gas_usage.txt";
+
 fn main() {
-    let filename = env::args().nth(1).unwrap_or(DEFAULT_FILENAME.into());
+    let filename = env::args().nth(1).unwrap_or_else(|| DEFAULT_FILENAME.into());
 
-    let file = OpenOptions::new().create(false).read(true).open(filename).expect(
-        "Failed to open gas_usage.txt: run tests first with `cargo test bench -- --ignored` and \
-         pass correct filename",
-    );
+    let file = match OpenOptions::new().create(false).read(true).open(&filename) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Failed to open file {}: {}", filename, err);
+            std::process::exit(1);
+        }
+    };
+
     let reader = BufReader::new(file);
-
     let mut map: HashMap<String, Vec<(u64, Option<String>)>> = HashMap::new();
 
-    // Collect info from all runs
-    for line in reader.lines() {
-        let line = line.unwrap();
-        let segments = line.split('\t').take(3).collect::<Vec<_>>();
+    for (line_number, line) in reader.lines().enumerate() {
+        let line = match line {
+            Ok(line) => line,
+            Err(err) => {
+                eprintln!("Error reading line {}: {}", line_number + 1, err);
+                continue;
+            }
+        };
+
+        let segments: Vec<_> = line.split('\t').take(3).collect();
 
         let (name, gas, calldata) = match segments.len() {
             3 => (segments[0], segments[1], Some(String::from(segments[2]))),
             2 => (segments[0], segments[1], None),
-            _ => panic!("Invalid line: {}", line),
+            _ => {
+                eprintln!("Invalid line format: {}", line);
+                continue;
+            }
         };
 
-        let gas = gas.split(' ').nth(1).expect("Invalid gas format");
-        let gas = gas.parse::<u64>().unwrap();
+        let gas = match gas.split_whitespace().nth(1) {
+            Some(gas) => match gas.parse::<u64>() {
+                Ok(gas) => gas,
+                Err(err) => {
+                    eprintln!("Error parsing gas value in line {}: {}", line_number + 1, err);
+                    continue;
+                }
+            },
+            None => {
+                eprintln!("Invalid gas format in line {}", line_number + 1);
+                continue;
+            }
+        };
 
-        if let Some(el) = map.get_mut(name) {
-            el.push((gas, calldata));
-        } else {
-            map.insert(String::from(name), vec![(gas, calldata)]);
-        }
+        map.entry(name.to_string()).or_default().push((gas, calldata));
     }
 
-    let mut pairs = map.into_iter().map(|(name, runs)| (name, runs)).collect::<Vec<_>>();
+    let mut pairs = map.into_iter().collect::<Vec<_>>();
     pairs.sort_by_key(|(key, _)| key.clone());
 
     for (name, mut runs) in pairs {
@@ -55,7 +77,7 @@ fn main() {
         } else {
             String::new()
         };
-        let max_calldata = if let Some(calldata) = calldata[calldata.len() - 1].clone() {
+        let max_calldata = if let Some(calldata) = calldata.last().cloned().flatten() {
             format!(" for {}", calldata)
         } else {
             String::new()
@@ -63,7 +85,10 @@ fn main() {
 
         println!("\tmin: {}{}", gas[0], min_calldata);
         println!("\tmax: {}{}", gas[gas.len() - 1], max_calldata);
-        println!("\taverage: {}", gas.iter().sum::<u64>() / gas.len() as u64);
+        println!(
+            "\taverage: {}",
+            gas.iter().sum::<u64>() / gas.len() as u64
+        );
         println!("\tmedian: {}", gas[gas.len() / 2]);
     }
 }
