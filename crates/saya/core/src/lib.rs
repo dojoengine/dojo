@@ -132,13 +132,14 @@ impl Saya {
         trace!(block_number, "processing block");
 
         let block = self.provider.fetch_block(block_number).await?;
-        let state_updates = self.provider.fetch_state_updates(block_number).await?;
+        let (state_updates, da_state_update) =
+            self.provider.fetch_state_updates(block_number).await?;
 
-        let block = SealedBlockWithStatus {
-            block,
-            // If the block is fetched, it's because it is not yet proven.
-            status: FinalityStatus::AcceptedOnL2,
-        };
+        if let Some(da) = &self.da_client {
+            da.publish_state_diff_felts(&da_state_update).await?;
+        }
+
+        let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
@@ -146,84 +147,13 @@ impl Saya {
             return Ok(());
         }
 
-        // TODO: all this must come from katana if we keep execution here.
-        // But this should not be the case and all the execution info
-        // should be fetched from Katana.
-        let invoke_tx_max_n_steps = 100000000;
-        let validate_max_n_steps = 100000000;
-        let chain_id = ChainId::parse("KATANA").unwrap();
-        let fee_token_addresses = FeeTokenAddresses {
-            eth_fee_token_address: 0_u128.into(),
-            strk_fee_token_address: 0_u128.into(),
-        };
+        let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
-        let block_info = blockchain::block_info_from_header(
-            &block.block.header,
-            invoke_tx_max_n_steps,
-            validate_max_n_steps,
-        );
-
-        let block_context = BlockContext {
-            block_info,
-            chain_info: ChainInfo { fee_token_addresses, chain_id: chain_id.into() },
-        };
-
-        // TODO: fetch this from a new katana endpoints when
-        // katana stored [`TransactionExecutionInfo`].
-        let exec_infos = self.blockchain.execute_transactions(&block.block, &block_context)?;
-
-        let input_path = std::path::PathBuf::from("/tmp/input.json");
-        let snos_input = crate::starknet_os::input::snos_input_from_block(&block.block);
-        snos_input.dump(&input_path)?;
-
-        let snos = SnOsRunner {
-            layout: String::from("starknet_with_keccak"),
-            os_path: String::from("/tmp/os.json"),
-            input_path: input_path.to_string_lossy().into(),
-            block_context: block_context.clone(),
-        };
-
-        let state_reader =
-            StateRefDb::from(self.blockchain.state(&BlockIdOrTag::Number(block_number - 1))?);
-
-        let state = SharedState {
-            cache: CachedState::from(state_reader),
-            block_context,
-            commitment_storage: TrieStorage::default(),
-            contract_storage: TrieStorage::default(),
-            class_storage: TrieStorage::default(),
-        };
-
-        snos.run(state, vec![])?;
+        // Output the current state + the state diff in input file
+        // to be proven.
 
         Ok(())
     }
-
-    // Fetches the state update for the given block and publish it to
-    // the data availability layer (if any).
-    // Returns the [`StateUpdate`].
-    //
-    // # Arguments
-    //
-    // * `block_number` - The block number to get state update for.
-    // async fn fetch_publish_state_update(&self, block_number: u64) -> SayaResult<StateUpdate> {
-    // let state_update =
-    // match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
-    // MaybePendingStateUpdate::Update(su) => {
-    // if let Some(da) = &self.da_client {
-    // let sd_felts =
-    // data_availability::state_diff::state_diff_to_felts(&su.state_diff);
-    //
-    // da.publish_state_diff_felts(&sd_felts).await?;
-    // }
-    //
-    // su
-    // }
-    // MaybePendingStateUpdate::PendingUpdate(_) => unreachable!("Should not be used"),
-    // };
-    //
-    // Ok(state_update)
-    // }
 }
 
 impl From<starknet::providers::ProviderError> for error::Error {

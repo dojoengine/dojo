@@ -319,7 +319,7 @@ pub struct TransactionsPage {
     pub cursor: TransactionsPageCursor,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct TransactionsExecutionsFilter {
     pub block_number: u64,
     pub chunk_size: u64,
