@@ -6,7 +6,7 @@ use katana_primitives::block::BlockHashOrNumber;
 use katana_provider::traits::transaction::TransactionExecutionProvider;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_types::error::saya::SayaApiError;
-use katana_rpc_types::transaction::{TransactionsExecutionsPage, TransactionsPageCursor};
+use katana_rpc_types::transaction::{TransactionsExecutionsFilter, TransactionsExecutionsPage};
 use katana_tasks::TokioTaskSpawner;
 
 #[derive(Clone)]
@@ -33,22 +33,26 @@ impl SayaApi {
 impl SayaApiServer for SayaApi {
     async fn get_transactions_executions(
         &self,
-        cursor: TransactionsPageCursor,
+        filter: TransactionsExecutionsFilter,
     ) -> RpcResult<TransactionsExecutionsPage> {
         self.on_io_blocking_task(move |this| {
-            let mut next_cursor = cursor.clone();
-
             let provider = this.sequencer.backend.blockchain.provider();
 
             let transactions_executions = provider
-                .transactions_executions_by_block(BlockHashOrNumber::Num(cursor.block_number))
+                .transactions_executions_by_block(BlockHashOrNumber::Num(filter.block_number))
                 .map_err(SayaApiError::from)?
-                .unwrap_or_default();
+                .ok_or(SayaApiError::BlockNotFound)?;
 
-            // TODO: limit the maximum number of exec info that are sent back to the client.
-            // If reach the end -> cursor block is +1, the client can choose to stop.
+            let total = transactions_executions.len();
 
-            Ok(TransactionsExecutionsPage { transactions_executions, cursor: next_cursor })
+            let transactions_executions = transactions_executions
+                .into_iter()
+                .take(filter.chunk_size as usize)
+                .collect::<Vec<_>>();
+
+            let remaining = (total - transactions_executions.len()) as u64;
+
+            Ok(TransactionsExecutionsPage { transactions_executions, remaining })
         })
         .await
     }

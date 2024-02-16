@@ -320,7 +320,13 @@ pub struct TransactionsPage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsExecutionsFilter {
+    pub block_number: u64,
+    pub chunk_size: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsExecutionsPage {
     pub transactions_executions: Vec<TxExecInfo>,
-    pub cursor: TransactionsPageCursor,
+    pub remaining: u64,
 }

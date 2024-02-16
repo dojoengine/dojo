@@ -9,10 +9,10 @@ use katana_primitives::block::{BlockIdOrTag, BlockNumber, FinalityStatus, Sealed
 use katana_primitives::chain::ChainId;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
+use serde::{Deserialize, Serialize};
 use snos::state::storage::TrieStorage;
 use snos::state::SharedState;
 use snos::SnOsRunner;
-use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 use url::Url;
 
