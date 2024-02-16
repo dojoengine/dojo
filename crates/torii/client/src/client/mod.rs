@@ -158,7 +158,8 @@ impl Client {
     /// type of entites matching keys and/or models.
     pub async fn entities(&self, query: Query) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveEntitiesResponse { entities } = grpc_client.retrieve_entities(query).await?;
+        let RetrieveEntitiesResponse { entities, total_count: _ } =
+            grpc_client.retrieve_entities(query).await?;
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 

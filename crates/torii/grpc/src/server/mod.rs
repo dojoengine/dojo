@@ -408,8 +408,9 @@ impl DojoWorld {
                 }
             }
         };
+        let total_count = entities.len() as u32;
 
-        Ok(RetrieveEntitiesResponse { entities })
+        Ok(RetrieveEntitiesResponse { entities, total_count })
     }
 
     fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
