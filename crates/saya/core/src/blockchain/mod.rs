@@ -1,23 +1,20 @@
 //! Blockchain fetched from Katana.
 use std::collections::HashMap;
 
-use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
+use blockifier::block_context::{BlockContext, BlockInfo, GasPrices};
 use blockifier::transaction::objects::TransactionExecutionInfo;
 use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
 };
-use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
 use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
 use katana_executor::blockifier::TransactionExecutor;
 use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
-use katana_primitives::chain::ChainId;
-use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxWithHash};
+use katana_primitives::transaction::{ExecutableTxWithHash, Tx};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
@@ -34,7 +31,6 @@ use starknet_api::block::{BlockNumber, BlockTimestamp};
 
 use crate::error::{Error as SayaError, SayaResult};
 
-const LOG_TARGET: &str = "blockchain";
 const MAX_RECURSION_DEPTH: usize = 1000;
 
 pub trait Database:
@@ -78,6 +74,12 @@ impl<T> Database for T where
 /// Represents the whole blockchain fetched from Katana.
 pub struct Blockchain {
     inner: BlockchainProvider<Box<dyn Database>>,
+}
+
+impl Default for Blockchain {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Blockchain {
@@ -153,8 +155,6 @@ impl Blockchain {
         block: &SealedBlock,
         block_context: &BlockContext,
     ) -> SayaResult<Vec<TransactionExecutionInfo>> {
-        let provider = self.provider();
-
         let block_number = block.header.header.number;
         let state_reader = self.state(&BlockIdOrTag::Number(block_number - 1))?;
         let state: CachedStateWrapper<StateRefDb> = CachedStateWrapper::new(state_reader.into());

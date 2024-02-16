@@ -2,17 +2,10 @@
 
 use std::sync::Arc;
 
-use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
-use blockifier::state::cached_state::CachedState;
-use katana_executor::blockifier::state::StateRefDb;
-use katana_primitives::block::{BlockIdOrTag, BlockNumber, FinalityStatus, SealedBlockWithStatus};
-use katana_primitives::chain::ChainId;
+use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlockWithStatus};
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use snos::state::storage::TrieStorage;
-use snos::state::SharedState;
-use snos::SnOsRunner;
 use tracing::{error, trace};
 use url::Url;
 
@@ -147,10 +140,14 @@ impl Saya {
             return Ok(());
         }
 
-        let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
+        let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         // Output the current state + the state diff in input file
         // to be proven.
+
+        // let state = self.blockchain.state(&BlockIdOrTag::Number(block_number - 1))?;
+
+        // -> Get state at block n - 1 for current, and state diff.
 
         Ok(())
     }

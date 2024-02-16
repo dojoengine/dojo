@@ -21,7 +21,7 @@ pub fn snos_internal_from_tx(tx_with_hash: &TxWithHash) -> InternalTransaction {
             internal.entry_point_type = Some(EntryPointType::External.to_string());
             internal.version = Some(felt::from_ff(&tx.version));
             internal.nonce = Some(felt::from_ff(&tx.nonce));
-            internal.sender_address = Some(felt::from_ff(&(*tx.sender_address)));
+            internal.sender_address = Some(felt::from_ff(&tx.sender_address));
             internal.signature = Some(felt::from_ff_vec(&tx.signature));
             internal.calldata = Some(felt::from_ff_vec(&tx.calldata));
             // Entrypoint selector can be retrieved from Call?
@@ -30,14 +30,14 @@ pub fn snos_internal_from_tx(tx_with_hash: &TxWithHash) -> InternalTransaction {
             DeclareTx::V1(tx) => {
                 internal.r#type = TransactionType::Declare.to_string();
                 internal.nonce = Some(felt::from_ff(&tx.nonce));
-                internal.sender_address = Some(felt::from_ff(&(*tx.sender_address)));
+                internal.sender_address = Some(felt::from_ff(&tx.sender_address));
                 internal.signature = Some(felt::from_ff_vec(&tx.signature));
                 internal.class_hash = Some(felt::from_ff(&tx.class_hash));
             }
             DeclareTx::V2(tx) => {
                 internal.r#type = TransactionType::Declare.to_string();
                 internal.nonce = Some(felt::from_ff(&tx.nonce));
-                internal.sender_address = Some(felt::from_ff(&(*tx.sender_address)));
+                internal.sender_address = Some(felt::from_ff(&tx.sender_address));
                 internal.signature = Some(felt::from_ff_vec(&tx.signature));
                 internal.class_hash = Some(felt::from_ff(&tx.class_hash));
             }
@@ -46,25 +46,25 @@ pub fn snos_internal_from_tx(tx_with_hash: &TxWithHash) -> InternalTransaction {
             internal.r#type = TransactionType::L1Handler.to_string();
             internal.entry_point_type = Some(EntryPointType::L1Handler.to_string());
             internal.nonce = Some(felt::from_ff(&tx.nonce));
-            internal.contract_address = Some(felt::from_ff(&(*tx.contract_address)));
+            internal.contract_address = Some(felt::from_ff(&tx.contract_address));
             internal.entry_point_selector = Some(felt::from_ff(&tx.entry_point_selector));
             internal.calldata = Some(felt::from_ff_vec(&tx.calldata));
         }
         Tx::DeployAccount(tx) => {
             internal.r#type = TransactionType::DeployAccount.to_string();
             internal.nonce = Some(felt::from_ff(&tx.nonce));
-            internal.contract_address = Some(felt::from_ff(&(*tx.contract_address)));
+            internal.contract_address = Some(felt::from_ff(&tx.contract_address));
             internal.contract_address_salt = Some(felt::from_ff(&tx.contract_address_salt));
             internal.class_hash = Some(felt::from_ff(&tx.class_hash));
             internal.constructor_calldata = Some(felt::from_ff_vec(&tx.constructor_calldata));
             internal.signature = Some(felt::from_ff_vec(&tx.signature));
         }
-        _ => {}
     };
 
     internal
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 enum TransactionType {
     Declare,
@@ -76,7 +76,7 @@ enum TransactionType {
 }
 
 impl fmt::Display for TransactionType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match *self {
             TransactionType::Declare => "DECLARE",
             TransactionType::Deploy => "DEPLOY",
@@ -89,6 +89,7 @@ impl fmt::Display for TransactionType {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 enum EntryPointType {
     External,
@@ -97,7 +98,7 @@ enum EntryPointType {
 }
 
 impl fmt::Display for EntryPointType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match *self {
             EntryPointType::External => "EXTERNAL",
             EntryPointType::L1Handler => "L1_HANDLER",
