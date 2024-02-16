@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use dojo_types::schema::Ty;
 use serde::{Deserialize, Serialize};
@@ -41,7 +41,7 @@ impl TokenAmount {
 
         hashes.push(self.token_address);
 
-        let amount_hash = self.amount.encode("amount", types)?;
+        let amount_hash = self.amount.encode("u256", types)?;
         hashes.push(amount_hash);
 
         Ok(poseidon_hash_many(hashes.as_slice()))
@@ -67,7 +67,7 @@ impl NftId {
         hashes.push(starknet_keccak(type_hash.as_bytes()));
 
         hashes.push(self.collection_address);
-        let token_id = self.token_id.encode("token_id", types)?;
+        let token_id = self.token_id.encode("u256", types)?;
 
         hashes.push(token_id);
 
@@ -111,10 +111,9 @@ pub enum Field {
 pub enum PrimitiveType {
     Object(HashMap<String, PrimitiveType>),
     Array(Vec<PrimitiveType>),
-    FieldElement(FieldElement),
     Bool(bool),
     // comprehensive representation of
-    // String, ShortString and Selector
+    // String, ShortString, Selector and Felt
     String(String),
     USize(usize),
     U128(u128),
@@ -125,7 +124,6 @@ pub enum PrimitiveType {
 }
 
 fn get_fields(name: &str, types: &HashMap<String, Vec<Field>>) -> Vec<Field> {
-    println!("{:?}", name);
     match name {
         "TokenAmount" => vec![
             Field::SimpleType(SimpleField {
@@ -148,14 +146,8 @@ fn get_fields(name: &str, types: &HashMap<String, Vec<Field>>) -> Vec<Field> {
             }),
         ],
         "u256" => vec![
-            Field::SimpleType(SimpleField {
-                name: "low".to_string(),
-                r#type: "u128".to_string(),
-            }),
-            Field::SimpleType(SimpleField {
-                name: "high".to_string(),
-                r#type: "u128".to_string(),
-            }),
+            Field::SimpleType(SimpleField { name: "low".to_string(), r#type: "u128".to_string() }),
+            Field::SimpleType(SimpleField { name: "high".to_string(), r#type: "u128".to_string() }),
         ],
         _ => types[name].clone(),
     }
@@ -171,6 +163,8 @@ fn get_dependencies(
     }
 
     dependencies.push(name.to_string());
+
+    println!("{:?}", name);
 
     for field in &get_fields(name, types) {
         let mut field_type = match field {
@@ -202,7 +196,6 @@ pub fn encode_type(name: &str, types: &HashMap<String, Vec<Field>>) -> String {
         type_hash += "(";
 
         let fields = get_fields(&dep, types);
-        println!("{:?}", fields);
         for (idx, field) in fields.iter().enumerate() {
             match field {
                 Field::SimpleType(simple_field) => {
@@ -266,20 +259,32 @@ impl PrimitiveType {
         Err(Error::InvalidMessageError(format!("Field {} not found in types", name)))
     }
 
+    fn get_hex(&self, value: &str) -> Result<FieldElement, Error> {
+        if let Ok(felt) = FieldElement::from_str(value) {
+            Ok(felt)
+        } else {
+            // assume its a short string and encode
+            cairo_short_string_to_felt(value).map_err(|_| {
+                Error::InvalidMessageError("Invalid short string".to_string())
+            })
+        }
+    }
+
     pub fn encode(
         &self,
-        name: &str,
+        r#type: &str,
         types: &HashMap<String, Vec<Field>>,
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
                 let mut hashes = Vec::new();
 
-                let type_hash = encode_type(name, types);
+                let type_hash = encode_type(r#type, types);
                 hashes.push(starknet_keccak(type_hash.as_bytes()));
 
                 for (field_name, value) in obj {
-                    let field_hash = value.encode(field_name, types)?;
+                    let field_hash =
+                        value.encode(&self.get_value_type(field_name, types)?, types)?;
                     hashes.push(field_hash);
                 }
 
@@ -288,50 +293,52 @@ impl PrimitiveType {
             PrimitiveType::Array(array) => Ok(poseidon_hash_many(
                 array
                     .iter()
-                    .map(|x| x.encode(name, types))
+                    .map(|x| x.encode(r#type.trim_end_matches("*"), types))
                     .collect::<Result<Vec<_>, _>>()?
                     .as_slice(),
             )),
-            PrimitiveType::FieldElement(field_element) => Ok(*field_element),
             PrimitiveType::Bool(boolean) => {
-                if *boolean {
-                    Ok(FieldElement::from(1 as u32))
+                let v = if *boolean {
+                    FieldElement::from(1 as u32)
                 } else {
-                    Ok(FieldElement::from(0 as u32))
-                }
+                    FieldElement::from(0 as u32)
+                };
+                Ok(poseidon_hash_many(vec![starknet_keccak("bool".as_bytes()), v].as_slice()))
             }
-            PrimitiveType::String(string) => {
-                // get value type
-                let value_type = self.get_value_type(name, types)?;
+            PrimitiveType::String(string) => match r#type {
+                "shortstring" => Ok(poseidon_hash_many(
+                    vec![
+                        starknet_keccak("shortstring".as_bytes()),
+                        cairo_short_string_to_felt(string).map_err(|_| {
+                            Error::InvalidMessageError("Invalid short string".to_string())
+                        })?,
+                    ]
+                    .as_slice(),
+                )),
+                "string" => {
+                    let mut hashes = Vec::new();
 
-                match value_type.as_str() {
-                    "shortstring" => cairo_short_string_to_felt(string).map_err(|_| {
-                        Error::InvalidMessageError("Invalid short string".to_string())
-                    }),
-                    "string" => {
-                        let mut hashes = Vec::new();
+                    let type_hash = encode_type(r#type, types);
+                    hashes.push(starknet_keccak(type_hash.as_bytes()));
 
-                        let type_hash = encode_type(name, types);
-                        hashes.push(starknet_keccak(type_hash.as_bytes()));
+                    let string_hash = starknet_keccak(string.as_bytes());
+                    hashes.push(string_hash);
 
-                        let string_hash = starknet_keccak(string.as_bytes());
-                        hashes.push(string_hash);
-
-                        Ok(poseidon_hash_many(hashes.as_slice()))
-                    }
-                    "selector" => Ok(starknet_keccak(string.as_bytes())),
-                    _ => Err(Error::InvalidMessageError(format!(
-                        "Invalid type {} for string",
-                        value_type
-                    ))),
+                    Ok(poseidon_hash_many(hashes.as_slice()))
                 }
-            }
-            PrimitiveType::USize(usize) => Ok(FieldElement::from(*usize)),
-            PrimitiveType::U128(u128) => Ok(FieldElement::from(*u128)),
+                "selector" => Ok(starknet_keccak(string.as_bytes())),
+                "felt" => self.get_hex(string),
+                "ContractAddress" => self.get_hex(string),
+                "ClassHash" => self.get_hex(string),
+                "timestamp" => self.get_hex(string),
+                _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
+            },
+            PrimitiveType::USize(usize) => Ok(FieldElement::from(*usize as u128)),
+            PrimitiveType::U128(u128) => Ok(FieldElement::from(*u128 as u128)),
             PrimitiveType::I128(i128) => Ok(FieldElement::from(*i128 as u128)),
-            PrimitiveType::U256(u256) => u256.encode(name, types),
-            PrimitiveType::NftId(nft_id) => nft_id.encode(name, types),
-            PrimitiveType::TokenAmount(token_amount) => token_amount.encode(name, types),
+            PrimitiveType::U256(u256) => u256.encode(r#type, types),
+            PrimitiveType::NftId(nft_id) => nft_id.encode(r#type, types),
+            PrimitiveType::TokenAmount(token_amount) => token_amount.encode(r#type, types),
         }
     }
 }
@@ -351,7 +358,7 @@ impl Domain {
 
         object.insert("name".to_string(), PrimitiveType::String(self.name.clone()));
         object.insert("version".to_string(), PrimitiveType::String(self.version.clone()));
-        object.insert("chain_id".to_string(), PrimitiveType::String(self.chain_id.clone()));
+        object.insert("chainId".to_string(), PrimitiveType::String(self.chain_id.clone()));
         if let Some(revision) = &self.revision {
             object.insert("revision".to_string(), PrimitiveType::String(revision.clone()));
         }
@@ -405,7 +412,7 @@ mod tests {
     #[test]
     fn test_token_amount_encoding() {
         let token_address = fe_from_u64(123456789); // Example token address
-        let amount  = U256 { low: 123, high: 456 }; // Example amount
+        let amount = U256 { low: 123, high: 456 }; // Example amount
 
         let token_amount = TokenAmount { token_address, amount };
 
@@ -456,8 +463,7 @@ mod tests {
         println!("{:?}", typed_data);
 
         let path = "mocks/example_presetTypes.json";
-        let file = std::fs::File::open
-        (path).unwrap();
+        let file = std::fs::File::open(path).unwrap();
         let reader = std::io::BufReader::new(file);
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
@@ -467,6 +473,16 @@ mod tests {
 
     #[test]
     fn test_type_encode() {
+        let path = "mocks/example_baseTypes.json";
+        let file = std::fs::File::open(path).unwrap();
+        let reader = std::io::BufReader::new(file);
+
+        let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
+
+        let encoded = encode_type(&typed_data.primary_type, &typed_data.types);
+
+        assert_eq!(encoded, "\"Example\"(\"n0\":\"felt\",\"n1\":\"bool\",\"n2\":\"string\",\"n3\":\"selector\",\"n4\":\"u128\",\"n5\":\"ContractAddress\",\"n6\":\"ClassHash\",\"n7\":\"timestamp\",\"n8\":\"shortstring\")");
+
         let path = "mocks/mail_StructArray.json";
         let file = std::fs::File::open(path).unwrap();
         let reader = std::io::BufReader::new(file);
@@ -496,5 +512,60 @@ mod tests {
         let encoded = encode_type(&typed_data.primary_type, &typed_data.types);
 
         assert_eq!(encoded, "\"Example\"(\"n0\":\"TokenAmount\",\"n1\":\"NftId\")");
+    }
+
+    #[test]
+    fn test_selector_encode() {
+        let selector = PrimitiveType::String("transfer".to_string());
+        let selector_hash =
+            PrimitiveType::String(starknet_keccak("transfer".as_bytes()).to_string());
+
+        let types = HashMap::new();
+
+        let encoded_selector = selector.encode("selector", &types).unwrap();
+        let raw_encoded_selector = selector_hash.encode("felt", &types).unwrap();
+
+        assert_eq!(encoded_selector, raw_encoded_selector);
+        assert_eq!(encoded_selector, starknet_keccak("transfer".as_bytes()));
+    }
+
+    #[test]
+    fn test_domain_hash() {
+        let path = "mocks/example_baseTypes.json";
+        let file = std::fs::File::open(path).unwrap();
+        let reader = std::io::BufReader::new(file);
+
+        let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
+
+        let domain_hash = typed_data.domain.encode(&typed_data.types).unwrap();
+
+        assert_eq!(
+            domain_hash,
+            FieldElement::from_hex_be(
+                "0x555f72e550b308e50c1a4f8611483a174026c982a9893a05c185eeb85399657"
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_message_hash() {
+        let path = "mocks/mail_StructArray.json";
+        let file = std::fs::File::open(path).unwrap();
+        let reader = std::io::BufReader::new(file);
+
+        let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
+
+        let message_hash = PrimitiveType::Object(typed_data.message.clone())
+            .encode(&typed_data.primary_type, &typed_data.types)
+            .unwrap();
+
+        assert_eq!(
+            message_hash,
+            FieldElement::from_hex_be(
+                "0x5914ed2764eca2e6a41eb037feefd3d2e33d9af6225a9e7fe31ac943ff712c"
+            )
+            .unwrap()
+        );
     }
 }
