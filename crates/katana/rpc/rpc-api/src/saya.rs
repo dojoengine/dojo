@@ -8,9 +8,6 @@ pub trait SayaApi {
     /// Fetches the transaction execution info for all the transactions in the
     /// given block.
     ///
-    /// The returned [`TransactionsPageCursor`] will always have the same block number
-    /// as the cursor given to the function. Only the transaction index may change.
-    ///
     /// # Arguments
     ///
     /// * `block_number` - The block number to get executions from.
