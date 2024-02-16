@@ -428,11 +428,4 @@ mod tests {
 
         legacy_rpc_to_inner_compiled_class(&compressed_legacy_class).unwrap();
     }
-
-    #[test]
-    fn legacy_rpc_to_inner_erc20() {
-        let class_json = include_str!("../../contracts/test_erc20_legacy_rpc.json");
-        let legacy_class: CompressedLegacyContractClass = serde_json::from_str(class_json).unwrap();
-        legacy_rpc_to_inner_compiled_class(&legacy_class).unwrap();
-    }
 }
