@@ -122,7 +122,7 @@ fn get_dependencies(
             Field::SimpleType(simple_field) => simple_field.r#type.clone(),
             Field::ParentType(parent_field) => parent_field.contains.clone(),
         };
-        
+
         field_type = field_type.trim_end_matches("*").to_string();
 
         if types.contains_key(&field_type) && !dependencies.contains(&field_type) {
@@ -185,10 +185,22 @@ pub fn encode_type(name: &str, types: &HashMap<String, Vec<Field>>) -> String {
         for (idx, field) in fields.iter().enumerate() {
             match field {
                 Field::SimpleType(simple_field) => {
-                    type_hash += &format!("\"{}\":\"{}\"", simple_field.name, simple_field.r#type);
+                    // if ( at start and ) at end
+                    if simple_field.r#type.starts_with('(') && simple_field.r#type.ends_with(')') {
+                        let inner_types = &simple_field.r#type[1..simple_field.r#type.len() - 1]
+                            .split(',')
+                            .map(|t| if t != "" { format!("\"{}\"", t) } else { t.to_string() })
+                            .collect::<Vec<String>>()
+                            .join(",");
+                        type_hash += &format!("\"{}\":({})", simple_field.name, inner_types);
+                    } else {
+                        type_hash +=
+                            &format!("\"{}\":\"{}\"", simple_field.name, simple_field.r#type);
+                    }
                 }
                 Field::ParentType(parent_field) => {
-                    return encode_type(&parent_field.contains, types);
+                    type_hash +=
+                        &format!("\"{}\":\"{}\"", parent_field.name, parent_field.contains);
                 }
             }
 
@@ -430,10 +442,9 @@ mod tests {
         let encoded = encode_type(&typed_data.primary_type, &typed_data.types);
 
         assert_eq!(encoded, "\"Mail\"(\"from\":\"Person\",\"to\":\"Person\",\"posts_len\":\"felt\",\"posts\":\"Post*\")\"Person\"(\"name\":\"felt\",\"wallet\":\"felt\")\"Post\"(\"title\":\"felt\",\"content\":\"felt\")");
-    
+
         let path = "mocks/example_enum.json";
-        let file = std::fs::File::open
-        (path).unwrap();
+        let file = std::fs::File::open(path).unwrap();
         let reader = std::io::BufReader::new(file);
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
