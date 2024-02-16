@@ -1,4 +1,5 @@
 pub mod config;
+pub mod dev;
 pub mod katana;
 pub mod starknet;
 
@@ -34,6 +35,9 @@ pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Res
                 methods.merge(StarknetApi::new(sequencer.clone()).into_rpc())?;
             }
             ApiKind::Katana => {
+                methods.merge(KatanaApi::new(sequencer.clone()).into_rpc())?;
+            }
+            ApiKind::Dev => {
                 methods.merge(KatanaApi::new(sequencer.clone()).into_rpc())?;
             }
         }

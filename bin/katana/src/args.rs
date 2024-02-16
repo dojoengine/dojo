@@ -215,6 +215,8 @@ impl KatanaArgs {
         let mut apis = vec![ApiKind::Starknet];
         // only enable `katana` API in dev mode
         if self.dev {
+            apis.push(ApiKind::Dev);
+        } else {
             apis.push(ApiKind::Katana);
         }
 
