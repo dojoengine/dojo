@@ -6,26 +6,26 @@ use katana_primitives::FieldElement;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::error::katana::KatanaApiError;
 
-pub struct DevApiImpl {
+pub struct DevApi {
     sequencer: Arc<KatanaSequencer>,
 }
 
-impl DevApiImpl {
+impl DevApi {
     pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
         Self { sequencer }
     }
 }
 
 #[async_trait]
-impl DevApiServer for DevApiImpl {
+impl DevApiServer for DevApi {
     async fn generate_block(&self) -> Result<(), Error> {
         self.sequencer.block_producer().force_mine();
         Ok(())
     }
 
-    async fn next_block_timestamp(&self) -> Result<u64, Error> {
+    async fn next_block_timestamp(&self) -> Result<(), Error> {
         // Ok(self.sequencer.backend().env.read().block.block_timestamp.0)
-        unimplemented!()
+        Ok(())
     }
 
     async fn set_next_block_timestamp(&self, timestamp: u64) -> Result<(), Error> {

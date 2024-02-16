@@ -9,7 +9,7 @@ pub trait DevApi {
     async fn generate_block(&self) -> RpcResult<()>;
 
     #[method(name = "nextBlockTimestamp")]
-    async fn next_block_timestamp(&self) -> RpcResult<u64>;
+    async fn next_block_timestamp(&self) -> RpcResult<()>;
 
     #[method(name = "setNextBlockTimestamp")]
     async fn set_next_block_timestamp(&self, timestamp: u64) -> RpcResult<()>;
