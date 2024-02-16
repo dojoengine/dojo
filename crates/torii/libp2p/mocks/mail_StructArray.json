@@ -1,6 +1,6 @@
 {
   "types": {
-    "StarkNetDomain": [
+    "StarknetDomain": [
       { "name": "name", "type": "shortstring" },
       { "name": "version", "type": "shortstring" },
       { "name": "chainId", "type": "shortstring" }

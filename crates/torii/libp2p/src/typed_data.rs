@@ -33,15 +33,18 @@ impl TokenAmount {
         &self,
         name: &str,
         types: &HashMap<String, Vec<Field>>,
+        encode_type_hash: bool,
     ) -> Result<FieldElement, Error> {
         let mut hashes = Vec::new();
 
-        let type_hash = encode_type(name, types);
-        hashes.push(starknet_keccak(type_hash.as_bytes()));
+        if encode_type_hash {
+            let type_hash = encode_type(name, types);
+            hashes.push(starknet_keccak(type_hash.as_bytes()));
+        }
 
         hashes.push(self.token_address);
 
-        let amount_hash = self.amount.encode("u256", types)?;
+        let amount_hash = self.amount.encode("u256", types, false)?;
         hashes.push(amount_hash);
 
         Ok(poseidon_hash_many(hashes.as_slice()))
@@ -60,14 +63,17 @@ impl NftId {
         &self,
         name: &str,
         types: &HashMap<String, Vec<Field>>,
+        encode_type_hash: bool,
     ) -> Result<FieldElement, Error> {
         let mut hashes = Vec::new();
 
-        let type_hash = encode_type(name, types);
-        hashes.push(starknet_keccak(type_hash.as_bytes()));
+        if encode_type_hash {
+            let type_hash = encode_type(name, types);
+            hashes.push(starknet_keccak(type_hash.as_bytes()));
+        }
 
         hashes.push(self.collection_address);
-        let token_id = self.token_id.encode("u256", types)?;
+        let token_id = self.token_id.encode("u256", types, false)?;
 
         hashes.push(token_id);
 
@@ -86,11 +92,14 @@ impl U256 {
         &self,
         name: &str,
         types: &HashMap<String, Vec<Field>>,
+        encode_type_hash: bool,
     ) -> Result<FieldElement, Error> {
-        let mut hashes = Vec::new();
+        let mut hashes: Vec<FieldElement> = Vec::new();
 
-        let type_hash = encode_type(name, types);
-        hashes.push(starknet_keccak(type_hash.as_bytes()));
+        if encode_type_hash {
+            let type_hash = encode_type(name, types);
+            hashes.push(starknet_keccak(type_hash.as_bytes()));
+        }
 
         hashes.push(FieldElement::from(self.low));
         hashes.push(FieldElement::from(self.high));
@@ -163,8 +172,6 @@ fn get_dependencies(
     }
 
     dependencies.push(name.to_string());
-
-    println!("{:?}", name);
 
     for field in &get_fields(name, types) {
         let mut field_type = match field {
@@ -264,9 +271,8 @@ impl PrimitiveType {
             Ok(felt)
         } else {
             // assume its a short string and encode
-            cairo_short_string_to_felt(value).map_err(|_| {
-                Error::InvalidMessageError("Invalid short string".to_string())
-            })
+            cairo_short_string_to_felt(value)
+                .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string()))
         }
     }
 
@@ -274,17 +280,21 @@ impl PrimitiveType {
         &self,
         r#type: &str,
         types: &HashMap<String, Vec<Field>>,
+        encode_type_hash: bool,
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
                 let mut hashes = Vec::new();
 
-                let type_hash = encode_type(r#type, types);
-                hashes.push(starknet_keccak(type_hash.as_bytes()));
+                if encode_type_hash {
+                    let type_hash = encode_type(r#type, types);
+                    println!("type_hash: {}", type_hash);
+                    hashes.push(starknet_keccak(type_hash.as_bytes()));
+                }
 
                 for (field_name, value) in obj {
                     let field_hash =
-                        value.encode(&self.get_value_type(field_name, types)?, types)?;
+                        value.encode(&self.get_value_type(field_name, types)?, types, false)?;
                     hashes.push(field_hash);
                 }
 
@@ -293,7 +303,7 @@ impl PrimitiveType {
             PrimitiveType::Array(array) => Ok(poseidon_hash_many(
                 array
                     .iter()
-                    .map(|x| x.encode(r#type.trim_end_matches("*"), types))
+                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, encode_type_hash))
                     .collect::<Result<Vec<_>, _>>()?
                     .as_slice(),
             )),
@@ -306,15 +316,8 @@ impl PrimitiveType {
                 Ok(poseidon_hash_many(vec![starknet_keccak("bool".as_bytes()), v].as_slice()))
             }
             PrimitiveType::String(string) => match r#type {
-                "shortstring" => Ok(poseidon_hash_many(
-                    vec![
-                        starknet_keccak("shortstring".as_bytes()),
-                        cairo_short_string_to_felt(string).map_err(|_| {
-                            Error::InvalidMessageError("Invalid short string".to_string())
-                        })?,
-                    ]
-                    .as_slice(),
-                )),
+                "shortstring" => cairo_short_string_to_felt(string)
+                    .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string())),
                 "string" => {
                     let mut hashes = Vec::new();
 
@@ -336,9 +339,9 @@ impl PrimitiveType {
             PrimitiveType::USize(usize) => Ok(FieldElement::from(*usize as u128)),
             PrimitiveType::U128(u128) => Ok(FieldElement::from(*u128 as u128)),
             PrimitiveType::I128(i128) => Ok(FieldElement::from(*i128 as u128)),
-            PrimitiveType::U256(u256) => u256.encode(r#type, types),
-            PrimitiveType::NftId(nft_id) => nft_id.encode(r#type, types),
-            PrimitiveType::TokenAmount(token_amount) => token_amount.encode(r#type, types),
+            PrimitiveType::U256(u256) => u256.encode(r#type, types, encode_type_hash),
+            PrimitiveType::NftId(nft_id) => nft_id.encode(r#type, types, encode_type_hash),
+            PrimitiveType::TokenAmount(token_amount) => token_amount.encode(r#type, types, encode_type_hash),
         }
     }
 }
@@ -363,7 +366,7 @@ impl Domain {
             object.insert("revision".to_string(), PrimitiveType::String(revision.clone()));
         }
 
-        PrimitiveType::Object(object).encode("StarknetDomain", types)
+        PrimitiveType::Object(object).encode("StarknetDomain", types, true)
     }
 }
 
@@ -384,14 +387,14 @@ impl TypedData {
             ));
         }
 
-        let prefix_message = starknet_keccak("StarkNet Message".as_bytes());
+        let prefix_message = cairo_short_string_to_felt("StarkNet Message").unwrap();
 
         // encode domain separator
         let domain_hash = self.domain.encode(&self.types)?;
 
         // encode message
         let message_hash =
-            PrimitiveType::Object(self.message.clone()).encode(&self.primary_type, &self.types)?;
+            PrimitiveType::Object(self.message.clone()).encode(&self.primary_type, &self.types, true)?;
 
         // return full hash
         Ok(poseidon_hash_many(vec![prefix_message, domain_hash, account, message_hash].as_slice()))
@@ -419,7 +422,7 @@ mod tests {
         // Simulate types HashMap required for encoding
         let types = HashMap::new(); // This should be populated based on your actual types
 
-        let encoded = token_amount.encode("TokenAmount", &types).unwrap();
+        let encoded = token_amount.encode("TokenAmount", &types, true).unwrap();
 
         // Compare the result with expected value
         // This part is tricky without knowing the expected output, so you might want to assert
@@ -437,7 +440,7 @@ mod tests {
 
         let types = HashMap::new(); // Populate as needed
 
-        let encoded = nft_id.encode("NftId", &types).unwrap();
+        let encoded = nft_id.encode("NftId", &types, true).unwrap();
 
         // Assert on the encoded result
         assert_ne!(encoded, FieldElement::ZERO);
@@ -522,8 +525,8 @@ mod tests {
 
         let types = HashMap::new();
 
-        let encoded_selector = selector.encode("selector", &types).unwrap();
-        let raw_encoded_selector = selector_hash.encode("felt", &types).unwrap();
+        let encoded_selector = selector.encode("selector", &types, true).unwrap();
+        let raw_encoded_selector = selector_hash.encode("felt", &types, true).unwrap();
 
         assert_eq!(encoded_selector, raw_encoded_selector);
         assert_eq!(encoded_selector, starknet_keccak("transfer".as_bytes()));
@@ -556,8 +559,10 @@ mod tests {
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
 
-        let message_hash = PrimitiveType::Object(typed_data.message.clone())
-            .encode(&typed_data.primary_type, &typed_data.types)
+        let message_hash = typed_data
+            .encode(
+                FieldElement::from_hex_be("0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826").unwrap(),
+            )
             .unwrap();
 
         assert_eq!(
