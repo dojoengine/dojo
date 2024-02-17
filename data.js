@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708147457546,
+  "lastUpdate": 1708201674053,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1315,6 +1315,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1021793,
             "range": "± 38239",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9ea17b47f1dba8f6085cac12191fea64d5777604",
+          "message": "fix: ensure DevApi is also present in test sequencer (#1549)",
+          "timestamp": "2024-02-17T14:18:02-06:00",
+          "tree_id": "35c819bc533bbde9dfd985465ffa49ee5247602d",
+          "url": "https://github.com/dojoengine/dojo/commit/9ea17b47f1dba8f6085cac12191fea64d5777604"
+        },
+        "date": 1708201673498,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1038016,
+            "range": "± 34567",
             "unit": "ns/iter"
           }
         ]
