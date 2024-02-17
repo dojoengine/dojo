@@ -130,11 +130,13 @@ async fn main() -> anyhow::Result<()> {
         .connect_with(options)
         .await?;
 
-    // Disable auto-vacuum
-    sqlx::query("PRAGMA auto_vacuum = NONE;").execute(&pool).await?;
+    if args.database == ":memory:" {
+        // Disable auto-vacuum
+        sqlx::query("PRAGMA auto_vacuum = NONE;").execute(&pool).await?;
 
-    // Switch DELETE journal mode
-    sqlx::query("PRAGMA journal_mode=DELETE;").execute(&pool).await?;
+        // Switch DELETE journal mode
+        sqlx::query("PRAGMA journal_mode=DELETE;").execute(&pool).await?;
+    }
 
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
