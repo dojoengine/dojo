@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707788901496,
+  "lastUpdate": 1708147457546,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1285,6 +1285,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 971316,
             "range": "± 40348",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "74396818+makluganteng@users.noreply.github.com",
+            "name": "V.O.T",
+            "username": "makluganteng"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ca3b018048ddbeaa3a78c8287143ba526e0f89a0",
+          "message": "refactor(katana-rpc): isolate dev JSON RPC API from `katana` namespace (#1544)\n\n* feat: isolate dev JSON RPC API from katana impl\r\n\r\n* feat: fix the changes\r\n\r\n* feat: remove the duplicate endpoint in katana",
+          "timestamp": "2024-02-17T13:14:47+08:00",
+          "tree_id": "a5d6dd114d69ce6dfcafbeda37fd7ee231c79cd2",
+          "url": "https://github.com/dojoengine/dojo/commit/ca3b018048ddbeaa3a78c8287143ba526e0f89a0"
+        },
+        "date": 1708147456982,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1021793,
+            "range": "± 38239",
             "unit": "ns/iter"
           }
         ]
