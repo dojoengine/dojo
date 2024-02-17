@@ -219,10 +219,7 @@ pub trait Deployable: Declarable + Sync {
         let declare = match self.declare(account, txn_config).await {
             Ok(res) => Some(res),
             Err(MigrationError::ClassAlreadyDeclared) => None,
-            Err(e) => {
-                println!("{:?}", e);
-                return Err(e);
-            }
+            Err(e) => return Err(e),
         };
 
         let calldata = [
