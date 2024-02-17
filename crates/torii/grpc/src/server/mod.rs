@@ -336,7 +336,7 @@ impl DojoWorld {
             .iter()
             .map(|row| Self::map_row_to_entity(row, &schemas))
             .collect::<Result<Vec<_>, Error>>()?;
-        // Since there is not limit and offset, the total_count is the same as the number of entities
+        // Since there is not limit and offset, total_count is same as number of entities
         let total_count = entities_collection.len() as u32;
         Ok((entities_collection, total_count))
     }
