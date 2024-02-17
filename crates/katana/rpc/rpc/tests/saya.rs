@@ -5,7 +5,7 @@ use std::time::Duration;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_core::sequencer::SequencerConfig;
-use katana_rpc_api::katana::KatanaApiClient;
+use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_types::transaction::{
