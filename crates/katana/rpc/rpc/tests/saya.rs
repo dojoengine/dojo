@@ -30,6 +30,30 @@ async fn no_pending_support() {
 
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
 
+    // Should return block not found on trying to fetch the pending block.
+    let cursor = TransactionsPageCursor { block_number: 1, ..Default::default() };
+
+    match client.get_transactions_executions(cursor).await {
+        Ok(_) => panic!("Expected error BlockNotFound"),
+        Err(e) => {
+            let eo: jsonrpsee::types::ErrorObject<'_> = e.into();
+            assert_eq!(eo.code(), 24);
+            assert_eq!(eo.message(), "Block not found");
+        }
+    };
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn process_sealed_block_only() {
+    // Saya does not support the pending block and only work on sealed blocks.
+    let sequencer = TestSequencer::start(
+        SequencerConfig { block_time: None, no_mining: true, ..Default::default() },
+        get_default_test_starknet_config(),
+    )
+    .await;
+
+    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+
     let account = sequencer.account();
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
