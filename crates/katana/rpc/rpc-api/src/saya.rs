@@ -1,6 +1,6 @@
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
-use katana_rpc_types::transaction::{TransactionsExecutionsFilter, TransactionsExecutionsPage};
+use katana_rpc_types::transaction::{TransactionsExecutionsPage, TransactionsPageCursor};
 
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "saya"))]
 #[cfg_attr(feature = "client", rpc(client, server, namespace = "saya"))]
@@ -15,6 +15,6 @@ pub trait SayaApi {
     #[method(name = "getTransactionsExecutions")]
     async fn get_transactions_executions(
         &self,
-        cursor: TransactionsExecutionsFilter,
+        cursor: TransactionsPageCursor,
     ) -> RpcResult<TransactionsExecutionsPage>;
 }

@@ -21,6 +21,8 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
+pub const CHUNK_SIZE_DEFAULT: u64 = 100;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
@@ -307,10 +309,17 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct TransactionsPageCursor {
     pub block_number: u64,
     pub transaction_index: u64,
+    pub chunk_size: u64,
+}
+
+impl Default for TransactionsPageCursor {
+    fn default() -> Self {
+        Self { block_number: 0, transaction_index: 0, chunk_size: CHUNK_SIZE_DEFAULT }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -319,14 +328,8 @@ pub struct TransactionsPage {
     pub cursor: TransactionsPageCursor,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct TransactionsExecutionsFilter {
-    pub block_number: u64,
-    pub chunk_size: u64,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsExecutionsPage {
     pub transactions_executions: Vec<TxExecInfo>,
-    pub remaining: u64,
+    pub cursor: TransactionsPageCursor,
 }
