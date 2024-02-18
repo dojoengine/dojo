@@ -16,8 +16,6 @@ pub mod system;
 pub struct WorldMetadata {
     pub world_address: FieldElement,
     pub world_class_hash: FieldElement,
-    pub executor_address: FieldElement,
-    pub executor_class_hash: FieldElement,
     pub models: HashMap<String, ModelMetadata>,
 }
 

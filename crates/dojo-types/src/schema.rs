@@ -27,6 +27,7 @@ pub struct ModelMetadata {
     pub packed_size: u32,
     pub unpacked_size: u32,
     pub class_hash: FieldElement,
+    pub contract_address: FieldElement,
     pub layout: Vec<FieldElement>,
 }
 

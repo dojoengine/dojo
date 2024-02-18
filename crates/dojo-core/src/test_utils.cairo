@@ -8,9 +8,9 @@ use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 use debug::PrintTrait;
 
-use dojo::executor::executor;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::packing::{shl, shr};
+use dojo::resource_metadata::resource_metadata;
 
 /// Deploy classhash with calldata for constructor
 ///
@@ -43,21 +43,19 @@ fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> Co
 fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
     let salt = testing::get_available_gas();
 
-    // deploy executor
-    let constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(), salt.into(), constructor_calldata.span(), true
-    )
-        .unwrap();
     // deploy world
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
         salt.into(),
-        array![executor_address.into(), dojo::base::base::TEST_CLASS_HASH].span(),
-        true
+        array![dojo::base::base::TEST_CLASS_HASH].span(),
+        false
     )
         .unwrap();
+
     let world = IWorldDispatcher { contract_address: world_address };
+
+    // Register the resource metadata.
+    world.register_model(resource_metadata::TEST_CLASS_HASH.try_into().unwrap());
 
     // register models
     let mut index = 0;

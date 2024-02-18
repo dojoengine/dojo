@@ -1,3 +1,4 @@
+use debug::PrintTrait;
 use option::OptionTrait;
 use starknet::ClassHash;
 use traits::TryInto;
@@ -10,6 +11,8 @@ use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 
 #[starknet::contract]
 mod contract_upgrade {
+    use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, IWorldProvider};
+
     #[storage]
     struct Storage {}
 
@@ -27,6 +30,19 @@ mod contract_upgrade {
             'daddy'
         }
     }
+
+    #[abi(embed_v0)]
+    impl WorldProviderImpl of IWorldProvider<ContractState> {
+        fn world(self: @ContractState) -> IWorldDispatcher {
+            IWorldDispatcher { contract_address: starknet::contract_address_const::<'world'>() }
+        }
+    }
+}
+
+#[starknet::contract]
+mod contract_invalid_upgrade {
+    #[storage]
+    struct Storage {}
 }
 
 use contract_upgrade::{IQuantumLeapDispatcher, IQuantumLeapDispatcherTrait};
@@ -52,6 +68,18 @@ fn test_upgrade_from_world() {
 
 #[test]
 #[available_gas(6000000)]
+#[should_panic(expected: ('class_hash not world provider', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+fn test_upgrade_from_world_not_world_provider() {
+    let world = deploy_world();
+
+    let base_address = world.deploy_contract('salt', base::TEST_CLASS_HASH.try_into().unwrap());
+    let new_class_hash: ClassHash = contract_invalid_upgrade::TEST_CLASS_HASH.try_into().unwrap();
+
+    world.upgrade_contract(base_address, new_class_hash);
+}
+
+#[test]
+#[available_gas(6000000)]
 #[should_panic(expected: ('must be called by world', 'ENTRYPOINT_FAILED'))]
 fn test_upgrade_direct() {
     let world = deploy_world();
@@ -61,4 +89,60 @@ fn test_upgrade_direct() {
 
     let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
     upgradeable_dispatcher.upgrade(new_class_hash);
+}
+
+#[starknet::interface]
+trait INameOnly<T> {
+    fn name(self: @T) -> felt252;
+}
+
+#[starknet::contract]
+mod invalid_model {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::INameOnly<ContractState> {
+        fn name(self: @ContractState) -> felt252 {
+            // Pre-computed address of a contract deployed through the world.
+            0x34534b116332dd9459bfde65280822d84c130e3f1faeb63af8455f83e733f4f
+        }
+    }
+}
+
+#[starknet::contract]
+mod invalid_model_world {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::INameOnly<ContractState> {
+        fn name(self: @ContractState) -> felt252 {
+            // World address is 0, and not registered as deployed through the world
+            // as it's itself.
+            0
+        }
+    }
+}
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(expected: ('invalid model name', 'ENTRYPOINT_FAILED',))]
+fn test_deploy_from_world_invalid_model() {
+    let world = deploy_world();
+
+    let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
+    // The print is required for invalid_model name to be a valid address as the
+    // register_model will use the gas consumed as salt.
+    base_address.print();
+
+    world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[available_gas(6000000)]
+#[should_panic(expected: ('invalid model name', 'ENTRYPOINT_FAILED',))]
+fn test_deploy_from_world_invalid_model_world() {
+    let world = deploy_world();
+    world.register_model(invalid_model_world::TEST_CLASS_HASH.try_into().unwrap());
 }

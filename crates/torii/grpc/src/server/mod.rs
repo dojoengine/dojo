@@ -88,8 +88,9 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models: Vec<(String, String, u32, u32, String)> = sqlx::query_as(
-            "SELECT name, class_hash, packed_size, unpacked_size, layout FROM models",
+        let models: Vec<(String, String, String, u32, u32, String)> = sqlx::query_as(
+            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
+             models",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -100,9 +101,10 @@ impl DojoWorld {
             models_metadata.push(proto::types::ModelMetadata {
                 name: model.0,
                 class_hash: model.1,
-                packed_size: model.2,
-                unpacked_size: model.3,
-                layout: hex::decode(&model.4).unwrap(),
+                contract_address: model.2,
+                packed_size: model.3,
+                unpacked_size: model.4,
+                layout: hex::decode(&model.5).unwrap(),
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
@@ -312,14 +314,16 @@ impl DojoWorld {
     }
 
     pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
-        let (name, class_hash, packed_size, unpacked_size, layout): (
+        let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
+            String,
             String,
             String,
             u32,
             u32,
             String,
         ) = sqlx::query_as(
-            "SELECT name, class_hash, packed_size, unpacked_size, layout FROM models WHERE id = ?",
+            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
+             models WHERE id = ?",
         )
         .bind(model)
         .fetch_one(&self.pool)
@@ -332,6 +336,7 @@ impl DojoWorld {
             name,
             layout,
             class_hash,
+            contract_address,
             packed_size,
             unpacked_size,
             schema: serde_json::to_vec(&schema).unwrap(),

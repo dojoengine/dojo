@@ -246,6 +246,7 @@ pub async fn model_fixtures(db: &mut Sql) {
         }),
         vec![],
         FieldElement::ONE,
+        FieldElement::TWO,
         0,
         0,
     )

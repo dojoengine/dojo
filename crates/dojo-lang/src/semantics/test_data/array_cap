@@ -1,0 +1,151 @@
+//! > no params
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+array_cap!()
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Invalid arguments. Expected "(capacity, (values,))"
+ --> lib.cairo:2:12
+array_cap!()
+           ^
+
+//! > ==========================================================================
+
+//! > Capacity exceeded
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+array_cap!(1, (1, 2, 3))
+
+//! > expected
+Missing(
+    ExprMissing {
+        ty: <missing>,
+    },
+)
+
+//! > semantic_diagnostics
+error: Plugin diagnostic: Number of values is exceeded the capacity
+ --> lib.cairo:2:22
+array_cap!(1, (1, 2, 3))
+                     ^
+
+//! > ==========================================================================
+
+//! > set successful expansion
+
+//! > no_diagnostics
+true
+
+//! > test_runner_name
+test_semantics
+
+//! > expression
+array_cap!(1, (0xfe, 2))
+
+//! > expected
+Block(
+    ExprBlock {
+        statements: [
+            Let(
+                StatementLet {
+                    pattern: Variable(
+                        __array_with_cap__,
+                    ),
+                    expr: Block(
+                        ExprBlock {
+                            statements: [
+                                Let(
+                                    StatementLet {
+                                        pattern: Variable(
+                                            __array_builder_macro_result__,
+                                        ),
+                                        expr: FunctionCall(
+                                            ExprFunctionCall {
+                                                function: core::array::ArrayImpl::<core::felt252>::new,
+                                                args: [],
+                                                ty: core::array::Array::<core::felt252>,
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ],
+                            tail: Some(
+                                Var(
+                                    LocalVarId(test::__array_builder_macro_result__),
+                                ),
+                            ),
+                            ty: core::array::Array::<core::felt252>,
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: core::array::ArrayImpl::<core::felt252>::append,
+                            args: [
+                                Reference(
+                                    LocalVarId(test::__array_with_cap__),
+                                ),
+                                Value(
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 254,
+                                            ty: core::felt252,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: (),
+                        },
+                    ),
+                },
+            ),
+            Expr(
+                StatementExpr {
+                    expr: FunctionCall(
+                        ExprFunctionCall {
+                            function: core::array::ArrayImpl::<core::felt252>::append,
+                            args: [
+                                Reference(
+                                    LocalVarId(test::__array_with_cap__),
+                                ),
+                                Value(
+                                    Literal(
+                                        ExprLiteral {
+                                            value: 2,
+                                            ty: core::felt252,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            ty: (),
+                        },
+                    ),
+                },
+            ),
+        ],
+        tail: Some(
+            Var(
+                LocalVarId(test::__array_with_cap__),
+            ),
+        ),
+        ty: core::array::Array::<core::felt252>,
+    },
+)
+
+//! > semantic_diagnostics

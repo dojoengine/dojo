@@ -126,7 +126,9 @@ impl RelayClient {
             .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
-                    .heartbeat_interval(std::time::Duration::from_secs(10))
+                    .heartbeat_interval(Duration::from_secs(
+                        constants::GOSSIPSUB_HEARTBEAT_INTERVAL_SECS,
+                    ))
                     .build()
                     .expect("Gossipsup config is invalid");
 
@@ -143,7 +145,11 @@ impl RelayClient {
                     ping: ping::Behaviour::new(ping::Config::default()),
                 }
             })?
-            .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
+            .with_swarm_config(|cfg| {
+                cfg.with_idle_connection_timeout(Duration::from_secs(
+                    constants::IDLE_CONNECTION_TIMEOUT_SECS,
+                ))
+            })
             .build();
 
         info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");

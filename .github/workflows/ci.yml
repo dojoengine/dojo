@@ -44,6 +44,8 @@ jobs:
           target: x86_64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # cairofmt:

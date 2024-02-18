@@ -207,14 +207,6 @@ Block(
                                     ),
                                 ),
                                 Value(
-                                    Literal(
-                                        ExprLiteral {
-                                            value: 0,
-                                            ty: core::integer::u8,
-                                        },
-                                    ),
-                                ),
-                                Value(
                                     FunctionCall(
                                         ExprFunctionCall {
                                             function: test::HealthModel::values,

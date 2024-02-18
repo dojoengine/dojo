@@ -13,7 +13,8 @@ const SCARB_MANIFEST_BACKUP: &str = "crates/dojo-core/bak.Scarb.toml";
 const SCARB_LOCK: &str = "crates/dojo-core/Scarb.lock";
 const SCARB_LOCK_BACKUP: &str = "crates/dojo-core/bak.Scarb.lock";
 const WORLD_ARTIFACT: &str = "crates/dojo-core/target/dev/dojo_world.contract_class.json";
-const EXECUTOR_ARTIFACT: &str = "crates/dojo-core/target/dev/dojo_executor.contract_class.json";
+const MODEL_ARTIFACT: &str =
+    "crates/dojo-core/target/dev/dojo_resource_metadata.contract_class.json";
 const OUT_DIR: &str = "crates/dojo-world/src/contracts/abi";
 
 fn define_check_only() -> bool {
@@ -28,7 +29,7 @@ fn main() {
     compile_dojo_core();
 
     generate_bindings("WorldContract", WORLD_ARTIFACT, "world.rs", is_check_only);
-    generate_bindings("ExecutorContract", EXECUTOR_ARTIFACT, "executor.rs", is_check_only);
+    generate_bindings("ModelContract", MODEL_ARTIFACT, "model.rs", is_check_only);
 }
 
 /// Generates the bindings for the given contracts, or verifies

@@ -99,7 +99,7 @@ mod records {
                             },
                             random_u8,
                             random_u128,
-                            composite_u256
+                            composite_u256,
                         },
                         RecordSibling { record_id, random_u8 },
                         Subrecord {

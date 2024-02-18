@@ -24,5 +24,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .file_descriptor_set_path(out_dir.join("world_descriptor.bin"))
             .compile(&["proto/world.proto"], &["proto"])?;
     }
+
+    println!("cargo:rerun-if-changed=proto");
+
     Ok(())
 }
