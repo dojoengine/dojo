@@ -1,39 +1,28 @@
 use starknet::{ContractAddress, ClassHash, StorageBaseAddress, SyscallResult};
 use traits::{Into, TryInto};
 use option::OptionTrait;
+use dojo::resource_metadata::ResourceMetadata;
 
 #[starknet::interface]
 trait IWorld<T> {
-    fn metadata_uri(self: @T, resource: felt252) -> Span<felt252>;
-    fn set_metadata_uri(ref self: T, resource: felt252, uri: Span<felt252>);
-    fn model(self: @T, name: felt252) -> ClassHash;
+    fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
+    fn set_metadata(ref self: T, metadata: ResourceMetadata);
+    fn model(self: @T, name: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
-        self: @T, model: felt252, keys: Span<felt252>, offset: u8, length: usize, layout: Span<u8>
+        self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
     ) -> Span<felt252>;
     fn set_entity(
         ref self: T,
         model: felt252,
         keys: Span<felt252>,
-        offset: u8,
         values: Span<felt252>,
         layout: Span<u8>
     );
-    fn entities(
-        self: @T,
-        model: felt252,
-        index: Option<felt252>,
-        values: Span<felt252>,
-        values_length: usize,
-        values_layout: Span<u8>
-    ) -> (Span<felt252>, Span<Span<felt252>>);
-    fn entity_ids(self: @T, model: felt252) -> Span<felt252>;
-    fn set_executor(ref self: T, contract_address: ContractAddress);
-    fn executor(self: @T) -> ContractAddress;
     fn base(self: @T) -> ClassHash;
     fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
     fn is_owner(self: @T, address: ContractAddress, resource: felt252) -> bool;
@@ -60,6 +49,15 @@ trait IDojoResourceProvider<T> {
     fn dojo_resource(self: @T) -> felt252;
 }
 
+mod Errors {
+    const METADATA_DESER: felt252 = 'metadata deser error';
+    const NOT_OWNER: felt252 = 'not owner';
+    const NOT_OWNER_WRITER: felt252 = 'not owner or writer';
+    const INVALID_MODEL_NAME: felt252 = 'invalid model name';
+    const OWNER_ONLY_UPGRADE: felt252 = 'only owner can upgrade';
+    const OWNER_ONLY_UPDATE: felt252 = 'only owner can update';
+}
+
 #[starknet::contract]
 mod world {
     use core::traits::TryInto;
@@ -79,14 +77,14 @@ mod world {
     };
 
     use dojo::database;
-    use dojo::database::index::WhereCondition;
-    use dojo::executor::{IExecutorDispatcher, IExecutorDispatcherTrait};
-    use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
-
+    use dojo::database::introspect::Introspect;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+    use dojo::model::Model;
+    use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
+    use dojo::resource_metadata;
+    use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
 
-    const NAME_ENTRYPOINT: felt252 =
-        0x0361458367e696363fbcc70777d07ebbd2394e89fd0adcaf147faccd1d294d60;
+    use super::Errors;
 
     const WORLD: felt252 = 0;
 
@@ -103,7 +101,6 @@ mod world {
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
-        ExecutorUpdated: ExecutorUpdated
     }
 
     #[derive(Drop, starknet::Event)]
@@ -140,14 +137,15 @@ mod world {
     struct ModelRegistered {
         name: felt252,
         class_hash: ClassHash,
-        prev_class_hash: ClassHash
+        prev_class_hash: ClassHash,
+        address: ContractAddress,
+        prev_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     struct StoreSetRecord {
         table: felt252,
         keys: Span<felt252>,
-        offset: u8,
         values: Span<felt252>,
     }
 
@@ -171,106 +169,72 @@ mod world {
         value: bool,
     }
 
-    #[derive(Drop, starknet::Event)]
-    struct ExecutorUpdated {
-        address: ContractAddress,
-        prev_address: ContractAddress,
-    }
-
-
     #[storage]
     struct Storage {
-        executor_dispatcher: IExecutorDispatcher,
         contract_base: ClassHash,
         nonce: usize,
-        metadata_uri: LegacyMap::<felt252, felt252>,
-        models: LegacyMap::<felt252, ClassHash>,
+        models_count: usize,
+        models: LegacyMap::<felt252, (ClassHash, ContractAddress)>,
+        deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, executor: ContractAddress, contract_base: ClassHash) {
+    fn constructor(ref self: ContractState, contract_base: ClassHash) {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
-        self.executor_dispatcher.write(IExecutorDispatcher { contract_address: executor });
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
+
+        // Ensure the creator of the world is the owner of the resource metadata model.
+        self.owners.write((RESOURCE_METADATA_MODEL, creator), true);
+        self.models.write(
+            RESOURCE_METADATA_MODEL,
+            (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
+        );
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
 
-    /// Call Helper,
-    /// Call the provided `entrypoint` method on the given `class_hash`.
-    ///
-    /// # Arguments
-    ///
-    /// * `class_hash` - Class Hash to call.
-    /// * `entrypoint` - Entrypoint to call.
-    /// * `calldata` - The calldata to pass.
-    ///
-    /// # Returns
-    ///
-    /// The return value of the call.
-    fn class_call(
-        self: @ContractState, class_hash: ClassHash, entrypoint: felt252, calldata: Span<felt252>
-    ) -> Span<felt252> {
-        self.executor_dispatcher.read().call(class_hash, entrypoint, calldata)
-    }
-
     #[abi(embed_v0)]
     impl World of IWorld<ContractState> {
-        /// Returns the metadata URI of the world.
-        ///
-        /// # Returns
-        ///
-        /// * `Span<felt252>` - The metadata URI of the world.
-        fn metadata_uri(self: @ContractState, resource: felt252) -> Span<felt252> {
-            let mut uri = array![];
-
-            // We add one here since we start i at 1;
-            let len = self.metadata_uri.read(resource) + 1;
-
-            let mut i = resource + 1;
-            loop {
-                if len == i {
-                    break;
-                }
-
-                uri.append(self.metadata_uri.read(i));
-                i += 1;
-            };
-
-            uri.span()
-        }
-
-        /// Sets the metadata URI of the world.
+        /// Returns the metadata of the resource.
         ///
         /// # Arguments
         ///
-        /// * `uri` - The new metadata URI to be set.
-        fn set_metadata_uri(ref self: ContractState, resource: felt252, mut uri: Span<felt252>) {
-            assert(self.is_owner(get_caller_address(), resource), 'not owner');
+        /// `resource_id` - The resource id.
+        fn metadata(self: @ContractState, resource_id: felt252) -> ResourceMetadata {
+            let mut layout = array![];
+            Introspect::<ResourceMetadata>::layout(ref layout);
 
-            let len = uri.len();
+            let mut data = self
+                .entity(RESOURCE_METADATA_MODEL, array![resource_id].span(), layout.span(),);
 
-            // Max len to avoid overflowing into other resources
-            assert(len < 255, 'metadata too long');
+            let mut model = array![resource_id];
+            core::array::serialize_array_helper(data, ref model);
 
-            self.metadata_uri.write(resource, len.into());
+            let mut model_span = model.span();
 
-            // Emit event before uri is consumed.
-            EventEmitter::emit(ref self, MetadataUpdate { resource, uri });
+            Serde::<ResourceMetadata>::deserialize(ref model_span).expect(Errors::METADATA_DESER)
+        }
 
-            let mut i = resource + 1;
-            loop {
-                match uri.pop_front() {
-                    Option::Some(item) => {
-                        self.metadata_uri.write(i, *item);
-                        i += 1;
-                    },
-                    Option::None(_) => { break; }
-                };
-            };
+        /// Sets the metadata of the resource.
+        ///
+        /// # Arguments
+        ///
+        /// `metadata` - The metadata content for the resource.
+        fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
+            assert_can_write(@self, metadata.resource_id, get_caller_address());
+
+            let model = Model::<ResourceMetadata>::name(@metadata);
+            let keys = Model::<ResourceMetadata>::keys(@metadata);
+            let values = Model::<ResourceMetadata>::values(@metadata);
+            let layout = Model::<ResourceMetadata>::layout(@metadata);
+
+            let key = poseidon::poseidon_hash_span(keys);
+            database::set(model, key, values, layout);
+
+            EventEmitter::emit(ref self, MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri });
         }
 
         /// Checks if the provided account is an owner of the resource.
@@ -296,7 +260,7 @@ mod world {
         /// * `resource` - The resource.
         fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
+            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
             self.owners.write((resource, address), true);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: true });
@@ -311,8 +275,8 @@ mod world {
         /// * `resource` - The resource.
         fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), 'not owner');
-            self.owners.write((resource, address), bool::False(()));
+            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
+            self.owners.write((resource, address), false);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
         }
@@ -342,7 +306,7 @@ mod world {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, model) || self.is_owner(caller, WORLD), 'not owner or writer'
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD), Errors::NOT_OWNER_WRITER
             );
             self.writers.write((model, system), true);
 
@@ -363,7 +327,7 @@ mod world {
                 self.is_writer(model, caller)
                     || self.is_owner(caller, model)
                     || self.is_owner(caller, WORLD),
-                'not owner or writer'
+                Errors::NOT_OWNER_WRITER
             );
             self.writers.write((model, system), false);
 
@@ -378,21 +342,34 @@ mod world {
         /// * `class_hash` - The class hash of the model to be registered.
         fn register_model(ref self: ContractState, class_hash: ClassHash) {
             let caller = get_caller_address();
-            let calldata = ArrayTrait::new();
-            let name = *class_call(@self, class_hash, NAME_ENTRYPOINT, calldata.span())[0];
-            let mut prev_class_hash = starknet::class_hash::ClassHashZeroable::zero();
+
+            let salt = self.models_count.read();
+            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash).unwrap_syscall();
+            self.models_count.write(salt + 1);
+
+            let (mut prev_class_hash, mut prev_address) = (
+                starknet::class_hash::ClassHashZeroable::zero(),
+                starknet::contract_address::ContractAddressZeroable::zero(),
+            );
+
+            // Avoids a model name to conflict with already deployed contract,
+            // which can cause ACL issue with current ACL implementation.
+            if name.is_zero() || self.deployed_contracts.read(name).is_non_zero() {
+                panic_with_felt252(Errors::INVALID_MODEL_NAME);
+            }
 
             // If model is already registered, validate permission to update.
-            let current_class_hash = self.models.read(name);
+            let (current_class_hash, current_address) = self.models.read(name);
             if current_class_hash.is_non_zero() {
-                assert(self.is_owner(caller, name), 'only owner can update');
+                assert(self.is_owner(caller, name), Errors::OWNER_ONLY_UPDATE);
                 prev_class_hash = current_class_hash;
+                prev_address = current_address;
             } else {
                 self.owners.write((name, caller), true);
             };
 
-            self.models.write(name, class_hash);
-            EventEmitter::emit(ref self, ModelRegistered { name, class_hash, prev_class_hash });
+            self.models.write(name, (class_hash, address));
+            EventEmitter::emit(ref self, ModelRegistered { name, prev_address, address, class_hash, prev_class_hash });
         }
 
         /// Gets the class hash of a registered model.
@@ -403,8 +380,8 @@ mod world {
         ///
         /// # Returns
         ///
-        /// * `ClassHash` - The class hash of the model.
-        fn model(self: @ContractState, name: felt252) -> ClassHash {
+        /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the model.
+        fn model(self: @ContractState, name: felt252) -> (ClassHash, ContractAddress) {
             self.models.read(name)
         }
 
@@ -412,8 +389,8 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the contract.
-        /// * `class_hash` - The class_hash of the contract.
+        /// * `salt` - The salt use for contract deployment.
+        /// * `class_hash` - The class hash of the contract.
         ///
         /// # Returns
         ///
@@ -430,6 +407,8 @@ mod world {
 
             self.owners.write((contract_address.into(), get_caller_address()), true);
 
+            self.deployed_contracts.write(contract_address.into(), class_hash.into());
+
             EventEmitter::emit(
                 ref self, ContractDeployed { salt, class_hash, address: contract_address }
             );
@@ -437,12 +416,12 @@ mod world {
             contract_address
         }
 
-        /// Upgrade an already deployed contract associated with the world.
+        /// Upgrades an already deployed contract associated with the world.
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the contract.
-        /// * `class_hash` - The class_hash of the contract.
+        /// * `address` - The contract address of the contract to upgrade.
+        /// * `class_hash` - The class hash of the contract.
         ///
         /// # Returns
         ///
@@ -450,8 +429,7 @@ mod world {
         fn upgrade_contract(
             ref self: ContractState, address: ContractAddress, class_hash: ClassHash
         ) -> ClassHash {
-            // Only owner can upgrade contract
-            assert_can_write(@self, address.into(), get_caller_address());
+            assert(is_account_owner(@self, address.into()), Errors::NOT_OWNER);
             IUpgradeableDispatcher { contract_address: address }.upgrade(class_hash);
             EventEmitter::emit(ref self, ContractUpgraded { class_hash, address });
             class_hash
@@ -485,31 +463,32 @@ mod world {
         /// # Arguments
         ///
         /// * `model` - The name of the model to be set.
-        /// * `key` - The key to be used to find the entity.
-        /// * `offset` - The offset of the model in the entity.
-        /// * `value` - The value to be set.
+        /// * `keys` - The key to be used to find the entity.
+        /// * `values` - The value to be set.
+        /// * `layout` - The memory layout of the entity.
         fn set_entity(
             ref self: ContractState,
             model: felt252,
             keys: Span<felt252>,
-            offset: u8,
             values: Span<felt252>,
             layout: Span<u8>
         ) {
             assert_can_write(@self, model, get_caller_address());
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, offset, values, layout);
+            database::set(model, key, values, layout);
 
-            EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, offset, values });
+            EventEmitter::emit(ref self, StoreSetRecord { table: model, keys, values });
         }
 
         /// Deletes a model from an entity.
+        /// Deleting is setting all the values to 0 in the given layout.
         ///
         /// # Arguments
         ///
         /// * `model` - The name of the model to be deleted.
-        /// * `query` - The query to be used to find the entity.
+        /// * `keys` - The key to be used to find the entity.
+        /// * `layout` - The memory layout of the entity.
         fn delete_entity(
             ref self: ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
         ) {
@@ -527,9 +506,7 @@ mod world {
             };
 
             let key = poseidon::poseidon_hash_span(keys);
-            database::set(model, key, 0, empty_values.span(), layout);
-            // this deletes the index
-            database::del(model, key);
+            database::set(model, key, empty_values.span(), layout);
 
             EventEmitter::emit(ref self, StoreDelRecord { table: model, keys });
         }
@@ -540,89 +517,20 @@ mod world {
         /// # Arguments
         ///
         /// * `model` - The name of the model to be retrieved.
-        /// * `query` - The query to be used to find the entity.
-        /// * `offset` - The offset of the model values.
-        /// * `length` - The length of the model values.
+        /// * `keys` - The keys used to find the entity.
+        /// * `layout` - The memory layout of the entity.
         ///
         /// # Returns
         ///
-        /// * `Span<felt252>` - The value of the model, zero initialized if not set.
+        /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
             self: @ContractState,
             model: felt252,
             keys: Span<felt252>,
-            offset: u8,
-            length: usize,
             layout: Span<u8>
         ) -> Span<felt252> {
             let key = poseidon::poseidon_hash_span(keys);
-            database::get(model, key, offset, length, layout)
-        }
-
-        /// Returns entity IDs and entities that contain the model state.
-        ///
-        /// # Arguments
-        ///
-        /// * `model` - The name of the model to be retrieved.
-        /// * `index` - The index to be retrieved.
-        /// * `values` - The query to be used to find the entity.
-        /// * `length` - The length of the model values.
-        ///
-        /// # Returns
-        ///
-        /// * `Span<felt252>` - The entity IDs.
-        /// * `Span<Span<felt252>>` - The entities.
-        fn entities(
-            self: @ContractState,
-            model: felt252,
-            index: Option<felt252>,
-            values: Span<felt252>,
-            values_length: usize,
-            values_layout: Span<u8>
-        ) -> (Span<felt252>, Span<Span<felt252>>) {
-            assert(values.len() == 0, 'Queries by values not impl');
-            database::scan(model, Option::None(()), values_length, values_layout)
-        }
-
-        /// Returns only the entity IDs that contain the model state.
-        /// # Arguments
-        /// * `model` - The name of the model to be retrieved.
-        /// * `index` - The index to be retrieved.
-        /// * `values` - The query to be used to find the entity.
-        /// * `length` - The length of the model values.
-        ///
-        /// # Returns
-        /// * `Span<felt252>` - The entity IDs.
-        /// * `Span<Span<felt252>>` - The entities.
-        fn entity_ids(self: @ContractState, model: felt252) -> Span<felt252> {
-            database::scan_ids(model, Option::None(()))
-        }
-
-        /// Sets the executor contract address.
-        ///
-        /// # Arguments
-        ///
-        /// * `contract_address` - The contract address of the executor.
-        fn set_executor(ref self: ContractState, contract_address: ContractAddress) {
-            // Only owner can set executor
-            assert(self.is_owner(get_caller_address(), WORLD), 'only owner can set executor');
-            let prev_address = self.executor_dispatcher.read().contract_address;
-            self
-                .executor_dispatcher
-                .write(IExecutorDispatcher { contract_address: contract_address });
-
-            EventEmitter::emit(
-                ref self, ExecutorUpdated { address: contract_address, prev_address }
-            );
-        }
-
-        /// Gets the executor contract address.
-        ///
-        /// # Returns
-        ///
-        /// * `ContractAddress` - The address of the executor contract.
-        fn executor(self: @ContractState) -> ContractAddress {
-            self.executor_dispatcher.read().contract_address
+            database::get(model, key, layout)
         }
 
         /// Gets the base contract class hash.
@@ -638,7 +546,7 @@ mod world {
 
     #[abi(embed_v0)]
     impl UpgradeableWorld of IUpgradeableWorld<ContractState> {
-        /// Upgrade world with new_class_hash
+        /// Upgrades the world with new_class_hash
         ///
         /// # Arguments
         ///
@@ -647,7 +555,7 @@ mod world {
             assert(new_class_hash.is_non_zero(), 'invalid class_hash');
             assert(
                 IWorld::is_owner(@self, get_tx_info().unbox().account_contract_address, WORLD),
-                'only owner can upgrade'
+                Errors::OWNER_ONLY_UPGRADE,
             );
 
             // upgrade to new_class_hash
@@ -666,10 +574,24 @@ mod world {
     /// * `caller` - The name of the caller writing.
     fn assert_can_write(self: @ContractState, resource: felt252, caller: ContractAddress) {
         assert(
-            IWorld::is_writer(self, resource, caller)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, resource)
-                || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD),
+            IWorld::is_writer(self, resource, caller) || is_account_owner(self, resource),
             'not writer'
         );
+    }
+
+    /// Verifies if the calling account is owner of the resource or the
+    /// owner of the world.
+    ///
+    /// # Arguments
+    ///
+    /// * `resource` - The name of the resource being verified.
+    ///
+    /// # Returns
+    ///
+    /// * `bool` - True if the calling account is the owner of the resource or the owner of the world,
+    ///            false otherwise.
+    fn is_account_owner(self: @ContractState, resource: felt252) -> bool {
+        IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, resource)
+            || IWorld::is_owner(self, get_tx_info().unbox().account_contract_address, WORLD)
     }
 }

@@ -1,4 +1,5 @@
 pub mod config;
+pub mod dev;
 pub mod katana;
 pub mod starknet;
 
@@ -16,11 +17,13 @@ use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
 use katana_core::sequencer::KatanaSequencer;
+use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_api::ApiKind;
 use tower_http::cors::{Any, CorsLayer};
 
+use crate::dev::DevApi;
 use crate::katana::KatanaApi;
 use crate::starknet::StarknetApi;
 
@@ -35,6 +38,9 @@ pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Res
             }
             ApiKind::Katana => {
                 methods.merge(KatanaApi::new(sequencer.clone()).into_rpc())?;
+            }
+            ApiKind::Dev => {
+                methods.merge(DevApi::new(sequencer.clone()).into_rpc())?;
             }
         }
     }

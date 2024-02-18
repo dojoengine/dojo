@@ -29,6 +29,8 @@ message ModelMetadata {
     bytes layout = 5;
     // The schema of the component serialized in bytes (for simplicity sake)
     bytes schema = 6;
+    // hex-encoded contract address of the component
+    string contract_address = 7;
 }
 
 message Model {

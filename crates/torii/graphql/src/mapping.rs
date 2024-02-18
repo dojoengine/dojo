@@ -39,6 +39,10 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
         ),
         (
+            Name::new("contractAddress"),
+            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
+        ),
+        (
             Name::new("transactionHash"),
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
         ),

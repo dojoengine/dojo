@@ -4,9 +4,6 @@ mod base_test;
 mod database;
 #[cfg(test)]
 mod database_test;
-mod executor;
-#[cfg(test)]
-mod executor_test;
 mod model;
 mod packing;
 #[cfg(test)]
@@ -22,3 +19,4 @@ mod test_utils;
 mod benchmarks;
 
 mod components;
+mod resource_metadata;

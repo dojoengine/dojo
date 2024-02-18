@@ -64,9 +64,9 @@ dependencies = [
 
 [[package]]
 name = "ahash"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a824f2aa7e75a0c98c5a504fceb80649e9c35265d44525b5f94de4771a395cd"
+checksum = "891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9"
 dependencies = [
  "getrandom",
  "once_cell",
@@ -75,9 +75,9 @@ dependencies = [
 
 [[package]]
 name = "ahash"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c3a9648d43b9cd48db467b3f87fdd6e146bcc88ab0180006cef2179fe11d01"
+checksum = "42cd52102d3df161c77a887b608d7a4897d7cc112886a9537b738a887a03aaff"
 dependencies = [
  "cfg-if",
  "getrandom",
@@ -957,7 +957,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1339,12 +1339,26 @@ dependencies = [
 
 [[package]]
 name = "cainome"
-version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+version = "0.2.3"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.4#a30cc79838ca0d68e24a53a2fdaffa181c849a28"
 dependencies = [
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
+ "anyhow",
+ "async-trait",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
+ "cainome-rs-macro",
+ "camino",
+ "clap",
+ "clap_complete",
+ "convert_case 0.6.0",
+ "serde",
+ "serde_json",
+ "starknet",
+ "thiserror",
+ "tracing",
+ "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
@@ -1359,7 +1373,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.4#a30cc79838ca0d68e24a53a2fdaffa181c849a28"
 dependencies = [
  "starknet",
  "thiserror",
@@ -1380,8 +1394,9 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.4#a30cc79838ca0d68e24a53a2fdaffa181c849a28"
 dependencies = [
+ "convert_case 0.6.0",
  "quote",
  "serde_json",
  "starknet",
@@ -1408,11 +1423,28 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=950e487#950e4871b735a1b4a7ba7e7561b9a15f5a43dbed"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.4#a30cc79838ca0d68e24a53a2fdaffa181c849a28"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet",
+ "syn 2.0.48",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs-macro"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.2.4#a30cc79838ca0d68e24a53a2fdaffa181c849a28"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.4)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -2437,7 +2469,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "reqwest",
@@ -3166,10 +3198,10 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "async-trait",
- "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome 0.1.5",
  "camino",
  "chrono",
  "convert_case 0.6.0",
@@ -3181,15 +3213,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-core"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 
 [[package]]
 name = "dojo-lang"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3219,6 +3251,7 @@ dependencies = [
  "indoc 1.0.9",
  "itertools 0.10.5",
  "lazy_static",
+ "num-traits 0.2.17",
  "once_cell",
  "pretty_assertions",
  "salsa",
@@ -3237,7 +3270,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3259,7 +3292,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3292,7 +3325,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -3307,13 +3340,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "assert_fs",
  "assert_matches",
  "async-trait",
- "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?rev=950e487)",
+ "cainome 0.2.3",
  "cairo-lang-filesystem",
  "cairo-lang-project",
  "cairo-lang-starknet",
@@ -3340,7 +3373,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "cairo-lang-starknet",
  "camino",
@@ -5319,7 +5352,7 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 dependencies = [
- "ahash 0.7.7",
+ "ahash 0.7.8",
 ]
 
 [[package]]
@@ -5328,7 +5361,7 @@ version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33ff8ae62cd3a9102e5637afc8452c55acf3844001bd5374e0b0bd7b6616c038"
 dependencies = [
- "ahash 0.8.7",
+ "ahash 0.8.8",
 ]
 
 [[package]]
@@ -5337,7 +5370,7 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
- "ahash 0.8.7",
+ "ahash 0.8.8",
  "allocator-api2",
  "serde",
 ]
@@ -5796,7 +5829,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e98c1d0ad70fc91b8b9654b1f33db55e59579d3b3de2bffdced0fdb810570cb8"
 dependencies = [
- "ahash 0.8.7",
+ "ahash 0.8.8",
  "hashbrown 0.12.3",
 ]
 
@@ -6478,7 +6511,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -6490,7 +6523,7 @@ dependencies = [
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
- "metrics 0.5.2-alpha.0",
+ "metrics 0.6.0-alpha.0",
  "metrics-process",
  "serde_json",
  "shellexpand",
@@ -6503,7 +6536,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -6511,7 +6544,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6521,7 +6554,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -6557,7 +6590,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -6579,7 +6612,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -6595,7 +6628,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -6620,7 +6653,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -6645,7 +6678,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -6679,7 +6712,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -6690,7 +6723,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "derive_more",
@@ -6708,7 +6741,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -6720,7 +6753,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -6739,7 +6772,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "futures",
  "rayon",
@@ -7603,7 +7636,7 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "hyper",
@@ -7624,7 +7657,7 @@ version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fde3af1a009ed76a778cb84fdef9e7dbbdf5775ae3e4cc1f434a6a307f6f76c5"
 dependencies = [
- "ahash 0.8.7",
+ "ahash 0.8.8",
  "metrics-macros",
  "portable-atomic",
 ]
@@ -7635,7 +7668,7 @@ version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77b9e10a211c839210fd7f99954bda26e5f8e26ec686ad68da6a32df7c80e782"
 dependencies = [
- "ahash 0.8.7",
+ "ahash 0.8.8",
  "portable-atomic",
 ]
 
@@ -9904,7 +9937,7 @@ checksum = "e666a5496a0b2186dbcd0ff6106e29e093c15591bde62c20d3842007c6978a09"
 
 [[package]]
 name = "runner-macro"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "quote",
  "syn 2.0.48",
@@ -10131,7 +10164,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -10150,7 +10183,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -10926,7 +10959,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -10973,7 +11006,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "starknet",
@@ -11045,7 +11078,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d84b0a3c3739e220d94b3239fd69fb1f74bc36e16643423bd99de3b43c21bfbd"
 dependencies = [
- "ahash 0.8.7",
+ "ahash 0.8.8",
  "async-io 1.13.0",
  "async-std",
  "atoi",
@@ -12205,7 +12238,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12225,7 +12258,7 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.5.2-alpha.0",
+ "metrics 0.6.0-alpha.0",
  "metrics-process",
  "scarb",
  "serde",
@@ -12250,7 +12283,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "async-trait",
  "camino",
@@ -12278,7 +12311,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12314,7 +12347,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -12353,7 +12386,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "bytes",
  "crypto-bigint",
@@ -12392,7 +12425,7 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12417,7 +12450,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12436,7 +12469,7 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.5.2-alpha.0",
+ "metrics 0.6.0-alpha.0",
  "metrics-process",
  "scarb",
  "serde",
@@ -12734,7 +12767,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 
 [[package]]
 name = "ucd-trie"

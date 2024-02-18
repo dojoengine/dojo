@@ -125,6 +125,7 @@ impl TryFrom<proto::types::ModelMetadata> for dojo_types::schema::ModelMetadata 
             packed_size: value.packed_size,
             unpacked_size: value.unpacked_size,
             class_hash: FieldElement::from_str(&value.class_hash)?,
+            contract_address: FieldElement::from_str(&value.contract_address)?,
         })
     }
 }
@@ -142,8 +143,6 @@ impl TryFrom<proto::types::WorldMetadata> for dojo_types::WorldMetadata {
             models,
             world_address: FieldElement::from_str(&value.world_address)?,
             world_class_hash: FieldElement::from_str(&value.world_class_hash)?,
-            executor_address: FieldElement::from_str(&value.executor_address)?,
-            executor_class_hash: FieldElement::from_str(&value.executor_class_hash)?,
         })
     }
 }
