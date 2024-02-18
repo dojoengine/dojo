@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708201674053,
+  "lastUpdate": 1708236065839,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1345,6 +1345,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1038016,
             "range": "± 34567",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "072a31d8fb1bd98fa0baa376f4cf5ac64f8d1df8",
+          "message": "feat: merge audit branch (#1533)\n\n* fix: ensure world metadata are handled safely with ACL\r\n\r\n* fix: remove unused EXECUTE_ENTRYPOINT\r\n\r\n* fix: add support for array for feature parity on metadata uri\r\n\r\n* fix: ensure the new class hash to upgrade to has world() entrypoint\r\n\r\n* wip: metadata rework\r\n\r\n* feat: add expand env var for plugin debug\r\n\r\n* feat: add support for multiple segment in the storage\r\n\r\nThis commit aims at having more flexibility in the dojo storage\r\nengine, to automatically use several storage slots segments depending\r\non the packed size.\r\n\r\nThe offset and length fields are not more required for the database to work.\r\nThe layout is still exposed for the moment.\r\n\r\n* fix: adjust world entry points based on storage rework\r\n\r\n* fix: remove unused WhereClause\r\n\r\n* fix: ensure deployed contracts addresses don't conflict with model names\r\n\r\n* fix: remove TODO with expected behavior for packing\r\n\r\n* fix: ensure fpow is never used with base equal to 0 in our case\r\n\r\n* fix: remove old boolean enum usage\r\n\r\n* fix: ensure executor address is not zero\r\n\r\n* fix: ensure packing max bits max value\r\n\r\n* fix: remove unused file\r\n\r\n* fix: remove database/utils not used for now\r\n\r\n* fix: remove index related code\r\n\r\n* fix: ensure empty data are well retrieved from storage\r\n\r\n* fix: remove the length from the storage to be backward compatible\r\n\r\n* fix: remove unused variable\r\n\r\n* fix: adjust gas for test\r\n\r\n* feat: add function to verify ownership of tx account\r\n\r\n* fix: remove executor and and deploy models instead\r\n\r\nThere were a security issue with the executor, as currently\r\nthe library_call is not immutable. Hence, a function called\r\nby library_call may contains other syscall. For this reason,\r\nthe executor is removed in favor of deploying the model\r\nto get it's name.\r\n\r\n* fix: keep class hash and contract address for models\r\n\r\n* feat: update toolchain for new model registration\r\n\r\n* fix: revise world documentation and refacto world errors\r\n\r\n* fix: remove unused storage variable\r\n\r\n* fix: ensure the world address is protected against model registration\r\n\r\n* fix: remove unused variable\r\n\r\n* fix: reintroduce missing test\r\n\r\n* fix: ensure resource metadata are only controlled by world creator\r\n\r\n* fix: ensure resource metadata is well written in the manifest\r\n\r\n* fix: format + clippy\r\n\r\n* tests(dojo-core): fix testing\r\n\r\n* fix: torii initial support for array and introspection\r\n\r\n* wip: torii introspect integration for Array\r\n\r\n* fix: add contract address to model's metadata\r\n\r\n* fix: Ty serialization for Array on Torii side\r\n\r\n* fix: fix torii values index for store_set_record\r\n\r\n* fix: remove contract address from wrong model\r\n\r\n* feat: add array in testing graphql\r\n\r\n* chore: restore main Cargo.lock\r\n\r\n* fix: remove Copy trait for Record as now contains Array\r\n\r\n* docs: add audit link in README\r\n\r\n* docs: fix README audit format\r\n\r\n* chore: use new tag of cainome wasm compatible + remove unused variables\r\n\r\n* fix: fmt\r\n\r\n* fix: add array as supported enum for models children ty\r\n\r\n* fix(dojo-core): remove print statements not required\r\n\r\n* fix: remove print for database but keep it for base_test address\r\n\r\n* fix: add sozo command for class hash back and add contract address command\r\n\r\n* ci: avoid rate limitation for protoc\r\n\r\n* fix(torii): ensure model contract address is in a new migration\r\n\r\n* fix(torii): remove array indexing support for now\r\n\r\n* fix(dojo-core): disable use of capacity derive on model\r\n\r\n* fix: fmt\r\n\r\n* fix(dojo-lang): run missing CAIRO_FIX tests\r\n\r\n* fix: remove debug print",
+          "timestamp": "2024-02-17T23:51:35-06:00",
+          "tree_id": "833ae58905f68e6fad0ba2f34d4031d624ab4b39",
+          "url": "https://github.com/dojoengine/dojo/commit/072a31d8fb1bd98fa0baa376f4cf5ac64f8d1df8"
+        },
+        "date": 1708236065236,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1015892,
+            "range": "± 68279",
             "unit": "ns/iter"
           }
         ]
