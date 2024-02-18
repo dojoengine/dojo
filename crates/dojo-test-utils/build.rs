@@ -15,6 +15,11 @@ fn main() {
 
     project_paths.iter().for_each(|path| compile(path));
 
+    println!("cargo:rerun-if-changed=../../examples");
+    println!("cargo:rerun-if-changed=../torii/types-test");
+    println!("cargo:rerun-if-changed=../dojo-lang/src");
+    println!("cargo:rerun-if-changed=../../bin/sozo/src");
+
     fn compile(path: &str) {
         let target_path = Utf8PathBuf::from_path_buf(format!("{}/target", path).into()).unwrap();
         if target_path.exists() {

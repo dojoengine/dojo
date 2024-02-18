@@ -257,6 +257,7 @@ mod tests {
             dojo_types::schema::ModelMetadata {
                 name: "Position".into(),
                 class_hash: felt!("1"),
+                contract_address: felt!("2"),
                 packed_size: 1,
                 unpacked_size: 2,
                 layout: vec![],

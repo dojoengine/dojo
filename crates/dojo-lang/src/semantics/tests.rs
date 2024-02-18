@@ -16,6 +16,8 @@ test_file_test!(
         get: "get",
 
         set: "set",
+
+        array_cap: "array_cap",
     },
     test_semantics
 );
