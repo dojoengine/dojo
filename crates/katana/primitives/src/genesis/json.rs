@@ -99,6 +99,8 @@ pub struct GenesisClassJson {
     /// The class hash of the contract. If not provided, the class hash is computed from the
     /// class at `path`.
     pub class_hash: Option<ClassHash>,
+    #[serde(default, skip_serializing)] 
+    name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -234,8 +236,15 @@ impl GenesisJson {
         path.pop();
 
         let mut genesis: Self = serde_json::from_reader(BufReader::new(file))?;
+        let mut class_name_map = HashMap::new();
+         for class in &genesis.classes {
+            if let Some(name) = &class.name {
+                class_name_map.insert(name.to_string(), class.class_hash.unwrap());  
+            }
+         }
+
         // resolves the class paths, if any
-        genesis.resolve_class_artifacts(path)?;
+        genesis.resolve_class_artifacts(path, &class_name_map)?;
 
         Ok(genesis)
     }
@@ -249,8 +258,15 @@ impl GenesisJson {
     pub fn resolve_class_artifacts(
         &mut self,
         base_path: impl AsRef<Path>,
+        class_name_map: &HashMap<String, ClassHash>
     ) -> Result<(), GenesisJsonError> {
         for entry in &mut self.classes {
+             if let Some(name) = &entry.name {
+                if let Some(hash) = class_name_map.get(name) {
+                entry.class_hash = Some(*hash);
+                continue;  
+                }   
+            } 
             if let PathOrFullArtifact::Path(rel_path) = &entry.class {
                 let base_path = base_path.as_ref().to_path_buf();
                 let artifact = class_artifact_at_path(base_path, rel_path)?;
@@ -269,15 +285,15 @@ impl TryFrom<GenesisJson> for Genesis {
             .classes
             .into_par_iter()
             .map(|entry| {
-                let GenesisClassJson { class, class_hash } = entry;
-
+                let GenesisClassJson { class, class_hash, name } = entry;
+                // Use name if present
                 let artifact = match class {
                     PathOrFullArtifact::Artifact(artifact) => artifact,
                     PathOrFullArtifact::Path(path) => {
                         return Err(GenesisJsonError::UnresolvedClassPath(path));
                     }
                 };
-
+                
                 let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
 
                 let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
@@ -312,12 +328,11 @@ impl TryFrom<GenesisJson> for Genesis {
                                 serde_json::from_value(artifact.clone())?;
                             casm.class_hash()?
                         };
-
                         (class_hash, class_hash, None, Arc::new(CompiledContractClass::V0(casm)))
                     }
                 };
 
-                Ok((class_hash, GenesisClass { compiled_class_hash, sierra, casm }))
+                Ok((class_hash, GenesisClass { name, compiled_class_hash, sierra, casm }))
             })
             .collect::<Result<_, GenesisJsonError>>()?;
 
@@ -340,9 +355,11 @@ impl TryFrom<GenesisJson> for Genesis {
 
             // if no class hash is provided, use the default fee token class
             None => {
+                let name: String = value.fee_token.name.clone();
                 let _ = classes.insert(
                     DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
                     GenesisClass {
+                        name: Some(name),
                         sierra: None,
                         casm: Arc::new(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()),
                         compiled_class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
@@ -367,6 +384,7 @@ impl TryFrom<GenesisJson> for Genesis {
 
                 // if no class hash is provided, use the default UD contract parameters
                 None => {
+                    let name = value.fee_token.name.clone();
                     let class_hash = DEFAULT_LEGACY_UDC_CLASS_HASH;
                     let address = config.address.unwrap_or(DEFAULT_UDC_ADDRESS);
                     let storage = config.storage;
@@ -374,6 +392,7 @@ impl TryFrom<GenesisJson> for Genesis {
                     let _ = classes.insert(
                         DEFAULT_LEGACY_UDC_CLASS_HASH,
                         GenesisClass {
+                            name: Some(name),
                             sierra: None,
                             casm: Arc::new(DEFAULT_LEGACY_UDC_CASM.clone()),
                             compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
@@ -408,6 +427,7 @@ impl TryFrom<GenesisJson> for Genesis {
                     {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
+                            name: None,
                             casm: Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()),
                             sierra: Some(Arc::new(
                                 DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap(),
@@ -509,8 +529,9 @@ impl FromStr for GenesisJson {
 pub fn resolve_artifacts_and_to_base64<P: AsRef<Path>>(
     mut genesis: GenesisJson,
     base_path: P,
+    class_name_map: HashMap<String, ClassHash>
 ) -> Result<Vec<u8>, GenesisJsonError> {
-    genesis.resolve_class_artifacts(base_path)?;
+    genesis.resolve_class_artifacts(base_path, &class_name_map)?;
     to_base64(genesis)
 }
 
@@ -530,8 +551,18 @@ pub fn to_base64(genesis: GenesisJson) -> Result<Vec<u8>, GenesisJsonError> {
 
 /// Deserialize the [GenesisJson] from base64 encoded bytes.
 pub fn from_base64(data: &[u8]) -> Result<GenesisJson, GenesisJsonError> {
+    // Decode base64 bytes 
     let decoded = BASE64_STANDARD.decode(data)?;
-    Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
+    // Deserialize JSON
+    let mut genesis_json: GenesisJson = serde_json::from_slice(&decoded)?;
+
+    // Populate name field
+    for class in &mut genesis_json.classes {
+        if let Some(name) = class.get("name") {
+        class.name = Some(name.as_str().unwrap().to_string());
+     }
+    }
+    Ok(genesis_json)
 }
 
 fn class_artifact_at_path(
