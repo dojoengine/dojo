@@ -558,10 +558,26 @@ pub fn from_base64(data: &[u8]) -> Result<GenesisJson, GenesisJsonError> {
 
     // Populate name field
     for class in &mut genesis_json.classes {
-        if let Some(name) = class.get("name") {
-        class.name = Some(name.as_str().unwrap().to_string());
-     }
+
+        match &class.class {
+
+      // If artifact is provided, try to extract name
+            PathOrFullArtifact::Artifact(artifact) => {
+                if let Value::Object(obj) = artifact {
+                    if let Some(name_value) = obj.get("name") {
+                        if let Value::String(name) = name_value {
+                            class.name = Some(name.to_string());
+                        }
+                    }
+                }
+            },
+
+      // Ignore path case
+      PathOrFullArtifact::Path(_path) => {}
+
     }
+
+  }
     Ok(genesis_json)
 }
 
