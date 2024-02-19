@@ -9,6 +9,7 @@ use starknet_core::utils::{
 };
 use starknet_crypto::{pedersen_hash, poseidon_hash, poseidon_hash_many};
 use starknet_ff::FieldElement;
+use tracing::field;
 
 use crate::errors::Error;
 
@@ -284,9 +285,10 @@ impl PrimitiveType {
                 }
 
                 if ctx.base_type == "enum" {
-                    let value = obj.first().ok_or_else(|| {
+                    let (variant_name, value) = obj.first().ok_or_else(|| {
                         Error::InvalidMessageError("Enum value must be populated".to_string())
-                    })?.1;
+                    })?;
+                    let variant_type = self.get_value_type(variant_name, types)?.0;
 
                     let arr = match value {
                         PrimitiveType::Array(arr) => arr,
@@ -301,7 +303,7 @@ impl PrimitiveType {
                     hashes.push(arr[0].encode("felt", types, encode_type_hash, ctx)?);
 
                     // variant parameters
-                    for (_, param) in match &arr[1] {
+                    for (idx, param) in match &arr[1] {
                         PrimitiveType::Array(arr) => arr.iter().enumerate(),
                         _ => {
                             return Err(Error::InvalidMessageError(
@@ -309,14 +311,22 @@ impl PrimitiveType {
                             ))
                         }
                     } {
-                        let field_hash = param.encode("u128", types, encode_type_hash, ctx)?;
+                        let field_type = variant_type
+                            .trim_start_matches('(')
+                            .trim_end_matches(')')
+                            .split(',')
+                            .nth(idx)
+                            .ok_or_else(|| {
+                                Error::InvalidMessageError("Invalid enum variant type".to_string())
+                            })?;
+
+                        let field_hash = param.encode(field_type, types, encode_type_hash, ctx)?;
                         hashes.push(field_hash);
                     }
 
                     return Ok(poseidon_hash_many(hashes.as_slice()));
                 }
-                
-                
+
                 for (field_name, value) in obj {
                     let field_type = self.get_value_type(field_name, types)?;
                     ctx.base_type = field_type.1.clone();
@@ -588,7 +598,7 @@ mod tests {
             )
             .unwrap()
         );
-        
+
         let path = "mocks/example_presetTypes.json";
         let file = std::fs::File::open(path).unwrap();
         let reader = std::io::BufReader::new(file);
@@ -604,6 +614,5 @@ mod tests {
             )
             .unwrap()
         );
-
     }
 }
