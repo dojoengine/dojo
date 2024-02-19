@@ -119,10 +119,6 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Token>> {
         process_abi(abi, &mut events_map);
     }
 
-    if let Some(abi) = manifest.executor.abi.as_ref() {
-        process_abi(abi, &mut events_map);
-    }
-
     for contract in &manifest.contracts {
         if let Some(abi) = contract.abi.clone() {
             process_abi(&abi, &mut events_map);

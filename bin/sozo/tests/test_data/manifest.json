@@ -843,6 +843,15 @@
     "writes": [],
     "computed": []
   },
+  "resource_metadata": {
+    "name": "",
+    "address": null,
+    "class_hash": "0x0",
+    "abi": null,
+    "reads": [],
+    "writes": [],
+    "computed": []
+  },
   "base": {
     "name": "dojo::base::base",
     "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
