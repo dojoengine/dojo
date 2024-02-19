@@ -350,6 +350,8 @@ where
                                     anyhow!("Failed to set World metadata: {e}")
                                 })?;
 
+                        TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
                         ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
                         ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
                     }
