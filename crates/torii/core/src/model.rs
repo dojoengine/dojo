@@ -249,8 +249,11 @@ pub fn map_row_to_ty(path: &str, struct_ty: &mut Struct, row: &SqliteRow) -> Res
                         primitive.set_u32(Some(value))?;
                     }
                     Primitive::U64(_) => {
-                        let value = row.try_get::<i64, &str>(&column_name)?;
-                        primitive.set_u64(Some(value as u64))?;
+                        let value = row.try_get::<String, &str>(&column_name)?;
+                        let hex_str = value.trim_start_matches("0x");
+                        primitive.set_u64(Some(
+                            u64::from_str_radix(hex_str, 16).map_err(ParseError::ParseIntError)?,
+                        ))?;
                     }
                     Primitive::U128(_) => {
                         let value = row.try_get::<String, &str>(&column_name)?;

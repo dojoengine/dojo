@@ -198,10 +198,10 @@ mod tests {
 
         // where filter LT and GT
         let records =
-            records_model_query(&schema, "(where: { type_u32GT: 2, type_u64LT: 4 })").await;
+            records_model_query(&schema, "(where: { type_u32GT: 2, type_u16LT: 4 })").await;
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
-        assert_eq!(first_record.node.type_u64, 3);
+        assert_eq!(first_record.node.type_u16, 3);
 
         // NOTE: Server side is gonna parse "0x5" and "5" to hexadecimal format
         let felt_str_0x5 = "0x5";
@@ -219,6 +219,14 @@ mod tests {
         let connection: Connection<Record> = serde_json::from_value(records).unwrap();
         let first_record = connection.edges.first().unwrap();
         assert_eq!(first_record.node.type_class_hash, "0x5");
+
+        // where filter EQ on u64 (string)
+        let records =
+            records_model_query(&schema, &format!("(where: {{ type_u64: \"{}\" }})", felt_str_0x5))
+                .await;
+        let connection: Connection<Record> = serde_json::from_value(records).unwrap();
+        let first_record = connection.edges.first().unwrap();
+        assert_eq!(first_record.node.type_u64, "0x5");
 
         // where filter GTE on u128 (string)
         let records = records_model_query(
