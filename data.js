@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708302712065,
+  "lastUpdate": 1708380898655,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1435,6 +1435,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1017656,
             "range": "± 67457",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "77c37f7522c62cff8a6075beeb2b660f0db55820",
+          "message": "Torii core store u64 primitive as string in db (#1532)",
+          "timestamp": "2024-02-19T14:05:21-08:00",
+          "tree_id": "b8a95ec33bc57e2d7defaa004672a23b2913fc58",
+          "url": "https://github.com/dojoengine/dojo/commit/77c37f7522c62cff8a6075beeb2b660f0db55820"
+        },
+        "date": 1708380895778,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 968795,
+            "range": "± 29301",
             "unit": "ns/iter"
           }
         ]
