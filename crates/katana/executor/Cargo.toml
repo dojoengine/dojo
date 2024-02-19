@@ -20,6 +20,11 @@ tracing.workspace = true
 # blockifier deps
 blockifier = { workspace = true, optional = true }
 
+# starknet_in_rust deps
+cairo-lang-sierra = { workspace = true, optional = true }
+sir = { workspace = true, optional = true }
+starknet-types-core = { workspace = true, optional = true }
+
 [dev-dependencies]
 cairo-vm.workspace = true
 katana-provider.workspace = true
@@ -29,6 +34,8 @@ similar-asserts.workspace = true
 starknet.workspace = true
 
 [features]
-default = [ "blockifier" ]
+default = [ "blockifier", "sir" ]
 
 blockifier = [ "dep:blockifier", "katana-primitives/blockifier" ]
+native = [ "sir", "sir/cairo-native" ]
+sir = [ "dep:sir", "dep:starknet-types-core" ]
