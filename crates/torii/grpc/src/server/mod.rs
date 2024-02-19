@@ -153,7 +153,6 @@ impl DojoWorld {
             r#"
                     SELECT count(*)
                     FROM entities
-                    JOIN entity_model ON entities.id = entity_model.entity_id
                     {filter_ids}
                 "#
         );
@@ -224,7 +223,6 @@ impl DojoWorld {
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
 
-        // count query that matches model_name AND keys_pattern
         let count_query = format!(
             r#"
             SELECT count(*)
