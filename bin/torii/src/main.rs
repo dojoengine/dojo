@@ -14,6 +14,8 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use base64::engine::general_purpose;
+use base64::Engine as _;
 use clap::Parser;
 use common::parse::{parse_socket_address, parse_url};
 use dojo_world::contracts::world::WorldContractReader;
@@ -196,8 +198,11 @@ async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to start libp2p relay server");
 
-    info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", args.addr));
-    info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", args.addr));
+    let endpoint = format!("http://{}", args.addr);
+    let encoded = general_purpose::STANDARD.encode(&endpoint).to_string();
+    info!(target: "torii::cli", "Starting torii endpoint: {}", endpoint);
+    info!(target: "torii::cli", "Serving Graphql playground: {}", format!("http://{}/graphql", args.addr));
+    info!(target: "torii::cli", "World explorer is available on: {}\n", format!("https://worlds.dev/torii/{}", encoded));
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("torii")?;
