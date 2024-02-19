@@ -44,6 +44,14 @@ message Entity {
     // Models of the entity
     repeated Model models = 2;
 }
+message Event {
+    // The event's hashed keys
+    bytes hashed_keys = 1;
+    // Data of the event
+    repeated string data = 2;
+    // event's transaction hash
+    string transaction_hash = 3;
+}
 
 message StorageEntry {
     // The key of the changed value

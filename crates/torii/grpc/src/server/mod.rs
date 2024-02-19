@@ -11,7 +11,7 @@ use dojo_types::schema::Ty;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeModelsRequest, SubscribeModelsResponse,
+    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
@@ -126,6 +126,10 @@ impl DojoWorld {
         self.entities_by_hashed_keys(None, limit, offset).await
     }
 
+    async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
+        self.events_by_hashed_keys(None, limit, offset).await
+    }
+
     async fn entities_by_hashed_keys(
         &self,
         hashed_keys: Option<proto::types::HashedKeysClause>,
@@ -193,6 +197,56 @@ impl DojoWorld {
         Ok(entities)
     }
 
+    async fn events_by_hashed_keys(
+        &self,
+        hashed_keys: Option<proto::types::HashedKeysClause>,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<proto::types::Event>, Error> {
+        // TODO: use prepared statement for where clause
+        let filter_ids = match hashed_keys {
+            Some(hashed_keys) => {
+                let ids = hashed_keys
+                    .hashed_keys
+                    .iter()
+                    .map(|id| {
+                        Ok(FieldElement::from_byte_slice_be(id)
+                            .map(|id| format!("events.id = '{id:#x}'"))
+                            .map_err(ParseError::FromByteSliceError)?)
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?;
+
+                format!("WHERE {}", ids.join(" OR "))
+            }
+            None => String::new(),
+        };
+
+        let query = format!(
+            r#"
+            SELECT id, data, transaction_hash
+            FROM events
+            {filter_ids}
+            LIMIT ? OFFSET ?
+         "#
+        );
+
+        let row_events: Vec<(String, String, String)> =
+            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+
+        let mut events = Vec::with_capacity(row_events.len());
+        for (event_id, event_data, transaction_hash) in row_events {
+            let data = event_data.split(',').map(|s| s.to_string()).collect();
+            let hashed_keys = FieldElement::from_str(&event_id).map_err(ParseError::FromStr)?;
+            events.push(proto::types::Event {
+                hashed_keys: hashed_keys.to_bytes_be().to_vec(),
+                data,
+                transaction_hash,
+            })
+        }
+
+        Ok(events)
+    }
+
     async fn entities_by_keys(
         &self,
         keys_clause: proto::types::KeysClause,
@@ -243,6 +297,45 @@ impl DojoWorld {
             .await?;
 
         db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
+    }
+
+    async fn events_by_keys(
+        &self,
+        keys_clause: proto::types::KeysClause,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<proto::types::Event>, Error> {
+        let keys = keys_clause
+            .keys
+            .iter()
+            .map(|bytes| {
+                if bytes.is_empty() {
+                    return Ok("%".to_string());
+                }
+                Ok(FieldElement::from_byte_slice_be(bytes)
+                    .map(|felt| format!("{:#x}", felt))
+                    .map_err(ParseError::FromByteSliceError)?)
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        let keys_pattern = keys.join("/") + "/%";
+
+        let events_query = format!(
+            r#"
+            SELECT id, data, transaction_hash
+            FROM events
+            WHERE events.keys LIKE ?
+            LIMIT ? OFFSET ?
+        "#
+        );
+
+        let db_events = sqlx::query(&events_query)
+            .bind(&keys_pattern)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
+
+        db_events.iter().map(|row| Self::map_row_to_event(row)).collect()
     }
 
     async fn entities_by_member(
@@ -417,6 +510,49 @@ impl DojoWorld {
         Ok(RetrieveEntitiesResponse { entities })
     }
 
+    async fn retrieve_events(
+        &self,
+        query: proto::types::Query,
+    ) -> Result<proto::world::RetrieveEventsResponse, Error> {
+        let events = match query.clause {
+            None => self.events_all(query.limit, query.offset).await?,
+            Some(clause) => {
+                let clause_type =
+                    clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
+
+                match clause_type {
+                    ClauseType::HashedKeys(hashed_keys) => {
+                        if hashed_keys.hashed_keys.is_empty() {
+                            return Err(QueryError::MissingParam("ids".into()).into());
+                        }
+
+                        self.events_by_hashed_keys(Some(hashed_keys), query.limit, query.offset)
+                            .await?
+                    }
+                    ClauseType::Keys(keys) => {
+                        if keys.keys.is_empty() {
+                            return Err(QueryError::MissingParam("keys".into()).into());
+                        }
+
+                        if keys.model.is_empty() {
+                            return Err(QueryError::MissingParam("model".into()).into());
+                        }
+
+                        self.events_by_keys(keys, query.limit, query.offset).await?
+                    }
+                    ClauseType::Member(_member) => {
+                        unimplemented!();
+                    }
+                    ClauseType::Composite(_composite) => {
+                        unimplemented!();
+                    }
+                }
+            }
+        };
+
+        Ok(RetrieveEventsResponse { events })
+    }
+
     fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
         let hashed_keys =
             FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
@@ -431,6 +567,19 @@ impl DojoWorld {
             .collect::<Result<Vec<_>, Error>>()?;
 
         Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
+    }
+
+    fn map_row_to_event(row: &SqliteRow) -> Result<proto::types::Event, Error> {
+        let hashed_keys =
+            FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+        let data = row.get::<String, _>("data").split(',').map(|s| s.to_string()).collect();
+        let transaction_hash = row.get::<String, _>("transaction_hash");
+
+        Ok(proto::types::Event {
+            hashed_keys: hashed_keys.to_bytes_be().to_vec(),
+            data,
+            transaction_hash,
+        })
     }
 }
 
@@ -502,6 +651,21 @@ impl proto::world::world_server::World for DojoWorld {
             self.retrieve_entities(query).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(entities))
+    }
+
+    async fn retrieve_events(
+        &self,
+        request: Request<RetrieveEventsRequest>,
+    ) -> Result<Response<RetrieveEventsResponse>, Status> {
+        let query = request
+            .into_inner()
+            .query
+            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let events =
+            self.retrieve_events(query).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(events))
     }
 }
 
