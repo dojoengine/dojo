@@ -1,11 +1,14 @@
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
-use cairo_lang_starknet::abi::{self, Event, Item};
+use cainome::parser::tokens::Token;
+use cainome::parser::AbiParser;
+use cairo_lang_starknet::abi;
 use clap::Parser;
 use dojo_world::manifest::Manifest;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
+use serde_json;
 use starknet::core::utils::starknet_keccak;
 
 use super::options::starknet::StarknetOptions;
@@ -73,50 +76,68 @@ impl EventsArgs {
     }
 }
 
-fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Event>> {
-    fn inner_helper(events: &mut HashMap<String, Vec<Event>>, abi: abi::Contract) {
-        for item in abi.into_iter() {
-            if let Item::Event(e) = item {
-                match e.kind {
-                    abi::EventKind::Struct { .. } => {
-                        let event_name = starknet_keccak(
-                            e.name
-                                .split("::")
-                                .last()
-                                .expect("valid fully qualified name")
-                                .as_bytes(),
-                        );
-                        let vec = events.entry(event_name.to_string()).or_default();
-                        vec.push(e.clone());
+fn is_event(token: &Token) -> bool {
+    match token {
+        Token::Composite(composite) => composite.is_event,
+        _ => false,
+    }
+}
+
+fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Token>> {
+    //println!("manifest {:?}", manifest.world.abi.clone().unwrap());
+
+    // Helper function to process ABI and populate events_map
+    fn process_abi(abi: &abi::Contract, events_map: &mut HashMap<String, Vec<Token>>) {
+        match serde_json::to_string(abi) {
+            Ok(abi_str) => match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
+                Ok(tokens) => {
+                    for token in tokens.structs {
+                        if is_event(&token) {
+                            //println!("°°°°°°°°°°°°");
+                            //println!("Token Name: {:?}", token.type_name());
+                            //println!("Token: {:?}", token);
+                            //println!("°°°°°°°°°°°°");
+
+                            let event_name = starknet_keccak(token.type_name().as_bytes());
+                            //println!("Event Name: {} {}", event_name, token.type_name());
+
+                            let vec = events_map.entry(event_name.to_string()).or_default();
+                            vec.push(token.clone());
+                        }
                     }
-                    abi::EventKind::Enum { .. } => (),
                 }
-            }
+                Err(e) => println!("Error parsing ABI: {}", e),
+            },
+            Err(e) => println!("Error serializing Contract to JSON: {}", e),
         }
     }
 
     let mut events_map = HashMap::new();
 
-    if let Some(abi) = manifest.world.abi.clone() {
-        inner_helper(&mut events_map, abi);
+    // Iterate over all ABIs in the manifest and process them
+    if let Some(abi) = manifest.world.abi.as_ref() {
+        process_abi(abi, &mut events_map);
     }
 
-    if let Some(abi) = manifest.executor.abi.clone() {
-        inner_helper(&mut events_map, abi);
+    if let Some(abi) = manifest.executor.abi.as_ref() {
+        process_abi(abi, &mut events_map);
     }
 
     for contract in &manifest.contracts {
         if let Some(abi) = contract.abi.clone() {
-            inner_helper(&mut events_map, abi);
+            process_abi(&abi, &mut events_map);
         }
     }
 
     for model in &manifest.contracts {
         if let Some(abi) = model.abi.clone() {
-            inner_helper(&mut events_map, abi);
+            process_abi(&abi, &mut events_map);
         }
     }
 
+    //println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    //println!("Events Map 2: {:?}", events_map);
+    //println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     events_map
 }
 
