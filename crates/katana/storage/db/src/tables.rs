@@ -1,14 +1,13 @@
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, ContractAddress, FlattenedSierraClass, GenericContractInfo,
-    StorageKey,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
+    GenericContractInfo, StorageKey,
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
-use crate::models::class::StoredContractClass;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::storage::{
     ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
@@ -159,7 +158,7 @@ define_tables_enum! {[
     (Transactions, TableType::Table),
     (Receipts, TableType::Table),
     (CompiledClassHashes, TableType::Table),
-    (CompiledContractClasses, TableType::Table),
+    (CompiledClasses, TableType::Table),
     (SierraClasses, TableType::Table),
     (ContractInfo, TableType::Table),
     (ContractStorage, TableType::DupSort),
@@ -197,7 +196,7 @@ tables! {
     /// Store compiled classes
     CompiledClassHashes: (ClassHash) => CompiledClassHash,
     /// Store compiled contract classes according to its compiled class hash
-    CompiledContractClasses: (ClassHash) => StoredContractClass,
+    CompiledClasses: (ClassHash) => CompiledClass,
     /// Store Sierra classes according to its class hash
     SierraClasses: (ClassHash) => FlattenedSierraClass,
     /// Store contract information according to its contract address
@@ -246,7 +245,7 @@ mod tests {
         assert_eq!(Tables::ALL[8].name(), Transactions::NAME);
         assert_eq!(Tables::ALL[9].name(), Receipts::NAME);
         assert_eq!(Tables::ALL[10].name(), CompiledClassHashes::NAME);
-        assert_eq!(Tables::ALL[11].name(), CompiledContractClasses::NAME);
+        assert_eq!(Tables::ALL[11].name(), CompiledClasses::NAME);
         assert_eq!(Tables::ALL[12].name(), SierraClasses::NAME);
         assert_eq!(Tables::ALL[13].name(), ContractInfo::NAME);
         assert_eq!(Tables::ALL[14].name(), ContractStorage::NAME);

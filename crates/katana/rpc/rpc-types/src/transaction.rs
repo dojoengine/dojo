@@ -6,7 +6,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::contract::{ClassHash, ContractAddress};
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
-    legacy_rpc_to_inner_compiled_class,
+    legacy_rpc_to_compiled_class,
 };
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, InvokeTx, TxHash,
@@ -62,7 +62,7 @@ impl BroadcastedDeclareTx {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
                 let (class_hash, compiled_class) =
-                    legacy_rpc_to_inner_compiled_class(&tx.contract_class)?;
+                    legacy_rpc_to_compiled_class(&tx.contract_class)?;
 
                 Ok(DeclareTxWithClass {
                     compiled_class,

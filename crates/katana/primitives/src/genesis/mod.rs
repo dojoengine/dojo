@@ -25,8 +25,8 @@ use self::constant::{
 };
 use crate::block::{Block, BlockHash, BlockNumber, GasPrices, Header};
 use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    StorageKey, StorageValue,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass, StorageKey,
+    StorageValue,
 };
 use crate::state::StateUpdatesWithDeclaredClasses;
 use crate::utils::split_u256;
@@ -61,7 +61,7 @@ pub struct GenesisClass {
     pub compiled_class_hash: CompiledClassHash,
     /// The casm class definition.
     #[serde(skip_serializing)]
-    pub casm: Arc<CompiledContractClass>,
+    pub casm: Arc<CompiledClass>,
     /// The sierra class definition.
     #[serde(skip_serializing)]
     pub sierra: Option<Arc<FlattenedSierraClass>>,

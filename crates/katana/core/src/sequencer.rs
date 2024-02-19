@@ -13,7 +13,7 @@ use katana_executor::blockifier::PendingState;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::ChainId;
 use katana_primitives::contract::{
-    ClassHash, CompiledContractClass, ContractAddress, Nonce, StorageKey, StorageValue,
+    ClassHash, CompiledClass, ContractAddress, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::event::{ContinuationToken, ContinuationTokenError};
 use katana_primitives::receipt::Event;
@@ -239,8 +239,8 @@ impl KatanaSequencer {
         };
 
         match class {
-            CompiledContractClass::V0(class) => Ok(Some(StarknetContract::Legacy(class))),
-            CompiledContractClass::V1(_) => {
+            CompiledClass::Deprecated(class) => Ok(Some(StarknetContract::Legacy(class))),
+            CompiledClass::Class(_) => {
                 let class = ContractClassProvider::sierra_class(&state, class_hash)?
                     .map(StarknetContract::Sierra);
                 Ok(class)

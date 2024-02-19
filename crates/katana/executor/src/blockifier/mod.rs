@@ -12,9 +12,8 @@ use blockifier::transaction::objects::TransactionExecutionInfo;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::transaction::{
-    DeclareTxWithClass, ExecutableTx, ExecutableTxWithHash, TxWithHash,
-};
+use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
+use katana_provider::traits::state::StateProvider;
 use parking_lot::RwLock;
 use tracing::{trace, warn};
 
@@ -34,7 +33,7 @@ type TxExecutionResult = Result<TransactionExecutionInfo, TransactionExecutionEr
 /// The transactions will be executed in an iterator fashion, sequentially, in the
 /// exact order they are provided to the executor. The execution is done within its
 /// implementation of the [`Iterator`] trait.
-pub struct TransactionExecutor<'a, S: StateReader, T> {
+pub struct TransactionExecutor<'a, S: StateReader + StateProvider, T> {
     /// A flag to enable/disable fee charging.
     charge_fee: bool,
     /// The block context the transactions will be executed on.
@@ -54,7 +53,7 @@ pub struct TransactionExecutor<'a, S: StateReader, T> {
 
 impl<'a, S, T> TransactionExecutor<'a, S, T>
 where
-    S: StateReader,
+    S: StateReader + StateProvider,
     T: Iterator<Item = ExecutableTxWithHash>,
 {
     pub fn new(
@@ -96,7 +95,7 @@ where
 
 impl<'a, S, T> Iterator for TransactionExecutor<'a, S, T>
 where
-    S: StateReader,
+    S: StateReader + StateProvider,
     T: Iterator<Item = ExecutableTxWithHash>,
 {
     type Item = TxExecutionResult;
@@ -141,20 +140,19 @@ where
     }
 }
 
-fn execute_tx<S: StateReader>(
+fn execute_tx<S>(
     tx: ExecutableTxWithHash,
     state: &CachedStateWrapper<S>,
     block_context: &BlockContext,
     charge_fee: bool,
     validate: bool,
-) -> TxExecutionResult {
-    let sierra = if let ExecutableTx::Declare(DeclareTxWithClass {
-        transaction,
-        sierra_class: Some(sierra_class),
-        ..
-    }) = tx.as_ref()
-    {
-        Some((transaction.class_hash(), sierra_class.clone()))
+) -> TxExecutionResult
+where
+    S: StateReader + StateProvider,
+{
+    let class_declaration_params = if let ExecutableTx::Declare(tx) = tx.as_ref() {
+        let class_hash = tx.class_hash();
+        Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
     } else {
         None
     };
@@ -169,8 +167,12 @@ fn execute_tx<S: StateReader>(
     };
 
     if res.is_ok() {
-        if let Some((class_hash, sierra_class)) = sierra {
-            state.sierra_class_mut().insert(class_hash, sierra_class);
+        if let Some((class_hash, compiled_class, sierra_class)) = class_declaration_params {
+            state.class_cache.write().compiled.insert(class_hash, compiled_class);
+
+            if let Some(sierra_class) = sierra_class {
+                state.class_cache.write().sierra.insert(class_hash, sierra_class);
+            }
         }
     }
 
@@ -201,9 +203,9 @@ impl PendingState {
         }
     }
 
-    pub fn reset_state(&self, state: StateRefDb, block_env: BlockEnv, cfg_env: CfgEnv) {
+    pub fn reset_state(&self, state: Box<dyn StateProvider>, block_env: BlockEnv, cfg_env: CfgEnv) {
         *self.block_envs.write() = (block_env, cfg_env);
-        self.state.reset_with_new_state(state);
+        self.state.reset_with_new_state(StateRefDb(state));
     }
 
     pub fn add_executed_txs(&self, transactions: Vec<(TxWithHash, TxExecutionResult)>) {
