@@ -3,7 +3,10 @@ use std::str::FromStr;
 use dojo_types::schema::Ty;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use starknet_core::utils::{cairo_short_string_to_felt, get_selector_from_name, starknet_keccak};
+use starknet_core::utils::{
+    cairo_short_string_to_felt, get_selector_from_name, starknet_keccak,
+    CairoShortStringToFeltError,
+};
 use starknet_crypto::{pedersen_hash, poseidon_hash, poseidon_hash_many};
 use starknet_ff::FieldElement;
 
@@ -237,6 +240,39 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> String {
     type_hash
 }
 
+fn byte_array_from_string(
+    target_string: &str,
+) -> Result<(Vec<FieldElement>, FieldElement, usize), CairoShortStringToFeltError> {
+    let short_strings: Vec<&str> = split_long_string(target_string);
+    let remainder = short_strings.last().unwrap_or(&"");
+
+    let mut short_strings_encoded = short_strings
+        .iter()
+        .map(|&s| cairo_short_string_to_felt(s))
+        .collect::<Result<Vec<FieldElement>, _>>()?;
+
+    let (pending_word, pending_word_length) = if remainder.is_empty() || remainder.len() == 31 {
+        (FieldElement::ZERO, 0)
+    } else {
+        (short_strings_encoded.pop().unwrap(), remainder.len())
+    };
+
+    Ok((short_strings_encoded, pending_word, pending_word_length))
+}
+
+fn split_long_string(long_str: &str) -> Vec<&str> {
+    let mut result = Vec::new();
+
+    let mut start = 0;
+    while start < long_str.len() {
+        let end = (start + 31).min(long_str.len());
+        result.push(&long_str[start..end]);
+        start = end;
+    }
+
+    result
+}
+
 impl PrimitiveType {
     fn get_value_type(
         &self,
@@ -323,18 +359,20 @@ impl PrimitiveType {
                 "shortstring" => self.get_hex(string),
                 "string" => {
                     // split the string into short strings and encode
-                    // let short_strings = Vec::new();
+                    let byte_array = byte_array_from_string(string).map_err(|_| {
+                        Error::InvalidMessageError("Invalid short string".to_string())
+                    })?;
 
-                    // // every 32 bytes, add short string from string
-                    // for i in (0..string.len()).step_by(32) {
-                    //     let short_string = cairo_short_string_to_felt(&string[i..i + 32])
-                    //         .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string()))?;
-                    //     short_strings.push(short_string);
-                    // }
+                    let mut hashes = vec![FieldElement::from(byte_array.0.len())];
 
-                    // let remainder
+                    for hash in byte_array.0 {
+                        hashes.push(hash);
+                    }
 
-                    Ok(starknet_keccak(string.as_bytes()))
+                    hashes.push(byte_array.1);
+                    hashes.push(FieldElement::from(byte_array.2));
+
+                    Ok(poseidon_hash_many(hashes.as_slice()))
                 }
                 "selector" => get_selector_from_name(string).map_err(|_| {
                     Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
@@ -343,6 +381,8 @@ impl PrimitiveType {
                 "ContractAddress" => self.get_hex(string),
                 "ClassHash" => self.get_hex(string),
                 "timestamp" => self.get_hex(string),
+                "u128" => self.get_hex(string),
+                "i128" => self.get_hex(string),
                 _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
             },
             PrimitiveType::USize(usize) => Ok(FieldElement::from(*usize as u128)),
@@ -567,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_message_hash() {
-        let path = "mocks/mail_StructArray.json";
+        let path = "mocks/example_baseTypes.json";
         let file = std::fs::File::open(path).unwrap();
         let reader = std::io::BufReader::new(file);
 
@@ -582,7 +622,7 @@ mod tests {
         assert_eq!(
             message_hash,
             FieldElement::from_hex_be(
-                "0x5914ed2764eca2e6a41eb037feefd3d2e33d9af6225a9e7fe31ac943ff712c"
+                "0x790d9fa99cf9ad91c515aaff9465fcb1c87784d9cfb27271ed193675cd06f9c"
             )
             .unwrap()
         );
