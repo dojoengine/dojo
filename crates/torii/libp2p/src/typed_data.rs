@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
-use dojo_types::schema::Ty;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_json::{value::Index, Number};
 use starknet_core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, starknet_keccak,
     CairoShortStringToFeltError,
@@ -26,93 +26,6 @@ pub struct ParentField {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TokenAmount {
-    // ContractAddress
-    pub token_address: FieldElement,
-    pub amount: U256,
-}
-
-impl TokenAmount {
-    pub fn encode(
-        &self,
-        name: &str,
-        types: &IndexMap<String, Vec<Field>>,
-        encode_type_hash: bool,
-    ) -> Result<FieldElement, Error> {
-        let mut hashes = Vec::new();
-
-        if encode_type_hash {
-            let type_hash = encode_type(name, types);
-            hashes.push(starknet_keccak(type_hash.as_bytes()));
-        }
-
-        hashes.push(self.token_address);
-
-        let amount_hash = self.amount.encode("u256", types, false)?;
-        hashes.push(amount_hash);
-
-        Ok(poseidon_hash_many(hashes.as_slice()))
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NftId {
-    // ContractAddress
-    pub collection_address: FieldElement,
-    pub token_id: U256,
-}
-
-impl NftId {
-    pub fn encode(
-        &self,
-        name: &str,
-        types: &IndexMap<String, Vec<Field>>,
-        encode_type_hash: bool,
-    ) -> Result<FieldElement, Error> {
-        let mut hashes = Vec::new();
-
-        if encode_type_hash {
-            let type_hash = encode_type(name, types);
-            hashes.push(starknet_keccak(type_hash.as_bytes()));
-        }
-
-        hashes.push(self.collection_address);
-        let token_id = self.token_id.encode("u256", types, false)?;
-
-        hashes.push(token_id);
-
-        Ok(poseidon_hash_many(hashes.as_slice()))
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct U256 {
-    pub low: u128,
-    pub high: u128,
-}
-
-impl U256 {
-    pub fn encode(
-        &self,
-        name: &str,
-        types: &IndexMap<String, Vec<Field>>,
-        encode_type_hash: bool,
-    ) -> Result<FieldElement, Error> {
-        let mut hashes: Vec<FieldElement> = Vec::new();
-
-        if encode_type_hash {
-            let type_hash = encode_type(name, types);
-            hashes.push(starknet_keccak(type_hash.as_bytes()));
-        }
-
-        hashes.push(FieldElement::from(self.low));
-        hashes.push(FieldElement::from(self.high));
-
-        Ok(poseidon_hash_many(hashes.as_slice()))
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Field {
     ParentType(ParentField),
@@ -122,23 +35,24 @@ pub enum Field {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PrimitiveType {
+    // TokenAmount(TokenAmount),
+    // NftId(NftId),
+    // U256(U256),
     Object(IndexMap<String, PrimitiveType>),
     Array(Vec<PrimitiveType>),
     Bool(bool),
     // comprehensive representation of
     // String, ShortString, Selector and Felt
     String(String),
-    USize(usize),
-    U128(u128),
-    I128(i128),
-    TokenAmount(TokenAmount),
-    NftId(NftId),
-    U256(U256),
+    Number(Number),
 }
 
-fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Vec<Field> {
-    match name {
-        "TokenAmount" => vec![
+fn get_preset_types() -> IndexMap<String, Vec<Field>> {
+    let mut types = IndexMap::new();
+
+    types.insert(
+        "TokenAmount".to_string(),
+        vec![
             Field::SimpleType(SimpleField {
                 name: "token_address".to_string(),
                 r#type: "ContractAddress".to_string(),
@@ -148,7 +62,11 @@ fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Vec<Field> {
                 r#type: "u256".to_string(),
             }),
         ],
-        "NftId" => vec![
+    );
+
+    types.insert(
+        "NftId".to_string(),
+        vec![
             Field::SimpleType(SimpleField {
                 name: "collection_address".to_string(),
                 r#type: "ContractAddress".to_string(),
@@ -158,11 +76,26 @@ fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Vec<Field> {
                 r#type: "u256".to_string(),
             }),
         ],
-        "u256" => vec![
+    );
+
+    types.insert(
+        "u256".to_string(),
+        vec![
             Field::SimpleType(SimpleField { name: "low".to_string(), r#type: "u128".to_string() }),
             Field::SimpleType(SimpleField { name: "high".to_string(), r#type: "u128".to_string() }),
         ],
-        _ => types[name].clone(),
+    );
+
+    types
+}
+
+fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<Vec<Field>, Error> {
+    if let Some(fields) = types.get(name) {
+        Ok(fields.clone())
+    } else if let Some(fields) = get_preset_types().get(name) {
+        Ok(fields.clone())
+    } else {
+        Err(Error::InvalidMessageError(format!("Type {} not found", name)))
     }
 }
 
@@ -170,14 +103,14 @@ fn get_dependencies(
     name: &str,
     types: &IndexMap<String, Vec<Field>>,
     dependencies: &mut Vec<String>,
-) {
+) -> Result<(), Error> {
     if dependencies.contains(&name.to_string()) {
-        return;
+        return Ok(());
     }
 
     dependencies.push(name.to_string());
 
-    for field in &get_fields(name, types) {
+    for field in &get_fields(name, types)? {
         let mut field_type = match field {
             Field::SimpleType(simple_field) => simple_field.r#type.clone(),
             Field::ParentType(parent_field) => parent_field.contains.clone(),
@@ -186,17 +119,19 @@ fn get_dependencies(
         field_type = field_type.trim_end_matches("*").to_string();
 
         if types.contains_key(&field_type) && !dependencies.contains(&field_type) {
-            get_dependencies(&field_type, types, dependencies);
+            get_dependencies(&field_type, types, dependencies)?;
         }
     }
+
+    Ok(())
 }
 
-pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> String {
+pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<String, Error> {
     let mut type_hash = String::new();
 
     // get dependencies
     let mut dependencies: Vec<String> = Vec::new();
-    get_dependencies(name, types, &mut dependencies);
+    get_dependencies(name, types, &mut dependencies)?;
 
     // sort dependencies
     dependencies.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
@@ -206,7 +141,7 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> String {
 
         type_hash += "(";
 
-        let fields = get_fields(&dep, types);
+        let fields = get_fields(&dep, types)?;
         for (idx, field) in fields.iter().enumerate() {
             match field {
                 Field::SimpleType(simple_field) => {
@@ -237,7 +172,7 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> String {
         type_hash += ")";
     }
 
-    type_hash
+    Ok(type_hash)
 }
 
 fn byte_array_from_string(
@@ -273,27 +208,43 @@ fn split_long_string(long_str: &str) -> Vec<&str> {
     result
 }
 
+pub struct Ctx {
+    pub base_type: String,
+}
+
+impl Default for Ctx {
+    fn default() -> Self {
+        Ctx { base_type: "".to_string() }
+    }
+}
+
 impl PrimitiveType {
     fn get_value_type(
         &self,
         name: &str,
         types: &IndexMap<String, Vec<Field>>,
-    ) -> Result<String, Error> {
-        for (key, value) in types {
+    ) -> Result<(String, String), Error> {
+        let preset_types = get_preset_types();
+
+        // iter both "types" and "preset_types" to find the field
+        for (key, value) in types.iter().chain(preset_types.iter()) {
             if key == name {
-                return Ok(key.clone());
+                return Ok((key.clone(), Default::default()));
             }
 
             for field in value {
                 match field {
                     Field::SimpleType(simple_field) => {
                         if simple_field.name == name {
-                            return Ok(simple_field.r#type.clone());
+                            return Ok((simple_field.r#type.clone(), Default::default()));
                         }
                     }
                     Field::ParentType(parent_field) => {
                         if parent_field.name == name {
-                            return Ok(parent_field.r#type.clone());
+                            return Ok((
+                                parent_field.contains.clone(),
+                                parent_field.r#type.clone(),
+                            ));
                         }
                     }
                 }
@@ -318,23 +269,58 @@ impl PrimitiveType {
         r#type: &str,
         types: &IndexMap<String, Vec<Field>>,
         encode_type_hash: bool,
+        ctx: &mut Ctx,
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
                 let mut hashes = Vec::new();
 
                 if encode_type_hash {
-                    let type_hash = encode_type(r#type, types);
+                    let type_hash = encode_type(r#type, types)?;
                     println!("type_hash: {}", type_hash);
                     hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
                         Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
                     })?);
                 }
 
+                if ctx.base_type == "enum" {
+                    let value = obj.first().ok_or_else(|| {
+                        Error::InvalidMessageError("Enum value must be populated".to_string())
+                    })?.1;
+
+                    let arr = match value {
+                        PrimitiveType::Array(arr) => arr,
+                        _ => {
+                            return Err(Error::InvalidMessageError(
+                                "Enum value must be an array".to_string(),
+                            ))
+                        }
+                    };
+
+                    // variant index
+                    hashes.push(arr[0].encode("felt", types, encode_type_hash, ctx)?);
+
+                    // variant parameters
+                    for (_, param) in match &arr[1] {
+                        PrimitiveType::Array(arr) => arr.iter().enumerate(),
+                        _ => {
+                            return Err(Error::InvalidMessageError(
+                                "Enum value must be an array".to_string(),
+                            ))
+                        }
+                    } {
+                        let field_hash = param.encode("u128", types, encode_type_hash, ctx)?;
+                        hashes.push(field_hash);
+                    }
+
+                    return Ok(poseidon_hash_many(hashes.as_slice()));
+                }
+                
+                
                 for (field_name, value) in obj {
-                    println!("field_name: {}", field_name);
-                    let field_hash =
-                        value.encode(&self.get_value_type(field_name, types)?, types, false)?;
+                    let field_type = self.get_value_type(field_name, types)?;
+                    ctx.base_type = field_type.1.clone();
+                    let field_hash = value.encode(field_type.0.as_str(), types, true, ctx)?;
                     hashes.push(field_hash);
                 }
 
@@ -343,7 +329,7 @@ impl PrimitiveType {
             PrimitiveType::Array(array) => Ok(poseidon_hash_many(
                 array
                     .iter()
-                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, encode_type_hash))
+                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, encode_type_hash, ctx))
                     .collect::<Result<Vec<_>, _>>()?
                     .as_slice(),
             )),
@@ -385,13 +371,11 @@ impl PrimitiveType {
                 "i128" => self.get_hex(string),
                 _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
             },
-            PrimitiveType::USize(usize) => Ok(FieldElement::from(*usize as u128)),
-            PrimitiveType::U128(u128) => Ok(FieldElement::from(*u128 as u128)),
-            PrimitiveType::I128(i128) => Ok(FieldElement::from(*i128 as u128)),
-            PrimitiveType::U256(u256) => u256.encode(r#type, types, encode_type_hash),
-            PrimitiveType::NftId(nft_id) => nft_id.encode(r#type, types, encode_type_hash),
-            PrimitiveType::TokenAmount(token_amount) => {
-                token_amount.encode(r#type, types, encode_type_hash)
+            PrimitiveType::Number(number) => {
+                let felt = FieldElement::from_str(&number.to_string()).map_err(|_| {
+                    Error::InvalidMessageError(format!("Invalid number {}", number.to_string()))
+                })?;
+                Ok(felt)
             }
         }
     }
@@ -417,7 +401,7 @@ impl Domain {
             object.insert("revision".to_string(), PrimitiveType::String(revision.clone()));
         }
 
-        PrimitiveType::Object(object).encode("StarknetDomain", types, true)
+        PrimitiveType::Object(object).encode("StarknetDomain", types, true, &mut Default::default())
     }
 }
 
@@ -448,6 +432,7 @@ impl TypedData {
             &self.primary_type,
             &self.types,
             true,
+            &mut Default::default(),
         )?;
 
         // return full hash
@@ -459,46 +444,6 @@ impl TypedData {
 mod tests {
     use super::*;
     use starknet_ff::FieldElement;
-
-    // Helper function to create a FieldElement from a u64 for testing
-    fn fe_from_u64(val: u64) -> FieldElement {
-        FieldElement::from(val)
-    }
-
-    // Example test for TokenAmount encoding
-    #[test]
-    fn test_token_amount_encoding() {
-        let token_address = fe_from_u64(123456789); // Example token address
-        let amount = U256 { low: 123, high: 456 }; // Example amount
-
-        let token_amount = TokenAmount { token_address, amount };
-
-        // Simulate types IndexMap required for encoding
-        let types = IndexMap::new(); // This should be populated based on your actual types
-
-        let encoded = token_amount.encode("TokenAmount", &types, true).unwrap();
-
-        // Compare the result with expected value
-        // This part is tricky without knowing the expected output, so you might want to assert
-        // that encoded is not zero, or compare it against a known value if you have one.
-        assert_ne!(encoded, FieldElement::ZERO);
-    }
-
-    // Example test for NftId encoding
-    #[test]
-    fn test_nft_id_encoding() {
-        let collection_address = fe_from_u64(987654321); // Example collection address
-        let token_id = U256 { low: 789, high: 654 }; // Example token id
-
-        let nft_id = NftId { collection_address, token_id };
-
-        let types = IndexMap::new(); // Populate as needed
-
-        let encoded = nft_id.encode("NftId", &types, true).unwrap();
-
-        // Assert on the encoded result
-        assert_ne!(encoded, FieldElement::ZERO);
-    }
 
     #[test]
     fn test_read_json() {
@@ -536,7 +481,7 @@ mod tests {
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
 
-        let encoded = encode_type(&typed_data.primary_type, &typed_data.types);
+        let encoded = encode_type(&typed_data.primary_type, &typed_data.types).unwrap();
 
         assert_eq!(encoded, "\"Example\"(\"n0\":\"felt\",\"n1\":\"bool\",\"n2\":\"string\",\"n3\":\"selector\",\"n4\":\"u128\",\"n5\":\"ContractAddress\",\"n6\":\"ClassHash\",\"n7\":\"timestamp\",\"n8\":\"shortstring\")");
 
@@ -546,7 +491,7 @@ mod tests {
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
 
-        let encoded = encode_type(&typed_data.primary_type, &typed_data.types);
+        let encoded = encode_type(&typed_data.primary_type, &typed_data.types).unwrap();
 
         assert_eq!(encoded, "\"Mail\"(\"from\":\"Person\",\"to\":\"Person\",\"posts_len\":\"felt\",\"posts\":\"Post*\")\"Person\"(\"name\":\"felt\",\"wallet\":\"felt\")\"Post\"(\"title\":\"felt\",\"content\":\"felt\")");
 
@@ -556,7 +501,7 @@ mod tests {
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
 
-        let encoded = encode_type(&typed_data.primary_type, &typed_data.types);
+        let encoded = encode_type(&typed_data.primary_type, &typed_data.types).unwrap();
 
         assert_eq!(encoded, "\"Example\"(\"someEnum\":\"MyEnum\")\"MyEnum\"(\"Variant 1\":(),\"Variant 2\":(\"u128\",\"u128*\"),\"Variant 3\":(\"u128\"))");
 
@@ -566,7 +511,7 @@ mod tests {
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
 
-        let encoded = encode_type(&typed_data.primary_type, &typed_data.types);
+        let encoded = encode_type(&typed_data.primary_type, &typed_data.types).unwrap();
 
         assert_eq!(encoded, "\"Example\"(\"n0\":\"TokenAmount\",\"n1\":\"NftId\")");
     }
@@ -579,8 +524,10 @@ mod tests {
 
         let types = IndexMap::new();
 
-        let encoded_selector = selector.encode("selector", &types, true).unwrap();
-        let raw_encoded_selector = selector_hash.encode("felt", &types, true).unwrap();
+        let encoded_selector =
+            selector.encode("selector", &types, true, &mut Default::default()).unwrap();
+        let raw_encoded_selector =
+            selector_hash.encode("felt", &types, true, &mut Default::default()).unwrap();
 
         assert_eq!(encoded_selector, raw_encoded_selector);
         assert_eq!(encoded_selector, starknet_keccak("transfer".as_bytes()));
@@ -607,17 +554,16 @@ mod tests {
 
     #[test]
     fn test_message_hash() {
+        let address =
+            FieldElement::from_hex_be("0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826").unwrap();
+
         let path = "mocks/example_baseTypes.json";
         let file = std::fs::File::open(path).unwrap();
         let reader = std::io::BufReader::new(file);
 
         let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
 
-        let message_hash = typed_data
-            .encode(
-                FieldElement::from_hex_be("0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826").unwrap(),
-            )
-            .unwrap();
+        let message_hash = typed_data.encode(address).unwrap();
 
         assert_eq!(
             message_hash,
@@ -626,5 +572,38 @@ mod tests {
             )
             .unwrap()
         );
+
+        let path = "mocks/example_enum.json";
+        let file = std::fs::File::open(path).unwrap();
+        let reader = std::io::BufReader::new(file);
+
+        let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
+
+        let message_hash = typed_data.encode(address).unwrap();
+
+        assert_eq!(
+            message_hash,
+            FieldElement::from_hex_be(
+                "0x3df10475ad5a8f49db4345a04a5b09164d2e24b09f6e1e236bc1ccd87627cc"
+            )
+            .unwrap()
+        );
+        
+        let path = "mocks/example_presetTypes.json";
+        let file = std::fs::File::open(path).unwrap();
+        let reader = std::io::BufReader::new(file);
+
+        let typed_data: TypedData = serde_json::from_reader(reader).unwrap();
+
+        let message_hash = typed_data.encode(address).unwrap();
+
+        assert_eq!(
+            message_hash,
+            FieldElement::from_hex_be(
+                "0x26e7b8cedfa63cdbed14e7e51b60ee53ac82bdf26724eb1e3f0710cb8987522"
+            )
+            .unwrap()
+        );
+
     }
 }
