@@ -289,6 +289,7 @@ impl PrimitiveType {
 
                 if encode_type_hash {
                     let type_hash = encode_type(r#type, types);
+                    println!("type_hash: {}", type_hash);
                     hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
                         Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
                     })?);
@@ -319,8 +320,7 @@ impl PrimitiveType {
                 Ok(v)
             }
             PrimitiveType::String(string) => match r#type {
-                "shortstring" => cairo_short_string_to_felt(string)
-                    .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string())),
+                "shortstring" => self.get_hex(string),
                 "string" => {
                     // split the string into short strings and encode
                     // let short_strings = Vec::new();
