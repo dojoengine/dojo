@@ -12,9 +12,8 @@ use katana_executor::blockifier::utils::{block_context_from_envs, EntryPointCall
 use katana_executor::blockifier::PendingState;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::ChainId;
-use katana_primitives::contract::{
-    ClassHash, CompiledClass, ContractAddress, Nonce, StorageKey, StorageValue,
-};
+use katana_primitives::class::{ClassHash, CompiledClass};
+use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::event::{ContinuationToken, ContinuationTokenError};
 use katana_primitives::receipt::Event;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};

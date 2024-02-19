@@ -23,7 +23,7 @@ use starknet_api::deprecated_contract_class::{
     ContractClassAbiEntry, EntryPoint, EntryPointType, TypedParameter,
 };
 
-use crate::contract::{
+use crate::class::{
     ClassHash, CompiledClassHash, DeprecatedCompiledClass, FlattenedSierraClass,
     SierraCompiledClass, SierraProgram,
 };
@@ -135,11 +135,11 @@ pub fn legacy_inner_to_rpc_class(
     Ok(ContractClass::Legacy(CompressedLegacyContractClass { abi, program, entry_points_by_type }))
 }
 
-/// Convert the given [`FlattenedSierraClass`] into the inner compiled class type
-/// [`CompiledClassHash`] along with its class hashes.
+/// Convert the given [FlattenedSierraClass] into the inner compiled class type
+/// [CompiledClass](crate::class::CompiledClass) along with its class hashes.
 pub fn flattened_sierra_to_compiled_class(
     contract_class: &FlattenedSierraClass,
-) -> Result<(ClassHash, CompiledClassHash, crate::contract::CompiledClass)> {
+) -> Result<(ClassHash, CompiledClassHash, crate::class::CompiledClass)> {
     let class_hash = contract_class.class_hash();
 
     let class = rpc_to_cairo_contract_class(contract_class)?;
@@ -151,7 +151,7 @@ pub fn flattened_sierra_to_compiled_class(
     let casm = CasmContractClass::from_contract_class(class, true)?;
     let compiled_hash = FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes())?;
 
-    let class = crate::contract::CompiledClass::Class(SierraCompiledClass { casm, sierra });
+    let class = crate::class::CompiledClass::Class(SierraCompiledClass { casm, sierra });
     Ok((class_hash, compiled_hash, class))
 }
 
@@ -166,10 +166,10 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
 }
 
 /// Converts a legacy RPC compiled contract class [CompressedLegacyContractClass] type to the inner
-/// compiled class type [CompiledClass](crate::contract::CompiledClass) along with its class hash.
+/// compiled class type [CompiledClass](crate::class::CompiledClass) along with its class hash.
 pub fn legacy_rpc_to_compiled_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
-) -> Result<(ClassHash, crate::contract::CompiledClass)> {
+) -> Result<(ClassHash, crate::class::CompiledClass)> {
     let class_json = json!({
         "abi": compressed_legacy_contract.abi.clone().unwrap_or_default(),
         "entry_points_by_type": compressed_legacy_contract.entry_points_by_type,
@@ -179,7 +179,7 @@ pub fn legacy_rpc_to_compiled_class(
     let deprecated_class: DeprecatedCompiledClass = serde_json::from_value(class_json.clone())?;
     let class_hash = serde_json::from_value::<LegacyContractClass>(class_json)?.class_hash()?;
 
-    Ok((class_hash, crate::contract::CompiledClass::Deprecated(deprecated_class)))
+    Ok((class_hash, crate::class::CompiledClass::Deprecated(deprecated_class)))
 }
 
 /// Converts `starknet-rs` RPC [FlattenedSierraClass] type to Cairo's
@@ -274,7 +274,7 @@ mod tests {
     use starknet::core::types::ContractClass;
 
     use super::{legacy_inner_to_rpc_class, legacy_rpc_to_compiled_class};
-    use crate::contract::{CompiledClass, DeprecatedCompiledClass};
+    use crate::class::{CompiledClass, DeprecatedCompiledClass};
     use crate::genesis::constant::DEFAULT_OZ_ACCOUNT_CONTRACT;
     use crate::utils::class::parse_deprecated_compiled_class;
 

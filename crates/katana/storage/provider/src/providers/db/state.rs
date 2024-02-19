@@ -5,9 +5,9 @@ use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
 use katana_primitives::block::BlockNumber;
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
-    GenericContractInfo, Nonce, StorageKey, StorageValue,
+    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::DbProvider;
@@ -137,7 +137,7 @@ impl StateProvider for LatestStateProvider {
     fn class_hash_of_contract(
         &self,
         address: ContractAddress,
-    ) -> ProviderResult<Option<katana_primitives::contract::ClassHash>> {
+    ) -> ProviderResult<Option<ClassHash>> {
         let info = self.0.get::<tables::ContractInfo>(address)?;
         Ok(info.map(|info| info.class_hash))
     }

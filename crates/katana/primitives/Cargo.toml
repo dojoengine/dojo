@@ -23,8 +23,8 @@ strum_macros.workspace = true
 thiserror.workspace = true
 
 blockifier.workspace = true
-cairo-lang-starknet.workspace = true
 cairo-lang-sierra.workspace = true
+cairo-lang-starknet.workspace = true
 flate2.workspace = true
 starknet_api.workspace = true
 

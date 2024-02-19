@@ -19,9 +19,9 @@ use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
+use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, ContractAddress, GenericContractInfo, Nonce, StorageKey,
-    StorageValue,
+    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;

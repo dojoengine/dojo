@@ -1,5 +1,6 @@
 use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::contract::{ClassHash, ContractAddress, Nonce, StorageKey, StorageValue};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::FieldElement;
 
 use super::contract::ContractClassProvider;

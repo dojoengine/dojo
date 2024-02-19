@@ -3,7 +3,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use derive_more::Deref;
 use katana_primitives::chain::ChainId;
-use katana_primitives::contract::{ClassHash, ContractAddress};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_compiled_class,
