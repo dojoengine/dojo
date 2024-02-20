@@ -49,33 +49,35 @@ impl TypescriptPlugin {
     // Token should be a struct
     // This will be formatted into a C# struct
     // using C# and unity SDK types
-    fn format_struct(token: &Composite) -> String {
-        let fields = token
-            .inners
-            .iter()
-            .map(|field| {
-                format!(
-                    "{}: {},",
-                    field.name,
-                    if TypescriptPlugin::map_type(field.token.clone().type_name().as_str()) == field.token.clone().type_name() {
-                        if field.token.to_composite().unwrap().r#type == CompositeType::Enum {
-                            format!("RecsType.Number")
-                        } else {
-                            format!("{}Definition", field.token.clone().type_name())
-                        }
-                    } else {
-                        TypescriptPlugin::map_type(field.token.clone().type_name().as_str())
-                    }
-                )
-            })
-            .collect::<Vec<String>>()
-            .join("\n    ");
+    fn format_struct(token: &Composite, handled_tokens: &[Composite]) -> String {
+        let mut native_fields = String::new();
+        let mut fields = String::new();
+        
+        for field in &token.inners {
+            let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
+            if mapped == field.token.type_name() {
+                let token = handled_tokens
+                    .iter()
+                    .find(|t| t.type_name() == field.token.type_name())
+                    .expect(format!("Token not found: {}", field.token.type_name()).as_str());
+                if token.r#type == CompositeType::Enum {
+                    native_fields += format!("{}: {};\n    ", field.name, mapped).as_str();
+                    fields += format!("{}: RecsType.Number,\n    ", field.name).as_str();
+                } else {
+                    native_fields += format!("{}: {};\n    ", field.name, field.token.type_name()).as_str();
+                    fields += format!("{}: {}Definition,\n    ", field.name, mapped).as_str();
+                }
+            } else {
+                native_fields += format!("{}: {};\n    ", field.name, mapped.replace("RecsType.", "")).as_str();
+                fields += format!("{}: {},\n    ", field.name, mapped).as_str();
+            }
+        }
 
         format!(
             "
 // Type definition for `{path}` struct
 export interface {name} {{
-    {nativeFields}
+    {native_fields}
 }}
 
 export const {name}Definition = {{
@@ -85,7 +87,7 @@ export const {name}Definition = {{
             path = token.type_path,
             name = token.type_name(),
             fields = fields,
-            nativeFields = fields.replace("RecsType.", "")
+            native_fields = native_fields
         )
     }
 
@@ -116,7 +118,7 @@ export enum {} {{
     // Token should be a model
     // This will be formatted into a C# class inheriting from ModelInstance
     // Fields are mapped using C# and unity SDK types
-    fn format_model(model: &Composite) -> String {
+    fn format_model(model: &Composite, handled_tokens: &[Composite]) -> String {
         let mut custom_types = Vec::<String>::new();
         let mut types = Vec::<String>::new();
         let fields = model
@@ -125,19 +127,26 @@ export enum {} {{
             .map(|field| {
                 let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
                 if mapped == field.token.type_name() {
-                    if field.token.to_composite().unwrap().r#type == CompositeType::Enum {
-                        custom_types.push("RecsType.Number".to_string());
+                    custom_types.push(format!("\"{}\"", field.token.type_name()));
+
+                    let token = handled_tokens
+                        .iter()
+                        .find(|t| t.type_name() == field.token.type_name())
+                        .expect(format!("Token not found: {}", field.token.type_name()).as_str());
+                    if token.r#type == CompositeType::Enum {
+                        format!("{}: {},", field.name, format!("RecsType.Number"))
                     } else {
-                        custom_types.push(format!("\"{}Definition\"", field.token.type_name()));
+                        format!("{}: {},", field.name, format!("{}Definition", mapped))
                     }
                 } else {
                     types.push(format!("\"{}\"", field.token.type_name()));
+                    format!("{}: {},", field.name, format!("{}", mapped))
                 }
 
-                format!("{}: {},", field.name, mapped,)
+                
             })
             .collect::<Vec<String>>()
-            .join("\n                ");
+            .join("\n                    ");
 
         format!(
             "
@@ -183,19 +192,24 @@ export enum {} {{
         let mut models_structs = Vec::new();
         for model in models {
             let tokens = &model.tokens;
+
+            for token in &tokens.enums {
+                handled_tokens.push(token.to_composite().unwrap().to_owned());
+            }
             for token in &tokens.structs {
                 handled_tokens.push(token.to_composite().unwrap().to_owned());
-
+            }
+            
+            for token in &tokens.structs {
                 // first index is our model struct
                 if token.type_name() == model.name {
                     models_structs.push(token.to_composite().unwrap());
                 }
 
-                out += TypescriptPlugin::format_struct(token.to_composite().unwrap()).as_str();
+                out += TypescriptPlugin::format_struct(token.to_composite().unwrap(), &handled_tokens).as_str();
             }
 
             for token in &tokens.enums {
-                handled_tokens.push(token.to_composite().unwrap().to_owned());
                 out += TypescriptPlugin::format_enum(token.to_composite().unwrap()).as_str();
             }
 
@@ -208,7 +222,7 @@ export function defineContractComponents(world: World) {
 ";
 
         for model in models_structs {
-            out += TypescriptPlugin::format_model(model).as_str();
+            out += TypescriptPlugin::format_model(model, &handled_tokens).as_str();
         }
 
         out += "    };
@@ -266,20 +280,20 @@ export function defineContractComponents(world: World) {
 
         format!(
             "
-    // Call the `{system_name}` system with the specified Account and calldata
-    const {pretty_system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
-        try {{
-            return await provider.execute(
-                props.account,
-                contract_name,
-                \"{system_name}\",
-                [{calldata}]
-            );
-        }} catch (error) {{
-            console.error(\"Error executing spawn:\", error);
-            throw error;
-        }}
-    }};
+        // Call the `{system_name}` system with the specified Account and calldata
+        const {pretty_system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
+            try {{
+                return await provider.execute(
+                    props.account,
+                    contract_name,
+                    \"{system_name}\",
+                    [{calldata}]
+                );
+            }} catch (error) {{
+                console.error(\"Error executing spawn:\", error);
+                throw error;
+            }}
+        }};
             ",
             // selector for execute
             system_name = system.name,
@@ -337,13 +351,13 @@ export function defineContractComponents(world: World) {
 
             out += &format!(
                 "
-// System definitions for `{}` contract
-function {}() {{
-    const contract_name = \"{}\";
+    // System definitions for `{}` contract
+    function {}() {{
+        const contract_name = \"{}\";
 
-    {}
-}}
-        ",
+        {}
+    }}
+",
                 contract.contract_file_name,
                 // capitalize contract name
                 TypescriptPlugin::formatted_contract_name(&contract.contract_file_name),
@@ -351,6 +365,8 @@ function {}() {{
                 systems
             );
         }
+
+        out += "}";
 
         out
     }
