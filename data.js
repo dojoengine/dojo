@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708425934147,
+  "lastUpdate": 1708462534989,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1525,6 +1525,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1017362,
             "range": "± 47877",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "thomas.belloc@gmail.com",
+            "name": "Thomas",
+            "username": "Cheelax"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "85f6595fb3f8298787c15eb5ae39b03fd7154c28",
+          "message": "change sql setup to avoid torii timeout (#1543)\n\n* change sql setup to avoid torii timeout\r\n\r\n* fix fmt\r\n\r\n* 🚑 fix: Fix database configuration in main.rs to properly handle in-memory databases",
+          "timestamp": "2024-02-20T12:46:06-08:00",
+          "tree_id": "bd6dc23c02576a3ee634b59b86b0c87f60229374",
+          "url": "https://github.com/dojoengine/dojo/commit/85f6595fb3f8298787c15eb5ae39b03fd7154c28"
+        },
+        "date": 1708462533983,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1017460,
+            "range": "± 48187",
             "unit": "ns/iter"
           }
         ]
