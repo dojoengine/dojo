@@ -1,7 +1,6 @@
 pub mod block;
 pub mod chain;
 pub mod contract;
-pub mod da;
 pub mod env;
 pub mod event;
 pub mod genesis;

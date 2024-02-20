@@ -1,13 +1,12 @@
 use derive_more::{AsRef, Deref};
 use ethers::types::H256;
-use starknet::core::types::ResourceBoundsMapping;
+use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
 
 use crate::chain::ChainId;
 use crate::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
     Nonce,
 };
-use crate::da::DataAvailabilityMode;
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_declare_v3_tx_hash,
     compute_deploy_account_v1_tx_hash, compute_deploy_account_v3_tx_hash,
@@ -392,13 +391,9 @@ pub struct DeployAccountTxV1 {
     ///
     /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
-    /// The account address which the transaction is initiated from.
-    pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: Nonce,
-    /// The data used as the input to the execute entry point of sender account contract.
-    pub calldata: Vec<FieldElement>,
     /// The transaction signature associated with the sender address.
     pub signature: Vec<FieldElement>,
     /// The hash of the contract class from which the account contract will be deployed from.
@@ -420,13 +415,9 @@ pub struct DeployAccountTxV3 {
     ///
     /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
-    /// The account address which the transaction is initiated from.
-    pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: Nonce,
-    /// The data used as the input to the execute entry point of sender account contract.
-    pub calldata: Vec<FieldElement>,
     /// The transaction signature associated with the sender address.
     pub signature: Vec<FieldElement>,
     /// The hash of the contract class from which the account contract will be deployed from.
@@ -465,7 +456,7 @@ impl DeployAccountTx {
             ),
 
             DeployAccountTx::V3(tx) => compute_deploy_account_v3_tx_hash(
-                tx.sender_address.into(),
+                tx.contract_address.into(),
                 &tx.constructor_calldata,
                 tx.class_hash,
                 tx.contract_address_salt,

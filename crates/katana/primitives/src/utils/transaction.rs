@@ -1,9 +1,8 @@
 use ethers::types::H256;
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::{MsgToL1, ResourceBounds};
+use starknet::core::types::{DataAvailabilityMode, MsgToL1, ResourceBounds};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::da::DataAvailabilityMode;
 use crate::FieldElement;
 
 /// 2^ 128
@@ -75,7 +74,7 @@ pub fn compute_deploy_account_v1_tx_hash(
 /// Compute the hash of a V1 DeployAccount transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_deploy_account_v3_tx_hash(
-    sender_address: FieldElement,
+    contract_address: FieldElement,
     constructor_calldata: &[FieldElement],
     class_hash: FieldElement,
     contract_address_salt: FieldElement,
@@ -94,7 +93,7 @@ pub fn compute_deploy_account_v3_tx_hash(
     poseidon_hash_many(&[
         PREFIX_INVOKE,
         if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
-        sender_address,
+        contract_address,
         hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
         poseidon_hash_many(paymaster_data),
         chain_id,
