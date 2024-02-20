@@ -66,13 +66,18 @@ impl TypescriptPlugin {
         format!(
             "
 // Type definition for `{path}` struct
-export const {name} = {{
+export interface {name} {{
+    {nativeFields}
+}}
+
+export const {name}Definition = {{
     {fields}
 }};
 ",
             path = token.type_path,
             name = token.type_name(),
-            fields = fields
+            fields = fields,
+            nativeFields = fields.replace("RecsType.", "")
         )
     }
 
@@ -117,14 +122,10 @@ export enum {} {{
                     types.push(format!("\"{}\"", field.token.type_name()));
                 }
 
-                format!(
-                    "{}: {},",
-                    field.name,
-                    TypescriptPlugin::map_type(field.token.type_name().as_str()),
-                )
+                format!("{}: {},", field.name, mapped,)
             })
             .collect::<Vec<String>>()
-            .join("\n            ");
+            .join("\n                ");
 
         format!(
             "
@@ -196,8 +197,7 @@ export function defineContractComponents(world: World) {
 ";
 
         for model in models_structs {
-            out += TypescriptPlugin::format_model(model)
-                .as_str();
+            out += TypescriptPlugin::format_model(model).as_str();
         }
 
         out += "    };
@@ -213,7 +213,17 @@ export function defineContractComponents(world: World) {
         let args = system
             .inputs
             .iter()
-            .map(|arg| format!("{} {}", TypescriptPlugin::map_type(&arg.1.type_name()), arg.0,))
+            .map(|arg| {
+                format!(
+                    "{}: {}",
+                    arg.0,
+                    if TypescriptPlugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
+                        format!("models.{}", arg.1.type_name())
+                    } else {
+                        TypescriptPlugin::map_type(&arg.1.type_name()).replace("RecsType.", "")
+                    }
+                )
+            })
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -232,11 +242,11 @@ export function defineContractComponents(world: World) {
                     CompositeType::Struct => token
                         .inners
                         .iter()
-                        .map(|field| format!("new FieldElement({}.{}).Inner()", arg.0, field.name))
+                        .map(|field| format!("{}.{}", arg.0, field.name))
                         .collect::<Vec<String>>()
                         .join(",\n                    "),
                     _ => {
-                        format!("new FieldElement({}).Inner()", arg.0)
+                        format!("{}", arg.0)
                     }
                 }
             })
@@ -296,6 +306,7 @@ export function defineContractComponents(world: World) {
         out += TypescriptPlugin::generated_header().as_str();
         out += "import { Account } from \"starknet\";\n";
         out += "import { DojoProvider } from \"@dojoengine/core\";\n";
+        out += "import * as models from \"./models.gen\";\n";
         out += "\n";
         out += "export type IWorld = Awaited<ReturnType<typeof setupWorld>>;";
 
