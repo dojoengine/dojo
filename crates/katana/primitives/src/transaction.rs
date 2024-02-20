@@ -155,7 +155,7 @@ pub struct InvokeTxV3 {
     /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
-    pub sender_address: FieldElement,
+    pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: FieldElement,
@@ -382,6 +382,15 @@ impl L1HandlerTx {
 pub enum DeployAccountTx {
     V1(DeployAccountTxV1),
     V3(DeployAccountTxV3),
+}
+
+impl DeployAccountTx {
+    pub fn contract_address(&self) -> ContractAddress {
+        match self {
+            DeployAccountTx::V1(tx) => tx.contract_address,
+            DeployAccountTx::V3(tx) => tx.contract_address,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

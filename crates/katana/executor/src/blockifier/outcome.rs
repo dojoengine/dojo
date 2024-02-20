@@ -55,7 +55,7 @@ impl TxReceiptWithExecInfo {
                 revert_error,
                 messages_sent,
                 execution_resources: actual_resources,
-                contract_address: tx.contract_address,
+                contract_address: tx.contract_address(),
             }),
         };
 
@@ -76,5 +76,6 @@ fn parse_actual_resources(resources: &HashMap<String, usize>) -> TxExecutionReso
         pedersen_builtin: resources.get("pedersen_builtin").map(|x| *x as u64),
         poseidon_builtin: resources.get("poseidon_builtin").map(|x| *x as u64),
         range_check_builtin: resources.get("range_check_builtin").map(|x| *x as u64),
+        segment_arena_builtin: resources.get("segment_arena_builtin").map(|x| *x as u64),
     }
 }

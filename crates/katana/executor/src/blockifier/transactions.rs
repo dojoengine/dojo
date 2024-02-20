@@ -4,14 +4,17 @@ use ::blockifier::transaction::transaction_execution::Transaction;
 use ::blockifier::transaction::transactions::{DeployAccountTransaction, InvokeTransaction};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::{DeclareTransaction, L1HandlerTransaction};
-use katana_primitives::transaction::{DeclareTx, ExecutableTx, ExecutableTxWithHash};
+use katana_primitives::transaction::{
+    DeclareTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, InvokeTxV1,
+};
 use starknet_api::core::{ClassHash, CompiledClassHash, EntryPointSelector, Nonce};
+use starknet_api::data_availability::DataAvailabilityMode;
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, DeclareTransaction as ApiDeclareTransaction,
-    DeclareTransactionV0V1, DeclareTransactionV2,
+    AccountDeploymentData, Calldata, ContractAddressSalt,
+    DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
     DeployAccountTransaction as ApiDeployAccountTransaction, DeployAccountTransactionV1, Fee,
-    InvokeTransaction as ApiInvokeTransaction, TransactionHash, TransactionSignature,
-    TransactionVersion,
+    InvokeTransaction as ApiInvokeTransaction, PaymasterData, Tip, TransactionHash,
+    TransactionSignature, TransactionVersion,
 };
 
 /// A newtype wrapper for execution transaction used in `blockifier`.
@@ -22,21 +25,56 @@ impl From<ExecutableTxWithHash> for BlockifierTx {
         let hash = value.hash;
 
         let tx = match value.transaction {
-            ExecutableTx::Invoke(tx) => {
-                let calldata = tx.calldata.into_iter().map(|f| f.into()).collect();
-                let signature = tx.signature.into_iter().map(|f| f.into()).collect();
-                Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
-                    tx: ApiInvokeTransaction::V1(starknet_api::transaction::InvokeTransactionV1 {
-                        max_fee: Fee(tx.max_fee),
-                        nonce: Nonce(tx.nonce.into()),
-                        sender_address: tx.sender_address.into(),
-                        signature: TransactionSignature(signature),
-                        calldata: Calldata(Arc::new(calldata)),
-                    }),
-                    tx_hash: TransactionHash(hash.into()),
-                    only_query: false,
-                }))
-            }
+            ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V1(tx) => {
+                    let calldata = tx.calldata.into_iter().map(|f| f.into()).collect();
+                    let signature = tx.signature.into_iter().map(|f| f.into()).collect();
+
+                    Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
+                        tx: ApiInvokeTransaction::V1(
+                            starknet_api::transaction::InvokeTransactionV1 {
+                                max_fee: Fee(tx.max_fee),
+                                nonce: Nonce(tx.nonce.into()),
+                                sender_address: tx.sender_address.into(),
+                                signature: TransactionSignature(signature),
+                                calldata: Calldata(Arc::new(calldata)),
+                            },
+                        ),
+                        tx_hash: TransactionHash(hash.into()),
+                        only_query: false,
+                    }))
+                }
+
+                InvokeTx::V3(tx) => {
+                    let calldata = tx.calldata.into_iter().map(|f| f.into()).collect();
+                    let signature = tx.signature.into_iter().map(|f| f.into()).collect();
+                    let paymaster_data = tx.paymaster_data.into_iter().map(|f| f.into()).collect();
+                    let account_deploy_data =
+                        tx.account_deployment_data.into_iter().map(|f| f.into()).collect();
+                    let fee_data_availability_mode = to_api_da_mode(tx.fee_data_availability_mode);
+                    let nonce_data_availability_mode =
+                        to_api_da_mode(tx.nonce_data_availability_mode);
+
+                    Transaction::AccountTransaction(AccountTransaction::Invoke(InvokeTransaction {
+                        tx: ApiInvokeTransaction::V3(
+                            starknet_api::transaction::InvokeTransactionV3 {
+                                tip: Tip(tx.tip),
+                                nonce: Nonce(tx.nonce.into()),
+                                sender_address: tx.sender_address.into(),
+                                signature: TransactionSignature(signature),
+                                calldata: Calldata(Arc::new(calldata)),
+                                paymaster_data: PaymasterData(paymaster_data),
+                                account_deployment_data: AccountDeploymentData(account_deploy_data),
+                                fee_data_availability_mode,
+                                nonce_data_availability_mode,
+                                resource_bounds,
+                            },
+                        ),
+                        tx_hash: TransactionHash(hash.into()),
+                        only_query: false,
+                    }))
+                }
+            },
 
             ExecutableTx::DeployAccount(tx) => {
                 let calldata = tx.constructor_calldata.into_iter().map(|f| f.into()).collect();
@@ -110,5 +148,12 @@ impl From<ExecutableTxWithHash> for BlockifierTx {
         };
 
         Self(tx)
+    }
+}
+
+fn to_api_da_mode(mode: starknet::core::types::DataAvailabilityMode) -> DataAvailabilityMode {
+    match mode {
+        starknet::core::types::DataAvailabilityMode::L1 => DataAvailabilityMode::L1,
+        starknet::core::types::DataAvailabilityMode::L2 => DataAvailabilityMode::L2,
     }
 }
