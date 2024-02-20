@@ -285,7 +285,6 @@ fn decompress_legacy_program_data(data: &[u8]) -> Result<LegacyProgram, io::Erro
         #[serde(default)]
         accessible_scopes: Vec<String>,
         end_pc: u64,
-        #[serde(skip_serializing_if = "Option::is_none")]
         flow_tracking_data: Option<LegacyFlowTrackingData>,
         name: String,
         start_pc: u64,
@@ -306,10 +305,8 @@ fn decompress_legacy_program_data(data: &[u8]) -> Result<LegacyProgram, io::Erro
     #[allow(unused)]
     #[derive(Deserialize)]
     struct LegacyProgramJson {
-        #[serde(skip_serializing_if = "Option::is_none")]
         attributes: Option<Vec<LegacyAttribute>>,
         builtins: Vec<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
         compiler_version: Option<String>,
         #[serde_as(as = "Vec<UfeHex>")]
         data: Vec<FieldElement>,
@@ -418,7 +415,7 @@ mod tests {
     // is successful and that the converted class can be converted back
     #[test]
     fn legacy_rpc_to_inner_and_back() {
-        let class_json = include_str!("../../contracts/compiled/erc20.json");
+        let class_json = include_str!("../../contracts/compiled/account.json");
         let class = parse_compiled_class_v0(class_json).unwrap();
 
         let Ok(ContractClass::Legacy(compressed_legacy_class)) = legacy_inner_to_rpc_class(class)
