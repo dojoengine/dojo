@@ -196,10 +196,19 @@ export enum {} {{
                 handled_tokens.push(token.to_composite().unwrap().to_owned());
             }
 
-            for token in &tokens.structs {
+            let mut structs = tokens.structs.to_owned();
+            structs.sort_by(|a, b| {
+                if a.to_composite().unwrap().inners.iter().find(|i| i.token.type_name() == b.type_name()).is_some() {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Less
+                }
+            });
+
+            for token in &structs {
                 // first index is our model struct
                 if token.type_name() == model.name {
-                    models_structs.push(token.to_composite().unwrap());
+                    models_structs.push(token.to_composite().unwrap().clone());
                 }
 
                 out +=
@@ -220,7 +229,7 @@ export function defineContractComponents(world: World) {
 ";
 
         for model in models_structs {
-            out += TypescriptPlugin::format_model(model, handled_tokens).as_str();
+            out += TypescriptPlugin::format_model(&model, handled_tokens).as_str();
         }
 
         out += "    };
