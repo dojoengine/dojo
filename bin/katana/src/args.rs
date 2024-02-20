@@ -172,7 +172,7 @@ pub struct EnvironmentOptions {
 
     #[arg(long)]
     #[arg(help = "The gas price.")]
-    pub gas_price: Option<u64>,
+    pub gas_price: Option<u128>,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]

@@ -240,7 +240,7 @@ pub struct DeclareTxV1 {
     /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
-    pub sender_address: FieldElement,
+    pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: FieldElement,
@@ -261,7 +261,7 @@ pub struct DeclareTxV2 {
     /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
-    pub sender_address: FieldElement,
+    pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: FieldElement,
@@ -284,7 +284,7 @@ pub struct DeclareTxV3 {
     /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
     /// The account address which the transaction is initiated from.
-    pub sender_address: FieldElement,
+    pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: FieldElement,

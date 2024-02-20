@@ -60,7 +60,7 @@ impl Default for StarknetConfig {
 #[derive(Debug, Clone)]
 pub struct Environment {
     pub chain_id: ChainId,
-    pub gas_price: u64,
+    pub gas_price: u128,
     pub invoke_max_steps: u32,
     pub validate_max_steps: u32,
 }

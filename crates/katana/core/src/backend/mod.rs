@@ -74,9 +74,10 @@ impl Backend {
             config.genesis.parent_hash = block.parent_hash;
             config.genesis.timestamp = block.timestamp;
             config.genesis.sequencer_address = block.sequencer_address.into();
-            config.genesis.gas_prices.eth = block.l1_gas_price.price_in_wei;
-            config.genesis.gas_prices.strk =
-                block.l1_gas_price.price_in_strk.unwrap_or(config.env.gas_price);
+            config.genesis.gas_prices.eth =
+                block.l1_gas_price.price_in_wei.try_into().expect("should fit in u128");
+            config.genesis.gas_prices.fri =
+                block.l1_gas_price.price_in_fri.try_into().expect("should fit in u128");
 
             trace!(
                 target: "backend",
@@ -152,7 +153,7 @@ impl Backend {
             sequencer_address: block_env.sequencer_address,
             gas_prices: GasPrices {
                 eth: block_env.l1_gas_prices.eth,
-                strk: block_env.l1_gas_prices.strk,
+                fri: block_env.l1_gas_prices.fri,
             },
         };
 

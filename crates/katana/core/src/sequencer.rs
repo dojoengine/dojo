@@ -10,7 +10,6 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use katana_executor::blockifier::state::StateRefDb;
 use katana_executor::blockifier::utils::{block_context_from_envs, EntryPointCall};
 use katana_executor::blockifier::PendingState;
-use katana_executor::SimulationFlag;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::ChainId;
 use katana_primitives::contract::{
@@ -204,7 +203,7 @@ impl KatanaSequencer {
             .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
 
         // TODO: document
-        let should_validate = !(skip_validate || !self.backend.config.disable_validate);
+        let should_validate = !skip_validate && self.backend.config.disable_validate;
 
         katana_executor::blockifier::utils::estimate_fee(
             transactions.into_iter(),

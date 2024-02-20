@@ -45,14 +45,14 @@ pub struct PartialHeader {
 #[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
-    pub eth: u64,
+    pub eth: u128,
     /// The price of one unit of the given resource, denominated in fri (the smallest unit of STRK,
     /// equivalent to 10^-18 STRK)
-    pub fri: u64,
+    pub fri: u128,
 }
 
 impl GasPrices {
-    pub fn new(eth_gas_price: u64, fri_gas_price: u64) -> Self {
+    pub fn new(eth_gas_price: u128, fri_gas_price: u128) -> Self {
         Self { eth: eth_gas_price, fri: fri_gas_price }
     }
 }

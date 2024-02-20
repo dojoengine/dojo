@@ -209,7 +209,7 @@ fn parse_deployed_contracts_events_with_upgrade() {
         EmittedEvent {
             data: vec![felt!("0x66"), felt!("0x123")],
             keys: vec![],
-            block_number: 2,
+            block_number: Some(2),
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
@@ -217,7 +217,7 @@ fn parse_deployed_contracts_events_with_upgrade() {
         EmittedEvent {
             data: vec![felt!("0x69"), felt!("0x123")],
             keys: vec![],
-            block_number: 9,
+            block_number: Some(9),
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),
@@ -225,7 +225,7 @@ fn parse_deployed_contracts_events_with_upgrade() {
         EmittedEvent {
             data: vec![felt!("0x77"), felt!("0x123")],
             keys: vec![],
-            block_number: 5,
+            block_number: Some(5),
             block_hash: Default::default(),
             from_address: Default::default(),
             transaction_hash: Default::default(),

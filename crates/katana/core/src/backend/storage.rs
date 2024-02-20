@@ -177,7 +177,7 @@ mod tests {
             parent_hash: FieldElement::ZERO,
             state_root: felt!("1334"),
             timestamp: 6868,
-            gas_prices: GasPrices { eth: 9090, strk: 8080 },
+            gas_prices: GasPrices { eth: 9090, fri: 8080 },
             ..Default::default()
         };
 
@@ -201,7 +201,7 @@ mod tests {
         assert_eq!(latest_hash, genesis_hash);
 
         assert_eq!(header.gas_prices.eth, 9090);
-        assert_eq!(header.gas_prices.strk, 8080);
+        assert_eq!(header.gas_prices.fri, 8080);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
         assert_eq!(header.state_root, genesis.state_root);
@@ -213,8 +213,10 @@ mod tests {
     fn blockchain_from_db() {
         let db_path = tempfile::TempDir::new().expect("Failed to create temp dir.").into_path();
 
-        let dummy_tx =
-            TxWithHash { hash: felt!("0xbad"), transaction: Tx::Invoke(InvokeTx::default()) };
+        let dummy_tx = TxWithHash {
+            hash: felt!("0xbad"),
+            transaction: Tx::Invoke(InvokeTx::V1(Default::default())),
+        };
 
         let dummy_block = SealedBlockWithStatus {
             status: FinalityStatus::AcceptedOnL1,

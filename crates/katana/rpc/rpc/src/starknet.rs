@@ -29,7 +29,7 @@ use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
-use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall};
+use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
@@ -456,14 +456,14 @@ impl StarknetApiServer for StarknetApi {
         deploy_account_transaction: BroadcastedDeployAccountTx,
     ) -> RpcResult<DeployAccountTxResult> {
         self.on_io_blocking_task(move |this| {
-            if deploy_account_transaction.is_query {
+            if deploy_account_transaction.is_query() {
                 return Err(StarknetApiError::UnsupportedTransactionVersion.into());
             }
 
             let chain_id = this.inner.sequencer.chain_id();
 
             let tx = deploy_account_transaction.into_tx_with_chain_id(chain_id);
-            let contract_address = tx.contract_address;
+            let contract_address = tx.contract_address();
 
             let tx = ExecutableTxWithHash::new(ExecutableTx::DeployAccount(tx));
             let tx_hash = tx.hash;
@@ -478,6 +478,7 @@ impl StarknetApiServer for StarknetApi {
     async fn estimate_fee(
         &self,
         request: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlags>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
@@ -509,10 +510,13 @@ impl StarknetApiServer for StarknetApi {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
+            let skip_validate =
+                simulation_flags.iter().any(|flag| flag == &SimulationFlags::SkipValidate);
+
             let res = this
                 .inner
                 .sequencer
-                .estimate_fee(transactions, block_id)
+                .estimate_fee(transactions, block_id, skip_validate)
                 .map_err(StarknetApiError::from)?;
 
             Ok(res)
@@ -535,7 +539,7 @@ impl StarknetApiServer for StarknetApi {
             let res = this
                 .inner
                 .sequencer
-                .estimate_fee(vec![tx], block_id)
+                .estimate_fee(vec![tx], block_id, false)
                 .map_err(StarknetApiError::from)?
                 .pop()
                 .expect("should have estimate result");
@@ -585,7 +589,7 @@ impl StarknetApiServer for StarknetApi {
         invoke_transaction: BroadcastedInvokeTx,
     ) -> RpcResult<InvokeTxResult> {
         self.on_io_blocking_task(move |this| {
-            if invoke_transaction.is_query {
+            if invoke_transaction.is_query() {
                 return Err(StarknetApiError::UnsupportedTransactionVersion.into());
             }
 

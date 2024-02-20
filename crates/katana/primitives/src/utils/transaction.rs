@@ -150,6 +150,7 @@ pub fn compute_declare_v2_tx_hash(
 }
 
 /// Compute the hash of a V3 Declare transaction.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_declare_v3_tx_hash(
     sender_address: FieldElement,
     class_hash: FieldElement,
@@ -204,6 +205,7 @@ pub fn compute_invoke_v1_tx_hash(
 }
 
 /// Compute the hash of a V1 Invoke transaction.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_invoke_v3_tx_hash(
     sender_address: FieldElement,
     calldata: &[FieldElement],

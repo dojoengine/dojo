@@ -14,7 +14,9 @@ use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
-use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SyncingStatus};
+use katana_rpc_types::{
+    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags, SyncingStatus,
+};
 use starknet::core::types::TransactionStatus;
 
 /// Starknet JSON-RPC APIs: <https://github.com/starkware-libs/starknet-specs>
@@ -117,6 +119,7 @@ pub trait StarknetApi {
     async fn estimate_fee(
         &self,
         request: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlags>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>>;
 

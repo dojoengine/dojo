@@ -45,7 +45,7 @@ pub fn parse_calls(calls: Vec<BenchCall>, to: FieldElement) -> Vec<Call> {
         .collect()
 }
 
-pub async fn estimate_calls(account: &OwnerAccount, calls: Vec<Call>) -> Result<u64> {
+pub async fn estimate_calls(account: &OwnerAccount, calls: Vec<Call>) -> Result<FieldElement> {
     let fee = account
         .execute(calls)
         .nonce(cached_nonce(account).await)
