@@ -198,7 +198,12 @@ export enum {} {{
 
             let mut structs = tokens.structs.to_owned();
             structs.sort_by(|a, b| {
-                if a.to_composite().unwrap().inners.iter().find(|i| i.token.type_name() == b.type_name()).is_some() {
+                if a.to_composite()
+                    .unwrap()
+                    .inners
+                    .iter()
+                    .any(|field| field.token.type_name() == b.type_name())
+                {
                     std::cmp::Ordering::Greater
                 } else {
                     std::cmp::Ordering::Less
@@ -363,17 +368,47 @@ export function defineContractComponents(world: World) {
         const contract_name = \"{}\";
 
         {}
+
+        return {{
+            {}
+        }};
     }}
 ",
                 contract.contract_file_name,
                 // capitalize contract name
                 TypescriptPlugin::formatted_contract_name(&contract.contract_file_name),
                 TypescriptPlugin::formatted_contract_name(&contract.contract_file_name),
-                systems
+                systems,
+                contract
+                    .systems
+                    .iter()
+                    .map(|system| {
+                        system.to_function().unwrap().name.to_case(convert_case::Case::Camel)
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", ")
             );
         }
 
-        out += "}";
+        out += "
+    return {
+        ";
+
+        out += &contracts
+            .iter()
+            .map(|c| {
+                format!(
+                    "{}: {}()",
+                    TypescriptPlugin::formatted_contract_name(&c.contract_file_name),
+                    TypescriptPlugin::formatted_contract_name(&c.contract_file_name)
+                )
+            })
+            .collect::<Vec<String>>()
+            .join(",\n        ");
+
+        out += "
+    };
+}\n";
 
         out
     }
