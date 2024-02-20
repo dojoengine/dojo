@@ -29,7 +29,7 @@ use crate::contract::{
 };
 use crate::FieldElement;
 
-/// Converts the legacy inner compiled class type [CompiledContractClassV0] into its RPC equivalent
+/// Converts the legacy inner compiled class type [DeprecatedCompiledClass] into its RPC equivalent
 /// [`ContractClass`].
 pub fn legacy_inner_to_rpc_class(
     legacy_contract_class: DeprecatedCompiledClass,
@@ -136,7 +136,7 @@ pub fn legacy_inner_to_rpc_class(
 }
 
 /// Convert the given [`FlattenedSierraClass`] into the inner compiled class type
-/// [`CompiledContractClass`] along with its class hashes.
+/// [`CompiledClassHash`] along with its class hashes.
 pub fn flattened_sierra_to_compiled_class(
     contract_class: &FlattenedSierraClass,
 ) -> Result<(ClassHash, CompiledClassHash, crate::contract::CompiledClass)> {
@@ -166,7 +166,7 @@ pub fn compiled_class_hash_from_flattened_sierra_class(
 }
 
 /// Converts a legacy RPC compiled contract class [CompressedLegacyContractClass] type to the inner
-/// compiled class type [CompiledContractClass] along with its class hash.
+/// compiled class type [CompiledClass](crate::contract::CompiledClass) along with its class hash.
 pub fn legacy_rpc_to_compiled_class(
     compressed_legacy_contract: &CompressedLegacyContractClass,
 ) -> Result<(ClassHash, crate::contract::CompiledClass)> {
