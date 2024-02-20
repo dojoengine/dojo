@@ -1,6 +1,6 @@
 use derive_more::{AsRef, Deref};
 use ethers::types::H256;
-use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
+use starknet::core::types::ResourceBoundsMapping;
 
 use crate::chain::ChainId;
 use crate::contract::{
@@ -12,6 +12,14 @@ use crate::utils::transaction::{
     compute_invoke_v1_tx_hash, compute_l1_handler_tx_hash,
 };
 use crate::FieldElement;
+
+#[repr(u64)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub enum DataAvailabilityMode {
+    #[default]
+    L1 = 0,
+    L2 = 1,
+}
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
