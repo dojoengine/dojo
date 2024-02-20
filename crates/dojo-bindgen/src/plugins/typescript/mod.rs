@@ -57,7 +57,15 @@ impl TypescriptPlugin {
                 format!(
                     "{}: {},",
                     field.name,
-                    TypescriptPlugin::map_type(field.token.clone().type_name().as_str()),
+                    if TypescriptPlugin::map_type(field.token.clone().type_name().as_str()) == field.token.clone().type_name() {
+                        if field.token.to_composite().unwrap().r#type == CompositeType::Enum {
+                            format!("RecsType.Number")
+                        } else {
+                            format!("{}Definition", field.token.clone().type_name())
+                        }
+                    } else {
+                        TypescriptPlugin::map_type(field.token.clone().type_name().as_str())
+                    }
                 )
             })
             .collect::<Vec<String>>()
@@ -117,7 +125,11 @@ export enum {} {{
             .map(|field| {
                 let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
                 if mapped == field.token.type_name() {
-                    custom_types.push(format!("\"{}\"", field.token.type_name()));
+                    if field.token.to_composite().unwrap().r#type == CompositeType::Enum {
+                        custom_types.push("RecsType.Number".to_string());
+                    } else {
+                        custom_types.push(format!("\"{}Definition\"", field.token.type_name()));
+                    }
                 } else {
                     types.push(format!("\"{}\"", field.token.type_name()));
                 }
@@ -177,7 +189,6 @@ export enum {} {{
                 // first index is our model struct
                 if token.type_name() == model.name {
                     models_structs.push(token.to_composite().unwrap());
-                    continue;
                 }
 
                 out += TypescriptPlugin::format_struct(token.to_composite().unwrap()).as_str();
@@ -242,11 +253,11 @@ export function defineContractComponents(world: World) {
                     CompositeType::Struct => token
                         .inners
                         .iter()
-                        .map(|field| format!("{}.{}", arg.0, field.name))
+                        .map(|field| format!("props.{}.{}", arg.0, field.name))
                         .collect::<Vec<String>>()
                         .join(",\n                    "),
                     _ => {
-                        format!("{}", arg.0)
+                        format!("props.{}", arg.0)
                     }
                 }
             })
@@ -256,12 +267,12 @@ export function defineContractComponents(world: World) {
         format!(
             "
     // Call the `{system_name}` system with the specified Account and calldata
-    const {pretty_system_name} = async ({{ account }}: {{ account: Account{arg_sep}{args} }}) => {{
+    const {pretty_system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
         try {{
             return await provider.execute(
-                account,
+                props.account,
                 contract_name,
-                {system_name},
+                \"{system_name}\",
                 [{calldata}]
             );
         }} catch (error) {{
