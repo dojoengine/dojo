@@ -55,7 +55,7 @@ impl TypescriptPlugin {
             .iter()
             .map(|field| {
                 format!(
-                    "{}: {};",
+                    "{}: {},",
                     field.name,
                     TypescriptPlugin::map_type(field.token.clone().type_name().as_str()),
                 )
@@ -65,14 +65,14 @@ impl TypescriptPlugin {
 
         format!(
             "
-// Type definition for `{}` struct
-export interface {} {{
-    {}
-}}
+// Type definition for `{path}` struct
+export const {name} = {{
+    {fields}
+}};
 ",
-            token.type_path,
-            token.type_name(),
-            fields
+            path = token.type_path,
+            name = token.type_name(),
+            fields = fields
         )
     }
 
@@ -124,26 +124,26 @@ export enum {} {{
                 )
             })
             .collect::<Vec<String>>()
-            .join("\n\n    ");
+            .join("\n            ");
 
         format!(
             "
-// Model definition for `{path}` model
-{model}: (() => {{
-    return defineComponent(
-        world,
-        {{
-            {fields}
-        }},
-        {{
-            metadata: {{
-                name: {model},
-                types: [{types}],
-                customTypes: [{custom_types}],
-            }},
-        }}
-    );
-}})(),
+        // Model definition for `{path}` model
+        {model}: (() => {{
+            return defineComponent(
+                world,
+                {{
+                    {fields}
+                }},
+                {{
+                    metadata: {{
+                        name: \"{model}\",
+                        types: [{types}],
+                        customTypes: [{custom_types}],
+                    }},
+                }}
+            );
+        }})(),
         ",
             path = model.type_path,
             model = model.type_name(),
@@ -167,15 +167,15 @@ export enum {} {{
 
         out += "\n\n";
 
+        let mut models_structs = Vec::new();
         for model in models {
-            let mut model_struct: Option<&Composite> = None;
             let tokens = &model.tokens;
             for token in &tokens.structs {
                 handled_tokens.push(token.to_composite().unwrap().to_owned());
 
                 // first index is our model struct
                 if token.type_name() == model.name {
-                    model_struct = Some(token.to_composite().unwrap());
+                    models_structs.push(token.to_composite().unwrap());
                     continue;
                 }
 
@@ -195,10 +195,8 @@ export function defineContractComponents(world: World) {
     return {
 ";
 
-        for model in models {
-            let mut model_struct: Option<&Composite> = None;
-
-            out += TypescriptPlugin::format_model(model_struct.expect("model struct not found"))
+        for model in models_structs {
+            out += TypescriptPlugin::format_model(model)
                 .as_str();
         }
 
