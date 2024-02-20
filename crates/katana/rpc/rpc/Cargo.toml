@@ -37,4 +37,6 @@ tracing.workspace = true
 [dev-dependencies]
 assert_matches = "1.5.0"
 dojo-test-utils = { path = "../../../dojo-test-utils" }
+jsonrpsee = { version = "0.16.2", features = [ "client" ] }
+katana-rpc-api = { workspace = true, features = [ "client" ] }
 url.workspace = true

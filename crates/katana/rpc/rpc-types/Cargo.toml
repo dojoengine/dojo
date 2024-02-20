@@ -11,9 +11,10 @@ katana-core = { path = "../../core" }
 katana-primitives = { path = "../../primitives" }
 katana-provider = { path = "../../storage/provider" }
 
-ethers = "2.0.11"
 anyhow.workspace = true
 derive_more.workspace = true
+ethers = "2.0.11"
+futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
 serde.workspace = true
 serde_with.workspace = true
