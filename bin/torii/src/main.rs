@@ -197,10 +197,12 @@ async fn main() -> anyhow::Result<()> {
     .expect("Failed to start libp2p relay server");
 
     let endpoint = format!("http://{}", args.addr);
-    let graphql = format!("{}/graphql", endpoint);
-    let encoded: String = form_urlencoded::byte_serialize(graphql.as_bytes()).collect();
+    let gql_endpoint = format!("{}/graphql", endpoint);
+    let encoded: String =
+        form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
+            .collect();
     info!(target: "torii::cli", "Starting torii endpoint: {}", endpoint);
-    info!(target: "torii::cli", "Serving Graphql playground: {}", graphql);
+    info!(target: "torii::cli", "Serving Graphql playground: {}", gql_endpoint);
     info!(target: "torii::cli", "World explorer is available on: {}\n", format!("https://worlds.dev/torii?url={}", encoded));
 
     if let Some(listen_addr) = args.metrics {
