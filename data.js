@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708394730106,
+  "lastUpdate": 1708425934147,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1495,6 +1495,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1024665,
             "range": "± 33140",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64992c9ce2ca941ccdde91acea222725f13ed7f7",
+          "message": "feat(katana): add `torii_getTransactions` rpc (#1529)",
+          "timestamp": "2024-02-20T05:36:09-05:00",
+          "tree_id": "a3e66377d06bc0056e1ac63125f52a2728a10ee0",
+          "url": "https://github.com/dojoengine/dojo/commit/64992c9ce2ca941ccdde91acea222725f13ed7f7"
+        },
+        "date": 1708425933657,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1017362,
+            "range": "± 47877",
             "unit": "ns/iter"
           }
         ]
