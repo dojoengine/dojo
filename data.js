@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708380898655,
+  "lastUpdate": 1708394730106,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1465,6 +1465,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 968795,
             "range": "± 29301",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "716520e953fc1e44fa22bfea19a73fd8b2fb5ccc",
+          "message": "feat(sozo): propose multicall format for `sozo auth writer` (#1555)\n\nfeat: propose multicall format for auth writer",
+          "timestamp": "2024-02-19T20:55:55-05:00",
+          "tree_id": "c2cd34fe43931a1dda8bfa5c5bdb093f749c5c52",
+          "url": "https://github.com/dojoengine/dojo/commit/716520e953fc1e44fa22bfea19a73fd8b2fb5ccc"
+        },
+        "date": 1708394729552,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1024665,
+            "range": "± 33140",
             "unit": "ns/iter"
           }
         ]
