@@ -31,6 +31,7 @@ use torii_core::model::{build_sql_query, map_row_to_ty};
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
 use crate::proto::types::clause::ClauseType;
+use crate::proto::types::event_clause::EventClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
@@ -301,7 +302,7 @@ impl DojoWorld {
 
     async fn events_by_keys(
         &self,
-        keys_clause: proto::types::KeysClause,
+        keys_clause: proto::types::EventKeysClause,
         limit: u32,
         offset: u32,
     ) -> Result<Vec<proto::types::Event>, Error> {
@@ -512,16 +513,17 @@ impl DojoWorld {
 
     async fn retrieve_events(
         &self,
-        query: proto::types::Query,
+        query: proto::types::EventQuery,
     ) -> Result<proto::world::RetrieveEventsResponse, Error> {
         let events = match query.clause {
             None => self.events_all(query.limit, query.offset).await?,
             Some(clause) => {
-                let clause_type =
-                    clause.clause_type.ok_or(QueryError::MissingParam("clause_type".into()))?;
+                let clause_type = clause
+                    .event_clause_type
+                    .ok_or(QueryError::MissingParam("clause_type".into()))?;
 
                 match clause_type {
-                    ClauseType::HashedKeys(hashed_keys) => {
+                    EventClauseType::HashedKeys(hashed_keys) => {
                         if hashed_keys.hashed_keys.is_empty() {
                             return Err(QueryError::MissingParam("ids".into()).into());
                         }
@@ -529,22 +531,12 @@ impl DojoWorld {
                         self.events_by_hashed_keys(Some(hashed_keys), query.limit, query.offset)
                             .await?
                     }
-                    ClauseType::Keys(keys) => {
+                    EventClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
                             return Err(QueryError::MissingParam("keys".into()).into());
                         }
 
-                        if keys.model.is_empty() {
-                            return Err(QueryError::MissingParam("model".into()).into());
-                        }
-
                         self.events_by_keys(keys, query.limit, query.offset).await?
-                    }
-                    ClauseType::Member(_member) => {
-                        unimplemented!();
-                    }
-                    ClauseType::Composite(_composite) => {
-                        unimplemented!();
                     }
                 }
             }

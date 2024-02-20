@@ -61,7 +61,7 @@ message RetrieveEntitiesResponse {
 
 message RetrieveEventsRequest {
     // The events to retrieve
-    types.Query query = 1;
+    types.EventQuery query = 1;
 }
 
 message RetrieveEventsResponse {
