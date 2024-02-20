@@ -3,7 +3,7 @@ use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{MsgToL1, ResourceBounds};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::transaction::DataAvailabilityMode;
+use crate::da::DataAvailabilityMode;
 use crate::FieldElement;
 
 /// 2^ 128

@@ -7,19 +7,13 @@ use crate::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
     Nonce,
 };
+use crate::da::DataAvailabilityMode;
 use crate::utils::transaction::{
-    compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_deploy_account_v1_tx_hash,
+    compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_declare_v3_tx_hash,
+    compute_deploy_account_v1_tx_hash, compute_deploy_account_v3_tx_hash,
     compute_invoke_v1_tx_hash, compute_l1_handler_tx_hash,
 };
-use crate::FieldElement;
-
-#[repr(u64)]
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub enum DataAvailabilityMode {
-    #[default]
-    L1 = 0,
-    L2 = 1,
-}
+use crate::{utils, FieldElement};
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
@@ -202,23 +196,20 @@ impl InvokeTx {
                 is_query,
             ),
 
-            InvokeTx::V3(tx) => {
-                // invoke_v3_tx_hash = h(
-                //     "invoke",
-                //     version,
-                //     sender_address,
-                //     h(tip, l1_gas_bounds, l2_gas_bounds),
-                //     h(paymaster_data),
-                //     chain_id,
-                //     nonce,
-                //     data_availability_modes,
-                //     h(
-                //       h(account_deployment_data),
-                //       h(calldata)
-                //     )
-                //     class_hash
-                // )
-            }
+            InvokeTx::V3(tx) => utils::transaction::compute_invoke_v3_tx_hash(
+                tx.sender_address.into(),
+                &tx.calldata,
+                tx.tip,
+                &tx.resource_bounds.l1_gas,
+                &tx.resource_bounds.l2_gas,
+                &tx.paymaster_data,
+                tx.chain_id.into(),
+                tx.nonce,
+                &tx.nonce_data_availability_mode,
+                &tx.fee_data_availability_mode,
+                &tx.account_deployment_data,
+                is_query,
+            ),
         }
     }
 }
@@ -228,6 +219,7 @@ impl InvokeTx {
 pub enum DeclareTx {
     V1(DeclareTxV1),
     V2(DeclareTxV2),
+    V3(DeclareTxV3),
 }
 
 impl DeclareTx {
@@ -235,6 +227,7 @@ impl DeclareTx {
         match self {
             DeclareTx::V1(tx) => tx.class_hash,
             DeclareTx::V2(tx) => tx.class_hash,
+            DeclareTx::V3(tx) => tx.class_hash,
         }
     }
 }
@@ -336,6 +329,22 @@ impl DeclareTx {
                 tx.chain_id.into(),
                 tx.nonce,
                 tx.compiled_class_hash,
+                is_query,
+            ),
+
+            DeclareTx::V3(tx) => compute_declare_v3_tx_hash(
+                tx.sender_address.into(),
+                tx.class_hash,
+                tx.compiled_class_hash,
+                tx.tip,
+                &tx.resource_bounds.l1_gas,
+                &tx.resource_bounds.l2_gas,
+                &tx.paymaster_data,
+                tx.chain_id.into(),
+                tx.nonce,
+                &tx.nonce_data_availability_mode,
+                &tx.fee_data_availability_mode,
+                &tx.account_deployment_data,
                 is_query,
             ),
         }
@@ -443,16 +452,34 @@ pub struct DeployAccountTxV3 {
 impl DeployAccountTx {
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
-        compute_deploy_account_v1_tx_hash(
-            self.contract_address.into(),
-            self.constructor_calldata.as_slice(),
-            self.class_hash,
-            self.contract_address_salt,
-            self.max_fee,
-            self.chain_id.into(),
-            self.nonce,
-            is_query,
-        )
+        match self {
+            DeployAccountTx::V1(tx) => compute_deploy_account_v1_tx_hash(
+                tx.contract_address.into(),
+                &tx.constructor_calldata,
+                tx.class_hash,
+                tx.contract_address_salt,
+                tx.max_fee,
+                tx.chain_id.into(),
+                tx.nonce,
+                is_query,
+            ),
+
+            DeployAccountTx::V3(tx) => compute_deploy_account_v3_tx_hash(
+                tx.sender_address.into(),
+                &tx.constructor_calldata,
+                tx.class_hash,
+                tx.contract_address_salt,
+                tx.tip,
+                &tx.resource_bounds.l1_gas,
+                &tx.resource_bounds.l2_gas,
+                &tx.paymaster_data,
+                tx.chain_id.into(),
+                tx.nonce,
+                &tx.nonce_data_availability_mode,
+                &tx.fee_data_availability_mode,
+                is_query,
+            ),
+        }
     }
 }
 
