@@ -166,7 +166,7 @@ export enum {} {{
                 }}
             );
         }})(),
-        ",
+",
             path = model.type_path,
             model = model.type_name(),
             fields = fields,
