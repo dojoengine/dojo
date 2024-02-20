@@ -257,13 +257,14 @@ impl From<TxExecutionResources> for ExecutionResources {
         ExecutionResources(starknet::core::types::ExecutionResources {
             steps: value.steps,
             memory_holes: value.memory_holes,
-            ec_op_builtin_applications: value.ec_op_builtin.unwrap_or_default(),
-            ecdsa_builtin_applications: value.ecdsa_builtin.unwrap_or_default(),
-            keccak_builtin_applications: value.keccak_builtin.unwrap_or_default(),
-            bitwise_builtin_applications: value.bitwise_builtin.unwrap_or_default(),
-            pedersen_builtin_applications: value.pedersen_builtin.unwrap_or_default(),
-            poseidon_builtin_applications: value.poseidon_builtin.unwrap_or_default(),
-            range_check_builtin_applications: value.range_check_builtin.unwrap_or_default(),
+            ec_op_builtin_applications: value.ec_op_builtin,
+            ecdsa_builtin_applications: value.ecdsa_builtin,
+            keccak_builtin_applications: value.keccak_builtin,
+            bitwise_builtin_applications: value.bitwise_builtin,
+            pedersen_builtin_applications: value.pedersen_builtin,
+            poseidon_builtin_applications: value.poseidon_builtin,
+            range_check_builtin_applications: value.range_check_builtin,
+            segment_arena_builtin: value.segment_arena_builtin,
         })
     }
 }

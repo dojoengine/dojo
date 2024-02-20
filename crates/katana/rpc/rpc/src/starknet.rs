@@ -167,7 +167,7 @@ impl StarknetApiServer for StarknetApi {
 
                     let gas_prices = GasPrices {
                         eth: block_env.l1_gas_prices.eth,
-                        strk: block_env.l1_gas_prices.strk,
+                        fri: block_env.l1_gas_prices.fri,
                     };
 
                     let header = PartialHeader {
@@ -248,7 +248,7 @@ impl StarknetApiServer for StarknetApi {
 
                     let gas_prices = GasPrices {
                         eth: block_env.l1_gas_prices.eth,
-                        strk: block_env.l1_gas_prices.strk,
+                        fri: block_env.l1_gas_prices.fri,
                     };
 
                     let header = PartialHeader {

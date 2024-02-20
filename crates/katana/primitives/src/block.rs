@@ -46,13 +46,14 @@ pub struct PartialHeader {
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
     pub eth: u64,
-    /// The price of one unit of the given resource, denominated in strk
-    pub strk: u64,
+    /// The price of one unit of the given resource, denominated in fri (the smallest unit of STRK,
+    /// equivalent to 10^-18 STRK)
+    pub fri: u64,
 }
 
 impl GasPrices {
-    pub fn new(eth_gas_price: u64, strk_gas_price: u64) -> Self {
-        Self { eth: eth_gas_price, strk: strk_gas_price }
+    pub fn new(eth_gas_price: u64, fri_gas_price: u64) -> Self {
+        Self { eth: eth_gas_price, fri: fri_gas_price }
     }
 }
 

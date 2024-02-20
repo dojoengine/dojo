@@ -135,6 +135,50 @@ pub fn compute_invoke_v1_tx_hash(
     ])
 }
 
+// invoke_v3_tx_hash = h(
+//     "invoke",
+//     version,
+//     sender_address,
+//     h(tip, l1_gas_bounds, l2_gas_bounds),
+//     h(paymaster_data),
+//     chain_id,
+//     nonce,
+//     data_availability_modes,
+//     h(
+//       h(account_deployment_data),
+//       h(calldata)
+//     )
+//     class_hash
+// )
+
+/// Compute the hash of a V1 Invoke transaction.
+pub fn compute_invoke_v3_tx_hash(
+    sender_address: FieldElement,
+    calldata: &[FieldElement],
+    tip: u64,
+    l1_gas_bounds: u64,
+    l2_gas_bounds: u64,
+    paymaster_data: &[FieldElement],
+    chain_id: FieldElement,
+    nonce: FieldElement,
+    data_availability_modes: FieldElement,
+    account_deployment_data: &[FieldElement],
+    calldata: &[FieldElement],
+    class_hash: FieldElement,
+    is_query: bool,
+) -> FieldElement {
+    poseidon_hash_many(&[
+        PREFIX_INVOKE,
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
+        sender_address,
+        FieldElement::ZERO, // entry_point_selector
+        compute_hash_on_elements(calldata),
+        max_fee.into(),
+        chain_id,
+        nonce,
+    ])
+}
+
 /// Computes the hash of a L1 handler transaction
 /// from the fields involved in the computation,
 /// as felts values.

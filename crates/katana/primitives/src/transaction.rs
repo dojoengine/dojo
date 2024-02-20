@@ -1,5 +1,6 @@
 use derive_more::{AsRef, Deref};
 use ethers::types::H256;
+use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
 
 use crate::chain::ChainId;
 use crate::contract::{
@@ -118,29 +119,99 @@ impl DeclareTxWithClass {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum InvokeTx {
+    V1(InvokeTxV1),
+    V3(InvokeTxV3),
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct InvokeTx {
-    pub nonce: Nonce,
-    pub max_fee: u128,
+pub struct InvokeTxV1 {
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
-    pub version: FieldElement,
-    pub calldata: Vec<FieldElement>,
-    pub signature: Vec<FieldElement>,
+    /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: Nonce,
+    /// The data used as the input to the execute entry point of sender account contract.
+    pub calldata: Vec<FieldElement>,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<FieldElement>,
+    /// The max fee that the sender is willing to pay for the transaction.
+    pub max_fee: u128,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct InvokeTxV3 {
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
+    pub chain_id: ChainId,
+    /// The account address which the transaction is initiated from.
+    pub sender_address: FieldElement,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: FieldElement,
+    /// The data used as the input to the execute entry point of sender account contract.
+    pub calldata: Vec<FieldElement>,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<FieldElement>,
+    /// Resource bounds for the transaction execution.
+    pub resource_bounds: ResourceBoundsMapping,
+    /// The tip for the transaction.
+    pub tip: u64,
+    /// Data needed to allow the paymaster to pay for the transaction in native tokens.
+    pub paymaster_data: Vec<FieldElement>,
+    /// Data needed to deploy the account contract from which this tx will be initiated. This field
+    /// is used when the transaction is initiated from a address that is not yet deployed. The
+    /// account contract will be deployed first before the function invocation is executed.
+    ///
+    /// The list contains the class_hash, salt, and the calldata needed for the constructor for
+    /// account deployment.
+    pub account_deployment_data: Vec<FieldElement>,
+    /// The storage domain of the account's nonce (an account has a nonce per da mode)
+    pub nonce_data_availability_mode: DataAvailabilityMode,
+    /// The storage domain of the account's balance from which fee will be charged
+    pub fee_data_availability_mode: DataAvailabilityMode,
 }
 
 impl InvokeTx {
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
-        compute_invoke_v1_tx_hash(
-            self.sender_address.into(),
-            &self.calldata,
-            self.max_fee,
-            self.chain_id.into(),
-            self.nonce,
-            is_query,
-        )
+        match self {
+            InvokeTx::V1(tx) => compute_invoke_v1_tx_hash(
+                tx.sender_address.into(),
+                &tx.calldata,
+                tx.max_fee,
+                tx.chain_id.into(),
+                tx.nonce,
+                is_query,
+            ),
+
+            InvokeTx::V3(tx) => {
+                // invoke_v3_tx_hash = h(
+                //     "invoke",
+                //     version,
+                //     sender_address,
+                //     h(tip, l1_gas_bounds, l2_gas_bounds),
+                //     h(paymaster_data),
+                //     chain_id,
+                //     nonce,
+                //     data_availability_modes,
+                //     h(
+                //       h(account_deployment_data),
+                //       h(calldata)
+                //     )
+                //     class_hash
+                // )
+            }
+        }
     }
 }
 
@@ -164,28 +235,77 @@ impl DeclareTx {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV1 {
-    pub nonce: Nonce,
-    pub max_fee: u128,
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
+    /// The account address which the transaction is initiated from.
+    pub sender_address: FieldElement,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: FieldElement,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<FieldElement>,
     /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
-    pub signature: Vec<FieldElement>,
-    pub sender_address: ContractAddress,
+    /// The max fee that the sender is willing to pay for the transaction.
+    pub max_fee: u128,
 }
 
 /// Represents a declare transaction type.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeclareTxV2 {
-    pub nonce: Nonce,
-    pub max_fee: u128,
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
+    /// The account address which the transaction is initiated from.
+    pub sender_address: FieldElement,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: FieldElement,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<FieldElement>,
     /// The class hash of the contract class to be declared.
     pub class_hash: ClassHash,
-    pub signature: Vec<FieldElement>,
-    pub sender_address: ContractAddress,
     /// The compiled class hash of the contract class (only if it's a Sierra class).
     pub compiled_class_hash: CompiledClassHash,
+    /// The max fee that the sender is willing to pay for the transaction.
+    pub max_fee: u128,
+}
+
+/// Represents a declare transaction type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DeclareTxV3 {
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
+    pub chain_id: ChainId,
+    /// The account address which the transaction is initiated from.
+    pub sender_address: FieldElement,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: FieldElement,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<FieldElement>,
+    /// The class hash of the contract class to be declared.
+    pub class_hash: ClassHash,
+    /// The CASM class hash of the Sierra contract class.
+    pub compiled_class_hash: CompiledClassHash,
+    /// Resource bounds for the transaction execution
+    pub resource_bounds: ResourceBoundsMapping,
+    /// The tip for the transaction
+    pub tip: u64,
+    /// Data needed to allow the paymaster to pay for the transaction in native tokens
+    pub paymaster_data: Vec<FieldElement>,
+    /// Data needed to deploy the account contract from which this tx will be initiated
+    pub account_deployment_data: Vec<FieldElement>,
+    /// The storage domain of the account's nonce (an account has a nonce per da mode)
+    pub nonce_data_availability_mode: DataAvailabilityMode,
+    /// The storage domain of the account's balance from which fee will be charged
+    pub fee_data_availability_mode: DataAvailabilityMode,
 }
 
 impl DeclareTx {
@@ -241,18 +361,75 @@ impl L1HandlerTx {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum DeployAccountTx {
+    V1(DeployAccountTxV1),
+    V3(DeployAccountTxV3),
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DeployAccountTx {
-    pub nonce: Nonce,
-    pub max_fee: u128,
+pub struct DeployAccountTxV1 {
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
     pub chain_id: ChainId,
-    pub version: FieldElement,
-    pub class_hash: ClassHash,
+    /// The account address which the transaction is initiated from.
+    pub sender_address: ContractAddress,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: Nonce,
+    /// The data used as the input to the execute entry point of sender account contract.
+    pub calldata: Vec<FieldElement>,
+    /// The transaction signature associated with the sender address.
     pub signature: Vec<FieldElement>,
+    /// The hash of the contract class from which the account contract will be deployed from.
+    pub class_hash: ClassHash,
+    /// The contract address of the account contract that will be deployed.
     pub contract_address: ContractAddress,
+    /// The salt used to generate the contract address.
     pub contract_address_salt: FieldElement,
+    /// The input data to the constructor function of the contract class.
     pub constructor_calldata: Vec<FieldElement>,
+    /// The max fee that the sender is willing to pay for the transaction.
+    pub max_fee: u128,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DeployAccountTxV3 {
+    /// The chain id of the chain on which the transaction is initiated.
+    ///
+    /// Used as a simple replay attack protection.
+    pub chain_id: ChainId,
+    /// The account address which the transaction is initiated from.
+    pub sender_address: ContractAddress,
+    /// The nonce value of the account. Corresponds to the number of transactions initiated by
+    /// sender.
+    pub nonce: Nonce,
+    /// The data used as the input to the execute entry point of sender account contract.
+    pub calldata: Vec<FieldElement>,
+    /// The transaction signature associated with the sender address.
+    pub signature: Vec<FieldElement>,
+    /// The hash of the contract class from which the account contract will be deployed from.
+    pub class_hash: ClassHash,
+    /// The contract address of the account contract that will be deployed.
+    pub contract_address: ContractAddress,
+    /// The salt used to generate the contract address.
+    pub contract_address_salt: FieldElement,
+    /// The input data to the constructor function of the contract class.
+    pub constructor_calldata: Vec<FieldElement>,
+    /// Resource bounds for the transaction execution
+    pub resource_bounds: ResourceBoundsMapping,
+    /// The tip for the transaction
+    pub tip: u64,
+    /// Data needed to allow the paymaster to pay for the transaction in native tokens
+    pub paymaster_data: Vec<FieldElement>,
+    /// The storage domain of the account's nonce (an account has a nonce per da mode)
+    pub nonce_data_availability_mode: DataAvailabilityMode,
+    /// The storage domain of the account's balance from which fee will be charged
+    pub fee_data_availability_mode: DataAvailabilityMode,
 }
 
 impl DeployAccountTx {

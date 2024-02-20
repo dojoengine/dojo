@@ -13,7 +13,7 @@ impl BlockWithTxs {
     pub fn new(block_hash: BlockHash, block: Block, finality_status: FinalityStatus) -> Self {
         let l1_gas_price = ResourcePrice {
             price_in_wei: block.header.gas_prices.eth,
-            price_in_strk: Some(block.header.gas_prices.strk),
+            price_in_fri: Some(block.header.gas_prices.fri),
         };
 
         let transactions =
@@ -48,7 +48,7 @@ impl PendingBlockWithTxs {
 
         let l1_gas_price = ResourcePrice {
             price_in_wei: header.gas_prices.eth,
-            price_in_strk: Some(header.gas_prices.strk),
+            price_in_fri: Some(header.gas_prices.fri),
         };
 
         Self(starknet::core::types::PendingBlockWithTxs {
@@ -81,7 +81,7 @@ impl BlockWithTxHashes {
     ) -> Self {
         let l1_gas_price = ResourcePrice {
             price_in_wei: block.header.gas_prices.eth,
-            price_in_strk: Some(block.header.gas_prices.strk),
+            price_in_fri: Some(block.header.gas_prices.fri),
         };
 
         Self(starknet::core::types::BlockWithTxHashes {
@@ -110,7 +110,7 @@ impl PendingBlockWithTxHashes {
     pub fn new(header: PartialHeader, transactions: Vec<TxHash>) -> Self {
         let l1_gas_price = ResourcePrice {
             price_in_wei: header.gas_prices.eth,
-            price_in_strk: Some(header.gas_prices.strk),
+            price_in_fri: Some(header.gas_prices.fri),
         };
 
         Self(starknet::core::types::PendingBlockWithTxHashes {
