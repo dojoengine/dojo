@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function};
+use convert_case::Casing;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -18,19 +19,24 @@ impl TypescriptPlugin {
     // Maps cairo types to C#/Unity SDK defined types
     fn map_type(type_name: &str) -> String {
         match type_name {
-            "u8" => "byte".to_string(),
-            "u16" => "ushort".to_string(),
-            "u32" => "uint".to_string(),
-            "u64" => "ulong".to_string(),
-            "u128" => "BigInteger".to_string(),
-            "u256" => "BigInteger".to_string(),
-            "usize" => "uint".to_string(),
-            "felt252" => "FieldElement".to_string(),
-            "ClassHash" => "FieldElement".to_string(),
-            "ContractAddress" => "FieldElement".to_string(),
+            "bool" => "RecsType.Boolean".to_string(),
+            "u8" => "RecsType.Number".to_string(),
+            "u16" => "RecsType.Number".to_string(),
+            "u32" => "RecsType.Number".to_string(),
+            "u64" => "RecsType.Number".to_string(),
+            "u128" => "RecsType.BigInt".to_string(),
+            "u256" => "RecsType.BigInt".to_string(),
+            "usize" => "RecsType.Number".to_string(),
+            "felt252" => "RecsType.BigInt".to_string(),
+            "ClassHash" => "RecsType.BigInt".to_string(),
+            "ContractAddress" => "RecsType.BigInt".to_string(),
 
             _ => type_name.to_string(),
         }
+    }
+
+    fn is_custom_type(type_name: &str) -> bool {
+        TypescriptPlugin::map_type(type_name) == type_name
     }
 
     fn generated_header() -> String {
@@ -49,9 +55,9 @@ impl TypescriptPlugin {
             .iter()
             .map(|field| {
                 format!(
-                    "public {} {};",
+                    "{}: {};",
+                    field.name,
                     TypescriptPlugin::map_type(field.token.clone().type_name().as_str()),
-                    field.name
                 )
             })
             .collect::<Vec<String>>()
@@ -60,8 +66,7 @@ impl TypescriptPlugin {
         format!(
             "
 // Type definition for `{}` struct
-[Serializable]
-public struct {} {{
+export interface {} {{
     {}
 }}
 ",
@@ -85,7 +90,7 @@ public struct {} {{
         format!(
             "
 // Type definition for `{}` enum
-public enum {} {{
+export enum {} {{
     {}
 }}
 ",
@@ -99,15 +104,23 @@ public enum {} {{
     // This will be formatted into a C# class inheriting from ModelInstance
     // Fields are mapped using C# and unity SDK types
     fn format_model(model: &Composite) -> String {
+        let mut custom_types = Vec::<String>::new();
+        let mut types = Vec::<String>::new();
         let fields = model
             .inners
             .iter()
             .map(|field| {
+                let mapped = TypescriptPlugin::map_type(field.token.type_name().as_str());
+                if mapped == field.token.type_name() {
+                    custom_types.push(format!("\"{}\"", field.token.type_name()));
+                } else {
+                    types.push(format!("\"{}\"", field.token.type_name()));
+                }
+
                 format!(
-                    "[ModelField(\"{}\")]\n    public {} {};",
+                    "{}: {},",
                     field.name,
                     TypescriptPlugin::map_type(field.token.type_name().as_str()),
-                    field.name,
                 )
             })
             .collect::<Vec<String>>()
@@ -115,58 +128,82 @@ public enum {} {{
 
         format!(
             "
-// Model definition for `{}` model
-public class {} : ModelInstance {{
-    {}
-
-    // Start is called before the first frame update
-    void Start() {{
-    }}
-
-    // Update is called once per frame
-    void Update() {{
-    }}
-}}
+// Model definition for `{path}` model
+{model}: (() => {{
+    return defineComponent(
+        world,
+        {{
+            {fields}
+        }},
+        {{
+            metadata: {{
+                name: {model},
+                types: [{types}],
+                customTypes: [{custom_types}],
+            }},
+        }}
+    );
+}})(),
         ",
-            model.type_path,
-            model.type_name(),
-            fields
+            path = model.type_path,
+            model = model.type_name(),
+            fields = fields,
+            types = types.join(", "),
+            custom_types = custom_types.join(", ")
         )
     }
 
     // Handles a model definition and its referenced tokens
-    // Will map all structs and enums to C# types
-    // Will format the model into a C# class
-    fn handle_model(&self, model: &DojoModel, handled_tokens: &mut Vec<Composite>) -> String {
+    // Will map all structs and enums to TS types
+    // Will format the models into a object
+    fn handle_model(&self, models: &[&DojoModel], handled_tokens: &mut Vec<Composite>) -> String {
         let mut out = String::new();
         out += TypescriptPlugin::generated_header().as_str();
-        out += "using System;\n";
-        out += "using Dojo;\n";
-        out += "using Dojo.Starknet;\n";
+        out += "import { defineComponent, Type as RecsType, World } from \"@dojoengine/recs\";\n";
+        out += "\n";
+        out += "export type ContractComponents = Awaited<
+            ReturnType<typeof defineContractComponents>
+        >;\n";
 
-        let mut model_struct: Option<&Composite> = None;
-        let tokens = &model.tokens;
-        for token in &tokens.structs {
-            handled_tokens.push(token.to_composite().unwrap().to_owned());
+        out += "\n\n";
 
-            // first index is our model struct
-            if token.type_name() == model.name {
-                model_struct = Some(token.to_composite().unwrap());
-                continue;
+        for model in models {
+            let mut model_struct: Option<&Composite> = None;
+            let tokens = &model.tokens;
+            for token in &tokens.structs {
+                handled_tokens.push(token.to_composite().unwrap().to_owned());
+
+                // first index is our model struct
+                if token.type_name() == model.name {
+                    model_struct = Some(token.to_composite().unwrap());
+                    continue;
+                }
+
+                out += TypescriptPlugin::format_struct(token.to_composite().unwrap()).as_str();
             }
 
-            out += TypescriptPlugin::format_struct(token.to_composite().unwrap()).as_str();
+            for token in &tokens.enums {
+                handled_tokens.push(token.to_composite().unwrap().to_owned());
+                out += TypescriptPlugin::format_enum(token.to_composite().unwrap()).as_str();
+            }
+
+            out += "\n";
         }
 
-        for token in &tokens.enums {
-            handled_tokens.push(token.to_composite().unwrap().to_owned());
-            out += TypescriptPlugin::format_enum(token.to_composite().unwrap()).as_str();
+        out += "
+export function defineContractComponents(world: World) {
+    return {
+";
+
+        for model in models {
+            let mut model_struct: Option<&Composite> = None;
+
+            out += TypescriptPlugin::format_model(model_struct.expect("model struct not found"))
+                .as_str();
         }
 
-        out += "\n";
-
-        out +=
-            TypescriptPlugin::format_model(model_struct.expect("model struct not found")).as_str();
+        out += "    };
+}\n";
 
         out
     }
@@ -211,37 +248,26 @@ public class {} : ModelInstance {{
         format!(
             "
     // Call the `{system_name}` system with the specified Account and calldata
-    // Returns the transaction hash. Use `WaitForTransaction` to wait for the transaction to be \
-             confirmed.
-    public async Task<FieldElement> {pretty_system_name}(Account account{arg_sep}{args}) {{
-        return await account.ExecuteRaw(new dojo.Call[] {{
-            new dojo.Call{{
-                to = contractAddress,
-                selector = \"{system_name}\",
-                calldata = new dojo.FieldElement[] {{
-                    {calldata}
-                }}
-            }}
-        }});
-    }}
+    const {pretty_system_name} = async ({{ account }}: {{ account: Account{arg_sep}{args} }}) => {{
+        try {{
+            return await provider.execute(
+                account,
+                contract_name,
+                {system_name},
+                [{calldata}]
+            );
+        }} catch (error) {{
+            console.error(\"Error executing spawn:\", error);
+            throw error;
+        }}
+    }};
             ",
             // selector for execute
             system_name = system.name,
             // pretty system name
             // snake case to camel case
-            // move_to -> MoveTo
-            pretty_system_name = system
-                .name
-                .split('_')
-                .map(|s| {
-                    let mut c = s.chars();
-                    match c.next() {
-                        None => String::new(),
-                        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(""),
+            // move_to -> moveTo
+            pretty_system_name = system.name.to_case(convert_case::Case::Camel),
             // add comma if we have args
             arg_sep = if !args.is_empty() { ", " } else { "" },
             // formatted args to use our mapped types
@@ -263,7 +289,11 @@ public class {} : ModelInstance {{
     // Will format the contract into a C# class and
     // all systems into C# methods
     // Handled tokens should be a list of all structs and enums used by the contract
-    fn handle_contracts(&self, contracts: &[DojoContract], handled_tokens: &[Composite]) -> String {
+    fn handle_contracts(
+        &self,
+        contracts: &[&DojoContract],
+        handled_tokens: &[Composite],
+    ) -> String {
         let mut out = String::new();
         out += TypescriptPlugin::generated_header().as_str();
         out += "import { Account } from \"starknet\";\n";
@@ -313,24 +343,18 @@ impl BuiltinPlugin for TypescriptPlugin {
         let mut handled_tokens = Vec::<Composite>::new();
 
         // Handle codegen for models
-        for (name, model) in &data.models {
-            let models_path = Path::new(&format!("Models/{}.gen.ts", name)).to_owned();
+        let models_path = Path::new("models.gen.ts").to_owned();
+        let models = data.models.values().collect::<Vec<_>>();
+        let code = self.handle_model(models.as_slice(), &mut handled_tokens);
 
-            println!("Generating model: {}", name);
-            let code = self.handle_model(model, &mut handled_tokens);
+        out.insert(models_path, code.as_bytes().to_vec());
 
-            out.insert(models_path, code.as_bytes().to_vec());
-        }
+        // Handle codegen for contracts & systems
+        let contracts_path = Path::new("contracts.gen.ts").to_owned();
+        let contracts = data.contracts.values().collect::<Vec<_>>();
+        let code = self.handle_contracts(contracts.as_slice(), &handled_tokens);
 
-        // Handle codegen for systems
-        for (name, contract) in &data.contracts {
-            let contracts_path = Path::new(&format!("Contracts/{}.gen.ts", name)).to_owned();
-
-            println!("Generating contract: {}", name);
-            let code = self.handle_contract(contract, &handled_tokens);
-
-            out.insert(contracts_path, code.as_bytes().to_vec());
-        }
+        out.insert(contracts_path, code.as_bytes().to_vec());
 
         Ok(out)
     }
