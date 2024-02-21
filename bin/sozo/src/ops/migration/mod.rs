@@ -486,7 +486,7 @@ where
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
-    ui.print_sub(format!("All models are registered at: {transaction_hash:#x}"));
+    ui.print(format!("All models are registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
