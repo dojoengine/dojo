@@ -1,4 +1,4 @@
-use derive_more::{AsRef, Deref};
+use derive_more::{AsRef, Deref, From};
 use ethers::types::H256;
 use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
 
@@ -47,7 +47,7 @@ impl<'a> From<TxRef<'a>> for Tx {
 }
 
 /// Represents a transaction that has all the necessary data to be executed.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From)]
 pub enum ExecutableTx {
     Invoke(InvokeTx),
     L1Handler(L1HandlerTx),
@@ -503,29 +503,5 @@ impl From<ExecutableTxWithHash> for TxWithHash {
 impl From<&ExecutableTxWithHash> for TxWithHash {
     fn from(tx: &ExecutableTxWithHash) -> Self {
         Self { hash: tx.hash, transaction: tx.tx_ref().into() }
-    }
-}
-
-impl From<L1HandlerTx> for ExecutableTx {
-    fn from(tx: L1HandlerTx) -> Self {
-        ExecutableTx::L1Handler(tx)
-    }
-}
-
-impl From<DeclareTxWithClass> for ExecutableTx {
-    fn from(tx: DeclareTxWithClass) -> Self {
-        ExecutableTx::Declare(tx)
-    }
-}
-
-impl From<InvokeTx> for ExecutableTx {
-    fn from(tx: InvokeTx) -> Self {
-        ExecutableTx::Invoke(tx)
-    }
-}
-
-impl From<DeployAccountTx> for ExecutableTx {
-    fn from(tx: DeployAccountTx) -> Self {
-        ExecutableTx::DeployAccount(tx)
     }
 }
