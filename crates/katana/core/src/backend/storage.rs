@@ -12,7 +12,7 @@ use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
-    ReceiptProvider, TransactionExecutionProvider, TransactionProvider, TransactionStatusProvider,
+    ReceiptProvider, TransactionTraceProvider, TransactionProvider, TransactionStatusProvider,
     TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;
@@ -22,7 +22,7 @@ pub trait Database:
     + BlockWriter
     + TransactionProvider
     + TransactionStatusProvider
-    + TransactionExecutionProvider
+    + TransactionTraceProvider
     + TransactionsProviderExt
     + ReceiptProvider
     + StateUpdateProvider
@@ -42,7 +42,7 @@ impl<T> Database for T where
         + BlockWriter
         + TransactionProvider
         + TransactionStatusProvider
-        + TransactionExecutionProvider
+        + TransactionTraceProvider
         + TransactionsProviderExt
         + ReceiptProvider
         + StateUpdateProvider

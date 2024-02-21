@@ -53,7 +53,7 @@ pub trait TransactionStatusProvider: Send + Sync {
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait TransactionExecutionProvider: Send + Sync {
+pub trait TransactionTraceProvider: Send + Sync {
     /// Returns a transaction execution given its hash.
     fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>>;
 

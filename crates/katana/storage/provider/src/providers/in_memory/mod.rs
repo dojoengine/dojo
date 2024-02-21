@@ -29,8 +29,8 @@ use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
-    ReceiptProvider, TransactionExecutionProvider, TransactionProvider, TransactionStatusProvider,
-    TransactionsProviderExt,
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider,
+    TransactionsProviderExt, TransactionTraceProvider,
 };
 use crate::ProviderResult;
 
@@ -317,7 +317,7 @@ impl TransactionStatusProvider for InMemoryProvider {
     }
 }
 
-impl TransactionExecutionProvider for InMemoryProvider {
+impl TransactionTraceProvider for InMemoryProvider {
     fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
         let exec = self.storage.read().transaction_numbers.get(&hash).and_then(|num| {
             self.storage.read().transactions_executions.get(*num as usize).cloned()

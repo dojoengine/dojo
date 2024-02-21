@@ -18,7 +18,7 @@ use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
 use traits::contract::{ContractClassProvider, ContractClassWriter};
 use traits::env::BlockEnvProvider;
 use traits::state::{StateRootProvider, StateWriter};
-use traits::transaction::{TransactionExecutionProvider, TransactionStatusProvider};
+use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
 
 pub mod error;
 pub mod providers;
@@ -186,19 +186,19 @@ where
     }
 }
 
-impl<Db> TransactionExecutionProvider for BlockchainProvider<Db>
+impl<Db> TransactionTraceProvider for BlockchainProvider<Db>
 where
-    Db: TransactionExecutionProvider,
+    Db: TransactionTraceProvider,
 {
     fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
-        TransactionExecutionProvider::transaction_execution(&self.provider, hash)
+        TransactionTraceProvider::transaction_execution(&self.provider, hash)
     }
 
     fn transactions_executions_by_block(
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
-        TransactionExecutionProvider::transactions_executions_by_block(&self.provider, block_id)
+        TransactionTraceProvider::transactions_executions_by_block(&self.provider, block_id)
     }
 }
 

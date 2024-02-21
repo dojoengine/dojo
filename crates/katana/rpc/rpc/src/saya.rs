@@ -3,7 +3,7 @@ use std::sync::Arc;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::sequencer::KatanaSequencer;
 use katana_primitives::block::BlockHashOrNumber;
-use katana_provider::traits::transaction::TransactionExecutionProvider;
+use katana_provider::traits::transaction::TransactionTraceProvider;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_types::error::saya::SayaApiError;
 use katana_rpc_types::transaction::{TransactionsExecutionsPage, TransactionsPageCursor};

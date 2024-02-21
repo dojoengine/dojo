@@ -4,7 +4,7 @@ use katana_primitives::contract::{
     StorageKey,
 };
 use katana_primitives::receipt::Receipt;
-use katana_primitives::transaction::{Tx, TxHash, TxNumber};
+use katana_primitives::transaction::{Tx, TxHash, TxExecInfo, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
@@ -192,6 +192,8 @@ tables! {
     Transactions: (TxNumber) => Tx,
     /// Stores the block number of a transaction.
     TxBlocks: (TxNumber) => BlockNumber,
+    /// Stores the transaction's execution info.
+    TxExecInfo: (TxNumber) => TxExecInfo,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Store compiled classes

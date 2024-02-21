@@ -38,8 +38,8 @@ use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
-    ReceiptProvider, TransactionExecutionProvider, TransactionProvider, TransactionStatusProvider,
-    TransactionsProviderExt,
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider,
+    TransactionsProviderExt, TransactionTraceProvider,
 };
 use crate::ProviderResult;
 
@@ -491,7 +491,7 @@ impl TransactionStatusProvider for DbProvider {
     }
 }
 
-impl TransactionExecutionProvider for DbProvider {
+impl TransactionTraceProvider for DbProvider {
     fn transaction_execution(&self, _hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
         todo!()
     }

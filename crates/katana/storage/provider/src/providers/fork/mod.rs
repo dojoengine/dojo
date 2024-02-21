@@ -33,8 +33,8 @@ use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
-    ReceiptProvider, TransactionExecutionProvider, TransactionProvider, TransactionStatusProvider,
-    TransactionsProviderExt,
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider,
+    TransactionsProviderExt, TransactionTraceProvider,
 };
 use crate::ProviderResult;
 
@@ -323,16 +323,44 @@ impl TransactionStatusProvider for ForkedProvider {
     }
 }
 
-impl TransactionExecutionProvider for ForkedProvider {
-    fn transaction_execution(&self, _hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
-        todo!()
+impl TransactionTraceProvider for ForkedProvider {
+    fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        let exec = self.storage.read().transaction_numbers.get(&hash).and_then(|num| {
+            self.storage.read().transactions_executions.get(*num as usize).cloned()
+        });
+
+        Ok(exec)
     }
 
     fn transactions_executions_by_block(
         &self,
-        _block_id: BlockHashOrNumber,
+        block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
-        todo!()
+        let block_num = match block_id {
+            BlockHashOrNumber::Num(num) => Some(num),
+            BlockHashOrNumber::Hash(hash) => self.storage.read().block_numbers.get(&hash).cloned(),
+        };
+
+        let Some(StoredBlockBodyIndices { tx_offset, tx_count }) =
+            block_num.and_then(|num| self.storage.read().block_body_indices.get(&num).cloned())
+        else {
+            return Ok(None);
+        };
+
+        let offset = tx_offset as usize;
+        let count = tx_count as usize;
+
+        let execs = self
+            .storage
+            .read()
+            .transactions_executions
+            .iter()
+            .skip(offset)
+            .take(count)
+            .cloned()
+            .collect();
+
+        Ok(Some(execs))
     }
 }
 
