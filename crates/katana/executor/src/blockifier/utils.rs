@@ -66,7 +66,7 @@ pub fn estimate_fee(
     validate: bool,
 ) -> Result<Vec<FeeEstimate>, TransactionExecutionError> {
     let state = CachedStateWrapper::new(StateRefDb::from(state));
-    let results = TransactionExecutor::new(&state, &block_context, false, validate, transactions)
+    let results = TransactionExecutor::new(&state, &block_context, true, validate, transactions)
         .with_error_log()
         .execute();
 
@@ -162,10 +162,10 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     };
 
     let gas_prices = GasPrices {
-        eth_l1_gas_price: block_env.l1_gas_prices.eth,
-        strk_l1_gas_price: block_env.l1_gas_prices.fri,
-        eth_l1_data_gas_price: 0,
-        strk_l1_data_gas_price: 0,
+        eth_l1_gas_price: block_env.l1_gas_prices.eth_l1_gas_price,
+        strk_l1_gas_price: block_env.l1_gas_prices.fri_l1_gas_price,
+        eth_l1_data_gas_price: block_env.l1_gas_prices.eth_l1_data_gas_price,
+        strk_l1_data_gas_price: block_env.l1_gas_prices.fri_l1_data_gas_price,
     };
 
     BlockContext {

@@ -148,6 +148,9 @@ fn execute_tx<S: StateReader>(
     charge_fee: bool,
     validate: bool,
 ) -> TxExecutionResult {
+    println!("charge_fee: {}", charge_fee);
+    println!("validate: {}", validate);
+
     let sierra = if let ExecutableTx::Declare(DeclareTxWithClass {
         transaction,
         sierra_class: Some(sierra_class),

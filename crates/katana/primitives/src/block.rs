@@ -40,20 +40,32 @@ pub struct PartialHeader {
 }
 
 /// The L1 gas prices.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
 pub struct GasPrices {
     /// The price of one unit of the given resource, denominated in wei
-    pub eth: u128,
+    pub eth_l1_gas_price: u128,
     /// The price of one unit of the given resource, denominated in fri (the smallest unit of STRK,
     /// equivalent to 10^-18 STRK)
-    pub fri: u128,
+    pub fri_l1_gas_price: u128,
+    pub eth_l1_data_gas_price: u128,
+    pub fri_l1_data_gas_price: u128,
 }
 
 impl GasPrices {
-    pub fn new(eth_gas_price: u128, fri_gas_price: u128) -> Self {
-        Self { eth: eth_gas_price, fri: fri_gas_price }
+    pub fn new(
+        eth_gas_price: u128,
+        fri_gas_price: u128,
+        eth_data_gas_price: u128,
+        strk_data_gas_price: u128,
+    ) -> Self {
+        Self {
+            eth_l1_gas_price: eth_gas_price,
+            fri_l1_gas_price: fri_gas_price,
+            eth_l1_data_gas_price: eth_data_gas_price,
+            fri_l1_data_gas_price: strk_data_gas_price,
+        }
     }
 }
 

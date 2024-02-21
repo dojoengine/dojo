@@ -18,6 +18,9 @@ pub struct TxReceiptWithExecInfo {
 impl TxReceiptWithExecInfo {
     pub fn new(tx: impl AsRef<Tx>, execution_info: TransactionExecutionInfo) -> Self {
         let actual_fee = execution_info.actual_fee.0;
+
+        println!("actual_fee: {actual_fee}");
+
         let events = events_from_exec_info(&execution_info);
         let revert_error = execution_info.revert_error.clone();
         let messages_sent = l2_to_l1_messages_from_exec_info(&execution_info);

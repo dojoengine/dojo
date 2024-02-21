@@ -146,7 +146,7 @@ impl Genesis {
                 number: self.number,
                 state_root: self.state_root,
                 timestamp: self.timestamp,
-                gas_prices: self.gas_prices,
+                gas_prices: self.gas_prices.clone(),
                 sequencer_address: self.sequencer_address,
                 version: CURRENT_STARKNET_VERSION,
             },
@@ -418,7 +418,11 @@ mod tests {
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
             sequencer_address: ContractAddress(felt!("0x100")),
-            gas_prices: GasPrices { eth: 1111, fri: 2222 },
+            gas_prices: GasPrices {
+                eth_l1_gas_price: 1111,
+                fri_l1_gas_price: 2222,
+                ..Default::default()
+            },
             universal_deployer: Some(ud.clone()),
         };
 
@@ -460,7 +464,7 @@ mod tests {
                 state_root: genesis.state_root,
                 parent_hash: genesis.parent_hash,
                 sequencer_address: genesis.sequencer_address,
-                gas_prices: genesis.gas_prices,
+                gas_prices: genesis.gas_prices.clone(),
                 version: CURRENT_STARKNET_VERSION,
             },
             body: Vec::new(),

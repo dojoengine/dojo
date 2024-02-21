@@ -414,6 +414,9 @@ impl InstantBlockProducer {
 
         let txs = transactions.iter().map(TxWithHash::from);
 
+        println!("disable_fee {}", backend.config.disable_fee);
+        println!("disable_validate {}", backend.config.disable_validate);
+
         let tx_receipt_pairs: Vec<TxWithHashAndReceiptPair> = TransactionExecutor::new(
             &state,
             &block_context,

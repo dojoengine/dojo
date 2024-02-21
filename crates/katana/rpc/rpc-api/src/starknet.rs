@@ -19,6 +19,9 @@ use katana_rpc_types::{
 };
 use starknet::core::types::TransactionStatus;
 
+/// The currently supported version of the Starknet JSON-RPC specification.
+pub const RPC_SPEC_VERSION: &str = "0.6.0";
+
 /// Starknet JSON-RPC APIs: <https://github.com/starkware-libs/starknet-specs>
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
 #[cfg_attr(feature = "client", rpc(client, server, namespace = "starknet"))]
@@ -26,7 +29,7 @@ pub trait StarknetApi {
     /// Returns the version of the Starknet JSON-RPC specification being used.
     #[method(name = "specVersion")]
     async fn spec_version(&self) -> RpcResult<String> {
-        Ok("0.5.1".into())
+        Ok(RPC_SPEC_VERSION.into())
     }
 
     /// Get block information with transaction hashes given the block id.

@@ -4,9 +4,7 @@ use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::sequencer::KatanaSequencer;
 use katana_executor::blockifier::utils::EntryPointCall;
-use katana_primitives::block::{
-    BlockHashOrNumber, BlockIdOrTag, FinalityStatus, GasPrices, PartialHeader,
-};
+use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus, PartialHeader};
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
@@ -165,10 +163,7 @@ impl StarknetApiServer for StarknetApi {
                     let latest_hash =
                         BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
 
-                    let gas_prices = GasPrices {
-                        eth: block_env.l1_gas_prices.eth,
-                        fri: block_env.l1_gas_prices.fri,
-                    };
+                    let gas_prices = block_env.l1_gas_prices.clone();
 
                     let header = PartialHeader {
                         gas_prices,
@@ -246,10 +241,7 @@ impl StarknetApiServer for StarknetApi {
                     let latest_hash =
                         BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
 
-                    let gas_prices = GasPrices {
-                        eth: block_env.l1_gas_prices.eth,
-                        fri: block_env.l1_gas_prices.fri,
-                    };
+                    let gas_prices = block_env.l1_gas_prices.clone();
 
                     let header = PartialHeader {
                         gas_prices,
@@ -518,6 +510,8 @@ impl StarknetApiServer for StarknetApi {
                 .sequencer
                 .estimate_fee(transactions, block_id, skip_validate)
                 .map_err(StarknetApiError::from)?;
+
+            println!("res: {:#?}", res);
 
             Ok(res)
         })

@@ -134,6 +134,7 @@ impl KatanaSequencer {
         if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
             if let Some(state) = self.pending_state() {
                 let (block_env, _) = state.block_execution_envs();
+                println!("my block {:#?}", block_env);
                 return Ok(Some(block_context_from_envs(&block_env, &cfg_env)));
             }
         }
@@ -201,6 +202,8 @@ impl KatanaSequencer {
         let block_context = self
             .block_execution_context_at(block_id)?
             .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
+
+        println!("block info : {:#?}", block_context.block_info);
 
         // TODO: document
         let should_validate = !skip_validate && self.backend.config.disable_validate;

@@ -18,9 +18,11 @@ use clap_complete::Shell;
 use common::parse::parse_socket_address;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
-    DEFAULT_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_VALIDATE_MAX_STEPS,
+    DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS,
+    DEFAULT_STRK_L1_DATA_GAS_PRICE, DEFAULT_STRK_L1_GAS_PRICE, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::sequencer::SequencerConfig;
+use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
@@ -171,16 +173,20 @@ pub struct EnvironmentOptions {
     pub chain_id: ChainId,
 
     #[arg(long)]
-    #[arg(help = "The gas price.")]
-    pub gas_price: Option<u128>,
-
-    #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
     pub validate_max_steps: Option<u32>,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account execution logic.")]
     pub invoke_max_steps: Option<u32>,
+
+    #[arg(long = "eth-gas-price")]
+    #[arg(help = "The L1 ETH gas price.")]
+    pub l1_eth_gas_price: Option<u128>,
+
+    #[arg(long = "strk-gas-price")]
+    #[arg(help = "The L1 STRK gas price.")]
+    pub l1_strk_gas_price: Option<u128>,
 }
 
 impl KatanaArgs {
@@ -241,14 +247,29 @@ impl KatanaArgs {
             }
         };
 
+        let gas_price = GasPrices {
+            eth_l1_gas_price: self
+                .starknet
+                .environment
+                .l1_eth_gas_price
+                .unwrap_or(DEFAULT_ETH_L1_GAS_PRICE),
+            fri_l1_gas_price: self
+                .starknet
+                .environment
+                .l1_strk_gas_price
+                .unwrap_or(DEFAULT_STRK_L1_GAS_PRICE),
+            eth_l1_data_gas_price: DEFAULT_ETH_L1_DATA_GAS_PRICE,
+            fri_l1_data_gas_price: DEFAULT_STRK_L1_DATA_GAS_PRICE,
+        };
+
         StarknetConfig {
             disable_fee: self.starknet.disable_fee,
             disable_validate: self.starknet.disable_validate,
             fork_rpc_url: self.rpc_url.clone(),
             fork_block_number: self.fork_block_number,
             env: Environment {
+                gas_price,
                 chain_id: self.starknet.environment.chain_id,
-                gas_price: self.starknet.environment.gas_price.unwrap_or(DEFAULT_GAS_PRICE),
                 invoke_max_steps: self
                     .starknet
                     .environment
@@ -274,15 +295,26 @@ mod test {
     fn default_block_context_from_args() {
         let args = KatanaArgs::parse_from(["katana"]);
         let block_context = args.starknet_config().block_env();
-        assert_eq!(block_context.l1_gas_prices.eth, DEFAULT_GAS_PRICE);
+        assert_eq!(block_context.l1_gas_prices.eth_l1_gas_price, DEFAULT_ETH_L1_GAS_PRICE);
+        assert_eq!(block_context.l1_gas_prices.fri_l1_gas_price, DEFAULT_STRK_L1_GAS_PRICE);
+        assert_eq!(
+            block_context.l1_gas_prices.eth_l1_data_gas_price,
+            DEFAULT_ETH_L1_DATA_GAS_PRICE
+        );
+        assert_eq!(
+            block_context.l1_gas_prices.fri_l1_data_gas_price,
+            DEFAULT_STRK_L1_DATA_GAS_PRICE
+        );
     }
 
     #[test]
     fn custom_block_context_from_args() {
         let args = KatanaArgs::parse_from([
             "katana",
-            "--gas-price",
+            "--eth-gas-price",
             "10",
+            "--strk-gas-price",
+            "20",
             "--chain-id",
             "SN_GOERLI",
             "--validate-max-steps",
@@ -293,6 +325,15 @@ mod test {
 
         let block_context = args.starknet_config().block_env();
 
-        assert_eq!(block_context.l1_gas_prices.eth, 10);
+        assert_eq!(block_context.l1_gas_prices.eth_l1_gas_price, 10);
+        assert_eq!(block_context.l1_gas_prices.fri_l1_gas_price, 20);
+        assert_eq!(
+            block_context.l1_gas_prices.eth_l1_data_gas_price,
+            DEFAULT_ETH_L1_DATA_GAS_PRICE
+        );
+        assert_eq!(
+            block_context.l1_gas_prices.fri_l1_data_gas_price,
+            DEFAULT_STRK_L1_DATA_GAS_PRICE
+        );
     }
 }
