@@ -511,8 +511,6 @@ impl StarknetApiServer for StarknetApi {
                 .estimate_fee(transactions, block_id, skip_validate)
                 .map_err(StarknetApiError::from)?;
 
-            println!("res: {:#?}", res);
-
             Ok(res)
         })
         .await

@@ -28,6 +28,7 @@ use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use starknet::core::types::{FeeEstimate, PriceUnit};
 use starknet::core::utils::parse_cairo_short_string;
+use starknet::macros::felt;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::transaction::Calldata;
@@ -158,7 +159,7 @@ pub fn calculate_execution_fee(
 pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
     let fee_token_addresses = FeeTokenAddresses {
         eth_fee_token_address: cfg_env.fee_token_addresses.eth.into(),
-        strk_fee_token_address: cfg_env.fee_token_addresses.strk.into(),
+        strk_fee_token_address: ContractAddress(felt!("0xb00b5")).into(),
     };
 
     let gas_prices = GasPrices {

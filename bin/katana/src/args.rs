@@ -19,7 +19,8 @@ use common::parse::parse_socket_address;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
     DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS,
-    DEFAULT_STRK_L1_DATA_GAS_PRICE, DEFAULT_STRK_L1_GAS_PRICE, DEFAULT_VALIDATE_MAX_STEPS,
+    DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STRK_L1_DATA_GAS_PRICE, DEFAULT_STRK_L1_GAS_PRICE,
+    DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::block::GasPrices;
@@ -233,20 +234,6 @@ impl KatanaArgs {
     }
 
     pub fn starknet_config(&self) -> StarknetConfig {
-        let genesis = match self.starknet.genesis.clone() {
-            Some(genesis) => genesis,
-            None => {
-                let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
-                    .with_seed(parse_seed(&self.starknet.seed))
-                    .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
-                    .generate();
-
-                let mut genesis = Genesis::default();
-                genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-                genesis
-            }
-        };
-
         let gas_price = GasPrices {
             eth_l1_gas_price: self
                 .starknet
@@ -260,6 +247,25 @@ impl KatanaArgs {
                 .unwrap_or(DEFAULT_STRK_L1_GAS_PRICE),
             eth_l1_data_gas_price: DEFAULT_ETH_L1_DATA_GAS_PRICE,
             fri_l1_data_gas_price: DEFAULT_STRK_L1_DATA_GAS_PRICE,
+        };
+
+        let genesis = match self.starknet.genesis.clone() {
+            Some(genesis) => genesis,
+            None => {
+                let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
+                    .with_seed(parse_seed(&self.starknet.seed))
+                    .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+                    .generate();
+
+                let mut genesis = Genesis {
+                    gas_prices: gas_price.clone(),
+                    sequencer_address: *DEFAULT_SEQUENCER_ADDRESS,
+                    ..Default::default()
+                };
+
+                genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+                genesis
+            }
         };
 
         StarknetConfig {

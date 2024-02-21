@@ -17,6 +17,6 @@ lazy_static! {
 
     // Predefined contract addresses
 
-    pub static ref SEQUENCER_ADDRESS: ContractAddress = ContractAddress(felt!("0x1"));
+    pub static ref DEFAULT_SEQUENCER_ADDRESS: ContractAddress = ContractAddress(felt!("0x1"));
 
 }
