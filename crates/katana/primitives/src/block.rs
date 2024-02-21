@@ -108,7 +108,7 @@ impl Header {
 }
 
 /// Represents a Starknet full block.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Block {
     pub header: Header,
@@ -189,6 +189,7 @@ impl From<BlockHash> for BlockHashOrNumber {
 
 /// A block that can executed. This is a block whose transactions includes
 /// all the necessary information to be executed.
+#[derive(Debug, Clone)]
 pub struct ExecutableBlock {
     pub header: PartialHeader,
     pub body: Vec<ExecutableTxWithHash>,

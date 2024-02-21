@@ -21,3 +21,8 @@ tracing.workspace = true
 blockifier.workspace = true
 starknet_api.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+cairo-vm.workspace = true
+katana-provider.workspace = true
+rstest.workspace = true

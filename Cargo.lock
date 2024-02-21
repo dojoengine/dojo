@@ -6615,10 +6615,12 @@ version = "0.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "blockifier",
+ "cairo-vm",
  "convert_case 0.6.0",
  "katana-primitives",
  "katana-provider",
  "parking_lot 0.12.1",
+ "rstest",
  "starknet",
  "starknet_api",
  "thiserror",
