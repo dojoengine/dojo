@@ -177,7 +177,7 @@ mod tests {
             parent_hash: FieldElement::ZERO,
             state_root: felt!("1334"),
             timestamp: 6868,
-            gas_prices: GasPrices { eth: 9090, strk: 8080, ..Default::default() },
+            gas_prices: GasPrices { eth: 9090, strk: 8080 },
             ..Default::default()
         };
 

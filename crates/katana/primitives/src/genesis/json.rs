@@ -926,7 +926,7 @@ mod tests {
             sequencer_address: ContractAddress::from(felt!("0x100")),
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
-            gas_prices: GasPrices { eth: 1111, strk: 2222, ..Default::default() },
+            gas_prices: GasPrices { eth: 1111, strk: 2222 },
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
                 address: ContractAddress::from(felt!(
@@ -1060,7 +1060,7 @@ mod tests {
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
             sequencer_address: ContractAddress(felt!("0x100")),
-            gas_prices: GasPrices { eth: 1111, strk: 2222, ..Default::default() },
+            gas_prices: GasPrices { eth: 1111, strk: 2222 },
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
                 address: DEFAULT_UDC_ADDRESS,
