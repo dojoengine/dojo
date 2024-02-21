@@ -177,11 +177,7 @@ mod tests {
             parent_hash: FieldElement::ZERO,
             state_root: felt!("1334"),
             timestamp: 6868,
-            gas_prices: GasPrices {
-                eth_l1_gas_price: 9090,
-                fri_l1_gas_price: 8080,
-                ..Default::default()
-            },
+            gas_prices: GasPrices { eth: 9090, strk: 8080, ..Default::default() },
             ..Default::default()
         };
 
@@ -204,8 +200,8 @@ mod tests {
         assert_eq!(latest_number, genesis.number);
         assert_eq!(latest_hash, genesis_hash);
 
-        assert_eq!(header.gas_prices.eth_l1_gas_price, 9090);
-        assert_eq!(header.gas_prices.fri_l1_gas_price, 8080);
+        assert_eq!(header.gas_prices.eth, 9090);
+        assert_eq!(header.gas_prices.strk, 8080);
         assert_eq!(header.timestamp, 6868);
         assert_eq!(header.number, latest_number);
         assert_eq!(header.state_root, genesis.state_root);

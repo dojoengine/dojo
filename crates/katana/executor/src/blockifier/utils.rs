@@ -163,10 +163,10 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     };
 
     let gas_prices = GasPrices {
-        eth_l1_gas_price: block_env.l1_gas_prices.eth_l1_gas_price,
-        strk_l1_gas_price: block_env.l1_gas_prices.fri_l1_gas_price,
-        eth_l1_data_gas_price: block_env.l1_gas_prices.eth_l1_data_gas_price,
-        strk_l1_data_gas_price: block_env.l1_gas_prices.fri_l1_data_gas_price,
+        eth_l1_gas_price: block_env.l1_gas_prices.eth,
+        strk_l1_gas_price: block_env.l1_gas_prices.strk,
+        eth_l1_data_gas_price: 0,
+        strk_l1_data_gas_price: 0,
     };
 
     BlockContext {

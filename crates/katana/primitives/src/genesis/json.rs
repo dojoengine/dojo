@@ -590,8 +590,8 @@ mod tests {
         assert_eq!(json.parent_hash, felt!("0x999"));
         assert_eq!(json.timestamp, 5123512314u64);
         assert_eq!(json.state_root, felt!("0x99"));
-        assert_eq!(json.gas_prices.eth_l1_gas_price, 1111);
-        assert_eq!(json.gas_prices.fri_l1_gas_price, 2222);
+        assert_eq!(json.gas_prices.eth, 1111);
+        assert_eq!(json.gas_prices.strk, 2222);
 
         assert_eq!(json.fee_token.address, Some(ContractAddress::from(felt!("0x55"))));
         assert_eq!(json.fee_token.name, String::from("ETHER"));
@@ -926,11 +926,7 @@ mod tests {
             sequencer_address: ContractAddress::from(felt!("0x100")),
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
-            gas_prices: GasPrices {
-                eth_l1_gas_price: 1111,
-                fri_l1_gas_price: 2222,
-                ..Default::default()
-            },
+            gas_prices: GasPrices { eth: 1111, strk: 2222, ..Default::default() },
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
                 address: ContractAddress::from(felt!(
@@ -1064,11 +1060,7 @@ mod tests {
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
             sequencer_address: ContractAddress(felt!("0x100")),
-            gas_prices: GasPrices {
-                eth_l1_gas_price: 1111,
-                fri_l1_gas_price: 2222,
-                ..Default::default()
-            },
+            gas_prices: GasPrices { eth: 1111, strk: 2222, ..Default::default() },
             universal_deployer: Some(UniversalDeployerConfig {
                 class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
                 address: DEFAULT_UDC_ADDRESS,

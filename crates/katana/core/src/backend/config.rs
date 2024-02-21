@@ -72,8 +72,8 @@ impl Default for Environment {
             invoke_max_steps: DEFAULT_INVOKE_MAX_STEPS,
             validate_max_steps: DEFAULT_VALIDATE_MAX_STEPS,
             gas_price: GasPrices {
-                eth_l1_gas_price: DEFAULT_ETH_L1_GAS_PRICE,
-                fri_l1_gas_price: DEFAULT_STRK_L1_GAS_PRICE,
+                eth: DEFAULT_ETH_L1_GAS_PRICE,
+                strk: DEFAULT_STRK_L1_GAS_PRICE,
                 ..Default::default()
             },
         }

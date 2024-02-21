@@ -18,9 +18,8 @@ use clap_complete::Shell;
 use common::parse::parse_socket_address;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::constants::{
-    DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS,
-    DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STRK_L1_DATA_GAS_PRICE, DEFAULT_STRK_L1_GAS_PRICE,
-    DEFAULT_VALIDATE_MAX_STEPS,
+    DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_INVOKE_MAX_STEPS, DEFAULT_SEQUENCER_ADDRESS,
+    DEFAULT_STRK_L1_GAS_PRICE, DEFAULT_VALIDATE_MAX_STEPS,
 };
 use katana_core::sequencer::SequencerConfig;
 use katana_primitives::block::GasPrices;
@@ -235,18 +234,8 @@ impl KatanaArgs {
 
     pub fn starknet_config(&self) -> StarknetConfig {
         let gas_price = GasPrices {
-            eth_l1_gas_price: self
-                .starknet
-                .environment
-                .l1_eth_gas_price
-                .unwrap_or(DEFAULT_ETH_L1_GAS_PRICE),
-            fri_l1_gas_price: self
-                .starknet
-                .environment
-                .l1_strk_gas_price
-                .unwrap_or(DEFAULT_STRK_L1_GAS_PRICE),
-            eth_l1_data_gas_price: DEFAULT_ETH_L1_DATA_GAS_PRICE,
-            fri_l1_data_gas_price: DEFAULT_STRK_L1_DATA_GAS_PRICE,
+            eth: self.starknet.environment.l1_eth_gas_price.unwrap_or(DEFAULT_ETH_L1_GAS_PRICE),
+            strk: self.starknet.environment.l1_strk_gas_price.unwrap_or(DEFAULT_STRK_L1_GAS_PRICE),
         };
 
         let genesis = match self.starknet.genesis.clone() {
@@ -301,16 +290,8 @@ mod test {
     fn default_block_context_from_args() {
         let args = KatanaArgs::parse_from(["katana"]);
         let block_context = args.starknet_config().block_env();
-        assert_eq!(block_context.l1_gas_prices.eth_l1_gas_price, DEFAULT_ETH_L1_GAS_PRICE);
-        assert_eq!(block_context.l1_gas_prices.fri_l1_gas_price, DEFAULT_STRK_L1_GAS_PRICE);
-        assert_eq!(
-            block_context.l1_gas_prices.eth_l1_data_gas_price,
-            DEFAULT_ETH_L1_DATA_GAS_PRICE
-        );
-        assert_eq!(
-            block_context.l1_gas_prices.fri_l1_data_gas_price,
-            DEFAULT_STRK_L1_DATA_GAS_PRICE
-        );
+        assert_eq!(block_context.l1_gas_prices.eth, DEFAULT_ETH_L1_GAS_PRICE);
+        assert_eq!(block_context.l1_gas_prices.strk, DEFAULT_STRK_L1_GAS_PRICE);
     }
 
     #[test]
@@ -331,15 +312,7 @@ mod test {
 
         let block_context = args.starknet_config().block_env();
 
-        assert_eq!(block_context.l1_gas_prices.eth_l1_gas_price, 10);
-        assert_eq!(block_context.l1_gas_prices.fri_l1_gas_price, 20);
-        assert_eq!(
-            block_context.l1_gas_prices.eth_l1_data_gas_price,
-            DEFAULT_ETH_L1_DATA_GAS_PRICE
-        );
-        assert_eq!(
-            block_context.l1_gas_prices.fri_l1_data_gas_price,
-            DEFAULT_STRK_L1_DATA_GAS_PRICE
-        );
+        assert_eq!(block_context.l1_gas_prices.eth, 10);
+        assert_eq!(block_context.l1_gas_prices.strk, 20);
     }
 }

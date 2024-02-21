@@ -27,9 +27,7 @@ pub mod storage;
 
 use self::config::StarknetConfig;
 use self::storage::Blockchain;
-use crate::constants::{
-    DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE, MAX_RECURSION_DEPTH,
-};
+use crate::constants::MAX_RECURSION_DEPTH;
 use crate::env::{get_default_vm_resource_fee_cost, BlockContextGenerator};
 use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
 use crate::utils::get_current_timestamp;
@@ -76,18 +74,10 @@ impl Backend {
             config.genesis.parent_hash = block.parent_hash;
             config.genesis.timestamp = block.timestamp;
             config.genesis.sequencer_address = block.sequencer_address.into();
-
-            // There's a disparity between our version of blockifier and the RPC version of
-            // `starknet-rs`. The `l1_data_price` is not present in the RPC version, so we use
-            // the default value.
-
-            config.genesis.gas_prices.eth_l1_gas_price =
+            config.genesis.gas_prices.eth =
                 block.l1_gas_price.price_in_wei.try_into().expect("should fit in u128");
-            config.genesis.gas_prices.eth_l1_data_gas_price = DEFAULT_ETH_L1_DATA_GAS_PRICE;
-
-            config.genesis.gas_prices.fri_l1_gas_price =
+            config.genesis.gas_prices.strk =
                 block.l1_gas_price.price_in_fri.try_into().expect("should fit in u128");
-            config.genesis.gas_prices.fri_l1_data_gas_price = DEFAULT_STRK_L1_DATA_GAS_PRICE;
 
             trace!(
                 target: "backend",
@@ -162,10 +152,8 @@ impl Backend {
             timestamp: block_env.timestamp,
             sequencer_address: block_env.sequencer_address,
             gas_prices: GasPrices {
-                eth_l1_gas_price: block_env.l1_gas_prices.eth_l1_gas_price,
-                fri_l1_gas_price: block_env.l1_gas_prices.fri_l1_gas_price,
-                eth_l1_data_gas_price: block_env.l1_gas_prices.eth_l1_data_gas_price,
-                fri_l1_data_gas_price: block_env.l1_gas_prices.fri_l1_data_gas_price,
+                eth: block_env.l1_gas_prices.eth,
+                strk: block_env.l1_gas_prices.strk,
             },
         };
 

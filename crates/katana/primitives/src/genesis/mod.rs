@@ -418,11 +418,7 @@ mod tests {
             state_root: felt!("0x99"),
             parent_hash: felt!("0x999"),
             sequencer_address: ContractAddress(felt!("0x100")),
-            gas_prices: GasPrices {
-                eth_l1_gas_price: 1111,
-                fri_l1_gas_price: 2222,
-                ..Default::default()
-            },
+            gas_prices: GasPrices { eth: 1111, strk: 2222, ..Default::default() },
             universal_deployer: Some(ud.clone()),
         };
 
