@@ -203,7 +203,7 @@ async fn main() -> anyhow::Result<()> {
             .collect();
     info!(target: "torii::cli", "Starting torii endpoint: {}", endpoint);
     info!(target: "torii::cli", "Serving Graphql playground: {}", gql_endpoint);
-    info!(target: "torii::cli", "World explorer is available on: {}\n", format!("https://worlds.dev/torii?url={}", encoded));
+    info!(target: "torii::cli", "World Explorer is available on: {}\n", format!("https://worlds.dev/torii?url={}", encoded));
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("torii")?;
