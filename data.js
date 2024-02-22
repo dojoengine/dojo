@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708623386732,
+  "lastUpdate": 1708627830567,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1645,6 +1645,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 971366,
             "range": "± 26676",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7f61be71720f6145adcc9832595ffe90a7ccaa5",
+          "message": "fix(dojo): dont assign ownership to ResourceMetadata on world creation (#1566)",
+          "timestamp": "2024-02-22T13:40:53-05:00",
+          "tree_id": "7d6a19b8d27a7399f84779bcb409bccea532c7a3",
+          "url": "https://github.com/dojoengine/dojo/commit/d7f61be71720f6145adcc9832595ffe90a7ccaa5"
+        },
+        "date": 1708627829566,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1018785,
+            "range": "± 65727",
             "unit": "ns/iter"
           }
         ]
