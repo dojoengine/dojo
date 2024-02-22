@@ -130,7 +130,8 @@ pub trait TransactionExecutor {
         flags: SimulationFlag,
     ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>>;
 
-    /// TODO: make `initial_gas` as `ExecutorFactory` responsibility
+    // TODO: make the `initial_gas` responsibility of the factory
+    /// Perform a contract entry point call.
     fn call(&self, call: EntryPointCall, initial_gas: u128) -> ExecutorResult<Vec<FieldElement>>;
 }
 
