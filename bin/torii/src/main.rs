@@ -130,6 +130,14 @@ async fn main() -> anyhow::Result<()> {
         .connect_with(options)
         .await?;
 
+    if args.database == ":memory:" {
+        // Disable auto-vacuum
+        sqlx::query("PRAGMA auto_vacuum = NONE;").execute(&pool).await?;
+
+        // Switch DELETE journal mode
+        sqlx::query("PRAGMA journal_mode=DELETE;").execute(&pool).await?;
+    }
+
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();

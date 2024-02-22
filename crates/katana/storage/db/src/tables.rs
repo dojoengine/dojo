@@ -193,7 +193,7 @@ tables! {
     /// Stores the block number of a transaction.
     TxBlocks: (TxNumber) => BlockNumber,
     /// Stores the transaction's execution info.
-    TxExecInfo: (TxNumber) => TxExecInfo,
+    TxExecutions: (TxNumber) => TxExecInfo,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Store compiled classes

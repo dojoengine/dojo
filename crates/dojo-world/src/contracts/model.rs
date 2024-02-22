@@ -1,5 +1,4 @@
-use std::vec;
-
+pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
 use cainome::cairo_serde::Error as CainomeError;
 use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
@@ -7,8 +6,7 @@ use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
 use starknet::core::types::{FieldElement, StarknetError};
 use starknet::core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
-    ParseCairoShortStringError,
+    cairo_short_string_to_felt, CairoShortStringToFeltError, ParseCairoShortStringError,
 };
 use starknet::macros::short_string;
 use starknet::providers::{Provider, ProviderError};
@@ -16,14 +14,15 @@ use starknet_crypto::poseidon_hash_many;
 
 use crate::contracts::WorldContractReader;
 
-const SCHEMA_SELECTOR_STR: &str = "schema";
-const LAYOUT_SELECTOR_STR: &str = "layout";
-const PACKED_SIZE_SELECTOR_STR: &str = "packed_size";
-const UNPACKED_SIZE_SELECTOR_STR: &str = "unpacked_size";
-
 #[cfg(test)]
 #[path = "model_test.rs"]
 mod model_test;
+
+pub mod abigen {
+    pub mod model {
+        pub use crate::contracts::abi::model::*;
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ModelError {
@@ -49,6 +48,7 @@ pub enum ModelError {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
     fn class_hash(&self) -> FieldElement;
+    fn contract_address(&self) -> FieldElement;
     async fn schema(&self) -> Result<Ty, E>;
     async fn packed_size(&self) -> Result<FieldElement, E>;
     async fn unpacked_size(&self) -> Result<FieldElement, E>;
@@ -60,8 +60,12 @@ pub struct ModelRPCReader<'a, P: Provider + Sync + Send> {
     name: FieldElement,
     /// The class hash of the model
     class_hash: FieldElement,
+    /// The contract address of the model
+    contract_address: FieldElement,
     /// Contract reader of the World that the model is registered to.
     world_reader: &'a WorldContractReader<P>,
+    /// Contract reader of the model.
+    model_reader: ModelContractReader<&'a P>,
 }
 
 impl<'a, P> ModelRPCReader<'a, P>
@@ -74,7 +78,7 @@ where
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
         let name = cairo_short_string_to_felt(name)?;
 
-        let class_hash =
+        let (class_hash, contract_address) =
             world.model(&name).block_id(world.block_id).call().await.map_err(|err| match err {
                 CainomeError::Provider(ProviderError::StarknetError(
                     StarknetError::ContractNotFound,
@@ -82,7 +86,15 @@ where
                 err => err.into(),
             })?;
 
-        Ok(Self { world_reader: world, class_hash: class_hash.into(), name })
+        let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
+
+        Ok(Self {
+            world_reader: world,
+            class_hash: class_hash.into(),
+            contract_address: contract_address.into(),
+            name,
+            model_reader,
+        })
     }
 
     pub async fn entity_storage(
@@ -138,40 +150,29 @@ where
         self.class_hash
     }
 
+    fn contract_address(&self) -> FieldElement {
+        self.contract_address
+    }
+
     async fn schema(&self) -> Result<Ty, ModelError> {
-        let entrypoint = get_selector_from_name(SCHEMA_SELECTOR_STR).unwrap();
-
-        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
-
+        let res = self.model_reader.schema().raw_call().await?;
         Ok(parse_ty(&res)?)
     }
 
     async fn packed_size(&self) -> Result<FieldElement, ModelError> {
-        let entrypoint = get_selector_from_name(PACKED_SIZE_SELECTOR_STR).unwrap();
-
-        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
-
-        Ok(res[0])
+        Ok(self.model_reader.packed_size().raw_call().await?[0])
     }
 
     async fn unpacked_size(&self) -> Result<FieldElement, ModelError> {
-        let entrypoint = get_selector_from_name(UNPACKED_SIZE_SELECTOR_STR).unwrap();
-
-        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
-
-        Ok(res[0])
+        Ok(self.model_reader.unpacked_size().raw_call().await?[0])
     }
 
     async fn layout(&self) -> Result<Vec<FieldElement>, ModelError> {
-        let entrypoint = get_selector_from_name(LAYOUT_SELECTOR_STR).unwrap();
-
-        let res = self.world_reader.executor_call(self.class_hash, entrypoint, vec![]).await?;
-
         // Layout entrypoint expanded by the #[model] attribute returns a
         // `Span`. So cainome generated code will deserialize the result
         // of `executor.call()` which is a Vec<FieldElement>.
         // So inside the vec, we skip the first element, which is the length
         // of the span returned by `layout` entrypoint of the model code.
-        Ok(res[1..].into())
+        Ok(self.model_reader.layout().raw_call().await?[1..].into())
     }
 }

@@ -21,6 +21,8 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
+use crate::receipt::MaybePendingTxReceipt;
+
 pub const CHUNK_SIZE_DEFAULT: u64 = 100;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
@@ -324,7 +326,7 @@ impl Default for TransactionsPageCursor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPage {
-    pub transactions: Vec<Tx>,
+    pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
     pub cursor: TransactionsPageCursor,
 }
 

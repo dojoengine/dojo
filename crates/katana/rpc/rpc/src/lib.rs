@@ -3,6 +3,7 @@ pub mod dev;
 pub mod katana;
 pub mod saya;
 pub mod starknet;
+pub mod torii;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -22,6 +23,7 @@ use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::StarknetApiServer;
+use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -29,6 +31,7 @@ use crate::dev::DevApi;
 use crate::katana::KatanaApi;
 use crate::saya::SayaApi;
 use crate::starknet::StarknetApi;
+use crate::torii::ToriiApi;
 
 pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Result<NodeHandle> {
     let mut methods = RpcModule::new(());
@@ -44,6 +47,9 @@ pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Res
             }
             ApiKind::Dev => {
                 methods.merge(DevApi::new(sequencer.clone()).into_rpc())?;
+            }
+            ApiKind::Torii => {
+                methods.merge(ToriiApi::new(sequencer.clone()).into_rpc())?;
             }
             ApiKind::Saya => {
                 methods.merge(SayaApi::new(sequencer.clone()).into_rpc())?;

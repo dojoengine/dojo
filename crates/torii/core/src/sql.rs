@@ -79,6 +79,7 @@ impl Sql {
         model: Ty,
         layout: Vec<FieldElement>,
         class_hash: FieldElement,
+        contract_address: FieldElement,
         packed_size: u32,
         unpacked_size: u32,
     ) -> Result<()> {
@@ -87,15 +88,17 @@ impl Sql {
             .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
             .collect::<Vec<u8>>();
 
-        let insert_models = "INSERT INTO models (id, name, class_hash, layout, packed_size, \
-                             unpacked_size) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE \
-                             SET class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
-                             packed_size=EXCLUDED.packed_size, \
-                             unpacked_size=EXCLUDED.unpacked_size RETURNING *";
+        let insert_models =
+            "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
+             unpacked_size) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+             contract_address=EXCLUDED.contract_address, class_hash=EXCLUDED.class_hash, \
+             layout=EXCLUDED.layout, packed_size=EXCLUDED.packed_size, \
+             unpacked_size=EXCLUDED.unpacked_size RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             .bind(model.name())
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
+            .bind(format!("{contract_address:#x}"))
             .bind(hex::encode(&layout_blob))
             .bind(packed_size)
             .bind(unpacked_size)

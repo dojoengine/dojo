@@ -12,6 +12,7 @@ katana-provider = { path = "../storage/provider" }
 
 anyhow.workspace = true
 convert_case.workspace = true
+futures.workspace = true
 parking_lot.workspace = true
 starknet.workspace = true
 tracing.workspace = true

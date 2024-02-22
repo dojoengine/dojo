@@ -5,7 +5,9 @@ use convert_case::{Case, Casing};
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::{Manifest, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use crate::manifest::{
+    Manifest, BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -15,8 +17,8 @@ mod tests;
 #[derive(Debug, Clone)]
 pub struct WorldDiff {
     pub world: ContractDiff,
-    pub executor: ContractDiff,
     pub base: ClassDiff,
+    pub resource_metadata: ClassDiff,
     pub contracts: Vec<ContractDiff>,
     pub models: Vec<ClassDiff>,
 }
@@ -62,16 +64,16 @@ impl WorldDiff {
             })
             .collect::<Vec<_>>();
 
-        let executor = ContractDiff {
-            name: EXECUTOR_CONTRACT_NAME.into(),
-            local: local.executor.class_hash,
-            remote: remote.as_ref().map(|m| m.executor.class_hash),
-        };
-
         let base = ClassDiff {
             name: BASE_CONTRACT_NAME.into(),
             local: local.base.class_hash,
             remote: remote.as_ref().map(|m| m.base.class_hash),
+        };
+
+        let resource_metadata = ClassDiff {
+            name: RESOURCE_METADATA_CONTRACT_NAME.into(),
+            local: local.resource_metadata.class_hash,
+            remote: remote.as_ref().map(|m| m.resource_metadata.class_hash),
         };
 
         let world = ContractDiff {
@@ -80,17 +82,13 @@ impl WorldDiff {
             remote: remote.map(|m| m.world.class_hash),
         };
 
-        WorldDiff { world, executor, base, contracts, models }
+        WorldDiff { world, base, resource_metadata, contracts, models }
     }
 
     pub fn count_diffs(&self) -> usize {
         let mut count = 0;
 
         if !self.world.is_same() {
-            count += 1;
-        }
-
-        if !self.executor.is_same() {
             count += 1;
         }
 
@@ -103,7 +101,6 @@ impl WorldDiff {
 impl Display for WorldDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.world)?;
-        writeln!(f, "{}", self.executor)?;
 
         for model in &self.models {
             writeln!(f, "{model}")?;

@@ -23,6 +23,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::contract::DojoContract;
+use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
@@ -32,6 +33,7 @@ use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
 
 const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
+const DOJO_PLUGIN_EXPAND_VAR_ENV: &str = "DOJO_PLUGIN_EXPAND";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
@@ -224,6 +226,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<DeleteMacro>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
+        .add_inline_macro_plugin::<ArrayCapMacro>()
         .add_inline_macro_plugin::<EmitMacro>();
 
     suite
@@ -238,6 +241,9 @@ impl MacroPlugin for BuiltinDojoPlugin {
         item_ast: ast::ModuleItem,
         _metadata: &MacroPluginMetadata<'_>,
     ) -> PluginResult {
+        let do_expand: bool =
+            std::env::var(DOJO_PLUGIN_EXPAND_VAR_ENV).map_or(false, |v| v == "true" || v == "1");
+
         match item_ast {
             ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast),
             ast::ModuleItem::Enum(enum_ast) => {
@@ -308,6 +314,10 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     builder.add_modified(node);
                 }
 
+                if do_expand {
+                    println!("{}", builder.code);
+                }
+
                 PluginResult {
                     code: Some(PluginGeneratedFile {
                         name,
@@ -374,8 +384,11 @@ impl MacroPlugin for BuiltinDojoPlugin {
                                 rewrite_nodes.push(handle_print_struct(db, struct_ast.clone()));
                             }
                             "Introspect" => {
-                                rewrite_nodes
-                                    .push(handle_introspect_struct(db, struct_ast.clone()));
+                                rewrite_nodes.push(handle_introspect_struct(
+                                    db,
+                                    &mut diagnostics,
+                                    struct_ast.clone(),
+                                ));
                             }
                             _ => continue,
                         }
@@ -390,6 +403,10 @@ impl MacroPlugin for BuiltinDojoPlugin {
                 let mut builder = PatchBuilder::new(db);
                 for node in rewrite_nodes {
                     builder.add_modified(node);
+                }
+
+                if do_expand {
+                    println!("{}", builder.code);
                 }
 
                 PluginResult {
@@ -409,7 +426,14 @@ impl MacroPlugin for BuiltinDojoPlugin {
     }
 
     fn declared_attributes(&self) -> Vec<String> {
-        vec!["dojo::contract".to_string(), "key".to_string(), "computed".to_string()]
+        vec![
+            "dojo::contract".to_string(),
+            "key".to_string(),
+            "computed".to_string(),
+            // Not adding capacity for now, this will automatically
+            // makes Scarb emitting a diagnostic saying this attribute is not supported.
+            // "capacity".to_string(),
+        ]
     }
 }
 

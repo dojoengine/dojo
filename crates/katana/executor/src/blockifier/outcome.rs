@@ -8,6 +8,7 @@ use katana_primitives::transaction::{Tx, TxExecInfo};
 
 use super::utils::{events_from_exec_info, l2_to_l1_messages_from_exec_info};
 
+#[derive(Clone)]
 pub struct TxReceiptWithExecInfo {
     pub receipt: Receipt,
     pub execution_info: TxExecInfo,
