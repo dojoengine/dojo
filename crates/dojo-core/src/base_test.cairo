@@ -68,7 +68,9 @@ fn test_upgrade_from_world() {
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ('class_hash not world provider', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: ('class_hash not world provider', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED')
+)]
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
 
@@ -105,7 +107,7 @@ mod invalid_model {
     impl InvalidModelName of super::INameOnly<ContractState> {
         fn name(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x34534b116332dd9459bfde65280822d84c130e3f1faeb63af8455f83e733f4f
+            0x742c3d09472a40914dedcbd609788fd547bde613d6c4d4c2f15d41f4e241f25
         }
     }
 }
