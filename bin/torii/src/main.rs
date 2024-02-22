@@ -38,7 +38,7 @@ use torii_core::types::Model;
 use torii_server::proxy::Proxy;
 use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
-use url::Url;
+use url::{form_urlencoded, Url};
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -196,8 +196,14 @@ async fn main() -> anyhow::Result<()> {
     )
     .expect("Failed to start libp2p relay server");
 
-    info!(target: "torii::cli", "Starting torii endpoint: {}", format!("http://{}", args.addr));
-    info!(target: "torii::cli", "Serving Graphql playground: {}\n", format!("http://{}/graphql", args.addr));
+    let endpoint = format!("http://{}", args.addr);
+    let gql_endpoint = format!("{}/graphql", endpoint);
+    let encoded: String =
+        form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
+            .collect();
+    info!(target: "torii::cli", "Starting torii endpoint: {}", endpoint);
+    info!(target: "torii::cli", "Serving Graphql playground: {}", gql_endpoint);
+    info!(target: "torii::cli", "World Explorer is available on: {}\n", format!("https://worlds.dev/torii?url={}", encoded));
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("torii")?;
