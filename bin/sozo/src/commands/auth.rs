@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
-use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -20,11 +19,13 @@ pub struct AuthArgs {
 pub enum AuthCommand {
     #[command(about = "Auth a system with the given calldata.")]
     Writer {
-        #[arg(help = "Name of the model to grant write access to.")]
-        model: String,
-
-        #[arg(help = "Address of the contract to grant writer access to.")]
-        contract: FieldElement,
+        #[arg(num_args = 1..)]
+        #[arg(required = true)]
+        #[arg(value_name = "model,contract_address")]
+        #[arg(help = "A list of models and contract address to grant write access to. Comma \
+                      separated values to indicate model name and contract address e.g. \
+                      model_name,0x1234 model_name,0x1111 ")]
+        models_contracts: Vec<String>,
 
         #[command(flatten)]
         world: WorldOptions,

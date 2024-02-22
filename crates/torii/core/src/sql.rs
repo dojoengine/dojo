@@ -8,7 +8,7 @@ use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{Event, FieldElement, InvokeTransactionV1};
+use starknet::core::types::{Event, FieldElement, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -238,19 +238,49 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    pub fn store_transaction(&mut self, transaction: &InvokeTransactionV1, transaction_id: &str) {
+    pub fn store_transaction(&mut self, transaction: &Transaction, transaction_id: &str) {
         let id = Argument::String(transaction_id.to_string());
-        let transaction_hash = Argument::FieldElement(transaction.transaction_hash);
-        let sender_address = Argument::FieldElement(transaction.sender_address);
-        let calldata = Argument::String(felts_sql_string(&transaction.calldata));
-        let max_fee = Argument::FieldElement(transaction.max_fee);
-        let signature = Argument::String(felts_sql_string(&transaction.signature));
-        let nonce = Argument::FieldElement(transaction.nonce);
+
+        let transaction_type = match transaction {
+            Transaction::Invoke(_) => "INVOKE",
+            Transaction::L1Handler(_) => "L1_HANDLER",
+            _ => return,
+        };
+
+        let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
+            match transaction {
+                Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
+                    Argument::FieldElement(invoke_v1_transaction.transaction_hash),
+                    Argument::FieldElement(invoke_v1_transaction.sender_address),
+                    Argument::String(felts_sql_string(&invoke_v1_transaction.calldata)),
+                    Argument::FieldElement(invoke_v1_transaction.max_fee),
+                    Argument::String(felts_sql_string(&invoke_v1_transaction.signature)),
+                    Argument::FieldElement(invoke_v1_transaction.nonce),
+                ),
+                Transaction::L1Handler(l1_handler_transaction) => (
+                    Argument::FieldElement(l1_handler_transaction.transaction_hash),
+                    Argument::FieldElement(l1_handler_transaction.contract_address),
+                    Argument::String(felts_sql_string(&l1_handler_transaction.calldata)),
+                    Argument::FieldElement(FieldElement::ZERO), // has no max_fee
+                    Argument::String("".to_string()),           // has no signature
+                    Argument::FieldElement((l1_handler_transaction.nonce).into()),
+                ),
+                _ => return,
+            };
 
         self.query_queue.enqueue(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            vec![id, transaction_hash, sender_address, calldata, max_fee, signature, nonce],
+             max_fee, signature, nonce, transaction_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            vec![
+                id,
+                transaction_hash,
+                sender_address,
+                calldata,
+                max_fee,
+                signature,
+                nonce,
+                Argument::String(transaction_type.to_string()),
+            ],
         );
     }
 

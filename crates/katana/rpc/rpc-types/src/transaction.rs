@@ -21,6 +21,8 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_contract_address;
 
+use crate::receipt::MaybePendingTxReceipt;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
@@ -305,4 +307,16 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
             max_fee: tx.0.max_fee.try_into().expect("max_fee is too big"),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPageCursor {
+    pub block_number: u64,
+    pub transaction_index: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPage {
+    pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
+    pub cursor: TransactionsPageCursor,
 }
