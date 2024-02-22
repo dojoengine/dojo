@@ -80,7 +80,7 @@ impl<'a> StarknetVMProcessor<'a> {
 
     fn fill_block_env_from_header(&mut self, header: &PartialHeader) {
         // TODO: include block number in partial header
-        let number = BlockNumber(0);
+        let number = BlockNumber(header.number);
         let timestamp = BlockTimestamp(header.timestamp);
         let eth_l1_gas_price = header.gas_prices.eth as u128;
         let strk_l1_gas_price = header.gas_prices.strk as u128;

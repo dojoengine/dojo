@@ -32,6 +32,7 @@ pub enum FinalityStatus {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
+    pub number: BlockNumber,
     pub parent_hash: FieldElement,
     pub gas_prices: GasPrices,
     pub timestamp: u64,
