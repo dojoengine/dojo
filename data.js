@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708483078858,
+  "lastUpdate": 1708570229455,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1585,6 +1585,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 967360,
             "range": "± 35647",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "anofiujelailah@gmail.com",
+            "name": "Jelilat Anofiu",
+            "username": "jelilat"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7984fb82b205776059719167749cf2250fd1f207",
+          "message": "[Torii] Index more transaction types (#1452)\n\n* include l1 handler indexing\r\n\r\n* add txn type to table\r\n\r\n* fix failing checks\r\n\r\n* return unsupported txn type early\r\n\r\n* retry failed block processing",
+          "timestamp": "2024-02-21T20:41:13-06:00",
+          "tree_id": "6aed4b0daa974f82a919aad9d36a3e9b0346e4a2",
+          "url": "https://github.com/dojoengine/dojo/commit/7984fb82b205776059719167749cf2250fd1f207"
+        },
+        "date": 1708570229024,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1031551,
+            "range": "± 68358",
             "unit": "ns/iter"
           }
         ]
