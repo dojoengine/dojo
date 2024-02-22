@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708570229455,
+  "lastUpdate": 1708623386732,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1615,6 +1615,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1031551,
             "range": "± 68358",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jun.sugiura.jp@gmail.com",
+            "name": "Junichi Sugiura",
+            "username": "JunichiSugiura"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f52168626a6a958d9835cf28bfc66f0f46f2c805",
+          "message": "Show world explore url when starting Torii (#1565)\n\n* Show world explore url\r\n\r\n* Url encode torii endpoint\r\n\r\n* Replace 0.0.0.0 with localhost\r\n\r\n* Capitalize \"World Explorer\"",
+          "timestamp": "2024-02-22T12:26:40-05:00",
+          "tree_id": "c865bbf101bf7efa828b31b5e108288502b69d5e",
+          "url": "https://github.com/dojoengine/dojo/commit/f52168626a6a958d9835cf28bfc66f0f46f2c805"
+        },
+        "date": 1708623385785,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 971366,
+            "range": "± 26676",
             "unit": "ns/iter"
           }
         ]
