@@ -140,8 +140,8 @@ impl<P: Provider + Sync> Engine<P> {
 
             match self.process(block_with_txs).await {
                 Ok(_) => {
-                    self.db.set_head(from);
-                    self.db.execute().await?;
+                    self.db.write().await.set_head(from);
+                    self.db.write().await.execute().await?;
                     from += 1;
                 }
                 Err(e) => {
@@ -284,13 +284,13 @@ impl<P: Provider + Sync> Engine<P> {
             }
             _ => return Ok(()),
         };
-        self.db.store_event(event_id, event, transaction_hash);
+        self.db.write().await.store_event(event_id, event, transaction_hash);
         for processor in &self.processors.event {
             if get_selector_from_name(&processor.event_key())? == event.keys[0]
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, self.db, block, transaction_receipt, event_id, event)
+                    .process(&self.world, self.db.clone(), block, transaction_receipt, event_id, event)
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {
