@@ -269,20 +269,17 @@ impl PrimitiveType {
         &self,
         r#type: &str,
         types: &IndexMap<String, Vec<Field>>,
-        encode_type_hash: bool,
         ctx: &mut Ctx,
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
                 let mut hashes = Vec::new();
 
-                if encode_type_hash {
-                    let type_hash = encode_type(r#type, types)?;
-                    println!("type_hash: {}", type_hash);
-                    hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
-                        Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
-                    })?);
-                }
+                let type_hash = encode_type(r#type, types)?;
+                println!("type_hash: {}", type_hash);
+                hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
+                    Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
+                })?);
 
                 if ctx.base_type == "enum" {
                     let (variant_name, value) = obj.first().ok_or_else(|| {
@@ -290,7 +287,7 @@ impl PrimitiveType {
                     })?;
                     let variant_type = self.get_value_type(variant_name, types)?.0;
 
-                    let arr = match value {
+                    let arr: &Vec<PrimitiveType> = match value {
                         PrimitiveType::Array(arr) => arr,
                         _ => {
                             return Err(Error::InvalidMessageError(
@@ -300,17 +297,10 @@ impl PrimitiveType {
                     };
 
                     // variant index
-                    hashes.push(arr[0].encode("felt", types, encode_type_hash, ctx)?);
+                    hashes.push(FieldElement::ONE);
 
                     // variant parameters
-                    for (idx, param) in match &arr[1] {
-                        PrimitiveType::Array(arr) => arr.iter().enumerate(),
-                        _ => {
-                            return Err(Error::InvalidMessageError(
-                                "Enum value must be an array".to_string(),
-                            ))
-                        }
-                    } {
+                    for (idx, param) in arr.iter().enumerate() {
                         let field_type = variant_type
                             .trim_start_matches('(')
                             .trim_end_matches(')')
@@ -320,7 +310,7 @@ impl PrimitiveType {
                                 Error::InvalidMessageError("Invalid enum variant type".to_string())
                             })?;
 
-                        let field_hash = param.encode(field_type, types, encode_type_hash, ctx)?;
+                        let field_hash = param.encode(field_type, types, ctx)?;
                         hashes.push(field_hash);
                     }
 
@@ -330,7 +320,7 @@ impl PrimitiveType {
                 for (field_name, value) in obj {
                     let field_type = self.get_value_type(field_name, types)?;
                     ctx.base_type = field_type.1.clone();
-                    let field_hash = value.encode(field_type.0.as_str(), types, true, ctx)?;
+                    let field_hash = value.encode(field_type.0.as_str(), types, ctx)?;
                     hashes.push(field_hash);
                 }
 
@@ -339,7 +329,7 @@ impl PrimitiveType {
             PrimitiveType::Array(array) => Ok(poseidon_hash_many(
                 array
                     .iter()
-                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, encode_type_hash, ctx))
+                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, ctx))
                     .collect::<Result<Vec<_>, _>>()?
                     .as_slice(),
             )),
@@ -411,7 +401,7 @@ impl Domain {
             object.insert("revision".to_string(), PrimitiveType::String(revision.clone()));
         }
 
-        PrimitiveType::Object(object).encode("StarknetDomain", types, true, &mut Default::default())
+        PrimitiveType::Object(object).encode("StarknetDomain", types, &mut Default::default())
     }
 }
 
@@ -441,7 +431,6 @@ impl TypedData {
         let message_hash = PrimitiveType::Object(self.message.clone()).encode(
             &self.primary_type,
             &self.types,
-            true,
             &mut Default::default(),
         )?;
 
@@ -535,9 +524,9 @@ mod tests {
         let types = IndexMap::new();
 
         let encoded_selector =
-            selector.encode("selector", &types, true, &mut Default::default()).unwrap();
+            selector.encode("selector", &types, &mut Default::default()).unwrap();
         let raw_encoded_selector =
-            selector_hash.encode("felt", &types, true, &mut Default::default()).unwrap();
+            selector_hash.encode("felt", &types, &mut Default::default()).unwrap();
 
         assert_eq!(encoded_selector, raw_encoded_selector);
         assert_eq!(encoded_selector, starknet_keccak("transfer".as_bytes()));
