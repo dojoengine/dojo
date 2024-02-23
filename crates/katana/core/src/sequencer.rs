@@ -4,16 +4,12 @@ use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blockifier::block_context::BlockContext;
-use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
-use blockifier::transaction::errors::TransactionExecutionError;
-use katana_executor::blockifier::state::StateRefDb;
-use katana_executor::blockifier::utils::{block_context_from_envs, EntryPointCall};
-use katana_executor::blockifier::PendingState;
+use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::ChainId;
 use katana_primitives::class::{ClassHash, CompiledClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
+use katana_primitives::env::BlockEnv;
 use katana_primitives::event::{ContinuationToken, ContinuationTokenError};
 use katana_primitives::receipt::Event;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
@@ -34,7 +30,7 @@ use crate::backend::contract::StarknetContract;
 use crate::backend::Backend;
 use crate::pool::TransactionPool;
 use crate::sequencer_error::SequencerError;
-use crate::service::block_producer::{BlockProducer, BlockProducerMode};
+use crate::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 #[cfg(feature = "messaging")]
 use crate::service::messaging::MessagingConfig;
 #[cfg(feature = "messaging")]
@@ -51,39 +47,30 @@ pub struct SequencerConfig {
     pub messaging: Option<MessagingConfig>,
 }
 
-pub struct KatanaSequencer {
+pub struct KatanaSequencer<EF: ExecutorFactory> {
     pub config: SequencerConfig,
     pub pool: Arc<TransactionPool>,
-    pub backend: Arc<Backend>,
-    pub block_producer: BlockProducer,
+    pub backend: Arc<Backend<EF>>,
+    pub block_producer: Arc<BlockProducer<EF>>,
 }
 
-impl KatanaSequencer {
+impl<EF: ExecutorFactory> KatanaSequencer<EF> {
     pub async fn new(
+        executor_factory: EF,
         config: SequencerConfig,
         starknet_config: StarknetConfig,
     ) -> anyhow::Result<Self> {
-        let backend = Arc::new(Backend::new(starknet_config).await);
+        let executor_factory = Arc::new(executor_factory);
+        let backend = Arc::new(Backend::new(executor_factory.clone(), starknet_config).await);
 
         let pool = Arc::new(TransactionPool::new());
         let miner = TransactionMiner::new(pool.add_listener());
 
-        let state = StateFactoryProvider::latest(backend.blockchain.provider())
-            .map(StateRefDb::new)
-            .unwrap();
-
         let block_producer = if config.block_time.is_some() || config.no_mining {
-            let block_num = backend.blockchain.provider().latest_number()?;
-
-            let mut block_env =
-                backend.blockchain.provider().block_env_at(block_num.into())?.unwrap();
-            backend.update_block_env(&mut block_env);
-            let cfg_env = backend.chain_cfg_env();
-
             if let Some(interval) = config.block_time {
-                BlockProducer::interval(Arc::clone(&backend), state, interval, (block_env, cfg_env))
+                BlockProducer::interval(Arc::clone(&backend), interval)
             } else {
-                BlockProducer::on_demand(Arc::clone(&backend), state, (block_env, cfg_env))
+                BlockProducer::on_demand(Arc::clone(&backend))
             }
         } else {
             BlockProducer::instant(Arc::clone(&backend))
@@ -95,6 +82,8 @@ impl KatanaSequencer {
         } else {
             None
         };
+
+        let block_producer = Arc::new(block_producer);
 
         tokio::spawn(NodeService {
             miner,
@@ -108,51 +97,49 @@ impl KatanaSequencer {
     }
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
-    pub fn pending_state(&self) -> Option<Arc<PendingState>> {
+    pub fn pending_executor(&self) -> Option<PendingExecutor> {
         match &*self.block_producer.inner.read() {
             BlockProducerMode::Instant(_) => None,
-            BlockProducerMode::Interval(producer) => Some(producer.state()),
+            BlockProducerMode::Interval(producer) => producer.executor(),
         }
     }
 
-    pub fn block_producer(&self) -> &BlockProducer {
+    pub fn block_producer(&self) -> &BlockProducer<EF> {
         &self.block_producer
     }
 
-    pub fn backend(&self) -> &Backend {
+    pub fn backend(&self) -> &Backend<EF> {
         &self.backend
     }
 
-    pub fn block_execution_context_at(
-        &self,
-        block_id: BlockIdOrTag,
-    ) -> SequencerResult<Option<BlockContext>> {
+    pub fn block_env_at(&self, block_id: BlockIdOrTag) -> SequencerResult<Option<BlockEnv>> {
         let provider = self.backend.blockchain.provider();
-        let cfg_env = self.backend().chain_cfg_env();
 
-        if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
-            if let Some(state) = self.pending_state() {
-                let (block_env, _) = state.block_execution_envs();
-                return Ok(Some(block_context_from_envs(&block_env, &cfg_env)));
+        if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
+            if let Some(exec) = self.pending_executor() {
+                return Ok(Some(exec.read().block_env()));
             }
         }
 
-        let block_num = match block_id {
+        match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) | BlockIdOrTag::Tag(BlockTag::Latest) => {
-                provider.latest_number()?
+                let num = provider.latest_number()?;
+                provider
+                    .block_env_at(num.into())?
+                    .map(Some)
+                    .ok_or(SequencerError::BlockNotFound(block_id))
             }
 
             BlockIdOrTag::Hash(hash) => provider
-                .block_number_by_hash(hash)?
-                .ok_or(SequencerError::BlockNotFound(block_id))?,
+                .block_env_at(hash.into())?
+                .map(Some)
+                .ok_or(SequencerError::BlockNotFound(block_id)),
 
-            BlockIdOrTag::Number(num) => num,
-        };
-
-        provider
-            .block_env_at(block_num.into())?
-            .map(|block_env| Some(block_context_from_envs(&block_env, &cfg_env)))
-            .ok_or(SequencerError::BlockNotFound(block_id))
+            BlockIdOrTag::Number(num) => provider
+                .block_env_at(num.into())?
+                .map(Some)
+                .ok_or(SequencerError::BlockNotFound(block_id)),
+        }
     }
 
     pub fn state(&self, block_id: &BlockIdOrTag) -> SequencerResult<Box<dyn StateProvider>> {
@@ -165,8 +152,8 @@ impl KatanaSequencer {
             }
 
             BlockIdOrTag::Tag(BlockTag::Pending) => {
-                if let Some(state) = self.pending_state() {
-                    Ok(Box::new(state.state.clone()))
+                if let Some(exec) = self.pending_executor() {
+                    Ok(Box::new(exec.read().state()))
                 } else {
                     let state = StateFactoryProvider::latest(provider)?;
                     Ok(state)
@@ -195,18 +182,21 @@ impl KatanaSequencer {
         block_id: BlockIdOrTag,
     ) -> SequencerResult<Vec<FeeEstimate>> {
         let state = self.state(&block_id)?;
+        let env = self.block_env_at(block_id)?.ok_or(SequencerError::BlockNotFound(block_id))?;
+        let executor = self.backend.executor_factory.with_state_and_block_env(state, env);
 
-        let block_context = self
-            .block_execution_context_at(block_id)?
-            .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
+        let mut estimates: Vec<FeeEstimate> = Vec::with_capacity(transactions.len());
+        for tx in transactions {
+            let result = executor.simulate(tx, Default::default()).unwrap();
 
-        katana_executor::blockifier::utils::estimate_fee(
-            transactions.into_iter(),
-            block_context,
-            state,
-            !self.backend.config.disable_validate,
-        )
-        .map_err(SequencerError::TransactionExecution)
+            let overall_fee = result.actual_fee() as u64;
+            let gas_consumed = result.gas_used() as u64;
+            let gas_price = executor.block_env().l1_gas_prices.eth;
+
+            estimates.push(FeeEstimate { gas_consumed, gas_price, overall_fee })
+        }
+
+        Ok(estimates)
     }
 
     pub fn block_hash_and_number(&self) -> SequencerResult<(BlockHash, BlockNumber)> {
@@ -277,8 +267,9 @@ impl KatanaSequencer {
         let provider = self.backend.blockchain.provider();
 
         let count = match block_id {
-            BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_state() {
-                Some(state) => Some(state.executed_txs.read().len() as u64),
+            BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_executor() {
+                Some(exec) => Some(exec.read().transactions().len() as u64),
+
                 None => {
                     let hash = BlockHashProvider::latest_hash(provider)?;
                     TransactionProvider::transaction_count_by_block(provider, hash.into())?
@@ -318,22 +309,10 @@ impl KatanaSequencer {
         block_id: BlockIdOrTag,
     ) -> SequencerResult<Vec<FieldElement>> {
         let state = self.state(&block_id)?;
+        let env = self.block_env_at(block_id)?.ok_or(SequencerError::BlockNotFound(block_id))?;
+        let executor = self.backend.executor_factory.with_state_and_block_env(state, env);
 
-        let block_context = self
-            .block_execution_context_at(block_id)?
-            .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
-
-        let retdata = katana_executor::blockifier::utils::call(request, block_context, state)
-            .map_err(|e| match e {
-                TransactionExecutionError::ExecutionError(exe) => match exe {
-                    EntryPointExecutionError::PreExecutionError(
-                        PreExecutionError::UninitializedStorageAddress(addr),
-                    ) => SequencerError::ContractNotFound(addr.into()),
-                    _ => SequencerError::EntryPointExecution(exe),
-                },
-                _ => SequencerError::TransactionExecution(e),
-            })?;
-
+        let retdata = executor.call(request, 1_000_000).unwrap();
         Ok(retdata)
     }
 
@@ -342,10 +321,9 @@ impl KatanaSequencer {
             TransactionProvider::transaction_by_hash(self.backend.blockchain.provider(), *hash)?;
 
         let tx @ Some(_) = tx else {
-            return Ok(self.pending_state().as_ref().and_then(|state| {
-                state
-                    .executed_txs
-                    .read()
+            return Ok(self.pending_executor().as_ref().and_then(|exec| {
+                exec.read()
+                    .transactions()
                     .iter()
                     .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
             }));
@@ -486,8 +464,8 @@ impl KatanaSequencer {
     }
 
     pub fn has_pending_transactions(&self) -> bool {
-        if let Some(ref pending) = self.pending_state() {
-            !pending.executed_txs.read().is_empty()
+        if let Some(ref exec) = self.pending_executor() {
+            !exec.read().transactions().is_empty()
         } else {
             false
         }
@@ -555,6 +533,7 @@ fn filter_events_by_params(
 
 #[cfg(test)]
 mod tests {
+    use katana_executor::implementation::noop::NoopExecutorFactory;
     use katana_provider::traits::block::BlockNumberProvider;
 
     use super::{KatanaSequencer, SequencerConfig};
@@ -562,7 +541,10 @@ mod tests {
 
     #[tokio::test]
     async fn init_interval_block_producer_with_correct_block_env() {
+        let executor_factory = NoopExecutorFactory::default();
+
         let sequencer = KatanaSequencer::new(
+            executor_factory,
             SequencerConfig { no_mining: true, ..Default::default() },
             StarknetConfig::default(),
         )
@@ -572,7 +554,7 @@ mod tests {
         let provider = sequencer.backend.blockchain.provider();
 
         let latest_num = provider.latest_number().unwrap();
-        let producer_block_env = sequencer.pending_state().unwrap().block_execution_envs().0;
+        let producer_block_env = sequencer.pending_executor().unwrap().read().block_env();
 
         assert_eq!(
             producer_block_env.number,

@@ -13,6 +13,7 @@ clap_complete.workspace = true
 common.workspace = true
 console.workspace = true
 katana-core.workspace = true
+katana-executor.workspace = true
 katana-primitives.workspace = true
 katana-rpc-api.workspace = true
 katana-rpc.workspace = true
