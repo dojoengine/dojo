@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708640405163,
+  "lastUpdate": 1708659531524,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1705,6 +1705,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 969744,
             "range": "± 40036",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "53880692+hhamud@users.noreply.github.com",
+            "name": "Hamza Hamud",
+            "username": "hhamud"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "640e94d8aeadaabcb51b26704b136908a575e866",
+          "message": "Fix(sozo): Improve sozo migration output (#1571)\n\n* feat: add divider and make model message clearer\r\n\r\n* fix: remove divider\r\n\r\n* fix: turn model declaration into print statement",
+          "timestamp": "2024-02-22T21:29:23-06:00",
+          "tree_id": "edd93a45e2a013b463b0ebf8eac0996f93275095",
+          "url": "https://github.com/dojoengine/dojo/commit/640e94d8aeadaabcb51b26704b136908a575e866"
+        },
+        "date": 1708659530939,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 970430,
+            "range": "± 40395",
             "unit": "ns/iter"
           }
         ]
