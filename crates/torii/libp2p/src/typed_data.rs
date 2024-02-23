@@ -209,14 +209,17 @@ fn split_long_string(long_str: &str) -> Vec<&str> {
     result
 }
 
+#[derive(Debug, Default)]
 pub struct Ctx {
     pub base_type: String,
+    pub parent_type: String,
 }
 
-impl Default for Ctx {
-    fn default() -> Self {
-        Ctx { base_type: "".to_string() }
-    }
+struct FieldInfo {
+    name: String,
+    r#type: String,
+    base_type: String,
+    index: usize,
 }
 
 impl PrimitiveType {
@@ -224,28 +227,40 @@ impl PrimitiveType {
         &self,
         name: &str,
         types: &IndexMap<String, Vec<Field>>,
-    ) -> Result<(String, String), Error> {
+    ) -> Result<FieldInfo, Error> {
         let preset_types = get_preset_types();
 
         // iter both "types" and "preset_types" to find the field
-        for (key, value) in types.iter().chain(preset_types.iter()) {
+        for (idx, (key, value)) in types.iter().chain(preset_types.iter()).enumerate() {
             if key == name {
-                return Ok((key.clone(), Default::default()));
+                return Ok(FieldInfo {
+                    name: name.to_string(),
+                    r#type: key.clone(),
+                    base_type: "".to_string(),
+                    index: idx,
+                });
             }
 
-            for field in value {
+            for (idx, field) in value.iter().enumerate() {
                 match field {
                     Field::SimpleType(simple_field) => {
                         if simple_field.name == name {
-                            return Ok((simple_field.r#type.clone(), Default::default()));
+                            return Ok(FieldInfo {
+                                name: name.to_string(),
+                                r#type: simple_field.r#type.clone(),
+                                base_type: "".to_string(),
+                                index: idx,
+                            });
                         }
                     }
                     Field::ParentType(parent_field) => {
                         if parent_field.name == name {
-                            return Ok((
-                                parent_field.contains.clone(),
-                                parent_field.r#type.clone(),
-                            ));
+                            return Ok(FieldInfo {
+                                name: name.to_string(),
+                                r#type: parent_field.contains.clone(),
+                                base_type: parent_field.r#type.clone(),
+                                index: idx,
+                            });
                         }
                     }
                 }
@@ -275,17 +290,11 @@ impl PrimitiveType {
             PrimitiveType::Object(obj) => {
                 let mut hashes = Vec::new();
 
-                let type_hash = encode_type(r#type, types)?;
-                println!("type_hash: {}", type_hash);
-                hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
-                    Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
-                })?);
-
                 if ctx.base_type == "enum" {
                     let (variant_name, value) = obj.first().ok_or_else(|| {
                         Error::InvalidMessageError("Enum value must be populated".to_string())
                     })?;
-                    let variant_type = self.get_value_type(variant_name, types)?.0;
+                    let variant_type = self.get_value_type(variant_name, types)?;
 
                     let arr: &Vec<PrimitiveType> = match value {
                         PrimitiveType::Array(arr) => arr,
@@ -297,11 +306,12 @@ impl PrimitiveType {
                     };
 
                     // variant index
-                    hashes.push(FieldElement::ONE);
+                    hashes.push(FieldElement::from(variant_type.index as u32));
 
                     // variant parameters
                     for (idx, param) in arr.iter().enumerate() {
-                        let field_type = variant_type
+                        let field_type = &variant_type
+                            .r#type
                             .trim_start_matches('(')
                             .trim_end_matches(')')
                             .split(',')
@@ -317,10 +327,17 @@ impl PrimitiveType {
                     return Ok(poseidon_hash_many(hashes.as_slice()));
                 }
 
+                let type_hash = encode_type(r#type, types)?;
+                println!("type_hash: {}", type_hash);
+                hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
+                    Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
+                })?);
+
                 for (field_name, value) in obj {
                     let field_type = self.get_value_type(field_name, types)?;
-                    ctx.base_type = field_type.1.clone();
-                    let field_hash = value.encode(field_type.0.as_str(), types, ctx)?;
+                    ctx.base_type = field_type.base_type;
+                    ctx.parent_type = r#type.to_string();
+                    let field_hash = value.encode(&field_type.r#type.as_str(), types, ctx)?;
                     hashes.push(field_hash);
                 }
 
