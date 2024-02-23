@@ -486,7 +486,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.sequencer.chain_id();
+            let sequencer = &this.inner.sequencer;
+            let chain_id = sequencer.chain_id();
 
             let transactions = request
                 .into_iter()
@@ -514,13 +515,38 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let res = this
-                .inner
-                .sequencer
-                .estimate_fee(transactions, block_id)
-                .map_err(StarknetApiError::from)?;
+            // get the state and block env at the specified block for execution
+            let state = sequencer.state(&block_id).map_err(StarknetApiError::from)?;
+            let env = sequencer
+                .block_env_at(block_id)
+                .map_err(StarknetApiError::from)?
+                .ok_or(StarknetApiError::BlockNotFound)?;
 
-            Ok(res)
+            // create the executor
+            let executor = sequencer.backend.executor_factory.with_state_and_block_env(state, env);
+
+            let mut estimates: Vec<FeeEstimate> = Vec::with_capacity(transactions.len());
+
+            for (i, tx) in transactions.into_iter().enumerate() {
+                match executor.simulate(tx, Default::default()) {
+                    Ok(output) => {
+                        let overall_fee = output.actual_fee() as u64;
+                        let gas_consumed = output.gas_used() as u64;
+                        let gas_price = executor.block_env().l1_gas_prices.eth;
+
+                        estimates.push(FeeEstimate { gas_consumed, gas_price, overall_fee })
+                    }
+
+                    Err(err) => {
+                        return Err(Error::from(StarknetApiError::TransactionExecutionError {
+                            transaction_index: i,
+                            execution_error: err.to_string(),
+                        }));
+                    }
+                }
+            }
+
+            Ok(estimates)
         })
         .await
     }
