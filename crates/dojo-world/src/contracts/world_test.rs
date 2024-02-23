@@ -8,7 +8,7 @@ use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::FieldElement;
 
 use super::{WorldContract, WorldContractReader};
-use crate::manifest::Manifest;
+use crate::manifest::BaseManifest;
 use crate::migration::strategy::prepare_for_migration;
 use crate::migration::world::WorldDiff;
 use crate::migration::{Declarable, Deployable};
@@ -29,7 +29,7 @@ async fn test_world_contract_reader() {
 }
 
 pub async fn deploy_world(sequencer: &TestSequencer, path: Utf8PathBuf) -> FieldElement {
-    let manifest = Manifest::load_from_path(path.join("manifest.json")).unwrap();
+    let manifest = BaseManifest::load_from_path(path.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();
 

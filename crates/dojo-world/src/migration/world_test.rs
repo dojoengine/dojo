@@ -1,32 +1,32 @@
 use starknet::macros::felt;
 
 use super::*;
-use crate::manifest::{Contract, Manifest, Model};
+use crate::manifest::{BaseManifest, DojoContract, DojoModel};
 
 #[test]
 fn no_diff_when_local_and_remote_are_equal() {
-    let world_contract = Contract {
+    let world_contract = DojoContract {
         address: Some(77_u32.into()),
         class_hash: 66_u32.into(),
         name: WORLD_CONTRACT_NAME.into(),
         ..Default::default()
     };
 
-    let models = vec![Model {
+    let models = vec![DojoModel {
         members: vec![],
         name: "dojo_mock::models::model".into(),
         class_hash: 11_u32.into(),
         ..Default::default()
     }];
 
-    let remote_models = vec![Model {
+    let remote_models = vec![DojoModel {
         members: vec![],
         name: "Model".into(),
         class_hash: 11_u32.into(),
         ..Default::default()
     }];
 
-    let local = Manifest { models, world: world_contract, ..Default::default() };
+    let local = BaseManifest { models, world: world_contract, ..Default::default() };
 
     let mut remote = local.clone();
     remote.models = remote_models;
@@ -38,20 +38,20 @@ fn no_diff_when_local_and_remote_are_equal() {
 
 #[test]
 fn diff_when_local_and_remote_are_different() {
-    let world_contract = Contract {
+    let world_contract = DojoContract {
         class_hash: 66_u32.into(),
         name: WORLD_CONTRACT_NAME.into(),
         ..Default::default()
     };
 
     let models = vec![
-        Model {
+        DojoModel {
             members: vec![],
             name: "dojo_mock::models::model".into(),
             class_hash: felt!("0x11"),
             ..Default::default()
         },
-        Model {
+        DojoModel {
             members: vec![],
             name: "dojo_mock::models::model_2".into(),
             class_hash: felt!("0x22"),
@@ -60,13 +60,13 @@ fn diff_when_local_and_remote_are_different() {
     ];
 
     let remote_models = vec![
-        Model {
+        DojoModel {
             members: vec![],
             name: "Model".into(),
             class_hash: felt!("0x11"),
             ..Default::default()
         },
-        Model {
+        DojoModel {
             members: vec![],
             name: "Model2".into(),
             class_hash: felt!("0x33"),
@@ -75,21 +75,21 @@ fn diff_when_local_and_remote_are_different() {
     ];
 
     let contracts = vec![
-        Contract {
+        DojoContract {
             name: "dojo_mock::contracts::my_contract".into(),
             class_hash: felt!("0x1111"),
             address: Some(felt!("0x2222")),
-            ..Contract::default()
+            ..DojoContract::default()
         },
-        Contract {
+        DojoContract {
             name: "dojo_mock::contracts::my_contract_2".into(),
             class_hash: felt!("0x3333"),
             address: Some(felt!("4444")),
-            ..Contract::default()
+            ..DojoContract::default()
         },
     ];
 
-    let local = Manifest { models, contracts, world: world_contract, ..Default::default() };
+    let local = BaseManifest { models, contracts, world: world_contract, ..Default::default() };
 
     let mut remote = local.clone();
     remote.models = remote_models;

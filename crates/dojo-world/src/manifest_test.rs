@@ -9,9 +9,9 @@ use starknet::core::types::{EmittedEvent, FieldElement};
 use starknet::macros::{felt, selector, short_string};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
-use super::{parse_contracts_events, Contract, Manifest, Model};
+use super::{parse_contracts_events, BaseManifest, DojoContract, DojoModel};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::{parse_models_events, ManifestError};
+use crate::manifest::{parse_models_events, AbstractManifestError};
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -30,10 +30,10 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let err = Manifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
+    let err = BaseManifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
 
     match err {
-        ManifestError::RemoteWorldNotFound => {
+        AbstractManifestError::RemoteWorldNotFound => {
             // World not deployed.
         }
         err => panic!("Unexpected error: {err}"),
@@ -43,8 +43,8 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
 #[test]
 fn parse_registered_model_events() {
     let expected_models = vec![
-        Model { name: "Model1".into(), class_hash: felt!("0x5555"), ..Default::default() },
-        Model { name: "Model2".into(), class_hash: felt!("0x6666"), ..Default::default() },
+        DojoModel { name: "Model1".into(), class_hash: felt!("0x5555"), ..Default::default() },
+        DojoModel { name: "Model2".into(), class_hash: felt!("0x6666"), ..Default::default() },
     ];
 
     let selector = selector!("ModelRegistered");
@@ -104,19 +104,19 @@ fn parse_registered_model_events() {
 #[test]
 fn parse_deployed_contracts_events_without_upgrade() {
     let expected_contracts = vec![
-        Contract {
+        DojoContract {
             name: "".into(),
             class_hash: felt!("0x1"),
             address: Some(felt!("0x123")),
             ..Default::default()
         },
-        Contract {
+        DojoContract {
             name: "".into(),
             class_hash: felt!("0x2"),
             address: Some(felt!("0x456")),
             ..Default::default()
         },
-        Contract {
+        DojoContract {
             name: "".into(),
             class_hash: felt!("0x3"),
             address: Some(felt!("0x789")),
@@ -158,19 +158,19 @@ fn parse_deployed_contracts_events_without_upgrade() {
 #[test]
 fn parse_deployed_contracts_events_with_upgrade() {
     let expected_contracts = vec![
-        Contract {
+        DojoContract {
             name: "".into(),
             class_hash: felt!("0x69"),
             address: Some(felt!("0x123")),
             ..Default::default()
         },
-        Contract {
+        DojoContract {
             name: "".into(),
             class_hash: felt!("0x2"),
             address: Some(felt!("0x456")),
             ..Default::default()
         },
-        Contract {
+        DojoContract {
             name: "".into(),
             class_hash: felt!("0x88"),
             address: Some(felt!("0x789")),
@@ -258,8 +258,8 @@ async fn fetch_remote_manifest() {
 
     let world_address = deploy_world(&sequencer, artifacts_path).await;
 
-    let local_manifest = Manifest::load_from_path(manifest_path).unwrap();
-    let remote_manifest = Manifest::load_from_remote(provider, world_address).await.unwrap();
+    let local_manifest = BaseManifest::load_from_path(manifest_path).unwrap();
+    let remote_manifest = BaseManifest::load_from_remote(provider, world_address).await.unwrap();
 
     assert_eq!(local_manifest.models.len(), 2);
     assert_eq!(local_manifest.contracts.len(), 1);
