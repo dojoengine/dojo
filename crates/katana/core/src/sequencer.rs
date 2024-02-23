@@ -4,7 +4,7 @@ use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
-use katana_executor::{EntryPointCall, ExecutorFactory};
+use katana_executor::ExecutorFactory;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::ChainId;
 use katana_primitives::class::{ClassHash, CompiledClass};
@@ -301,19 +301,6 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
         let state = self.state(&block_id)?;
         let nonce = StateProvider::nonce(&state, contract_address)?;
         Ok(nonce)
-    }
-
-    pub fn call(
-        &self,
-        request: EntryPointCall,
-        block_id: BlockIdOrTag,
-    ) -> SequencerResult<Vec<FieldElement>> {
-        let state = self.state(&block_id)?;
-        let env = self.block_env_at(block_id)?.ok_or(SequencerError::BlockNotFound(block_id))?;
-        let executor = self.backend.executor_factory.with_state_and_block_env(state, env);
-
-        let retdata = executor.call(request, 1_000_000).unwrap();
-        Ok(retdata)
     }
 
     pub fn transaction(&self, hash: &TxHash) -> SequencerResult<Option<TxWithHash>> {

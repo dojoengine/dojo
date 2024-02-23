@@ -431,9 +431,23 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 entry_point_selector: request.entry_point_selector,
             };
 
-            let res =
-                this.inner.sequencer.call(request, block_id).map_err(StarknetApiError::from)?;
-            Ok(res.into_iter().map(|v| v.into()).collect())
+            let sequencer = &this.inner.sequencer;
+
+            // get the state and block env at the specified block for function call execution
+            let state = sequencer.state(&block_id).map_err(StarknetApiError::from)?;
+            let env = sequencer
+                .block_env_at(block_id)
+                .map_err(StarknetApiError::from)?
+                .ok_or(StarknetApiError::BlockNotFound)?;
+
+            let executor = sequencer.backend.executor_factory.with_state_and_block_env(state, env);
+
+            match executor.call(request, 1_000_000_000) {
+                Ok(retdata) => Ok(retdata.into_iter().map(|v| v.into()).collect()),
+                Err(err) => Err(Error::from(StarknetApiError::ContractError {
+                    revert_error: err.to_string(),
+                })),
+            }
         })
         .await
     }
