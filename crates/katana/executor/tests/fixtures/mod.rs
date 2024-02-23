@@ -100,7 +100,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 100,
                 sequencer_address,
                 parent_hash: 123u64.into(),
-                gas_prices
+                gas_prices,
             },
             body: vec![
                 // fund the account to be deployed, sending 0x9999999999999 amount
@@ -149,7 +149,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 200,
                 sequencer_address,
                 parent_hash: 1234u64.into(),
-                gas_prices
+                gas_prices,
             },
             body: vec![
                 // deploy account tx with the default account class
@@ -181,7 +181,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 300,
                 sequencer_address,
                 parent_hash: 12345u64.into(),
-                gas_prices
+                gas_prices,
             },
             body: vec![
                 // deploy contract using UDC

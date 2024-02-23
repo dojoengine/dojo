@@ -184,7 +184,8 @@ mod sir {
 
     use super::*;
 
-    // TODO: find out why cant deploy contract using UDC, ignore this test until it's fixed (possible an upstream issue)
+    // TODO: find out why cant deploy contract using UDC, ignore this test until it's fixed
+    // (possible an upstream issue)
     #[ignore]
     #[rstest::rstest]
     fn test_executor_with_valid_blocks(
