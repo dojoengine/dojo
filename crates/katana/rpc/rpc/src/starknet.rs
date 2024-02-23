@@ -335,11 +335,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let pending_receipt =
                         this.inner.sequencer.pending_executor().and_then(|executor| {
                             executor.read().transactions().iter().find_map(|(tx, rct)| {
-                                if tx.hash == transaction_hash {
-                                    rct.clone()
-                                } else {
-                                    None
-                                }
+                                if tx.hash == transaction_hash { rct.clone() } else { None }
                             })
                         });
 
