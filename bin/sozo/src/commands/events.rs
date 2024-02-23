@@ -84,22 +84,13 @@ fn is_event(token: &Token) -> bool {
 }
 
 fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Token>> {
-    //println!("manifest {:?}", manifest.world.abi.clone().unwrap());
-
-    // Helper function to process ABI and populate events_map
     fn process_abi(abi: &abi::Contract, events_map: &mut HashMap<String, Vec<Token>>) {
         match serde_json::to_string(abi) {
             Ok(abi_str) => match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
                 Ok(tokens) => {
                     for token in tokens.structs {
                         if is_event(&token) {
-                            //println!("°°°°°°°°°°°°");
-                            //println!("Token Name: {:?}", token.type_name());
-                            //println!("Token: {:?}", token);
-                            //println!("°°°°°°°°°°°°");
-
                             let event_name = starknet_keccak(token.type_name().as_bytes());
-                            //println!("Event Name: {} {}", event_name, token.type_name());
 
                             let vec = events_map.entry(event_name.to_string()).or_default();
                             vec.push(token.clone());
@@ -131,9 +122,6 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Token>> {
         }
     }
 
-    //println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    //println!("Events Map 2: {:?}", events_map);
-    //println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     events_map
 }
 
