@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockWithTxs, InvokeTransactionReceipt, InvokeTransactionV1};
+use starknet::core::types::{BlockWithTxs, Transaction, TransactionReceipt};
 use starknet::providers::Provider;
 use tokio::sync::RwLock;
 
@@ -19,8 +19,8 @@ impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
         db: Arc<RwLock<Sql>>,
         _provider: &P,
         _block: &BlockWithTxs,
-        _receipt: &InvokeTransactionReceipt,
-        transaction: &InvokeTransactionV1,
+        _receipt: &TransactionReceipt,
+        transaction: &Transaction,
         transaction_id: &str,
     ) -> Result<(), Error> {
         db.write().await.store_transaction(transaction, transaction_id);

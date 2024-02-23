@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
 use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
@@ -24,7 +25,7 @@ use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::StateFactoryProvider;
 use parking_lot::RwLock;
 use tokio::time::{interval_at, Instant, Interval};
-use tracing::trace;
+use tracing::{trace, warn};
 
 use crate::backend::Backend;
 
@@ -42,6 +43,9 @@ type ServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + Sync>>;
 
 type BlockProductionResult = Result<MinedBlockOutcome, BlockProductionError>;
 type BlockProductionFuture = ServiceFuture<BlockProductionResult>;
+type BlockProductionWithTxnsFuture =
+    ServiceFuture<Result<(Vec<TxWithHashAndReceiptPair>, MinedBlockOutcome), BlockProductionError>>;
+pub type TxWithHashAndReceiptPair = (TxWithHash, Receipt);
 
 /// The type which responsible for block production.
 #[must_use = "BlockProducer does nothing unless polled"]
@@ -161,6 +165,8 @@ pub struct IntervalBlockProducer {
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
     /// The state of the pending block after executing all the transactions within the interval.
     state: Arc<PendingState>,
+    /// Listeners notified when a new executed tx is added.
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithHashAndReceiptPair>>>>,
 }
 
 impl IntervalBlockProducer {
@@ -185,6 +191,7 @@ impl IntervalBlockProducer {
             block_mining: None,
             interval: Some(interval),
             queued: VecDeque::default(),
+            tx_execution_listeners: RwLock::new(vec![]),
         }
     }
 
@@ -198,7 +205,14 @@ impl IntervalBlockProducer {
     ) -> Self {
         let state = Arc::new(PendingState::new(db, block_exec_envs.0, block_exec_envs.1));
 
-        Self { state, backend, interval: None, block_mining: None, queued: VecDeque::default() }
+        Self {
+            state,
+            backend,
+            interval: None,
+            block_mining: None,
+            queued: VecDeque::default(),
+            tx_execution_listeners: RwLock::new(vec![]),
+        }
     }
 
     pub fn state(&self) -> Arc<PendingState> {
@@ -267,7 +281,41 @@ impl IntervalBlockProducer {
             .collect::<Vec<_>>()
         };
 
-        self.state.executed_txs.write().extend(results);
+        self.state.executed_txs.write().extend(results.clone());
+        self.notify_listener(results.into_iter().map(|(tx, info)| (tx, info.receipt)).collect());
+    }
+
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithHashAndReceiptPair>> {
+        const TX_LISTENER_BUFFER_SIZE: usize = 2048;
+        let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
+        self.tx_execution_listeners.write().push(tx);
+        rx
+    }
+
+    /// notifies all listeners about the transaction
+    fn notify_listener(&self, txs: Vec<TxWithHashAndReceiptPair>) {
+        let mut listener = self.tx_execution_listeners.write();
+        // this is basically a retain but with mut reference
+        for n in (0..listener.len()).rev() {
+            let mut listener_tx = listener.swap_remove(n);
+            let retain = match listener_tx.try_send(txs.clone()) {
+                Ok(()) => true,
+                Err(e) => {
+                    if e.is_full() {
+                        warn!(
+                            target: "miner",
+                            "failed to send new txs notification because channel is full",
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+            if retain {
+                listener.push(listener_tx)
+            }
+        }
     }
 
     fn outcome(&self) -> StateUpdatesWithDeclaredClasses {
@@ -320,14 +368,21 @@ pub struct InstantBlockProducer {
     /// Holds the backend if no block is being mined
     backend: Arc<Backend>,
     /// Single active future that mines a new block
-    block_mining: Option<BlockProductionFuture>,
+    block_mining: Option<BlockProductionWithTxnsFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
+    /// Listeners notified when a new executed tx is added.
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithHashAndReceiptPair>>>>,
 }
 
 impl InstantBlockProducer {
     pub fn new(backend: Arc<Backend>) -> Self {
-        Self { backend, block_mining: None, queued: VecDeque::default() }
+        Self {
+            backend,
+            block_mining: None,
+            queued: VecDeque::default(),
+            tx_execution_listeners: RwLock::new(vec![]),
+        }
     }
 
     pub fn force_mine(&mut self) {
@@ -342,7 +397,7 @@ impl InstantBlockProducer {
     fn do_mine(
         backend: Arc<Backend>,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> Result<MinedBlockOutcome, BlockProductionError> {
+    ) -> Result<(Vec<TxWithHashAndReceiptPair>, MinedBlockOutcome), BlockProductionError> {
         trace!(target: "miner", "creating new block");
 
         let provider = backend.blockchain.provider();
@@ -359,7 +414,7 @@ impl InstantBlockProducer {
 
         let txs = transactions.iter().map(TxWithHash::from);
 
-        let tx_receipt_pairs: Vec<(TxWithHash, Receipt)> = TransactionExecutor::new(
+        let tx_receipt_pairs: Vec<TxWithHashAndReceiptPair> = TransactionExecutor::new(
             &state,
             &block_context,
             !backend.config.disable_fee,
@@ -372,8 +427,8 @@ impl InstantBlockProducer {
         .zip(txs)
         .filter_map(|(res, tx)| {
             if let Ok(info) = res {
-                let receipt = TxReceiptWithExecInfo::new(&tx, info);
-                Some((tx, receipt.receipt))
+                let info = TxReceiptWithExecInfo::new(&tx, info);
+                Some((tx, info.receipt))
             } else {
                 None
             }
@@ -382,19 +437,52 @@ impl InstantBlockProducer {
 
         let outcome = backend.do_mine_block(
             &block_env,
-            tx_receipt_pairs,
+            tx_receipt_pairs.clone(),
             get_state_update_from_cached_state(&state),
         )?;
 
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
-        Ok(outcome)
+        Ok((tx_receipt_pairs, outcome))
+    }
+
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithHashAndReceiptPair>> {
+        const TX_LISTENER_BUFFER_SIZE: usize = 2048;
+        let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
+        self.tx_execution_listeners.write().push(tx);
+        rx
+    }
+
+    /// notifies all listeners about the transaction
+    fn notify_listener(&self, txs: Vec<TxWithHashAndReceiptPair>) {
+        let mut listener = self.tx_execution_listeners.write();
+        // this is basically a retain but with mut reference
+        for n in (0..listener.len()).rev() {
+            let mut listener_tx = listener.swap_remove(n);
+            let retain = match listener_tx.try_send(txs.clone()) {
+                Ok(()) => true,
+                Err(e) => {
+                    if e.is_full() {
+                        warn!(
+                            target: "miner",
+                            "failed to send new txs notification because channel is full",
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
+            if retain {
+                listener.push(listener_tx)
+            }
+        }
     }
 }
 
 impl Stream for InstantBlockProducer {
     // mined block outcome and the new state
-    type Item = BlockProductionResult;
+    type Item = Result<MinedBlockOutcome, BlockProductionError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();
@@ -410,10 +498,19 @@ impl Stream for InstantBlockProducer {
 
         // poll the mining future
         if let Some(mut mining) = pin.block_mining.take() {
-            if let Poll::Ready(outcome) = mining.poll_unpin(cx) {
-                return Poll::Ready(Some(outcome));
-            } else {
-                pin.block_mining = Some(mining)
+            match mining.poll_unpin(cx) {
+                Poll::Ready(Ok((txs, outcome))) => {
+                    pin.notify_listener(txs);
+                    return Poll::Ready(Some(Ok(outcome)));
+                }
+
+                Poll::Ready(Err(e)) => {
+                    return Poll::Ready(Some(Err(e)));
+                }
+
+                Poll::Pending => {
+                    pin.block_mining = Some(mining);
+                }
             }
         }
 

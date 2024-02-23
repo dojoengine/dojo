@@ -32,12 +32,12 @@ impl DojoContract {
                 .elements(db)
                 .iter()
                 .flat_map(|el| {
-                    if let ast::Item::Enum(enum_ast) = el {
+                    if let ast::ModuleItem::Enum(enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
                             has_event = true;
                             return system.merge_event(db, enum_ast.clone());
                         }
-                    } else if let ast::Item::Struct(struct_ast) = el {
+                    } else if let ast::ModuleItem::Struct(struct_ast) = el {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
                             return system.merge_storage(db, struct_ast.clone());
@@ -108,7 +108,7 @@ impl DojoContract {
                             dependencies: system.dependencies.values().cloned().collect(),
                         }],
                     })),
-                    diagnostics_mappings: builder.diagnostics_mappings,
+                    code_mappings: builder.code_mappings,
                 }),
                 diagnostics: system.diagnostics,
                 remove_original_item: true,

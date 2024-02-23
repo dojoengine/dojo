@@ -6,7 +6,7 @@ use dojo_test_utils::sequencer::{
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{EmittedEvent, FieldElement};
-use starknet::macros::{felt, short_string};
+use starknet::macros::{felt, selector, short_string};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{parse_contracts_events, Contract, Manifest, Model};
@@ -47,26 +47,46 @@ fn parse_registered_model_events() {
         Model { name: "Model2".into(), class_hash: felt!("0x6666"), ..Default::default() },
     ];
 
+    let selector = selector!("ModelRegistered");
+
     let events = vec![
         EmittedEvent {
-            data: vec![short_string!("Model1"), felt!("0x5555"), felt!("0xbeef")],
-            keys: vec![],
+            data: vec![
+                short_string!("Model1"),
+                felt!("0x5555"),
+                felt!("0xbeef"),
+                felt!("0xa1"),
+                felt!("0"),
+            ],
+            keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
             block_number: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![short_string!("Model1"), felt!("0xbeef"), felt!("0")],
-            keys: vec![],
+            data: vec![
+                short_string!("Model1"),
+                felt!("0xbeef"),
+                felt!("0"),
+                felt!("0xa1"),
+                felt!("0xa1"),
+            ],
+            keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
             block_number: Default::default(),
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![short_string!("Model2"), felt!("0x6666"), felt!("0")],
-            keys: vec![],
+            data: vec![
+                short_string!("Model2"),
+                felt!("0x6666"),
+                felt!("0"),
+                felt!("0xa3"),
+                felt!("0"),
+            ],
+            keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
             block_number: Default::default(),
@@ -236,7 +256,7 @@ async fn fetch_remote_manifest() {
         Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
     let manifest_path = artifacts_path.join("manifest.json");
 
-    let (world_address, _) = deploy_world(&sequencer, artifacts_path).await;
+    let world_address = deploy_world(&sequencer, artifacts_path).await;
 
     let local_manifest = Manifest::load_from_path(manifest_path).unwrap();
     let remote_manifest = Manifest::load_from_remote(provider, world_address).await.unwrap();

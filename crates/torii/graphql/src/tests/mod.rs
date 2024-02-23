@@ -90,7 +90,7 @@ pub struct Record {
     pub type_u8: u8,
     pub type_u16: u16,
     pub type_u32: u32,
-    pub type_u64: u64,
+    pub type_u64: String,
     pub type_u128: String,
     pub type_u256: String,
     pub type_bool: bool,
@@ -247,6 +247,7 @@ pub async fn model_fixtures(db: &mut Sql) {
         }),
         vec![],
         FieldElement::ONE,
+        FieldElement::TWO,
         0,
         0,
     )

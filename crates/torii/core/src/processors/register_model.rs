@@ -4,11 +4,10 @@ use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
+use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{debug, info};
 
 use super::EventProcessor;
 use crate::sql::Sql;
@@ -42,7 +41,7 @@ where
         world: &WorldContractReader<P>,
         db: Arc<RwLock<Sql>>,
         _block: &BlockWithTxs,
-        _invoke_receipt: &InvokeTransactionReceipt,
+        _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
@@ -55,11 +54,22 @@ where
         let unpacked_size: u32 = model.unpacked_size().await?.try_into()?;
         let packed_size: u32 = model.packed_size().await?.try_into()?;
 
-        info!("Registered model: {}", name);
+        let class_hash = event.data[1];
+        let contract_address = event.data[3];
 
-        db.write()
-            .await
-            .register_model(schema, layout, event.data[1], packed_size, unpacked_size)
+        info!(name, "Registered model");
+        debug!(
+            name,
+            ?schema,
+            ?layout,
+            ?class_hash,
+            ?contract_address,
+            packed_size,
+            unpacked_size,
+            "Registered model content"
+        );
+
+        db.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size)
             .await?;
 
         Ok(())

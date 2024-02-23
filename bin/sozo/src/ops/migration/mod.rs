@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{Manifest, ManifestError};
@@ -286,34 +287,6 @@ where
 {
     let ui = ws.config().ui();
 
-    match &strategy.executor {
-        Some(executor) => {
-            ui.print_header("# Executor");
-            deploy_contract(executor, "executor", vec![], migrator, &ui, &txn_config).await?;
-
-            // There is no world migration, so it exists already.
-            if strategy.world.is_none() {
-                let addr = strategy.world_address()?;
-                let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(addr, &migrator)
-                        .set_executor(&executor.contract_address.into())
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            ui.verbose(format!("{e:?}"));
-                            e
-                        })?;
-
-                TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
-
-                ui.print_hidden_sub(format!("Updated at: {transaction_hash:#x}"));
-            }
-
-            ui.print_sub(format!("Contract address: {:#x}", executor.contract_address));
-        }
-        None => {}
-    };
-
     match &strategy.base {
         Some(base) => {
             ui.print_header("# Base Contract");
@@ -341,10 +314,7 @@ where
         Some(world) => {
             ui.print_header("# World");
 
-            let calldata = vec![
-                strategy.executor.as_ref().unwrap().contract_address,
-                strategy.base.as_ref().unwrap().diff.local,
-            ];
+            let calldata = vec![strategy.base.as_ref().unwrap().diff.local];
             deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
                 .await
                 .map_err(|e| {
@@ -358,17 +328,29 @@ where
             if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
                 match meta.upload().await {
                     Ok(hash) => {
-                        let encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+                        let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+
+                        // Metadata is expecting an array of capacity 3.
+                        if encoded_uri.len() < 3 {
+                            encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
+                        }
+
+                        let world_metadata = ResourceMetadata {
+                            resource_id: FieldElement::ZERO,
+                            metadata_uri: encoded_uri,
+                        };
 
                         let InvokeTransactionResult { transaction_hash } =
                             WorldContract::new(world.contract_address, migrator)
-                                .set_metadata_uri(&FieldElement::ZERO, &encoded_uri)
+                                .set_metadata(&world_metadata)
                                 .send()
                                 .await
                                 .map_err(|e| {
                                     ui.verbose(format!("{e:?}"));
                                     anyhow!("Failed to set World metadata: {e}")
                                 })?;
+
+                        TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
                         ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
                         ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
@@ -381,6 +363,9 @@ where
         }
         None => {}
     };
+
+    // Once Torii supports indexing arrays, we should declare and register the
+    // ResourceMetadata model.
 
     register_models(strategy, migrator, &ui, txn_config.clone()).await?;
     deploy_contracts(strategy, migrator, &ui, txn_config).await?;
@@ -501,7 +486,7 @@ where
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
-    ui.print_sub(format!("Registered at: {transaction_hash:#x}"));
+    ui.print(format!("All models are registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }

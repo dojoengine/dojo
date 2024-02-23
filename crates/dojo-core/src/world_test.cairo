@@ -8,8 +8,10 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
-use dojo::executor::executor;
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait };
+use dojo::world::{
+    IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
+    IUpgradeableWorldDispatcherTrait, ResourceMetadata
+};
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
@@ -27,6 +29,24 @@ struct Fizz {
     #[key]
     caller: ContractAddress,
     a: felt252
+}
+
+#[starknet::interface]
+trait INameOnly<T> {
+    fn name(self: @T) -> felt252;
+}
+
+#[starknet::contract]
+mod resource_metadata_malicious {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::INameOnly<ContractState> {
+        fn name(self: @ContractState) -> felt252 {
+            'ResourceMetadata'
+        }
+    }
 }
 
 #[starknet::interface]
@@ -162,6 +182,7 @@ fn test_delete() {
     assert(deleted.a == 0, 'data not deleted');
     assert(deleted.b == 0, 'data not deleted');
 }
+use core::debug::PrintTrait;
 
 #[test]
 #[available_gas(6000000)]
@@ -169,8 +190,8 @@ fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
-    let foo = world.model('Foo');
-    assert(foo == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo does not exists');
+    let (foo_class_hash, _) = world.model('Foo');
+    assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
 }
 
 #[test]
@@ -246,65 +267,70 @@ fn deploy_world() -> IWorldDispatcher {
 
 #[test]
 #[available_gas(60000000)]
-fn test_metadata_uri() {
-    // Deploy world contract
+fn test_set_metadata_world() {
     let world = deploy_world();
-    world.set_metadata_uri(0, array!['test_uri'].span());
-    let uri = world.metadata_uri(0);
 
-    assert(uri.len() == 1, 'Incorrect metadata uri len');
-    assert(uri[0] == @'test_uri', 'Incorrect metadata uri');
+    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: array_cap!(3, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json')).span() };
 
-    world.set_metadata_uri(0, array!['new_uri', 'longer'].span());
+    world.set_metadata(metadata.clone());
 
-    let uri = world.metadata_uri(0);
-    assert(uri.len() == 2, 'Incorrect metadata uri len');
-    assert(uri[0] == @'new_uri', 'Incorrect metadata uri 1');
-    assert(uri[1] == @'longer', 'Incorrect metadata uri 2');
+    assert(world.metadata(0) == metadata, 'invalid metadata');
 }
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic]
-fn test_set_metadata_uri_reverts_for_not_owner() {
-    // Deploy world contract
-    let world = deploy_world();
-
-    starknet::testing::set_contract_address(starknet::contract_address_const::<0x1337>());
-    world.set_metadata_uri(0, array!['new_uri', 'longer'].span());
-}
-
-#[test]
-#[available_gas(60000000)]
-fn test_entities() {
-    // Deploy world contract
+fn test_set_metadata_model_writer() {
     let world = spawn_test_world(array![foo::TEST_CLASS_HASH],);
 
     let bar_contract = IbarDispatcher {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
-    let alice = starknet::contract_address_const::<0x1337>();
-    starknet::testing::set_contract_address(alice);
+    world.grant_writer('Foo', bar_contract.contract_address);
+
+    let bob = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_account_contract_address(bob);
+    starknet::testing::set_contract_address(bar_contract.contract_address);
+
     bar_contract.set_foo(1337, 1337);
 
-    let mut keys = ArrayTrait::new();
-    keys.append(0);
+    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: array_cap!(3, ('ipfs:bob',)).span(), };
 
-    let mut query_keys = ArrayTrait::new();
-    let layout = array![251].span();
-    let (keys, values) = world.entities('Foo', Option::None, query_keys.span(), 2, layout);
-    let ids = world.entity_ids('Foo');
-    assert(keys.len() == ids.len(), 'result differs in entity_ids');
-    assert(keys.len() == 0, 'found value for unindexed');
-// query_keys.append(0x1337);
-// let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
-// assert(keys.len() == 1, 'No keys found!');
+    // A system that has write access on a model should be able to update the metadata.
+    // This follows conventional ACL model.
+    world.set_metadata(metadata.clone());
+    assert(world.metadata('Foo') == metadata, 'bad metadata');
+}
 
-// let mut query_keys = ArrayTrait::new();
-// query_keys.append(0x1338);
-// let (keys, values) = world.entities('Foo', 42, query_keys.span(), 2, layout);
-// assert(keys.len() == 0, 'Keys found!');
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('not writer', 'ENTRYPOINT_FAILED',))]
+fn test_set_metadata_same_model_rules() {
+    let world = deploy_world();
+
+    let metadata = ResourceMetadata { // World metadata.
+    resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:bob',)).span(), };
+
+    let bob = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_contract_address(bob);
+    starknet::testing::set_account_contract_address(bob);
+
+    // Bob access follows the conventional ACL, he can't write the world
+    // metadata if he does not have access to it.
+    world.set_metadata(metadata);
+}
+
+#[test]
+#[available_gas(60000000)]
+#[should_panic(expected: ('only owner can update', 'ENTRYPOINT_FAILED',))]
+fn test_metadata_update_owner_only() {
+    let world = deploy_world();
+
+    let bob = starknet::contract_address_const::<0xb0b>();
+    starknet::testing::set_contract_address(bob);
+    starknet::testing::set_account_contract_address(bob);
+
+    world.register_model(resource_metadata_malicious::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
@@ -410,7 +436,6 @@ fn test_set_writer_fails_for_non_owner() {
     world.grant_writer(42, 69.try_into().unwrap());
 }
 
-
 #[test]
 #[available_gas(60000000)]
 fn test_execute_multiple_worlds() {
@@ -436,6 +461,7 @@ fn test_execute_multiple_worlds() {
 
     let data1 = get!(world1, alice, Foo);
     let data2 = get!(world2, alice, Foo);
+
     assert(data1.a == 1337, 'data1 not stored');
     assert(data2.a == 7331, 'data2 not stored');
 }
@@ -505,7 +531,7 @@ mod worldupgrade {
     
     #[abi(embed_v0)]
     impl IWorldUpgradeImpl of super::IWorldUpgrade<ContractState> {
-        fn hello(self: @ContractState) -> felt252{
+        fn hello(self: @ContractState) -> felt252 {
             'dojo'
         }
     }
@@ -515,7 +541,6 @@ mod worldupgrade {
 #[test]
 #[available_gas(60000000)]
 fn test_upgradeable_world() {
-    
     // Deploy world contract
     let world = deploy_world();
 
@@ -524,18 +549,15 @@ fn test_upgradeable_world() {
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
 
-    let res = (IWorldUpgradeDispatcher {
-        contract_address: world.contract_address
-    }).hello();
+    let res = (IWorldUpgradeDispatcher { contract_address: world.contract_address }).hello();
 
     assert(res == 'dojo', 'should return dojo');
 }
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic(expected:('invalid class_hash', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('invalid class_hash', 'ENTRYPOINT_FAILED'))]
 fn test_upgradeable_world_with_class_hash_zero() {
-    
     // Deploy world contract
     let world = deploy_world();
 
@@ -549,9 +571,8 @@ fn test_upgradeable_world_with_class_hash_zero() {
 
 #[test]
 #[available_gas(60000000)]
-#[should_panic( expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('only owner can upgrade', 'ENTRYPOINT_FAILED'))]
 fn test_upgradeable_world_from_non_owner() {
-    
     // Deploy world contract
     let world = deploy_world();
 

@@ -4,6 +4,7 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::ast::{ExprPath, ExprStructCtorCall, FunctionWithBody, ItemModule};
 use cairo_lang_syntax::node::kind::SyntaxKind;
@@ -53,6 +54,7 @@ impl InlineMacroExprPlugin for SetMacro {
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
+                    severity: Severity::Error,
                 }],
             };
         }
@@ -86,6 +88,7 @@ impl InlineMacroExprPlugin for SetMacro {
                     diagnostics: vec![PluginDiagnostic {
                         message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
                         stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
+                        severity: Severity::Error,
                     }],
                 };
             }
@@ -97,6 +100,7 @@ impl InlineMacroExprPlugin for SetMacro {
                 diagnostics: vec![PluginDiagnostic {
                     message: "Invalid arguments: No models provided.".to_string(),
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
+                    severity: Severity::Error,
                 }],
             };
         }
@@ -157,7 +161,7 @@ impl InlineMacroExprPlugin for SetMacro {
                 "
                 let __set_macro_value__ = {};
                 {}.set_entity(dojo::model::Model::name(@__set_macro_value__),
-                 dojo::model::Model::keys(@__set_macro_value__), 0_u8,
+                 dojo::model::Model::keys(@__set_macro_value__),
                  dojo::model::Model::values(@__set_macro_value__),
                  dojo::model::Model::layout(@__set_macro_value__));",
                 entity,
@@ -170,7 +174,7 @@ impl InlineMacroExprPlugin for SetMacro {
             code: Some(PluginGeneratedFile {
                 name: "set_inline_macro".into(),
                 content: builder.code,
-                diagnostics_mappings: builder.diagnostics_mappings,
+                code_mappings: builder.code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],

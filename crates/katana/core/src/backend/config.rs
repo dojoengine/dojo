@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use ethers::types::U256;
+use ::primitive_types::U256;
 use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;

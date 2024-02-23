@@ -138,10 +138,11 @@ impl Primitive {
             Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
-            | Primitive::U64(_)
             | Primitive::USize(_)
             | Primitive::Bool(_) => SqlType::Integer,
-            Primitive::U128(_)
+
+            Primitive::U64(_)
+            | Primitive::U128(_)
             | Primitive::U256(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
@@ -160,11 +161,11 @@ impl Primitive {
             Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
-            | Primitive::U64(_)
             | Primitive::USize(_)
             | Primitive::Bool(_) => Ok(format!("{}", value[0])),
 
-            Primitive::U128(_)
+            Primitive::U64(_)
+            | Primitive::U128(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
             | Primitive::Felt252(_) => Ok(format!("0x{:064x}", value[0])),

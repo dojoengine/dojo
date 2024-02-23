@@ -4,7 +4,7 @@ use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
+use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tokio::sync::RwLock;
@@ -43,7 +43,7 @@ where
         _world: &WorldContractReader<P>,
         db: Arc<RwLock<Sql>>,
         _block: &BlockWithTxs,
-        _transaction_receipt: &InvokeTransactionReceipt,
+        _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {

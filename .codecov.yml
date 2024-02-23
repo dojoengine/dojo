@@ -1,0 +1,18 @@
+# For more configuration details:
+# https://docs.codecov.io/docs/codecov-yaml
+
+# Check if this file is valid by running in bash:
+# curl -X POST --data-binary @.codecov.yml https://codecov.io/validate
+
+# Coverage configuration
+# ----------------------
+coverage:
+  status:
+    patch:
+      default:
+        target: auto
+        only_pulls: true
+    project:
+      default:
+        target: auto
+        only_pulls: true

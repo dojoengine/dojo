@@ -8,7 +8,7 @@ test_compiler_cairo_v240
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x5ac623f0c96059936bd2d0904bdd31799e430fe08a0caff7a5f497260b16497",
+    "class_hash": "0x5ad96ceea29160aa7305bb078d1ade41f73b487363ae12778dbea6393cc00b2",
     "abi": [
       {
         "type": "impl",
@@ -27,35 +27,25 @@ test_compiler_cairo_v240
       },
       {
         "type": "struct",
-        "name": "core::array::Span::<core::integer::u8>",
+        "name": "dojo::resource_metadata::ResourceMetadata",
         "members": [
           {
-            "name": "snapshot",
-            "type": "@core::array::Array::<core::integer::u8>"
-          }
-        ]
-      },
-      {
-        "type": "enum",
-        "name": "core::option::Option::<core::felt252>",
-        "variants": [
-          {
-            "name": "Some",
+            "name": "resource_id",
             "type": "core::felt252"
           },
           {
-            "name": "None",
-            "type": "()"
+            "name": "metadata_uri",
+            "type": "core::array::Span::<core::felt252>"
           }
         ]
       },
       {
         "type": "struct",
-        "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+        "name": "core::array::Span::<core::integer::u8>",
         "members": [
           {
             "name": "snapshot",
-            "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+            "type": "@core::array::Array::<core::integer::u8>"
           }
         ]
       },
@@ -79,31 +69,27 @@ test_compiler_cairo_v240
         "items": [
           {
             "type": "function",
-            "name": "metadata_uri",
+            "name": "metadata",
             "inputs": [
               {
-                "name": "resource",
+                "name": "resource_id",
                 "type": "core::felt252"
               }
             ],
             "outputs": [
               {
-                "type": "core::array::Span::<core::felt252>"
+                "type": "dojo::resource_metadata::ResourceMetadata"
               }
             ],
             "state_mutability": "view"
           },
           {
             "type": "function",
-            "name": "set_metadata_uri",
+            "name": "set_metadata",
             "inputs": [
               {
-                "name": "resource",
-                "type": "core::felt252"
-              },
-              {
-                "name": "uri",
-                "type": "core::array::Span::<core::felt252>"
+                "name": "metadata",
+                "type": "dojo::resource_metadata::ResourceMetadata"
               }
             ],
             "outputs": [],
@@ -120,7 +106,7 @@ test_compiler_cairo_v240
             ],
             "outputs": [
               {
-                "type": "core::starknet::class_hash::ClassHash"
+                "type": "(core::starknet::class_hash::ClassHash, core::starknet::contract_address::ContractAddress)"
               }
             ],
             "state_mutability": "view"
@@ -217,14 +203,6 @@ test_compiler_cairo_v240
                 "type": "core::array::Span::<core::felt252>"
               },
               {
-                "name": "offset",
-                "type": "core::integer::u8"
-              },
-              {
-                "name": "length",
-                "type": "core::integer::u32"
-              },
-              {
                 "name": "layout",
                 "type": "core::array::Span::<core::integer::u8>"
               }
@@ -249,10 +227,6 @@ test_compiler_cairo_v240
                 "type": "core::array::Span::<core::felt252>"
               },
               {
-                "name": "offset",
-                "type": "core::integer::u8"
-              },
-              {
                 "name": "values",
                 "type": "core::array::Span::<core::felt252>"
               },
@@ -263,77 +237,6 @@ test_compiler_cairo_v240
             ],
             "outputs": [],
             "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "entities",
-            "inputs": [
-              {
-                "name": "model",
-                "type": "core::felt252"
-              },
-              {
-                "name": "index",
-                "type": "core::option::Option::<core::felt252>"
-              },
-              {
-                "name": "values",
-                "type": "core::array::Span::<core::felt252>"
-              },
-              {
-                "name": "values_length",
-                "type": "core::integer::u32"
-              },
-              {
-                "name": "values_layout",
-                "type": "core::array::Span::<core::integer::u8>"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "(core::array::Span::<core::felt252>, core::array::Span::<core::array::Span::<core::felt252>>)"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "entity_ids",
-            "inputs": [
-              {
-                "name": "model",
-                "type": "core::felt252"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "core::array::Span::<core::felt252>"
-              }
-            ],
-            "state_mutability": "view"
-          },
-          {
-            "type": "function",
-            "name": "set_executor",
-            "inputs": [
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              }
-            ],
-            "outputs": [],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "executor",
-            "inputs": [],
-            "outputs": [
-              {
-                "type": "core::starknet::contract_address::ContractAddress"
-              }
-            ],
-            "state_mutability": "view"
           },
           {
             "type": "function",
@@ -500,10 +403,6 @@ test_compiler_cairo_v240
         "name": "constructor",
         "inputs": [
           {
-            "name": "executor",
-            "type": "core::starknet::contract_address::ContractAddress"
-          },
-          {
             "name": "contract_base",
             "type": "core::starknet::class_hash::ClassHash"
           }
@@ -613,6 +512,16 @@ test_compiler_cairo_v240
             "name": "prev_class_hash",
             "type": "core::starknet::class_hash::ClassHash",
             "kind": "data"
+          },
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          },
+          {
+            "name": "prev_address",
+            "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
           }
         ]
       },
@@ -629,11 +538,6 @@ test_compiler_cairo_v240
           {
             "name": "keys",
             "type": "core::array::Span::<core::felt252>",
-            "kind": "data"
-          },
-          {
-            "name": "offset",
-            "type": "core::integer::u8",
             "kind": "data"
           },
           {
@@ -706,23 +610,6 @@ test_compiler_cairo_v240
       },
       {
         "type": "event",
-        "name": "dojo::world::world::ExecutorUpdated",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "prev_address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
         "name": "dojo::world::world::Event",
         "kind": "enum",
         "variants": [
@@ -775,74 +662,8 @@ test_compiler_cairo_v240
             "name": "OwnerUpdated",
             "type": "dojo::world::world::OwnerUpdated",
             "kind": "nested"
-          },
-          {
-            "name": "ExecutorUpdated",
-            "type": "dojo::world::world::ExecutorUpdated",
-            "kind": "nested"
           }
         ]
-      }
-    ],
-    "reads": [],
-    "writes": [],
-    "computed": []
-  },
-  "executor": {
-    "name": "dojo::executor::executor",
-    "address": null,
-    "class_hash": "0x585507fa2818fe78e66da6ea4c5915376739f4abf509d41153f60a16cb1f68d",
-    "abi": [
-      {
-        "type": "impl",
-        "name": "Executor",
-        "interface_name": "dojo::executor::IExecutor"
-      },
-      {
-        "type": "struct",
-        "name": "core::array::Span::<core::felt252>",
-        "members": [
-          {
-            "name": "snapshot",
-            "type": "@core::array::Array::<core::felt252>"
-          }
-        ]
-      },
-      {
-        "type": "interface",
-        "name": "dojo::executor::IExecutor",
-        "items": [
-          {
-            "type": "function",
-            "name": "call",
-            "inputs": [
-              {
-                "name": "class_hash",
-                "type": "core::starknet::class_hash::ClassHash"
-              },
-              {
-                "name": "entrypoint",
-                "type": "core::felt252"
-              },
-              {
-                "name": "calldata",
-                "type": "core::array::Span::<core::felt252>"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "core::array::Span::<core::felt252>"
-              }
-            ],
-            "state_mutability": "view"
-          }
-        ]
-      },
-      {
-        "type": "event",
-        "name": "dojo::executor::executor::Event",
-        "kind": "enum",
-        "variants": []
       }
     ],
     "reads": [],
@@ -851,7 +672,7 @@ test_compiler_cairo_v240
   },
   "base": {
     "name": "dojo::base::base",
-    "class_hash": "0x6c458453d35753703ad25632deec20a29faf8531942ec109e6eb0650316a2bc",
+    "class_hash": "0x794d5ed2f7eb970f92e0ed9be8f73bbbdf18f7db2a9a296fa12c2d9c33e6ab3",
     "abi": [
       {
         "type": "impl",
@@ -951,11 +772,210 @@ test_compiler_cairo_v240
       }
     ]
   },
+  "resource_metadata": {
+    "name": "dojo::resource_metadata::resource_metadata",
+    "address": null,
+    "class_hash": "0x6a2f06cde4aad60e0b6dd595edebe8dca1fbefe5b36cfc2f46a1d1159757df9",
+    "abi": [
+      {
+        "type": "function",
+        "name": "name",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "unpacked_size",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u32"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "packed_size",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u32"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<core::integer::u8>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<core::integer::u8>"
+          }
+        ]
+      },
+      {
+        "type": "function",
+        "name": "layout",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::array::Span::<core::integer::u8>"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<core::felt252>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<core::felt252>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "dojo::database::introspect::Struct",
+        "members": [
+          {
+            "name": "name",
+            "type": "core::felt252"
+          },
+          {
+            "name": "attrs",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "children",
+            "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+        "members": [
+          {
+            "name": "snapshot",
+            "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+          }
+        ]
+      },
+      {
+        "type": "struct",
+        "name": "dojo::database::introspect::Enum",
+        "members": [
+          {
+            "name": "name",
+            "type": "core::felt252"
+          },
+          {
+            "name": "attrs",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "children",
+            "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+          }
+        ]
+      },
+      {
+        "type": "enum",
+        "name": "dojo::database::introspect::Ty",
+        "variants": [
+          {
+            "name": "Primitive",
+            "type": "core::felt252"
+          },
+          {
+            "name": "Struct",
+            "type": "dojo::database::introspect::Struct"
+          },
+          {
+            "name": "Enum",
+            "type": "dojo::database::introspect::Enum"
+          },
+          {
+            "name": "Tuple",
+            "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+          },
+          {
+            "name": "Array",
+            "type": "core::integer::u32"
+          }
+        ]
+      },
+      {
+        "type": "function",
+        "name": "schema",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "dojo::database::introspect::Ty"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "struct",
+        "name": "dojo::resource_metadata::ResourceMetadata",
+        "members": [
+          {
+            "name": "resource_id",
+            "type": "core::felt252"
+          },
+          {
+            "name": "metadata_uri",
+            "type": "core::array::Span::<core::felt252>"
+          }
+        ]
+      },
+      {
+        "type": "function",
+        "name": "ensure_abi",
+        "inputs": [
+          {
+            "name": "model",
+            "type": "dojo::resource_metadata::ResourceMetadata"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "view"
+      },
+      {
+        "type": "event",
+        "name": "dojo::resource_metadata::resource_metadata::Event",
+        "kind": "enum",
+        "variants": []
+      }
+    ],
+    "reads": [],
+    "writes": [],
+    "computed": []
+  },
   "contracts": [
     {
       "name": "cairo_v240::cairo_v240",
       "address": null,
-      "class_hash": "0x714353d2a54cfd74820f89c19d8911a379214d5d4ccf369d74b5f5844dc565f",
+      "class_hash": "0x6517f8b97f269ae354fabcafe7428eda4ce60efbecc55dad8ac662144b8f469",
       "abi": [
         {
           "type": "event",

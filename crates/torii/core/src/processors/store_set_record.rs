@@ -4,7 +4,7 @@ use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt};
+use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tokio::sync::RwLock;
@@ -43,7 +43,7 @@ where
         _world: &WorldContractReader<P>,
         db: Arc<RwLock<Sql>>,
         _block: &BlockWithTxs,
-        _transaction_receipt: &InvokeTransactionReceipt,
+        _transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
@@ -56,8 +56,10 @@ where
         let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
         let keys = event.data[keys_start..keys_end].to_vec();
 
-        let values_start = keys_end + 2;
-        let values_end: usize = values_start + usize::from(u8::try_from(event.data[keys_end + 1])?);
+        // keys_end is already the length of the values array.
+
+        let values_start = keys_end + 1;
+        let values_end: usize = values_start + usize::from(u8::try_from(event.data[keys_end])?);
 
         let values = event.data[values_start..values_end].to_vec();
         let mut keys_and_unpacked = [keys, values].concat();

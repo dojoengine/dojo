@@ -1,5 +1,6 @@
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
@@ -40,6 +41,7 @@ pub fn handle_model_struct(
         diagnostics.push(PluginDiagnostic {
             message: "Model must define at least one #[key] attribute".into(),
             stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
+            severity: Severity::Error,
         });
     }
 
@@ -47,6 +49,7 @@ pub fn handle_model_struct(
         diagnostics.push(PluginDiagnostic {
             message: "Model must define at least one member that is not a key".into(),
             stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
+            severity: Severity::Error,
         });
     }
 
@@ -170,7 +173,10 @@ pub fn handle_model_struct(
                     "type_name".to_string(),
                     RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
-                ("schema_introspection".to_string(), handle_introspect_struct(db, struct_ast)),
+                (
+                    "schema_introspection".to_string(),
+                    handle_introspect_struct(db, &mut diagnostics, struct_ast),
+                ),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
             ]),

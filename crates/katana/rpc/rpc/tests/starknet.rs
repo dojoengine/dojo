@@ -1,22 +1,22 @@
-use std::fs::{self, File};
+use std::fs::{self};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
 use katana_core::sequencer::SequencerConfig;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionReceipt, FieldElement, FlattenedSierraClass,
-    MaybePendingTransactionReceipt, TransactionFinalityStatus, TransactionReceipt,
+    BlockId, BlockTag, DeclareTransactionReceipt, FieldElement, MaybePendingTransactionReceipt,
+    TransactionFinalityStatus, TransactionReceipt,
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
+
+use crate::common::prepare_contract_declaration_params;
+
+mod common;
 
 const WAIT_TX_DELAY_MILLIS: u64 = 1000;
 
@@ -174,30 +174,4 @@ async fn test_send_declare_and_deploy_legacy_contract() {
     );
 
     sequencer.stop().expect("failed to stop sequencer");
-}
-
-fn prepare_contract_declaration_params(
-    artifact_path: &PathBuf,
-) -> Result<(FlattenedSierraClass, FieldElement)> {
-    let flattened_class = get_flattened_class(artifact_path)
-        .map_err(|e| anyhow!("error flattening the contract class: {e}"))?;
-    let compiled_class_hash = get_compiled_class_hash(artifact_path)
-        .map_err(|e| anyhow!("error computing compiled class hash: {e}"))?;
-    Ok((flattened_class, compiled_class_hash))
-}
-
-fn get_flattened_class(artifact_path: &PathBuf) -> Result<FlattenedSierraClass> {
-    let file = File::open(artifact_path)?;
-    let contract_artifact: SierraClass = serde_json::from_reader(&file)?;
-    Ok(contract_artifact.flatten()?)
-}
-
-fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
-    let file = File::open(artifact_path)?;
-    let casm_contract_class: ContractClass = serde_json::from_reader(file)?;
-    let casm_contract = CasmContractClass::from_contract_class(casm_contract_class, true)
-        .map_err(|e| anyhow!("CasmContractClass from ContractClass error: {e}"))?;
-    let res = serde_json::to_string_pretty(&casm_contract)?;
-    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
-    Ok(compiled_class.class_hash()?)
 }

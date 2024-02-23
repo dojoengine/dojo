@@ -8,9 +8,9 @@ use option::OptionTrait;
 use core::{result::ResultTrait, traits::Into};
 use debug::PrintTrait;
 
-use dojo::executor::executor;
 use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::packing::{shl, shr};
+use dojo::resource_metadata::resource_metadata;
 
 /// Deploy classhash with calldata for constructor
 ///
@@ -41,20 +41,17 @@ fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> Co
 }
 
 fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
-    // deploy executor
-    let constructor_calldata = array::ArrayTrait::new();
-    let (executor_address, _) = deploy_syscall(
-        executor::TEST_CLASS_HASH.try_into().unwrap(), 0, constructor_calldata.span(), false
-    )
-        .unwrap();
+    let salt = testing::get_available_gas();
+
     // deploy world
     let (world_address, _) = deploy_syscall(
         world::TEST_CLASS_HASH.try_into().unwrap(),
-        0,
-        array![executor_address.into(), dojo::base::base::TEST_CLASS_HASH].span(),
+        salt.into(),
+        array![dojo::base::base::TEST_CLASS_HASH].span(),
         false
     )
         .unwrap();
+
     let world = IWorldDispatcher { contract_address: world_address };
 
     // register models
@@ -98,6 +95,7 @@ fn end(start: u128, name: felt252) {
     };
 
     let name: felt252 = (name % GAS_OFFSET.into()).try_into().unwrap();
-    let used_gas = (start - gas_after - 1770).into() * GAS_OFFSET;
+    // Q?: What's this 1070 value that needed to be adjusted?
+    let used_gas = (start - gas_after - 1070).into() * GAS_OFFSET;
     (used_gas + name).print();
 }

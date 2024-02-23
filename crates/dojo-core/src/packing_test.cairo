@@ -56,7 +56,7 @@ fn test_pack_unpack_felt252_u128() {
     let mut packing: felt252 = 0;
     let mut offset = 0;
     pack_inner(@1337, 128, ref packing, ref offset, ref packed);
-    pack_inner(@420, 252, ref packing, ref offset, ref packed);
+    pack_inner(@420, 251, ref packing, ref offset, ref packed);
     packed.append(packing);
 
     let mut unpacking: felt252 = packed.pop_front().unwrap();
@@ -148,7 +148,6 @@ fn test_pack_unpack_types() {
     let mut packing: felt252 = 0;
     let mut offset = 0;
 
-    let mut i: u8 = 0;
     pack_inner(@3, 8, ref packing, ref offset, ref packed);
     pack_inner(@14, 16, ref packing, ref offset, ref packed);
     pack_inner(@59, 32, ref packing, ref offset, ref packed);
@@ -353,4 +352,18 @@ fn test_calculate_packed_size() {
     let mut layout = array![32, 64, 128, 28].span();
     let got = calculate_packed_size(ref layout);
     assert(got == 2, 'invalid length');
+}
+
+#[test]
+#[available_gas(9000000)]
+#[should_panic(expected: ('Invalid layout size',))]
+fn test_pack_max_bits_value() {
+    let mut unpacked = array![1];
+    let mut layout = array![253];
+
+    let mut layout_span = layout.span();
+    let mut unpacked_span = unpacked.span();
+
+    let mut packed = array![];
+    pack(ref packed, ref unpacked_span, ref layout_span);
 }

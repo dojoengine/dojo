@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, InvokeTransactionReceipt, InvokeTransactionV1};
+use starknet::core::types::{BlockWithTxs, Event, Transaction, TransactionReceipt};
 use starknet::providers::Provider;
 use tokio::sync::RwLock;
 
@@ -37,7 +37,7 @@ where
         world: &WorldContractReader<P>,
         db: Arc<RwLock<Sql>>,
         block: &BlockWithTxs,
-        invoke_receipt: &InvokeTransactionReceipt,
+        transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error>;
@@ -61,8 +61,8 @@ pub trait TransactionProcessor<P: Provider + Sync> {
         db: Arc<RwLock<Sql>>,
         provider: &P,
         block: &BlockWithTxs,
-        invoke_receipt: &InvokeTransactionReceipt,
-        transaction: &InvokeTransactionV1,
+        transaction_receipt: &TransactionReceipt,
+        transaction: &Transaction,
         transaction_id: &str,
     ) -> Result<(), Error>;
 }
