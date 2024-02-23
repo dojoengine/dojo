@@ -12128,7 +12128,7 @@ dependencies = [
 [[package]]
 name = "starknet_in_rust"
 version = "0.4.0"
-source = "git+https://github.com/dojoengine/starknet_in_rust.git?rev=8a95b3f#8a95b3faacdecf27399184d36fb884815d9113d5"
+source = "git+https://github.com/dojoengine/starknet_in_rust.git?rev=47b65ca#47b65ca24b397c4c8886b6b1d8eb50e76c87d714"
 dependencies = [
  "anyhow",
  "auto_impl",

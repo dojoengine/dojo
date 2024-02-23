@@ -15,6 +15,7 @@ use sir::state::contract_class_cache::ContractClassCache;
 use sir::state::state_api::StateReader;
 use sir::state::state_cache::StorageEntry;
 use sir::transaction::{Address, ClassHash, CompiledClassHash};
+use sir::Felt252;
 
 use super::utils;
 use crate::abstraction::StateProviderDb;
@@ -28,7 +29,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         match self.0.class_hash_of_contract(utils::to_address(contract_address)) {
             Ok(Some(value)) => Ok(utils::to_sir_class_hash(&value)),
 
-            Ok(None) => Err(StateError::NoneClassHash(contract_address.clone())),
+            Ok(None) => Ok(ClassHash::default()),
             Err(e) => Err(StateError::CustomError(e.to_string())),
         }
     }
@@ -62,7 +63,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         match self.0.nonce(utils::to_address(contract_address)) {
             Ok(Some(value)) => Ok(utils::to_sir_felt(&value)),
 
-            Ok(None) => Err(StateError::NoneNonce(contract_address.clone())),
+            Ok(None) => Ok(Felt252::ZERO),
             Err(e) => Err(StateError::CustomError(e.to_string())),
         }
     }
@@ -74,7 +75,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         match self.0.storage(address, key) {
             Ok(Some(value)) => Ok(utils::to_sir_felt(&value)),
 
-            Ok(None) => Err(StateError::NoneStorage(storage_entry.clone())),
+            Ok(None) => Ok(Felt252::ZERO),
             Err(e) => Err(StateError::CustomError(e.to_string())),
         }
     }

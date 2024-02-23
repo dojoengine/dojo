@@ -15,7 +15,7 @@ use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithH
 use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateProvider;
 use sir::definitions::block_context::{
-    BlockContext, FeeTokenAddresses, GasPrices, StarknetOsConfig,
+    self, BlockContext, FeeTokenAddresses, GasPrices, StarknetOsConfig,
 };
 use sir::state::contract_class_cache::PermanentContractClassCache;
 use sir::state::{cached_state, BlockInfo};
@@ -88,18 +88,20 @@ impl<'a> StarknetVMProcessor<'a> {
             utils::to_sir_address(&cfg_env.fee_token_addresses.strk),
         );
 
+        let gas_price = GasPrices {
+            eth_l1_gas_price: block_env.l1_gas_prices.eth as u128,
+            strk_l1_gas_price: block_env.l1_gas_prices.strk as u128,
+        };
+
         let block_info = BlockInfo {
+            gas_price,
             block_number: block_env.number,
             block_timestamp: block_env.timestamp,
             sequencer_address: utils::to_sir_address(&block_env.sequencer_address),
-            gas_price: GasPrices {
-                eth_l1_gas_price: block_env.l1_gas_prices.eth as u128,
-                strk_l1_gas_price: block_env.l1_gas_prices.strk as u128,
-            },
         };
 
         let block_context = BlockContext::new(
-            StarknetOsConfig::new(chain_id, fee_token_addreses, GasPrices::default()),
+            StarknetOsConfig::new(chain_id, fee_token_addreses),
             Default::default(),
             Default::default(),
             cfg_env.vm_resource_fee_cost.clone(),
@@ -121,14 +123,16 @@ impl<'a> StarknetVMProcessor<'a> {
         let number = header.number;
         let timestamp = header.timestamp;
         let sequencer_address = utils::to_sir_address(&header.sequencer_address);
-        let eth_l1_gas_price = header.gas_prices.eth as u128;
-        let strk_l1_gas_price = header.gas_prices.strk as u128;
+
+        let gas_prices = block_context::GasPrices {
+            eth_l1_gas_price: header.gas_prices.eth as u128,
+            strk_l1_gas_price: header.gas_prices.strk as u128,
+        };
 
         self.block_context.block_info_mut().block_number = number;
+        self.block_context.block_info_mut().gas_price = gas_prices;
         self.block_context.block_info_mut().block_timestamp = timestamp;
         self.block_context.block_info_mut().sequencer_address = sequencer_address;
-        self.block_context.block_info_mut().gas_price.eth_l1_gas_price = eth_l1_gas_price;
-        self.block_context.block_info_mut().gas_price.strk_l1_gas_price = strk_l1_gas_price;
     }
 }
 
