@@ -176,10 +176,10 @@ async fn update_manifest_abis(
     inner_helper::<Contract>(manifest_dir, &mut local_manifest.world, chain_id).await;
     inner_helper::<Class>(manifest_dir, &mut local_manifest.base, chain_id).await;
     for contract in local_manifest.contracts.iter_mut() {
-        inner_helper::<DojoContract>(&manifest_dir, contract, chain_id).await;
+        inner_helper::<DojoContract>(manifest_dir, contract, chain_id).await;
     }
     for model in local_manifest.models.iter_mut() {
-        inner_helper::<DojoModel>(&manifest_dir, model, chain_id).await;
+        inner_helper::<DojoModel>(manifest_dir, model, chain_id).await;
     }
 }
 

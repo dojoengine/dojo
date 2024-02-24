@@ -47,7 +47,7 @@ pub async fn execute(
             return Err(anyhow!("Run scarb migrate before running this command"));
         }
 
-        Some(extract_events(&DeployedManifest::load_from_path(&deployed_manifest)?, &manifest_dir)?)
+        Some(extract_events(&DeployedManifest::load_from_path(&deployed_manifest)?, manifest_dir)?)
     } else {
         None
     };

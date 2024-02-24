@@ -234,7 +234,7 @@ impl DevArgs {
             previous_manifest.clone(),
         )) {
             Ok((manifest, address)) => {
-                previous_manifest = Some(manifest.into());
+                previous_manifest = Some(manifest);
                 world_address = address;
             }
             Err(error) => {

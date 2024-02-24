@@ -324,6 +324,7 @@ fn update_manifest(
 
 /// Finds the inline modules annotated as models in the given crate_ids and
 /// returns the corresponding Models.
+#[allow(clippy::type_complexity)]
 fn get_dojo_model_artifacts(
     db: &RootDatabase,
     aux_data: &DojoAuxData,
@@ -386,6 +387,7 @@ fn get_dojo_computed_values(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn get_dojo_contract_artifacts(
     db: &RootDatabase,
     module_id: &ModuleId,
@@ -455,7 +457,7 @@ where
     let manifest_toml = toml::to_string_pretty(&manifest)?;
     let abi_json = serde_json::to_string_pretty(&abi)?;
 
-    let full_manifest_path = manifest_dir.join(&relative_manifest_path);
+    let full_manifest_path = manifest_dir.join(relative_manifest_path);
     let full_abi_path = manifest_dir.join(&relative_abi_path);
 
     // Create the directory if it doesn't exist
