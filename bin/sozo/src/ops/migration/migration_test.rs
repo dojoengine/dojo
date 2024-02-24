@@ -4,7 +4,7 @@ use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
-use dojo_world::manifest::Manifest;
+use dojo_world::manifest::BaseManifest;
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
 use scarb::ops;
@@ -83,16 +83,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         ExecutionEncoding::New,
     );
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &migration,
-            &account,
-            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &migration,
+        &account,
+        Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
+    )
+    .await
+    .is_err());
     sequencer.stop().unwrap();
 }
 
@@ -100,7 +98,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 fn migrate_world_without_seed_will_fail() {
     let target_dir =
         Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
-    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let manifest = BaseManifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
     let res = prepare_for_migration(None, None, target_dir, world);
     assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
@@ -128,7 +126,7 @@ async fn migration_from_remote() {
         ExecutionEncoding::New,
     );
 
-    let manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let manifest = BaseManifest::load_from_path(target_dir.join("manifest.json")).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
     let migration =
@@ -136,8 +134,8 @@ async fn migration_from_remote() {
 
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
-    let local_manifest = Manifest::load_from_path(target_dir.join("manifest.json")).unwrap();
-    let remote_manifest = Manifest::load_from_remote(
+    let local_manifest = BaseManifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let remote_manifest = BaseManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),
     )

@@ -1,11 +1,15 @@
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
+use camino::Utf8PathBuf;
+use dojo_lang::compiler::{BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::manifest::{Manifest, ManifestError};
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::manifest::{
+    AbstractManifestError, BaseManifest, DeployedManifest, ManifestMethods, OverlayManifest,
+};
+use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
@@ -19,7 +23,9 @@ use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{
     BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
 };
-use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_contract_address, parse_cairo_short_string,
+};
 use starknet::providers::jsonrpc::HttpTransport;
 
 #[cfg(test)]
@@ -38,21 +44,30 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::transaction::TransactionOptions;
 use crate::commands::options::world::WorldOptions;
 
-pub async fn execute<U>(ws: &Workspace<'_>, args: MigrateArgs, target_dir: U) -> Result<()>
-where
-    U: AsRef<Path>,
-{
+pub async fn execute(
+    ws: &Workspace<'_>,
+    args: MigrateArgs,
+    env_metadata: Option<Environment>,
+) -> Result<()> {
     let ui = ws.config().ui();
     let MigrateArgs { account, starknet, world, name, .. } = args;
 
     // Setup account for migration and fetch world address if it exists.
 
-    let (world_address, account) = setup_env(ws, account, starknet, world, name.as_ref()).await?;
+    let (world_address, account, chain_id) =
+        setup_env(ws, account, starknet, world, name.as_ref(), env_metadata.as_ref()).await?;
+    ui.print(format!("Chain ID: {}\n", &chain_id));
+
+    // its path to a file so `parent` should never return `None`
+    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+
+    let target_dir = ws.target_dir().path_existent().unwrap();
+    let target_dir = target_dir.join(ws.config().profile().as_str());
 
     // Load local and remote World manifests.
 
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&target_dir, &account, world_address, &ui).await?;
+        load_world_manifests(&manifest_dir, &account, world_address, &ui).await?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -76,47 +91,56 @@ where
         )
         .await?;
 
-        update_world_manifest(ws, local_manifest, remote_manifest, target_dir, world_address)
-            .await?;
+        update_manifests(
+            ws,
+            local_manifest,
+            remote_manifest,
+            &manifest_dir,
+            world_address,
+            &chain_id,
+        )
+        .await?;
     }
 
     Ok(())
 }
 
-async fn update_world_manifest<U>(
+async fn update_manifests(
     ws: &Workspace<'_>,
-    mut local_manifest: Manifest,
-    remote_manifest: Option<Manifest>,
-    target_dir: U,
+    local_manifest: BaseManifest,
+    remote_manifest: Option<DeployedManifest>,
+    manifest_dir: &Utf8PathBuf,
     world_address: FieldElement,
-) -> Result<()>
-where
-    U: AsRef<Path>,
-{
+    chain_id: &str,
+) -> Result<()> {
     let ui = ws.config().ui();
-    ui.print("\n✨ Updating manifest.json...");
-    local_manifest.world.address = Some(world_address);
+    ui.print("\n✨ Updating manifests...");
+
+    let mut local_manifest: DeployedManifest = local_manifest.into();
+    local_manifest.world.inner.address = Some(world_address);
 
     let base_class_hash = match remote_manifest {
-        Some(manifest) => manifest.base.class_hash,
-        None => local_manifest.base.class_hash,
+        Some(manifest) => *manifest.base.inner.class_hash(),
+        None => *local_manifest.base.inner.class_hash(),
     };
 
     local_manifest.contracts.iter_mut().for_each(|c| {
         let salt = generate_salt(&c.name);
-        c.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
+        c.inner.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
+    
 
-    local_manifest.write_to_path(target_dir.as_ref().join("manifest.json"))?;
+    local_manifest
+        .write_to_path(&manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id))?;
     ui.print("\n✨ Done.");
 
     Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn apply_diff<U, P, S>(
+pub(crate) async fn apply_diff<P, S>(
     ws: &Workspace<'_>,
-    target_dir: U,
+    target_dir: &Utf8PathBuf,
     diff: WorldDiff,
     name: Option<String>,
     world_address: Option<FieldElement>,
@@ -124,7 +148,6 @@ pub(crate) async fn apply_diff<U, P, S>(
     txn_config: Option<TransactionOptions>,
 ) -> Result<FieldElement>
 where
-    U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
@@ -166,15 +189,22 @@ pub(crate) async fn setup_env(
     starknet: StarknetOptions,
     world: WorldOptions,
     name: Option<&String>,
-) -> Result<(Option<FieldElement>, SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>)> {
+    env: Option<&Environment>,
+) -> Result<(
+    Option<FieldElement>,
+    SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    String,
+)> {
     let ui = ws.config().ui();
-    let metadata = dojo_metadata_from_workspace(ws);
-    let env = metadata.as_ref().and_then(|inner| inner.env());
 
     let world_address = world.address(env).ok();
 
-    let account = {
+    let (account, chain_id) = {
         let provider = starknet.provider(env)?;
+        let chain_id = provider.chain_id().await?;
+        let chain_id = parse_cairo_short_string(&chain_id)
+            .with_context(|| "Cannot parse chain_id as string")?;
+
         let mut account = account.account(provider, env).await?;
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
@@ -186,7 +216,7 @@ pub(crate) async fn setup_env(
         }
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-            Ok(_) => Ok(account),
+            Ok(_) => Ok((account, chain_id)),
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
                 Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
             }
@@ -195,31 +225,40 @@ pub(crate) async fn setup_env(
     }
     .with_context(|| "Problem initializing account for migration.")?;
 
-    Ok((world_address, account))
+    Ok((world_address, account, chain_id))
 }
 
-async fn load_world_manifests<U, P, S>(
-    target_dir: U,
+async fn load_world_manifests<P, S>(
+    manifest_dir: &Utf8PathBuf,
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
-) -> Result<(Manifest, Option<Manifest>)>
+) -> Result<(BaseManifest, Option<DeployedManifest>)>
 where
-    U: AsRef<Path>,
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let local_manifest = Manifest::load_from_path(target_dir.as_ref().join("manifest.json"))?;
+    let mut local_manifest =
+        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
+
+    let overlay_path = manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR);
+    if overlay_path.exists() {
+        let overlay_manifest =
+            OverlayManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR))?;
+
+        // merge user defined changes to base manifest
+        local_manifest.merge(overlay_manifest);
+    }
 
     let remote_manifest = if let Some(address) = world_address {
-        match Manifest::load_from_remote(account.provider(), address).await {
+        match DeployedManifest::load_from_remote(account.provider(), address).await {
             Ok(manifest) => {
                 ui.print_sub(format!("Found remote World: {address:#x}"));
                 Some(manifest)
             }
-            Err(ManifestError::RemoteWorldNotFound) => None,
+            Err(AbstractManifestError::RemoteWorldNotFound) => None,
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
                 return Err(anyhow!("Failed to build remote World state: {e}"));

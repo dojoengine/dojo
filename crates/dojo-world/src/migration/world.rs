@@ -5,7 +5,9 @@ use convert_case::{Case, Casing};
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::{BaseManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME};
+use crate::manifest::{
+    BaseManifest, DeployedManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -21,7 +23,7 @@ pub struct WorldDiff {
 }
 
 impl WorldDiff {
-    pub fn compute(local: BaseManifest, remote: Option<BaseManifest>) -> WorldDiff {
+    pub fn compute(local: BaseManifest, remote: Option<DeployedManifest>) -> WorldDiff {
         let models = local
             .models
             .iter()

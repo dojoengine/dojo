@@ -125,7 +125,9 @@ pub struct DojoContract {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+
 pub struct OverlayDojoContract {
+    pub name: SmolStr,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
 }
@@ -184,7 +186,7 @@ impl From<BaseManifest> for DeployedManifest {
         DeployedManifest {
             world: value.world.into(),
             base: value.base,
-            contracts: vec![],
+            contracts: value.contracts,
             models: value.models,
         }
     }
@@ -198,6 +200,7 @@ pub struct DeployedManifest {
     pub models: Vec<Manifest<DojoModel>>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct OverlayManifest {
     pub contracts: Vec<OverlayDojoContract>,
 }
@@ -245,10 +248,35 @@ impl BaseManifest {
         let base: Manifest<Class> =
             toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
 
-        let contracts = elements_from_path::<DojoContract>(contract_dir)?;
-        let models = elements_from_path::<DojoModel>(model_dir)?;
+        let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
+        let models = elements_from_path::<DojoModel>(&model_dir)?;
 
         Ok(Self { world, base, contracts, models })
+    }
+
+    pub fn merge(&mut self, overlay: OverlayManifest) {
+        let mut base_map = HashMap::new();
+
+        for contract in self.contracts.iter_mut() {
+            base_map.insert(contract.name.clone(), contract);
+        }
+
+        for contract in overlay.contracts {
+            base_map
+                .get_mut(&contract.name)
+                .expect("qed; overlay contract not found")
+                .inner
+                .merge(contract);
+        }
+    }
+}
+
+impl OverlayManifest {
+    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let contract_dir = path.join("contracts");
+        let contracts = overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?;
+
+        Ok(Self { contracts })
     }
 }
 
@@ -262,12 +290,13 @@ impl DeployedManifest {
         let base: Manifest<Class> =
             toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
 
-        let contracts = elements_from_path::<DojoContract>(contract_dir)?;
-        let models = elements_from_path::<DojoModel>(model_dir)?;
+        let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
+        let models = elements_from_path::<DojoModel>(&model_dir)?;
 
         Ok(Self { world, base, contracts, models })
     }
 
+    // TODO: write to a single file instead
     pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path)?;
 
@@ -547,7 +576,7 @@ where
     Ok(())
 }
 
-fn elements_from_path<T>(path: Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
+fn elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
 where
     T: DeserializeOwned + ManifestMethods,
 {
@@ -558,6 +587,26 @@ where
         let path = entry.path();
         if path.is_file() {
             let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            elements.push(manifest);
+        } else {
+            continue;
+        }
+    }
+
+    Ok(elements)
+}
+
+fn overlay_elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<T>, AbstractManifestError>
+where
+    T: DeserializeOwned,
+{
+    let mut elements = vec![];
+
+    for entry in path.read_dir()? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let manifest: T = toml::from_str(&fs::read_to_string(path)?).unwrap();
             elements.push(manifest);
         } else {
             continue;
