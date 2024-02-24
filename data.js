@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708659531524,
+  "lastUpdate": 1708801754756,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1735,6 +1735,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 970430,
             "range": "± 40395",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gian.alarcon@unmsm.edu.pe",
+            "name": "GianMarco",
+            "username": "gianalarcon"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c5eecd0893032d2923e13642522068129deef10",
+          "message": "Feat(torii-grpc): Add total_count on RetrieveEntitiesResponse (#1545)\n\n* Feat: Add total_count on RetrieveEntitiesResponse\r\n\r\n* Feat: add count_rows\r\n\r\n* fmt\r\n\r\n* Fix sql count_query",
+          "timestamp": "2024-02-24T10:59:31-08:00",
+          "tree_id": "3cc9944739f0ebc1f2087c37ef9e7c98f1cf6011",
+          "url": "https://github.com/dojoengine/dojo/commit/8c5eecd0893032d2923e13642522068129deef10"
+        },
+        "date": 1708801754294,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 973130,
+            "range": "± 34649",
             "unit": "ns/iter"
           }
         ]
