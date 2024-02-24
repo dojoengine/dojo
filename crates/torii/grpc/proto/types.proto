@@ -51,7 +51,7 @@ message Event {
     // Data of the event
     repeated bytes data = 2;
     // event's transaction hash
-    string transaction_hash = 3;
+    bytes transaction_hash = 3;
 }
 
 message StorageEntry {
