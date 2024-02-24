@@ -720,7 +720,7 @@ mod tests {
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::receipt::Receipt;
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-    use katana_primitives::transaction::{Tx, TxHash, TxWithHash};
+    use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
     use starknet::macros::felt;
 
     use super::DbProvider;
@@ -736,7 +736,7 @@ mod tests {
             header,
             body: vec![TxWithHash {
                 hash: 24u8.into(),
-                transaction: Tx::Invoke(Default::default()),
+                transaction: Tx::Invoke(InvokeTx::V1(Default::default())),
             }],
         }
         .seal();
@@ -844,7 +844,7 @@ mod tests {
         // assert values are populated correctly
 
         assert_eq!(tx_hash, tx.hash);
-        assert_eq!(tx.transaction, Tx::Invoke(Default::default()));
+        assert_eq!(tx.transaction, Tx::Invoke(InvokeTx::V1(Default::default())));
 
         assert_eq!(tx_count, 1);
         assert_eq!(body_indices.tx_offset, 0);

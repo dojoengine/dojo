@@ -26,7 +26,7 @@ pub fn estimate_gas_last(
     account: &OwnerAccount,
     calls: Vec<BenchCall>,
     contract: FieldElement,
-) -> Result<u64> {
+) -> Result<FieldElement> {
     let mut calls = parse_calls(calls, contract);
     let all = calls.clone();
     calls.pop().expect("Empty calls vector"); // remove last call
@@ -43,7 +43,7 @@ pub fn estimate_gas(
     account: &OwnerAccount,
     call: BenchCall,
     contract: FieldElement,
-) -> Result<u64> {
+) -> Result<FieldElement> {
     let calls = parse_calls(vec![call], contract);
     let _rt = RUNTIME.enter();
     block_on(async move { estimate_calls(account, calls).await })
@@ -53,7 +53,7 @@ pub fn estimate_gas_multiple(
     account: &OwnerAccount,
     calls: Vec<BenchCall>,
     contract: FieldElement,
-) -> Result<u64> {
+) -> Result<FieldElement> {
     let calls = parse_calls(calls, contract);
     let _rt = RUNTIME.enter();
     block_on(async move { estimate_calls(account, calls).await })
@@ -63,7 +63,7 @@ pub async fn estimate_gas_async(
     account: &OwnerAccount,
     calls: Vec<BenchCall>,
     contract: FieldElement,
-) -> Result<u64> {
+) -> Result<FieldElement> {
     let calls = parse_calls(calls, contract);
     estimate_calls(account, calls).await
 }
