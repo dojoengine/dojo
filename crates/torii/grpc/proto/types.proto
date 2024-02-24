@@ -49,7 +49,7 @@ message Event {
     // The event's hashed keys
     bytes hashed_keys = 1;
     // Data of the event
-    repeated string data = 2;
+    repeated bytes data = 2;
     // event's transaction hash
     string transaction_hash = 3;
 }
