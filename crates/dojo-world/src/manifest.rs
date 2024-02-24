@@ -128,8 +128,8 @@ pub struct DojoContract {
 
 pub struct OverlayDojoContract {
     pub name: SmolStr,
-    pub reads: Vec<String>,
-    pub writes: Vec<String>,
+    pub reads: Option<Vec<String>>,
+    pub writes: Option<Vec<String>>,
 }
 
 #[serde_as]
@@ -640,8 +640,12 @@ impl ManifestMethods for DojoContract {
     }
 
     fn merge(&mut self, old: Self::OverlayType) {
-        self.reads = old.reads;
-        self.writes = old.writes;
+        if let Some(reads) = old.reads {
+            self.reads = reads;
+        }
+        if let Some(writes) = old.writes {
+            self.writes = writes;
+        }
     }
 }
 
