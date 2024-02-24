@@ -5,9 +5,7 @@ use convert_case::{Case, Casing};
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
-use crate::manifest::{
-    BaseManifest, BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME, WORLD_CONTRACT_NAME,
-};
+use crate::manifest::{BaseManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME};
 
 #[cfg(test)]
 #[path = "world_test.rs"]
@@ -18,7 +16,6 @@ mod tests;
 pub struct WorldDiff {
     pub world: ContractDiff,
     pub base: ClassDiff,
-    pub resource_metadata: ClassDiff,
     pub contracts: Vec<ContractDiff>,
     pub models: Vec<ClassDiff>,
 }
@@ -30,7 +27,7 @@ impl WorldDiff {
             .iter()
             .map(|model| ClassDiff {
                 name: model.name.to_string(),
-                local: model.class_hash,
+                local: *model.inner.class_hash(),
                 remote: remote.as_ref().and_then(|m| {
                     // Remote models are detected from events, where only the struct
                     // name (pascal case) is emitted.
@@ -44,7 +41,7 @@ impl WorldDiff {
                         .from_case(Case::Snake)
                         .to_case(Case::Pascal);
 
-                    m.models.iter().find(|e| e.name == model_name).map(|s| s.class_hash)
+                    m.models.iter().find(|e| e.name == model_name).map(|s| *s.inner.class_hash())
                 }),
             })
             .collect::<Vec<_>>();
@@ -54,35 +51,29 @@ impl WorldDiff {
             .iter()
             .map(|contract| ContractDiff {
                 name: contract.name.to_string(),
-                local: contract.class_hash,
+                local: *contract.inner.class_hash(),
                 remote: remote.as_ref().and_then(|m| {
                     m.contracts
                         .iter()
-                        .find(|r| r.class_hash == contract.class_hash)
-                        .map(|r| r.class_hash)
+                        .find(|r| r.inner.class_hash() == contract.inner.class_hash())
+                        .map(|r| *r.inner.class_hash())
                 }),
             })
             .collect::<Vec<_>>();
 
         let base = ClassDiff {
             name: BASE_CONTRACT_NAME.into(),
-            local: local.base.class_hash,
-            remote: remote.as_ref().map(|m| m.base.class_hash),
-        };
-
-        let resource_metadata = ClassDiff {
-            name: RESOURCE_METADATA_CONTRACT_NAME.into(),
-            local: local.resource_metadata.class_hash,
-            remote: remote.as_ref().map(|m| m.resource_metadata.class_hash),
+            local: *local.base.inner.class_hash(),
+            remote: remote.as_ref().map(|m| *m.base.inner.class_hash()),
         };
 
         let world = ContractDiff {
             name: WORLD_CONTRACT_NAME.into(),
-            local: local.world.class_hash,
-            remote: remote.map(|m| m.world.class_hash),
+            local: *local.world.inner.class_hash(),
+            remote: remote.map(|m| *m.world.inner.class_hash()),
         };
 
-        WorldDiff { world, base, resource_metadata, contracts, models }
+        WorldDiff { world, base, contracts, models }
     }
 
     pub fn count_diffs(&self) -> usize {
