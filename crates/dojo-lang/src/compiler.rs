@@ -41,6 +41,7 @@ pub const MANIFESTS_DIR: &str = "manifests";
 pub const BASE_DIR: &str = "base";
 pub const OVERLAYS_DIR: &str = "overlays";
 pub const DEPLOYMENTS_DIR: &str = "deployments";
+pub const ABIS_DIR: &str = "abis";
 
 pub const CONTRACTS_DIR: &str = "contracts";
 pub const MODELS_DIR: &str = "models";
@@ -210,7 +211,7 @@ fn update_manifest(
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
     let base_dir = ws.manifest_path().parent().unwrap().join(MANIFESTS_DIR).join(BASE_DIR);
-    let abi_dir = ws.manifest_path().parent().unwrap().join("abis");
+    let abi_dir = ws.manifest_path().parent().unwrap().join(ABIS_DIR).join(BASE_DIR);
 
     fn get_compiled_artifact_from_map<'a>(
         artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
@@ -441,7 +442,7 @@ where
     let full_manifest_path = base_dir.join(name.clone()).with_extension("toml");
     let full_abi_path = abi_dir.join(name.clone()).with_extension("json");
 
-    let abi_relative_path = Utf8PathBuf::new().join("abis").join(name).with_extension("json");
+    let abi_relative_path = Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR).join(name).with_extension("json");
 
     if abi.is_some() {
         manifest.inner.set_abi(Some(abi_relative_path.to_string()));

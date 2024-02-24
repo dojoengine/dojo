@@ -128,7 +128,6 @@ async fn update_manifests(
         let salt = generate_salt(&c.name);
         c.inner.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
-    
 
     local_manifest
         .write_to_path(&manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id))?;
