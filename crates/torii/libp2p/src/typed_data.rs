@@ -90,14 +90,19 @@ fn get_preset_types() -> IndexMap<String, Vec<Field>> {
     types
 }
 
-fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<Vec<Field>, Error> {
-    if let Some(fields) = types.get(name) {
-        Ok(fields.clone())
-    } else if let Some(fields) = get_preset_types().get(name) {
-        Ok(fields.clone())
-    } else {
-        Err(Error::InvalidMessageError(format!("Type {} not found", name)))
+// Get the fields of a specific type
+// Looks up both the types hashmap as well as the preset types
+// Returns the fields and the hashmap of types
+fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<(Vec<Field>, IndexMap<String, Vec<Field>>), Error> {
+    let preset_types = get_preset_types();
+    
+    if types.contains_key(name) {
+        return Ok((types[name].clone(), types.clone()));
+    } else if preset_types.contains_key(name) {
+        return Ok((preset_types[name].clone(), preset_types.clone()));
     }
+
+    Err(Error::InvalidMessageError(format!("Type {} not found", name)))
 }
 
 fn get_dependencies(
@@ -111,7 +116,9 @@ fn get_dependencies(
 
     dependencies.push(name.to_string());
 
-    for field in &get_fields(name, types)? {
+    let (fields, types) = get_fields(name, types)?;
+
+    for field in fields {
         let mut field_type = match field {
             Field::SimpleType(simple_field) => simple_field.r#type.clone(),
             Field::ParentType(parent_field) => parent_field.contains.clone(),
@@ -120,7 +127,7 @@ fn get_dependencies(
         field_type = field_type.trim_end_matches("*").to_string();
 
         if types.contains_key(&field_type) && !dependencies.contains(&field_type) {
-            get_dependencies(&field_type, types, dependencies)?;
+            get_dependencies(&field_type, &types, dependencies)?;
         }
     }
 
@@ -142,7 +149,7 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
 
         type_hash += "(";
 
-        let fields = get_fields(&dep, types)?;
+        let (fields, _) = get_fields(&dep, types)?;
         for (idx, field) in fields.iter().enumerate() {
             match field {
                 Field::SimpleType(simple_field) => {
