@@ -93,13 +93,9 @@ fn get_preset_types() -> IndexMap<String, Vec<Field>> {
 // Get the fields of a specific type
 // Looks up both the types hashmap as well as the preset types
 // Returns the fields and the hashmap of types
-fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<(Vec<Field>, IndexMap<String, Vec<Field>>), Error> {
-    let preset_types = get_preset_types();
-    
-    if types.contains_key(name) {
-        return Ok((types[name].clone(), types.clone()));
-    } else if preset_types.contains_key(name) {
-        return Ok((preset_types[name].clone(), preset_types.clone()));
+fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<Vec<Field>, Error> {
+    if let Some(fields) = types.get(name) {
+        return Ok(fields.clone());
     }
 
     Err(Error::InvalidMessageError(format!("Type {} not found", name)))
@@ -116,9 +112,7 @@ fn get_dependencies(
 
     dependencies.push(name.to_string());
 
-    let (fields, types) = get_fields(name, types)?;
-
-    for field in fields {
+    for field in get_fields(name, types)? {
         let mut field_type = match field {
             Field::SimpleType(simple_field) => simple_field.r#type.clone(),
             Field::ParentType(parent_field) => parent_field.contains.clone(),
@@ -149,7 +143,7 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
 
         type_hash += "(";
 
-        let (fields, _) = get_fields(&dep, types)?;
+        let fields = get_fields(&dep, types)?;
         for (idx, field) in fields.iter().enumerate() {
             match field {
                 Field::SimpleType(simple_field) => {
@@ -220,6 +214,7 @@ fn split_long_string(long_str: &str) -> Vec<&str> {
 pub struct Ctx {
     pub base_type: String,
     pub parent_type: String,
+    pub is_preset: bool,
 }
 
 struct FieldInfo {
@@ -235,10 +230,8 @@ impl PrimitiveType {
         name: &str,
         types: &IndexMap<String, Vec<Field>>,
     ) -> Result<FieldInfo, Error> {
-        let preset_types = get_preset_types();
-
         // iter both "types" and "preset_types" to find the field
-        for (idx, (key, value)) in types.iter().chain(preset_types.iter()).enumerate() {
+        for (idx, (key, value)) in types.iter().enumerate() {
             if key == name {
                 return Ok(FieldInfo {
                     name: name.to_string(),
@@ -291,10 +284,19 @@ impl PrimitiveType {
         &self,
         r#type: &str,
         types: &IndexMap<String, Vec<Field>>,
+        preset_types: &IndexMap<String, Vec<Field>>,
         ctx: &mut Ctx,
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
+                println!("r#type: {}", r#type);
+
+                if preset_types.contains_key(r#type) {
+                    ctx.is_preset = true;
+                } else {
+                    ctx.is_preset = false;
+                }
+
                 let mut hashes = Vec::new();
 
                 if ctx.base_type == "enum" {
@@ -327,24 +329,37 @@ impl PrimitiveType {
                                 Error::InvalidMessageError("Invalid enum variant type".to_string())
                             })?;
 
-                        let field_hash = param.encode(field_type, types, ctx)?;
+                        let field_hash = param.encode(field_type, types, preset_types, ctx)?;
                         hashes.push(field_hash);
                     }
 
                     return Ok(poseidon_hash_many(hashes.as_slice()));
                 }
 
-                let type_hash = encode_type(r#type, types)?;
+                let type_hash =
+                    encode_type(r#type, if ctx.is_preset { preset_types } else { types })?;
                 println!("type_hash: {}", type_hash);
                 hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
                     Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
                 })?);
 
                 for (field_name, value) in obj {
-                    let field_type = self.get_value_type(field_name, types)?;
+                    // recheck if we're currently in a preset type
+                    if preset_types.contains_key(r#type) {
+                        ctx.is_preset = true;
+                    } else {
+                        ctx.is_preset = false;
+                    }
+
+                    // pass correct types - preset or types
+                    let field_type = self.get_value_type(
+                        field_name,
+                        if ctx.is_preset { preset_types } else { types },
+                    )?;
                     ctx.base_type = field_type.base_type;
                     ctx.parent_type = r#type.to_string();
-                    let field_hash = value.encode(&field_type.r#type.as_str(), types, ctx)?;
+                    let field_hash =
+                        value.encode(&field_type.r#type.as_str(), types, preset_types, ctx)?;
                     hashes.push(field_hash);
                 }
 
@@ -353,7 +368,7 @@ impl PrimitiveType {
             PrimitiveType::Array(array) => Ok(poseidon_hash_many(
                 array
                     .iter()
-                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, ctx))
+                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, preset_types, ctx))
                     .collect::<Result<Vec<_>, _>>()?
                     .as_slice(),
             )),
@@ -425,7 +440,13 @@ impl Domain {
             object.insert("revision".to_string(), PrimitiveType::String(revision.clone()));
         }
 
-        PrimitiveType::Object(object).encode("StarknetDomain", types, &mut Default::default())
+        // we dont need to pass our preset types here. domain should never use a preset type
+        PrimitiveType::Object(object).encode(
+            "StarknetDomain",
+            types,
+            &IndexMap::new(),
+            &mut Default::default(),
+        )
     }
 }
 
@@ -440,6 +461,8 @@ pub struct TypedData {
 
 impl TypedData {
     pub fn encode(&self, account: FieldElement) -> Result<FieldElement, Error> {
+        let preset_types = get_preset_types();
+
         if self.domain.revision.clone().unwrap_or("1".to_string()) != "1" {
             return Err(Error::InvalidMessageError(
                 "Legacy revision 0 is not supported".to_string(),
@@ -455,6 +478,7 @@ impl TypedData {
         let message_hash = PrimitiveType::Object(self.message.clone()).encode(
             &self.primary_type,
             &self.types,
+            &preset_types,
             &mut Default::default(),
         )?;
 
@@ -546,11 +570,12 @@ mod tests {
             PrimitiveType::String(starknet_keccak("transfer".as_bytes()).to_string());
 
         let types = IndexMap::new();
+        let preset_types = get_preset_types();
 
         let encoded_selector =
-            selector.encode("selector", &types, &mut Default::default()).unwrap();
+            selector.encode("selector", &types, &preset_types, &mut Default::default()).unwrap();
         let raw_encoded_selector =
-            selector_hash.encode("felt", &types, &mut Default::default()).unwrap();
+            selector_hash.encode("felt", &types, &preset_types, &mut Default::default()).unwrap();
 
         assert_eq!(encoded_selector, raw_encoded_selector);
         assert_eq!(encoded_selector, starknet_keccak("transfer".as_bytes()));
