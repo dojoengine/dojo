@@ -54,4 +54,5 @@ message RetrieveEntitiesRequest {
 
 message RetrieveEntitiesResponse {
     repeated types.Entity entities = 1;
+    uint32 total_count = 2;
 }
