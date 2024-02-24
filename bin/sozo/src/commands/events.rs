@@ -55,25 +55,3 @@ impl EventsArgs {
         config.tokio_handle().block_on(events::execute(self, env_metadata, &manifest_dir))
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn events_are_parsed_correctly() {
-        let arg = EventsArgs::parse_from(["event", "Event1,Event2", "--chunk-size", "1"]);
-        assert!(arg.events.unwrap().len() == 2);
-        assert!(arg.from_block.is_none());
-        assert!(arg.to_block.is_none());
-        assert!(arg.chunk_size == 1);
-    }
-
-    #[test]
-    fn extract_events_work_as_expected() {
-        let manifest = BaseManifest::load_from_path("./tests/test_data/manifest.json").unwrap();
-        let result = extract_events(&manifest);
-
-        // we are just collection all events from manifest file so just verifying count should work
-        assert!(result.len() == 13);
-    }
-}

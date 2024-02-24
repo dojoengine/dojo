@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 
 use anyhow::{anyhow, Context, Result};
+use camino::Utf8PathBuf;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
@@ -69,15 +70,12 @@ impl MigrationStrategy {
 
 /// construct migration strategy
 /// evaluate which contracts/classes need to be declared/deployed
-pub fn prepare_for_migration<P>(
+pub fn prepare_for_migration(
     world_address: Option<FieldElement>,
     seed: Option<FieldElement>,
-    target_dir: P,
+    target_dir: &Utf8PathBuf,
     diff: WorldDiff,
-) -> Result<MigrationStrategy>
-where
-    P: AsRef<Path>,
-{
+) -> Result<MigrationStrategy> {
     let entries = fs::read_dir(target_dir)
         .map_err(|err| anyhow!("Failed reading source directory: {err}"))?;
 

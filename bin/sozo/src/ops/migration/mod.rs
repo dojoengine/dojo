@@ -1,4 +1,4 @@
-use std::path::Path;
+
 
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
@@ -322,7 +322,7 @@ where
 }
 
 fn prepare_migration(
-    target_dir: impl AsRef<Path>,
+    target_dir: &Utf8PathBuf,
     diff: WorldDiff,
     name: Option<String>,
     world_address: Option<FieldElement>,

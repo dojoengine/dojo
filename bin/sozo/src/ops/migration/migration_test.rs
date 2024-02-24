@@ -1,10 +1,10 @@
-use camino::Utf8PathBuf;
+use camino::{Utf8Path};
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
-use dojo_world::manifest::BaseManifest;
+use dojo_world::manifest::{BaseManifest, DeployedManifest};
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
 use scarb::ops;
@@ -25,7 +25,9 @@ async fn migrate_with_auto_mine() {
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let migration = prepare_migration("../../examples/spawn-and-move/target/dev".into()).unwrap();
+    let base_dir = "../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base_dir);
+    let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -44,7 +46,9 @@ async fn migrate_with_block_time() {
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let migration = prepare_migration("../../examples/spawn-and-move/target/dev".into()).unwrap();
+    let base = "../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base);
+    let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
 
     let sequencer = TestSequencer::start(
         SequencerConfig { block_time: Some(1000), ..Default::default() },
@@ -65,7 +69,9 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let migration = prepare_migration("../../examples/spawn-and-move/target/dev".into()).unwrap();
+    let base = "../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base);
+    let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
 
     let sequencer = TestSequencer::start(
         Default::default(),
@@ -96,11 +102,11 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
 #[test]
 fn migrate_world_without_seed_will_fail() {
-    let target_dir =
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
-    let manifest = BaseManifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let base = "../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base);
+    let manifest = BaseManifest::load_from_path(&Utf8Path::new(base).to_path_buf()).unwrap();
     let world = WorldDiff::compute(manifest, None);
-    let res = prepare_for_migration(None, None, target_dir, world);
+    let res = prepare_for_migration(None, None, &Utf8Path::new(&target_dir).to_path_buf(), world);
     assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
 }
 
@@ -110,8 +116,8 @@ async fn migration_from_remote() {
     let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let target_dir =
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap();
+    let base = "../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base);
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -126,16 +132,21 @@ async fn migration_from_remote() {
         ExecutionEncoding::New,
     );
 
-    let manifest = BaseManifest::load_from_path(target_dir.join("manifest.json")).unwrap();
+    let manifest = BaseManifest::load_from_path(&Utf8Path::new(base).to_path_buf()).unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration =
-        prepare_for_migration(None, Some(felt!("0x12345")), target_dir.clone(), world).unwrap();
+    let migration = prepare_for_migration(
+        None,
+        Some(felt!("0x12345")),
+        &Utf8Path::new(&target_dir).to_path_buf(),
+        world,
+    )
+    .unwrap();
 
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
-    let local_manifest = BaseManifest::load_from_path(target_dir.join("manifest.json")).unwrap();
-    let remote_manifest = BaseManifest::load_from_remote(
+    let local_manifest = BaseManifest::load_from_path(&Utf8Path::new(base).to_path_buf()).unwrap();
+    let remote_manifest = DeployedManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),
     )
@@ -144,6 +155,6 @@ async fn migration_from_remote() {
 
     sequencer.stop().unwrap();
 
-    assert_eq!(local_manifest.world.class_hash, remote_manifest.world.class_hash);
+    assert_eq!(local_manifest.world.inner.class_hash, remote_manifest.world.inner.class_hash);
     assert_eq!(local_manifest.models.len(), remote_manifest.models.len());
 }

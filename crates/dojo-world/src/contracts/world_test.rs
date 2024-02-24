@@ -21,22 +21,27 @@ async fn test_world_contract_reader() {
     let provider = account.provider();
     let world_address = deploy_world(
         &sequencer,
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
+        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
+        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
     )
     .await;
 
     let _world = WorldContractReader::new(world_address, provider);
 }
 
-pub async fn deploy_world(sequencer: &TestSequencer, path: Utf8PathBuf) -> FieldElement {
-    let manifest = BaseManifest::load_from_path(path.join("manifest.json")).unwrap();
+pub async fn deploy_world(
+    sequencer: &TestSequencer,
+    manifest_dir: &Utf8PathBuf,
+    target_dir: &Utf8PathBuf,
+) -> FieldElement {
+    let manifest = BaseManifest::load_from_path(manifest_dir).unwrap();
     let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();
 
     let strategy = prepare_for_migration(
         None,
         Some(FieldElement::from_hex_be("0x12345").unwrap()),
-        path,
+        target_dir,
         world,
     )
     .unwrap();
@@ -51,7 +56,7 @@ pub async fn deploy_world(sequencer: &TestSequencer, path: Utf8PathBuf) -> Field
         .world
         .unwrap()
         .deploy(
-            manifest.clone().world.class_hash,
+            manifest.clone().world.inner.class_hash,
             vec![base_class_hash],
             &account,
             Default::default(),

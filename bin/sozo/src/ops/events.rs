@@ -4,7 +4,7 @@ use std::fs;
 use anyhow::{anyhow, Context, Error, Result};
 use cairo_lang_starknet::abi::{self, Event, EventKind, Item};
 use cairo_lang_starknet::plugin::events::EventFieldKind;
-use camino::{Utf8PathBuf};
+use camino::Utf8PathBuf;
 use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_world::manifest::{DeployedManifest, ManifestMethods};
 use dojo_world::metadata::Environment;
@@ -241,4 +241,31 @@ fn extract_events(
     }
 
     Ok(events_map)
+}
+
+#[cfg(test)]
+mod test {
+    use camino::Utf8Path;
+    use clap::Parser;
+    use dojo_world::manifest::BaseManifest;
+
+    use super::*;
+    #[test]
+    fn events_are_parsed_correctly() {
+        let arg = EventsArgs::parse_from(["event", "Event1,Event2", "--chunk-size", "1"]);
+        assert!(arg.events.unwrap().len() == 2);
+        assert!(arg.from_block.is_none());
+        assert!(arg.to_block.is_none());
+        assert!(arg.chunk_size == 1);
+    }
+
+    #[test]
+    fn extract_events_work_as_expected() {
+        let manifest_dir = Utf8Path::new("../../../../examples/spawn-and-move").to_path_buf();
+        let manifest = BaseManifest::load_from_path(&manifest_dir).unwrap().into();
+        let result = extract_events(&manifest, &manifest_dir).unwrap();
+
+        // we are just collection all events from manifest file so just verifying count should work
+        assert!(result.len() == 13);
+    }
 }
