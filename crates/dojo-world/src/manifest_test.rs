@@ -11,9 +11,7 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{parse_contracts_events, BaseManifest, DojoContract, DojoModel};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::{
-    parse_models_events, AbstractManifestError, DeployedManifest, Manifest,
-};
+use crate::manifest::{parse_models_events, AbstractManifestError, DeployedManifest, Manifest};
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
