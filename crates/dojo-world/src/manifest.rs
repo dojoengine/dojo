@@ -487,15 +487,19 @@ fn parse_contracts_events(
             let class_hash = data.next().expect("qed; missing class hash");
             let address = data.next().expect("qed; missing address");
 
-            upgrades
-                .entry(address)
-                .and_modify(|(current_block, current_class_hash)| {
-                    if *current_block < block_num {
-                        *current_block = block_num;
-                        *current_class_hash = class_hash;
-                    }
-                })
-                .or_insert((block_num, class_hash));
+            // Events that do not have a block number are ignored because we are unable to evaluate
+            // whether the events happened before or after the latest event that has been processed.
+            if let Some(num) = block_num {
+                upgrades
+                    .entry(address)
+                    .and_modify(|(current_block, current_class_hash)| {
+                        if *current_block < num {
+                            *current_block = num;
+                            *current_class_hash = class_hash;
+                        }
+                    })
+                    .or_insert((num, class_hash));
+            }
         });
 
         upgrades.into_iter().map(|(addr, (_, class_hash))| (addr, class_hash)).collect()
