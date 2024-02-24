@@ -8,7 +8,7 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
-use dojo_lang::compiler::BASE_DIR;
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_lang::scarb_internal::build_scarb_root_database;
 use dojo_world::manifest::{BaseManifest, DeployedManifest};
 use dojo_world::metadata::dojo_metadata_from_workspace;
@@ -128,7 +128,8 @@ where
 
     // `parent` returns `None` only when its root path, so its safe to unwrap
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-    let new_manifest = BaseManifest::load_from_path(&manifest_dir.join(BASE_DIR))?;
+    let new_manifest =
+        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
 
     let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
     let total_diffs = diff.count_diffs();

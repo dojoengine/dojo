@@ -1,4 +1,5 @@
 use camino::Utf8Path;
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
@@ -106,7 +107,10 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 fn migrate_world_without_seed_will_fail() {
     let base = "../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
-    let manifest = BaseManifest::load_from_path(&Utf8Path::new(base).to_path_buf()).unwrap();
+    let manifest = BaseManifest::load_from_path(
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+    )
+    .unwrap();
     let world = WorldDiff::compute(manifest, None);
     let res = prepare_for_migration(None, None, &Utf8Path::new(&target_dir).to_path_buf(), world);
     assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
@@ -134,7 +138,10 @@ async fn migration_from_remote() {
         ExecutionEncoding::New,
     );
 
-    let manifest = BaseManifest::load_from_path(&Utf8Path::new(base).to_path_buf()).unwrap();
+    let manifest = BaseManifest::load_from_path(
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+    )
+    .unwrap();
     let world = WorldDiff::compute(manifest, None);
 
     let migration = prepare_for_migration(
@@ -147,7 +154,10 @@ async fn migration_from_remote() {
 
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
-    let local_manifest = BaseManifest::load_from_path(&Utf8Path::new(base).to_path_buf()).unwrap();
+    let local_manifest = BaseManifest::load_from_path(
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+    )
+    .unwrap();
     let remote_manifest = DeployedManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),

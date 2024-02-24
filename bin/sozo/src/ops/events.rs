@@ -244,6 +244,7 @@ fn extract_events(
 mod test {
     use camino::Utf8Path;
     use clap::Parser;
+    use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
     use dojo_world::manifest::BaseManifest;
 
     use super::*;
@@ -258,8 +259,11 @@ mod test {
 
     #[test]
     fn extract_events_work_as_expected() {
-        let manifest_dir = Utf8Path::new("../../../../examples/spawn-and-move").to_path_buf();
-        let manifest = BaseManifest::load_from_path(&manifest_dir).unwrap().into();
+        let manifest_dir = Utf8Path::new("../../examples/spawn-and-move").to_path_buf();
+        let manifest =
+            BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
+                .unwrap()
+                .into();
         let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collection all events from manifest file so just verifying count should work

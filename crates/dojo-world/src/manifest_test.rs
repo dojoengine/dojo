@@ -1,4 +1,5 @@
 use camino::Utf8PathBuf;
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
@@ -374,7 +375,8 @@ async fn fetch_remote_manifest() {
 
     let world_address = deploy_world(&sequencer, &manifest_path, &artifacts_path).await;
 
-    let local_manifest = BaseManifest::load_from_path(&manifest_path).unwrap();
+    let local_manifest =
+        BaseManifest::load_from_path(&manifest_path.join(MANIFESTS_DIR).join(BASE_DIR)).unwrap();
     let remote_manifest =
         DeployedManifest::load_from_remote(provider, world_address).await.unwrap();
 
