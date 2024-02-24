@@ -1,0 +1,19 @@
+kind = "DojoModel"
+class_hash = "0x764906a97ff3e532e82b154908b25711cdec1c692bf68e3aba2a3dd9964a15c"
+abi = "abis/deployments/KATANA/models/moves.json"
+name = "dojo_examples::models::moves"
+
+[[members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "remaining"
+type = "u8"
+key = false
+
+[[members]]
+name = "last_direction"
+type = "Direction"
+key = false

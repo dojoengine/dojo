@@ -210,8 +210,9 @@ fn update_manifest(
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
-    let base_dir = ws.manifest_path().parent().unwrap().join(MANIFESTS_DIR).join(BASE_DIR);
-    let abi_dir = ws.manifest_path().parent().unwrap().join(ABIS_DIR).join(BASE_DIR);
+    let relative_manifests_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(BASE_DIR);
+    let relative_abis_dir = Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR);
+    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
         artifacts: &'a HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
@@ -226,8 +227,9 @@ fn update_manifest(
 
     let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
     write_manifest_and_abi(
-        &base_dir,
-        &abi_dir,
+        &relative_manifests_dir,
+        &relative_abis_dir,
+        &manifest_dir,
         &mut Manifest::new(
             // abi path will be written by `write_manifest`
             Class { class_hash: *hash, abi: None },
@@ -238,8 +240,9 @@ fn update_manifest(
 
     let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
     write_manifest_and_abi(
-        &base_dir,
-        &abi_dir,
+        &relative_manifests_dir,
+        &relative_abis_dir,
+        &manifest_dir,
         &mut Manifest::new(Class { class_hash: *hash, abi: None }, BASE_CONTRACT_NAME.into()),
         abi,
     )?;
@@ -298,8 +301,9 @@ fn update_manifest(
 
     for (_, (manifest, abi)) in contracts.iter_mut() {
         write_manifest_and_abi(
-            &base_dir.join(CONTRACTS_DIR),
-            &abi_dir.join(CONTRACTS_DIR),
+            &relative_manifests_dir.join(CONTRACTS_DIR),
+            &relative_abis_dir.join(CONTRACTS_DIR),
+            &manifest_dir,
             manifest,
             abi,
         )?;
@@ -307,8 +311,9 @@ fn update_manifest(
 
     for (_, (manifest, abi)) in models.iter_mut() {
         write_manifest_and_abi(
-            &base_dir.join(MODELS_DIR),
-            &abi_dir.join(MODELS_DIR),
+            &relative_manifests_dir.join(MODELS_DIR),
+            &relative_abis_dir.join(MODELS_DIR),
+            &manifest_dir,
             manifest,
             abi,
         )?;
@@ -428,8 +433,9 @@ fn get_dojo_contract_artifacts(
 }
 
 fn write_manifest_and_abi<T>(
-    base_dir: &Utf8PathBuf,
-    abi_dir: &Utf8PathBuf,
+    relative_manifest_dir: &Utf8PathBuf,
+    relative_abis_dir: &Utf8PathBuf,
+    manifest_dir: &Utf8PathBuf,
     manifest: &mut Manifest<T>,
     abi: &Option<abi::Contract>,
 ) -> anyhow::Result<()>
@@ -439,17 +445,18 @@ where
     let parts: Vec<&str> = manifest.name.split("::").collect();
     let name: Utf8PathBuf = parts.last().unwrap().into();
 
-    let full_manifest_path = base_dir.join(name.clone()).with_extension("toml");
-    let full_abi_path = abi_dir.join(name.clone()).with_extension("json");
-
-    let abi_relative_path = Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR).join(name).with_extension("json");
+    let relative_manifest_path = relative_manifest_dir.join(name.clone()).with_extension("toml");
+    let relative_abi_path = relative_abis_dir.join(name.clone()).with_extension("json");
 
     if abi.is_some() {
-        manifest.inner.set_abi(Some(abi_relative_path));
+        manifest.inner.set_abi(Some(relative_abi_path.clone()));
     }
 
     let manifest_toml = toml::to_string_pretty(&manifest)?;
     let abi_json = serde_json::to_string_pretty(&abi)?;
+
+    let full_manifest_path = manifest_dir.join(&relative_manifest_path);
+    let full_abi_path = manifest_dir.join(&relative_abi_path);
 
     // Create the directory if it doesn't exist
     if let Some(parent) = full_manifest_path.parent() {

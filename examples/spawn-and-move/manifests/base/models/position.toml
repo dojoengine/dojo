@@ -1,0 +1,14 @@
+kind = "DojoModel"
+class_hash = "0x53672d63a83f40ab5f3aeec55d1541a98aa822f5b197a30fbbac28e6f98a7d8"
+abi = "abis/base/models/position.json"
+name = "dojo_examples::models::position"
+
+[[members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "vec"
+type = "Vec2"
+key = false

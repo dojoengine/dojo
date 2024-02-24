@@ -2,12 +2,13 @@ use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
 use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbstractManifestError, BaseManifest, DeployedManifest, ManifestMethods, OverlayManifest,
+    AbstractManifestError, BaseManifest, Class, Contract, DeployedManifest, DojoContract,
+    DojoModel, Manifest, ManifestMethods, OverlayManifest,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::contract::ContractMigration;
@@ -27,6 +28,7 @@ use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, parse_cairo_short_string,
 };
 use starknet::providers::jsonrpc::HttpTransport;
+use tokio::fs;
 
 #[cfg(test)]
 #[path = "migration_test.rs"]
@@ -91,7 +93,7 @@ pub async fn execute(
         )
         .await?;
 
-        update_manifests(
+        update_manifests_and_abis(
             ws,
             local_manifest,
             remote_manifest,
@@ -105,7 +107,7 @@ pub async fn execute(
     Ok(())
 }
 
-async fn update_manifests(
+async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
     remote_manifest: Option<DeployedManifest>,
@@ -129,11 +131,56 @@ async fn update_manifests(
         c.inner.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
 
+    // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in local_manifest
+    update_manifest_abis(&mut local_manifest, manifest_dir, chain_id).await;
+
     local_manifest
         .write_to_path(&manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id))?;
     ui.print("\n✨ Done.");
 
     Ok(())
+}
+
+async fn update_manifest_abis(
+    local_manifest: &mut DeployedManifest,
+    manifest_dir: &Utf8PathBuf,
+    chain_id: &str,
+) {
+    fs::create_dir_all(manifest_dir.join(ABIS_DIR).join(DEPLOYMENTS_DIR))
+        .await
+        .expect("Failed to create folder");
+
+    async fn inner_helper<T>(manifest_dir: &Utf8PathBuf, manifest: &mut Manifest<T>, chain_id: &str)
+    where
+        T: ManifestMethods,
+    {
+        // unwraps in call to abi is safe because we always write abis
+        let base_relative_path = manifest.inner.abi().unwrap();
+        let deployed_relative_path =
+            Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).join(
+                base_relative_path
+                    .strip_prefix(Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR))
+                    .unwrap(),
+            );
+
+        let full_base_path = manifest_dir.join(base_relative_path);
+        let full_deployed_path = manifest_dir.join(deployed_relative_path.clone());
+
+        fs::create_dir_all(full_deployed_path.parent().unwrap())
+            .await
+            .expect("Failed to create folder");
+        fs::copy(full_base_path, full_deployed_path).await.expect("Failed to copy abi file");
+        manifest.inner.set_abi(Some(deployed_relative_path));
+    }
+
+    inner_helper::<Contract>(manifest_dir, &mut local_manifest.world, chain_id).await;
+    inner_helper::<Class>(manifest_dir, &mut local_manifest.base, chain_id).await;
+    for contract in local_manifest.contracts.iter_mut() {
+        inner_helper::<DojoContract>(&manifest_dir, contract, chain_id).await;
+    }
+    for model in local_manifest.models.iter_mut() {
+        inner_helper::<DojoModel>(&manifest_dir, model, chain_id).await;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
