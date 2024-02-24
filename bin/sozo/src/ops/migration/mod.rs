@@ -1,5 +1,3 @@
-
-
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
@@ -131,7 +129,8 @@ async fn update_manifests_and_abis(
         c.inner.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
     });
 
-    // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in local_manifest
+    // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
+    // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, chain_id).await;
 
     local_manifest

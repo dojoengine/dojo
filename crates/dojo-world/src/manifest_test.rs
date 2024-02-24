@@ -11,7 +11,9 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{parse_contracts_events, BaseManifest, DojoContract, DojoModel};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::{parse_models_events, AbstractManifestError, DeployedManifest, Manifest};
+use crate::manifest::{
+    parse_models_events, AbstractManifestError, DeployedManifest, Manifest,
+};
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -265,24 +267,22 @@ fn parse_deployed_contracts_events_with_upgrade() {
 #[test]
 fn events_without_block_number_arent_parsed() {
     let expected_contracts = vec![
-        Contract {
-            name: "".into(),
-            class_hash: felt!("0x66"),
-            address: Some(felt!("0x123")),
-            ..Default::default()
-        },
-        Contract {
-            name: "".into(),
-            class_hash: felt!("0x2"),
-            address: Some(felt!("0x456")),
-            ..Default::default()
-        },
-        Contract {
-            name: "".into(),
-            class_hash: felt!("0x3"),
-            address: Some(felt!("0x789")),
-            ..Default::default()
-        },
+        Manifest::new(
+            DojoContract {
+                class_hash: felt!("0x2"),
+                address: Some(felt!("0x456")),
+                ..Default::default()
+            },
+            "".into(),
+        ),
+        Manifest::new(
+            DojoContract {
+                class_hash: felt!("0x3"),
+                address: Some(felt!("0x789")),
+                ..Default::default()
+            },
+            "".into(),
+        ),
     ];
 
     let deployed_events = vec![

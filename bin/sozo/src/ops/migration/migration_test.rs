@@ -1,4 +1,4 @@
-use camino::{Utf8Path};
+use camino::Utf8Path;
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
@@ -89,14 +89,16 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         ExecutionEncoding::New,
     );
 
-    assert!(execute_strategy(
-        &ws,
-        &migration,
-        &account,
-        Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
-    )
-    .await
-    .is_err());
+    assert!(
+        execute_strategy(
+            &ws,
+            &migration,
+            &account,
+            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
+        )
+        .await
+        .is_err()
+    );
     sequencer.stop().unwrap();
 }
 

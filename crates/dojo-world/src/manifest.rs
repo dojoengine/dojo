@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs;
+use std::{fs, io};
 
 use anyhow::Result;
 use cainome::cairo_serde::Error as CainomeError;
@@ -18,7 +18,6 @@ use starknet::core::utils::{
 };
 use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
-use std::io;
 use thiserror::Error;
 use toml;
 
