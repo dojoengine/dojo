@@ -4,7 +4,7 @@ use std::fs;
 use anyhow::{anyhow, Context, Error, Result};
 use cairo_lang_starknet::abi::{self, Event, EventKind, Item};
 use cairo_lang_starknet::plugin::events::EventFieldKind;
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::{Utf8PathBuf};
 use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_world::manifest::{DeployedManifest, ManifestMethods};
 use dojo_world::metadata::Environment;
@@ -194,10 +194,10 @@ fn extract_events(
 ) -> Result<HashMap<String, Vec<Event>>, Error> {
     fn inner_helper(
         events: &mut HashMap<String, Vec<Event>>,
-        abi_path: &String,
+        abi_path: &Utf8PathBuf,
         manifest_dir: &Utf8PathBuf,
     ) -> Result<(), Error> {
-        let full_abi_path = manifest_dir.join(Utf8Path::new(abi_path));
+        let full_abi_path = manifest_dir.join(abi_path);
         let abi: abi::Contract = serde_json::from_str(&fs::read_to_string(full_abi_path)?)?;
 
         for item in abi.into_iter() {

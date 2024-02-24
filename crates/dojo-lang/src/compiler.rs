@@ -445,7 +445,7 @@ where
     let abi_relative_path = Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR).join(name).with_extension("json");
 
     if abi.is_some() {
-        manifest.inner.set_abi(Some(abi_relative_path.to_string()));
+        manifest.inner.set_abi(Some(abi_relative_path));
     }
 
     let manifest_toml = toml::to_string_pretty(&manifest)?;

@@ -80,7 +80,7 @@ pub struct DojoModel {
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<String>,
+    pub abi: Option<Utf8PathBuf>,
 }
 
 /// System input ABI.
@@ -117,7 +117,7 @@ pub struct DojoContract {
     pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<String>,
+    pub abi: Option<Utf8PathBuf>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
     pub computed: Vec<ComputedValueEntrypoint>,
@@ -150,7 +150,7 @@ pub struct OverlayClass {}
 pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<String>,
+    pub abi: Option<Utf8PathBuf>,
 }
 
 #[serde_as]
@@ -159,7 +159,7 @@ pub struct Class {
 pub struct Contract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<String>,
+    pub abi: Option<Utf8PathBuf>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
 }
@@ -226,8 +226,8 @@ where
 
 pub trait ManifestMethods {
     type OverlayType;
-    fn abi(&self) -> Option<&String>;
-    fn set_abi(&mut self, abi: Option<String>);
+    fn abi(&self) -> Option<&Utf8PathBuf>;
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>);
     fn class_hash(&self) -> &FieldElement;
     fn set_class_hash(&mut self, class_hash: FieldElement);
 
@@ -619,11 +619,11 @@ where
 impl ManifestMethods for DojoContract {
     type OverlayType = OverlayDojoContract;
 
-    fn abi(&self) -> Option<&String> {
+    fn abi(&self) -> Option<&Utf8PathBuf> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<String>) {
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
         self.abi = abi;
     }
 
@@ -644,11 +644,11 @@ impl ManifestMethods for DojoContract {
 impl ManifestMethods for DojoModel {
     type OverlayType = OverlayDojoModel;
 
-    fn abi(&self) -> Option<&String> {
+    fn abi(&self) -> Option<&Utf8PathBuf> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<String>) {
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
         self.abi = abi;
     }
 
@@ -666,11 +666,11 @@ impl ManifestMethods for DojoModel {
 impl ManifestMethods for Contract {
     type OverlayType = OverlayContract;
 
-    fn abi(&self) -> Option<&String> {
+    fn abi(&self) -> Option<&Utf8PathBuf> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<String>) {
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
         self.abi = abi;
     }
 
@@ -688,11 +688,11 @@ impl ManifestMethods for Contract {
 impl ManifestMethods for Class {
     type OverlayType = OverlayClass;
 
-    fn abi(&self) -> Option<&String> {
+    fn abi(&self) -> Option<&Utf8PathBuf> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<String>) {
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
         self.abi = abi;
     }
 
