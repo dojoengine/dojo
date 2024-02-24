@@ -3364,6 +3364,7 @@ dependencies = [
  "cairo-lang-starknet",
  "camino",
  "convert_case 0.6.0",
+ "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
  "futures",

@@ -267,6 +267,14 @@ fn events_without_block_number_arent_parsed() {
     let expected_contracts = vec![
         Manifest::new(
             DojoContract {
+                class_hash: felt!("0x66"),
+                address: Some(felt!("0x123")),
+                ..Default::default()
+            },
+            "".into(),
+        ),
+        Manifest::new(
+            DojoContract {
                 class_hash: felt!("0x2"),
                 address: Some(felt!("0x456")),
                 ..Default::default()

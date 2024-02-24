@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
@@ -34,7 +35,8 @@ pub async fn deploy_world(
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
 ) -> FieldElement {
-    let manifest = BaseManifest::load_from_path(manifest_dir).unwrap();
+    let manifest =
+        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR)).unwrap();
     let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();
 
