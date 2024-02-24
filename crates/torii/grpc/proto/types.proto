@@ -85,7 +85,7 @@ message Query {
 }
 
 message EventQuery {
-    EventClause clause = 1;
+    EventKeysClause keys =1;
     uint32 limit = 2;
     uint32 offset = 3;
 }
@@ -96,13 +96,6 @@ message Clause {
         KeysClause keys = 2;
         MemberClause member = 3;
         CompositeClause composite = 4;
-    }
-}
-
-message EventClause {
-    oneof event_clause_type {
-        HashedKeysClause hashed_keys = 1;
-        EventKeysClause keys = 2;
     }
 }
 
