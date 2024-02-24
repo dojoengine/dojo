@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708801754756,
+  "lastUpdate": 1708802673385,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1765,6 +1765,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 973130,
             "range": "± 34649",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "23e9234e4078d6c895ad4e9594fe99555198617b",
+          "message": "Katana RPC v0.6.0 (#1568)\n\n* wip\r\n\r\n* v3 hash util funcs\r\n\r\n* update\r\n\r\n* update\r\n\r\n* wip\r\n\r\n* no errors\r\n\r\n* fix test\r\n\r\n* wip\r\n\r\n* update\r\n\r\n* update\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* wip\r\n\r\n* remove script",
+          "timestamp": "2024-02-24T14:14:43-05:00",
+          "tree_id": "10b771c6ce2d951f6c3f4e1df88c7a9389ff0126",
+          "url": "https://github.com/dojoengine/dojo/commit/23e9234e4078d6c895ad4e9594fe99555198617b"
+        },
+        "date": 1708802672466,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1025970,
+            "range": "± 24393",
             "unit": "ns/iter"
           }
         ]
