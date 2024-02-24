@@ -36,15 +36,14 @@ pub enum Field {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PrimitiveType {
-    // TokenAmount(TokenAmount),
-    // NftId(NftId),
-    // U256(U256),
+    // All of object types. Including preset types
     Object(IndexMap<String, PrimitiveType>),
     Array(Vec<PrimitiveType>),
     Bool(bool),
     // comprehensive representation of
     // String, ShortString, Selector and Felt
     String(String),
+    // For JSON numbers. Formed into a Felt
     Number(Number),
 }
 

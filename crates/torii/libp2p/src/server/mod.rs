@@ -31,6 +31,7 @@ mod events;
 
 use crate::server::events::ServerEvent;
 use crate::typed_data::TypedData;
+use crate::types::Message;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -153,7 +154,7 @@ impl Relay {
                         }) => {
                             // Deserialize typed data.
                             // We shouldn't panic here
-                            let data = match serde_json::from_slice::<TypedData>(&message.data) {
+                            let data = match serde_json::from_slice::<Message>(&message.data) {
                                 Ok(message) => message,
                                 Err(e) => {
                                     info!(
@@ -173,21 +174,34 @@ impl Relay {
                                 "Received message"
                             );
 
-                            // Message has to be a struct
-                            // that contains an identity & signature
-                            // let (identity, signature) = match validate_message(&data.message) {
-                            //     Ok((identity, signature)) => (identity, signature),
-                            //     Err(e) => {
-                            //         warn!(
-                            //             target: "torii::relay::server",
-                            //             error = %e,
-                            //             "Failed to validate message"
-                            //         );
-                            //         continue;
-                            //     }
-                            // };
+                            // Verify the signature
+                            let message_hash = if let Ok(message) = data.message.encode(data.identity) {
+                                message
+                            } else {
+                                info!(
+                                    target: "torii::relay::server",
+                                    "Failed to encode message"
+                                );
+                                continue;
+                            };
+                            if let Ok(valid) = verify(&data.identity, &message_hash, &data.signature_r, &data.signature_s) {
+                                if !valid {
+                                    info!(
+                                        target: "torii::relay::server",
+                                        "Invalid signature"
+                                    );
+                                    continue;
+                                }
+                            } else {
+                                info!(
+                                    target: "torii::relay::server",
+                                    "Failed to verify signature"
+                                );
+                                continue;
+                            }
 
-                            // // Verify the signature
+                            
+
                             // if let Err(e) = self
                             //     .pool
                             //     .write()
