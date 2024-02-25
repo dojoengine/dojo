@@ -138,22 +138,7 @@ impl DojoWorld {
 
         let row_events: Vec<(String, String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-        let mut events = Vec::with_capacity(row_events.len());
-        for (event_keys, event_data, event_transaction_hash) in row_events {
-            let data = event_data
-                .trim_end_matches('/')
-                .split('/')
-                .map(|s| s.to_owned().into_bytes())
-                .collect();
-            let keys = event_keys
-                .trim_end_matches('/')
-                .split('/')
-                .map(|s| s.to_owned().into_bytes())
-                .collect();
-            let transaction_hash = event_transaction_hash.into_bytes();
-            events.push(proto::types::Event { keys, data, transaction_hash });
-        }
-        Ok(events)
+        row_events.iter().map(|row| map_row_to_event(row)).collect()
     }
 
     async fn entities_by_hashed_keys(
@@ -302,14 +287,14 @@ impl DojoWorld {
         "#
         );
 
-        let db_events = sqlx::query(&events_query)
+        let row_events: Vec<(String, String, String)> = sqlx::query_as(&events_query)
             .bind(&keys_pattern)
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.pool)
             .await?;
 
-        db_events.iter().map(|row| Self::map_row_to_event(row)).collect()
+        row_events.iter().map(|row| map_row_to_event(row)).collect()
     }
 
     async fn entities_by_member(
@@ -510,24 +495,18 @@ impl DojoWorld {
 
         Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
     }
+}
 
-    fn map_row_to_event(row: &SqliteRow) -> Result<proto::types::Event, Error> {
-        let keys = row
-            .get::<String, _>("keys")
-            .trim_end_matches('/')
-            .split('/')
-            .map(|s| s.to_owned().into_bytes())
-            .collect();
-        let data = row
-            .get::<String, _>("data")
-            .trim_end_matches('/')
-            .split('/')
-            .map(|s| s.to_owned().into_bytes())
-            .collect();
-        let transaction_hash = row.get::<String, _>("transaction_hash").into_bytes();
+fn process_event_field(data: &String) -> Vec<Vec<u8>> {
+    data.trim_end_matches('/').split('/').map(|s| s.to_owned().into_bytes()).collect()
+}
 
-        Ok(proto::types::Event { keys, data, transaction_hash })
-    }
+fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Event, Error> {
+    let keys = process_event_field(&row.0);
+    let data = process_event_field(&row.1);
+    let transaction_hash = row.2.to_owned().into_bytes();
+
+    Ok(proto::types::Event { keys, data, transaction_hash })
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
