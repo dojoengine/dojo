@@ -275,7 +275,7 @@ mod tests {
         };
 
         let expected_output =
-            format!("Event name: dojo::world::world::TestEvent\nfelt252: Test1 \"0x5465737431\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n");
+            "Event name: dojo::world::world::TestEvent\nfelt252: Test1 \"0x5465737431\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n".to_string();
 
         let actual_output = parse_event(event.clone(), &events_map)
             .unwrap_or_else(|| "Couldn't parse event".to_string());
@@ -335,7 +335,7 @@ mod tests {
         };
 
         let expected_output =
-            format!("Event name: dojo::world::world::StoreDelRecord\ntable: Test \"0x54657374\"\nkeys: [\"0x5465737431\", \"0x5465737432\", \"0x5465737433\"]\n");
+            "Event name: dojo::world::world::StoreDelRecord\ntable: Test \"0x54657374\"\nkeys: [\"0x5465737431\", \"0x5465737432\", \"0x5465737433\"]\n".to_string();
 
         let actual_output = parse_event(event.clone(), &events_map)
             .unwrap_or_else(|| "Couldn't parse event".to_string());
@@ -406,7 +406,7 @@ mod tests {
         };
 
         let expected_output =
-            format!("Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: Test1 \"0x5465737431\"\ndata_1: 1\ndata_2: 2\n");
+            "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: Test1 \"0x5465737431\"\ndata_1: 1\ndata_2: 2\n".to_string();
 
         let actual_output = parse_event(event.clone(), &events_map)
             .unwrap_or_else(|| "Couldn't parse event".to_string());
@@ -465,8 +465,7 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").expect("Invalid hex"),
         };
 
-        let expected_output =
-            format!("Event name: dojo::world::world::StoreDelRecord\ntable: \"0x0\"\nkeys: [\"0x0\", \"0x1\", \"0x2\"]\n");
+        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: \"0x0\"\nkeys: [\"0x0\", \"0x1\", \"0x2\"]\n".to_string();
 
         let actual_output = parse_event(event.clone(), &events_map)
             .unwrap_or_else(|| "Couldn't parse event".to_string());
