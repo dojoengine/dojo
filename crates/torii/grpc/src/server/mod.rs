@@ -128,17 +128,15 @@ impl DojoWorld {
     }
 
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
-        let query = format!(
-            r#"
+        let query = r#"
             SELECT keys, data, transaction_hash
             FROM events
             LIMIT ? OFFSET ?
-         "#
-        );
+         "#.to_string();
 
         let row_events: Vec<(String, String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-        row_events.iter().map(|row| map_row_to_event(row)).collect()
+        row_events.iter().map(map_row_to_event).collect()
     }
 
     async fn entities_by_hashed_keys(
@@ -273,19 +271,17 @@ impl DojoWorld {
                 if bytes.is_empty() {
                     return Ok("%".to_string());
                 }
-                Ok(str::from_utf8(&bytes).unwrap().to_string())
+                Ok(str::from_utf8(bytes).unwrap().to_string())
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
 
-        let events_query = format!(
-            r#"
+        let events_query = r#"
             SELECT keys, data, transaction_hash
             FROM events
             WHERE keys LIKE ?
             LIMIT ? OFFSET ?
-        "#
-        );
+        "#.to_string();
 
         let row_events: Vec<(String, String, String)> = sqlx::query_as(&events_query)
             .bind(&keys_pattern)
@@ -294,7 +290,7 @@ impl DojoWorld {
             .fetch_all(&self.pool)
             .await?;
 
-        row_events.iter().map(|row| map_row_to_event(row)).collect()
+        row_events.iter().map(map_row_to_event).collect()
     }
 
     async fn entities_by_member(
