@@ -11014,6 +11014,7 @@ dependencies = [
  "dojo-test-utils",
  "dojo-types",
  "dojo-world",
+ "futures",
  "katana-runner",
  "notify",
  "notify-debouncer-mini",
