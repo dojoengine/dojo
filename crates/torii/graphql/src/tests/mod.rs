@@ -260,7 +260,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    let base_path = "../type-test";
+    let base_path = "../types-test";
     let target_path = format!("{}/target/dev", base_path);
     let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
