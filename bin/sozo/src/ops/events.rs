@@ -37,8 +37,11 @@ pub async fn execute(
         parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
 
     let events_map = if !json {
-        let deployed_manifest =
-            manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).with_extension("toml");
+        let deployed_manifest = manifest_dir
+            .join(MANIFESTS_DIR)
+            .join(DEPLOYMENTS_DIR)
+            .join(chain_id)
+            .with_extension("toml");
 
         if !deployed_manifest.exists() {
             return Err(anyhow!("Run scarb migrate before running this command"));

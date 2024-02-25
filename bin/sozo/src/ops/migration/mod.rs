@@ -133,8 +133,13 @@ async fn update_manifests_and_abis(
     // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, chain_id).await;
 
-    local_manifest
-        .write_to_path(&manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).with_extension("toml"))?;
+    local_manifest.write_to_path(
+        &manifest_dir
+            .join(MANIFESTS_DIR)
+            .join(DEPLOYMENTS_DIR)
+            .join(chain_id)
+            .with_extension("toml"),
+    )?;
     ui.print("\n✨ Done.");
 
     Ok(())
