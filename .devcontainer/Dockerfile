@@ -4,6 +4,7 @@
 
 ARG VARIANT
 FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
+ARG VARIANT
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
@@ -12,10 +13,9 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 RUN apt install -y gh libgmp3-dev software-properties-common
 
 # Install Cairo Native dependencies
-RUN curl -s https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null \
-	&& add-apt-repository 'deb http://apt.llvm.org/bionic/   llvm-toolchain-bionic-10  main' \
-	&& apt-get update \
-	&& apt-get -y install llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
+RUN curl -s https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+RUN echo "deb http://apt.llvm.org/${VARIANT}/ llvm-toolchain-${VARIANT}-17 main" | tee /etc/apt/sources.list.d/llvm.list && apt-get update
+RUN apt-get -y install -t llvm-toolchain-${VARIANT}-17 llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
 
 # To build Katana with 'native' feature, we need to set the following environment variables
 ENV MLIR_SYS_170_PREFIX=/usr/lib/llvm-17
