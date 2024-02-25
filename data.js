@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708809338317,
+  "lastUpdate": 1708858865786,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1825,6 +1825,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1028833,
             "range": "± 33735",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5faf5b2f2b4c4867720463c4c4a5005d382f8e16",
+          "message": "feat(bindgen): typescript plugin (#1569)\n\n* feat: start working on typescript codegen\r\n\r\n* feat: systems and models for typescript\r\n\r\n* feat: models gen finished for ts\r\n\r\n* feat: contracts code output\r\n\r\n* refactor: type defs\r\n\r\n* feat: models and contracts correct type gen\r\n\r\n* fix: formatting\r\n\r\n* chore: clippy & fmt\r\n\r\n* feat: dependency tree fdor declaration order\r\n\r\n* fix: clippy",
+          "timestamp": "2024-02-25T21:50:52+11:00",
+          "tree_id": "bf3c51063391bc0da7a9bd42aedb79c7164cd6e3",
+          "url": "https://github.com/dojoengine/dojo/commit/5faf5b2f2b4c4867720463c4c4a5005d382f8e16"
+        },
+        "date": 1708858865126,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 972669,
+            "range": "± 48033",
             "unit": "ns/iter"
           }
         ]
