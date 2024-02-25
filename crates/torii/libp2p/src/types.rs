@@ -7,7 +7,6 @@ use crate::typed_data::TypedData;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
     pub message: TypedData,
-    pub identity: FieldElement,
     pub signature_r: FieldElement,
     pub signature_s: FieldElement,
 }

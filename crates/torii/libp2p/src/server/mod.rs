@@ -1,7 +1,9 @@
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, io};
@@ -9,6 +11,7 @@ use std::{fs, io};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use futures::StreamExt;
+use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::Multiaddr;
@@ -30,7 +33,7 @@ use crate::errors::Error;
 mod events;
 
 use crate::server::events::ServerEvent;
-use crate::typed_data::TypedData;
+use crate::typed_data::{PrimitiveType, TypedData};
 use crate::types::Message;
 
 #[derive(NetworkBehaviour)]
@@ -174,6 +177,9 @@ impl Relay {
                                 "Received message"
                             );
 
+                            // check if entity already exists
+                            let entity_identity = self.pool.read().await.
+
                             // Verify the signature
                             let message_hash = if let Ok(message) = data.message.encode(data.identity) {
                                 message
@@ -184,6 +190,8 @@ impl Relay {
                                 );
                                 continue;
                             };
+
+                            // for the public key used for verification; use identity from model
                             if let Ok(valid) = verify(&data.identity, &message_hash, &data.signature_r, &data.signature_s) {
                                 if !valid {
                                     info!(
@@ -268,75 +276,51 @@ impl Relay {
     }
 }
 
+struct ParsedMessage {
+    model_name: String,
+    hashed_keys: FieldElement,
+    values: HashMap<String, PrimitiveType>,
+}
+
 // Validates the message model
 // and returns the identity and signature
-fn validate_message(message: &Ty) -> Result<(FieldElement, Vec<FieldElement>), Error> {
-    let mut identity: FieldElement = FieldElement::ZERO;
-    let mut signature: Vec<FieldElement> = Vec::new();
-    let message_struct = match message {
-        Ty::Struct(message) => {
-            for member in message.keys() {
-                match member.name.as_str() {
-                    "identity" => {
-                        // check if identity is correct primitive type
-                        if let Ty::Primitive(Primitive::ContractAddress(address)) = &member.ty {
-                            if let Some(address) = address {
-                                identity = *address;
-                            } else {
-                                return Err(Error::InvalidMessageError(
-                                    "Identity is not a contract address".to_string(),
-                                ));
-                            }
-                        } else {
-                            return Err(Error::InvalidMessageError(
-                                "Identity is not a contract address".to_string(),
-                            ));
-                        }
-                    }
-                    "signature" => {
-                        // must be a Ty::Tuple and children must be Primitive::Felt252
-                        if let Ty::Tuple(tuple) = &member.ty {
-                            for component in tuple {
-                                if let Ty::Primitive(Primitive::Felt252(sig)) = &component {
-                                    if let Some(sig) = sig {
-                                        signature.push(*sig);
-                                    } else {
-                                        return Err(Error::InvalidMessageError(
-                                            "Signature component is not a Felt252".to_string(),
-                                        ));
-                                    }
-                                } else {
-                                    return Err(Error::InvalidMessageError(
-                                        "Signature component is not a Felt252".to_string(),
-                                    ));
-                                }
-                            }
-                        } else {
-                            return Err(Error::InvalidMessageError(
-                                "Signature is not a tuple".to_string(),
-                            ));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            message
+fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedMessage, Error> {
+    
+    let model_name = if let  Some(model_name) = message.get("model") {
+        if let PrimitiveType::String(model_name) = model_name {
+            model_name
+        } else {
+            return Err(Error::InvalidMessageError("Model name is not a string".to_string()));
         }
-        _ => {
-            return Err(Error::InvalidMessageError("Message is not a struct".to_string()));
-        }
+    } else {
+        return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
 
-    if identity == FieldElement::ZERO {
-        return Err(Error::InvalidMessageError("Missing identity".to_string()));
-    }
+    let hashed_keys = if let  Some(hashed_keys) = message.get("hashed_keys") {
+        if let PrimitiveType::String(hashed_keys) = hashed_keys {
+            if let Ok(hashed_keys) = FieldElement::from_str(hashed_keys) {
+                hashed_keys
+            } else {
+                return Err(Error::InvalidMessageError("Hashed keys is not a valid field element".to_string()));
+            }
+        } else {
+            return Err(Error::InvalidMessageError("Hashed keys is not a string".to_string()));
+        }
+    } else {
+        return Err(Error::InvalidMessageError("Hashed keys is missing".to_string()));
+    };
 
-    if signature.is_empty() {
-        return Err(Error::InvalidMessageError("Missing signature".to_string()));
-    }
+    let values = message
+        .iter()
+        .filter(|(key, _)| *key != "model" && *key != "hashed_keys")
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
 
-    Ok((identity, signature))
+    Ok(ParsedMessage {
+        model_name: model_name.to_string(),
+        hashed_keys,
+        values,
+    })
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
