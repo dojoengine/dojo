@@ -1,5 +1,0 @@
-kind = "Contract"
-class_hash = "0x5ad96ceea29160aa7305bb078d1ade41f73b487363ae12778dbea6393cc00b2"
-abi = "abis/deployments/KATANA/world.json"
-address = "0xc26dfdc00af6798af8add1ee5d99a716ce9a5766d81218c4fd675ab9889dc4"
-name = "dojo::world::world"

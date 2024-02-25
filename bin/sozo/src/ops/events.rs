@@ -38,7 +38,7 @@ pub async fn execute(
 
     let events_map = if !json {
         let deployed_manifest =
-            manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id);
+            manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).with_extension("toml");
 
         if !deployed_manifest.exists() {
             return Err(anyhow!("Run scarb migrate before running this command"));

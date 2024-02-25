@@ -281,35 +281,16 @@ impl OverlayManifest {
 
 impl DeployedManifest {
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
-        let contract_dir = path.join("contracts");
-        let model_dir = path.join("models");
+        let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
 
-        let world: Manifest<Contract> =
-            toml::from_str(&fs::read_to_string(path.join("world.toml"))?).unwrap();
-        let base: Manifest<Class> =
-            toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
-
-        let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
-        let models = elements_from_path::<DojoModel>(&model_dir)?;
-
-        Ok(Self { world, base, contracts, models })
+        Ok(manifest)
     }
 
-    // TODO: write to a single file instead
     pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
-        fs::create_dir_all(path)?;
+        fs::create_dir_all(path.parent().unwrap())?;
 
-        let contract_dir = path.join("contracts");
-        let model_dir = path.join("models");
-
-        let world = toml::to_string_pretty(&self.world)?;
-        fs::write(path.join("world").with_extension("toml"), world)?;
-
-        let base = toml::to_string_pretty(&self.base)?;
-        fs::write(path.join("base").with_extension("toml"), base)?;
-
-        elements_to_path(&contract_dir, &self.contracts)?;
-        elements_to_path(&model_dir, &self.models)?;
+        let deployed_manifest = toml::to_string_pretty(&self)?;
+        fs::write(path, deployed_manifest)?;
 
         Ok(())
     }
@@ -565,19 +546,19 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
         .collect()
 }
 
-fn elements_to_path<T>(item_dir: &Utf8PathBuf, items: &Vec<Manifest<T>>) -> Result<()>
-where
-    T: Serialize + ManifestMethods,
-{
-    fs::create_dir_all(item_dir)?;
-    for item in items {
-        let item_toml = toml::to_string_pretty(&item)?;
-        let item_name = item.name.split("::").last().unwrap();
-        fs::write(item_dir.join(item_name).with_extension("toml"), item_toml)?;
-    }
+// fn elements_to_path<T>(item_dir: &Utf8PathBuf, items: &Vec<Manifest<T>>) -> Result<()>
+// where
+//     T: Serialize + ManifestMethods,
+// {
+//     fs::create_dir_all(item_dir)?;
+//     for item in items {
+//         let item_toml = toml::to_string_pretty(&item)?;
+//         let item_name = item.name.split("::").last().unwrap();
+//         fs::write(item_dir.join(item_name).with_extension("toml"), item_toml)?;
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 fn elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
 where
