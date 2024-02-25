@@ -4,6 +4,9 @@ use scarb::ops::CompileOpts;
 
 use crate::scarb_internal;
 
+// TODO: Remove this ignore after issue mentioned in this PR is resolved:
+// https://github.com/dojoengine/dojo/pull/1485
+#[ignore]
 #[test]
 fn test_compiler() {
     let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
