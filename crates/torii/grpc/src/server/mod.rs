@@ -4,6 +4,7 @@ pub mod subscriptions;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -31,7 +32,6 @@ use torii_core::model::{build_sql_query, map_row_to_ty};
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
 use crate::proto::types::clause::ClauseType;
-use crate::proto::types::event_clause::EventClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
@@ -128,7 +128,32 @@ impl DojoWorld {
     }
 
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
-        self.events_by_hashed_keys(None, limit, offset).await
+        let query = format!(
+            r#"
+            SELECT keys, data, transaction_hash
+            FROM events
+            LIMIT ? OFFSET ?
+         "#
+        );
+
+        let row_events: Vec<(String, String, String)> =
+            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+        let mut events = Vec::with_capacity(row_events.len());
+        for (event_keys, event_data, event_transaction_hash) in row_events {
+            let data = event_data
+                .trim_end_matches('/')
+                .split('/')
+                .map(|s| s.to_owned().into_bytes())
+                .collect();
+            let keys = event_keys
+                .trim_end_matches('/')
+                .split('/')
+                .map(|s| s.to_owned().into_bytes())
+                .collect();
+            let transaction_hash = event_transaction_hash.into_bytes();
+            events.push(proto::types::Event { keys, data, transaction_hash });
+        }
+        Ok(events)
     }
 
     async fn entities_by_hashed_keys(
@@ -198,56 +223,6 @@ impl DojoWorld {
         Ok(entities)
     }
 
-    async fn events_by_hashed_keys(
-        &self,
-        hashed_keys: Option<proto::types::HashedKeysClause>,
-        limit: u32,
-        offset: u32,
-    ) -> Result<Vec<proto::types::Event>, Error> {
-        // TODO: use prepared statement for where clause
-        let filter_ids = match hashed_keys {
-            Some(hashed_keys) => {
-                let ids = hashed_keys
-                    .hashed_keys
-                    .iter()
-                    .map(|id| {
-                        Ok(FieldElement::from_byte_slice_be(id)
-                            .map(|id| format!("events.id = '{id:#x}'"))
-                            .map_err(ParseError::FromByteSliceError)?)
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?;
-
-                format!("WHERE {}", ids.join(" OR "))
-            }
-            None => String::new(),
-        };
-
-        let query = format!(
-            r#"
-            SELECT id, data, transaction_hash
-            FROM events
-            {filter_ids}
-            LIMIT ? OFFSET ?
-         "#
-        );
-
-        let row_events: Vec<(String, String, String)> =
-            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-
-        let mut events = Vec::with_capacity(row_events.len());
-        for (event_id, event_data, transaction_hash) in row_events {
-            let data = event_data.split(',').map(|s| s.to_string()).collect();
-            let hashed_keys = FieldElement::from_str(&event_id).map_err(ParseError::FromStr)?;
-            events.push(proto::types::Event {
-                hashed_keys: hashed_keys.to_bytes_be().to_vec(),
-                data,
-                transaction_hash,
-            })
-        }
-
-        Ok(events)
-    }
-
     async fn entities_by_keys(
         &self,
         keys_clause: proto::types::KeysClause,
@@ -313,18 +288,16 @@ impl DojoWorld {
                 if bytes.is_empty() {
                     return Ok("%".to_string());
                 }
-                Ok(FieldElement::from_byte_slice_be(bytes)
-                    .map(|felt| format!("{:#x}", felt))
-                    .map_err(ParseError::FromByteSliceError)?)
+                Ok(str::from_utf8(&bytes).unwrap().to_string())
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
 
         let events_query = format!(
             r#"
-            SELECT id, data, transaction_hash
+            SELECT keys, data, transaction_hash
             FROM events
-            WHERE events.keys LIKE ?
+            WHERE keys LIKE ?
             LIMIT ? OFFSET ?
         "#
         );
@@ -515,33 +488,10 @@ impl DojoWorld {
         &self,
         query: proto::types::EventQuery,
     ) -> Result<proto::world::RetrieveEventsResponse, Error> {
-        let events = match query.clause {
+        let events = match query.keys {
             None => self.events_all(query.limit, query.offset).await?,
-            Some(clause) => {
-                let clause_type = clause
-                    .event_clause_type
-                    .ok_or(QueryError::MissingParam("clause_type".into()))?;
-
-                match clause_type {
-                    EventClauseType::HashedKeys(hashed_keys) => {
-                        if hashed_keys.hashed_keys.is_empty() {
-                            return Err(QueryError::MissingParam("ids".into()).into());
-                        }
-
-                        self.events_by_hashed_keys(Some(hashed_keys), query.limit, query.offset)
-                            .await?
-                    }
-                    EventClauseType::Keys(keys) => {
-                        if keys.keys.is_empty() {
-                            return Err(QueryError::MissingParam("keys".into()).into());
-                        }
-
-                        self.events_by_keys(keys, query.limit, query.offset).await?
-                    }
-                }
-            }
+            Some(keys) => self.events_by_keys(keys, query.limit, query.offset).await?,
         };
-
         Ok(RetrieveEventsResponse { events })
     }
 
@@ -562,16 +512,21 @@ impl DojoWorld {
     }
 
     fn map_row_to_event(row: &SqliteRow) -> Result<proto::types::Event, Error> {
-        let hashed_keys =
-            FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
-        let data = row.get::<String, _>("data").split(',').map(|s| s.to_string()).collect();
-        let transaction_hash = row.get::<String, _>("transaction_hash");
+        let keys = row
+            .get::<String, _>("keys")
+            .trim_end_matches('/')
+            .split('/')
+            .map(|s| s.to_owned().into_bytes())
+            .collect();
+        let data = row
+            .get::<String, _>("data")
+            .trim_end_matches('/')
+            .split('/')
+            .map(|s| s.to_owned().into_bytes())
+            .collect();
+        let transaction_hash = row.get::<String, _>("transaction_hash").into_bytes();
 
-        Ok(proto::types::Event {
-            hashed_keys: hashed_keys.to_bytes_be().to_vec(),
-            data,
-            transaction_hash,
-        })
+        Ok(proto::types::Event { keys, data, transaction_hash })
     }
 }
 

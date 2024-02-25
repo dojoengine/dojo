@@ -46,8 +46,8 @@ message Entity {
 }
 
 message Event {
-    // The event's hashed keys
-    bytes hashed_keys = 1;
+    // The event's keys
+    repeated bytes keys = 1;
     // Data of the event
     repeated bytes data = 2;
     // event's transaction hash
@@ -104,7 +104,7 @@ message HashedKeysClause {
 }
 
 message EventKeysClause {
-    repeated bytes keys = 2;
+    repeated bytes keys = 1;
 }
 
 message KeysClause {
