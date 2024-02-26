@@ -185,7 +185,7 @@ public class {} : ModelInstance {{
             .inputs
             .iter()
             .map(|arg| {
-                let token = arg.1.to_composite().unwrap();
+                let token = &arg.1;
                 // r#type doesnt seem to be working rn.
                 // instead, we can take a look at our
                 // handled tokens db
