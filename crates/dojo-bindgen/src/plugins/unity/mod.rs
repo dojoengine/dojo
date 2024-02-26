@@ -204,9 +204,10 @@ public class {} : ModelInstance {{
                             }
                         }
                     }
-                    None => {
-                        format!("new FieldElement({}).Inner()", arg.0)
-                    }
+                    None => match UnityPlugin::map_type(&arg.0).as_str() {
+                        "FieldElement" => format!("new {}.Inner()", arg.0),
+                        _ => format!("new FieldElement({}).Inner()", arg.0),
+                    },
                 }
             })
             .collect::<Vec<String>>()
