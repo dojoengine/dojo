@@ -149,7 +149,7 @@ pub trait StarknetApi {
     /// Returns an object about the sync status, or false if the node is not synching.
     #[method(name = "syncing")]
     async fn syncing(&self) -> RpcResult<SyncingStatus> {
-        Ok(SyncingStatus::False)
+        Ok(SyncingStatus::NotSyncing)
     }
 
     /// Returns all event objects matching the conditions in the provided filter.
