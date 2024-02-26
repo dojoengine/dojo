@@ -17,7 +17,6 @@ use std::ops::Deref;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::SyncStatus;
 
 /// A wrapper around [`FieldElement`](katana_primitives::FieldElement) that serializes to hex as
 /// default.
@@ -52,14 +51,7 @@ pub type ContractClass = starknet::core::types::ContractClass;
 
 pub type SimulationFlags = starknet::core::types::SimulationFlagForEstimateFee;
 
-/// The state of the node synchronization.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SyncingStatus {
-    #[serde(rename = "FALSE")]
-    False,
-    #[serde(untagged)]
-    Status(SyncStatus),
-}
+pub type SyncingStatus = starknet::core::types::SyncStatusType;
 
 #[cfg(test)]
 mod tests {
