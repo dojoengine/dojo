@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708864807391,
+  "lastUpdate": 1708939988041,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1885,6 +1885,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 969284,
             "range": "± 78675",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6bddced6fb505be308d8e36bec3595ff4e4e1112",
+          "message": "fix(katana-rpc): syncing status type (#1582)",
+          "timestamp": "2024-02-26T17:23:40+08:00",
+          "tree_id": "c5b6a9d2e654b269874fefc0944f4e92ab9b0cf4",
+          "url": "https://github.com/dojoengine/dojo/commit/6bddced6fb505be308d8e36bec3595ff4e4e1112"
+        },
+        "date": 1708939987567,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1026488,
+            "range": "± 66169",
             "unit": "ns/iter"
           }
         ]
