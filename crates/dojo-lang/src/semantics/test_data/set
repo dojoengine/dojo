@@ -33,6 +33,16 @@ error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
 set!()
      ^
 
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:9:22
+fn test_func() { let key: felt252 = 0xb0b;
+                     ^*^
+
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:10:5
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
+    ^***^
+
 //! > ==========================================================================
 
 //! > incorrect args
@@ -69,6 +79,16 @@ error: Plugin diagnostic: Invalid arguments. Expected "(world, (models,))"
  --> lib.cairo:11:6
 set!(world)
      ^***^
+
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:9:22
+fn test_func() { let key: felt252 = 0xb0b;
+                     ^*^
+
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:10:5
+let world = IWorldDispatcher{contract_address: 0x0.try_into().unwrap()}; {
+    ^***^
 
 //! > ==========================================================================
 
@@ -129,6 +149,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            base_struct: None,
                             ty: test::Health,
                         },
                     ),
@@ -186,14 +207,6 @@ Block(
                                     ),
                                 ),
                                 Value(
-                                    Literal(
-                                        ExprLiteral {
-                                            value: 0,
-                                            ty: core::integer::u8,
-                                        },
-                                    ),
-                                ),
-                                Value(
                                     FunctionCall(
                                         ExprFunctionCall {
                                             function: test::HealthModel::values,
@@ -246,3 +259,7 @@ Block(
 )
 
 //! > semantic_diagnostics
+warning: Unused variable. Consider ignoring by prefixing with `_`.
+ --> lib.cairo:9:22
+fn test_func() { let key: felt252 = 0xb0b;
+                     ^*^

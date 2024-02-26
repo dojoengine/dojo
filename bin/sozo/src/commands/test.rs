@@ -30,6 +30,9 @@ pub struct TestArgs {
     /// Should we run only the ignored tests.
     #[arg(long, default_value_t = false)]
     ignored: bool,
+    /// Should we run the profiler.
+    #[arg(long, default_value_t = false)]
+    run_profiler: bool,
 }
 
 impl TestArgs {
@@ -70,6 +73,7 @@ impl TestArgs {
                 filter: self.filter.clone(),
                 ignored: self.ignored,
                 include_ignored: self.include_ignored,
+                run_profiler: self.run_profiler,
             };
 
             let compiler = TestCompiler { db, main_crate_ids, test_crate_ids, starknet: true };

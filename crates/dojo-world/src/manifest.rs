@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use ::serde::{Deserialize, Serialize};
-use cainome::cairo_serde::Error as CainomeError;
+use cainome::cairo_serde::{ContractAddress, Error as CainomeError};
 use cairo_lang_starknet::abi;
 use serde_with::serde_as;
 use smol_str::SmolStr;
@@ -20,6 +20,7 @@ use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
 
 use crate::contracts::model::ModelError;
+use crate::contracts::world::WorldEvent;
 use crate::contracts::WorldContractReader;
 
 #[cfg(test)]
@@ -27,15 +28,14 @@ use crate::contracts::WorldContractReader;
 mod test;
 
 pub const WORLD_CONTRACT_NAME: &str = "dojo::world::world";
-pub const EXECUTOR_CONTRACT_NAME: &str = "dojo::executor::executor";
 pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
+pub const RESOURCE_METADATA_CONTRACT_NAME: &str = "dojo::resource_metadata::resource_metadata";
+pub const RESOURCE_METADATA_MODEL_NAME: &str = "0x5265736f757263654d65746164617461";
 
 #[derive(Error, Debug)]
 pub enum ManifestError {
     #[error("Remote World not found.")]
     RemoteWorldNotFound,
-    #[error("Executor contract not found.")]
-    ExecutorNotFound,
     #[error("Entry point name contains non-ASCII characters.")]
     InvalidEntryPointError,
     #[error(transparent)]
@@ -130,8 +130,8 @@ pub struct Class {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
     pub world: Contract,
-    pub executor: Contract,
     pub base: Class,
+    pub resource_metadata: Contract,
     pub contracts: Vec<Contract>,
     pub models: Vec<Model>,
 }
@@ -174,19 +174,20 @@ impl Manifest {
 
         let world = WorldContractReader::new(world_address, provider);
 
-        let executor_address = world.executor().block_id(BLOCK_ID).call().await?;
         let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
 
-        let executor_class_hash = world
-            .provider()
-            .get_class_hash_at(BLOCK_ID, FieldElement::from(executor_address))
-            .await
-            .map_err(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::ExecutorNotFound
-                }
-                err => err.into(),
-            })?;
+        let (resource_metadata_class_hash, resource_metadata_address) = world
+            .model(&FieldElement::from_hex_be(RESOURCE_METADATA_MODEL_NAME).unwrap())
+            .block_id(BLOCK_ID)
+            .call()
+            .await?;
+
+        let resource_metadata_address =
+            if resource_metadata_address == ContractAddress(FieldElement::ZERO) {
+                None
+            } else {
+                Some(resource_metadata_address.into())
+            };
 
         let (models, contracts) =
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
@@ -200,10 +201,10 @@ impl Manifest {
                 address: Some(world_address),
                 ..Default::default()
             },
-            executor: Contract {
-                name: EXECUTOR_CONTRACT_NAME.into(),
-                address: Some(executor_address.into()),
-                class_hash: executor_class_hash,
+            resource_metadata: Contract {
+                name: RESOURCE_METADATA_CONTRACT_NAME.into(),
+                class_hash: resource_metadata_class_hash.into(),
+                address: resource_metadata_address,
                 ..Default::default()
             },
             base: Class {
@@ -344,15 +345,19 @@ fn parse_contracts_events(
             let class_hash = data.next().expect("qed; missing class hash");
             let address = data.next().expect("qed; missing address");
 
-            upgrades
-                .entry(address)
-                .and_modify(|(current_block, current_class_hash)| {
-                    if *current_block < block_num {
-                        *current_block = block_num;
-                        *current_class_hash = class_hash;
-                    }
-                })
-                .or_insert((block_num, class_hash));
+            // Events that do not have a block number are ignored because we are unable to evaluate
+            // whether the events happened before or after the latest event that has been processed.
+            if let Some(num) = block_num {
+                upgrades
+                    .entry(address)
+                    .and_modify(|(current_block, current_class_hash)| {
+                        if *current_block < num {
+                            *current_block = num;
+                            *current_class_hash = class_hash;
+                        }
+                    })
+                    .or_insert((num, class_hash));
+            }
         });
 
         upgrades.into_iter().map(|(addr, (_, class_hash))| (addr, class_hash)).collect()
@@ -381,24 +386,27 @@ fn parse_contracts_events(
 fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Model> {
     let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
 
-    for event in events {
-        let mut data = event.data.into_iter();
+    for e in events {
+        let model_event = if let WorldEvent::ModelRegistered(m) =
+            e.try_into().expect("ModelRegistered event is expected to be parseable")
+        {
+            m
+        } else {
+            panic!("ModelRegistered expected");
+        };
 
-        let model_name = data.next().expect("name is missing from event");
-        let model_name = parse_cairo_short_string(&model_name).unwrap();
-
-        let class_hash = data.next().expect("class hash is missing from event");
-        let prev_class_hash = data.next().expect("prev class hash is missing from event");
+        let model_name = parse_cairo_short_string(&model_event.name).unwrap();
 
         if let Some(current_class_hash) = models.get_mut(&model_name) {
-            if current_class_hash == &prev_class_hash {
-                *current_class_hash = class_hash;
+            if current_class_hash == &model_event.prev_class_hash.into() {
+                *current_class_hash = model_event.class_hash.into();
             }
         } else {
-            models.insert(model_name, class_hash);
+            models.insert(model_name, model_event.class_hash.into());
         }
     }
 
+    // TODO: include address of the model in the manifest.
     models
         .into_iter()
         .map(|(name, class_hash)| Model { name, class_hash, ..Default::default() })

@@ -1,7 +1,7 @@
 pub mod cache;
 pub mod state;
 
-use std::ops::RangeInclusive;
+use std::ops::{Range, RangeInclusive};
 use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
@@ -128,7 +128,7 @@ impl BlockProvider for InMemoryProvider {
             return Ok(None);
         };
 
-        let body = TransactionProvider::transactions_by_block(&self, id)?.unwrap_or_default();
+        let body = self.transactions_by_block(id)?.unwrap_or_default();
 
         Ok(Some(Block { header, body }))
     }
@@ -190,36 +190,11 @@ impl TransactionProvider for InMemoryProvider {
         &self,
         block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxWithHash>>> {
-        let block_num = match block_id {
-            BlockHashOrNumber::Num(num) => Some(num),
-            BlockHashOrNumber::Hash(hash) => self.storage.read().block_numbers.get(&hash).cloned(),
-        };
-
-        let Some(StoredBlockBodyIndices { tx_offset, tx_count }) =
-            block_num.and_then(|num| self.storage.read().block_body_indices.get(&num).cloned())
-        else {
-            return Ok(None);
-        };
-
-        let offset = tx_offset as usize;
-        let count = tx_count as usize;
-
-        let txs = self
-            .storage
-            .read()
-            .transactions
-            .iter()
-            .enumerate()
-            .skip(offset)
-            .take(count)
-            .map(|(n, tx)| {
-                let hash =
-                    self.storage.read().transaction_hashes.get(&(n as u64)).cloned().unwrap();
-                TxWithHash { hash, transaction: tx.clone() }
-            })
-            .collect();
-
-        Ok(Some(txs))
+        if let Some(indices) = self.block_body_indices(block_id)? {
+            Ok(Some(self.transaction_in_range(Range::from(indices))?))
+        } else {
+            Ok(None)
+        }
     }
 
     fn transaction_by_block_and_idx(
@@ -283,6 +258,28 @@ impl TransactionProvider for InMemoryProvider {
         let block_hash = storage_read.block_hashes.get(block_num).expect("block hash should exist");
 
         Ok(Some((*block_num, *block_hash)))
+    }
+
+    fn transaction_in_range(&self, range: Range<TxNumber>) -> ProviderResult<Vec<TxWithHash>> {
+        let start = range.start as usize;
+        let total = range.end as usize - start;
+
+        let txs = self
+            .storage
+            .read()
+            .transactions
+            .iter()
+            .enumerate()
+            .skip(start)
+            .take(total)
+            .map(|(n, tx)| {
+                let hash =
+                    self.storage.read().transaction_hashes.get(&(n as u64)).cloned().unwrap();
+                TxWithHash { hash, transaction: tx.clone() }
+            })
+            .collect::<Vec<TxWithHash>>();
+
+        Ok(txs)
     }
 }
 

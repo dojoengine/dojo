@@ -50,6 +50,8 @@ pub type FeeEstimate = starknet::core::types::FeeEstimate;
 
 pub type ContractClass = starknet::core::types::ContractClass;
 
+pub type SimulationFlags = starknet::core::types::SimulationFlagForEstimateFee;
+
 /// The state of the node synchronization.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SyncingStatus {

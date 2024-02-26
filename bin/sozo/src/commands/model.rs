@@ -28,6 +28,18 @@ pub enum ModelCommands {
         starknet: StarknetOptions,
     },
 
+    #[command(about = "Retrieve the contract address of a model")]
+    ContractAddress {
+        #[arg(help = "The name of the model")]
+        name: String,
+
+        #[command(flatten)]
+        world: WorldOptions,
+
+        #[command(flatten)]
+        starknet: StarknetOptions,
+    },
+
     #[command(about = "Retrieve the schema for a model")]
     Schema {
         #[arg(help = "The name of the model")]

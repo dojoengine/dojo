@@ -20,7 +20,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -r --bin katana && cargo llvm-cov nextest --all-features --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v3
-        if: github.ref != 'refs/heads/main'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
@@ -44,6 +43,8 @@ jobs:
           target: x86_64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # cairofmt:

@@ -13,5 +13,5 @@ struct Generic<T> {
 #[test]
 #[available_gas(2000000)]
 fn test_generic_introspect() {
-    let generic = Generic { value: Base { value: 123 } };
+    let _generic = Generic { value: Base { value: 123 } };
 }

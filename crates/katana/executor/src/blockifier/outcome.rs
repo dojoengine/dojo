@@ -9,6 +9,7 @@ use katana_primitives::transaction::Tx;
 
 use super::utils::{events_from_exec_info, l2_to_l1_messages_from_exec_info};
 
+#[derive(Clone)]
 pub struct TxReceiptWithExecInfo {
     pub receipt: Receipt,
     pub execution_info: TransactionExecutionInfo,
@@ -17,6 +18,7 @@ pub struct TxReceiptWithExecInfo {
 impl TxReceiptWithExecInfo {
     pub fn new(tx: impl AsRef<Tx>, execution_info: TransactionExecutionInfo) -> Self {
         let actual_fee = execution_info.actual_fee.0;
+
         let events = events_from_exec_info(&execution_info);
         let revert_error = execution_info.revert_error.clone();
         let messages_sent = l2_to_l1_messages_from_exec_info(&execution_info);
@@ -54,7 +56,7 @@ impl TxReceiptWithExecInfo {
                 revert_error,
                 messages_sent,
                 execution_resources: actual_resources,
-                contract_address: tx.contract_address,
+                contract_address: tx.contract_address(),
             }),
         };
 
@@ -75,5 +77,6 @@ fn parse_actual_resources(resources: &HashMap<String, usize>) -> TxExecutionReso
         pedersen_builtin: resources.get("pedersen_builtin").map(|x| *x as u64),
         poseidon_builtin: resources.get("poseidon_builtin").map(|x| *x as u64),
         range_check_builtin: resources.get("range_check_builtin").map(|x| *x as u64),
+        segment_arena_builtin: resources.get("segment_arena_builtin").map(|x| *x as u64),
     }
 }

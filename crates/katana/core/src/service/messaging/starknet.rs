@@ -87,10 +87,13 @@ impl StarknetMessaging {
                 self.provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
 
             event_page.events.into_iter().for_each(|event| {
-                block_to_events
-                    .entry(event.block_number)
-                    .and_modify(|v| v.push(event.clone()))
-                    .or_insert(vec![event]);
+                // We ignore events without the block number
+                if let Some(block_number) = event.block_number {
+                    block_to_events
+                        .entry(block_number)
+                        .and_modify(|v| v.push(event.clone()))
+                        .or_insert(vec![event]);
+                }
             });
 
             continuation_token = event_page.continuation_token;
@@ -119,8 +122,8 @@ impl StarknetMessaging {
 
         // TODO: we need to have maximum fee configurable.
         let execution = account.execute(calls).fee_estimate_multiplier(10f64);
-        let estimated_fee = (execution.estimate_fee().await?.overall_fee) * 10;
-        let tx = execution.max_fee(estimated_fee.into()).send().await?;
+        let estimated_fee = (execution.estimate_fee().await?.overall_fee) * 10u64.into();
+        let tx = execution.max_fee(estimated_fee).send().await?;
 
         Ok(tx.transaction_hash)
     }
@@ -459,8 +462,8 @@ mod tests {
                 FieldElement::from(calldata.len() as u128),
                 FieldElement::THREE,
             ],
-            block_hash: selector!("block_hash"),
-            block_number: 0,
+            block_hash: Some(selector!("block_hash")),
+            block_number: Some(0),
             transaction_hash,
         };
 
@@ -508,8 +511,8 @@ mod tests {
                 FieldElement::from(calldata.len() as u128),
                 FieldElement::THREE,
             ],
-            block_hash: selector!("block_hash"),
-            block_number: 0,
+            block_hash: Some(selector!("block_hash")),
+            block_number: Some(0),
             transaction_hash,
         };
 
@@ -532,8 +535,8 @@ mod tests {
             ),
             keys: vec![selector!("AnOtherUnexpectedEvent"), selector!("random_hash"), from_address],
             data: vec![],
-            block_hash: selector!("block_hash"),
-            block_number: 0,
+            block_hash: Some(selector!("block_hash")),
+            block_number: Some(0),
             transaction_hash,
         };
 

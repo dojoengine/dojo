@@ -6,6 +6,7 @@
 use std::fmt::Display;
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 
 pub mod celestia;
@@ -15,7 +16,7 @@ pub mod state_diff;
 use error::DataAvailabilityResult;
 
 /// All possible chains configuration for data availability.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum DataAvailabilityConfig {
     Celestia(celestia::CelestiaConfig),
 }

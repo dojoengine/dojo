@@ -2,6 +2,7 @@ use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
     InlineMacroExprPlugin, InlinePluginResult, NamedPlugin, PluginDiagnostic, PluginGeneratedFile,
 };
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
@@ -36,6 +37,7 @@ impl InlineMacroExprPlugin for EmitMacro {
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     message: "Invalid arguments. Expected \"emit!(world, event)\"".to_string(),
+                    severity: Severity::Error,
                 }],
             };
         }
@@ -59,7 +61,7 @@ impl InlineMacroExprPlugin for EmitMacro {
             code: Some(PluginGeneratedFile {
                 name: "emit_inline_macro".into(),
                 content: builder.code,
-                diagnostics_mappings: builder.diagnostics_mappings,
+                code_mappings: builder.code_mappings,
                 aux_data: None,
             }),
             diagnostics: vec![],

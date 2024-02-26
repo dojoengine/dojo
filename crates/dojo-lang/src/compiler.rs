@@ -16,7 +16,7 @@ use cairo_lang_starknet::plugin::aux_data::StarkNetContractAuxData;
 use cairo_lang_utils::UpcastMut;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
-    Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, EXECUTOR_CONTRACT_NAME,
+    Class, ComputedValueEntrypoint, Contract, BASE_CONTRACT_NAME, RESOURCE_METADATA_CONTRACT_NAME,
     WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
@@ -187,7 +187,6 @@ fn find_project_contracts(
 pub fn collect_core_crate_ids(db: &RootDatabase) -> Vec<CrateId> {
     [
         ContractSelector(BASE_CONTRACT_NAME.to_string()),
-        ContractSelector(EXECUTOR_CONTRACT_NAME.to_string()),
         ContractSelector(WORLD_CONTRACT_NAME.to_string()),
     ]
     .iter()
@@ -237,20 +236,20 @@ fn update_manifest(
         }
     };
 
-    let executor = {
+    let base = {
+        let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
+        Class { name: BASE_CONTRACT_NAME.into(), abi: abi.clone(), class_hash: *hash }
+    };
+
+    let resource_metadata = {
         let (hash, abi) =
-            get_compiled_artifact_from_map(&compiled_artifacts, EXECUTOR_CONTRACT_NAME)?;
+            get_compiled_artifact_from_map(&compiled_artifacts, RESOURCE_METADATA_CONTRACT_NAME)?;
         Contract {
-            name: EXECUTOR_CONTRACT_NAME.into(),
+            name: RESOURCE_METADATA_CONTRACT_NAME.into(),
             abi: abi.clone(),
             class_hash: *hash,
             ..Default::default()
         }
-    };
-
-    let base = {
-        let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
-        Class { name: BASE_CONTRACT_NAME.into(), abi: abi.clone(), class_hash: *hash }
     };
 
     let mut models = BTreeMap::new();
@@ -305,7 +304,7 @@ fn update_manifest(
         contracts.remove(model.0.as_str());
     }
 
-    do_update_manifest(manifest, world, executor, base, models, contracts)?;
+    do_update_manifest(manifest, world, base, resource_metadata, models, contracts)?;
 
     Ok(())
 }
@@ -379,56 +378,49 @@ fn get_dojo_contract_artifacts(
     aux_data: &StarkNetContractAuxData,
     compiled_classes: &HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
 ) -> anyhow::Result<HashMap<SmolStr, Contract>> {
-    aux_data
-        .contracts
-        .iter()
-        .filter(|name| !matches!(name.as_ref(), "world" | "executor" | "base"))
-        .filter(|_name| {
-            let module_name = module_id.full_path(db);
-            compiled_classes.get(module_name.as_str()).cloned().is_some()
-        })
-        .map(|name| {
-            let module_name = module_id.full_path(db);
-            let module_name = module_name.as_str();
+    let contract_name = &aux_data.contract_name;
 
-            let reads = match SYSTEM_READS.lock().unwrap().get(module_name) {
-                Some(models) => {
+    let mut result = HashMap::new();
+
+    if !matches!(contract_name.as_ref(), "world" | "resource_metadata" | "base") {
+        let module_name: SmolStr = module_id.full_path(db).into();
+
+        if let Some((class_hash, abi)) = compiled_classes.get(&module_name as &str) {
+            let reads = SYSTEM_READS
+                .lock()
+                .unwrap()
+                .get(&module_name as &str)
+                .map_or_else(Vec::new, |models| {
                     models.clone().into_iter().collect::<BTreeSet<_>>().into_iter().collect()
-                }
-                None => vec![],
+                });
+
+            let writes = SYSTEM_WRITES
+                .lock()
+                .unwrap()
+                .get(&module_name as &str)
+                .map_or_else(Vec::new, |write_ops| find_module_rw(db, module_id, write_ops));
+
+            let contract = Contract {
+                name: module_name.clone(),
+                class_hash: *class_hash,
+                abi: abi.clone(),
+                writes,
+                reads,
+                ..Default::default()
             };
 
-            let write_entries = SYSTEM_WRITES.lock().unwrap();
-            let writes = match write_entries.get(module_name) {
-                Some(write_ops) => find_module_rw(db, module_id, write_ops),
-                None => vec![],
-            };
+            result.insert(module_name, contract);
+        }
+    }
 
-            let (class_hash, abi) = compiled_classes
-                .get(module_name)
-                .cloned()
-                .ok_or(anyhow!("Contract {name} not found in target."))?;
-
-            Ok((
-                SmolStr::from(module_name),
-                Contract {
-                    name: module_name.into(),
-                    class_hash,
-                    abi,
-                    writes,
-                    reads,
-                    ..Default::default()
-                },
-            ))
-        })
-        .collect::<anyhow::Result<_>>()
+    Ok(result)
 }
 
 fn do_update_manifest(
     current_manifest: &mut dojo_world::manifest::Manifest,
     world: dojo_world::manifest::Contract,
-    executor: dojo_world::manifest::Contract,
     base: dojo_world::manifest::Class,
+    resource_metadata: dojo_world::manifest::Contract,
     models: BTreeMap<String, dojo_world::manifest::Model>,
     contracts: BTreeMap<SmolStr, dojo_world::manifest::Contract>,
 ) -> anyhow::Result<()> {
@@ -436,12 +428,12 @@ fn do_update_manifest(
         current_manifest.world = world;
     }
 
-    if current_manifest.executor.class_hash != executor.class_hash {
-        current_manifest.executor = executor;
-    }
-
     if current_manifest.base.class_hash != base.class_hash {
         current_manifest.base = base;
+    }
+
+    if current_manifest.resource_metadata.class_hash != resource_metadata.class_hash {
+        current_manifest.resource_metadata = resource_metadata;
     }
 
     let mut contracts_to_add = vec![];

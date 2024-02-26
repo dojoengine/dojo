@@ -2,13 +2,12 @@ use core::result::ResultTrait;
 use array::ArrayTrait;
 use array::SpanTrait;
 use debug::PrintTrait;
-use option::OptionTrait;
 use poseidon::poseidon_hash_span;
 use starknet::SyscallResultTrait;
 use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_address};
 
 use dojo::database;
-use dojo::database::{storage, index};
+use dojo::database::storage;
 use dojo::model::Model;
 use dojo::world_test::Foo;
 use dojo::test_utils::end;
@@ -49,12 +48,12 @@ fn bench_storage_many() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    storage::set_many(0, keys, 0, values, layout);
+    storage::set_many(0, keys, values, layout).unwrap();
     end(gas, 'storage set mny');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let res = storage::get_many(0, keys, 0, 2, layout);
+    let res = storage::get_many(0, keys, layout).unwrap();
     end(gas, 'storage get mny');
 
     assert(res.len() == 2, 'wrong number of values');
@@ -74,7 +73,7 @@ fn bench_native_storage() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    starknet::storage_write_syscall(0, address, 42);
+    starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
     end(gas, 'native write');
 
     let gas = testing::get_available_gas();
@@ -97,7 +96,7 @@ fn bench_native_storage_offset() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    starknet::storage_write_syscall(0, address, 42);
+    starknet::storage_write_syscall(0, address, 42).unwrap_syscall();
     end(gas, 'native writ of');
 
     let gas = testing::get_available_gas();
@@ -110,170 +109,46 @@ fn bench_native_storage_offset() {
 
 #[test]
 #[available_gas(1000000000)]
-fn bench_index() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let no_query = index::query(0, 69, Option::None(()));
-    end(gas, 'idx empty');
-    assert(no_query.len() == 0, 'entity indexed');
+fn bench_database_array() {
+    let mut keys = ArrayTrait::new();
+    keys.append(0x966);
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::create(0, 69, 420);
-    end(gas, 'idx create 1st');
+    let array_test_len: usize = 300;
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69, Option::None(()));
-    end(gas, 'idx query one');
-    assert(query.len() == 1, 'entity not indexed');
-    assert(*query.at(0) == 420, 'entity value incorrect');
-    
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::create(0, 69, 1337);
-    end(gas, 'idx query 2nd');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let two_query = index::query(0, 69, Option::None(()));
-    end(gas, 'idx query two');
-    assert(two_query.len() == 2, 'index should have two query');
-    assert(*two_query.at(1) == 1337, 'entity value incorrect');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::exists(0, 69, 420);
-    end(gas, 'idx exists chk');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 420);
-    end(gas, 'idx dlt !last');
-
-    assert(!index::exists(0, 69, 420), 'entity should not exist');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 1337);
-    end(gas, 'idx dlt last');
-
-    assert(!index::exists(0, 69, 1337), 'entity should not exist');
-}
-
-#[test]
-#[available_gas(1000000000)]
-fn bench_big_index() {
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    let mut layout = ArrayTrait::new();
+    let mut values: Array<felt252> = ArrayTrait::new();
     let mut i = 0;
     loop {
-        if i == 1000 {
+        if i == array_test_len {
             break;
         }
-        index::create(0, 69, i);
+
+        values.append(i.into());
+        layout.append(251_u8);
+
         i += 1;
     };
-    end(gas, 'idx create 1000');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let query = index::query(0, 69, Option::None(()));
-    end(gas, 'idx query 1000');
-    assert(query.len() == 1000, 'entity not indexed');
-    assert(*query.at(420) == 420, 'entity value incorrect');
-    
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::exists(0, 69, 999);
-    end(gas, 'idx exists 1000');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 999);
-    end(gas, 'idx dlt 1000');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 420);
-    end(gas, 'idx dlt !1000 >');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    index::delete(0, 69, 420);
-    end(gas, 'idx dlt !1000 0');
-}
-
-#[test]
-#[available_gas(1000000000)]
-fn bench_database_array() {
-    let value = array![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].span();
-    let layout = array![251, 251, 251, 251, 251, 251, 251, 251, 251, 251].span();
-    let half_layout = array![251, 251, 251, 251, 251].span();
-    let len = value.len();
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    database::set('table', 'key', 0, value, layout);
+    database::set('table', 'key', values.span(), layout.span());
     end(gas, 'db set arr');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    let res = database::get('table', 'key', 0, len, layout);
+    let res = database::get('table', 'key', layout.span());
     end(gas, 'db get arr');
 
-    assert(res.len() == len, 'wrong number of values');
-    assert(*res.at(0) == *value.at(0), 'value not set');
-    assert(*res.at(1) == *value.at(1), 'value not set');
+    let mut i = 0;
+    loop {
+        if i == array_test_len {
+            break;
+        }
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let second_res = database::get('table', 'key', 3, 8, array![251, 251, 251, 251, 251].span());
-    end(gas, 'db get half arr');
-
-    assert(second_res.len() == 5, 'wrong number of values');
-    assert(*second_res.at(0) == *value.at(3), 'value not set');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    database::del('table', 'key');
-    end(gas, 'db del arr');
+        assert(res.at(i) == values.at(i), 'Value not equal!');
+        i += 1;
+    };
 }
-
-#[test]
-#[available_gas(1000000000)]
-fn bench_indexed_database_array() {
-    let even = array![2, 4].span();
-    let odd = array![1, 3].span();
-    let layout = array![251, 251].span();
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    database::set_with_index('table', 'even', 0, even, layout);
-    end(gas, 'dbi set arr 1st');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), 2, layout);
-    end(gas, 'dbi scan arr 1');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    database::set_with_index('table', 'odd', 0, odd, layout);
-    end(gas, 'dbi set arr 2nd');
-
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    let (keys, values) = database::scan('table', Option::None(()), 2, layout);
-    end(gas, 'dbi scan arr 2');
-
-    assert(keys.len() == 2, 'Wrong number of keys!');
-    assert(values.len() == 2, 'Wrong number of values!');
-    assert(*keys.at(0) == 'even', 'Wrong key at index 0!');
-    assert(*(*values.at(0)).at(0) == 2, 'Wrong value at index 0!');
-    assert(*(*values.at(0)).at(1) == 4, 'Wrong value at index 1!');
-}
-
 
 #[test]
 #[available_gas(1000000000)]
@@ -369,12 +244,12 @@ fn test_struct_with_many_fields() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::set('positions', '42', 0, pos.values(), pos.layout());
+    database::set('positions', '42', pos.values(), pos.layout());
     end(gas, 'pos db set');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::get('positions', '42', 0, pos.packed_size(), pos.layout());
+    database::get('positions', '42', pos.layout());
     end(gas, 'pos db get');
 }
 
@@ -410,7 +285,7 @@ fn bench_nested_struct() {
         material: 'wooden',
     };
     end(gas, 'case init');
-    let gas = testing::get_available_gas();
+    let _gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
 
 
@@ -439,12 +314,12 @@ fn bench_nested_struct() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::set('cases', '42', 0, case.values(), case.layout());
+    database::set('cases', '42', values, case.layout());
     end(gas, 'case db set');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::get('cases', '42', 0, case.packed_size(), case.layout());
+    database::get('cases', '42', case.layout());
     end(gas, 'case db get');
 }
 
@@ -559,11 +434,11 @@ fn bench_complex_struct() {
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::set('chars', '42', 0, char.values(), char.layout());
+    database::set('chars', '42', char.values(), char.layout());
     end(gas, 'chars db set');
 
     let gas = testing::get_available_gas();
     gas::withdraw_gas().unwrap();
-    database::get('chars', '42', 0, char.packed_size(), char.layout());
+    database::get('chars', '42', char.layout());
     end(gas, 'chars db get');
 }

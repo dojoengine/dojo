@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockWithTxs, InvokeTransactionReceipt, InvokeTransactionV1};
+use starknet::core::types::{BlockWithTxs, Transaction, TransactionReceipt};
 use starknet::providers::Provider;
 
 use super::TransactionProcessor;
@@ -16,8 +16,8 @@ impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
         db: &mut Sql,
         _provider: &P,
         _block: &BlockWithTxs,
-        _receipt: &InvokeTransactionReceipt,
-        transaction: &InvokeTransactionV1,
+        _receipt: &TransactionReceipt,
+        transaction: &Transaction,
         transaction_id: &str,
     ) -> Result<(), Error> {
         db.store_transaction(transaction, transaction_id);

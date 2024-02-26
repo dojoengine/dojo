@@ -3,11 +3,12 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockWithTxs, Event, InvokeTransaction, InvokeTransactionReceipt, InvokeTransactionV1,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
+    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::time::sleep;
@@ -135,11 +136,17 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 block_tx.send(from).await.expect("failed to send block number to gRPC server");
             }
 
-            self.process(block_with_txs).await?;
-
-            self.db.set_head(from);
-            self.db.execute().await?;
-            from += 1;
+            match self.process(block_with_txs).await {
+                Ok(_) => {
+                    self.db.set_head(from);
+                    self.db.execute().await?;
+                    from += 1;
+                }
+                Err(e) => {
+                    error!("processing block: {}", e);
+                    continue;
+                }
+            }
         }
 
         Ok(())
@@ -154,35 +161,61 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
         Self::process_block(self, &block).await?;
 
         for (tx_idx, transaction) in block.clone().transactions.iter().enumerate() {
-            let invoke_transaction = match &transaction {
-                Transaction::Invoke(invoke_transaction) => invoke_transaction,
+            let transaction_hash = match transaction {
+                Transaction::Invoke(invoke_transaction) => {
+                    if let InvokeTransaction::V1(invoke_transaction) = invoke_transaction {
+                        invoke_transaction.transaction_hash
+                    } else {
+                        continue;
+                    }
+                }
+                Transaction::L1Handler(l1_handler_transaction) => {
+                    l1_handler_transaction.transaction_hash
+                }
                 _ => continue,
             };
 
-            let invoke_transaction = match invoke_transaction {
-                InvokeTransaction::V1(invoke_transaction) => invoke_transaction,
-                _ => continue,
-            };
+            self.process_transaction_and_receipt(transaction_hash, transaction, &block, tx_idx)
+                .await?;
+        }
 
-            let receipt = self
-                .provider
-                .get_transaction_receipt(invoke_transaction.transaction_hash)
-                .await
-                .ok()
-                .and_then(|receipt| match receipt {
-                    MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(
-                        receipt,
-                    )) => Some(receipt),
-                    _ => None,
-                });
+        info!("processed block: {}", block.block_number);
 
-            let invoke_receipt = match receipt {
-                Some(receipt) => receipt,
-                _ => continue,
+        Ok(())
+    }
+
+    async fn process_transaction_and_receipt(
+        &mut self,
+        transaction_hash: FieldElement,
+        transaction: &Transaction,
+        block: &BlockWithTxs,
+        tx_idx: usize,
+    ) -> Result<()> {
+        let receipt = match self.provider.get_transaction_receipt(transaction_hash).await {
+            Ok(receipt) => match receipt {
+                MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
+                    Some(TransactionReceipt::Invoke(receipt))
+                }
+                MaybePendingTransactionReceipt::Receipt(TransactionReceipt::L1Handler(receipt)) => {
+                    Some(TransactionReceipt::L1Handler(receipt))
+                }
+                _ => None,
+            },
+            Err(e) => {
+                error!("getting transaction receipt: {}", e);
+                return Err(e.into());
+            }
+        };
+
+        if let Some(receipt) = receipt {
+            let events = match &receipt {
+                TransactionReceipt::Invoke(invoke_receipt) => &invoke_receipt.events,
+                TransactionReceipt::L1Handler(l1_handler_receipt) => &l1_handler_receipt.events,
+                _ => return Ok(()),
             };
 
             let mut world_event = false;
-            for (event_idx, event) in invoke_receipt.events.iter().enumerate() {
+            for (event_idx, event) in events.iter().enumerate() {
                 if event.from_address != self.world.address {
                     continue;
                 }
@@ -191,24 +224,16 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 let event_id =
                     format!("0x{:064x}:0x{:04x}:0x{:04x}", block.block_number, tx_idx, event_idx);
 
-                Self::process_event(self, &block, &invoke_receipt, &event_id, event).await?;
+                Self::process_event(self, block, &receipt, &event_id, event).await?;
             }
 
             if world_event {
                 let transaction_id = format!("0x{:064x}:0x{:04x}", block.block_number, tx_idx);
 
-                Self::process_transaction(
-                    self,
-                    &block,
-                    &invoke_receipt,
-                    &transaction_id,
-                    invoke_transaction,
-                )
-                .await?;
+                Self::process_transaction(self, block, &receipt, &transaction_id, transaction)
+                    .await?;
             }
         }
-
-        info!("processed block: {}", block.block_number);
 
         Ok(())
     }
@@ -223,9 +248,9 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
     async fn process_transaction(
         &mut self,
         block: &BlockWithTxs,
-        invoke_receipt: &InvokeTransactionReceipt,
+        transaction_receipt: &TransactionReceipt,
         transaction_id: &str,
-        transaction: &InvokeTransactionV1,
+        transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
             processor
@@ -233,7 +258,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                     self.db,
                     self.provider.as_ref(),
                     block,
-                    invoke_receipt,
+                    transaction_receipt,
                     transaction,
                     transaction_id,
                 )
@@ -246,17 +271,24 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
     async fn process_event(
         &mut self,
         block: &BlockWithTxs,
-        invoke_receipt: &InvokeTransactionReceipt,
+        transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
     ) -> Result<()> {
-        self.db.store_event(event_id, event, invoke_receipt.transaction_hash);
+        let transaction_hash = match transaction_receipt {
+            TransactionReceipt::Invoke(invoke_receipt) => invoke_receipt.transaction_hash,
+            TransactionReceipt::L1Handler(l1_handler_receipt) => {
+                l1_handler_receipt.transaction_hash
+            }
+            _ => return Ok(()),
+        };
+        self.db.store_event(event_id, event, transaction_hash);
         for processor in &self.processors.event {
             if get_selector_from_name(&processor.event_key())? == event.keys[0]
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, self.db, block, invoke_receipt, event_id, event)
+                    .process(&self.world, self.db, block, transaction_receipt, event_id, event)
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {

@@ -1,8 +1,10 @@
 use cairo_lang_defs::plugin::{InlinePluginResult, PluginDiagnostic};
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use smol_str::SmolStr;
 
+pub mod array_cap;
 pub mod delete;
 pub mod emit;
 pub mod get;
@@ -40,6 +42,7 @@ pub fn extract_models(
                         return Err(PluginDiagnostic {
                             stable_ptr: param.stable_ptr().untyped(),
                             message: "Should be an unnamed argument".to_string(),
+                            severity: Severity::Error,
                         });
                     };
 
@@ -47,6 +50,7 @@ pub fn extract_models(
                         return Err(PluginDiagnostic {
                             stable_ptr: unnamed.stable_ptr().untyped(),
                             message: "Should be an expression".to_string(),
+                            severity: Severity::Error,
                         });
                     };
 
@@ -67,6 +71,7 @@ pub fn extract_models(
                     "Unsupported expression type: {}",
                     expression.as_syntax_node().get_text(db)
                 ),
+                severity: Severity::Error,
             });
         }
     }
@@ -86,6 +91,7 @@ pub fn unsupported_arg_diagnostic(
                 "Macro {} does not support this arg type",
                 macro_ast.path(db).as_syntax_node().get_text(db)
             ),
+            severity: Severity::Error,
         }],
     }
 }
