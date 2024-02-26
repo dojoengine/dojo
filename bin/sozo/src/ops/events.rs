@@ -1,8 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 
 use crate::commands::events::EventsArgs;
-use anyhow::Result;
-use cainome::parser::tokens::{CompositeInnerKind, CoreBasic, Token};
+use anyhow::{anyhow, Result};
+use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use dojo_world::metadata::Environment;
 use starknet::core::types::FieldElement;
 use starknet::core::types::{BlockId, EventFilter};
@@ -51,8 +51,16 @@ fn parse_and_print_events(
     println!("Continuation token: {:?}", res.continuation_token);
     println!("----------------------------------------------");
     for event in res.events {
-        if let Some(e) = parse_event(event.clone(), &events_map) {
-            println!("{e}");
+        match parse_event(event.clone(), &events_map) {
+            Ok(Some(e)) => {
+                println!("{e}");
+            }
+            Ok(None) => {
+                println!("No matching event found for {:?}", event);
+            }
+            Err(e) => {
+                println!("Error parsing event: {}", e);
+            }
         }
     }
     Ok(())
@@ -62,7 +70,7 @@ fn parse_core_basic(
     cb: &CoreBasic,
     value: &FieldElement,
     include_felt_string: bool,
-) -> Result<String, String> {
+) -> Result<String> {
     match cb.type_name().as_str() {
         "felt252" => {
             let hex = format!("{:#x}", value);
@@ -84,76 +92,78 @@ fn parse_core_basic(
         "u8" | "u16" | "u32" | "u64" | "u128" | "usize" | "i8" | "i16" | "i32" | "i64" | "i128" => {
             Ok(value.to_string())
         }
-        _ => Err(format!("Unsupported CoreBasic type: {}", cb.type_name())),
+        _ => Err(anyhow!("Unsupported CoreBasic type: {}", cb.type_name())),
     }
 }
 
 fn parse_event(
     event: starknet::core::types::EmittedEvent,
     events_map: &HashMap<String, Vec<Token>>,
-) -> Option<String> {
+) -> Result<Option<String>> {
     let mut data = VecDeque::from(event.data.clone());
     let mut keys = VecDeque::from(event.keys.clone());
-    let event_hash = keys.pop_front()?;
+    let event_hash = keys.pop_front().ok_or(anyhow!("Event hash missing"))?;
 
-    let events = events_map.get(&event_hash.to_string())?;
+    let events =
+        events_map.get(&event_hash.to_string()).ok_or(anyhow!("Events for hash not found"))?;
 
-    'outer: for e in events {
-        let mut ret = format!("Event name: {}\n", e.type_path());
-
+    for e in events {
         if let Token::Composite(composite) = e {
-            for inner in &composite.inners {
-                let result: Result<_, &'static str> = match inner.kind {
-                    CompositeInnerKind::Data => data.pop_front().ok_or("Missing data value"),
-                    CompositeInnerKind::Key => keys.pop_front().ok_or("Missing key value"),
-                    _ => Err("Unsupported inner kind encountered"),
-                };
-
-                let value = match result {
-                    Ok(val) => val,
-                    Err(_) => continue 'outer,
-                };
-
-                let formatted_value = match &inner.token {
-                    Token::CoreBasic(ref cb) => match parse_core_basic(cb, &value, true) {
-                        Ok(parsed_value) => parsed_value,
-                        Err(_) => continue 'outer,
-                    },
-                    Token::Array(ref array) => {
-                        let length = match value.to_string().parse::<usize>() {
-                            Ok(len) => len,
-                            Err(_) => continue 'outer,
-                        };
-
-                        let cb = if let Token::CoreBasic(ref cb) = *array.inner {
-                            cb
-                        } else {
-                            continue 'outer;
-                        };
-
-                        let mut elements = Vec::new();
-                        for _ in 0..length {
-                            if let Some(element_value) = data.pop_front() {
-                                match parse_core_basic(cb, &element_value, false) {
-                                    Ok(element_str) => elements.push(element_str),
-                                    Err(_) => continue 'outer,
-                                };
-                            } else {
-                                continue 'outer;
-                            }
-                        }
-
-                        format!("[{}]", elements.join(", "))
-                    }
-                    _ => continue 'outer,
-                };
-                ret.push_str(&format!("{}: {}\n", inner.name, formatted_value));
-            }
-            return Some(ret);
+            let processed_inners = process_inners(&composite.inners, &mut data, &mut keys)?;
+            let ret = format!("Event name: {}\n{}", e.type_path(), processed_inners);
+            return Ok(Some(ret));
         }
     }
 
-    None
+    Ok(None)
+}
+
+fn process_inners(
+    inners: &[CompositeInner],
+    data: &mut VecDeque<FieldElement>,
+    keys: &mut VecDeque<FieldElement>,
+) -> Result<String> {
+    let mut ret = String::new();
+
+    for inner in inners {
+        let value = match inner.kind {
+            CompositeInnerKind::Data => data.pop_front().ok_or(anyhow!("Missing data value")),
+            CompositeInnerKind::Key => keys.pop_front().ok_or(anyhow!("Missing key value")),
+            _ => Err(anyhow!("Unsupported inner kind encountered")),
+        }?;
+
+        let formatted_value = match &inner.token {
+            Token::CoreBasic(ref cb) => parse_core_basic(cb, &value, true)?,
+            Token::Array(ref array) => {
+                let length = value
+                    .to_string()
+                    .parse::<usize>()
+                    .map_err(|_| anyhow!("Error parsing length to usize"))?;
+
+                let cb = if let Token::CoreBasic(ref cb) = *array.inner {
+                    cb
+                } else {
+                    return Err(anyhow!("Inner token of array is not CoreBasic"));
+                };
+
+                let mut elements = Vec::new();
+                for _ in 0..length {
+                    if let Some(element_value) = data.pop_front() {
+                        let element_str = parse_core_basic(cb, &element_value, false)?;
+                        elements.push(element_str);
+                    } else {
+                        return Err(anyhow!("Missing array element value"));
+                    }
+                }
+
+                format!("[{}]", elements.join(", "))
+            }
+            _ => return Err(anyhow!("Unsupported token type encountered")),
+        };
+        ret.push_str(&format!("{}: {}\n", inner.name, formatted_value));
+    }
+
+    Ok(ret)
 }
 
 #[cfg(test)]
@@ -277,10 +287,12 @@ mod tests {
         let expected_output =
             "Event name: dojo::world::world::TestEvent\nfelt252: Test1 \"0x5465737431\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n".to_string();
 
-        let actual_output = parse_event(event.clone(), &events_map)
-            .unwrap_or_else(|| "Couldn't parse event".to_string());
+        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
-        assert_eq!(actual_output, expected_output);
+        match actual_output_option {
+            Some(actual_output) => assert_eq!(actual_output, expected_output),
+            None => panic!("Expected event was not found."),
+        }
     }
 
     #[test]
@@ -337,10 +349,12 @@ mod tests {
         let expected_output =
             "Event name: dojo::world::world::StoreDelRecord\ntable: Test \"0x54657374\"\nkeys: [\"0x5465737431\", \"0x5465737432\", \"0x5465737433\"]\n".to_string();
 
-        let actual_output = parse_event(event.clone(), &events_map)
-            .unwrap_or_else(|| "Couldn't parse event".to_string());
+        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
-        assert_eq!(actual_output, expected_output);
+        match actual_output_option {
+            Some(actual_output) => assert_eq!(actual_output, expected_output),
+            None => panic!("Expected event was not found."),
+        }
     }
 
     #[test]
@@ -408,10 +422,12 @@ mod tests {
         let expected_output =
             "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: Test1 \"0x5465737431\"\ndata_1: 1\ndata_2: 2\n".to_string();
 
-        let actual_output = parse_event(event.clone(), &events_map)
-            .unwrap_or_else(|| "Couldn't parse event".to_string());
+        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
-        assert_eq!(actual_output, expected_output);
+        match actual_output_option {
+            Some(actual_output) => assert_eq!(actual_output, expected_output),
+            None => panic!("Expected event was not found."),
+        }
     }
 
     #[test]
@@ -467,9 +483,11 @@ mod tests {
 
         let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: \"0x0\"\nkeys: [\"0x0\", \"0x1\", \"0x2\"]\n".to_string();
 
-        let actual_output = parse_event(event.clone(), &events_map)
-            .unwrap_or_else(|| "Couldn't parse event".to_string());
+        let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
-        assert_eq!(actual_output, expected_output);
+        match actual_output_option {
+            Some(actual_output) => assert_eq!(actual_output, expected_output),
+            None => panic!("Expected event was not found."),
+        }
     }
 }

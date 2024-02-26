@@ -59,7 +59,7 @@ impl EventsArgs {
                 return Err(anyhow!("Run scarb migrate before running this command"));
             }
 
-            Some(extract_events(&Manifest::load_from_path(manifest_path)?))
+            Some(extract_events(&Manifest::load_from_path(manifest_path)?)?)
         } else {
             None
         };
@@ -83,8 +83,11 @@ fn is_event(token: &Token) -> bool {
     }
 }
 
-fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Token>> {
-    fn process_abi(abi: &abi::Contract, events_map: &mut HashMap<String, Vec<Token>>) {
+fn extract_events(manifest: &Manifest) -> Result<HashMap<String, Vec<Token>>> {
+    fn process_abi(
+        abi: &abi::Contract,
+        events_map: &mut HashMap<String, Vec<Token>>,
+    ) -> Result<()> {
         match serde_json::to_string(abi) {
             Ok(abi_str) => match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
                 Ok(tokens) => {
@@ -97,32 +100,33 @@ fn extract_events(manifest: &Manifest) -> HashMap<String, Vec<Token>> {
                         }
                     }
                 }
-                Err(e) => println!("Error parsing ABI: {}", e),
+                Err(e) => return Err(anyhow!("Error parsing ABI: {}", e)),
             },
-            Err(e) => println!("Error serializing Contract to JSON: {}", e),
+            Err(e) => return Err(anyhow!("Error serializing Contract to JSON: {}", e)),
         }
+        Ok(())
     }
 
     let mut events_map = HashMap::new();
 
     // Iterate over all ABIs in the manifest and process them
     if let Some(abi) = manifest.world.abi.as_ref() {
-        process_abi(abi, &mut events_map);
+        process_abi(abi, &mut events_map)?;
     }
 
     for contract in &manifest.contracts {
         if let Some(abi) = contract.abi.clone() {
-            process_abi(&abi, &mut events_map);
+            process_abi(&abi, &mut events_map)?;
         }
     }
 
     for model in &manifest.contracts {
         if let Some(abi) = model.abi.clone() {
-            process_abi(&abi, &mut events_map);
+            process_abi(&abi, &mut events_map)?;
         }
     }
 
-    events_map
+    Ok(events_map)
 }
 
 #[cfg(test)]
@@ -140,7 +144,7 @@ mod test {
     #[test]
     fn extract_events_work_as_expected() {
         let manifest = Manifest::load_from_path("./tests/test_data/manifest.json").unwrap();
-        let result = extract_events(&manifest);
+        let result = extract_events(&manifest).unwrap();
 
         // we are just collection all events from manifest file so just verifying count should work
         assert!(result.len() == 13);
