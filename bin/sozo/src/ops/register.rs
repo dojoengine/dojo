@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::{Context, Result};
 use dojo_world::contracts::WorldContract;
 use dojo_world::metadata::Environment;
@@ -22,37 +20,28 @@ pub async fn execute(
 
             let account = account.account(&provider, env_metadata.as_ref()).await?;
             let world = WorldContract::new(world_address, &account);
-            let mut model_class_hashes = HashMap::new();
+            let mut models_to_register = Vec::new();
             for model_class_hash in models.iter() {
-                let (class_hash, contract_address) =
-                    world.model(model_class_hash.into()).call().await?;
-                if class_hash.0 != FieldElement::from_hex_be("0x0")?
-                    && contract_address.0 != FieldElement::from_hex_be("0x0")?
-                {
-                    model_class_hashes.insert(model_class_hash, true);
+                let (class_hash, _contract_address) = world.model(model_class_hash).call().await?;
+                if class_hash.0 == FieldElement::ZERO {
+                    models_to_register.push(*model_class_hash);
+                } else {
+                    config.ui().print(format!(
+                        "\"{:#x}\" model already registered with the given class hash",
+                        model_class_hash
+                    ));
                 }
             }
 
-            }
-
-            let calls = models
-                .iter()
-                .filter(|m| {
-                    if model_class_hashes.contains_key(m) {
-                        config.ui().print(format!(
-                            "\"{:?}\" model already registered with the given class hash", m
-                        ));
-                        return false;
-                    }
-                    true
-                })
-                .map(|c| world.register_model_getcall(&(*c).into()))
-                .collect::<Vec<_>>();
-
-            if calls.len() == 0 {
+            if models_to_register.is_empty() {
                 config.ui().print("No new models to register.");
                 return Ok(());
             }
+
+            let calls = models_to_register
+                .iter()
+                .map(|c| world.register_model_getcall(&(*c).into()))
+                .collect::<Vec<_>>();
 
             let res = account
                 .execute(calls)
