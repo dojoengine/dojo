@@ -186,6 +186,7 @@ public class {} : ModelInstance {{
             .iter()
             .map(|arg| {
                 let token = &arg.1;
+                let type_name = &arg.0;
 
                 match handled_tokens.iter().find(|t| t.type_name() == token.type_name()) {
                     Some(t) => {
@@ -195,18 +196,21 @@ public class {} : ModelInstance {{
                                 .inners
                                 .iter()
                                 .map(|field| {
-                                    format!("new FieldElement({}.{}).Inner()", arg.0, field.name)
+                                    format!(
+                                        "new FieldElement({}.{}).Inner()",
+                                        type_name, field.name
+                                    )
                                 })
                                 .collect::<Vec<String>>()
                                 .join(",\n                    "),
                             _ => {
-                                format!("new FieldElement({}).Inner()", arg.0)
+                                format!("new FieldElement({}).Inner()", type_name)
                             }
                         }
                     }
-                    None => match UnityPlugin::map_type(&arg.0).as_str() {
-                        "FieldElement" => format!("new {}.Inner()", arg.0),
-                        _ => format!("new FieldElement({}).Inner()", arg.0),
+                    None => match UnityPlugin::map_type(type_name).as_str() {
+                        "FieldElement" => format!("{}.Inner()", type_name),
+                        _ => format!("new FieldElement({}).Inner()", type_name),
                     },
                 }
             })
