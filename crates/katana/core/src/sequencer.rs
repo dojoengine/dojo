@@ -202,8 +202,9 @@ impl KatanaSequencer {
             .block_execution_context_at(block_id)?
             .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
 
-        // TODO: document
-        let should_validate = !skip_validate && self.backend.config.disable_validate;
+        // If the node is run with transaction validation disabled, then we should not validate
+        // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
+        let should_validate = !(skip_validate || self.backend.config.disable_validate);
 
         katana_executor::blockifier::utils::estimate_fee(
             transactions.into_iter(),
