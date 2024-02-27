@@ -6,7 +6,7 @@ use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use scarb::ops;
-use sozo::ops::migration::execute_strategy;
+use sozo_ops::migration::execute_strategy;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 use utils::snapbox::get_snapbox;

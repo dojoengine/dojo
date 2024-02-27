@@ -92,6 +92,7 @@ saya-core = { path = "crates/saya/core" }
 
 # sozo
 sozo-signers = { path = "crates/sozo/signers" }
+sozo-ops = { path = "crates/sozo/ops" }
 
 anyhow = "1.0.75"
 assert_matches = "1.5.0"

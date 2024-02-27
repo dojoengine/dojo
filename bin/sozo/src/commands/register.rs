@@ -1,14 +1,16 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::contracts::WorldContractReader;
 use scarb::core::Config;
-use starknet::core::types::FieldElement;
+use sozo_ops::register;
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{BlockId, BlockTag, FieldElement};
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use crate::ops::register;
+use crate::utils;
 
 #[derive(Debug, Args)]
 pub struct RegisterArgs {
@@ -42,14 +44,33 @@ pub enum RegisterCommand {
 
 impl RegisterArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = if config.manifest_path().exists() {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let env_metadata = utils::load_metadata_from_config(config)?;
 
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
-        } else {
-            None
+        let (starknet, world, account, transaction, models) = match self.command {
+            RegisterCommand::Model { starknet, world, account, transaction, models } => {
+                (starknet, world, account, transaction, models)
+            }
         };
 
-        config.tokio_handle().block_on(register::execute(self.command, env_metadata, config))
+        let world_address = world.world_address.unwrap_or_default();
+
+        let _ = config.tokio_handle().block_on(async {
+            let world =
+                utils::world_from_env_metadata(world, account, starknet, &env_metadata).await?;
+            let provider = world.account.provider();
+            let world_reader = WorldContractReader::new(world_address, &provider)
+                .with_block(BlockId::Tag(BlockTag::Pending));
+
+            register::model_register(
+                models,
+                &world,
+                transaction.into(),
+                world_reader,
+                world_address,
+                config,
+            )
+            .await
+        });
+        Ok(())
     }
 }

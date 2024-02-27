@@ -31,6 +31,10 @@ pub struct TransactionOptions {
 
 impl From<TransactionOptions> for TxConfig {
     fn from(value: TransactionOptions) -> Self {
-        Self { fee_estimate_multiplier: value.fee_estimate_multiplier }
+        Self {
+            fee_estimate_multiplier: value.fee_estimate_multiplier,
+            wait: value.wait,
+            receipt: value.receipt,
+        }
     }
 }

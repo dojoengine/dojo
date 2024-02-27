@@ -1,96 +1,22 @@
-use std::str::FromStr;
-
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::contracts::cairo_utils;
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::contracts::WorldContractReader;
+use dojo_world::metadata::Environment;
 use scarb::core::Config;
-use starknet_crypto::FieldElement;
+use sozo_ops::auth;
+use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{BlockId, BlockTag};
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use crate::ops::auth;
+use crate::utils;
 
 #[derive(Debug, Args)]
 pub struct AuthArgs {
     #[command(subcommand)]
     pub command: AuthCommand,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModelContract {
-    pub model: FieldElement,
-    pub contract: String,
-}
-
-impl FromStr for ModelContract {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(',').collect();
-
-        let (model, contract) = match parts.as_slice() {
-            [model, contract] => (model, contract),
-            _ => anyhow::bail!(
-                "Model and contract address are expected to be comma separated: `sozo auth writer \
-                 model_name,0x1234`"
-            ),
-        };
-
-        let model = cairo_utils::str_to_felt(model)
-            .map_err(|_| anyhow::anyhow!("Invalid model name: {}", model))?;
-
-        Ok(ModelContract { model, contract: contract.to_string() })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ResourceType {
-    Contract(String),
-    Model(FieldElement),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct OwnerResource {
-    pub resource: ResourceType,
-    pub owner: FieldElement,
-}
-
-impl FromStr for OwnerResource {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split(',').collect();
-
-        let (resource_part, owner_part) = match parts.as_slice() {
-            [resource, owner] => (*resource, *owner),
-            _ => anyhow::bail!(
-                "Owner and resource are expected to be comma separated: `sozo auth owner \
-                 resource_type:resource_name,0x1234`"
-            ),
-        };
-
-        let owner = FieldElement::from_hex_be(owner_part)
-            .map_err(|_| anyhow::anyhow!("Invalid owner address: {}", owner_part))?;
-
-        let resource_parts = resource_part.split_once(':');
-        let resource = match resource_parts {
-            Some(("contract", name)) => ResourceType::Contract(name.to_string()),
-            Some(("model", name)) => {
-                let model = cairo_utils::str_to_felt(name)
-                    .map_err(|_| anyhow::anyhow!("Invalid model name: {}", name))?;
-                ResourceType::Model(model)
-            }
-            _ => anyhow::bail!(
-                "Resource is expected to be in the format `resource_type:resource_name`: `sozo \
-                 auth owner 0x1234,resource_type:resource_name`"
-            ),
-        };
-
-        Ok(OwnerResource { owner, resource })
-    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -103,7 +29,7 @@ pub enum AuthKind {
         #[arg(help = "A list of models and contract address to grant write access to. Comma \
                       separated values to indicate model name and contract address e.g. \
                       model_name,path::to::contract model_name,contract_address ")]
-        models_contracts: Vec<ModelContract>,
+        models_contracts: Vec<auth::ModelContract>,
     },
     #[command(about = "Grant ownership of a resource.")]
     Owner {
@@ -114,8 +40,35 @@ pub enum AuthKind {
                       values to indicate owner address and resouce e.g. \
                       contract:path::to::contract,0x1234 contract:contract_address,0x1111, \
                       model:model_name,0xbeef")]
-        owners_resources: Vec<OwnerResource>,
+        owners_resources: Vec<auth::OwnerResource>,
     },
+}
+
+pub async fn execute(
+    world: WorldOptions,
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    env_metadata: Option<Environment>,
+    kind: AuthKind,
+    transaction: TransactionOptions,
+) -> Result<()> {
+    let world_address = world.world_address.unwrap_or_default();
+    let world =
+        utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
+    let provider = world.account.provider();
+    let world_reader = WorldContractReader::new(world_address, &provider)
+        .with_block(BlockId::Tag(BlockTag::Pending));
+
+    let _ = match kind {
+        AuthKind::Writer { models_contracts } => {
+            auth::grant_writer(&world, models_contracts, world_reader, transaction.into()).await
+        }
+        AuthKind::Owner { owners_resources } => {
+            auth::grant_owner(world, owners_resources, transaction.into()).await
+        }
+    };
+
+    Ok(())
 }
 
 #[derive(Debug, Subcommand)]
@@ -158,15 +111,18 @@ pub enum AuthCommand {
 
 impl AuthArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = if config.manifest_path().exists() {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let env_metadata = utils::load_metadata_from_config(config)?;
 
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
-        } else {
-            None
+        let _ = match self.command {
+            AuthCommand::Grant { kind, world, starknet, account, transaction } => config
+                .tokio_handle()
+                .block_on(execute(world, account, starknet, env_metadata, kind, transaction)),
+            AuthCommand::Revoke { kind, world, starknet, account, transaction } => config
+                .tokio_handle()
+                .block_on(execute(world, account, starknet, env_metadata, kind, transaction)),
         };
 
-        config.tokio_handle().block_on(auth::execute(self.command, env_metadata))
+        Ok(())
     }
 }
 
@@ -174,6 +130,7 @@ impl AuthArgs {
 mod tests {
     use std::str::FromStr;
 
+    use dojo_world::contracts::cairo_utils;
     use starknet_crypto::FieldElement;
 
     use super::*;
@@ -183,23 +140,23 @@ mod tests {
         // Test valid input
         let input = "contract:path::to::contract,0x1234";
         let expected_owner = FieldElement::from_hex_be("0x1234").unwrap();
-        let expected_resource = ResourceType::Contract("path::to::contract".to_string());
-        let expected = OwnerResource { owner: expected_owner, resource: expected_resource };
-        let result = OwnerResource::from_str(input).unwrap();
+        let expected_resource = auth::ResourceType::Contract("path::to::contract".to_string());
+        let expected = auth::OwnerResource { owner: expected_owner, resource: expected_resource };
+        let result = auth::OwnerResource::from_str(input).unwrap();
         assert_eq!(result, expected);
 
         // Test valid input with model
         let input = "model:model_name,0x1234";
         let expected_owner = FieldElement::from_hex_be("0x1234").unwrap();
         let expected_model = cairo_utils::str_to_felt("model_name").unwrap();
-        let expected_resource = ResourceType::Model(expected_model);
-        let expected = OwnerResource { owner: expected_owner, resource: expected_resource };
-        let result = OwnerResource::from_str(input).unwrap();
+        let expected_resource = auth::ResourceType::Model(expected_model);
+        let expected = auth::OwnerResource { owner: expected_owner, resource: expected_resource };
+        let result = auth::OwnerResource::from_str(input).unwrap();
         assert_eq!(result, expected);
 
         // Test invalid input
         let input = "invalid_input";
-        let result = OwnerResource::from_str(input);
+        let result = auth::OwnerResource::from_str(input);
         assert!(result.is_err());
     }
 
@@ -210,13 +167,13 @@ mod tests {
         let expected_model = cairo_utils::str_to_felt("model_name").unwrap();
         let expected_contract = "0x1234";
         let expected =
-            ModelContract { model: expected_model, contract: expected_contract.to_string() };
-        let result = ModelContract::from_str(input).unwrap();
+            auth::ModelContract { model: expected_model, contract: expected_contract.to_string() };
+        let result = auth::ModelContract::from_str(input).unwrap();
         assert_eq!(result, expected);
 
         // Test invalid input
         let input = "invalid_input";
-        let result = ModelContract::from_str(input);
+        let result = auth::ModelContract::from_str(input);
         assert!(result.is_err());
     }
 }

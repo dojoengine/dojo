@@ -1,11 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
-use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
+use sozo_ops::events;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::ops::events;
+use crate::utils;
 
 #[derive(Parser, Debug)]
 pub struct EventsArgs {
@@ -42,16 +42,29 @@ pub struct EventsArgs {
 
 impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let env_metadata = utils::load_metadata_from_config(config)?;
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
-        let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
-        } else {
-            None
-        };
-
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+        let provider = self.starknet.provider(env_metadata.as_ref())?;
 
-        config.tokio_handle().block_on(events::execute(self, env_metadata, &manifest_dir))
+        let event_filter = events::get_event_filter(
+            self.from_block,
+            self.to_block,
+            self.events,
+            self.world.world_address,
+        );
+
+        let _ = config.tokio_handle().block_on(async {
+            events::parse(
+                self.chunk_size,
+                provider,
+                self.continuation_token,
+                event_filter,
+                self.json,
+                &manifest_dir,
+            )
+            .await
+        });
+        Ok(())
     }
 }
