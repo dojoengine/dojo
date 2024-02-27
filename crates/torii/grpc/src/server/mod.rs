@@ -130,9 +130,10 @@ impl DojoWorld {
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
         let query = r#"
             SELECT keys, data, transaction_hash
-            FROM events
+            FROM events DESC
             LIMIT ? OFFSET ?
-         "#.to_string();
+         "#
+        .to_string();
 
         let row_events: Vec<(String, String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
@@ -279,9 +280,10 @@ impl DojoWorld {
         let events_query = r#"
             SELECT keys, data, transaction_hash
             FROM events
-            WHERE keys LIKE ?
+            WHERE keys LIKE ? DESC
             LIMIT ? OFFSET ?
-        "#.to_string();
+        "#
+        .to_string();
 
         let row_events: Vec<(String, String, String)> = sqlx::query_as(&events_query)
             .bind(&keys_pattern)
@@ -493,7 +495,7 @@ impl DojoWorld {
     }
 }
 
-fn process_event_field(data: &String) -> Vec<Vec<u8>> {
+fn process_event_field(data: &str) -> Vec<Vec<u8>> {
     data.trim_end_matches('/').split('/').map(|s| s.to_owned().into_bytes()).collect()
 }
 
