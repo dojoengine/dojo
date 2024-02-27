@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708939988041,
+  "lastUpdate": 1709039606075,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1915,6 +1915,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1026488,
             "range": "± 66169",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "91c737fe95bf882cdb85b4dba584886ffd3f861b",
+          "message": "fix(katana): always skip validation if node is run with validation disabled (#1589)",
+          "timestamp": "2024-02-27T21:03:50+08:00",
+          "tree_id": "89926915c247991a7b166f0ea0f204c4de82bab7",
+          "url": "https://github.com/dojoengine/dojo/commit/91c737fe95bf882cdb85b4dba584886ffd3f861b"
+        },
+        "date": 1709039605161,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1001502,
+            "range": "± 64101",
             "unit": "ns/iter"
           }
         ]
