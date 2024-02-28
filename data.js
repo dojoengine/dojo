@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709040435255,
+  "lastUpdate": 1709105191977,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -1975,6 +1975,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 970272,
             "range": "± 45401",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "be5469e14c84bc4317d9caa49f7d591fde656414",
+          "message": "fix(sozo): ensure bindgen works for unity even with felts (#1587)\n\n* fix(sozo): ensure bindgen works for unity even with felts\r\n\r\n* fix: ensure support for any type of tokens for systems\r\n\r\n* fix: use FieldElement Inner directly\r\n\r\n* fix: remove new keyword",
+          "timestamp": "2024-02-28T00:17:12-07:00",
+          "tree_id": "6ce29949a56f140291947fe5fc34569248124962",
+          "url": "https://github.com/dojoengine/dojo/commit/be5469e14c84bc4317d9caa49f7d591fde656414"
+        },
+        "date": 1709105191477,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 968851,
+            "range": "± 39716",
             "unit": "ns/iter"
           }
         ]
