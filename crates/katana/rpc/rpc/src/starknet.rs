@@ -22,15 +22,22 @@ use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
+use katana_rpc_types::simulation::SimulateTransactionsRequest;
 use katana_rpc_types::state_update::StateUpdate;
 use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
-use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags};
+use katana_rpc_types::{
+    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag,
+    SimulationFlagForEstimateFee,
+};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
-use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
+use starknet::core::types::{
+    BlockTag, SimulatedTransaction, TransactionExecutionStatus, TransactionStatus,
+};
+use tracing::info;
 
 #[derive(Clone)]
 pub struct StarknetApi {
@@ -470,7 +477,7 @@ impl StarknetApiServer for StarknetApi {
     async fn estimate_fee(
         &self,
         request: Vec<BroadcastedTx>,
-        simulation_flags: Vec<SimulationFlags>,
+        simulation_flags: Vec<SimulationFlagForEstimateFee>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
@@ -509,7 +516,7 @@ impl StarknetApiServer for StarknetApi {
                 .collect::<Result<Vec<_>, _>>()?;
 
             let skip_validate =
-                simulation_flags.iter().any(|flag| flag == &SimulationFlags::SkipValidate);
+                simulation_flags.iter().any(|flag| flag == &SimulationFlagForEstimateFee::SkipValidate);
 
             let res = this
                 .inner
@@ -660,6 +667,37 @@ impl StarknetApiServer for StarknetApi {
                     .map(|_| TransactionStatus::Rejected)
                     .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
             }
+        })
+        .await
+    }
+
+    async fn simulate_transactions(
+        &self,
+        request: SimulateTransactionsRequest,
+    ) -> RpcResult<Vec<SimulatedTransaction>> {
+        self.on_cpu_blocking_task(move |this| {
+            let charge_fee = !request.simulation_flags.contains(&SimulationFlag::SkipFeeCharge);
+            let validate = !request.simulation_flags.contains(&SimulationFlag::SkipValidate);
+            let executables = request
+                .try_into_executables_with_hash(this.inner.sequencer.chain_id())
+                .map_err(|_| StarknetApiError::ContractError {
+                    revert_error: "Transaction conversion error".to_string(),
+                })?;
+            let simulated_transactions = executables
+                .into_iter()
+                .map(|exec| {
+                    this.inner.sequencer.simulate_transaction(
+                        exec,
+                        request.block_id,
+                        validate,
+                        charge_fee,
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(StarknetApiError::from)?;
+
+            info!("Simulated transactions: {:?}", simulated_transactions);
+            Ok(simulated_transactions)
         })
         .await
     }

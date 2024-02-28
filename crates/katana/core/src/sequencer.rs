@@ -28,7 +28,9 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionsProviderExt,
 };
-use starknet::core::types::{BlockTag, EmittedEvent, EventsPage, FeeEstimate};
+use starknet::core::types::{
+    BlockTag, EmittedEvent, EventsPage, FeeEstimate, SimulatedTransaction,
+};
 
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
@@ -211,6 +213,29 @@ impl KatanaSequencer {
             block_context,
             state,
             should_validate,
+        )
+        .map_err(SequencerError::TransactionExecution)
+    }
+
+    pub fn simulate_transaction(
+        &self,
+        transaction: ExecutableTxWithHash,
+        block_id: BlockIdOrTag,
+        validate: bool,
+        charge_fee: bool,
+    ) -> SequencerResult<SimulatedTransaction> {
+        let state = self.state(&block_id)?;
+
+        let block_context = self
+            .block_execution_context_at(block_id)?
+            .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
+
+        katana_executor::blockifier::utils::simulate_transaction(
+            transaction,
+            &block_context,
+            state,
+            validate,
+            charge_fee,
         )
         .map_err(SequencerError::TransactionExecution)
     }

@@ -17,20 +17,30 @@ use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{
     DeprecatedAccountTransactionContext, ResourcesMapping, TransactionExecutionInfo,
 };
+use cairo_vm::vm::runners::builtin_runner::{
+    BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
+    POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME, SEGMENT_ARENA_BUILTIN_NAME,
+    SIGNATURE_BUILTIN_NAME,
+};
 use convert_case::{Case, Casing};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::{Event, MessageToL1};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::transaction::ExecutableTxWithHash;
+use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
-use starknet::core::types::{FeeEstimate, PriceUnit};
+use starknet::core::types::{
+    DeclareTransactionTrace, DeployAccountTransactionTrace, ExecuteInvocation, FeeEstimate,
+    FunctionInvocation, InvokeTransactionTrace, L1HandlerTransactionTrace, PriceUnit,
+    RevertedInvocation, SimulatedTransaction, TransactionTrace,
+};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::macros::felt;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::EntryPointSelector;
+use starknet_api::hash::StarkFelt;
 use starknet_api::transaction::Calldata;
 use tracing::trace;
 
@@ -85,6 +95,90 @@ pub fn estimate_fee(
             calculate_execution_fee(&block_context, &exec_info)
         })
         .collect::<Result<Vec<_>, _>>()
+}
+
+/// Simulate a transaction's execution on the state
+pub fn simulate_transaction(
+    transaction: ExecutableTxWithHash,
+    block_context: &BlockContext,
+    state: Box<dyn StateProvider>,
+    validate: bool,
+    charge_fee: bool,
+) -> Result<SimulatedTransaction, TransactionExecutionError> {
+    let state = CachedStateWrapper::new(StateRefDb::from(state));
+    let result = TransactionExecutor::new(
+        &state,
+        block_context,
+        charge_fee,
+        validate,
+        vec![transaction.clone()].into_iter(),
+    )
+    .with_error_log()
+    .next()
+    .ok_or(TransactionExecutionError::ExecutionError(
+        EntryPointExecutionError::ExecutionFailed { error_data: Default::default() },
+    ))?;
+    let result = result?;
+
+    let function_invocation =
+        result.execute_call_info.as_ref().map(function_invocation_from_call_info).ok_or(
+            TransactionExecutionError::ExecutionError(EntryPointExecutionError::ExecutionFailed {
+                error_data: Default::default(),
+            }),
+        );
+
+    let validate_invocation =
+        result.validate_call_info.as_ref().map(function_invocation_from_call_info);
+
+    let fee_transfer_invocation =
+        result.fee_transfer_call_info.as_ref().map(function_invocation_from_call_info);
+
+    let transaction_trace = match &transaction.transaction {
+        ExecutableTx::Declare(_) => TransactionTrace::Declare(DeclareTransactionTrace {
+            validate_invocation,
+            fee_transfer_invocation,
+            state_diff: None,
+        }),
+        ExecutableTx::DeployAccount(_) => {
+            TransactionTrace::DeployAccount(DeployAccountTransactionTrace {
+                constructor_invocation: function_invocation?,
+                validate_invocation,
+                fee_transfer_invocation,
+                state_diff: None,
+            })
+        }
+        ExecutableTx::Invoke(_) => TransactionTrace::Invoke(InvokeTransactionTrace {
+            validate_invocation,
+            execute_invocation: if let Some(revert_reason) = result.revert_error {
+                ExecuteInvocation::Reverted(RevertedInvocation { revert_reason })
+            } else {
+                ExecuteInvocation::Success(function_invocation?)
+            },
+            fee_transfer_invocation,
+            state_diff: None,
+        }),
+        ExecutableTx::L1Handler(_) => TransactionTrace::L1Handler(L1HandlerTransactionTrace {
+            function_invocation: function_invocation?,
+            state_diff: None,
+        }),
+    };
+
+    let execute_gas_consumed =
+        result.execute_call_info.map(|e| e.execution.gas_consumed).unwrap_or_default();
+    let validate_gas_consumed =
+        result.validate_call_info.map(|e| e.execution.gas_consumed).unwrap_or_default();
+    let gas_consumed = execute_gas_consumed + validate_gas_consumed;
+    let overall_fee = result.actual_fee.0 as u64;
+    let gas_price = if gas_consumed != 0 { overall_fee / gas_consumed } else { 0 };
+
+    let fee_estimation = FeeEstimate {
+        gas_price: FieldElement::from(gas_price),
+        gas_consumed: FieldElement::from(execute_gas_consumed + validate_gas_consumed),
+        overall_fee: FieldElement::from(overall_fee),
+        unit: PriceUnit::Wei,
+    };
+
+    Ok(SimulatedTransaction { transaction_trace, fee_estimation })
 }
 
 /// Perform a raw entrypoint call of a contract.
@@ -396,4 +490,79 @@ pub(super) fn l2_to_l1_messages_from_exec_info(
     }
 
     messages
+}
+
+fn function_invocation_from_call_info(info: &CallInfo) -> FunctionInvocation {
+    let entry_point_type = match info.call.entry_point_type {
+        starknet_api::deprecated_contract_class::EntryPointType::Constructor => {
+            starknet::core::types::EntryPointType::Constructor
+        }
+        starknet_api::deprecated_contract_class::EntryPointType::External => {
+            starknet::core::types::EntryPointType::External
+        }
+        starknet_api::deprecated_contract_class::EntryPointType::L1Handler => {
+            starknet::core::types::EntryPointType::L1Handler
+        }
+    };
+    let call_type = match info.call.call_type {
+        blockifier::execution::entry_point::CallType::Call => starknet::core::types::CallType::Call,
+        blockifier::execution::entry_point::CallType::Delegate => {
+            starknet::core::types::CallType::Delegate
+        }
+    };
+
+    let calls = info.inner_calls.iter().map(function_invocation_from_call_info).collect();
+    let events = info
+        .execution
+        .events
+        .iter()
+        .map(|e| starknet::core::types::OrderedEvent {
+            order: e.order as u64,
+            data: e.event.data.0.iter().map(|d| (*d).into()).collect(),
+            keys: e.event.keys.iter().map(|k| k.0.into()).collect(),
+        })
+        .collect();
+    let messages = info
+        .execution
+        .l2_to_l1_messages
+        .iter()
+        .map(|m| starknet::core::types::OrderedMessage {
+            order: m.order as u64,
+            to_address: (Into::<StarkFelt>::into(m.message.to_address)).into(),
+            from_address: (*info.call.storage_address.0.key()).into(),
+            payload: m.message.payload.0.iter().map(|p| (*p).into()).collect(),
+        })
+        .collect();
+
+    let vm_resources = info.vm_resources.filter_unused_builtins();
+    let get_vm_resource =
+        |name: &str| vm_resources.builtin_instance_counter.get(name).map(|r| *r as u64);
+    let execution_resources = starknet::core::types::ExecutionResources {
+        steps: vm_resources.n_steps as u64,
+        memory_holes: Some(vm_resources.n_memory_holes as u64),
+        range_check_builtin_applications: get_vm_resource(RANGE_CHECK_BUILTIN_NAME),
+        pedersen_builtin_applications: get_vm_resource(HASH_BUILTIN_NAME),
+        poseidon_builtin_applications: get_vm_resource(POSEIDON_BUILTIN_NAME),
+        ec_op_builtin_applications: get_vm_resource(EC_OP_BUILTIN_NAME),
+        ecdsa_builtin_applications: get_vm_resource(SIGNATURE_BUILTIN_NAME),
+        bitwise_builtin_applications: get_vm_resource(BITWISE_BUILTIN_NAME),
+        keccak_builtin_applications: get_vm_resource(KECCAK_BUILTIN_NAME),
+        segment_arena_builtin: get_vm_resource(SEGMENT_ARENA_BUILTIN_NAME),
+    };
+
+    FunctionInvocation {
+        contract_address: (*info.call.storage_address.0.key()).into(),
+        entry_point_selector: info.call.entry_point_selector.0.into(),
+        calldata: info.call.calldata.0.iter().map(|f| (*f).into()).collect(),
+        caller_address: (*info.call.caller_address.0.key()).into(),
+        // See https://github.com/starkware-libs/blockifier/blob/main/crates/blockifier/src/execution/call_info.rs#L167
+        class_hash: info.call.class_hash.expect("Class hash mut be set after execution").0.into(),
+        entry_point_type,
+        call_type,
+        result: info.execution.retdata.0.iter().map(|f| (*f).into()).collect(),
+        calls,
+        events,
+        messages,
+        execution_resources,
+    }
 }

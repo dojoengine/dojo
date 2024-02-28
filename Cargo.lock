@@ -6630,6 +6630,7 @@ version = "0.6.0-alpha.5"
 dependencies = [
  "anyhow",
  "blockifier",
+ "cairo-vm",
  "convert_case 0.6.0",
  "futures",
  "katana-primitives",
