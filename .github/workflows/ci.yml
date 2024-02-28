@@ -18,8 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: |
-          cargo build -r --bin katana         
+      - run: |       
           cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana
           cargo llvm-cov nextest --no-report -p katana 
           cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
