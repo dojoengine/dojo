@@ -34,6 +34,9 @@ pub enum ExecutorError {
 
     #[error(transparent)]
     Other(Box<dyn std::error::Error + Send>),
+
+    #[error(transparent)]
+    BlockifierError(#[from] crate::implementation::blockifier::Error),
 }
 
 pub type ExecutorResult<T> = Result<T, ExecutorError>;
