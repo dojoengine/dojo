@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use blockifier::state::cached_state::{CachedState, GlobalContractCache};
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
-use katana_primitives::contract::{CompiledClass, FlattenedSierraClass};
+use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
 use katana_primitives::conversion::blockifier::to_class;
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
@@ -16,9 +16,8 @@ use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
 mod primitives {
-    pub use katana_primitives::contract::{
-        ClassHash, CompiledClassHash, ContractAddress, Nonce, StorageKey, StorageValue,
-    };
+    pub use katana_primitives::class::{ClassHash, CompiledClassHash};
+    pub use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 }
 
 /// A state db only provide read access.
@@ -167,10 +166,7 @@ impl CachedStateWrapper {
 }
 
 impl ContractClassProvider for CachedStateWrapper {
-    fn class(
-        &self,
-        hash: katana_primitives::contract::ClassHash,
-    ) -> ProviderResult<Option<CompiledClass>> {
+    fn class(&self, hash: primitives::ClassHash) -> ProviderResult<Option<CompiledClass>> {
         if let res @ Some(_) = self.class_cache.read().compiled.get(&hash).cloned() {
             Ok(res)
         } else {
@@ -180,8 +176,8 @@ impl ContractClassProvider for CachedStateWrapper {
 
     fn compiled_class_hash_of_class_hash(
         &self,
-        hash: katana_primitives::contract::ClassHash,
-    ) -> ProviderResult<Option<katana_primitives::contract::CompiledClassHash>> {
+        hash: primitives::ClassHash,
+    ) -> ProviderResult<Option<primitives::CompiledClassHash>> {
         let Ok(hash) = self.inner().get_compiled_class_hash(ClassHash(hash.into())) else {
             return Ok(None);
         };
@@ -190,7 +186,7 @@ impl ContractClassProvider for CachedStateWrapper {
 
     fn sierra_class(
         &self,
-        hash: katana_primitives::contract::ClassHash,
+        hash: primitives::ClassHash,
     ) -> ProviderResult<Option<FlattenedSierraClass>> {
         if let Some(class) = self.class_cache.read().sierra.get(&hash) {
             Ok(Some(class.clone()))
@@ -203,9 +199,9 @@ impl ContractClassProvider for CachedStateWrapper {
 impl StateProvider for CachedStateWrapper {
     fn storage(
         &self,
-        address: katana_primitives::contract::ContractAddress,
-        storage_key: katana_primitives::contract::StorageKey,
-    ) -> ProviderResult<Option<katana_primitives::contract::StorageValue>> {
+        address: primitives::ContractAddress,
+        storage_key: primitives::StorageKey,
+    ) -> ProviderResult<Option<primitives::StorageValue>> {
         let Ok(value) =
             self.inner().get_storage_at(address.into(), StorageKey(patricia_key!(storage_key)))
         else {
@@ -216,8 +212,8 @@ impl StateProvider for CachedStateWrapper {
 
     fn nonce(
         &self,
-        address: katana_primitives::contract::ContractAddress,
-    ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
+        address: primitives::ContractAddress,
+    ) -> ProviderResult<Option<primitives::Nonce>> {
         let Ok(nonce) = self.inner().get_nonce_at(address.into()) else {
             return Ok(None);
         };
@@ -226,8 +222,8 @@ impl StateProvider for CachedStateWrapper {
 
     fn class_hash_of_contract(
         &self,
-        address: katana_primitives::contract::ContractAddress,
-    ) -> ProviderResult<Option<katana_primitives::contract::ClassHash>> {
+        address: primitives::ContractAddress,
+    ) -> ProviderResult<Option<primitives::ClassHash>> {
         let Ok(hash) = self.inner().get_class_hash_at(address.into()) else {
             return Ok(None);
         };

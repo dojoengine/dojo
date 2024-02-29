@@ -1,7 +1,5 @@
-use katana_primitives::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
-    GenericContractInfo,
-};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::contract::{ContractAddress, GenericContractInfo};
 
 use crate::ProviderResult;
 

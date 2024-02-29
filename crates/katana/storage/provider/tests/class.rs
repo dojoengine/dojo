@@ -6,9 +6,7 @@ use fixtures::{
     DOJO_WORLD_COMPILED_CLASS, DOJO_WORLD_SIERRA_CLASS,
 };
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
-use katana_primitives::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass,
-};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::genesis::constant::{
     DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
 };

@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use katana_db::codecs::{Compress, Decompress};
-use katana_primitives::contract::CompiledClass;
+use katana_primitives::class::CompiledClass;
 use katana_primitives::utils::class::parse_compiled_class;
 
 fn compress_contract(contract: CompiledClass) -> Vec<u8> {

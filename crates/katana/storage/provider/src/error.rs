@@ -1,6 +1,7 @@
 use katana_db::error::DatabaseError;
 use katana_primitives::block::BlockNumber;
-use katana_primitives::contract::{ClassHash, ContractAddress, StorageKey};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::{ContractAddress, StorageKey};
 use katana_primitives::transaction::TxNumber;
 
 use crate::providers::fork::backend::ForkedBackendError;
