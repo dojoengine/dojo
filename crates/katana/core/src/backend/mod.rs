@@ -147,6 +147,7 @@ impl Backend {
         let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
 
         let partial_header = PartialHeader {
+            number: block_env.number,
             parent_hash: prev_hash,
             version: CURRENT_STARKNET_VERSION,
             timestamp: block_env.timestamp,
