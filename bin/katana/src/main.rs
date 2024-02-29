@@ -61,8 +61,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    use katana_executor::implementation::blockifier::BlockifierFactory;
-    let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
+    cfg_if::cfg_if! {
+        if #[cfg(all(feature = "blockifier", feature = "sir"))] {
+            compile_error!("Cannot enable both `blockifier` and `sir` features at the same time");
+        } else if #[cfg(feature = "blockifier")] {
+            use katana_executor::implementation::blockifier::BlockifierFactory;
+            let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
+        } else if #[cfg(feature = "sir")] {
+            use katana_executor::implementation::sir::NativeExecutorFactory;
+            let executor_factory = NativeExecutorFactory::new(cfg_env, simulation_flags);
+        } else {
+            compile_error!("At least one of the following features must be enabled: blockifier, sir");
+        }
+    }
 
     let sequencer =
         Arc::new(KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await?);
