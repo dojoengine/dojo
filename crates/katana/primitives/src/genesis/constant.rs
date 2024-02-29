@@ -1,9 +1,8 @@
 use lazy_static::lazy_static;
 use starknet::core::utils::get_storage_var_address;
 
-use crate::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, SierraClass, StorageKey,
-};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, SierraClass};
+use crate::contract::{ContractAddress, StorageKey};
 use crate::utils::class::{parse_compiled_class, parse_sierra_class};
 use crate::FieldElement;
 
