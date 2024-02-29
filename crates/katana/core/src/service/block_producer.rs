@@ -234,7 +234,7 @@ impl IntervalBlockProducer {
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
         backend.update_block_env(&mut block_env);
-        pending_state.reset_state(new_state.into(), block_env, cfg_env);
+        pending_state.reset_state(new_state, block_env, cfg_env);
 
         Ok(outcome)
     }
@@ -355,7 +355,7 @@ impl InstantBlockProducer {
         let block_context = block_context_from_envs(&block_env, &cfg_env);
 
         let latest_state = StateFactoryProvider::latest(backend.blockchain.provider())?;
-        let state = CachedStateWrapper::new(latest_state.into());
+        let state = CachedStateWrapper::new(StateRefDb(latest_state));
 
         let txs = transactions.iter().map(TxWithHash::from);
 

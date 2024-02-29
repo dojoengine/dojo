@@ -587,7 +587,7 @@ impl BlockWriter for DbProvider {
             }
 
             for (hash, compiled_class) in states.declared_compiled_classes {
-                db_tx.put::<tables::CompiledContractClasses>(hash, compiled_class.into())?;
+                db_tx.put::<tables::CompiledClasses>(hash, compiled_class)?;
             }
 
             for (class_hash, sierra_class) in states.declared_sierra_classes {

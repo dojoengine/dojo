@@ -3,8 +3,7 @@ use ethers::types::H256;
 
 use crate::chain::ChainId;
 use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    Nonce,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass, Nonce,
 };
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_deploy_account_v1_tx_hash,
@@ -101,7 +100,7 @@ pub struct DeclareTxWithClass {
     /// The Sierra class, if any.
     pub sierra_class: Option<FlattenedSierraClass>,
     /// The compiled contract class.
-    pub compiled_class: CompiledContractClass,
+    pub compiled_class: CompiledClass,
     /// The raw transaction.
     #[deref]
     #[as_ref]
@@ -112,7 +111,7 @@ impl DeclareTxWithClass {
     pub fn new_with_classes(
         transaction: DeclareTx,
         sierra_class: FlattenedSierraClass,
-        compiled_class: CompiledContractClass,
+        compiled_class: CompiledClass,
     ) -> Self {
         Self { sierra_class: Some(sierra_class), compiled_class, transaction }
     }

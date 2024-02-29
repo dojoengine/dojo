@@ -6,7 +6,7 @@ use katana_primitives::block::{
     SealedBlockWithStatus,
 };
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
     GenericContractInfo, StorageKey, StorageValue,
 };
 use katana_primitives::env::BlockEnv;
@@ -248,7 +248,7 @@ where
         self.provider.compiled_class_hash_of_class_hash(hash)
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         self.provider.class(hash)
     }
 
@@ -304,7 +304,7 @@ impl<Db> ContractClassWriter for BlockchainProvider<Db>
 where
     Db: ContractClassWriter,
 {
-    fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.provider.set_class(hash, class)
     }
 
