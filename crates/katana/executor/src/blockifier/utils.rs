@@ -15,7 +15,8 @@ use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_an
 use blockifier::state::state_api::State;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{
-    DeprecatedAccountTransactionContext, ResourcesMapping, TransactionExecutionInfo,
+    DeprecatedAccountTransactionContext, HasRelatedFeeType, ResourcesMapping,
+    TransactionExecutionInfo,
 };
 use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
@@ -45,6 +46,7 @@ use starknet_api::transaction::Calldata;
 use tracing::trace;
 
 use super::state::{CachedStateWrapper, StateRefDb};
+use super::transactions::BlockifierTx;
 use super::TransactionExecutor;
 
 #[derive(Debug)]
@@ -171,11 +173,24 @@ pub fn simulate_transaction(
     let overall_fee = result.actual_fee.0 as u64;
     let gas_price = if gas_consumed != 0 { overall_fee / gas_consumed } else { 0 };
 
+    let blockifier_tx = BlockifierTx::from(transaction);
+    let fee_type = match blockifier_tx.0 {
+        blockifier::transaction::transaction_execution::Transaction::AccountTransaction(tx) => {
+            tx.fee_type()
+        }
+        blockifier::transaction::transaction_execution::Transaction::L1HandlerTransaction(tx) => {
+            tx.fee_type()
+        }
+    };
+
     let fee_estimation = FeeEstimate {
         gas_price: FieldElement::from(gas_price),
         gas_consumed: FieldElement::from(execute_gas_consumed + validate_gas_consumed),
         overall_fee: FieldElement::from(overall_fee),
-        unit: PriceUnit::Wei,
+        unit: match fee_type {
+            blockifier::transaction::objects::FeeType::Eth => PriceUnit::Wei,
+            blockifier::transaction::objects::FeeType::Strk => PriceUnit::Fri,
+        },
     };
 
     Ok(SimulatedTransaction { transaction_trace, fee_estimation })
