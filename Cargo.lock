@@ -3317,6 +3317,7 @@ dependencies = [
  "dojo-world",
  "jsonrpsee 0.16.3",
  "katana-core",
+ "katana-executor",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
@@ -6532,6 +6533,7 @@ dependencies = [
  "common",
  "console",
  "katana-core",
+ "katana-executor",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
@@ -6576,6 +6578,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-vm",
  "convert_case 0.6.0",
+ "derive_more",
  "ethers",
  "flate2",
  "futures",
@@ -6584,6 +6587,7 @@ dependencies = [
  "katana-executor",
  "katana-primitives",
  "katana-provider",
+ "katana-tasks",
  "lazy_static",
  "parking_lot 0.12.1",
  "primitive-types",
@@ -6625,7 +6629,6 @@ dependencies = [
 name = "katana-executor"
 version = "0.6.0-alpha.3"
 dependencies = [
- "anyhow",
  "blockifier",
  "cairo-vm",
  "convert_case 0.6.0",
@@ -6639,7 +6642,6 @@ dependencies = [
  "starknet 0.9.0",
  "starknet_api",
  "thiserror",
- "tokio",
  "tracing",
 ]
 
