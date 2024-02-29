@@ -6636,6 +6636,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "starknet 0.9.0",
  "starknet_api",
+ "thiserror",
  "tokio",
  "tracing",
 ]
