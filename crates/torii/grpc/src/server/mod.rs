@@ -130,7 +130,8 @@ impl DojoWorld {
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
         let query = r#"
             SELECT keys, data, transaction_hash
-            FROM events DESC
+            FROM events 
+            ORDER BY id DESC
             LIMIT ? OFFSET ?
          "#
         .to_string();
@@ -280,7 +281,8 @@ impl DojoWorld {
         let events_query = r#"
             SELECT keys, data, transaction_hash
             FROM events
-            WHERE keys LIKE ? DESC
+            WHERE keys LIKE ?
+            ORDER BY id DESC
             LIMIT ? OFFSET ?
         "#
         .to_string();
