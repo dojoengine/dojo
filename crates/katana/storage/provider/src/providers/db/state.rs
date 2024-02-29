@@ -6,7 +6,7 @@ use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
     GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
@@ -69,9 +69,9 @@ impl StateWriter for DbProvider {
 }
 
 impl ContractClassWriter for DbProvider {
-    fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<tables::CompiledContractClasses>(hash, class.into())?;
+            db_tx.put::<tables::CompiledClasses>(hash, class)?;
             Ok(())
         })?
     }
@@ -109,9 +109,9 @@ impl LatestStateProvider {
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
-        let class = self.0.get::<tables::CompiledContractClasses>(hash)?;
-        Ok(class.map(CompiledContractClass::from))
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        let class = self.0.get::<tables::CompiledClasses>(hash)?;
+        Ok(class)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -222,10 +222,10 @@ impl ContractClassProvider for HistoricalStateProvider {
         }
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            let contract = self.tx.get::<tables::CompiledContractClasses>(hash)?;
-            Ok(contract.map(CompiledContractClass::from))
+            let contract = self.tx.get::<tables::CompiledClasses>(hash)?;
+            Ok(contract)
         } else {
             Ok(None)
         }

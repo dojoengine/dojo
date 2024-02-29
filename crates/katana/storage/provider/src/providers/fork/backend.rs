@@ -11,12 +11,12 @@ use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
     GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
-    legacy_rpc_to_inner_compiled_class,
+    legacy_rpc_to_compiled_class,
 };
 use katana_primitives::FieldElement;
 use parking_lot::Mutex;
@@ -449,7 +449,7 @@ impl ContractClassProvider for SharedStateProvider {
         }
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         if let Some(class) = self.0.shared_contract_classes.compiled_classes.read().get(&hash) {
             return Ok(Some(class.clone()));
         }
@@ -465,7 +465,7 @@ impl ContractClassProvider for SharedStateProvider {
 
         let (class_hash, compiled_class_hash, casm, sierra) = match class {
             ContractClass::Legacy(class) => {
-                let (_, compiled_class) = legacy_rpc_to_inner_compiled_class(&class).map_err(|e| {
+                let (_, compiled_class) = legacy_rpc_to_compiled_class(&class).map_err(|e| {
                     error!(target: "forked_backend", "error while parsing legacy class {hash:#x}: {e}");
                     ProviderError::ParsingError(e.to_string())
                 })?;

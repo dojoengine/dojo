@@ -1,7 +1,7 @@
-use blockifier::execution::contract_class::ContractClassV0;
+use katana_primitives::contract::DeprecatedCompiledClass;
 use starknet::core::types::FlattenedSierraClass;
 
 pub enum StarknetContract {
-    Legacy(ContractClassV0),
+    Legacy(DeprecatedCompiledClass),
     Sierra(FlattenedSierraClass),
 }

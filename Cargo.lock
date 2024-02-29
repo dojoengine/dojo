@@ -6605,7 +6605,6 @@ name = "katana-db"
 version = "0.6.0-alpha.3"
 dependencies = [
  "anyhow",
- "blockifier",
  "cairo-lang-starknet",
  "cairo-vm",
  "criterion",
@@ -6646,6 +6645,7 @@ dependencies = [
  "anyhow",
  "base64 0.21.7",
  "blockifier",
+ "cairo-lang-sierra",
  "cairo-lang-starknet",
  "cairo-vm",
  "derive_more",

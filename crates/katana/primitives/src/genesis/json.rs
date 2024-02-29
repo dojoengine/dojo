@@ -11,8 +11,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use base64::prelude::*;
-use cairo_lang_starknet::casm_contract_class::{CasmContractClass, StarknetSierraCompilationError};
-use cairo_lang_starknet::contract_class::ContractClass;
+use cairo_lang_starknet::casm_contract_class::StarknetSierraCompilationError;
 use cairo_vm::types::errors::program_errors::ProgramError;
 use ethers::types::U256;
 use rayon::prelude::*;
@@ -38,10 +37,10 @@ use super::constant::{
 use super::{FeeTokenConfig, Genesis, GenesisAllocation, UniversalDeployerConfig};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
 use crate::contract::{
-    ClassHash, CompiledContractClass, CompiledContractClassV0, CompiledContractClassV1,
-    ContractAddress, SierraClass, StorageKey, StorageValue,
+    ClassHash, CompiledClass, ContractAddress, SierraClass, StorageKey, StorageValue,
 };
 use crate::genesis::GenesisClass;
+use crate::utils::class::{parse_compiled_class_v1, parse_deprecated_compiled_class};
 use crate::FieldElement;
 
 type Object = Map<String, Value>;
@@ -282,28 +281,24 @@ impl TryFrom<GenesisJson> for Genesis {
 
                 let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
                     Ok(sierra) => {
-                        let casm: ContractClass = serde_json::from_value(artifact)?;
-                        let casm = CasmContractClass::from_contract_class(casm, true)?;
+                        let class = parse_compiled_class_v1(artifact)?;
 
                         // check if the class hash is provided, otherwise compute it from the
                         // artifacts
                         let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
-                        let compiled_hash = casm.compiled_class_hash().to_be_bytes();
+                        let compiled_hash = class.casm.compiled_class_hash().to_be_bytes();
 
                         (
                             class_hash,
                             FieldElement::from_bytes_be(&compiled_hash)?,
                             Some(Arc::new(sierra.flatten()?)),
-                            Arc::new(CompiledContractClass::V1(CompiledContractClassV1::try_from(
-                                casm,
-                            )?)),
+                            Arc::new(CompiledClass::Class(class)),
                         )
                     }
 
                     // if the artifact is not a sierra contract, we check if it's a legacy contract
                     Err(_) => {
-                        let casm: CompiledContractClassV0 =
-                            serde_json::from_value(artifact.clone())?;
+                        let casm = parse_deprecated_compiled_class(artifact.clone())?;
 
                         let class_hash = if let Some(class_hash) = class_hash {
                             class_hash
@@ -313,7 +308,7 @@ impl TryFrom<GenesisJson> for Genesis {
                             casm.class_hash()?
                         };
 
-                        (class_hash, class_hash, None, Arc::new(CompiledContractClass::V0(casm)))
+                        (class_hash, class_hash, None, Arc::new(CompiledClass::Deprecated(casm)))
                     }
                 };
 
