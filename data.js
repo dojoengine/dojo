@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709105191977,
+  "lastUpdate": 1709242311541,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2005,6 +2005,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 968851,
             "range": "± 39716",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gian.alarcon@unmsm.edu.pe",
+            "name": "GianMarco",
+            "username": "gianalarcon"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6a513fef55d83a31e47a004d59ff496fa3a32055",
+          "message": "Feat(torii-grpc): support Events query (#1567)\n\n* Feat: Add fn retrieve_events()\r\n\r\n* Feat: Add event related messages\r\n\r\n* Update crates/torii/grpc/proto/types.proto\r\n\r\nCo-authored-by: Yun <broody@gmail.com>\r\n\r\n* Update crates/torii/grpc/proto/types.proto\r\n\r\nCo-authored-by: Yun <broody@gmail.com>\r\n\r\n* Remove hashed_keys on EventQuery, Remove EventClause\r\n\r\n* Feat: Improve fn events_all and events_by_keys\r\n\r\n* Refactor code\r\n\r\n* fix clippy\r\n\r\n* Update query\r\n\r\n* Fix sql query\r\n\r\n---------\r\n\r\nCo-authored-by: Yun <broody@gmail.com>",
+          "timestamp": "2024-02-29T13:22:12-08:00",
+          "tree_id": "998d84b6fd5778e3f62f9314196c2c75718c9ca8",
+          "url": "https://github.com/dojoengine/dojo/commit/6a513fef55d83a31e47a004d59ff496fa3a32055"
+        },
+        "date": 1709242310494,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 967812,
+            "range": "± 66096",
             "unit": "ns/iter"
           }
         ]
