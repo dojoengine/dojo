@@ -1,5 +1,5 @@
 [package]
-description = "Katana execution engine. This crate provides implementations for executing transactions."
+description = "Katana execution engine. This crate provides abstractions and implementations for transaction execution."
 edition.workspace = true
 name = "katana-executor"
 version.workspace = true
@@ -10,17 +10,15 @@ version.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
-anyhow.workspace = true
 convert_case.workspace = true
 parking_lot.workspace = true
-starknet.workspace = true
+serde_json.workspace = true
+starknet_api.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
 # blockifier deps
-blockifier.workspace = true
-starknet_api.workspace = true
-tokio.workspace = true
+blockifier = { workspace = true, optional = true }
 
 [dev-dependencies]
 cairo-vm.workspace = true
@@ -28,3 +26,9 @@ katana-provider.workspace = true
 rstest.workspace = true
 serde_json.workspace = true
 similar-asserts.workspace = true
+starknet.workspace = true
+
+[features]
+default = [ "blockifier" ]
+
+blockifier = [ "dep:blockifier", "katana-primitives/blockifier" ]

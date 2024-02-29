@@ -2,9 +2,14 @@ use std::sync::Arc;
 
 use jsonrpsee::core::Error;
 pub use katana_core::backend::config::{Environment, StarknetConfig};
+use katana_core::constants::MAX_RECURSION_DEPTH;
+use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
 pub use katana_core::sequencer::SequencerConfig;
+use katana_executor::implementation::blockifier::BlockifierFactory;
+use katana_executor::SimulationFlag;
 use katana_primitives::chain::ChainId;
+use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::config::ServerConfig;
 use katana_rpc::{spawn, NodeHandle};
 use katana_rpc_api::ApiKind;
@@ -26,13 +31,33 @@ pub struct TestSequencer {
     url: Url,
     handle: NodeHandle,
     account: TestAccount,
-    pub sequencer: Arc<KatanaSequencer>,
+    pub sequencer: Arc<KatanaSequencer<BlockifierFactory>>,
 }
 
 impl TestSequencer {
     pub async fn start(config: SequencerConfig, starknet_config: StarknetConfig) -> Self {
+        let cfg_env = CfgEnv {
+            chain_id: starknet_config.env.chain_id,
+            vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
+            invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
+            validate_max_n_steps: starknet_config.env.validate_max_steps,
+            max_recursion_depth: MAX_RECURSION_DEPTH,
+            fee_token_addresses: FeeTokenAddressses {
+                eth: starknet_config.genesis.fee_token.address,
+                strk: Default::default(),
+            },
+        };
+
+        let simulation_flags = SimulationFlag {
+            skip_validate: starknet_config.disable_validate,
+            skip_fee_transfer: starknet_config.disable_fee,
+            ..Default::default()
+        };
+
+        let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
+
         let sequencer = Arc::new(
-            KatanaSequencer::new(config, starknet_config)
+            KatanaSequencer::new(executor_factory, config, starknet_config)
                 .await
                 .expect("Failed to create sequencer"),
         );

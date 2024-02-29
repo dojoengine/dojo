@@ -5,9 +5,13 @@ use std::sync::Arc;
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
+use katana_core::constants::MAX_RECURSION_DEPTH;
+use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
+use katana_executor::SimulationFlag;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::{spawn, NodeHandle};
@@ -39,7 +43,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sequencer_config = args.sequencer_config();
     let starknet_config = args.starknet_config();
 
-    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await?);
+    let cfg_env = CfgEnv {
+        chain_id: starknet_config.env.chain_id,
+        vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
+        invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
+        validate_max_n_steps: starknet_config.env.validate_max_steps,
+        max_recursion_depth: MAX_RECURSION_DEPTH,
+        fee_token_addresses: FeeTokenAddressses {
+            eth: starknet_config.genesis.fee_token.address,
+            strk: Default::default(),
+        },
+    };
+
+    let simulation_flags = SimulationFlag {
+        skip_validate: starknet_config.disable_validate,
+        skip_fee_transfer: starknet_config.disable_fee,
+        ..Default::default()
+    };
+
+    use katana_executor::implementation::blockifier::BlockifierFactory;
+    let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
+
+    let sequencer =
+        Arc::new(KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await?);
     let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
 
     if !args.silent {

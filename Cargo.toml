@@ -29,6 +29,7 @@ members = [
   "crates/katana/storage/codecs/derive",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
+  "crates/katana/tasks",
   "crates/metrics",
   "crates/saya/core",
   "crates/sozo/signers",
@@ -68,9 +69,9 @@ dojo-world = { path = "crates/dojo-world" }
 # katana
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
-katana-core = { path = "crates/katana/core" }
+katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
-katana-executor = { path = "crates/katana/executor" }
+katana-executor = { path = "crates/katana/executor", default-features = false }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
@@ -78,6 +79,7 @@ katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
+katana-tasks = { path = "crates/katana/tasks" }
 
 # torii
 torii-client = { path = "crates/torii/client" }

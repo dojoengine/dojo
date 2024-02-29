@@ -7,9 +7,10 @@ use std::task::{Context, Poll};
 
 use futures::channel::mpsc::Receiver;
 use futures::stream::{Fuse, Stream, StreamExt};
+use katana_executor::ExecutorFactory;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use starknet::core::types::FieldElement;
-use tracing::{error, trace};
+use tracing::info;
 
 use self::block_producer::BlockProducer;
 use crate::pool::TransactionPool;
@@ -26,19 +27,19 @@ use self::messaging::{MessagingOutcome, MessagingService};
 /// This service is basically an endless future that continuously polls the miner which returns
 /// transactions for the next block, then those transactions are handed off to the [BlockProducer]
 /// to construct a new block.
-pub struct NodeService {
+pub struct NodeService<EF: ExecutorFactory> {
     /// the pool that holds all transactions
     pub(crate) pool: Arc<TransactionPool>,
     /// creates new blocks
-    pub(crate) block_producer: BlockProducer,
+    pub(crate) block_producer: Arc<BlockProducer<EF>>,
     /// the miner responsible to select transactions from the `pool´
     pub(crate) miner: TransactionMiner,
     /// The messaging service
     #[cfg(feature = "messaging")]
-    pub(crate) messaging: Option<MessagingService>,
+    pub(crate) messaging: Option<MessagingService<EF>>,
 }
 
-impl Future for NodeService {
+impl<EF: ExecutorFactory> Future for NodeService<EF> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -49,10 +50,10 @@ impl Future for NodeService {
             while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
                 match outcome {
                     MessagingOutcome::Gather { msg_count, .. } => {
-                        trace!(target: "node", "collected {msg_count} messages from settlement chain");
+                        info!(target: "node", "collected {msg_count} messages from settlement chain");
                     }
                     MessagingOutcome::Send { msg_count, .. } => {
-                        trace!(target: "node", "sent {msg_count} messages to the settlement chain");
+                        info!(target: "node", "sent {msg_count} messages to the settlement chain");
                     }
                 }
             }
@@ -61,14 +62,14 @@ impl Future for NodeService {
         // this drives block production and feeds new sets of ready transactions to the block
         // producer
         loop {
-            while let Poll::Ready(Some(res)) = pin.block_producer.poll_next_unpin(cx) {
+            while let Poll::Ready(Some(res)) = pin.block_producer.poll_next(cx) {
                 match res {
                     Ok(outcome) => {
-                        trace!(target: "node", "mined block {}", outcome.block_number)
+                        info!(target: "node", "mined block {}", outcome.block_number)
                     }
 
                     Err(err) => {
-                        error!(target: "node", "failed to mine block: {err}");
+                        info!(target: "node", "failed to mine block: {err}");
                     }
                 }
             }
