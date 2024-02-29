@@ -5,6 +5,7 @@ use ::blockifier::transaction::transaction_execution::Transaction;
 use ::blockifier::transaction::transactions::{DeployAccountTransaction, InvokeTransaction};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::transactions::{DeclareTransaction, L1HandlerTransaction};
+use katana_primitives::conversion::blockifier::to_class;
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
@@ -191,8 +192,12 @@ impl From<ExecutableTxWithHash> for BlockifierTx {
                     }
                 };
 
-                let tx = DeclareTransaction::new(tx, TransactionHash(hash.into()), contract_class)
-                    .expect("class mismatch");
+                let tx = DeclareTransaction::new(
+                    tx,
+                    TransactionHash(hash.into()),
+                    to_class(contract_class).unwrap(),
+                )
+                .expect("class mismatch");
                 Transaction::AccountTransaction(AccountTransaction::Declare(tx))
             }
 

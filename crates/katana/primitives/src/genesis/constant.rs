@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use starknet::core::utils::get_storage_var_address;
 
 use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, SierraClass, StorageKey,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, SierraClass, StorageKey,
 };
 use crate::utils::class::{parse_compiled_class, parse_sierra_class};
 use crate::FieldElement;
@@ -126,14 +126,15 @@ pub const DEFAULT_OZ_ACCOUNT_CONTRACT_COMPILED_CLASS_HASH: CompiledClassHash =
 lazy_static! {
 
     // Default fee token contract
-    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/erc20.json")).unwrap();
+    // pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/erc20.json")).unwrap();
+    pub static ref DEFAULT_LEGACY_ERC20_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../contracts/compiled/erc20.json"));
 
     // Default universal deployer
-    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/universal_deployer.json")).unwrap();
+    pub static ref DEFAULT_LEGACY_UDC_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../contracts/compiled/universal_deployer.json"));
 
     // Default account contract
     pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT: SierraClass = parse_sierra_class(include_str!("../../contracts/compiled/oz_account_080.json")).unwrap();
-    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledContractClass = parse_compiled_class(include_str!("../../contracts/compiled/oz_account_080.json")).unwrap();
+    pub static ref DEFAULT_OZ_ACCOUNT_CONTRACT_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../contracts/compiled/oz_account_080.json"));
 
 }
 
@@ -143,4 +144,9 @@ lazy_static! {
 /// stored as a U256 value and as such has to be split into two U128 values (low and high).
 pub(super) fn get_fee_token_balance_base_storage_address(address: ContractAddress) -> FieldElement {
     get_storage_var_address("ERC20_balances", &[address.into()]).unwrap()
+}
+
+fn read_compiled_class_artifact(artifact: &str) -> CompiledClass {
+    let value = serde_json::from_str(artifact).unwrap();
+    parse_compiled_class(value).unwrap()
 }
