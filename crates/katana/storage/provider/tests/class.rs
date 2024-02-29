@@ -7,7 +7,7 @@ use fixtures::{
 };
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, FlattenedSierraClass,
+    ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass,
 };
 use katana_primitives::genesis::constant::{
     DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
@@ -19,12 +19,8 @@ use katana_provider::BlockchainProvider;
 use rstest_reuse::{self, *};
 use starknet::macros::felt;
 
-type ClassHashAndClasses = (
-    ClassHash,
-    Option<CompiledClassHash>,
-    Option<CompiledContractClass>,
-    Option<FlattenedSierraClass>,
-);
+type ClassHashAndClasses =
+    (ClassHash, Option<CompiledClassHash>, Option<CompiledClass>, Option<FlattenedSierraClass>);
 
 fn assert_state_provider_class(
     state_provider: Box<dyn StateProvider>,
@@ -38,7 +34,7 @@ fn assert_state_provider_class(
         let actual_sierra_class = state_provider.sierra_class(class_hash)?;
 
         assert!(
-            if let Some(CompiledContractClass::V1(_)) = &actual_compiled_class {
+            if let Some(CompiledClass::Class(_)) = &actual_compiled_class {
                 actual_sierra_class.is_some()
             } else {
                 actual_sierra_class.is_none()

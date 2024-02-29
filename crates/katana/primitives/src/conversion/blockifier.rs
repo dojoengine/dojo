@@ -1,11 +1,14 @@
 //! Translation layer for converting the primitive types to the execution engine types.
 
+use blockifier::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
+use cairo_vm::types::errors::program_errors::ProgramError;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 
 use crate::chain::ChainId;
+use crate::contract::CompiledClass;
 
 impl From<crate::contract::ContractAddress> for ContractAddress {
     fn from(address: crate::contract::ContractAddress) -> Self {
@@ -26,6 +29,18 @@ impl From<ChainId> for starknet_api::core::ChainId {
             ChainId::Id(id) => parse_cairo_short_string(&id).expect("valid cairo string"),
         };
         Self(name)
+    }
+}
+
+pub fn to_class(class: CompiledClass) -> Result<ContractClass, ProgramError> {
+    match class {
+        CompiledClass::Deprecated(class) => {
+            Ok(ContractClass::V0(ContractClassV0::try_from(class)?))
+        }
+
+        CompiledClass::Class(class) => {
+            Ok(ContractClass::V1(ContractClassV1::try_from(class.casm)?))
+        }
     }
 }
 
