@@ -3,7 +3,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use serde_json::Value;
 
-use crate::contract::{
+use crate::class::{
     CompiledClass, DeprecatedCompiledClass, SierraClass, SierraCompiledClass, SierraProgram,
 };
 

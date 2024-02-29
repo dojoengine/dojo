@@ -2,9 +2,8 @@ use derive_more::{AsRef, Deref};
 use ethers::types::H256;
 
 use crate::chain::ChainId;
-use crate::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass, Nonce,
-};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::contract::{ContractAddress, Nonce};
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_deploy_account_v1_tx_hash,
     compute_invoke_v1_tx_hash, compute_l1_handler_tx_hash,

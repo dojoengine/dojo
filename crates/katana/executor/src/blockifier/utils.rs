@@ -245,8 +245,8 @@ pub fn get_state_update_from_cached_state(
                 (class_hash.0.into(), class)
             })
             .collect::<HashMap<
-                katana_primitives::contract::ClassHash,
-                katana_primitives::contract::CompiledClass,
+                katana_primitives::class::ClassHash,
+                katana_primitives::class::CompiledClass,
             >>();
 
     let nonce_updates =
@@ -275,23 +275,25 @@ pub fn get_state_update_from_cached_state(
         })
         .collect::<HashMap<katana_primitives::contract::ContractAddress, _>>();
 
-    let contract_updates = state_diff
-        .address_to_class_hash
-        .into_iter()
-        .map(|(key, value)| (key.into(), value.0.into()))
-        .collect::<HashMap<
-            katana_primitives::contract::ContractAddress,
-            katana_primitives::contract::ClassHash,
-        >>();
+    let contract_updates =
+        state_diff
+            .address_to_class_hash
+            .into_iter()
+            .map(|(key, value)| (key.into(), value.0.into()))
+            .collect::<HashMap<
+                katana_primitives::contract::ContractAddress,
+                katana_primitives::class::ClassHash,
+            >>();
 
-    let declared_classes = state_diff
-        .class_hash_to_compiled_class_hash
-        .into_iter()
-        .map(|(key, value)| (key.0.into(), value.0.into()))
-        .collect::<HashMap<
-            katana_primitives::contract::ClassHash,
-            katana_primitives::contract::CompiledClassHash,
-        >>();
+    let declared_classes =
+        state_diff
+            .class_hash_to_compiled_class_hash
+            .into_iter()
+            .map(|(key, value)| (key.0.into(), value.0.into()))
+            .collect::<HashMap<
+                katana_primitives::class::ClassHash,
+                katana_primitives::class::CompiledClassHash,
+            >>();
 
     StateUpdatesWithDeclaredClasses {
         declared_sierra_classes,
