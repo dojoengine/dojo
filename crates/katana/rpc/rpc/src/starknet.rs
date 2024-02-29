@@ -515,8 +515,9 @@ impl StarknetApiServer for StarknetApi {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let skip_validate =
-                simulation_flags.iter().any(|flag| flag == &SimulationFlagForEstimateFee::SkipValidate);
+            let skip_validate = simulation_flags
+                .iter()
+                .any(|flag| flag == &SimulationFlagForEstimateFee::SkipValidate);
 
             let res = this
                 .inner

@@ -1,12 +1,11 @@
 use anyhow::Result;
-use katana_primitives::{
-    block::BlockIdOrTag,
-    chain::ChainId,
-    transaction::{ExecutableTx, ExecutableTxWithHash},
-};
+use katana_primitives::block::BlockIdOrTag;
+use katana_primitives::chain::ChainId;
+use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
 use serde::{Deserialize, Serialize};
 
-use crate::{transaction::BroadcastedTx, SimulationFlag};
+use crate::transaction::BroadcastedTx;
+use crate::SimulationFlag;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulateTransactionsRequest {
