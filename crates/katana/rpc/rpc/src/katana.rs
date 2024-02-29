@@ -2,21 +2,22 @@ use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::sequencer::KatanaSequencer;
+use katana_executor::ExecutorFactory;
 use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_types::account::Account;
 
-pub struct KatanaApi {
-    sequencer: Arc<KatanaSequencer>,
+pub struct KatanaApi<EF: ExecutorFactory> {
+    sequencer: Arc<KatanaSequencer<EF>>,
 }
 
-impl KatanaApi {
-    pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
+impl<EF: ExecutorFactory> KatanaApi<EF> {
+    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
         Self { sequencer }
     }
 }
 
 #[async_trait]
-impl KatanaApiServer for KatanaApi {
+impl<EF: ExecutorFactory> KatanaApiServer for KatanaApi<EF> {
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
         Ok(self
             .sequencer
