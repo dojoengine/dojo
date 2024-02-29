@@ -105,4 +105,8 @@ pub enum ProviderError {
     #[cfg(feature = "fork")]
     #[error(transparent)]
     ForkedBackend(#[from] ForkedBackendError),
+
+    /// Any error that is not covered by the other variants.
+    #[error("soemthing went wrong: {0}")]
+    Other(String),
 }
