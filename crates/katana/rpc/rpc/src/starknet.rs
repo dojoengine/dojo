@@ -171,6 +171,7 @@ impl StarknetApiServer for StarknetApi {
                     };
 
                     let header = PartialHeader {
+                        number: block_env.number,
                         gas_prices,
                         parent_hash: latest_hash,
                         version: CURRENT_STARKNET_VERSION,
@@ -252,6 +253,7 @@ impl StarknetApiServer for StarknetApi {
                     };
 
                     let header = PartialHeader {
+                        number: block_env.number,
                         gas_prices,
                         parent_hash: latest_hash,
                         version: CURRENT_STARKNET_VERSION,
