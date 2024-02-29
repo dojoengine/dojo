@@ -1,9 +1,9 @@
 use std::fmt;
 
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use derive_more::Deref;
 use starknet::core::utils::normalize_address;
 
+use crate::class::ClassHash;
 use crate::FieldElement;
 
 /// Represents the type for a contract storage key.
@@ -11,16 +11,8 @@ pub type StorageKey = FieldElement;
 /// Represents the type for a contract storage value.
 pub type StorageValue = FieldElement;
 
-/// The canonical hash of a contract class. This is the class hash value of a contract instance.
-pub type ClassHash = FieldElement;
-/// The hash of a compiled contract class.
-pub type CompiledClassHash = FieldElement;
-
 /// Represents the type for a contract nonce.
 pub type Nonce = FieldElement;
-
-pub type SierraClass = starknet::core::types::contract::SierraClass;
-pub type FlattenedSierraClass = starknet::core::types::FlattenedSierraClass;
 
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
@@ -59,29 +51,4 @@ pub struct GenericContractInfo {
     pub nonce: Nonce,
     /// The hash of the contract class.
     pub class_hash: ClassHash,
-}
-
-pub type DeprecatedCompiledClass = ::starknet_api::deprecated_contract_class::ContractClass;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SierraProgram {
-    pub program: cairo_lang_sierra::program::Program,
-    pub entry_points_by_type: cairo_lang_starknet::contract_class::ContractEntryPoints,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SierraCompiledClass {
-    pub casm: CasmContractClass,
-    pub sierra: SierraProgram,
-}
-
-/// Executable contract class
-#[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone, Eq, PartialEq, derive_more::From)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum CompiledClass {
-    Deprecated(DeprecatedCompiledClass),
-    Class(SierraCompiledClass),
 }

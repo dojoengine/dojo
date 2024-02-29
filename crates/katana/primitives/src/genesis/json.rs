@@ -36,9 +36,8 @@ use super::constant::{
 };
 use super::{FeeTokenConfig, Genesis, GenesisAllocation, UniversalDeployerConfig};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::contract::{
-    ClassHash, CompiledClass, ContractAddress, SierraClass, StorageKey, StorageValue,
-};
+use crate::class::{ClassHash, CompiledClass, SierraClass};
+use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::genesis::GenesisClass;
 use crate::utils::class::{parse_compiled_class_v1, parse_deprecated_compiled_class};
 use crate::FieldElement;
