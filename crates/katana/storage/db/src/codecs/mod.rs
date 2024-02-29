@@ -2,7 +2,8 @@
 pub mod postcard;
 
 use katana_primitives::block::FinalityStatus;
-use katana_primitives::contract::{ContractAddress, FlattenedSierraClass};
+use katana_primitives::class::FlattenedSierraClass;
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::FieldElement;
 
 use crate::error::CodecError;

@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-use crate::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass, Nonce,
-    StorageKey, StorageValue,
-};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 
 /// State updates.
 ///

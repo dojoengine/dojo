@@ -1,4 +1,4 @@
-use katana_primitives::contract::DeprecatedCompiledClass;
+use katana_primitives::class::DeprecatedCompiledClass;
 use starknet::core::types::FlattenedSierraClass;
 
 pub enum StarknetContract {

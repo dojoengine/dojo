@@ -1,4 +1,4 @@
-use katana_primitives::contract::CompiledClass;
+use katana_primitives::class::CompiledClass;
 
 use crate::codecs::{Compress, Decompress};
 use crate::error::CodecError;

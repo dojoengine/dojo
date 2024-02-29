@@ -3,10 +3,8 @@ use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
-use katana_primitives::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
-    GenericContractInfo, StorageKey, StorageValue,
-};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey, StorageValue};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
