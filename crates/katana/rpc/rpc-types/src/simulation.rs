@@ -26,13 +26,13 @@ impl SimulateTransactionsRequest {
             .into_iter()
             .map(|t| {
                 Ok(match t {
-                    BroadcastedTx::Invoke(tx) => ExecutableTxWithHash::new(ExecutableTx::Invoke(
-                        tx.into_tx_with_chain_id(chain_id),
-                    )),
-                    BroadcastedTx::Declare(tx) => ExecutableTxWithHash::new(ExecutableTx::Declare(
-                        tx.try_into_tx_with_chain_id(chain_id)?,
-                    )),
-                    BroadcastedTx::DeployAccount(tx) => ExecutableTxWithHash::new(
+                    BroadcastedTx::Invoke(tx) => ExecutableTxWithHash::new_query(
+                        ExecutableTx::Invoke(tx.into_tx_with_chain_id(chain_id)),
+                    ),
+                    BroadcastedTx::Declare(tx) => ExecutableTxWithHash::new_query(
+                        ExecutableTx::Declare(tx.try_into_tx_with_chain_id(chain_id)?),
+                    ),
+                    BroadcastedTx::DeployAccount(tx) => ExecutableTxWithHash::new_query(
                         ExecutableTx::DeployAccount(tx.into_tx_with_chain_id(chain_id)),
                     ),
                 })
