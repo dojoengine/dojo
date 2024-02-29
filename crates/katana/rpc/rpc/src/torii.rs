@@ -4,6 +4,7 @@ use futures::StreamExt;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::sequencer::KatanaSequencer;
 use katana_core::service::block_producer::BlockProducerMode;
+use katana_executor::ExecutorFactory;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
@@ -15,13 +16,18 @@ use katana_tasks::TokioTaskSpawner;
 
 const MAX_PAGE_SIZE: usize = 100;
 
-#[derive(Clone)]
-pub struct ToriiApi {
-    sequencer: Arc<KatanaSequencer>,
+pub struct ToriiApi<EF: ExecutorFactory> {
+    sequencer: Arc<KatanaSequencer<EF>>,
 }
 
-impl ToriiApi {
-    pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
+impl<EF: ExecutorFactory> Clone for ToriiApi<EF> {
+    fn clone(&self) -> Self {
+        Self { sequencer: self.sequencer.clone() }
+    }
+}
+
+impl<EF: ExecutorFactory> ToriiApi<EF> {
+    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
         Self { sequencer }
     }
 
@@ -36,7 +42,7 @@ impl ToriiApi {
 }
 
 #[async_trait]
-impl ToriiApiServer for ToriiApi {
+impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
     async fn get_transactions(
         &self,
         cursor: TransactionsPageCursor,
@@ -93,25 +99,27 @@ impl ToriiApiServer for ToriiApi {
                     }
                 }
 
-                if let Some(pending_state) = this.sequencer.pending_state() {
+                if let Some(pending_executor) = this.sequencer.pending_executor() {
                     let remaining = MAX_PAGE_SIZE - transactions.len();
 
                     // If cursor is in the pending block
                     if cursor.block_number == latest_block_number + 1 {
-                        let pending_transactions = pending_state
-                            .executed_txs
+                        let pending_transactions = pending_executor
                             .read()
+                            .transactions()
                             .iter()
                             .skip(cursor.transaction_index as usize)
                             .take(remaining)
-                            .map(|(tx, info)| {
-                                (
-                                    tx.clone(),
-                                    MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
-                                        tx.hash,
-                                        info.receipt.clone(),
-                                    )),
-                                )
+                            .filter_map(|(tx, receipt)| {
+                                receipt.as_ref().map(|rct| {
+                                    (
+                                        tx.clone(),
+                                        MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                            tx.hash,
+                                            rct.clone(),
+                                        )),
+                                    )
+                                })
                             })
                             .collect::<Vec<_>>();
 
@@ -135,19 +143,21 @@ impl ToriiApiServer for ToriiApi {
                         next_cursor.transaction_index += pending_transactions.len() as u64;
                         transactions.extend(pending_transactions);
                     } else {
-                        let pending_transactions = pending_state
-                            .executed_txs
+                        let pending_transactions = pending_executor
                             .read()
+                            .transactions()
                             .iter()
                             .take(remaining)
-                            .map(|(tx, info)| {
-                                (
-                                    tx.clone(),
-                                    MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
-                                        tx.hash,
-                                        info.receipt.clone(),
-                                    )),
-                                )
+                            .filter_map(|(tx, receipt)| {
+                                receipt.as_ref().map(|rct| {
+                                    (
+                                        tx.clone(),
+                                        MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
+                                            tx.hash,
+                                            rct.clone(),
+                                        )),
+                                    )
+                                })
                             })
                             .collect::<Vec<_>>();
                         next_cursor.block_number += 1;

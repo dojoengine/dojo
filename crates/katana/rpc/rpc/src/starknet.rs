@@ -3,7 +3,7 @@ use std::sync::Arc;
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::sequencer::KatanaSequencer;
-use katana_executor::blockifier::utils::EntryPointCall;
+use katana_executor::{EntryPointCall, ExecutorFactory, SimulationFlag};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus, PartialHeader};
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
@@ -30,20 +30,25 @@ use katana_rpc_types::transaction::{
 use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
-use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
+use starknet::core::types::{BlockTag, PriceUnit, TransactionExecutionStatus, TransactionStatus};
 
-#[derive(Clone)]
-pub struct StarknetApi {
-    inner: Arc<StarknetApiInner>,
+pub struct StarknetApi<EF: ExecutorFactory> {
+    inner: Arc<StarknetApiInner<EF>>,
 }
 
-struct StarknetApiInner {
-    sequencer: Arc<KatanaSequencer>,
+impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
+    fn clone(&self) -> Self {
+        Self { inner: Arc::clone(&self.inner) }
+    }
+}
+
+struct StarknetApiInner<EF: ExecutorFactory> {
+    sequencer: Arc<KatanaSequencer<EF>>,
     blocking_task_pool: BlockingTaskPool,
 }
 
-impl StarknetApi {
-    pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
+impl<EF: ExecutorFactory> StarknetApi<EF> {
+    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
         Self { inner: Arc::new(StarknetApiInner { sequencer, blocking_task_pool }) }
@@ -68,7 +73,7 @@ impl StarknetApi {
     }
 }
 #[async_trait]
-impl StarknetApiServer for StarknetApi {
+impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
         Ok(FieldElement::from(self.inner.sequencer.chain_id()).into())
     }
@@ -158,10 +163,9 @@ impl StarknetApiServer for StarknetApi {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
             if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-                if let Some(pending_state) = this.inner.sequencer.pending_state() {
-                    let block_env = pending_state.block_envs.read().0.clone();
-                    let latest_hash =
-                        BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
+                if let Some(executor) = this.inner.sequencer.pending_executor() {
+                    let block_env = executor.read().block_env();
+                    let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
                     let gas_prices = block_env.l1_gas_prices.clone();
 
@@ -169,14 +173,14 @@ impl StarknetApiServer for StarknetApi {
                         number: block_env.number,
                         gas_prices,
                         parent_hash: latest_hash,
-                        version: CURRENT_STARKNET_VERSION,
                         timestamp: block_env.timestamp,
+                        version: CURRENT_STARKNET_VERSION,
                         sequencer_address: block_env.sequencer_address,
                     };
 
-                    let transactions = pending_state
-                        .executed_txs
+                    let transactions = executor
                         .read()
+                        .transactions()
                         .iter()
                         .map(|(tx, _)| tx.hash)
                         .collect::<Vec<_>>();
@@ -209,12 +213,13 @@ impl StarknetApiServer for StarknetApi {
         self.on_io_blocking_task(move |this| {
             // TEMP: have to handle pending tag independently for now
             let tx = if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-                let Some(pending_state) = this.inner.sequencer.pending_state() else {
+                let Some(executor) = this.inner.sequencer.pending_executor() else {
                     return Err(StarknetApiError::BlockNotFound.into());
                 };
 
-                let pending_txs = pending_state.executed_txs.read();
-                pending_txs.iter().nth(index as usize).map(|(tx, _)| tx.clone())
+                let executor = executor.read();
+                let pending_txs = executor.transactions();
+                pending_txs.get(index as usize).map(|(tx, _)| tx.clone())
             } else {
                 let provider = &this.inner.sequencer.backend.blockchain.provider();
 
@@ -237,10 +242,9 @@ impl StarknetApiServer for StarknetApi {
             let provider = this.inner.sequencer.backend.blockchain.provider();
 
             if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
-                if let Some(pending_state) = this.inner.sequencer.pending_state() {
-                    let block_env = pending_state.block_envs.read().0.clone();
-                    let latest_hash =
-                        BlockHashProvider::latest_hash(provider).map_err(StarknetApiError::from)?;
+                if let Some(executor) = this.inner.sequencer.pending_executor() {
+                    let block_env = executor.read().block_env();
+                    let latest_hash = provider.latest_hash().map_err(StarknetApiError::from)?;
 
                     let gas_prices = block_env.l1_gas_prices.clone();
 
@@ -253,9 +257,9 @@ impl StarknetApiServer for StarknetApi {
                         sequencer_address: block_env.sequencer_address,
                     };
 
-                    let transactions = pending_state
-                        .executed_txs
+                    let transactions = executor
                         .read()
+                        .transactions()
                         .iter()
                         .map(|(tx, _)| tx.clone())
                         .collect::<Vec<_>>();
@@ -320,13 +324,12 @@ impl StarknetApiServer for StarknetApi {
                 Some(receipt) => Ok(MaybePendingTxReceipt::Receipt(receipt)),
 
                 None => {
-                    let pending_receipt = this.inner.sequencer.pending_state().and_then(|s| {
-                        s.executed_txs
-                            .read()
-                            .iter()
-                            .find(|(tx, _)| tx.hash == transaction_hash)
-                            .map(|(_, rct)| rct.receipt.clone())
-                    });
+                    let pending_receipt =
+                        this.inner.sequencer.pending_executor().and_then(|executor| {
+                            executor.read().transactions().iter().find_map(|(tx, rct)| {
+                                if tx.hash == transaction_hash { rct.clone() } else { None }
+                            })
+                        });
 
                     let Some(pending_receipt) = pending_receipt else {
                         return Err(StarknetApiError::TxnHashNotFound.into());
@@ -420,9 +423,23 @@ impl StarknetApiServer for StarknetApi {
                 entry_point_selector: request.entry_point_selector,
             };
 
-            let res =
-                this.inner.sequencer.call(request, block_id).map_err(StarknetApiError::from)?;
-            Ok(res.into_iter().map(|v| v.into()).collect())
+            let sequencer = &this.inner.sequencer;
+
+            // get the state and block env at the specified block for function call execution
+            let state = sequencer.state(&block_id).map_err(StarknetApiError::from)?;
+            let env = sequencer
+                .block_env_at(block_id)
+                .map_err(StarknetApiError::from)?
+                .ok_or(StarknetApiError::BlockNotFound)?;
+
+            let executor = sequencer.backend.executor_factory.with_state_and_block_env(state, env);
+
+            match executor.call(request, 1_000_000_000) {
+                Ok(retdata) => Ok(retdata.into_iter().map(|v| v.into()).collect()),
+                Err(err) => Err(Error::from(StarknetApiError::ContractError {
+                    revert_error: err.to_string(),
+                })),
+            }
         })
         .await
     }
@@ -476,7 +493,8 @@ impl StarknetApiServer for StarknetApi {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.sequencer.chain_id();
+            let sequencer = &this.inner.sequencer;
+            let chain_id = sequencer.chain_id();
 
             let transactions = request
                 .into_iter()
@@ -513,13 +531,51 @@ impl StarknetApiServer for StarknetApi {
             let skip_validate =
                 simulation_flags.iter().any(|flag| flag == &SimulationFlags::SkipValidate);
 
-            let res = this
-                .inner
-                .sequencer
-                .estimate_fee(transactions, block_id, skip_validate)
-                .map_err(StarknetApiError::from)?;
+            // If the node is run with transaction validation disabled, then we should not validate
+            // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
+            let should_validate =
+                !(skip_validate || this.inner.sequencer.backend.config.disable_validate);
 
-            Ok(res)
+            let simulation_flag =
+                SimulationFlag { skip_validate: !should_validate, ..Default::default() };
+
+            // get the state and block env at the specified block for execution
+            let state = sequencer.state(&block_id).map_err(StarknetApiError::from)?;
+            let env = sequencer
+                .block_env_at(block_id)
+                .map_err(StarknetApiError::from)?
+                .ok_or(StarknetApiError::BlockNotFound)?;
+
+            // create the executor
+            let executor = sequencer.backend.executor_factory.with_state_and_block_env(state, env);
+
+            let mut estimates: Vec<FeeEstimate> = Vec::with_capacity(transactions.len());
+
+            for (i, tx) in transactions.into_iter().enumerate() {
+                match executor.simulate(tx, simulation_flag.clone()) {
+                    Ok(output) => {
+                        let overall_fee = output.actual_fee().into();
+                        let gas_consumed = output.gas_used().into();
+                        let gas_price = executor.block_env().l1_gas_prices.eth.into();
+
+                        estimates.push(FeeEstimate {
+                            gas_consumed,
+                            gas_price,
+                            overall_fee,
+                            unit: PriceUnit::Wei,
+                        })
+                    }
+
+                    Err(err) => {
+                        return Err(Error::from(StarknetApiError::TransactionExecutionError {
+                            transaction_index: i,
+                            execution_error: err.to_string(),
+                        }));
+                    }
+                }
+            }
+
+            Ok(estimates)
         })
         .await
     }
@@ -635,16 +691,19 @@ impl StarknetApiServer for StarknetApi {
                 }
             }
 
-            let pending_state = this.inner.sequencer.pending_state();
-            let state = pending_state.ok_or(StarknetApiError::TxnHashNotFound)?;
-            let executed_txs = state.executed_txs.read();
+            let pending_executor =
+                this.inner.sequencer.pending_executor().ok_or(StarknetApiError::TxnHashNotFound)?;
+            let pending_executor = pending_executor.read();
+
+            let pending_txs = pending_executor.transactions();
+            // filter only the valid executed transactions (the ones with a receipt)
+            let mut executed_txs = pending_txs.iter().filter(|(_, rct)| rct.is_some());
 
             // attemps to find in the valid transactions list first (executed_txs)
             // if not found, then search in the rejected transactions list (rejected_txs)
             if let Some(is_reverted) = executed_txs
-                .iter()
                 .find(|(tx, _)| tx.hash == transaction_hash)
-                .map(|(_, rct)| rct.receipt.is_reverted())
+                .map(|(_, rct)| rct.as_ref().is_some_and(|r| r.is_reverted()))
             {
                 let exec_status = if is_reverted {
                     TransactionExecutionStatus::Reverted
@@ -654,10 +713,11 @@ impl StarknetApiServer for StarknetApi {
 
                 Ok(TransactionStatus::AcceptedOnL2(exec_status))
             } else {
-                let rejected_txs = state.rejected_txs.read();
+                // we filter out the executed transactions and only take the rejected ones (the ones
+                // with no receipt)
+                let mut rejected_txs = pending_txs.iter().filter(|(_, rct)| rct.is_none());
 
                 rejected_txs
-                    .iter()
                     .find(|(tx, _)| tx.hash == transaction_hash)
                     .map(|_| TransactionStatus::Rejected)
                     .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
