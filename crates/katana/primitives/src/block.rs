@@ -1,7 +1,7 @@
 use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
-use crate::transaction::{TxHash, TxWithHash};
+use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::Version;
 use crate::FieldElement;
 
@@ -185,4 +185,11 @@ impl From<BlockHash> for BlockHashOrNumber {
     fn from(hash: BlockHash) -> Self {
         Self::Hash(hash)
     }
+}
+
+/// A block that can executed. This is a block whose transactions includes
+/// all the necessary information to be executed.
+pub struct ExecutableBlock {
+    pub header: PartialHeader,
+    pub body: Vec<ExecutableTxWithHash>,
 }
