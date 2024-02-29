@@ -5,7 +5,8 @@ use fixtures::{
     db_provider, fork_provider_with_spawned_fork_network, in_memory_provider, provider_with_states,
 };
 use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
-use katana_primitives::contract::{ClassHash, ContractAddress, Nonce};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
