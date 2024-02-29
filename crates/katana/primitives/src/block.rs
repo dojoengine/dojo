@@ -72,14 +72,10 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn new(
-        partial_header: PartialHeader,
-        number: BlockNumber,
-        state_root: FieldElement,
-    ) -> Self {
+    pub fn new(partial_header: PartialHeader, state_root: FieldElement) -> Self {
         Self {
-            number,
             state_root,
+            number: partial_header.number,
             version: partial_header.version,
             timestamp: partial_header.timestamp,
             gas_prices: partial_header.gas_prices,

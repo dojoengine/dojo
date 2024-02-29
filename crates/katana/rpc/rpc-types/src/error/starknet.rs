@@ -33,6 +33,13 @@ pub enum StarknetApiError {
     InvalidContinuationToken,
     #[error("Contract error")]
     ContractError { revert_error: String },
+    #[error("Transaction execution error")]
+    TransactionExecutionError {
+        /// The index of the first transaction failing in a sequence of given transactions.
+        transaction_index: usize,
+        /// The revert error with the execution trace up to the point of failure.
+        execution_error: String,
+    },
     #[error("Invalid contract class")]
     InvalidContractClass,
     #[error("Class already declared")]
@@ -70,7 +77,7 @@ pub enum StarknetApiError {
 }
 
 impl StarknetApiError {
-    fn code(&self) -> i32 {
+    pub fn code(&self) -> i32 {
         match self {
             StarknetApiError::FailedToReceiveTxn => 1,
             StarknetApiError::ContractNotFound => 20,
@@ -86,6 +93,7 @@ impl StarknetApiError {
             StarknetApiError::TooManyKeysInFilter => 34,
             StarknetApiError::FailedToFetchPendingTransactions => 38,
             StarknetApiError::ContractError { .. } => 40,
+            StarknetApiError::TransactionExecutionError { .. } => 41,
             StarknetApiError::InvalidContractClass => 50,
             StarknetApiError::ClassAlreadyDeclared => 51,
             StarknetApiError::InvalidTransactionNonce => 52,
