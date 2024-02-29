@@ -1,5 +1,6 @@
 use std::fmt;
 
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use derive_more::Deref;
 use starknet::core::utils::normalize_address;
 
@@ -60,12 +61,27 @@ pub struct GenericContractInfo {
     pub class_hash: ClassHash,
 }
 
-/// Represents a runnable Starknet contract class (meaning, the program is runnable by the VM).
-#[cfg(feature = "blockifier")]
-pub type CompiledContractClass = ::blockifier::execution::contract_class::ContractClass;
-/// V0 of the compiled contract class
-#[cfg(feature = "blockifier")]
-pub type CompiledContractClassV0 = ::blockifier::execution::contract_class::ContractClassV0;
-/// V1 of the compiled contract class
-#[cfg(feature = "blockifier")]
-pub type CompiledContractClassV1 = ::blockifier::execution::contract_class::ContractClassV1;
+pub type DeprecatedCompiledClass = ::starknet_api::deprecated_contract_class::ContractClass;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SierraProgram {
+    pub program: cairo_lang_sierra::program::Program,
+    pub entry_points_by_type: cairo_lang_starknet::contract_class::ContractEntryPoints,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SierraCompiledClass {
+    pub casm: CasmContractClass,
+    pub sierra: SierraProgram,
+}
+
+/// Executable contract class
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, Eq, PartialEq, derive_more::From)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum CompiledClass {
+    Deprecated(DeprecatedCompiledClass),
+    Class(SierraCompiledClass),
+}

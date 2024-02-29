@@ -239,19 +239,21 @@ pub fn get_state_update_from_cached_state(
 ) -> StateUpdatesWithDeclaredClasses {
     let state_diff = state.inner().to_state_diff();
 
-    let declared_sierra_classes = state.sierra_class().clone();
+    let declared_sierra_classes = state.class_cache.read().sierra.clone();
 
-    let declared_compiled_classes = state_diff
-        .class_hash_to_compiled_class_hash
-        .iter()
-        .map(|(class_hash, _)| {
-            let class = state.class(class_hash.0.into()).unwrap().expect("must exist if declared");
-            (class_hash.0.into(), class)
-        })
-        .collect::<HashMap<
-            katana_primitives::contract::ClassHash,
-            katana_primitives::contract::CompiledContractClass,
-        >>();
+    let declared_compiled_classes =
+        state_diff
+            .class_hash_to_compiled_class_hash
+            .iter()
+            .map(|(class_hash, _)| {
+                let class =
+                    state.class(class_hash.0.into()).unwrap().expect("must exist if declared");
+                (class_hash.0.into(), class)
+            })
+            .collect::<HashMap<
+                katana_primitives::contract::ClassHash,
+                katana_primitives::contract::CompiledClass,
+            >>();
 
     let nonce_updates =
         state_diff

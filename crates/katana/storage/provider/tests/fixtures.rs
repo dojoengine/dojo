@@ -6,7 +6,7 @@ use katana_primitives::block::{
     BlockHashOrNumber, FinalityStatus, Header, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
 use katana_primitives::contract::{
-    CompiledContractClass, ContractAddress, FlattenedSierraClass, SierraClass,
+    CompiledClass, ContractAddress, FlattenedSierraClass, SierraClass,
 };
 use katana_primitives::genesis::constant::{
     DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM,
@@ -32,9 +32,12 @@ lazy_static! {
         let provider = runner.owned_provider();
         (runner, Arc::new(provider))
     };
-    pub static ref DOJO_WORLD_COMPILED_CLASS: CompiledContractClass =
-        parse_compiled_class(include_str!("../../db/benches/artifacts/dojo_world_240.json"))
-            .unwrap();
+    pub static ref DOJO_WORLD_COMPILED_CLASS: CompiledClass = {
+        let json =
+            serde_json::from_str(include_str!("../../db/benches/artifacts/dojo_world_240.json"))
+                .unwrap();
+        parse_compiled_class(json).unwrap()
+    };
     pub static ref DOJO_WORLD_SIERRA_CLASS: FlattenedSierraClass = {
         let sierra_class: SierraClass =
             serde_json::from_str(include_str!("../../db/benches/artifacts/dojo_world_240.json"))
