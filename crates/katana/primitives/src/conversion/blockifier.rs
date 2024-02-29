@@ -8,7 +8,7 @@ use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 
 use crate::chain::ChainId;
-use crate::contract::CompiledClass;
+use crate::class::CompiledClass;
 
 impl From<crate::contract::ContractAddress> for ContractAddress {
     fn from(address: crate::contract::ContractAddress) -> Self {

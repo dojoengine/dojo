@@ -3,9 +3,8 @@ use ethers::types::H256;
 use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
 
 use crate::chain::ChainId;
-use crate::contract::{
-    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass, Nonce,
-};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::contract::{ContractAddress, Nonce};
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_declare_v3_tx_hash,
     compute_deploy_account_v1_tx_hash, compute_deploy_account_v3_tx_hash,
