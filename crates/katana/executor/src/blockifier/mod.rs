@@ -11,9 +11,8 @@ use blockifier::transaction::objects::TransactionExecutionInfo;
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::ExecutableTransaction;
 use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::transaction::{
-    DeclareTxWithClass, ExecutableTx, ExecutableTxWithHash, TxWithHash,
-};
+use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
+use katana_provider::traits::state::StateProvider;
 use parking_lot::RwLock;
 use tracing::{trace, warn};
 
@@ -145,13 +144,9 @@ fn execute_tx(
     charge_fee: bool,
     validate: bool,
 ) -> TxExecutionResult {
-    let sierra = if let ExecutableTx::Declare(DeclareTxWithClass {
-        transaction,
-        sierra_class: Some(sierra_class),
-        ..
-    }) = tx.as_ref()
-    {
-        Some((transaction.class_hash(), sierra_class.clone()))
+    let class_declaration_params = if let ExecutableTx::Declare(tx) = tx.as_ref() {
+        let class_hash = tx.class_hash();
+        Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
     } else {
         None
     };
@@ -166,8 +161,12 @@ fn execute_tx(
     };
 
     if res.is_ok() {
-        if let Some((class_hash, sierra_class)) = sierra {
-            state.sierra_class_mut().insert(class_hash, sierra_class);
+        if let Some((class_hash, compiled_class, sierra_class)) = class_declaration_params {
+            state.class_cache.write().compiled.insert(class_hash, compiled_class);
+
+            if let Some(sierra_class) = sierra_class {
+                state.class_cache.write().sierra.insert(class_hash, sierra_class);
+            }
         }
     }
 
@@ -198,9 +197,9 @@ impl PendingState {
         }
     }
 
-    pub fn reset_state(&self, state: StateRefDb, block_env: BlockEnv, cfg_env: CfgEnv) {
+    pub fn reset_state(&self, state: Box<dyn StateProvider>, block_env: BlockEnv, cfg_env: CfgEnv) {
         *self.block_envs.write() = (block_env, cfg_env);
-        self.state.reset_with_new_state(state);
+        self.state.reset_with_new_state(StateRefDb(state));
     }
 
     pub fn add_executed_txs(&self, transactions: Vec<(TxWithHash, TxExecutionResult)>) {

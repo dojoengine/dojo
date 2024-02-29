@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use blockifier::state::cached_state::{CachedState, GlobalContractCache};
 use blockifier::state::errors::StateError;
-use blockifier::state::state_api::StateReader;
-use katana_primitives::contract::FlattenedSierraClass;
+use blockifier::state::state_api::{StateReader, StateResult};
+use katana_primitives::contract::{CompiledClass, FlattenedSierraClass};
+use katana_primitives::conversion::blockifier::to_class;
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
@@ -13,6 +14,12 @@ use starknet_api::core::{ClassHash, CompiledClassHash, Nonce, PatriciaKey};
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
+
+mod primitives {
+    pub use katana_primitives::contract::{
+        ClassHash, CompiledClassHash, ContractAddress, Nonce, StorageKey, StorageValue,
+    };
+}
 
 /// A state db only provide read access.
 ///
@@ -25,50 +32,47 @@ impl StateRefDb {
     }
 }
 
-impl ContractClassProvider for StateRefDb {
-    fn class(
+impl StateProvider for StateRefDb {
+    fn class_hash_of_contract(
         &self,
-        hash: katana_primitives::contract::ClassHash,
-    ) -> ProviderResult<Option<katana_primitives::contract::CompiledContractClass>> {
+        address: primitives::ContractAddress,
+    ) -> ProviderResult<Option<primitives::ClassHash>> {
+        self.0.class_hash_of_contract(address)
+    }
+
+    fn nonce(
+        &self,
+        address: primitives::ContractAddress,
+    ) -> ProviderResult<Option<primitives::Nonce>> {
+        self.0.nonce(address)
+    }
+
+    fn storage(
+        &self,
+        address: primitives::ContractAddress,
+        storage_key: primitives::StorageKey,
+    ) -> ProviderResult<Option<primitives::StorageValue>> {
+        self.0.storage(address, storage_key)
+    }
+}
+
+impl ContractClassProvider for StateRefDb {
+    fn class(&self, hash: primitives::ClassHash) -> ProviderResult<Option<CompiledClass>> {
         self.0.class(hash)
     }
 
     fn compiled_class_hash_of_class_hash(
         &self,
-        hash: katana_primitives::contract::ClassHash,
-    ) -> ProviderResult<Option<katana_primitives::contract::CompiledClassHash>> {
+        hash: primitives::ClassHash,
+    ) -> ProviderResult<Option<primitives::CompiledClassHash>> {
         self.0.compiled_class_hash_of_class_hash(hash)
     }
 
     fn sierra_class(
         &self,
-        hash: katana_primitives::contract::ClassHash,
+        hash: primitives::ClassHash,
     ) -> ProviderResult<Option<FlattenedSierraClass>> {
         self.0.sierra_class(hash)
-    }
-}
-
-impl StateProvider for StateRefDb {
-    fn nonce(
-        &self,
-        address: katana_primitives::contract::ContractAddress,
-    ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
-        self.0.nonce(address)
-    }
-
-    fn class_hash_of_contract(
-        &self,
-        address: katana_primitives::contract::ContractAddress,
-    ) -> ProviderResult<Option<katana_primitives::contract::ClassHash>> {
-        self.0.class_hash_of_contract(address)
-    }
-
-    fn storage(
-        &self,
-        address: katana_primitives::contract::ContractAddress,
-        storage_key: katana_primitives::contract::StorageKey,
-    ) -> ProviderResult<Option<katana_primitives::contract::StorageValue>> {
-        self.0.storage(address, storage_key)
     }
 }
 
@@ -76,7 +80,7 @@ impl StateReader for StateRefDb {
     fn get_nonce_at(
         &mut self,
         contract_address: starknet_api::core::ContractAddress,
-    ) -> blockifier::state::state_api::StateResult<Nonce> {
+    ) -> StateResult<Nonce> {
         StateProvider::nonce(&self.0, contract_address.into())
             .map(|n| Nonce(n.unwrap_or_default().into()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
@@ -86,7 +90,7 @@ impl StateReader for StateRefDb {
         &mut self,
         contract_address: starknet_api::core::ContractAddress,
         key: starknet_api::state::StorageKey,
-    ) -> blockifier::state::state_api::StateResult<starknet_api::hash::StarkFelt> {
+    ) -> StateResult<starknet_api::hash::StarkFelt> {
         StateProvider::storage(&self.0, contract_address.into(), (*key.0.key()).into())
             .map(|v| v.unwrap_or_default().into())
             .map_err(|e| StateError::StateReadError(e.to_string()))
@@ -95,7 +99,7 @@ impl StateReader for StateRefDb {
     fn get_class_hash_at(
         &mut self,
         contract_address: starknet_api::core::ContractAddress,
-    ) -> blockifier::state::state_api::StateResult<starknet_api::core::ClassHash> {
+    ) -> StateResult<starknet_api::core::ClassHash> {
         StateProvider::class_hash_of_contract(&self.0, contract_address.into())
             .map(|v| ClassHash(v.unwrap_or_default().into()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
@@ -104,7 +108,7 @@ impl StateReader for StateRefDb {
     fn get_compiled_class_hash(
         &mut self,
         class_hash: starknet_api::core::ClassHash,
-    ) -> blockifier::state::state_api::StateResult<starknet_api::core::CompiledClassHash> {
+    ) -> StateResult<starknet_api::core::CompiledClassHash> {
         if let Some(hash) =
             ContractClassProvider::compiled_class_hash_of_class_hash(&self.0, class_hash.0.into())
                 .map_err(|e| StateError::StateReadError(e.to_string()))?
@@ -118,35 +122,41 @@ impl StateReader for StateRefDb {
     fn get_compiled_contract_class(
         &mut self,
         class_hash: starknet_api::core::ClassHash,
-    ) -> blockifier::state::state_api::StateResult<
-        blockifier::execution::contract_class::ContractClass,
-    > {
+    ) -> StateResult<blockifier::execution::contract_class::ContractClass> {
         if let Some(class) = ContractClassProvider::class(&self.0, class_hash.0.into())
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            Ok(class)
+            to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))
         } else {
             Err(StateError::UndeclaredClassHash(class_hash))
         }
     }
 }
 
+#[derive(Default)]
+pub struct ClassCache {
+    pub(crate) compiled: HashMap<primitives::ClassHash, CompiledClass>,
+    pub(crate) sierra: HashMap<primitives::ClassHash, FlattenedSierraClass>,
+}
+
 pub struct CachedStateWrapper {
     inner: Mutex<CachedState<StateRefDb>>,
-    sierra_class: RwLock<HashMap<katana_primitives::contract::ClassHash, FlattenedSierraClass>>,
+    pub(crate) class_cache: RwLock<ClassCache>,
 }
 
 impl CachedStateWrapper {
     pub fn new(db: StateRefDb) -> Self {
         Self {
-            sierra_class: Default::default(),
+            class_cache: RwLock::new(ClassCache::default()),
             inner: Mutex::new(CachedState::new(db, GlobalContractCache::default())),
         }
     }
 
     pub(super) fn reset_with_new_state(&self, db: StateRefDb) {
         *self.inner() = CachedState::new(db, GlobalContractCache::default());
-        self.sierra_class_mut().clear();
+        let mut lock = self.class_cache.write();
+        lock.compiled.clear();
+        lock.sierra.clear();
     }
 
     pub fn inner(
@@ -154,35 +164,18 @@ impl CachedStateWrapper {
     ) -> parking_lot::lock_api::MutexGuard<'_, RawMutex, CachedState<StateRefDb>> {
         self.inner.lock()
     }
-
-    pub fn sierra_class(
-        &self,
-    ) -> parking_lot::RwLockReadGuard<
-        '_,
-        HashMap<katana_primitives::contract::ClassHash, FlattenedSierraClass>,
-    > {
-        self.sierra_class.read()
-    }
-
-    pub fn sierra_class_mut(
-        &self,
-    ) -> parking_lot::RwLockWriteGuard<
-        '_,
-        HashMap<katana_primitives::contract::ClassHash, FlattenedSierraClass>,
-    > {
-        self.sierra_class.write()
-    }
 }
 
 impl ContractClassProvider for CachedStateWrapper {
     fn class(
         &self,
         hash: katana_primitives::contract::ClassHash,
-    ) -> ProviderResult<Option<katana_primitives::contract::CompiledContractClass>> {
-        let Ok(class) = self.inner().get_compiled_contract_class(ClassHash(hash.into())) else {
-            return Ok(None);
-        };
-        Ok(Some(class))
+    ) -> ProviderResult<Option<CompiledClass>> {
+        if let res @ Some(_) = self.class_cache.read().compiled.get(&hash).cloned() {
+            Ok(res)
+        } else {
+            self.inner().state.class(hash)
+        }
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -199,7 +192,7 @@ impl ContractClassProvider for CachedStateWrapper {
         &self,
         hash: katana_primitives::contract::ClassHash,
     ) -> ProviderResult<Option<FlattenedSierraClass>> {
-        if let Some(class) = self.sierra_class().get(&hash) {
+        if let Some(class) = self.class_cache.read().sierra.get(&hash) {
             Ok(Some(class.clone()))
         } else {
             self.inner.lock().state.0.sierra_class(hash)

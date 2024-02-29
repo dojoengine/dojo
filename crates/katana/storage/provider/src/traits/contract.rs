@@ -1,5 +1,5 @@
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
+    ClassHash, CompiledClass, CompiledClassHash, ContractAddress, FlattenedSierraClass,
     GenericContractInfo,
 };
 
@@ -21,7 +21,7 @@ pub trait ContractClassProvider: Send + Sync {
     ) -> ProviderResult<Option<CompiledClassHash>>;
 
     /// Returns the compiled class definition of a contract class given its class hash.
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>>;
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>>;
 
     /// Retrieves the Sierra class definition of a contract class given its class hash.
     fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>>;
@@ -38,7 +38,7 @@ pub trait ContractClassWriter: Send + Sync {
     ) -> ProviderResult<()>;
 
     /// Returns the compiled class definition of a contract class given its class hash.
-    fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> ProviderResult<()>;
+    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()>;
 
     /// Retrieves the Sierra class definition of a contract class given its class hash.
     fn set_sierra_class(&self, hash: ClassHash, sierra: FlattenedSierraClass)

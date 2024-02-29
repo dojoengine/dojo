@@ -248,7 +248,7 @@ impl IntervalBlockProducer {
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
         backend.update_block_env(&mut block_env);
-        pending_state.reset_state(StateRefDb(new_state), block_env, cfg_env);
+        pending_state.reset_state(new_state, block_env, cfg_env);
 
         Ok(outcome)
     }
