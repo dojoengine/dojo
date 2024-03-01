@@ -23,6 +23,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::contract::DojoContract;
+use crate::interface::DojoInterface;
 use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
@@ -33,6 +34,7 @@ use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
 
 const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
+const DOJO_INTERFACE_ATTR:  &str = "dojo::interface";
 const DOJO_PLUGIN_EXPAND_VAR_ENV: &str = "DOJO_PLUGIN_EXPAND";
 
 #[derive(Clone, Debug, PartialEq)]
@@ -96,6 +98,14 @@ impl BuiltinDojoPlugin {
     fn handle_mod(&self, db: &dyn SyntaxGroup, module_ast: ast::ItemModule) -> PluginResult {
         if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
             return DojoContract::from_module(db, module_ast);
+        }
+
+        PluginResult::default()
+    }
+
+    fn handle_trait(&self, db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginResult {
+        if trait_ast.has_attr(db, DOJO_INTERFACE_ATTR) {
+            return DojoInterface::from_trait(db, trait_ast);
         }
 
         PluginResult::default()
@@ -246,6 +256,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
 
         match item_ast {
             ast::ModuleItem::Module(module_ast) => self.handle_mod(db, module_ast),
+            ast::ModuleItem::Trait(trait_ast) => self.handle_trait(db, trait_ast),
             ast::ModuleItem::Enum(enum_ast) => {
                 let aux_data = DojoAuxData::default();
                 let mut rewrite_nodes = vec![];

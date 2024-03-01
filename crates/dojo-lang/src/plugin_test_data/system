@@ -84,6 +84,26 @@ mod withcomponent {
         testcomponent2_event: testcomponent2::Event,
     }
 }
+#[dojo::interface]
+trait IEmptyTrait;
+
+#[dojo::interface]
+trait IActions {
+    // TODO
+    // it looks like there is a bug in trait parsing because if a value is set
+    // on a constant, this value appears alone in the trait...
+    const ONE: u8;
+
+    fn do_no_param();
+    fn do_no_param_but_self(self: @TContractState);
+    fn do_params(p1: dojo_examples::models::Direction, p2: u8);
+    fn do_params_and_self(self: @TContractState, p2: u8);
+    fn do_return_value(p1: u8) -> u16;
+    fn do_ref_self(ref self: TContractState);
+
+    #[my_attr]
+    fn do_with_attrs(p1: u8) -> u16;
+}
 
 //! > generated_cairo_code
 #[starknet::contract]
@@ -205,6 +225,16 @@ error: Unsupported attribute.
 #[starknet::component]
 ^********************^
 
+error: Anything other than functions is not supported in a dojo::interface
+ --> test_src/lib.cairo:89:5
+    const ONE: u8;
+    ^************^
+
+error: Functions of dojo::interface cannot have `ref self` parameter.
+ --> test_src/lib.cairo:96:5
+    fn do_ref_self(ref self: TContractState);
+    ^***************************************^
+
 error: Unsupported attribute.
  --> test_src/lib.cairo[spawn]:2:17
                 #[starknet::contract]
@@ -229,6 +259,11 @@ error: Unsupported attribute.
  --> test_src/lib.cairo[withcomponent]:2:17
                 #[starknet::contract]
                 ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:98:5
+    #[my_attr]
+    ^********^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo:49:5
@@ -700,4 +735,22 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
             }
 impl EventDrop of core::traits::Drop::<Event>;
             
+                }
+
+                #[starknet::interface]
+                trait IEmptyTrait<TContractState> {}
+
+                #[starknet::interface]
+                trait IActions<TContractState> {
+                    
+    fn do_no_param(self: @TContractState);
+    fn do_no_param_but_self(self: @TContractState);
+    fn do_params(self: @TContractState, p1: dojo_examples::models::Direction, p2: u8);
+    fn do_params_and_self(self: @TContractState, p2: u8);
+    fn do_return_value(self: @TContractState, p1: u8) -> u16;
+    fn do_ref_self(ref self: TContractState);
+
+    #[my_attr]
+    fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
+
                 }
