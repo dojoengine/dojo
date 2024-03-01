@@ -194,6 +194,7 @@ impl KatanaSequencer {
         &self,
         transactions: Vec<ExecutableTxWithHash>,
         block_id: BlockIdOrTag,
+        skip_validate: bool,
     ) -> SequencerResult<Vec<FeeEstimate>> {
         let state = self.state(&block_id)?;
 
@@ -201,11 +202,15 @@ impl KatanaSequencer {
             .block_execution_context_at(block_id)?
             .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
 
+        // If the node is run with transaction validation disabled, then we should not validate
+        // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
+        let should_validate = !(skip_validate || self.backend.config.disable_validate);
+
         katana_executor::blockifier::utils::estimate_fee(
             transactions.into_iter(),
             block_context,
             state,
-            !self.backend.config.disable_validate,
+            should_validate,
         )
         .map_err(SequencerError::TransactionExecution)
     }
@@ -440,8 +445,8 @@ impl KatanaSequencer {
                     from_address: e.from_address.into(),
                     keys: e.keys.clone(),
                     data: e.data.clone(),
-                    block_hash,
-                    block_number: i,
+                    block_hash: Some(block_hash),
+                    block_number: Some(i),
                     transaction_hash: tx_hash,
                 }));
 

@@ -8,7 +8,7 @@ test_compiler_cairo_v240
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x6c0c550736dd694219f1a3d0a8ac95fbc8b17382f1f02dc09422451bfa30376",
+    "class_hash": "0x5ad96ceea29160aa7305bb078d1ade41f73b487363ae12778dbea6393cc00b2",
     "abi": [
       {
         "type": "impl",

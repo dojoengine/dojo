@@ -14,8 +14,13 @@ use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
-use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SyncingStatus};
+use katana_rpc_types::{
+    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags, SyncingStatus,
+};
 use starknet::core::types::TransactionStatus;
+
+/// The currently supported version of the Starknet JSON-RPC specification.
+pub const RPC_SPEC_VERSION: &str = "0.6.0";
 
 /// Starknet JSON-RPC APIs: <https://github.com/starkware-libs/starknet-specs>
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "starknet"))]
@@ -24,7 +29,7 @@ pub trait StarknetApi {
     /// Returns the version of the Starknet JSON-RPC specification being used.
     #[method(name = "specVersion")]
     async fn spec_version(&self) -> RpcResult<String> {
-        Ok("0.5.1".into())
+        Ok(RPC_SPEC_VERSION.into())
     }
 
     /// Get block information with transaction hashes given the block id.
@@ -117,6 +122,7 @@ pub trait StarknetApi {
     async fn estimate_fee(
         &self,
         request: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlags>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>>;
 
@@ -143,7 +149,7 @@ pub trait StarknetApi {
     /// Returns an object about the sync status, or false if the node is not synching.
     #[method(name = "syncing")]
     async fn syncing(&self) -> RpcResult<SyncingStatus> {
-        Ok(SyncingStatus::False)
+        Ok(SyncingStatus::NotSyncing)
     }
 
     /// Returns all event objects matching the conditions in the provided filter.

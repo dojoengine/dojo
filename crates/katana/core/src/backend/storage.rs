@@ -213,8 +213,10 @@ mod tests {
     fn blockchain_from_db() {
         let db_path = tempfile::TempDir::new().expect("Failed to create temp dir.").into_path();
 
-        let dummy_tx =
-            TxWithHash { hash: felt!("0xbad"), transaction: Tx::Invoke(InvokeTx::default()) };
+        let dummy_tx = TxWithHash {
+            hash: felt!("0xbad"),
+            transaction: Tx::Invoke(InvokeTx::V1(Default::default())),
+        };
 
         let dummy_block = SealedBlockWithStatus {
             status: FinalityStatus::AcceptedOnL1,

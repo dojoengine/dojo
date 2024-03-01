@@ -185,23 +185,33 @@ public class {} : ModelInstance {{
             .inputs
             .iter()
             .map(|arg| {
-                let token = arg.1.to_composite().unwrap();
-                // r#type doesnt seem to be working rn.
-                // instead, we can take a look at our
-                // handled tokens db
-                let token =
-                    handled_tokens.iter().find(|t| t.type_name() == token.type_name()).unwrap();
+                let token = &arg.1;
+                let type_name = &arg.0;
 
-                match token.r#type {
-                    CompositeType::Struct => token
-                        .inners
-                        .iter()
-                        .map(|field| format!("new FieldElement({}.{}).Inner()", arg.0, field.name))
-                        .collect::<Vec<String>>()
-                        .join(",\n                    "),
-                    _ => {
-                        format!("new FieldElement({}).Inner()", arg.0)
+                match handled_tokens.iter().find(|t| t.type_name() == token.type_name()) {
+                    Some(t) => {
+                        // Need to flatten the struct members.
+                        match t.r#type {
+                            CompositeType::Struct => t
+                                .inners
+                                .iter()
+                                .map(|field| {
+                                    format!(
+                                        "new FieldElement({}.{}).Inner()",
+                                        type_name, field.name
+                                    )
+                                })
+                                .collect::<Vec<String>>()
+                                .join(",\n                    "),
+                            _ => {
+                                format!("new FieldElement({}).Inner()", type_name)
+                            }
+                        }
                     }
+                    None => match UnityPlugin::map_type(type_name).as_str() {
+                        "FieldElement" => format!("{}.Inner()", type_name),
+                        _ => format!("new FieldElement({}).Inner()", type_name),
+                    },
                 }
             })
             .collect::<Vec<String>>()
