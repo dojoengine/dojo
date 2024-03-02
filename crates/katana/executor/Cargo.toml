@@ -30,9 +30,11 @@ starknet-types-core = { version = "0.0.9", optional = true }
 [dev-dependencies]
 cairo-vm.workspace = true
 katana-provider.workspace = true
+katana-rpc-types.workspace = true
 rstest.workspace = true
 serde_json.workspace = true
 similar-asserts.workspace = true
+tokio.workspace = true
 
 [features]
 default = [ "blockifier", "sir" ]

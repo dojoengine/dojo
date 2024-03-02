@@ -26,7 +26,7 @@ use crate::receipt::MaybePendingTxReceipt;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
+pub struct BroadcastedInvokeTx(pub BroadcastedInvokeTransaction);
 
 impl BroadcastedInvokeTx {
     pub fn is_query(&self) -> bool {
@@ -66,7 +66,7 @@ impl BroadcastedInvokeTx {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedDeclareTx(BroadcastedDeclareTransaction);
+pub struct BroadcastedDeclareTx(pub BroadcastedDeclareTransaction);
 
 impl BroadcastedDeclareTx {
     /// Validates that the provided compiled class hash is computed correctly from the class
@@ -168,7 +168,7 @@ impl BroadcastedDeclareTx {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedDeployAccountTx(BroadcastedDeployAccountTransaction);
+pub struct BroadcastedDeployAccountTx(pub BroadcastedDeployAccountTransaction);
 
 impl BroadcastedDeployAccountTx {
     pub fn is_query(&self) -> bool {
