@@ -8,13 +8,13 @@ use blockifier::execution::entry_point::{
     CallEntryPoint, EntryPointExecutionContext, ExecutionResources,
 };
 use blockifier::execution::errors::EntryPointExecutionError;
-use blockifier::fee::fee_utils::calculate_tx_l1_gas_usages;
+use blockifier::fee::fee_utils::{self, calculate_tx_l1_gas_usages};
 use blockifier::state::cached_state::{self};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::errors::{TransactionExecutionError, TransactionFeeError};
 use blockifier::transaction::objects::{
-    AccountTransactionContext, DeprecatedAccountTransactionContext,
+    AccountTransactionContext, DeprecatedAccountTransactionContext, FeeType, HasRelatedFeeType,
 };
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{
@@ -65,7 +65,10 @@ pub(super) fn transact<S: StateReader>(
     let validate = !simulation_flags.skip_validate;
     let charge_fee = !simulation_flags.skip_fee_transfer;
 
-    let res = match to_executor_tx(tx) {
+    let transaction = to_executor_tx(tx);
+    let fee_type = get_fee_type_from_tx(&transaction);
+
+    let mut info = match transaction {
         Transaction::AccountTransaction(tx) => {
             tx.execute(state, block_context, charge_fee, validate)
         }
@@ -74,8 +77,17 @@ pub(super) fn transact<S: StateReader>(
         }
     }?;
 
-    let gas_used = calculate_tx_l1_gas_usages(&res.actual_resources, block_context)?.gas_usage;
-    Ok(TransactionExecutionInfo { inner: res, gas_used })
+    // There are a few case where the `actual_fee` field of the transaction info is not set where
+    // the fee is skipped and thus not charged for the transaction (e.g. when the `skip_fee_transfer` is
+    // explicitly set, or when the transaction `max_fee` is set to 0). In these cases, we still want to
+    // calculate the fee.
+    if info.actual_fee == Fee(0) {
+        let fee = fee_utils::calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?;
+        info.actual_fee = fee;
+    }
+
+    let gas_used = calculate_tx_l1_gas_usages(&info.actual_resources, block_context)?.gas_usage;
+    Ok(TransactionExecutionInfo { inner: info, gas_used })
 }
 
 /// Perform a function call on a contract and retrieve the return values.
@@ -441,4 +453,12 @@ fn to_api_resource_bounds(
     };
 
     ResourceBoundsMapping(BTreeMap::from([(Resource::L1Gas, l1_gas), (Resource::L2Gas, l2_gas)]))
+}
+
+/// Get the fee type of a transaction. The fee type determines the token used to pay for the transaction.
+fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
+    match transaction {
+        Transaction::AccountTransaction(tx) => tx.fee_type(),
+        Transaction::L1HandlerTransaction(tx) => tx.fee_type(),
+    }
 }
