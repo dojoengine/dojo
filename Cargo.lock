@@ -6895,6 +6895,7 @@ dependencies = [
  "futures",
  "katana-primitives",
  "katana-provider",
+ "katana-rpc-types",
  "parking_lot 0.12.1",
  "rstest",
  "serde_json",
@@ -6904,6 +6905,7 @@ dependencies = [
  "starknet_api",
  "starknet_in_rust",
  "thiserror",
+ "tokio",
  "tracing",
 ]
 
