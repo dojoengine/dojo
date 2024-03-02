@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709242311541,
+  "lastUpdate": 1709404369573,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2035,6 +2035,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 967812,
             "range": "± 66096",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d3ecb61e3d7f104398b276332ddaf9be4240c5f",
+          "message": "Bump `blockifier` rev for supporting higher fee transfer gas (#1598)\n\nbump blockifier rev",
+          "timestamp": "2024-03-03T02:23:20+08:00",
+          "tree_id": "1a5b1a3aa51b93193244c8dfcaca9c9abfb6ca1e",
+          "url": "https://github.com/dojoengine/dojo/commit/1d3ecb61e3d7f104398b276332ddaf9be4240c5f"
+        },
+        "date": 1709404369127,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 968119,
+            "range": "± 69544",
             "unit": "ns/iter"
           }
         ]
