@@ -11,7 +11,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::{
@@ -28,7 +28,11 @@ use katana_primitives::FieldElement;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
-use starknet::macros::felt;
+use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
+use starknet::macros::{felt, selector};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Url};
+use starknet::signers::{LocalWallet, SigningKey};
 
 // TODO: remove support for legacy contract declaration
 #[allow(unused)]
@@ -48,9 +52,9 @@ pub fn contract_class() -> (CompiledClass, FlattenedSierraClass) {
     (compiled, sierra)
 }
 
-/// Returns a state provider with some prefilled states.
 #[rstest::fixture]
-pub fn state_provider() -> Box<dyn StateProvider> {
+#[once]
+pub fn genesis() -> Genesis {
     let mut seed = [0u8; 32];
     seed[0] = b'0';
 
@@ -61,10 +65,56 @@ pub fn state_provider() -> Box<dyn StateProvider> {
 
     let mut genesis = Genesis::default();
     genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+    genesis
+}
 
+#[allow(unused)]
+pub fn signed_invoke_executable_tx(
+    address: ContractAddress,
+    private_key: FieldElement,
+    chain_id: ChainId,
+    nonce: Nonce,
+    max_fee: FieldElement,
+) -> ExecutableTxWithHash {
+    let url = "http://localhost:5050";
+    let provider = JsonRpcClient::new(HttpTransport::new(Url::try_from(url).unwrap()));
+    let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key));
+
+    let account = SingleOwnerAccount::new(
+        provider,
+        signer,
+        address.into(),
+        chain_id.into(),
+        ExecutionEncoding::New,
+    );
+
+    let calls = vec![Call {
+        to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
+        selector: selector!("transfer"),
+        calldata: vec![felt!("0x1"), felt!("0x99"), felt!("0x0")],
+    }];
+
+    let tx = account.execute(calls).nonce(nonce).max_fee(max_fee).prepared().unwrap();
+
+    let broadcasted_tx = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(tx.get_invoke_request(false))
+        .unwrap();
+
+    let tx = katana_rpc_types::transaction::BroadcastedInvokeTx(broadcasted_tx)
+        .into_tx_with_chain_id(chain_id);
+
+    ExecutableTxWithHash::new(tx.into())
+}
+
+/// Returns a state provider with some prefilled states.
+#[rstest::fixture]
+pub fn state_provider(genesis: &Genesis) -> Box<dyn StateProvider> {
+    let states = genesis.state_updates();
     let provider = InMemoryProvider::new();
 
-    let states = genesis.state_updates();
     let block = SealedBlockWithStatus {
         status: FinalityStatus::AcceptedOnL2,
         block: Block::default().seal_with_hash(123u64.into()),
