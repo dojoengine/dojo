@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709404369573,
+  "lastUpdate": 1709483949782,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2065,6 +2065,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 968119,
             "range": "± 69544",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c74ce273d5aaa155bf10306495e71b12fd686e2",
+          "message": "fix(katana): search the inner state when sierra class not found in the cache (#1602)\n\nfall back to inner state when sierra class not found in the cache",
+          "timestamp": "2024-03-04T00:29:36+08:00",
+          "tree_id": "8855c099b2c64532fafe50c6fabff4087110fa46",
+          "url": "https://github.com/dojoengine/dojo/commit/5c74ce273d5aaa155bf10306495e71b12fd686e2"
+        },
+        "date": 1709483948843,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1026898,
+            "range": "± 65741",
             "unit": "ns/iter"
           }
         ]
