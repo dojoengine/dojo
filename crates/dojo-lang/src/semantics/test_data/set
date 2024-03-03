@@ -169,7 +169,7 @@ Block(
                                 Value(
                                     FunctionCall(
                                         ExprFunctionCall {
-                                            function: test::HealthModel::name,
+                                            function: test::HealthModel::selector,
                                             args: [
                                                 Value(
                                                     Snapshot(

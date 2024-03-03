@@ -123,7 +123,7 @@ impl InlineMacroExprPlugin for GetMacro {
                  core::array::ArrayTrait::span(@__{model}_layout__);
                  let mut __{model}_layout_clone_span__ = \
                  core::array::ArrayTrait::span(@__{model}_layout_clone__);
-                 let mut __{model}_values__ = {}.entity('{model}', __get_macro_keys__,
+                 let mut __{model}_values__ = {}.entity(dojo::model::Model::<{model}>::selector_static(), __get_macro_keys__,
                  __{model}_layout_span__);
                  let mut __{model}_model__ = core::array::ArrayTrait::new();
                  core::array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);

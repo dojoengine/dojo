@@ -1,7 +1,8 @@
 use starknet::SyscallResult;
 
 trait Model<T> {
-    fn name(self: @T) -> felt252;
+    fn selector_static() -> felt252;
+    fn selector(self: @T) -> felt252;
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
     fn layout(self: @T) -> Span<u8>;
@@ -10,14 +11,14 @@ trait Model<T> {
 
 #[starknet::interface]
 trait IModel<T> {
-    fn name(self: @T) -> felt252;
+    fn selector(self: @T) -> felt252;
     fn layout(self: @T) -> Span<felt252>;
     fn schema(self: @T) -> Span<dojo::database::introspect::Member>;
 }
 
 #[starknet::interface]
 trait IDojoModel<T> {
-    fn name(self: @T) -> felt252;
+    fn selector(self: @T) -> felt252;
     fn unpacked_size(self: @T) -> usize;
     fn packed_size(self: @T) -> usize;
     fn layout(self: @T) -> Span<u8>;
@@ -30,7 +31,7 @@ trait IDojoModel<T> {
 /// # Arguments
 ///
 /// * `class_hash` - Class Hash of the model.
-fn deploy_and_get_name(salt: felt252, class_hash: starknet::ClassHash) -> SyscallResult<(starknet::ContractAddress, felt252)> {
+fn deploy_and_get_selector(salt: felt252, class_hash: starknet::ClassHash) -> SyscallResult<(starknet::ContractAddress, felt252)> {
     let (address, _) = starknet::deploy_syscall(
         class_hash,
         salt,
@@ -38,11 +39,11 @@ fn deploy_and_get_name(salt: felt252, class_hash: starknet::ClassHash) -> Syscal
         false,
     )?;
 
-    let name = *starknet::call_contract_syscall(
+    let selector = *starknet::call_contract_syscall(
         address,
-        selector!("name"),
+        selector!("selector"),
         array![].span()
     )?[0];
 
-    Result::Ok((address, name))
+    Result::Ok((address, selector))
 }

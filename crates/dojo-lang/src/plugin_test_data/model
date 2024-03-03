@@ -537,82 +537,82 @@ struct OnlyKeyModel {
        ^**********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:73:13
+ --> test_src/lib.cairo[Position]:78:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:69:13
+ --> test_src/lib.cairo[Roles]:74:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:68:13
+ --> test_src/lib.cairo[OnlyKeyModel]:73:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:77:13
+ --> test_src/lib.cairo[Player]:82:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:78:17
+ --> test_src/lib.cairo[Position]:83:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:81:17
+ --> test_src/lib.cairo[Position]:86:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:109:17
+ --> test_src/lib.cairo[Position]:114:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:74:17
+ --> test_src/lib.cairo[Roles]:79:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:77:17
+ --> test_src/lib.cairo[Roles]:82:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:105:17
+ --> test_src/lib.cairo[Roles]:110:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:73:17
+ --> test_src/lib.cairo[OnlyKeyModel]:78:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:76:17
+ --> test_src/lib.cairo[OnlyKeyModel]:81:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:104:17
+ --> test_src/lib.cairo[OnlyKeyModel]:109:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:82:17
+ --> test_src/lib.cairo[Player]:87:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:85:17
+ --> test_src/lib.cairo[Player]:90:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:113:17
+ --> test_src/lib.cairo[Player]:118:17
                 #[abi(embed_v0)]
                 ^**************^
 
@@ -742,8 +742,13 @@ impl PositionSerde of core::serde::Serde::<Position> {
 
             impl PositionModel of dojo::model::Model<Position> {
                 #[inline(always)]
-                fn name(self: @Position) -> felt252 {
-                    'Position'
+                fn selector_static() -> felt252 {
+                    selector!("Position")
+                }
+
+                #[inline(always)]
+                fn selector(self: @Position) -> felt252 {
+                    selector!("Position")
                 }
 
                 #[inline(always)]
@@ -821,8 +826,8 @@ impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> 
 
                 #[abi(embed_v0)]
                 impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'Position'
+                    fn selector(self: @ContractState) -> felt252 {
+                        selector!("Position")
                     }
 
                     fn unpacked_size(self: @ContractState) -> usize {
@@ -866,8 +871,13 @@ impl RolesSerde of core::serde::Serde::<Roles> {
 
             impl RolesModel of dojo::model::Model<Roles> {
                 #[inline(always)]
-                fn name(self: @Roles) -> felt252 {
-                    'Roles'
+                fn selector_static() -> felt252 {
+                    selector!("Roles")
+                }
+
+                #[inline(always)]
+                fn selector(self: @Roles) -> felt252 {
+                    selector!("Roles")
                 }
 
                 #[inline(always)]
@@ -941,8 +951,8 @@ impl RolesIntrospect<> of dojo::database::introspect::Introspect<Roles<>> {
 
                 #[abi(embed_v0)]
                 impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'Roles'
+                    fn selector(self: @ContractState) -> felt252 {
+                        selector!("Roles")
                     }
 
                     fn unpacked_size(self: @ContractState) -> usize {
@@ -986,8 +996,13 @@ impl OnlyKeyModelSerde of core::serde::Serde::<OnlyKeyModel> {
 
             impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
                 #[inline(always)]
-                fn name(self: @OnlyKeyModel) -> felt252 {
-                    'OnlyKeyModel'
+                fn selector_static() -> felt252 {
+                    selector!("OnlyKeyModel")
+                }
+
+                #[inline(always)]
+                fn selector(self: @OnlyKeyModel) -> felt252 {
+                    selector!("OnlyKeyModel")
                 }
 
                 #[inline(always)]
@@ -1060,8 +1075,8 @@ impl OnlyKeyModelIntrospect<> of dojo::database::introspect::Introspect<OnlyKeyM
 
                 #[abi(embed_v0)]
                 impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'OnlyKeyModel'
+                    fn selector(self: @ContractState) -> felt252 {
+                        selector!("OnlyKeyModel")
                     }
 
                     fn unpacked_size(self: @ContractState) -> usize {
@@ -1111,8 +1126,13 @@ impl PlayerSerde of core::serde::Serde::<Player> {
 
             impl PlayerModel of dojo::model::Model<Player> {
                 #[inline(always)]
-                fn name(self: @Player) -> felt252 {
-                    'Player'
+                fn selector_static() -> felt252 {
+                    selector!("Player")
+                }
+
+                #[inline(always)]
+                fn selector(self: @Player) -> felt252 {
+                    selector!("Player")
                 }
 
                 #[inline(always)]
@@ -1194,8 +1214,8 @@ impl PlayerIntrospect<> of dojo::database::introspect::Introspect<Player<>> {
 
                 #[abi(embed_v0)]
                 impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn name(self: @ContractState) -> felt252 {
-                        'Player'
+                    fn selector(self: @ContractState) -> felt252 {
+                        selector!("Player")
                     }
 
                     fn unpacked_size(self: @ContractState) -> usize {

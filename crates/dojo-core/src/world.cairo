@@ -7,21 +7,15 @@ use dojo::resource_metadata::ResourceMetadata;
 trait IWorld<T> {
     fn metadata(self: @T, resource_id: felt252) -> ResourceMetadata;
     fn set_metadata(ref self: T, metadata: ResourceMetadata);
-    fn model(self: @T, name: felt252) -> (ClassHash, ContractAddress);
+    fn model(self: @T, selector: felt252) -> (ClassHash, ContractAddress);
     fn register_model(ref self: T, class_hash: ClassHash);
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
-    fn entity(
-        self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
-    ) -> Span<felt252>;
+    fn entity(self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>) -> Span<felt252>;
     fn set_entity(
-        ref self: T,
-        model: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
-        layout: Span<u8>
+        ref self: T, model: felt252, keys: Span<felt252>, values: Span<felt252>, layout: Span<u8>
     );
     fn base(self: @T) -> ClassHash;
     fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
@@ -29,9 +23,9 @@ trait IWorld<T> {
     fn grant_owner(ref self: T, address: ContractAddress, resource: felt252);
     fn revoke_owner(ref self: T, address: ContractAddress, resource: felt252);
 
-    fn is_writer(self: @T, model: felt252, system: ContractAddress) -> bool;
-    fn grant_writer(ref self: T, model: felt252, system: ContractAddress);
-    fn revoke_writer(ref self: T, model: felt252, system: ContractAddress);
+    fn is_writer(self: @T, model: felt252, contract: ContractAddress) -> bool;
+    fn grant_writer(ref self: T, model: felt252, contract: ContractAddress);
+    fn revoke_writer(ref self: T, model: felt252, contract: ContractAddress);
 }
 
 #[starknet::interface]
@@ -135,7 +129,7 @@ mod world {
 
     #[derive(Drop, starknet::Event)]
     struct ModelRegistered {
-        name: felt252,
+        selector: felt252,
         class_hash: ClassHash,
         prev_class_hash: ClassHash,
         address: ContractAddress,
@@ -158,7 +152,7 @@ mod world {
     #[derive(Drop, starknet::Event)]
     struct WriterUpdated {
         model: felt252,
-        system: ContractAddress,
+        contract: ContractAddress,
         value: bool
     }
 
@@ -185,10 +179,12 @@ mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
-        self.models.write(
-            RESOURCE_METADATA_MODEL,
-            (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
-        );
+        self
+            .models
+            .write(
+                RESOURCE_METADATA_MODEL,
+                (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
+            );
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -223,7 +219,7 @@ mod world {
         fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
             assert_can_write(@self, metadata.resource_id, get_caller_address());
 
-            let model = Model::<ResourceMetadata>::name(@metadata);
+            let model = Model::<ResourceMetadata>::selector_static();
             let keys = Model::<ResourceMetadata>::keys(@metadata);
             let values = Model::<ResourceMetadata>::values(@metadata);
             let layout = Model::<ResourceMetadata>::layout(@metadata);
@@ -231,7 +227,10 @@ mod world {
             let key = poseidon::poseidon_hash_span(keys);
             database::set(model, key, values, layout);
 
-            EventEmitter::emit(ref self, MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri });
+            EventEmitter::emit(
+                ref self,
+                MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri }
+            );
         }
 
         /// Checks if the provided account is an owner of the resource.
@@ -257,13 +256,15 @@ mod world {
         /// * `resource` - The resource.
         fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
+            assert(
+                self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER
+            );
             self.owners.write((resource, address), true);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: true });
         }
 
-        /// Revokes owner permission to the system for the model.
+        /// Revokes owner permission to the contract for the model.
         /// Can only be called by an existing owner or the world admin.
         ///
         /// # Arguments
@@ -272,52 +273,55 @@ mod world {
         /// * `resource` - The resource.
         fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
+            assert(
+                self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER
+            );
             self.owners.write((resource, address), false);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
         }
 
-        /// Checks if the provided system is a writer of the model.
+        /// Checks if the provided contract is a writer of the model.
         ///
         /// # Arguments
         ///
         /// * `model` - The name of the model.
-        /// * `system` - The name of the system.
+        /// * `contract` - The name of the contract.
         ///
         /// # Returns
         ///
-        /// * `bool` - True if the system is a writer of the model, false otherwise
-        fn is_writer(self: @ContractState, model: felt252, system: ContractAddress) -> bool {
-            self.writers.read((model, system))
+        /// * `bool` - True if the contract is a writer of the model, false otherwise
+        fn is_writer(self: @ContractState, model: felt252, contract: ContractAddress) -> bool {
+            self.writers.read((model, contract))
         }
 
-        /// Grants writer permission to the system for the model.
+        /// Grants writer permission to the contract for the model.
         /// Can only be called by an existing model owner or the world admin.
         ///
         /// # Arguments
         ///
         /// * `model` - The name of the model.
-        /// * `system` - The name of the system.
-        fn grant_writer(ref self: ContractState, model: felt252, system: ContractAddress) {
+        /// * `contract` - The name of the contract.
+        fn grant_writer(ref self: ContractState, model: felt252, contract: ContractAddress) {
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, model) || self.is_owner(caller, WORLD), Errors::NOT_OWNER_WRITER
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD),
+                Errors::NOT_OWNER_WRITER
             );
-            self.writers.write((model, system), true);
+            self.writers.write((model, contract), true);
 
-            EventEmitter::emit(ref self, WriterUpdated { model, system, value: true });
+            EventEmitter::emit(ref self, WriterUpdated { model, contract, value: true });
         }
 
-        /// Revokes writer permission to the system for the model.
+        /// Revokes writer permission to the contract for the model.
         /// Can only be called by an existing model writer, owner or the world admin.
         ///
         /// # Arguments
         ///
         /// * `model` - The name of the model.
-        /// * `system` - The name of the system.
-        fn revoke_writer(ref self: ContractState, model: felt252, system: ContractAddress) {
+        /// * `contract` - The name of the contract.
+        fn revoke_writer(ref self: ContractState, model: felt252, contract: ContractAddress) {
             let caller = get_caller_address();
 
             assert(
@@ -326,9 +330,9 @@ mod world {
                     || self.is_owner(caller, WORLD),
                 Errors::NOT_OWNER_WRITER
             );
-            self.writers.write((model, system), false);
+            self.writers.write((model, contract), false);
 
-            EventEmitter::emit(ref self, WriterUpdated { model, system, value: false });
+            EventEmitter::emit(ref self, WriterUpdated { model, contract, value: false });
         }
 
         /// Registers a model in the world. If the model is already registered,
@@ -341,7 +345,8 @@ mod world {
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash).unwrap_syscall();
+            let (address, selector) = dojo::model::deploy_and_get_selector(salt.into(), class_hash)
+                .unwrap_syscall();
             self.models_count.write(salt + 1);
 
             let (mut prev_class_hash, mut prev_address) = (
@@ -351,35 +356,38 @@ mod world {
 
             // Avoids a model name to conflict with already deployed contract,
             // which can cause ACL issue with current ACL implementation.
-            if name.is_zero() || self.deployed_contracts.read(name).is_non_zero() {
+            if selector.is_zero() || self.deployed_contracts.read(selector).is_non_zero() {
                 panic_with_felt252(Errors::INVALID_MODEL_NAME);
             }
 
             // If model is already registered, validate permission to update.
-            let (current_class_hash, current_address) = self.models.read(name);
+            let (current_class_hash, current_address) = self.models.read(selector);
             if current_class_hash.is_non_zero() {
-                assert(self.is_owner(caller, name), Errors::OWNER_ONLY_UPDATE);
+                assert(self.is_owner(caller, selector), Errors::OWNER_ONLY_UPDATE);
                 prev_class_hash = current_class_hash;
                 prev_address = current_address;
             } else {
-                self.owners.write((name, caller), true);
+                self.owners.write((selector, caller), true);
             };
 
-            self.models.write(name, (class_hash, address));
-            EventEmitter::emit(ref self, ModelRegistered { name, prev_address, address, class_hash, prev_class_hash });
+            self.models.write(selector, (class_hash, address));
+            EventEmitter::emit(
+                ref self,
+                ModelRegistered { selector, prev_address, address, class_hash, prev_class_hash }
+            );
         }
 
         /// Gets the class hash of a registered model.
         ///
         /// # Arguments
         ///
-        /// * `name` - The name of the model.
+        /// * `selector` - The keccak(name) of the model.
         ///
         /// # Returns
         ///
         /// * (`ClassHash`, `ContractAddress`) - The class hash and the contract address of the model.
-        fn model(self: @ContractState, name: felt252) -> (ClassHash, ContractAddress) {
-            self.models.read(name)
+        fn model(self: @ContractState, selector: felt252) -> (ClassHash, ContractAddress) {
+            self.models.read(selector)
         }
 
         /// Deploys a contract associated with the world.
@@ -450,8 +458,8 @@ mod world {
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
         fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
-            let system = get_caller_address();
-            system.serialize(ref keys);
+            let contract = get_caller_address();
+            contract.serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 
@@ -459,7 +467,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name of the model to be set.
+        /// * `model` - The name hash of the model to be set.
         /// * `keys` - The key to be used to find the entity.
         /// * `values` - The value to be set.
         /// * `layout` - The memory layout of the entity.
@@ -483,7 +491,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name of the model to be deleted.
+        /// * `model` - The name hash of the model to be deleted.
         /// * `keys` - The key to be used to find the entity.
         /// * `layout` - The memory layout of the entity.
         fn delete_entity(
@@ -513,7 +521,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name of the model to be retrieved.
+        /// * `model` - The name hash of the model to be retrieved.
         /// * `keys` - The keys used to find the entity.
         /// * `layout` - The memory layout of the entity.
         ///
@@ -521,10 +529,7 @@ mod world {
         ///
         /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
-            self: @ContractState,
-            model: felt252,
-            keys: Span<felt252>,
-            layout: Span<u8>
+            self: @ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
         ) -> Span<felt252> {
             let key = poseidon::poseidon_hash_span(keys);
             database::get(model, key, layout)
@@ -567,8 +572,8 @@ mod world {
     ///
     /// # Arguments
     ///
-    /// * `resource` - The name of the resource being written to.
-    /// * `caller` - The name of the caller writing.
+    /// * `resource` - The name hash of the resource being written to.
+    /// * `caller` - The name hash of the caller writing.
     fn assert_can_write(self: @ContractState, resource: felt252, caller: ContractAddress) {
         assert(
             IWorld::is_writer(self, resource, caller) || is_account_owner(self, resource),
@@ -581,7 +586,7 @@ mod world {
     ///
     /// # Arguments
     ///
-    /// * `resource` - The name of the resource being verified.
+    /// * `resource` - The name hash of the resource being verified.
     ///
     /// # Returns
     ///
