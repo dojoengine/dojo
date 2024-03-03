@@ -66,7 +66,7 @@ pub fn estimate_fee(
     state: Box<dyn StateProvider>,
     validate: bool,
 ) -> Result<Vec<FeeEstimate>, TransactionExecutionError> {
-    let state = CachedStateWrapper::new(StateRefDb::from(state));
+    let state = CachedStateWrapper::new(StateRefDb(state));
     let results = TransactionExecutor::new(&state, &block_context, true, validate, transactions)
         .with_error_log()
         .execute();
@@ -94,7 +94,7 @@ pub fn raw_call(
     state: Box<dyn StateProvider>,
     initial_gas: u64,
 ) -> Result<CallInfo, TransactionExecutionError> {
-    let mut state = CachedState::new(StateRefDb::from(state), GlobalContractCache::default());
+    let mut state = CachedState::new(StateRefDb(state), GlobalContractCache::default());
     let mut state = CachedState::new(MutRefState::new(&mut state), GlobalContractCache::default());
 
     let call = CallEntryPoint {
@@ -235,7 +235,7 @@ pub(crate) fn pretty_print_resources(resources: &ResourcesMapping) -> String {
 }
 
 pub fn get_state_update_from_cached_state(
-    state: &CachedStateWrapper<StateRefDb>,
+    state: &CachedStateWrapper,
 ) -> StateUpdatesWithDeclaredClasses {
     let state_diff = state.inner().to_state_diff();
 
