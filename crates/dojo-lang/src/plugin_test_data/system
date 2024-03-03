@@ -105,6 +105,42 @@ trait IActions {
     fn do_with_attrs(p1: u8) -> u16;
 }
 
+#[dojo::contract]
+mod MyContract {
+
+    #[derive(Drop)]
+    struct Action {
+        damage: u8
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn tile_terrain(vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn tile_terrain_with_world(vec: Vec2, world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    impl ActionsImpl of IActions<ContractState> {
+        fn spawn() {
+        }
+
+        fn spawn_with_world(world: IWorldDispatcher) {
+        }
+
+        fn move(direction: Direction) {
+        }
+
+        fn move_with_world(world: IWorldDispatcher, direction: Direction) {
+        }
+    }
+}
+
 //! > generated_cairo_code
 #[starknet::contract]
 mod spawn {
@@ -264,6 +300,11 @@ error: Unsupported attribute.
  --> test_src/lib.cairo:98:5
     #[my_attr]
     ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyContract]:2:17
+                #[starknet::contract]
+                ^*******************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo:49:5
@@ -480,6 +521,56 @@ error: Unsupported attribute.
                         #[flat]
                         ^*****^
 
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[MyContract]:10:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyContract]:12:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyContract]:19:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyContract]:26:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:110:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:116:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:122:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyContract]:65:13
+            #[event]
+            ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyContract]:71:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyContract]:74:17
+                #[substorage(v0)]
+                ^***************^
+
 //! > expanded_cairo_code
 
 #[starknet::component]
@@ -522,7 +613,7 @@ mod testcomponent2 {
                         use traits::Into;
     use dojo::world::Context;
 
-    fn execute(ctx: Context, name: felt252) {
+    fn execute(self: @ContractState, ctx: Context, name: felt252) {
         return ();
     }
 
@@ -567,7 +658,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
-                        fn execute(value: felt252) -> felt252 {
+                        fn execute(self: @ContractState, value: felt252) -> felt252 {
         value
     }
 
@@ -615,7 +706,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         use traits::Into;
     use dojo::world::Context;
 
-    fn execute(ctx2: Context, name: felt252) {
+    fn execute(self: @ContractState, ctx2: Context, name: felt252) {
         return ();
     }
 
@@ -674,7 +765,7 @@ impl EventDrop of core::traits::Drop::<Event>;
     }
 
     #[abi(embed_v0)]
-    fn test(value: felt252) -> value {
+    fn test(self: @ContractState, value: felt252) -> value {
         value
     }
 
@@ -753,4 +844,82 @@ impl EventDrop of core::traits::Drop::<Event>;
     #[my_attr]
     fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
 
+                }
+
+                #[starknet::contract]
+                mod MyContract {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'MyContract'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                    
+    #[derive(Drop)]
+    struct Action {
+        damage: u8
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn tile_terrain(self: @ContractState, vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn tile_terrain_with_world(self: @ContractState, vec: Vec2) -> felt252 {
+let world = self.world_dispatcher.read();
+        'land'
+    }
+
+    #[external(v0)]
+    impl ActionsImpl of IActions<ContractState> {
+        fn spawn(self: @ContractState) {
+        }
+
+        fn spawn_with_world(self: @ContractState) {
+let world = self.world_dispatcher.read();
+        }
+
+        fn move(self: @ContractState, direction: Direction) {
+        }
+
+        fn move_with_world(self: @ContractState, direction: Direction) {
+let world = self.world_dispatcher.read();
+        }
+    }
+
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl ActionDrop of core::traits::Drop::<Action>;
+impl EventDrop of core::traits::Drop::<Event>;
+            
                 }
