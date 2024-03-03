@@ -6,7 +6,6 @@ pub mod utils;
 use std::sync::Arc;
 
 use blockifier::block_context::BlockContext;
-use blockifier::state::state_api::StateReader;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::TransactionExecutionInfo;
 use blockifier::transaction::transaction_execution::Transaction;
@@ -34,7 +33,7 @@ type TxExecutionResult = Result<TransactionExecutionInfo, TransactionExecutionEr
 /// The transactions will be executed in an iterator fashion, sequentially, in the
 /// exact order they are provided to the executor. The execution is done within its
 /// implementation of the [`Iterator`] trait.
-pub struct TransactionExecutor<'a, S: StateReader, T> {
+pub struct TransactionExecutor<'a, T> {
     /// A flag to enable/disable fee charging.
     charge_fee: bool,
     /// The block context the transactions will be executed on.
@@ -42,7 +41,7 @@ pub struct TransactionExecutor<'a, S: StateReader, T> {
     /// The transactions to be executed (in the exact order they are in the iterator).
     transactions: T,
     /// The state the transactions will be executed on.
-    state: &'a CachedStateWrapper<S>,
+    state: &'a CachedStateWrapper,
     /// A flag to enable/disable transaction validation.
     validate: bool,
 
@@ -52,13 +51,12 @@ pub struct TransactionExecutor<'a, S: StateReader, T> {
     resources_log: bool,
 }
 
-impl<'a, S, T> TransactionExecutor<'a, S, T>
+impl<'a, T> TransactionExecutor<'a, T>
 where
-    S: StateReader,
     T: Iterator<Item = ExecutableTxWithHash>,
 {
     pub fn new(
-        state: &'a CachedStateWrapper<S>,
+        state: &'a CachedStateWrapper,
         block_context: &'a BlockContext,
         charge_fee: bool,
         validate: bool,
@@ -94,9 +92,8 @@ where
     }
 }
 
-impl<'a, S, T> Iterator for TransactionExecutor<'a, S, T>
+impl<'a, T> Iterator for TransactionExecutor<'a, T>
 where
-    S: StateReader,
     T: Iterator<Item = ExecutableTxWithHash>,
 {
     type Item = TxExecutionResult;
@@ -141,9 +138,9 @@ where
     }
 }
 
-fn execute_tx<S: StateReader>(
+fn execute_tx(
     tx: ExecutableTxWithHash,
-    state: &CachedStateWrapper<S>,
+    state: &CachedStateWrapper,
     block_context: &BlockContext,
     charge_fee: bool,
     validate: bool,
@@ -184,7 +181,7 @@ pub struct PendingState {
     /// The block context of the pending block.
     pub block_envs: RwLock<(BlockEnv, CfgEnv)>,
     /// The state of the pending block.
-    pub state: Arc<CachedStateWrapper<StateRefDb>>,
+    pub state: Arc<CachedStateWrapper>,
     /// The transactions that have been executed.
     pub executed_txs: RwLock<Vec<AcceptedTxPair>>,
     /// The transactions that have been rejected.
