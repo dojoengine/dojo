@@ -8,7 +8,7 @@ test_compiler_cairo_v240
   "world": {
     "name": "dojo::world::world",
     "address": null,
-    "class_hash": "0x5ad96ceea29160aa7305bb078d1ade41f73b487363ae12778dbea6393cc00b2",
+    "class_hash": "0x2206663eed57fb406a3557c3dbe650451af6f271af4acdcb5cb2e2279249f66",
     "abi": [
       {
         "type": "impl",
@@ -100,7 +100,7 @@ test_compiler_cairo_v240
             "name": "model",
             "inputs": [
               {
-                "name": "name",
+                "name": "selector",
                 "type": "core::felt252"
               }
             ],
@@ -330,7 +330,7 @@ test_compiler_cairo_v240
                 "type": "core::felt252"
               },
               {
-                "name": "system",
+                "name": "contract",
                 "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
@@ -350,7 +350,7 @@ test_compiler_cairo_v240
                 "type": "core::felt252"
               },
               {
-                "name": "system",
+                "name": "contract",
                 "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
@@ -366,7 +366,7 @@ test_compiler_cairo_v240
                 "type": "core::felt252"
               },
               {
-                "name": "system",
+                "name": "contract",
                 "type": "core::starknet::contract_address::ContractAddress"
               }
             ],
@@ -499,7 +499,7 @@ test_compiler_cairo_v240
         "kind": "struct",
         "members": [
           {
-            "name": "name",
+            "name": "selector",
             "type": "core::felt252",
             "kind": "data"
           },
@@ -575,7 +575,7 @@ test_compiler_cairo_v240
             "kind": "data"
           },
           {
-            "name": "system",
+            "name": "contract",
             "type": "core::starknet::contract_address::ContractAddress",
             "kind": "data"
           },

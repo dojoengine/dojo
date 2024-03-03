@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use cainome::cairo_serde::{ByteArray, CairoSerde};
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::rpc::MockJsonRpcTransport;
@@ -10,7 +11,7 @@ use serde_json::json;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{EmittedEvent, FieldElement};
-use starknet::macros::{felt, selector, short_string};
+use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel};
@@ -61,13 +62,12 @@ fn parse_registered_model_events() {
 
     let events = vec![
         EmittedEvent {
-            data: vec![
-                short_string!("Model1"),
-                felt!("0x5555"),
-                felt!("0xbeef"),
-                felt!("0xa1"),
-                felt!("0"),
-            ],
+            data: {
+                let mut data =
+                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
+                data.extend(vec![felt!("0x5555"), felt!("0xbeef"), felt!("0xa1"), felt!("0")]);
+                data
+            },
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -75,13 +75,12 @@ fn parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![
-                short_string!("Model1"),
-                felt!("0xbeef"),
-                felt!("0"),
-                felt!("0xa1"),
-                felt!("0xa1"),
-            ],
+            data: {
+                let mut data =
+                    ByteArray::cairo_serialize(&ByteArray::from_string("Model1").unwrap());
+                data.extend(vec![felt!("0xbeef"), felt!("0"), felt!("0xa1"), felt!("0xa1")]);
+                data
+            },
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
@@ -89,13 +88,12 @@ fn parse_registered_model_events() {
             transaction_hash: Default::default(),
         },
         EmittedEvent {
-            data: vec![
-                short_string!("Model2"),
-                felt!("0x6666"),
-                felt!("0"),
-                felt!("0xa3"),
-                felt!("0"),
-            ],
+            data: {
+                let mut data =
+                    ByteArray::cairo_serialize(&ByteArray::from_string("Model2").unwrap());
+                data.extend(vec![felt!("0x6666"), felt!("0"), felt!("0xa3"), felt!("0")]);
+                data
+            },
             keys: vec![selector],
             block_hash: Default::default(),
             from_address: Default::default(),
