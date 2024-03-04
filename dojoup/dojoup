@@ -67,6 +67,7 @@ main() {
     done
 
     say "done"
+    welcome_msg
     exit 0
   fi
 
@@ -167,6 +168,7 @@ EOF
     done
 
     say "done!"
+    welcome_msg
 
   # Install by cloning the repo with the provided branch/tag
   else
@@ -198,6 +200,7 @@ EOF
     ensure cargo install --path ./dojo --bin dojo --locked --force --root "$DOJO_DIR"
 
     say "done"
+    welcome_msg
   fi
 }
 
@@ -295,5 +298,58 @@ banner() {
 '
 }
 
+# Welcome message printed after having installed Dojo.
+welcome_msg() {
+  dojo='\033[1;34m'
+  title='\033[0;32m'
+  emphasis='\033[0;34m'
+  command='\033[0;31m'
+  clear='\033[0m'
+
+  printf "
+═════════════════════════════════════════════════════════════════════════
+
+Ohayo!
+
+Congratulations on successfully installing ${dojo}Dojo${clear} ${DOJOUP_VERSION}! 🎉
+
+Here’s how you can get started:
+
+${title}1. Explore the Dojo Toolkit${clear}
+
+Familiarize yourself with the newly installed components:
+   - ${emphasis}Katana${clear}: Discover how to streamline your development workflow.
+   - ${emphasis}Sozo${clear}: Learn about creating and managing your project environments.
+   - ${emphasis}Torii${clear}: Understand how to connect and interact with various services.
+   - ${emphasis}Dojo Language Server${clear}: Enhance your coding experience with our language server support.
+
+${title}2. Create Your First Project${clear}
+
+Jump straight into action by creating your first project with Dojo.
+Use the command below to get started:
+   ${command}dojo init <project-name>${clear}
+
+${title}3. Access Documentation${clear}
+
+For comprehensive guides and documentation, visit ${emphasis}https://book.dojoengine.org${clear}.
+Here, you'll find everything from getting started tutorials to advanced usage examples.
+
+${title}4. Join the Community${clear}
+
+Become a part of the Dojo community. Connect with other developers, get help, and share your experiences.
+Join us on Discord (${emphasis}https://discord.gg/dojoengine${clear}) or GitHub (${emphasis}https://github.com/dojoengine/dojo${clear})
+
+${title}5. Stay Updated${clear}
+
+Keep your Dojo installation up to date. Check for updates regularly to ensure you have the latest features and improvements:
+   ${command}dojoup${clear}
+
+${title}6. Feedback & Support${clear}
+
+Your feedback is invaluable. If you encounter any issues or have suggestions, please open an issue on our GitHub Issues page: ${emphasis}https://github.com/dojoengine/dojo/issues${clear}
+
+Happy terraforming with ${dojo}Dojo${clear}! 🚀
+"
+}
 
 main "$@" || exit 1
