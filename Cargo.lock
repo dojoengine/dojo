@@ -12473,6 +12473,7 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "lazy_static",
+ "regex",
  "scarb",
  "scarb-ui",
  "serde",

@@ -211,9 +211,16 @@ fn handle_cursor(
 fn build_conditions(keys: &Option<Vec<String>>, filters: &Option<Vec<Filter>>) -> Vec<String> {
     let mut conditions = Vec::new();
 
-    if let Some(keys) = &keys {
-        let keys_str = keys.join("/").replace('*', "%");
-        conditions.push(format!("keys LIKE '{}/%'", keys_str));
+    if let Some(keys) = keys {
+        if !keys.is_empty() {
+            // regex is used if first element is wildcard, otherwise default to `like` which is more
+            // performant
+            let use_regex = keys.first().map_or(false, |k| k == "*");
+            let pattern = keys_to_pattern(keys, use_regex);
+
+            let condition_type = if use_regex { "REGEXP" } else { "LIKE" };
+            conditions.push(format!("keys {} '{}'", condition_type, pattern));
+        }
     }
 
     if let Some(filters) = filters {
@@ -224,4 +231,26 @@ fn build_conditions(keys: &Option<Vec<String>>, filters: &Option<Vec<Filter>>) -
     }
 
     conditions
+}
+
+fn keys_to_pattern(keys: &[String], use_regex: bool) -> String {
+    let pattern = keys
+        .iter()
+        .map(|key| {
+            if use_regex {
+                match key.as_str() {
+                    "*" => "([^/]*)".to_string(),
+                    _ => regex::escape(key),
+                }
+            } else {
+                key.replace('*', "%")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("/");
+
+    match use_regex {
+        true => format!("^{}.*", pattern),
+        false => format!("{}/%", pattern),
+    }
 }

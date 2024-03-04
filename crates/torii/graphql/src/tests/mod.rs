@@ -32,6 +32,7 @@ use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
 mod entities_test;
+mod events_test;
 mod metadata_test;
 mod models_ordering_test;
 mod models_test;
@@ -58,6 +59,15 @@ pub struct Edge<T> {
 pub struct Entity {
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Event {
+    pub id: String,
+    pub keys: Vec<String>,
+    pub data: Vec<String>,
+    pub transaction_hash: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -256,7 +266,8 @@ pub async fn model_fixtures(db: &mut Sql) {
 
 pub async fn spinup_types_test() -> Result<SqlitePool> {
     // change sqlite::memory: to sqlite:~/.test.db to dump database to disk
-    let options = SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true);
+    let options =
+        SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true).with_regexp();
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
