@@ -1,6 +1,5 @@
 kind = "DojoModel"
 class_hash = "0xf7a5bcc533f76d67c228de4583d2460538bb98900ad073c61c4ab18023b1ef"
-abi = "abis/base/models/subrecord.json"
 name = "types_test::models::subrecord"
 
 [[members]]

@@ -1,6 +1,5 @@
 kind = "DojoModel"
 class_hash = "0x7660a792b6d4e2c6790ff6df004cc1f903343ed7ccd8ea3da57e6163b05126b"
-abi = "abis/base/models/record_sibling.json"
 name = "types_test::models::record_sibling"
 
 [[members]]
