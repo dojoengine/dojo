@@ -6893,6 +6893,7 @@ dependencies = [
  "katana-rpc-types",
  "parking_lot 0.12.1",
  "rstest",
+ "rstest_reuse",
  "serde_json",
  "similar-asserts",
  "starknet 0.9.0",

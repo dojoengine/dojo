@@ -78,9 +78,9 @@ pub(super) fn transact<S: StateReader>(
     }?;
 
     // There are a few case where the `actual_fee` field of the transaction info is not set where
-    // the fee is skipped and thus not charged for the transaction (e.g. when the `skip_fee_transfer` is
-    // explicitly set, or when the transaction `max_fee` is set to 0). In these cases, we still want to
-    // calculate the fee.
+    // the fee is skipped and thus not charged for the transaction (e.g. when the
+    // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
+    // these cases, we still want to calculate the fee.
     if info.actual_fee == Fee(0) {
         let fee = fee_utils::calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?;
         info.actual_fee = fee;
@@ -455,7 +455,8 @@ fn to_api_resource_bounds(
     ResourceBoundsMapping(BTreeMap::from([(Resource::L1Gas, l1_gas), (Resource::L2Gas, l2_gas)]))
 }
 
-/// Get the fee type of a transaction. The fee type determines the token used to pay for the transaction.
+/// Get the fee type of a transaction. The fee type determines the token used to pay for the
+/// transaction.
 fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
     match transaction {
         Transaction::AccountTransaction(tx) => tx.fee_type(),

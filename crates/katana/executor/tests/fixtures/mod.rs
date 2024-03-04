@@ -1,3 +1,5 @@
+pub mod transaction;
+
 use std::collections::HashMap;
 
 use cairo_vm::vm::runners::builtin_runner::{
@@ -5,13 +7,14 @@ use cairo_vm::vm::runners::builtin_runner::{
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
 };
-use katana_executor::SimulationFlag;
+use katana_executor::implementation::noop::NoopExecutorFactory;
+use katana_executor::{ExecutorFactory, SimulationFlag};
 use katana_primitives::block::{
     Block, ExecutableBlock, FinalityStatus, GasPrices, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
-use katana_primitives::contract::{ContractAddress, Nonce};
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::{
@@ -28,11 +31,7 @@ use katana_primitives::FieldElement;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
-use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
-use starknet::macros::{felt, selector};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Url};
-use starknet::signers::{LocalWallet, SigningKey};
+use starknet::macros::felt;
 
 // TODO: remove support for legacy contract declaration
 #[allow(unused)]
@@ -66,47 +65,6 @@ pub fn genesis() -> Genesis {
     let mut genesis = Genesis::default();
     genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
     genesis
-}
-
-#[allow(unused)]
-pub fn signed_invoke_executable_tx(
-    address: ContractAddress,
-    private_key: FieldElement,
-    chain_id: ChainId,
-    nonce: Nonce,
-    max_fee: FieldElement,
-) -> ExecutableTxWithHash {
-    let url = "http://localhost:5050";
-    let provider = JsonRpcClient::new(HttpTransport::new(Url::try_from(url).unwrap()));
-    let signer = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key));
-
-    let account = SingleOwnerAccount::new(
-        provider,
-        signer,
-        address.into(),
-        chain_id.into(),
-        ExecutionEncoding::New,
-    );
-
-    let calls = vec![Call {
-        to: DEFAULT_FEE_TOKEN_ADDRESS.into(),
-        selector: selector!("transfer"),
-        calldata: vec![felt!("0x1"), felt!("0x99"), felt!("0x0")],
-    }];
-
-    let tx = account.execute(calls).nonce(nonce).max_fee(max_fee).prepared().unwrap();
-
-    let broadcasted_tx = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(tx.get_invoke_request(false))
-        .unwrap();
-
-    let tx = katana_rpc_types::transaction::BroadcastedInvokeTx(broadcasted_tx)
-        .into_tx_with_chain_id(chain_id);
-
-    ExecutableTxWithHash::new(tx.into())
 }
 
 /// Returns a state provider with some prefilled states.
@@ -298,6 +256,15 @@ pub fn flags(
     #[default(false)] skip_fee_transfer: bool,
 ) -> SimulationFlag {
     SimulationFlag { skip_validate, skip_fee_transfer, ..Default::default() }
+}
+
+/// A fixture that provides a default `ExecutorFactory` implementation.
+#[rstest::fixture]
+#[default(NoopExecutorFactory)]
+pub fn executor_factory<EF: ExecutorFactory>(
+    #[default(NoopExecutorFactory::new())] factory: EF,
+) -> EF {
+    factory
 }
 
 #[cfg(feature = "blockifier")]
