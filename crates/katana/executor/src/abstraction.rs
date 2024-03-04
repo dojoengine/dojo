@@ -65,6 +65,42 @@ pub struct SimulationFlag {
     pub ignore_max_fee: bool,
 }
 
+impl SimulationFlag {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Enables the skip execution flag.
+    pub fn skip_execute(mut self) -> Self {
+        self.skip_execute = true;
+        self
+    }
+
+    /// Enables the skip validation flag.
+    pub fn skip_validate(mut self) -> Self {
+        self.skip_validate = true;
+        self
+    }
+
+    /// Enables the skip nonce check flag.
+    pub fn skip_nonce_check(mut self) -> Self {
+        self.skip_nonce_check = true;
+        self
+    }
+
+    /// Enables the skip fee transfer flag.
+    pub fn skip_fee_transfer(mut self) -> Self {
+        self.skip_fee_transfer = true;
+        self
+    }
+
+    /// Enables the ignore max fee flag.
+    pub fn ignore_max_fee(mut self) -> Self {
+        self.ignore_max_fee = true;
+        self
+    }
+}
+
 /// The output of a executor after a series of executions.
 #[derive(Debug, Default)]
 pub struct ExecutionOutput {
