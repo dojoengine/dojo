@@ -225,7 +225,7 @@ fn update_manifest(
 
     let mut crate_ids = crate_ids.to_vec();
 
-    let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
+    let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
     write_manifest_and_abi(
         &relative_manifests_dir,
         &relative_abis_dir,
@@ -235,16 +235,16 @@ fn update_manifest(
             Class { class_hash: *hash, abi: None },
             WORLD_CONTRACT_NAME.into(),
         ),
-        abi,
+        &None,
     )?;
 
-    let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
+    let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
     write_manifest_and_abi(
         &relative_manifests_dir,
         &relative_abis_dir,
         &manifest_dir,
         &mut Manifest::new(Class { class_hash: *hash, abi: None }, BASE_CONTRACT_NAME.into()),
-        abi,
+        &None,
     )?;
 
     let mut models = BTreeMap::new();
@@ -309,13 +309,13 @@ fn update_manifest(
         )?;
     }
 
-    for (_, (manifest, abi)) in models.iter_mut() {
+    for (_, (manifest, _)) in models.iter_mut() {
         write_manifest_and_abi(
             &relative_manifests_dir.join(MODELS_DIR),
             &relative_abis_dir.join(MODELS_DIR),
             &manifest_dir,
             manifest,
-            abi,
+            &None,
         )?;
     }
 
@@ -467,16 +467,19 @@ where
         }
     }
 
-    // Create the directory if it doesn't exist
-    if let Some(parent) = full_abi_path.parent() {
-        if !parent.exists() {
-            std::fs::create_dir_all(parent)?;
-        }
-    }
-
     std::fs::write(full_manifest_path.clone(), manifest_toml)
         .unwrap_or_else(|_| panic!("Unable to write manifest file to path: {full_manifest_path}"));
-    std::fs::write(full_abi_path.clone(), abi_json)
-        .unwrap_or_else(|_| panic!("Unable to write abi file to path: {full_abi_path}"));
+
+    if abi.is_some() {
+        // Create the directory if it doesn't exist
+        if let Some(parent) = full_abi_path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+
+        std::fs::write(full_abi_path.clone(), abi_json)
+            .unwrap_or_else(|_| panic!("Unable to write abi file to path: {full_abi_path}"));
+    }
     Ok(())
 }

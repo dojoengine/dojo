@@ -5,8 +5,8 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbstractManifestError, BaseManifest, Class, Contract, DeployedManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, OverlayManifest,
+    AbstractManifestError, BaseManifest, DeployedManifest, DojoContract, Manifest, ManifestMethods,
+    OverlayManifest,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::contract::ContractMigration;
@@ -158,7 +158,7 @@ async fn update_manifest_abis(
     where
         T: ManifestMethods,
     {
-        // unwraps in call to abi is safe because we always write abis
+        // unwraps in call to abi is safe because we always write abis for DojoContracts
         let base_relative_path = manifest.inner.abi().unwrap();
         let deployed_relative_path =
             Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).join(
@@ -177,13 +177,8 @@ async fn update_manifest_abis(
         manifest.inner.set_abi(Some(deployed_relative_path));
     }
 
-    inner_helper::<Contract>(manifest_dir, &mut local_manifest.world, chain_id).await;
-    inner_helper::<Class>(manifest_dir, &mut local_manifest.base, chain_id).await;
     for contract in local_manifest.contracts.iter_mut() {
         inner_helper::<DojoContract>(manifest_dir, contract, chain_id).await;
-    }
-    for model in local_manifest.models.iter_mut() {
-        inner_helper::<DojoModel>(manifest_dir, model, chain_id).await;
     }
 }
 
