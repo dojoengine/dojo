@@ -121,13 +121,14 @@ where
 {
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
-    let manifest_path = target_dir.join("manifest.json");
-    if !manifest_path.exists() {
-        return Err(anyhow!("manifest.json not found"));
-    }
 
     // `parent` returns `None` only when its root path, so its safe to unwrap
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+
+    if !manifest_dir.join(MANIFESTS_DIR).exists() {
+        return Err(anyhow!("Build project using `sozo build` first"));
+    }
+
     let new_manifest =
         BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
 

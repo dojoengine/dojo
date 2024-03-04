@@ -1,5 +1,7 @@
+use anyhow::anyhow;
 use anyhow::Result;
 use clap::Args;
+use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
 
@@ -50,6 +52,11 @@ impl MigrateArgs {
         } else {
             None
         };
+
+        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+        if !manifest_dir.join(MANIFESTS_DIR).exists() {
+            return Err(anyhow!("Build project using `sozo build` first"));
+        }
 
         ws.config().tokio_handle().block_on(migration::execute(&ws, self, env_metadata))?;
 
