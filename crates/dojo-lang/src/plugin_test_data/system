@@ -89,9 +89,9 @@ trait IEmptyTrait;
 
 #[dojo::interface]
 trait IActions {
-    // TODO
-    // it looks like there is a bug in trait parsing because if a value is set
-    // on a constant, this value appears alone in the trait...
+    /// Even if it looks weird, the expected pattern for a constant in a trait is
+    /// `const <name>: <type>;`
+    /// See: https://github.com/starkware-libs/cairo/blob/600553d34a1af93ff7fb038ac677efdd3fd07010/crates/cairo-lang-parser/src/parser.rs#L835
     const ONE: u8;
 
     fn do_no_param();
