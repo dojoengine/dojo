@@ -1,5 +1,4 @@
-use anyhow::anyhow;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::metadata::dojo_metadata_from_workspace;
