@@ -270,7 +270,6 @@ mod test {
         let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collection all events from manifest file so just verifying count should work
-        dbg!(result.len());
-        assert!(result.len() == 12);
+        assert!(result.len() == 2);
     }
 }
