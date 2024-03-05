@@ -3,7 +3,9 @@
 //! Manually expand to ensure that dojo-core
 //! does not depend on dojo plugin to be built.
 //!
-const RESOURCE_METADATA_MODEL: felt252 = 'ResourceMetadata';
+use dojo::world::IWorldDispatcherTrait;
+
+const RESOURCE_METADATA_MODEL: felt252 = selector!("ResourceMetadata");
 
 fn initial_address() -> starknet::ContractAddress {
     starknet::contract_address_const::<0>()
@@ -24,9 +26,23 @@ struct ResourceMetadata {
 }
 
 impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
-    #[inline(always)]
-    fn selector_static() -> felt252 {
-        selector!("ResourceMetadata")
+    fn entity(
+        world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>
+    ) -> ResourceMetadata {
+        let values = world.entity(selector!("ResourceMetadata"), keys, layout);
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+        let entity = core::serde::Serde::<ResourceMetadata>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ResourceMetadata>::is_none(@entity) {
+            panic!(
+                "Model `ResourceMetadata`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ResourceMetadata>::unwrap(entity)
     }
 
     #[inline(always)]
@@ -115,8 +131,8 @@ mod resource_metadata {
     struct Storage {}
 
     #[external(v0)]
-    fn name(self: @ContractState) -> felt252 {
-        'ResourceMetadata'
+    fn selector(self: @ContractState) -> felt252 {
+        selector!("ResourceMetadata")
     }
 
     #[external(v0)]

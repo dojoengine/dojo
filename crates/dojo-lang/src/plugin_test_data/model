@@ -537,82 +537,82 @@ struct OnlyKeyModel {
        ^**********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:78:13
+ --> test_src/lib.cairo[Position]:94:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:74:13
+ --> test_src/lib.cairo[Roles]:90:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:73:13
+ --> test_src/lib.cairo[OnlyKeyModel]:89:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:82:13
+ --> test_src/lib.cairo[Player]:98:13
             #[starknet::contract]
             ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:83:17
+ --> test_src/lib.cairo[Position]:99:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:86:17
+ --> test_src/lib.cairo[Position]:102:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:114:17
+ --> test_src/lib.cairo[Position]:130:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:79:17
+ --> test_src/lib.cairo[Roles]:95:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:82:17
+ --> test_src/lib.cairo[Roles]:98:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:110:17
+ --> test_src/lib.cairo[Roles]:126:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:78:17
+ --> test_src/lib.cairo[OnlyKeyModel]:94:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:81:17
+ --> test_src/lib.cairo[OnlyKeyModel]:97:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:109:17
+ --> test_src/lib.cairo[OnlyKeyModel]:125:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:87:17
+ --> test_src/lib.cairo[Player]:103:17
                 #[storage]
                 ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:90:17
+ --> test_src/lib.cairo[Player]:106:17
                 #[abi(embed_v0)]
                 ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:118:17
+ --> test_src/lib.cairo[Player]:134:17
                 #[abi(embed_v0)]
                 ^**************^
 
@@ -741,9 +741,25 @@ impl PositionSerde of core::serde::Serde::<Position> {
 }
 
             impl PositionModel of dojo::model::Model<Position> {
-                #[inline(always)]
-                fn selector_static() -> felt252 {
-                    selector!("Position")
+                fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> Position {
+                    let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Position"), keys, layout);
+
+                    // TODO: Generate method to deserialize from keys / values directly to avoid
+                    // serializing to intermediate array.
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::serialize_array_helper(keys, ref serialized);
+                    core::array::serialize_array_helper(values, ref serialized);
+                    let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+                    let entity = core::serde::Serde::<Position>::deserialize(ref serialized);
+
+                    if core::option::OptionTrait::<Position>::is_none(@entity) {
+                        panic!(
+                            "Model `Position`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                        );
+                    }
+
+                    core::option::OptionTrait::<Position>::unwrap(entity)
                 }
 
                 #[inline(always)]
@@ -870,9 +886,25 @@ impl RolesSerde of core::serde::Serde::<Roles> {
 }
 
             impl RolesModel of dojo::model::Model<Roles> {
-                #[inline(always)]
-                fn selector_static() -> felt252 {
-                    selector!("Roles")
+                fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> Roles {
+                    let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Roles"), keys, layout);
+
+                    // TODO: Generate method to deserialize from keys / values directly to avoid
+                    // serializing to intermediate array.
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::serialize_array_helper(keys, ref serialized);
+                    core::array::serialize_array_helper(values, ref serialized);
+                    let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+                    let entity = core::serde::Serde::<Roles>::deserialize(ref serialized);
+
+                    if core::option::OptionTrait::<Roles>::is_none(@entity) {
+                        panic!(
+                            "Model `Roles`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                        );
+                    }
+
+                    core::option::OptionTrait::<Roles>::unwrap(entity)
                 }
 
                 #[inline(always)]
@@ -995,9 +1027,25 @@ impl OnlyKeyModelSerde of core::serde::Serde::<OnlyKeyModel> {
 }
 
             impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
-                #[inline(always)]
-                fn selector_static() -> felt252 {
-                    selector!("OnlyKeyModel")
+                fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> OnlyKeyModel {
+                    let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("OnlyKeyModel"), keys, layout);
+
+                    // TODO: Generate method to deserialize from keys / values directly to avoid
+                    // serializing to intermediate array.
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::serialize_array_helper(keys, ref serialized);
+                    core::array::serialize_array_helper(values, ref serialized);
+                    let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+                    let entity = core::serde::Serde::<OnlyKeyModel>::deserialize(ref serialized);
+
+                    if core::option::OptionTrait::<OnlyKeyModel>::is_none(@entity) {
+                        panic!(
+                            "Model `OnlyKeyModel`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                        );
+                    }
+
+                    core::option::OptionTrait::<OnlyKeyModel>::unwrap(entity)
                 }
 
                 #[inline(always)]
@@ -1125,9 +1173,25 @@ impl PlayerSerde of core::serde::Serde::<Player> {
 }
 
             impl PlayerModel of dojo::model::Model<Player> {
-                #[inline(always)]
-                fn selector_static() -> felt252 {
-                    selector!("Player")
+                fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> Player {
+                    let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Player"), keys, layout);
+
+                    // TODO: Generate method to deserialize from keys / values directly to avoid
+                    // serializing to intermediate array.
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::serialize_array_helper(keys, ref serialized);
+                    core::array::serialize_array_helper(values, ref serialized);
+                    let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+                    let entity = core::serde::Serde::<Player>::deserialize(ref serialized);
+
+                    if core::option::OptionTrait::<Player>::is_none(@entity) {
+                        panic!(
+                            "Model `Player`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                        );
+                    }
+
+                    core::option::OptionTrait::<Player>::unwrap(entity)
                 }
 
                 #[inline(always)]

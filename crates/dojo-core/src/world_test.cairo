@@ -32,8 +32,8 @@ struct Fizz {
 }
 
 #[starknet::interface]
-trait INameOnly<T> {
-    fn name(self: @T) -> felt252;
+trait ISelectorOnly<T> {
+    fn selector(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -42,9 +42,9 @@ mod resource_metadata_malicious {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::INameOnly<ContractState> {
-        fn name(self: @ContractState) -> felt252 {
-            'ResourceMetadata'
+    impl InvalidModelName of super::ISelectorOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
+            selector!("ResourceMetadata")
         }
     }
 }
@@ -85,7 +85,7 @@ mod bar {
             self
                 .world
                 .read()
-                .delete_entity('Foo', array![get_caller_address().into()].span(), layout.span());
+                .delete_entity(selector!("Foo"), array![get_caller_address().into()].span(), layout.span());
         }
 
         fn delete_foo_macro(self: @ContractState, foo: Foo) {
@@ -190,6 +190,17 @@ fn test_model_class_hash_getter() {
     let world = deploy_world();
     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
 
+    let (foo_class_hash, _) = world.model(selector!("Foo"));
+    assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
+}
+
+#[test]
+#[ignore]
+#[available_gas(6000000)]
+fn test_legacy_model_class_hash_getter() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
     let (foo_class_hash, _) = world.model('Foo');
     assert(foo_class_hash == foo::TEST_CLASS_HASH.try_into().unwrap(), 'foo wrong class hash');
 }
@@ -270,7 +281,11 @@ fn deploy_world() -> IWorldDispatcher {
 fn test_set_metadata_world() {
     let world = deploy_world();
 
-    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: array_cap!(3, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json')).span() };
+    let metadata = ResourceMetadata {
+        resource_id: 0,
+        metadata_uri: array_cap!(3, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json'))
+            .span()
+    };
 
     world.set_metadata(metadata.clone());
 
@@ -286,7 +301,7 @@ fn test_set_metadata_model_writer() {
         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
     };
 
-    world.grant_writer('Foo', bar_contract.contract_address);
+    world.grant_writer(selector!("Foo"), bar_contract.contract_address);
 
     let bob = starknet::contract_address_const::<0xb0b>();
     starknet::testing::set_account_contract_address(bob);
@@ -294,12 +309,14 @@ fn test_set_metadata_model_writer() {
 
     bar_contract.set_foo(1337, 1337);
 
-    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: array_cap!(3, ('ipfs:bob',)).span(), };
+    let metadata = ResourceMetadata {
+        resource_id: selector!("Foo"), metadata_uri: array_cap!(3, ('ipfs:bob',)).span(),
+    };
 
     // A system that has write access on a model should be able to update the metadata.
     // This follows conventional ACL model.
     world.set_metadata(metadata.clone());
-    assert(world.metadata('Foo') == metadata, 'bad metadata');
+    assert(world.metadata(selector!("Foo")) == metadata, 'bad metadata');
 }
 
 #[test]
@@ -309,7 +326,8 @@ fn test_set_metadata_same_model_rules() {
     let world = deploy_world();
 
     let metadata = ResourceMetadata { // World metadata.
-    resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:bob',)).span(), };
+        resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:bob',)).span(),
+    };
 
     let bob = starknet::contract_address_const::<0xb0b>();
     starknet::testing::set_contract_address(bob);
@@ -411,8 +429,8 @@ fn test_system_writer_access() {
     let bar_address = deploy_with_world_address(bar::TEST_CLASS_HASH, world);
     let bar_contract = IbarDispatcher { contract_address: bar_address };
 
-    world.grant_writer('Foo', bar_address);
-    assert(world.is_writer('Foo', bar_address), 'should be writer');
+    world.grant_writer(selector!("Foo"), bar_address);
+    assert(world.is_writer(selector!("Foo"), bar_address), 'should be writer');
 
     // Caller is not owner now
     let caller = starknet::contract_address_const::<0x1337>();
@@ -528,7 +546,7 @@ mod worldupgrade {
     struct Storage {
         world: IWorldDispatcher,
     }
-    
+
     #[abi(embed_v0)]
     impl IWorldUpgradeImpl of super::IWorldUpgrade<ContractState> {
         fn hello(self: @ContractState) -> felt252 {

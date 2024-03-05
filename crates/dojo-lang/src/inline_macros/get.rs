@@ -106,35 +106,14 @@ impl InlineMacroExprPlugin for GetMacro {
             }
             let mut lookup_err_msg = format!("{} not found", model.to_string());
             lookup_err_msg.truncate(CAIRO_ERR_MSG_LEN);
-            // Currently, the main reason to have a deserialization to fail is by having
-            // the user providing the wrong keys length, which causes an invalid offset
-            // in the model deserialization.
-            let deser_err_msg = format!(
-                "\"Model `{}`: deserialization failed. Ensure the length of the keys tuple is \
-                 matching the number of #[key] fields in the model struct.\"",
-                model.to_string()
-            );
 
             builder.add_str(&format!(
                 "\n            let mut __{model}_layout__ = core::array::ArrayTrait::new();
                  dojo::database::introspect::Introspect::<{model}>::layout(ref __{model}_layout__);
-                 let mut __{model}_layout_clone__ = __{model}_layout__.clone();
                  let mut __{model}_layout_span__ = \
                  core::array::ArrayTrait::span(@__{model}_layout__);
-                 let mut __{model}_layout_clone_span__ = \
-                 core::array::ArrayTrait::span(@__{model}_layout_clone__);
-                 let mut __{model}_values__ = {}.entity(dojo::model::Model::<{model}>::selector_static(), __get_macro_keys__,
-                 __{model}_layout_span__);
-                 let mut __{model}_model__ = core::array::ArrayTrait::new();
-                 core::array::serialize_array_helper(__get_macro_keys__, ref __{model}_model__);
-                 core::array::serialize_array_helper(__{model}_values__, ref __{model}_model__);
-                 let mut __{model}_model_span__ = \
-                 core::array::ArrayTrait::span(@__{model}_model__);
-                 let __{model} = core::serde::Serde::<{model}>::deserialize(
-                    ref __{model}_model_span__
-                ); if core::option::OptionTrait::<{model}>::is_none(@__{model}) {{ \
-                 panic!({deser_err_msg}); }}; let __{model} = \
-                 core::option::OptionTrait::<{model}>::unwrap(__{model});\n",
+                 let __{model}: {model} = dojo::model::Model::entity({}, __get_macro_keys__, \
+                 __{model}_layout_span__);\n",
                 world.as_syntax_node().get_text(db),
             ));
         }

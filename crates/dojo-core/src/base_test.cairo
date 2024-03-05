@@ -95,7 +95,41 @@ fn test_upgrade_direct() {
 
 #[starknet::interface]
 trait INameOnly<T> {
-    fn name(self: @T) -> felt252;
+    fn selector(self: @T) -> felt252;
+}
+
+#[starknet::contract]
+mod invalid_legacy_model {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::INameOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
+            // Pre-computed address of a contract deployed through the world.
+            0x742c3d09472a40914dedcbd609788fd547bde613d6c4d4c2f15d41f4e241f25
+        }
+    }
+}
+
+#[starknet::contract]
+mod invalid_legacy_model_world {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::INameOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
+            // World address is 0, and not registered as deployed through the world
+            // as it's itself.
+            0
+        }
+    }
+}
+
+#[starknet::interface]
+trait ISelectorOnly<T> {
+    fn selector(self: @T) -> felt252;
 }
 
 #[starknet::contract]
@@ -104,10 +138,10 @@ mod invalid_model {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::INameOnly<ContractState> {
-        fn name(self: @ContractState) -> felt252 {
+    impl InvalidModelSelector of super::ISelectorOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x7b6cc67bb03efdf091487465df2037cad74111d8b616536b013e70da7491a30
+            0x6b5539fa40b68b06beba0a0e797657ac97c8fe377600712316af5eaa5a10dc6
         }
     }
 }
@@ -118,8 +152,8 @@ mod invalid_model_world {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::INameOnly<ContractState> {
-        fn name(self: @ContractState) -> felt252 {
+    impl InvalidModelSelector of super::ISelectorOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
             // World address is 0, and not registered as deployed through the world
             // as it's itself.
             0

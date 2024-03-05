@@ -1,7 +1,8 @@
+use dojo::world::IWorldDispatcher;
 use starknet::SyscallResult;
 
 trait Model<T> {
-    fn selector_static() -> felt252;
+    fn entity(world: IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> T;
     fn selector(self: @T) -> felt252;
     fn keys(self: @T) -> Span<felt252>;
     fn values(self: @T) -> Span<felt252>;
@@ -31,18 +32,13 @@ trait IDojoModel<T> {
 /// # Arguments
 ///
 /// * `class_hash` - Class Hash of the model.
-fn deploy_and_get_selector(salt: felt252, class_hash: starknet::ClassHash) -> SyscallResult<(starknet::ContractAddress, felt252)> {
-    let (address, _) = starknet::deploy_syscall(
-        class_hash,
-        salt,
-        array![].span(),
-        false,
-    )?;
+fn deploy_and_get_selector(
+    salt: felt252, class_hash: starknet::ClassHash
+) -> SyscallResult<(starknet::ContractAddress, felt252)> {
+    let (address, _) = starknet::deploy_syscall(class_hash, salt, array![].span(), false,)?;
 
     let selector = *starknet::call_contract_syscall(
-        address,
-        selector!("selector"),
-        array![].span()
+        address, selector!("selector"), array![].span()
     )?[0];
 
     Result::Ok((address, selector))

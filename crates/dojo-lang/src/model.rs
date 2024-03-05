@@ -84,9 +84,28 @@ pub fn handle_model_struct(
         RewriteNode::interpolate_patched(
             "
             impl $type_name$Model of dojo::model::Model<$type_name$> {
-                #[inline(always)]
-                fn selector_static() -> felt252 {
-                    selector!(\"$type_name$\")
+                fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: \
+             Span<u8>) -> $type_name$ {
+                    let values = dojo::world::IWorldDispatcherTrait::entity(world, \
+             selector!(\"$type_name$\"), keys, layout);
+
+                    // TODO: Generate method to deserialize from keys / values directly to avoid
+                    // serializing to intermediate array.
+                    let mut serialized = core::array::ArrayTrait::new();
+                    core::array::serialize_array_helper(keys, ref serialized);
+                    core::array::serialize_array_helper(values, ref serialized);
+                    let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+                    let entity = core::serde::Serde::<$type_name$>::deserialize(ref serialized);
+
+                    if core::option::OptionTrait::<$type_name$>::is_none(@entity) {
+                        panic!(
+                            \"Model `$type_name$`: deserialization failed. Ensure the length of \
+             the keys tuple is matching the number of #[key] fields in the model struct.\"
+                        );
+                    }
+
+                    core::option::OptionTrait::<$type_name$>::unwrap(entity)
                 }
 
                 #[inline(always)]

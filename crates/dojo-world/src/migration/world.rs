@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use convert_case::{Case, Casing};
+use starknet::core::utils::get_selector_from_name;
 
 use super::class::ClassDiff;
 use super::contract::ContractDiff;
@@ -42,8 +43,9 @@ impl WorldDiff {
                         .unwrap_or(&model.name)
                         .from_case(Case::Snake)
                         .to_case(Case::Pascal);
-
-                    m.models.iter().find(|e| e.name == model_name).map(|s| *s.inner.class_hash())
+                    let selector =
+                        format!("0x{:064x}", get_selector_from_name(&model_name).unwrap());
+                    m.models.iter().find(|e| e.name == selector).map(|s| *s.inner.class_hash())
                 }),
             })
             .collect::<Vec<_>>();

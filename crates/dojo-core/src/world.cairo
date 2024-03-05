@@ -219,7 +219,7 @@ mod world {
         fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
             assert_can_write(@self, metadata.resource_id, get_caller_address());
 
-            let model = Model::<ResourceMetadata>::selector_static();
+            let model = Model::<ResourceMetadata>::selector(@metadata);
             let keys = Model::<ResourceMetadata>::keys(@metadata);
             let values = Model::<ResourceMetadata>::values(@metadata);
             let layout = Model::<ResourceMetadata>::layout(@metadata);
@@ -345,7 +345,9 @@ mod world {
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let (address, selector) = dojo::model::deploy_and_get_selector(salt.into(), class_hash)
+            let (address, selector) = dojo::model::deploy_and_get_selector(
+                salt.into(), class_hash
+            )
                 .unwrap_syscall();
             self.models_count.write(salt + 1);
 

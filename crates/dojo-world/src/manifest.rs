@@ -525,7 +525,7 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
             panic!("ModelRegistered expected");
         };
 
-        let model_name = parse_cairo_short_string(&model_event.name).unwrap();
+        let model_name = format!("0x{:064x}", &model_event.name);
 
         if let Some(current_class_hash) = models.get_mut(&model_name) {
             if current_class_hash == &model_event.prev_class_hash.into() {
