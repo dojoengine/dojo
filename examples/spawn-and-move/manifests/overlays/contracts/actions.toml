@@ -1,2 +1,2 @@
 name = "dojo_examples::actions::actions"
-reads = [ "File", "Overlay", "Test" ]
+reads = [ "Moves", "Position" ]
