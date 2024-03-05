@@ -87,12 +87,12 @@ impl ExecutableTxWithHash {
         Self { hash, transaction }
     }
 
-    pub fn new_query(transaction: ExecutableTx) -> Self {
+    pub fn new_query(transaction: ExecutableTx, is_query: bool) -> Self {
         let hash = match &transaction {
             ExecutableTx::L1Handler(tx) => tx.calculate_hash(),
-            ExecutableTx::Invoke(tx) => tx.calculate_hash(true),
-            ExecutableTx::Declare(tx) => tx.calculate_hash(true),
-            ExecutableTx::DeployAccount(tx) => tx.calculate_hash(true),
+            ExecutableTx::Invoke(tx) => tx.calculate_hash(is_query),
+            ExecutableTx::Declare(tx) => tx.calculate_hash(is_query),
+            ExecutableTx::DeployAccount(tx) => tx.calculate_hash(is_query),
         };
         Self { hash, transaction }
     }
