@@ -327,7 +327,7 @@ ${title}2. Create Your First Project${clear}
 
 Jump straight into action by creating your first project with Dojo.
 Use the command below to get started:
-   ${command}dojo init <project-name>${clear}
+   ${command}sozo init <project-name>${clear}
 
 ${title}3. Access Documentation${clear}
 
