@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709486697093,
+  "lastUpdate": 1709618320614,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2125,6 +2125,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1023424,
             "range": "± 25872",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "me@xjonathan.dev",
+            "name": "Jonathan LEI",
+            "username": "xJonathanLEI"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "59918682a991406e31a9cdd7f6c88359d3c96351",
+          "message": "fix(katana): non-query-version fee estimates (#1610)\n\nKatana incorrectly assumes that all `starknet_estimateFee` requests\r\nare query-versioned, and hence arrives at wrong transaction hashes\r\nwhen clients attempt to estimate with non-query transactions. As of\r\nthis writing, both Argent X and Braavos use non-query requests for\r\n'DEPLOY_ACCOUNT' fee estimation. This bug prevents these wallets from\r\nbeing used on Katana networks.",
+          "timestamp": "2024-03-05T13:49:08+08:00",
+          "tree_id": "688d887620c6ee40b87580a4114ba3d0b86ea193",
+          "url": "https://github.com/dojoengine/dojo/commit/59918682a991406e31a9cdd7f6c88359d3c96351"
+        },
+        "date": 1709618320012,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 966335,
+            "range": "± 30652",
             "unit": "ns/iter"
           }
         ]
