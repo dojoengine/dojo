@@ -4,7 +4,6 @@ use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
 use cairo_lang_defs::plugin::{
     DynGeneratedFileAuxData, PluginDiagnostic, PluginGeneratedFile, PluginResult,
 };
-
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::MaybeModuleBody;
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -206,11 +205,12 @@ impl DojoContract {
     pub fn get_parameter_info(
         &mut self,
         db: &dyn SyntaxGroup,
-        param: ast::Param
+        param: ast::Param,
     ) -> (String, String, String) {
         let name = param.name(db).text(db).trim().to_string();
         let modifiers = param.modifiers(db).as_syntax_node().get_text(db).trim().to_string();
-        let param_type = param.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string();
+        let param_type =
+            param.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string();
 
         (name, modifiers, param_type)
     }
@@ -224,25 +224,28 @@ impl DojoContract {
     /// Returns
     ///  * the list of parameters in a String
     ///  * a boolean indicating if `self` has been added
-    //   * a boolean indicating if `world` parameter has been removed 
+    //   * a boolean indicating if `world` parameter has been removed
     pub fn rewrite_parameters(
         &mut self,
         db: &dyn SyntaxGroup,
         param_list: ast::ParamList,
-        diagnostic_item: ids::SyntaxStablePtrId
+        diagnostic_item: ids::SyntaxStablePtrId,
     ) -> (String, bool, bool) {
         let mut world_removed = false;
 
-        let mut params = param_list.elements(db)
+        let mut params = param_list
+            .elements(db)
             .iter()
             .filter_map(|e| {
                 let (name, modifiers, param_type) = self.get_parameter_info(db, e.clone());
 
-                if name.eq(&"world".to_string()) && modifiers.eq(&"".to_string()) && param_type.eq(&"IWorldDispatcher".to_string()) {
+                if name.eq(&"world".to_string())
+                    && modifiers.eq(&"".to_string())
+                    && param_type.eq(&"IWorldDispatcher".to_string())
+                {
                     world_removed = true;
                     None
-                }
-                else {
+                } else {
                     Some(e.as_syntax_node().get_text(db))
                 }
             })
@@ -250,16 +253,17 @@ impl DojoContract {
 
         let mut add_self = true;
         if !params.is_empty() {
-            let (param_name, param_modifiers, param_type) = self.get_parameter_info(
-                db,
-                param_list.elements(db)[0].clone()
-            );
+            let (param_name, param_modifiers, param_type) =
+                self.get_parameter_info(db, param_list.elements(db)[0].clone());
 
             if param_name.eq(&"self".to_string()) {
-                if param_modifiers.contains(&"ref".to_string()) && param_type.eq(&"ContractState".to_string()) {
+                if param_modifiers.contains(&"ref".to_string())
+                    && param_type.eq(&"ContractState".to_string())
+                {
                     self.diagnostics.push(PluginDiagnostic {
                         stable_ptr: diagnostic_item,
-                        message: "Functions of dojo::contract cannot have `ref self` parameter.".to_string(),
+                        message: "Functions of dojo::contract cannot have `ref self` parameter."
+                            .to_string(),
                         severity: Severity::Error,
                     });
 
@@ -283,9 +287,10 @@ impl DojoContract {
     pub fn rewrite_statements(
         &mut self,
         db: &dyn SyntaxGroup,
-        statement_list: ast::StatementList
+        statement_list: ast::StatementList,
     ) -> String {
-        let mut statements = statement_list.elements(db)
+        let mut statements = statement_list
+            .elements(db)
             .iter()
             .map(|e| e.as_syntax_node().get_text(db))
             .collect::<Vec<_>>();
@@ -297,8 +302,8 @@ impl DojoContract {
     /// Rewrites function declaration by:
     ///  * adding `self` parameter if missing,
     ///  * removing `world` if present,
-    ///  * adding `let world = self.world_dispatcher.read();` statement 
-    ///    at the beginning of the function to restore the removed `world` parameter.
+    ///  * adding `let world = self.world_dispatcher.read();` statement at the beginning of the
+    ///    function to restore the removed `world` parameter.
     pub fn rewrite_function(
         &mut self,
         db: &dyn SyntaxGroup,
@@ -307,10 +312,10 @@ impl DojoContract {
         let mut rewritten_fn = RewriteNode::from_ast(&fn_ast);
 
         let (params_str, self_added, world_removed) = self.rewrite_parameters(
-                db,
-                fn_ast.declaration(db).signature(db).parameters(db),
-                fn_ast.stable_ptr().untyped()
-            );
+            db,
+            fn_ast.declaration(db).signature(db).parameters(db),
+            fn_ast.stable_ptr().untyped(),
+        );
 
         if self_added || world_removed {
             let rewritten_params = rewritten_fn
@@ -325,20 +330,15 @@ impl DojoContract {
                 .modify_child(db, ast::FunctionWithBody::INDEX_BODY)
                 .modify_child(db, ast::ExprBlock::INDEX_STATEMENTS);
 
-            rewritten_statements.set_str(
-                self.rewrite_statements(db, fn_ast.body(db).statements(db))
-            );
+            rewritten_statements
+                .set_str(self.rewrite_statements(db, fn_ast.body(db).statements(db)));
         }
 
         vec![rewritten_fn]
     }
 
     /// Rewrites all the functions of a Impl block.
-    fn rewrite_impl(
-        &mut self,
-        db: &dyn SyntaxGroup,
-        impl_ast: ast::ItemImpl,
-    ) -> Vec<RewriteNode> {
+    fn rewrite_impl(&mut self, db: &dyn SyntaxGroup, impl_ast: ast::ItemImpl) -> Vec<RewriteNode> {
         if let ast::MaybeImplBody::Some(body) = impl_ast.body(db) {
             let body_nodes: Vec<_> = body
                 .items(db)
@@ -354,10 +354,11 @@ impl DojoContract {
 
             let mut builder = PatchBuilder::new(db);
             builder.add_modified(RewriteNode::interpolate_patched(
-                    "$body$",
-                &UnorderedHashMap::from([
-                    ("body".to_string(), RewriteNode::new_modified(body_nodes)),
-                ])
+                "$body$",
+                &UnorderedHashMap::from([(
+                    "body".to_string(),
+                    RewriteNode::new_modified(body_nodes),
+                )]),
             ));
 
             let mut rewritten_impl = RewriteNode::from_ast(&impl_ast);

@@ -1,10 +1,8 @@
 use cairo_lang_defs::patcher::{PatchBuilder, RewriteNode};
-use cairo_lang_defs::plugin::{
-    PluginDiagnostic, PluginGeneratedFile, PluginResult,
-};
+use cairo_lang_defs::plugin::{PluginDiagnostic, PluginGeneratedFile, PluginResult};
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
 use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::{ast, ids, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
 pub struct DojoInterface {
@@ -23,13 +21,15 @@ impl DojoInterface {
                 .elements(db)
                 .iter()
                 .flat_map(|el| {
-                      if let ast::TraitItem::Function(fn_ast) = el {
+                    if let ast::TraitItem::Function(fn_ast) = el {
                         return system.rewrite_function(db, fn_ast.clone());
                     }
 
                     system.diagnostics.push(PluginDiagnostic {
                         stable_ptr: el.stable_ptr().untyped(),
-                        message: "Anything other than functions is not supported in a dojo::interface".to_string(),
+                        message: "Anything other than functions is not supported in a \
+                                  dojo::interface"
+                            .to_string(),
                         severity: Severity::Error,
                     });
 
@@ -49,20 +49,20 @@ impl DojoInterface {
                     ("body".to_string(), RewriteNode::new_modified(body_nodes)),
                 ]),
             ));
-        }
-        else {
+        } else {
             // empty trait
             builder.add_modified(RewriteNode::interpolate_patched(
                 "
                 #[starknet::interface]
                 trait $name$<TContractState> {}
                 ",
-                &UnorderedHashMap::from([
-                    ("name".to_string(), RewriteNode::Text(name.to_string())),
-                ]),
+                &UnorderedHashMap::from([(
+                    "name".to_string(),
+                    RewriteNode::Text(name.to_string()),
+                )]),
             ));
         }
-        
+
         PluginResult {
             code: Some(PluginGeneratedFile {
                 name: name.clone(),
@@ -82,9 +82,10 @@ impl DojoInterface {
         &mut self,
         db: &dyn SyntaxGroup,
         param_list: ast::ParamList,
-        diagnostic_item: ids::SyntaxStablePtrId
+        diagnostic_item: ids::SyntaxStablePtrId,
     ) -> String {
-        let mut params = param_list.elements(db)
+        let mut params = param_list
+            .elements(db)
             .iter()
             .map(|e| e.as_syntax_node().get_text(db))
             .collect::<Vec<_>>();
@@ -96,18 +97,27 @@ impl DojoInterface {
 
             if param_name.eq(&"self".to_string()) {
                 let param_modifiers = first_param
-                    .modifiers(db).elements(db)
-                    .iter().map(|e|e.as_syntax_node().get_text(db).trim().to_string())
+                    .modifiers(db)
+                    .elements(db)
+                    .iter()
+                    .map(|e| e.as_syntax_node().get_text(db).trim().to_string())
                     .collect::<Vec<_>>();
 
                 let param_type = first_param
-                    .type_clause(db).ty(db).as_syntax_node()
-                    .get_text(db).trim().to_string();
+                    .type_clause(db)
+                    .ty(db)
+                    .as_syntax_node()
+                    .get_text(db)
+                    .trim()
+                    .to_string();
 
-                if param_modifiers.contains(&"ref".to_string()) && param_type.eq(&"TContractState".to_string()) {
+                if param_modifiers.contains(&"ref".to_string())
+                    && param_type.eq(&"TContractState".to_string())
+                {
                     self.diagnostics.push(PluginDiagnostic {
                         stable_ptr: diagnostic_item,
-                        message: "Functions of dojo::interface cannot have `ref self` parameter.".to_string(),
+                        message: "Functions of dojo::interface cannot have `ref self` parameter."
+                            .to_string(),
                         severity: Severity::Error,
                     });
 
@@ -139,13 +149,11 @@ impl DojoInterface {
             .modify_child(db, ast::FunctionDeclaration::INDEX_SIGNATURE)
             .modify_child(db, ast::FunctionSignature::INDEX_PARAMETERS);
 
-        rewritten_params.set_str(
-            self.rewrite_parameters(
-                db,
-                fn_ast.declaration(db).signature(db).parameters(db),
-                fn_ast.stable_ptr().untyped()
-            )
-        );
+        rewritten_params.set_str(self.rewrite_parameters(
+            db,
+            fn_ast.declaration(db).signature(db).parameters(db),
+            fn_ast.stable_ptr().untyped(),
+        ));
         vec![rewritten_fn]
     }
 }

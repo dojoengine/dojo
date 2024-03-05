@@ -23,18 +23,18 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::contract::DojoContract;
-use crate::interface::DojoInterface;
 use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
 use crate::inline_macros::set::SetMacro;
+use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
 
 const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
-const DOJO_INTERFACE_ATTR:  &str = "dojo::interface";
+const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
 const DOJO_PLUGIN_EXPAND_VAR_ENV: &str = "DOJO_PLUGIN_EXPAND";
 
 #[derive(Clone, Debug, PartialEq)]
