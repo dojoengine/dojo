@@ -286,7 +286,7 @@ export function defineContractComponents(world: World) {
                             }
                         }
                     }
-                    None => format!("props.{}", type_name)
+                    None => format!("props.{}", type_name),
                 }
             })
             .collect::<Vec<String>>()
