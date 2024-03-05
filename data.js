@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709660690102,
+  "lastUpdate": 1709665881147,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2215,6 +2215,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1019158,
             "range": "± 37110",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cf095dea99168b521be8e3894716b72e29b6bbe0",
+          "message": "fix: typescript plugin for non struct fields (#1608)\n\n* fix: typescript plugin for non struct fields\r\n\r\n* fix: primitive type arg in system\r\n\r\n* chore: fmt",
+          "timestamp": "2024-03-05T14:01:36-05:00",
+          "tree_id": "778b5dd598f0a39afe096e84d1919d8adcaf1710",
+          "url": "https://github.com/dojoengine/dojo/commit/cf095dea99168b521be8e3894716b72e29b6bbe0"
+        },
+        "date": 1709665880161,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 969859,
+            "range": "± 35102",
             "unit": "ns/iter"
           }
         ]
