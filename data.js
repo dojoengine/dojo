@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709618320614,
+  "lastUpdate": 1709620721032,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2155,6 +2155,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 966335,
             "range": "± 30652",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "70c32b2aa5d6f03ccaad383e300450ad76a7c36c",
+          "message": "Add a script to declare standard ArgentX account contract classes (#1579)\n\nAdd a declare script using `starkli` for declaring standard ArgentX account contract, both `0.3.0` and `0.3.1` are supported.\r\n\r\n### 0.3.0\r\n\r\n`0x01a736d6ed154502257f02b1ccdf4d9d1089f80811cd6acad48e6b6a9d1f2003` (0.3.0)\r\n\r\nhttps://github.com/argentlabs/argent-contracts-starknet/blob/account-0.3.0/contracts/account/src/argent_account.cairo\r\n\r\nhttps://voyager.online/class/0x01a736d6ed154502257f02b1ccdf4d9d1089f80811cd6acad48e6b6a9d1f2003\r\n\r\n### 0.3.1\r\n\r\n`0x29927c8af6bccf3f6fda035981e765a7bdbf18a2dc0d630494f8758aa908e2b` (0.3.1)\r\n\r\nhttps://github.com/argentlabs/argent-contracts-starknet/blob/account-0.3.1/src/account/argent_account.cairo\r\n\r\nhttps://voyager.online/class/0x29927c8af6bccf3f6fda035981e765a7bdbf18a2dc0d630494f8758aa908e2b",
+          "timestamp": "2024-03-05T14:28:56+08:00",
+          "tree_id": "dd388550015a24c2cc5ebf748788671f9e3b4d85",
+          "url": "https://github.com/dojoengine/dojo/commit/70c32b2aa5d6f03ccaad383e300450ad76a7c36c"
+        },
+        "date": 1709620720063,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 965161,
+            "range": "± 25225",
             "unit": "ns/iter"
           }
         ]
