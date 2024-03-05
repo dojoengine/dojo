@@ -1,0 +1,93 @@
+kind = "DojoModel"
+class_hash = "0x143f14424c28802a649bbd45dfc4213794b5ec98700fe959597c2daeb2c5937"
+name = "types_test::models::record"
+
+[[members]]
+name = "record_id"
+type = "u32"
+key = true
+
+[[members]]
+name = "depth"
+type = "Depth"
+key = false
+
+[[members]]
+name = "type_u8"
+type = "u8"
+key = false
+
+[[members]]
+name = "type_u16"
+type = "u16"
+key = false
+
+[[members]]
+name = "type_u32"
+type = "u32"
+key = false
+
+[[members]]
+name = "type_u64"
+type = "u64"
+key = false
+
+[[members]]
+name = "type_u128"
+type = "u128"
+key = false
+
+[[members]]
+name = "type_u256"
+type = "u256"
+key = false
+
+[[members]]
+name = "type_bool"
+type = "bool"
+key = false
+
+[[members]]
+name = "type_felt"
+type = "felt252"
+key = false
+
+[[members]]
+name = "type_class_hash"
+type = "ClassHash"
+key = false
+
+[[members]]
+name = "type_contract_address"
+type = "ContractAddress"
+key = false
+
+[[members]]
+name = "type_deeply_nested"
+type = "Nested"
+key = false
+
+[[members]]
+name = "type_nested_one"
+type = "NestedMost"
+key = false
+
+[[members]]
+name = "type_nested_two"
+type = "NestedMost"
+key = false
+
+[[members]]
+name = "random_u8"
+type = "u8"
+key = false
+
+[[members]]
+name = "random_u128"
+type = "u128"
+key = false
+
+[[members]]
+name = "composite_u256"
+type = "u256"
+key = false

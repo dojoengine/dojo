@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
+use camino::Utf8PathBuf;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
@@ -24,7 +25,6 @@ pub struct MigrationStrategy {
     pub world_address: Option<FieldElement>,
     pub world: Option<ContractMigration>,
     pub base: Option<ClassMigration>,
-    pub resource_metadata: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
     pub models: Vec<ClassMigration>,
 }
@@ -70,15 +70,12 @@ impl MigrationStrategy {
 
 /// construct migration strategy
 /// evaluate which contracts/classes need to be declared/deployed
-pub fn prepare_for_migration<P>(
+pub fn prepare_for_migration(
     world_address: Option<FieldElement>,
     seed: Option<FieldElement>,
-    target_dir: P,
+    target_dir: &Utf8PathBuf,
     diff: WorldDiff,
-) -> Result<MigrationStrategy>
-where
-    P: AsRef<Path>,
-{
+) -> Result<MigrationStrategy> {
     let entries = fs::read_dir(target_dir)
         .map_err(|err| anyhow!("Failed reading source directory: {err}"))?;
 
@@ -102,8 +99,6 @@ where
     // else we need to evaluate which contracts need to be migrated.
     let mut world = evaluate_contract_to_migrate(&diff.world, &artifact_paths, false)?;
     let base = evaluate_class_to_migrate(&diff.base, &artifact_paths, world.is_some())?;
-    let resource_metadata =
-        evaluate_class_to_migrate(&diff.resource_metadata, &artifact_paths, world.is_some())?;
     let contracts =
         evaluate_contracts_to_migrate(&diff.contracts, &artifact_paths, world.is_some())?;
     let models = evaluate_models_to_migrate(&diff.models, &artifact_paths, world.is_some())?;
@@ -122,7 +117,7 @@ where
         );
     }
 
-    Ok(MigrationStrategy { world_address, world, resource_metadata, base, contracts, models })
+    Ok(MigrationStrategy { world_address, world, base, contracts, models })
 }
 
 fn evaluate_models_to_migrate(

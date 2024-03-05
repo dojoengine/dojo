@@ -3275,6 +3275,7 @@ dependencies = [
  "starknet 0.9.0",
  "test-log",
  "thiserror",
+ "toml 0.7.8",
  "tracing",
  "url",
 ]
@@ -3363,6 +3364,7 @@ dependencies = [
  "cairo-lang-starknet",
  "camino",
  "convert_case 0.6.0",
+ "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
  "futures",
