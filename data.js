@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709620721032,
+  "lastUpdate": 1709660690102,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2185,6 +2185,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 965161,
             "range": "± 25225",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f90a71ad51aee4cfe6de3c99446dae9d0a2aa6d9",
+          "message": "refactor: migrate to using toml manifest instead of json manifest (#1577)\n\n* update manifest structs\r\n\r\n* update compiler\r\n\r\n* update sozo\r\n\r\n* add base in abis directory\r\n\r\n* fix world address\r\n\r\n* use utf8pathbuf instead of string for cross-platform support\r\n\r\n* copy abi files to deployments similar to manifests\r\n\r\n* apply clippy lints\r\n\r\n* finally!!!!! fixed all clippy lints\r\n\r\n* make overlay fields optional and add an example overlay contract\r\n\r\n* more test fixes\r\n\r\n* fix rust formatting\r\n\r\n* fix tests\r\n\r\n* fix sozo events\r\n\r\n* more fixing\r\n\r\n* update events count\r\n\r\n* write DeployedManifest to a single file\r\n\r\n* fix torii test\r\n\r\n* ignore test that breaking other test\r\n\r\n* fix rust formatting\r\n\r\n* remove abis for world, base, and DojoModels\r\n\r\n* add nicer error message\r\n\r\n* update events count after recent abis change\r\n\r\n* fix lint\r\n\r\n* update build for torii-types\r\n\r\n* update overlays manifest",
+          "timestamp": "2024-03-05T12:35:22-05:00",
+          "tree_id": "b8dac96290d73da0906bc01d5f7419315c2ca14d",
+          "url": "https://github.com/dojoengine/dojo/commit/f90a71ad51aee4cfe6de3c99446dae9d0a2aa6d9"
+        },
+        "date": 1709660689630,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1019158,
+            "range": "± 37110",
             "unit": "ns/iter"
           }
         ]
