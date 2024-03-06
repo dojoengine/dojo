@@ -88,12 +88,17 @@ mod withcomponent {
 trait IEmptyTrait;
 
 #[dojo::interface]
-trait IActions {
+trait ITraitWithConstant {
     /// Even if it looks weird, the expected pattern for a constant in a trait is
     /// `const <name>: <type>;`
     /// See: https://github.com/starkware-libs/cairo/blob/600553d34a1af93ff7fb038ac677efdd3fd07010/crates/cairo-lang-parser/src/parser.rs#L835
     const ONE: u8;
 
+    fn do_no_param();
+}
+
+#[dojo::interface]
+trait INominalTrait {
     fn do_no_param();
     fn do_no_param_but_self(self: @TContractState);
     fn do_params(p1: dojo_examples::models::Direction, p2: u8);
@@ -267,7 +272,7 @@ error: Anything other than functions is not supported in a dojo::interface
     ^************^
 
 error: Functions of dojo::interface cannot have `ref self` parameter.
- --> test_src/lib.cairo:96:5
+ --> test_src/lib.cairo:101:5
     fn do_ref_self(ref self: TContractState);
     ^***************************************^
 
@@ -297,7 +302,7 @@ error: Unsupported attribute.
                 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:98:5
+ --> test_src/lib.cairo:103:5
     #[my_attr]
     ^********^
 
@@ -542,17 +547,17 @@ error: Unsupported attribute.
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:110:5
+ --> test_src/lib.cairo:115:5
     #[external(v0)]
     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:116:5
+ --> test_src/lib.cairo:121:5
     #[external(v0)]
     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:122:5
+ --> test_src/lib.cairo:127:5
     #[external(v0)]
     ^*************^
 
@@ -832,9 +837,15 @@ impl EventDrop of core::traits::Drop::<Event>;
                 trait IEmptyTrait<TContractState> {}
 
                 #[starknet::interface]
-                trait IActions<TContractState> {
+                trait ITraitWithConstant<TContractState> {
                     
     fn do_no_param(self: @TContractState);
+
+                }
+
+                #[starknet::interface]
+                trait INominalTrait<TContractState> {
+                        fn do_no_param(self: @TContractState);
     fn do_no_param_but_self(self: @TContractState);
     fn do_params(self: @TContractState, p1: dojo_examples::models::Direction, p2: u8);
     fn do_params_and_self(self: @TContractState, p2: u8);
