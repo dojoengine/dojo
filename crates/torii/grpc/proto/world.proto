@@ -8,8 +8,8 @@ service World {
     // Retrieves metadata about the World including all the registered components and systems.
     rpc WorldMetadata (MetadataRequest) returns (MetadataResponse);
    
-    // Subscribes to models updates.
-    rpc SubscribeModels (SubscribeModelsRequest) returns (stream SubscribeModelsResponse);
+    // Subscribes to models diff updates.
+    rpc SubscribeDiffs (SubscribeDiffsRequest) returns (stream SubscribeDiffsResponse);
 
     // Subscribe to entity updates.
     rpc SubscribeEntities (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
@@ -32,14 +32,14 @@ message MetadataResponse {
    types.WorldMetadata metadata = 1;
 }
 
-message SubscribeModelsRequest {
+message SubscribeDiffsRequest {
     // The list of model keys to subscribe to.
-    repeated types.KeysClause models_keys = 1;
+    repeated types.ModelDiffKeys models_keys = 1;
 }
 
-message SubscribeModelsResponse {
+message SubscribeDiffsResponse {
     // List of models that have been updated.
-    types.ModelUpdate model_update = 1;
+    types.ModelDiffUpdate model_update = 1;
 }
 
 message SubscribeEntitiesRequest {
@@ -52,7 +52,7 @@ message SubscribeEntityResponse {
 
 message RetrieveEntitiesRequest {
     // The entities to retrieve
-    types.Query query = 1;
+    types.EntityQuery query = 1;
 }
 
 message RetrieveEntitiesResponse {

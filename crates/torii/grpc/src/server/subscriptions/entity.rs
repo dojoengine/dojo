@@ -97,10 +97,11 @@ impl Service {
                 "#;
                 let (model_names,): (String,) =
                     sqlx::query_as(models_query).bind(hashed_keys).fetch_one(&pool).await?;
-                let model_names: Vec<&str> = model_names.split(',').collect();
+                let model_names: HashSet<&str> = model_names.split(',').collect();
                 let schemas = cache.schemas(model_names).await?;
 
-                let entity_query = format!("{} WHERE entities.id = ?", build_sql_query(&schemas)?);
+                let entity_query =
+                    format!("{} WHERE entities.id = ?", build_sql_query(&schemas, None)?);
                 let row = sqlx::query(&entity_query).bind(hashed_keys).fetch_one(&pool).await?;
 
                 let models = schemas

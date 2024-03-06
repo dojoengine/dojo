@@ -20,7 +20,7 @@ use tracing::{debug, error, trace};
 
 use super::error::SubscriptionError;
 use crate::proto;
-use crate::types::KeysClause;
+use crate::types::ModelDiffKeys;
 
 pub struct ModelMetadata {
     pub name: FieldElement,
@@ -29,7 +29,7 @@ pub struct ModelMetadata {
 
 pub struct ModelDiffRequest {
     pub model: ModelMetadata,
-    pub keys: proto::types::KeysClause,
+    pub keys: proto::types::ModelDiffKeys,
 }
 
 impl ModelDiffRequest {}
@@ -38,7 +38,7 @@ pub struct ModelDiffSubscriber {
     /// The storage addresses that the subscriber is interested in.
     storage_addresses: HashSet<FieldElement>,
     /// The channel to send the response back to the subscriber.
-    sender: Sender<Result<proto::world::SubscribeModelsResponse, tonic::Status>>,
+    sender: Sender<Result<proto::world::SubscribeDiffsResponse, tonic::Status>>,
 }
 
 #[derive(Default)]
@@ -50,7 +50,7 @@ impl StateDiffManager {
     pub async fn add_subscriber(
         &self,
         reqs: Vec<ModelDiffRequest>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeModelsResponse, tonic::Status>>, Error> {
+    ) -> Result<Receiver<Result<proto::world::SubscribeDiffsResponse, tonic::Status>>, Error> {
         let id = rand::thread_rng().gen::<usize>();
 
         let (sender, receiver) = channel(1);
@@ -59,7 +59,7 @@ impl StateDiffManager {
         let storage_addresses = reqs
             .into_iter()
             .map(|req| {
-                let keys: KeysClause =
+                let keys: ModelDiffKeys =
                     req.keys.try_into().map_err(ParseError::FromByteSliceError)?;
 
                 let base = poseidon_hash_many(&[
@@ -162,7 +162,7 @@ where
                 })
                 .collect::<Vec<proto::types::StorageEntry>>();
 
-            let model_update = proto::types::ModelUpdate {
+            let model_update = proto::types::ModelDiffUpdate {
                 block_hash: format!("{:#x}", state_update.block_hash),
                 model_diff: Some(proto::types::ModelDiff {
                     storage_diffs: vec![proto::types::StorageDiff {
@@ -172,7 +172,7 @@ where
                 }),
             };
 
-            let resp = proto::world::SubscribeModelsResponse { model_update: Some(model_update) };
+            let resp = proto::world::SubscribeDiffsResponse { model_update: Some(model_update) };
 
             if sub.sender.send(Ok(resp)).await.is_err() {
                 closed_stream.push(*idx);

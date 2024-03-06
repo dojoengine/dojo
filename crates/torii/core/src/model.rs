@@ -164,7 +164,10 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 }
 
 /// Creates a query that fetches all models and their nested data.
-pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
+pub fn build_sql_query(
+    model_schemas: &Vec<Ty>,
+    additional_selections: Option<&str>,
+) -> Result<String, Error> {
     fn parse_struct(
         path: &str,
         schema: &Struct,
@@ -194,6 +197,10 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
     let mut global_tables =
         model_schemas.iter().enumerate().map(|(_, schema)| schema.name()).collect::<Vec<String>>();
 
+    if let Some(additional_selections) = additional_selections {
+        global_selections.push(additional_selections.to_string());
+    }
+
     for ty in model_schemas {
         let schema = ty.as_struct().expect("schema should be struct");
         let model_table = &schema.name;
@@ -206,7 +213,6 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
         global_tables.extend(tables);
     }
 
-    // TODO: Fallback to subqueries, SQLite has a max limit of 64 on 'table 'JOIN'
     if global_tables.len() > 64 {
         return Err(QueryError::SqliteJoinLimit.into());
     }
@@ -275,7 +281,7 @@ pub fn map_row_to_ty(path: &str, struct_ty: &mut Struct, row: &SqliteRow) -> Res
                     }
                     Primitive::ClassHash(_) => {
                         let value = row.try_get::<String, &str>(&column_name)?;
-                        primitive.set_contract_address(Some(
+                        primitive.set_class_hash(Some(
                             FieldElement::from_str(&value).map_err(ParseError::FromStr)?,
                         ))?;
                     }
@@ -302,6 +308,29 @@ pub fn map_row_to_ty(path: &str, struct_ty: &mut Struct, row: &SqliteRow) -> Res
     }
 
     Ok(())
+}
+
+/// Takes an an array of keys returns pattern for either `regex` or `like` matching
+pub fn keys_to_pattern(keys: &[String], use_regex: bool) -> String {
+    let pattern = keys
+        .iter()
+        .map(|key| {
+            if use_regex {
+                match key.as_str() {
+                    "*" => "([^/]*)".to_string(),
+                    _ => regex::escape(key),
+                }
+            } else {
+                key.replace('*', "%")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("/");
+
+    match use_regex {
+        true => format!("^{}.*", pattern),
+        false => format!("{}/%", pattern),
+    }
 }
 
 #[cfg(test)]
@@ -519,7 +548,7 @@ mod tests {
             ],
         });
 
-        let query = build_sql_query(&vec![ty]).unwrap();
+        let query = build_sql_query(&vec![ty], None).unwrap();
         assert_eq!(
             query,
             r#"SELECT entities.id, entities.keys, Position.external_name AS "Position.name", Position.external_age AS "Position.age", Position$vec.external_x AS "Position$vec.x", Position$vec.external_y AS "Position$vec.y" FROM entities JOIN Position ON entities.id = Position.entity_id  JOIN Position$vec ON entities.id = Position$vec.entity_id"#

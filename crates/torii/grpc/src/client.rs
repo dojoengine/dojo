@@ -8,11 +8,11 @@ use starknet_crypto::FieldElement;
 
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeModelsRequest,
-    SubscribeModelsResponse,
+    SubscribeDiffsRequest, SubscribeDiffsResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse,
 };
 use crate::types::schema::Entity;
-use crate::types::{KeysClause, Query};
+use crate::types::{EntityQuery, ModelDiffKeys};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -77,7 +77,7 @@ impl WorldClient {
 
     pub async fn retrieve_entities(
         &mut self,
-        query: Query,
+        query: EntityQuery,
     ) -> Result<RetrieveEntitiesResponse, Error> {
         let request = RetrieveEntitiesRequest { query: Some(query.into()) };
         self.inner.retrieve_entities(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
@@ -103,13 +103,13 @@ impl WorldClient {
     }
 
     /// Subscribe to the model diff for a set of models of a World.
-    pub async fn subscribe_model_diffs(
+    pub async fn subscribe_diffs(
         &mut self,
-        models_keys: Vec<KeysClause>,
+        models_keys: Vec<ModelDiffKeys>,
     ) -> Result<ModelDiffsStreaming, Error> {
         let stream = self
             .inner
-            .subscribe_models(SubscribeModelsRequest {
+            .subscribe_diffs(SubscribeDiffsRequest {
                 models_keys: models_keys.into_iter().map(|e| e.into()).collect(),
             })
             .await
@@ -124,8 +124,8 @@ impl WorldClient {
 }
 
 type ModelDiffMappedStream = MapOk<
-    tonic::Streaming<SubscribeModelsResponse>,
-    Box<dyn Fn(SubscribeModelsResponse) -> StateUpdate + Send>,
+    tonic::Streaming<SubscribeDiffsResponse>,
+    Box<dyn Fn(SubscribeDiffsResponse) -> StateUpdate + Send>,
 >;
 
 pub struct ModelDiffsStreaming(ModelDiffMappedStream);

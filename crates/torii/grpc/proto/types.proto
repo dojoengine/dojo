@@ -73,29 +73,33 @@ message ModelDiff {
     repeated StorageDiff storage_diffs = 1;
 }
 
-message ModelUpdate {
+message ModelDiffKeys {
+    string model = 1;
+    repeated bytes keys = 2;
+}
+
+message ModelDiffUpdate {
     string block_hash = 1;
     ModelDiff model_diff = 2;
 }
 
-message Query {
-    Clause clause = 1;
+message EntityQuery {
+    EntityClause clause = 1;
     uint32 limit = 2;
     uint32 offset = 3;
 }
 
 message EventQuery {
-    EventKeysClause keys =1;
+    KeysClause keys =1;
     uint32 limit = 2;
     uint32 offset = 3;
 }
 
-message Clause {
+message EntityClause {
     oneof clause_type {
         HashedKeysClause hashed_keys = 1;
         KeysClause keys = 2;
-        MemberClause member = 3;
-        CompositeClause composite = 4;
+        ModelsClause models = 3;
     }
 }
 
@@ -103,13 +107,13 @@ message HashedKeysClause {
     repeated bytes hashed_keys = 1;
 }
 
-message EventKeysClause {
-    repeated bytes keys = 1;
+message KeysClause {
+    repeated bytes keys = 2;
 }
 
-message KeysClause {
-    string model = 1;
-    repeated bytes keys = 2;
+message ModelsClause {
+    repeated MemberClause members = 1;
+    LogicalOperator operator = 2;
 }
 
 message MemberClause {
@@ -117,12 +121,6 @@ message MemberClause {
     string member = 2;
     ComparisonOperator operator = 3;
     Value value = 4;
-}
-
-message CompositeClause {
-    string model = 1;
-    LogicalOperator operator = 2;
-    repeated Clause clauses = 3;
 }
 
 enum LogicalOperator {
