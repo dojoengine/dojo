@@ -435,7 +435,7 @@ impl Sql {
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
+            "DROP TABLE IF EXISTS [{table_id}]; CREATE TABLE [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
              event_id, "
         );
 
@@ -478,7 +478,7 @@ impl Sql {
                     ));
                 }
 
-                let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
+                let statement = "INSERT OR REPLACE INTO model_members (id, model_id, model_idx, \
                                  member_idx, name, type, type_enum, enum_options, key) VALUES (?, \
                                  ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
