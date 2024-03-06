@@ -1,7 +1,10 @@
+use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
+use futures_util::lock::Mutex;
 use starknet::core::types::{
     BlockId, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
     MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
@@ -56,7 +59,7 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<'db, P: Provider + Sync> Engine<'db, P> {
+impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
     pub fn new(
         world: WorldContractReader<P>,
         db: &'db mut Sql,
@@ -121,10 +124,20 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
 
     pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<()> {
         // Process all blocks from current to latest.
-        while from <= to {
-            let block_with_txs = match self.provider.get_block_with_txs(BlockId::Number(from)).await
-            {
-                Ok(block_with_txs) => block_with_txs,
+        let blocks = Arc::new(Mutex::new(Vec::new()));
+
+        thread::scope(|s| {
+            while from <= to {
+                s.spawn(|| async {
+                    blocks.lock().await.push(self.provider.get_block_with_txs(BlockId::Number(from)).await);
+                });
+            }
+        });
+        
+
+        for block in blocks.lock().await.iter() {
+            let block_with_txs = match block {
+                Ok(block) => block,
                 Err(e) => {
                     error!("getting block: {}", e);
                     continue;
@@ -136,7 +149,7 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
                 block_tx.send(from).await.expect("failed to send block number to gRPC server");
             }
 
-            match self.process(block_with_txs).await {
+            match self.process(block_with_txs.clone()).await {
                 Ok(_) => {
                     self.db.set_head(from);
                     self.db.execute().await?;
