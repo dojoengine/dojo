@@ -4,6 +4,7 @@ pub mod subscriptions;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use dojo_types::schema::Ty;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeModelsRequest, SubscribeModelsResponse,
+    RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
@@ -122,8 +123,22 @@ impl DojoWorld {
         &self,
         limit: u32,
         offset: u32,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.entities_by_hashed_keys(None, limit, offset).await
+    }
+
+    async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
+        let query = r#"
+            SELECT keys, data, transaction_hash
+            FROM events 
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+         "#
+        .to_string();
+
+        let row_events: Vec<(String, String, String)> =
+            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+        row_events.iter().map(map_row_to_event).collect()
     }
 
     async fn entities_by_hashed_keys(
@@ -131,7 +146,7 @@ impl DojoWorld {
         hashed_keys: Option<proto::types::HashedKeysClause>,
         limit: u32,
         offset: u32,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: use prepared statement for where clause
         let filter_ids = match hashed_keys {
             Some(hashed_keys) => {
@@ -150,6 +165,18 @@ impl DojoWorld {
             None => String::new(),
         };
 
+        // count query that matches filter_ids
+        let count_query = format!(
+            r#"
+                    SELECT count(*)
+                    FROM entities
+                    {filter_ids}
+                "#
+        );
+        // total count of rows without limit and offset
+        let total_count: u32 = sqlx::query_scalar(&count_query).fetch_one(&self.pool).await?;
+
+        // query to filter with limit and offset
         let query = format!(
             r#"
             SELECT entities.id, group_concat(entity_model.model_id) as model_names
@@ -190,7 +217,7 @@ impl DojoWorld {
             })
         }
 
-        Ok(entities)
+        Ok((entities, total_count))
     }
 
     async fn entities_by_keys(
@@ -198,7 +225,7 @@ impl DojoWorld {
         keys_clause: proto::types::KeysClause,
         limit: u32,
         offset: u32,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys = keys_clause
             .keys
             .iter()
@@ -212,6 +239,20 @@ impl DojoWorld {
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let keys_pattern = keys.join("/") + "/%";
+
+        let count_query = format!(
+            r#"
+            SELECT count(*)
+            FROM entities
+            JOIN entity_model ON entities.id = entity_model.entity_id
+            WHERE entity_model.model_id = '{}' and entities.keys LIKE ?
+        "#,
+            keys_clause.model
+        );
+
+        // total count of rows that matches keys_pattern without limit and offset
+        let total_count =
+            sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
         let models_query = format!(
             r#"
@@ -231,6 +272,7 @@ impl DojoWorld {
         let model_names = models_str.split(',').collect::<Vec<&str>>();
         let schemas = self.model_cache.schemas(model_names).await?;
 
+        // query to filter with limit and offset
         let entities_query = format!(
             "{} WHERE entities.keys LIKE ? ORDER BY entities.event_id DESC LIMIT ? OFFSET ?",
             build_sql_query(&schemas)?
@@ -242,7 +284,50 @@ impl DojoWorld {
             .fetch_all(&self.pool)
             .await?;
 
-        db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
+        Ok((
+            db_entities
+                .iter()
+                .map(|row| Self::map_row_to_entity(row, &schemas))
+                .collect::<Result<Vec<_>, Error>>()?,
+            total_count,
+        ))
+    }
+
+    async fn events_by_keys(
+        &self,
+        keys_clause: proto::types::EventKeysClause,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<proto::types::Event>, Error> {
+        let keys = keys_clause
+            .keys
+            .iter()
+            .map(|bytes| {
+                if bytes.is_empty() {
+                    return Ok("%".to_string());
+                }
+                Ok(str::from_utf8(bytes).unwrap().to_string())
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        let keys_pattern = keys.join("/") + "/%";
+
+        let events_query = r#"
+            SELECT keys, data, transaction_hash
+            FROM events
+            WHERE keys LIKE ?
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+        "#
+        .to_string();
+
+        let row_events: Vec<(String, String, String)> = sqlx::query_as(&events_query)
+            .bind(&keys_pattern)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
+
+        row_events.iter().map(map_row_to_event).collect()
     }
 
     async fn entities_by_member(
@@ -250,7 +335,7 @@ impl DojoWorld {
         member_clause: proto::types::MemberClause,
         _limit: u32,
         _offset: u32,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
@@ -299,8 +384,13 @@ impl DojoWorld {
 
         let db_entities =
             sqlx::query(&member_query).bind(comparison_value).fetch_all(&self.pool).await?;
-
-        db_entities.iter().map(|row| Self::map_row_to_entity(row, &schemas)).collect()
+        let entities_collection = db_entities
+            .iter()
+            .map(|row| Self::map_row_to_entity(row, &schemas))
+            .collect::<Result<Vec<_>, Error>>()?;
+        // Since there is not limit and offset, total_count is same as number of entities
+        let total_count = entities_collection.len() as u32;
+        Ok((entities_collection, total_count))
     }
 
     async fn entities_by_composite(
@@ -308,7 +398,7 @@ impl DojoWorld {
         _composite: proto::types::CompositeClause,
         _limit: u32,
         _offset: u32,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
+    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         // TODO: Implement
         Err(QueryError::UnsupportedQuery.into())
     }
@@ -378,7 +468,7 @@ impl DojoWorld {
         &self,
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
-        let entities = match query.clause {
+        let (entities, total_count) = match query.clause {
             None => self.entities_all(query.limit, query.offset).await?,
             Some(clause) => {
                 let clause_type =
@@ -414,7 +504,18 @@ impl DojoWorld {
             }
         };
 
-        Ok(RetrieveEntitiesResponse { entities })
+        Ok(RetrieveEntitiesResponse { entities, total_count })
+    }
+
+    async fn retrieve_events(
+        &self,
+        query: proto::types::EventQuery,
+    ) -> Result<proto::world::RetrieveEventsResponse, Error> {
+        let events = match query.keys {
+            None => self.events_all(query.limit, query.offset).await?,
+            Some(keys) => self.events_by_keys(keys, query.limit, query.offset).await?,
+        };
+        Ok(RetrieveEventsResponse { events })
     }
 
     fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
@@ -432,6 +533,18 @@ impl DojoWorld {
 
         Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
     }
+}
+
+fn process_event_field(data: &str) -> Vec<Vec<u8>> {
+    data.trim_end_matches('/').split('/').map(|s| s.to_owned().into_bytes()).collect()
+}
+
+fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Event, Error> {
+    let keys = process_event_field(&row.0);
+    let data = process_event_field(&row.1);
+    let transaction_hash = row.2.to_owned().into_bytes();
+
+    Ok(proto::types::Event { keys, data, transaction_hash })
 }
 
 type ServiceResult<T> = Result<Response<T>, Status>;
@@ -502,6 +615,21 @@ impl proto::world::world_server::World for DojoWorld {
             self.retrieve_entities(query).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(entities))
+    }
+
+    async fn retrieve_events(
+        &self,
+        request: Request<RetrieveEventsRequest>,
+    ) -> Result<Response<RetrieveEventsResponse>, Status> {
+        let query = request
+            .into_inner()
+            .query
+            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let events =
+            self.retrieve_events(query).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(events))
     }
 }
 

@@ -17,13 +17,13 @@ thiserror.workspace = true
 tracing.workspace = true
 
 # fork provider deps
-futures.workspace = true
-starknet.workspace = true
-tokio.workspace = true
+futures = { workspace = true, optional = true }
+starknet = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 
 [features]
 default = [ "fork", "in-memory" ]
-fork = [ "in-memory" ]
+fork = [ "dep:futures", "dep:starknet", "dep:tokio", "in-memory" ]
 in-memory = [  ]
 
 [dev-dependencies]

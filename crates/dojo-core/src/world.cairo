@@ -185,9 +185,6 @@ mod world {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
-
-        // Ensure the creator of the world is the owner of the resource metadata model.
-        self.owners.write((RESOURCE_METADATA_MODEL, creator), true);
         self.models.write(
             RESOURCE_METADATA_MODEL,
             (resource_metadata::initial_class_hash(), resource_metadata::initial_address())

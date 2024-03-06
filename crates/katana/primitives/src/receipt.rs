@@ -160,4 +160,6 @@ pub struct TxExecutionResources {
     pub bitwise_builtin: Option<u64>,
     /// The number of keccak builtin instances
     pub keccak_builtin: Option<u64>,
+
+    pub segment_arena_builtin: Option<u64>,
 }

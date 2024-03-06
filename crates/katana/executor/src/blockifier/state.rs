@@ -17,7 +17,7 @@ use starknet_api::state::StorageKey;
 /// A state db only provide read access.
 ///
 /// This type implements the [`StateReader`] trait so that it can be used as a with [`CachedState`].
-pub struct StateRefDb(Box<dyn StateProvider>);
+pub struct StateRefDb(pub Box<dyn StateProvider>);
 
 impl StateRefDb {
     pub fn new(provider: impl StateProvider + 'static) -> Self {
@@ -25,12 +25,50 @@ impl StateRefDb {
     }
 }
 
-impl<T> From<T> for StateRefDb
-where
-    T: StateProvider + 'static,
-{
-    fn from(provider: T) -> Self {
-        Self::new(provider)
+impl ContractClassProvider for StateRefDb {
+    fn class(
+        &self,
+        hash: katana_primitives::contract::ClassHash,
+    ) -> ProviderResult<Option<katana_primitives::contract::CompiledContractClass>> {
+        self.0.class(hash)
+    }
+
+    fn compiled_class_hash_of_class_hash(
+        &self,
+        hash: katana_primitives::contract::ClassHash,
+    ) -> ProviderResult<Option<katana_primitives::contract::CompiledClassHash>> {
+        self.0.compiled_class_hash_of_class_hash(hash)
+    }
+
+    fn sierra_class(
+        &self,
+        hash: katana_primitives::contract::ClassHash,
+    ) -> ProviderResult<Option<FlattenedSierraClass>> {
+        self.0.sierra_class(hash)
+    }
+}
+
+impl StateProvider for StateRefDb {
+    fn nonce(
+        &self,
+        address: katana_primitives::contract::ContractAddress,
+    ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
+        self.0.nonce(address)
+    }
+
+    fn class_hash_of_contract(
+        &self,
+        address: katana_primitives::contract::ContractAddress,
+    ) -> ProviderResult<Option<katana_primitives::contract::ClassHash>> {
+        self.0.class_hash_of_contract(address)
+    }
+
+    fn storage(
+        &self,
+        address: katana_primitives::contract::ContractAddress,
+        storage_key: katana_primitives::contract::StorageKey,
+    ) -> ProviderResult<Option<katana_primitives::contract::StorageValue>> {
+        self.0.storage(address, storage_key)
     }
 }
 
@@ -93,25 +131,27 @@ impl StateReader for StateRefDb {
     }
 }
 
-pub struct CachedStateWrapper<S: StateReader> {
-    inner: Mutex<CachedState<S>>,
+pub struct CachedStateWrapper {
+    inner: Mutex<CachedState<StateRefDb>>,
     sierra_class: RwLock<HashMap<katana_primitives::contract::ClassHash, FlattenedSierraClass>>,
 }
 
-impl<S: StateReader> CachedStateWrapper<S> {
-    pub fn new(db: S) -> Self {
+impl CachedStateWrapper {
+    pub fn new(db: StateRefDb) -> Self {
         Self {
             sierra_class: Default::default(),
             inner: Mutex::new(CachedState::new(db, GlobalContractCache::default())),
         }
     }
 
-    pub(super) fn reset_with_new_state(&self, db: S) {
+    pub(super) fn reset_with_new_state(&self, db: StateRefDb) {
         *self.inner() = CachedState::new(db, GlobalContractCache::default());
         self.sierra_class_mut().clear();
     }
 
-    pub fn inner(&self) -> parking_lot::lock_api::MutexGuard<'_, RawMutex, CachedState<S>> {
+    pub fn inner(
+        &self,
+    ) -> parking_lot::lock_api::MutexGuard<'_, RawMutex, CachedState<StateRefDb>> {
         self.inner.lock()
     }
 
@@ -134,10 +174,7 @@ impl<S: StateReader> CachedStateWrapper<S> {
     }
 }
 
-impl<Db> ContractClassProvider for CachedStateWrapper<Db>
-where
-    Db: StateReader + Sync + Send,
-{
+impl ContractClassProvider for CachedStateWrapper {
     fn class(
         &self,
         hash: katana_primitives::contract::ClassHash,
@@ -162,17 +199,15 @@ where
         &self,
         hash: katana_primitives::contract::ClassHash,
     ) -> ProviderResult<Option<FlattenedSierraClass>> {
-        let class @ Some(_) = self.sierra_class().get(&hash).cloned() else {
-            return Ok(None);
-        };
-        Ok(class)
+        if let Some(class) = self.sierra_class().get(&hash) {
+            Ok(Some(class.clone()))
+        } else {
+            self.inner.lock().state.0.sierra_class(hash)
+        }
     }
 }
 
-impl<Db> StateProvider for CachedStateWrapper<Db>
-where
-    Db: StateReader + Sync + Send,
-{
+impl StateProvider for CachedStateWrapper {
     fn storage(
         &self,
         address: katana_primitives::contract::ContractAddress,

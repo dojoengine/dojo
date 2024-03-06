@@ -1,8 +1,8 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Args;
-use dojo_lang::scarb_internal::compile_workspace;
-use scarb::core::{Config, TargetKind};
-use scarb::ops::CompileOpts;
+use dojo_lang::compiler::MANIFESTS_DIR;
+use dojo_world::metadata::dojo_metadata_from_workspace;
+use scarb::core::Config;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -46,17 +46,18 @@ impl MigrateArgs {
             }
         }
 
-        let target_dir = ws.target_dir().path_existent().unwrap();
-        let target_dir = target_dir.join(ws.config().profile().as_str());
+        let env_metadata = if config.manifest_path().exists() {
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+        } else {
+            None
+        };
 
-        if !target_dir.join("manifest.json").exists() {
-            compile_workspace(
-                config,
-                CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-            )?;
+        let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+        if !manifest_dir.join(MANIFESTS_DIR).exists() {
+            return Err(anyhow!("Build project using `sozo build` first"));
         }
 
-        ws.config().tokio_handle().block_on(migration::execute(&ws, self, target_dir))?;
+        ws.config().tokio_handle().block_on(migration::execute(&ws, self, env_metadata))?;
 
         Ok(())
     }

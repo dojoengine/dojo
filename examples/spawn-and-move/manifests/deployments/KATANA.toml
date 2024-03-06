@@ -1,0 +1,58 @@
+[world]
+kind = "Contract"
+class_hash = "0x5ad96ceea29160aa7305bb078d1ade41f73b487363ae12778dbea6393cc00b2"
+address = "0xc26dfdc00af6798af8add1ee5d99a716ce9a5766d81218c4fd675ab9889dc4"
+name = "dojo::world::world"
+
+[base]
+kind = "Class"
+class_hash = "0x794d5ed2f7eb970f92e0ed9be8f73bbbdf18f7db2a9a296fa12c2d9c33e6ab3"
+name = "dojo::base::base"
+
+[[contracts]]
+kind = "DojoContract"
+address = "0x4bc39aa90510ea204e24910cc18e2fe9027292b49d465ca1d1832e41752b840"
+class_hash = "0x2a1c4999d12c32667739532ef820d68ab01db6bed62ea3fd2da08e4d36cca63"
+abi = "abis/deployments/KATANA/contracts/actions.json"
+reads = [
+    "Moves",
+    "Position",
+]
+writes = []
+computed = []
+name = "dojo_examples::actions::actions"
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x53672d63a83f40ab5f3aeec55d1541a98aa822f5b197a30fbbac28e6f98a7d8"
+name = "dojo_examples::models::position"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "vec"
+type = "Vec2"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x764906a97ff3e532e82b154908b25711cdec1c692bf68e3aba2a3dd9964a15c"
+name = "dojo_examples::models::moves"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "remaining"
+type = "u8"
+key = false
+
+[[models.members]]
+name = "last_direction"
+type = "Direction"
+key = false

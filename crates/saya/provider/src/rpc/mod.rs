@@ -92,8 +92,8 @@ impl Provider for JsonRpcProvider {
                     parent_hash: block.parent_hash,
                     number: block.block_number,
                     gas_prices: GasPrices::new(
-                        block.l1_gas_price.price_in_wei,
-                        block.l1_gas_price.price_in_strk.unwrap_or_default(),
+                        block.l1_gas_price.price_in_wei.try_into().unwrap(),
+                        block.l1_gas_price.price_in_fri.try_into().unwrap(),
                     ),
                     timestamp: block.timestamp,
                     state_root: block.new_root,

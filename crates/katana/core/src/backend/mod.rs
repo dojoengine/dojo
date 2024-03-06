@@ -76,9 +76,10 @@ impl Backend {
             config.genesis.parent_hash = block.parent_hash;
             config.genesis.timestamp = block.timestamp;
             config.genesis.sequencer_address = block.sequencer_address.into();
-            config.genesis.gas_prices.eth = block.l1_gas_price.price_in_wei;
+            config.genesis.gas_prices.eth =
+                block.l1_gas_price.price_in_wei.try_into().expect("should fit in u128");
             config.genesis.gas_prices.strk =
-                block.l1_gas_price.price_in_strk.unwrap_or(config.env.gas_price);
+                block.l1_gas_price.price_in_fri.try_into().expect("should fit in u128");
 
             trace!(
                 target: "backend",
@@ -202,6 +203,7 @@ impl Backend {
 
         block_env.number += 1;
         block_env.timestamp = timestamp;
+        block_env.l1_gas_prices = self.config.env.gas_price.clone();
     }
 
     /// Retrieves the chain configuration environment values.

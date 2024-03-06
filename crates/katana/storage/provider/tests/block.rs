@@ -101,7 +101,7 @@ where
         let expected_block_env = BlockEnv {
             number: expected_block_num,
             timestamp: expected_block.header.timestamp,
-            l1_gas_prices: expected_block.header.gas_prices,
+            l1_gas_prices: expected_block.header.gas_prices.clone(),
             sequencer_address: expected_block.header.sequencer_address,
         };
 

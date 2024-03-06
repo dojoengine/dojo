@@ -63,8 +63,9 @@ async fn test_load_from_remote() {
         SqliteConnectOptions::from_str("sqlite::memory:").unwrap().create_if_missing(true);
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-    let migration =
-        prepare_migration("../../../examples/spawn-and-move/target/dev".into()).unwrap();
+    let base_path = "../../../examples/spawn-and-move";
+    let target_path = format!("{}/target/dev", base_path);
+    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));

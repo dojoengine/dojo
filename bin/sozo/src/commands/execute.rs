@@ -7,6 +7,7 @@ use starknet::core::types::FieldElement;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
+use super::options::world::WorldOptions;
 use crate::ops::execute;
 
 #[derive(Debug, Args)]
@@ -30,6 +31,9 @@ pub struct ExecuteArgs {
 
     #[command(flatten)]
     pub account: AccountOptions,
+
+    #[command(flatten)]
+    pub world: WorldOptions,
 
     #[command(flatten)]
     pub transaction: TransactionOptions,

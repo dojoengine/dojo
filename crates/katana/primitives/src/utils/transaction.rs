@@ -1,6 +1,7 @@
 use ethers::types::H256;
 use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::MsgToL1;
+use starknet::core::types::{DataAvailabilityMode, MsgToL1, ResourceBounds};
+use starknet_crypto::poseidon_hash_many;
 
 use crate::FieldElement;
 
@@ -47,26 +48,60 @@ const PREFIX_L1_HANDLER: FieldElement = FieldElement::from_mont([
 /// Compute the hash of a V1 DeployAccount transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn compute_deploy_account_v1_tx_hash(
-    contract_address: FieldElement,
+    sender_address: FieldElement,
     constructor_calldata: &[FieldElement],
     class_hash: FieldElement,
-    salt: FieldElement,
+    contract_address_salt: FieldElement,
     max_fee: u128,
     chain_id: FieldElement,
     nonce: FieldElement,
     is_query: bool,
 ) -> FieldElement {
-    let calldata_to_hash = [&[class_hash, salt], constructor_calldata].concat();
+    let calldata_to_hash = [&[class_hash, contract_address_salt], constructor_calldata].concat();
 
     compute_hash_on_elements(&[
         PREFIX_DEPLOY_ACCOUNT,
         if is_query { QUERY_VERSION_OFFSET + FieldElement::ONE } else { FieldElement::ONE }, /* version */
-        contract_address,
+        sender_address,
         FieldElement::ZERO, // entry_point_selector
         compute_hash_on_elements(&calldata_to_hash),
         max_fee.into(),
         chain_id,
         nonce,
+    ])
+}
+
+/// Compute the hash of a V1 DeployAccount transaction.
+#[allow(clippy::too_many_arguments)]
+pub fn compute_deploy_account_v3_tx_hash(
+    contract_address: FieldElement,
+    constructor_calldata: &[FieldElement],
+    class_hash: FieldElement,
+    contract_address_salt: FieldElement,
+    tip: u64,
+    l1_gas_bounds: &ResourceBounds,
+    l2_gas_bounds: &ResourceBounds,
+    paymaster_data: &[FieldElement],
+    chain_id: FieldElement,
+    nonce: FieldElement,
+    nonce_da_mode: &DataAvailabilityMode,
+    fee_da_mode: &DataAvailabilityMode,
+    is_query: bool,
+) -> FieldElement {
+    let data_hash = poseidon_hash_many(constructor_calldata);
+
+    poseidon_hash_many(&[
+        PREFIX_INVOKE,
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        contract_address,
+        hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
+        poseidon_hash_many(paymaster_data),
+        chain_id,
+        nonce,
+        data_hash,
+        encode_da_mode(nonce_da_mode, fee_da_mode),
+        class_hash,
+        contract_address_salt,
     ])
 }
 
@@ -114,6 +149,40 @@ pub fn compute_declare_v2_tx_hash(
     ])
 }
 
+/// Compute the hash of a V3 Declare transaction.
+#[allow(clippy::too_many_arguments)]
+pub fn compute_declare_v3_tx_hash(
+    sender_address: FieldElement,
+    class_hash: FieldElement,
+    compiled_class_hash: FieldElement,
+    tip: u64,
+    l1_gas_bounds: &ResourceBounds,
+    l2_gas_bounds: &ResourceBounds,
+    paymaster_data: &[FieldElement],
+    chain_id: FieldElement,
+    nonce: FieldElement,
+    nonce_da_mode: &DataAvailabilityMode,
+    fee_da_mode: &DataAvailabilityMode,
+    account_deployment_data: &[FieldElement],
+    is_query: bool,
+) -> FieldElement {
+    let data_hash = poseidon_hash_many(account_deployment_data);
+
+    poseidon_hash_many(&[
+        PREFIX_INVOKE,
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        sender_address,
+        hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
+        poseidon_hash_many(paymaster_data),
+        chain_id,
+        nonce,
+        data_hash,
+        encode_da_mode(nonce_da_mode, fee_da_mode),
+        class_hash,
+        compiled_class_hash,
+    ])
+}
+
 /// Compute the hash of a V1 Invoke transaction.
 pub fn compute_invoke_v1_tx_hash(
     sender_address: FieldElement,
@@ -132,6 +201,40 @@ pub fn compute_invoke_v1_tx_hash(
         max_fee.into(),
         chain_id,
         nonce,
+    ])
+}
+
+/// Compute the hash of a V1 Invoke transaction.
+#[allow(clippy::too_many_arguments)]
+pub fn compute_invoke_v3_tx_hash(
+    sender_address: FieldElement,
+    calldata: &[FieldElement],
+    tip: u64,
+    l1_gas_bounds: &ResourceBounds,
+    l2_gas_bounds: &ResourceBounds,
+    paymaster_data: &[FieldElement],
+    chain_id: FieldElement,
+    nonce: FieldElement,
+    nonce_da_mode: &DataAvailabilityMode,
+    fee_da_mode: &DataAvailabilityMode,
+    account_deployment_data: &[FieldElement],
+    is_query: bool,
+) -> FieldElement {
+    let data_hash = poseidon_hash_many(&[
+        poseidon_hash_many(account_deployment_data),
+        poseidon_hash_many(calldata),
+    ]);
+
+    poseidon_hash_many(&[
+        PREFIX_INVOKE,
+        if is_query { QUERY_VERSION_OFFSET + FieldElement::THREE } else { FieldElement::THREE }, /* version */
+        sender_address,
+        hash_fee_fields(tip, l1_gas_bounds, l2_gas_bounds),
+        poseidon_hash_many(paymaster_data),
+        chain_id,
+        nonce,
+        data_hash,
+        encode_da_mode(nonce_da_mode, fee_da_mode),
     ])
 }
 
@@ -230,4 +333,38 @@ mod tests {
             .unwrap()
         );
     }
+}
+
+fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {
+    let mut buffer = [0u8; 32];
+    let (remainder, max_price) = buffer.split_at_mut(128 / 8);
+    let (gas_kind, max_amount) = remainder.split_at_mut(64 / 8);
+
+    let padding = gas_kind.len() - name.len();
+    gas_kind[padding..].copy_from_slice(name);
+    max_amount.copy_from_slice(&bound.max_amount.to_be_bytes());
+    max_price.copy_from_slice(&bound.max_price_per_unit.to_be_bytes());
+
+    FieldElement::from_bytes_be(&buffer).expect("Packed resource should fit into felt")
+}
+
+fn hash_fee_fields(
+    tip: u64,
+    l1_gas_bounds: &ResourceBounds,
+    l2_gas_bounds: &ResourceBounds,
+) -> FieldElement {
+    poseidon_hash_many(&[
+        tip.into(),
+        encode_gas_bound(b"L1_GAS", l1_gas_bounds),
+        encode_gas_bound(b"L2_GAS", l2_gas_bounds),
+    ])
+}
+
+fn encode_da_mode(
+    nonce_da_mode: &DataAvailabilityMode,
+    fee_da_mode: &DataAvailabilityMode,
+) -> FieldElement {
+    let nonce = (*nonce_da_mode as u64) << 32;
+    let fee = *fee_da_mode as u64;
+    FieldElement::from(nonce + fee)
 }

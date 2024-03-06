@@ -1,0 +1,13 @@
+kind = "DojoModel"
+class_hash = "0x7660a792b6d4e2c6790ff6df004cc1f903343ed7ccd8ea3da57e6163b05126b"
+name = "types_test::models::record_sibling"
+
+[[members]]
+name = "record_id"
+type = "u32"
+key = true
+
+[[members]]
+name = "random_u8"
+type = "u8"
+key = false

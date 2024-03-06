@@ -45,6 +45,15 @@ message Entity {
     repeated Model models = 2;
 }
 
+message Event {
+    // The event's keys
+    repeated bytes keys = 1;
+    // Data of the event
+    repeated bytes data = 2;
+    // event's transaction hash
+    bytes transaction_hash = 3;
+}
+
 message StorageEntry {
     // The key of the changed value
     string key = 1;
@@ -75,6 +84,12 @@ message Query {
     uint32 offset = 3;
 }
 
+message EventQuery {
+    EventKeysClause keys =1;
+    uint32 limit = 2;
+    uint32 offset = 3;
+}
+
 message Clause {
     oneof clause_type {
         HashedKeysClause hashed_keys = 1;
@@ -86,6 +101,10 @@ message Clause {
 
 message HashedKeysClause {
     repeated bytes hashed_keys = 1;
+}
+
+message EventKeysClause {
+    repeated bytes keys = 1;
 }
 
 message KeysClause {

@@ -54,9 +54,6 @@ fn spawn_test_world(models: Array<felt252>) -> IWorldDispatcher {
 
     let world = IWorldDispatcher { contract_address: world_address };
 
-    // Register the resource metadata.
-    world.register_model(resource_metadata::TEST_CLASS_HASH.try_into().unwrap());
-
     // register models
     let mut index = 0;
     loop {
