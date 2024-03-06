@@ -3,7 +3,7 @@ use dojo_examples::models::{Position, Vec2};
 #[dojo::interface]
 trait IActions {
     fn spawn();
-    fn move(direction: dojo_examples::models::Direction);
+    fn move(direction: Direction);
 }
 
 #[dojo::interface]
