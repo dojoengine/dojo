@@ -435,8 +435,8 @@ impl Sql {
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "DROP TABLE IF EXISTS [{table_id}]; CREATE TABLE [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
-             event_id, "
+            "DROP TABLE IF EXISTS [{table_id}]; CREATE TABLE [{table_id}] (entity_id TEXT NOT \
+             NULL PRIMARY KEY, event_id, "
         );
 
         if let Ty::Struct(s) = model {
