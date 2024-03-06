@@ -12,7 +12,7 @@ use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
-    ReceiptProvider, TransactionTraceProvider, TransactionProvider, TransactionStatusProvider,
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;

@@ -157,7 +157,7 @@ impl Blockchain {
     ) -> SayaResult<Vec<TransactionExecutionInfo>> {
         let block_number = block.header.header.number;
         let state_reader = self.state(&BlockIdOrTag::Number(block_number - 1))?;
-        let state: CachedStateWrapper<StateRefDb> = CachedStateWrapper::new(state_reader.into());
+        let state: CachedStateWrapper = CachedStateWrapper::new(StateRefDb(state_reader));
 
         let mut exec_txs: Vec<ExecutableTxWithHash> = vec![];
         for tx_with_hash in &block.body {

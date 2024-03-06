@@ -38,8 +38,8 @@ use crate::traits::env::BlockEnvProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionStatusProvider,
-    TransactionsProviderExt, TransactionTraceProvider,
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
+    TransactionsProviderExt,
 };
 use crate::ProviderResult;
 

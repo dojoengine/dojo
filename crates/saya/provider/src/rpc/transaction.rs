@@ -1,9 +1,12 @@
 //! Transactions related conversions.
 use katana_primitives::chain::ChainId;
 use katana_primitives::transaction::{
-    DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeployAccountTx, DeployAccountTxV1, DeployAccountTxV3, InvokeTx, L1HandlerTx, Tx, TxWithHash, InvokeTxV1, InvokeTxV3,
+    DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeployAccountTx, DeployAccountTxV1,
+    DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, L1HandlerTx, Tx, TxWithHash,
 };
-use starknet::core::types::{DeclareTransaction, DeployAccountTransaction, FieldElement, InvokeTransaction, Transaction};
+use starknet::core::types::{
+    DeclareTransaction, DeployAccountTransaction, FieldElement, InvokeTransaction, Transaction,
+};
 
 use crate::ProviderResult;
 
@@ -152,8 +155,8 @@ pub fn tx_from_rpc(tx_rpc: &Transaction, chain_id: ChainId) -> ProviderResult<Tx
                     nonce_data_availability_mode: tx.nonce_data_availability_mode.clone(),
                     fee_data_availability_mode: tx.fee_data_availability_mode.clone(),
                 })),
-            })
-        }
+            }),
+        },
         Transaction::Deploy(_) => {
             panic!("Deploy transaction not supported");
         }

@@ -10,7 +10,8 @@ use katana_primitives::conversion::rpc::{
 };
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
-    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxExecInfo, TxWithHash,
+    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxExecInfo, TxHash,
+    TxWithHash,
 };
 use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};

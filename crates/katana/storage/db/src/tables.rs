@@ -4,7 +4,7 @@ use katana_primitives::contract::{
     StorageKey,
 };
 use katana_primitives::receipt::Receipt;
-use katana_primitives::transaction::{Tx, TxHash, TxExecInfo, TxNumber};
+use katana_primitives::transaction::{Tx, TxExecInfo, TxHash, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
