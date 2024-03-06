@@ -104,6 +104,13 @@ pub struct GenesisClassJson {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum ClassOrHash {
+    ClassName(String),
+    ClassHash(ClassHash),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeTokenConfigJson {
     pub name: String,
@@ -112,7 +119,7 @@ pub struct FeeTokenConfigJson {
     pub decimals: u8,
     /// The class hash of the fee token contract.
     /// If not provided, the default fee token class is used.
-    pub class: Option<ClassHash>,
+    pub class: Option<ClassOrHash>,
     /// To initialize the fee token contract storage
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
@@ -124,7 +131,7 @@ pub struct UniversalDeployerConfigJson {
     pub address: Option<ContractAddress>,
     /// The class hash of the universal deployer contract.
     /// If not provided, the default UD class is used.
-    pub class: Option<ClassHash>,
+    pub class: Option<ClassOrHash>,
     /// To initialize the UD contract storage
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
@@ -132,7 +139,7 @@ pub struct UniversalDeployerConfigJson {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisContractJson {
-    pub class: Option<ClassHash>,
+    pub class: Option<ClassOrHash>,
     pub balance: Option<U256>,
     pub nonce: Option<FieldElement>,
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
@@ -188,6 +195,7 @@ pub enum GenesisJsonError {
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+
 }
 
 // The JSON representation of the [Genesis] configuration. This `struct` is used to deserialize
@@ -281,73 +289,89 @@ impl TryFrom<GenesisJson> for Genesis {
     type Error = GenesisJsonError;
 
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
-        let mut classes: HashMap<ClassHash, GenesisClass> = value
-            .classes
-            .into_par_iter()
-            .map(|entry| {
-                let GenesisClassJson { class, class_hash, name } = entry;
-                // Use name if present
-                let artifact = match class {
-                    PathOrFullArtifact::Artifact(artifact) => artifact,
-                    PathOrFullArtifact::Path(path) => {
-                        return Err(GenesisJsonError::UnresolvedClassPath(path));
-                    }
-                };
-                
-                let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
-
-                let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
-                    Ok(sierra) => {
-                        let casm: ContractClass = serde_json::from_value(artifact)?;
-                        let casm = CasmContractClass::from_contract_class(casm, true)?;
-
-                        // check if the class hash is provided, otherwise compute it from the
-                        // artifacts
-                        let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
-                        let compiled_hash = casm.compiled_class_hash().to_be_bytes();
-
-                        (
-                            class_hash,
-                            FieldElement::from_bytes_be(&compiled_hash)?,
-                            Some(Arc::new(sierra.flatten()?)),
-                            Arc::new(CompiledContractClass::V1(CompiledContractClassV1::try_from(
-                                casm,
-                            )?)),
-                        )
-                    }
-
-                    // if the artifact is not a sierra contract, we check if it's a legacy contract
-                    Err(_) => {
-                        let casm: CompiledContractClassV0 =
-                            serde_json::from_value(artifact.clone())?;
-
-                        let class_hash = if let Some(class_hash) = class_hash {
-                            class_hash
-                        } else {
-                            let casm: LegacyContractClass =
-                                serde_json::from_value(artifact.clone())?;
-                            casm.class_hash()?
+                let mut name_to_class_hash = HashMap::new();
+                let mut classes: HashMap<ClassHash, GenesisClass> = value
+                    .classes
+                    .into_par_iter()
+                    .map(|entry| {
+                        let GenesisClassJson { class, class_hash, name } = entry;
+                        // Use name if present
+                        if let (Some(name), Some(class_hash)) = (name, class_hash) {
+                    name_to_class_hash.insert(name, class_hash);
+                }
+                        let artifact = match class {
+                            PathOrFullArtifact::Artifact(artifact) => artifact,
+                            PathOrFullArtifact::Path(path) => {
+                                return Err(GenesisJsonError::UnresolvedClassPath(path));
+                            }
                         };
-                        (class_hash, class_hash, None, Arc::new(CompiledContractClass::V0(casm)))
-                    }
-                };
+                        
+                        let sierra = serde_json::from_value::<SierraClass>(artifact.clone());
 
-                Ok((class_hash, GenesisClass { name, compiled_class_hash, sierra, casm }))
-            })
-            .collect::<Result<_, GenesisJsonError>>()?;
+                        let (class_hash, compiled_class_hash, sierra, casm) = match sierra {
+                            Ok(sierra) => {
+                                let casm: ContractClass = serde_json::from_value(artifact)?;
+                                let casm = CasmContractClass::from_contract_class(casm, true)?;
 
-        let mut fee_token = FeeTokenConfig {
+                                // check if the class hash is provided, otherwise compute it from the
+                                // artifacts
+                                let class_hash = class_hash.unwrap_or(sierra.class_hash()?);
+                                let compiled_hash = casm.compiled_class_hash().to_be_bytes();
+
+                                (
+                                    class_hash,
+                                    FieldElement::from_bytes_be(&compiled_hash)?,
+                                    Some(Arc::new(sierra.flatten()?)),
+                                    Arc::new(CompiledContractClass::V1(CompiledContractClassV1::try_from(
+                                        casm,
+                                    )?)),
+                                )
+                            }
+
+                            // if the artifact is not a sierra contract, we check if it's a legacy contract
+                            Err(_) => {
+                                let casm: CompiledContractClassV0 =
+                                    serde_json::from_value(artifact.clone())?;
+
+                                let class_hash = if let Some(class_hash) = class_hash {
+                                    class_hash
+                                } else {
+                                    let casm: LegacyContractClass =
+                                        serde_json::from_value(artifact.clone())?;
+                                    casm.class_hash()?
+                                };
+                                (class_hash, class_hash, None, Arc::new(CompiledContractClass::V0(casm)))
+                            }
+                        };
+
+                        // Add the class name and class hash to the mapping
+                        let _ = name.map(|name| {
+                            name_to_class_hash.insert(name, class_hash);
+                        });
+
+                        Ok((class_hash, GenesisClass { compiled_class_hash, sierra, casm }))
+                    })
+                    .collect::<Result<_, GenesisJsonError>>()?;
+
+        // Populate the classes and name_to_class_hash
+             let mut fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
             total_supply: U256::zero(),
             decimals: value.fee_token.decimals,
             address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
-            class_hash: value.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
+            class_hash: match value.fee_token.class {
+        Some(ClassOrHash::ClassHash(class_hash)) => class_hash,
+        Some(ClassOrHash::ClassName(class_name)) => {
+            *name_to_class_hash.get(&class_name).ok_or_else(|| value_out_of_range_error::ValueOutOfRangeError)?
+        },
+        None => DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+    }, 
             storage: value.fee_token.storage,
         };
 
         match value.fee_token.class {
-            Some(hash) => {
+            Some(ClassOrHash::ClassHash(hash)) => {
                 if !classes.contains_key(&hash) {
                     return Err(GenesisJsonError::MissingClass(hash));
                 }
@@ -359,7 +383,6 @@ impl TryFrom<GenesisJson> for Genesis {
                 let _ = classes.insert(
                     DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
                     GenesisClass {
-                        name: Some(name),
                         sierra: None,
                         casm: Arc::new(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()),
                         compiled_class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
@@ -392,7 +415,6 @@ impl TryFrom<GenesisJson> for Genesis {
                     let _ = classes.insert(
                         DEFAULT_LEGACY_UDC_CLASS_HASH,
                         GenesisClass {
-                            name: Some(name),
                             sierra: None,
                             casm: Arc::new(DEFAULT_LEGACY_UDC_CASM.clone()),
                             compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
@@ -427,7 +449,6 @@ impl TryFrom<GenesisJson> for Genesis {
                     {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
-                            name: None,
                             casm: Arc::new(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()),
                             sierra: Some(Arc::new(
                                 DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap(),

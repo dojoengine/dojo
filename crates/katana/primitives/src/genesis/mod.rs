@@ -56,7 +56,6 @@ pub struct FeeTokenConfig {
 #[serde_with::serde_as]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct GenesisClass {
-    name: Option<String>,
     /// The compiled class hash of the contract class.
     #[serde_as(as = "UfeHex")]
     pub compiled_class_hash: CompiledClassHash,
