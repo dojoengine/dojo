@@ -215,11 +215,70 @@ impl DojoContract {
         (name, modifiers, param_type)
     }
 
+    /// Check if the function has a self parameter.
+    ///
+    /// Returns
+    ///  * a boolean indicating if `self` has to be added,
+    //   * a boolean indicating if there is a `ref self` parameter.
+    pub fn check_self_parameter(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        param_list: ast::ParamList,
+    ) -> (bool, bool) {
+        let mut add_self = true;
+        let mut has_ref_self = false;
+        if !param_list.elements(db).is_empty() {
+            let (param_name, param_modifiers, param_type) =
+                self.get_parameter_info(db, param_list.elements(db)[0].clone());
+
+            if param_name.eq(&"self".to_string()) {
+                if param_modifiers.contains(&"ref".to_string())
+                    && param_type.eq(&"ContractState".to_string())
+                {
+                    has_ref_self = false;
+                    add_self = false;
+                }
+
+                if param_type.eq(&"@ContractState".to_string()) {
+                    add_self = false;
+                }
+            }
+        };
+
+        (add_self, has_ref_self)
+    }
+
+    /// Check if the function has multiple IWorldDispatcher parameters.
+    ///
+    /// Returns
+    ///  * a boolean indicating if the function has multiple world dispatchers.
+    pub fn check_world_dispatcher(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        param_list: ast::ParamList,
+    ) -> bool {
+        let mut count = 0;
+
+        param_list.elements(db).iter().for_each(|param| {
+            let (_, _, param_type) = self.get_parameter_info(db, param.clone());
+
+            if param_type.eq(&"IWorldDispatcher".to_string()) {
+                count += 1;
+            }
+        });
+
+        count > 1
+    }
+
     /// Rewrites parameter list by:
     ///  * adding `self` parameter if missing,
-    ///  * removing `world` if present as it will be read from the first function statement.
+    ///  * removing `world` if present as first parameter (self excluded), as it will be read from
+    ///    the first function statement.
     ///
-    /// Reports an error in case of `ref self` as systems are supposed to be 100% stateless.
+    /// Reports an error in case of:
+    ///  * `ref self`, as systems are supposed to be 100% stateless,
+    ///  * multiple IWorldDispatcher parameters.
+    ///  * the `IWorldDispatcher` is not the first parameter (self excluded) and named 'world'.
     ///
     /// Returns
     ///  * the list of parameters in a String
@@ -231,50 +290,69 @@ impl DojoContract {
         param_list: ast::ParamList,
         diagnostic_item: ids::SyntaxStablePtrId,
     ) -> (String, bool, bool) {
+        let (add_self, has_ref_self) = self.check_self_parameter(db, param_list.clone());
+        let has_multiple_world_dispatchers = self.check_world_dispatcher(db, param_list.clone());
+
         let mut world_removed = false;
 
         let mut params = param_list
             .elements(db)
             .iter()
-            .filter_map(|e| {
-                let (name, modifiers, param_type) = self.get_parameter_info(db, e.clone());
+            .enumerate()
+            .filter_map(|(idx, param)| {
+                let (name, modifiers, param_type) = self.get_parameter_info(db, param.clone());
 
-                if name.eq(&"world".to_string())
+                if param_type.eq(&"IWorldDispatcher".to_string())
                     && modifiers.eq(&"".to_string())
-                    && param_type.eq(&"IWorldDispatcher".to_string())
+                    && !has_multiple_world_dispatchers
                 {
-                    world_removed = true;
-                    None
+                    let has_good_pos = (add_self && idx == 0) || (!add_self && idx == 1);
+                    let has_good_name = name.eq(&"world".to_string());
+                    
+                    if has_good_pos && has_good_name {
+                        world_removed = true;
+                        None
+                    }
+                    else {
+                        if !has_good_pos {
+                            self.diagnostics.push(PluginDiagnostic {
+                                stable_ptr: param.stable_ptr().untyped(),
+                                message: "The IWorldDispatcher parameter must be the first parameter of the function (self excluded).".to_string(),
+                                severity: Severity::Error,
+                            });
+                        }
+
+                        if !has_good_name {
+                            self.diagnostics.push(PluginDiagnostic {
+                                stable_ptr: param.stable_ptr().untyped(),
+                                message: "The IWorldDispatcher parameter must be named 'world'.".to_string(),
+                                severity: Severity::Error,
+                            });
+                        }
+                        Some(param.as_syntax_node().get_text(db))
+                    }
                 } else {
-                    Some(e.as_syntax_node().get_text(db))
+                    Some(param.as_syntax_node().get_text(db))
                 }
             })
             .collect::<Vec<_>>();
 
-        let mut add_self = true;
-        if !params.is_empty() {
-            let (param_name, param_modifiers, param_type) =
-                self.get_parameter_info(db, param_list.elements(db)[0].clone());
+        if has_multiple_world_dispatchers {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: diagnostic_item,
+                message: "Only one parameter of type IWorldDispatcher is allowed.".to_string(),
+                severity: Severity::Error,
+            });
+        }
 
-            if param_name.eq(&"self".to_string()) {
-                if param_modifiers.contains(&"ref".to_string())
-                    && param_type.eq(&"ContractState".to_string())
-                {
-                    self.diagnostics.push(PluginDiagnostic {
-                        stable_ptr: diagnostic_item,
-                        message: "Functions of dojo::contract cannot have `ref self` parameter."
-                            .to_string(),
-                        severity: Severity::Error,
-                    });
-
-                    add_self = false;
-                }
-
-                if param_type.eq(&"@ContractState".to_string()) {
-                    add_self = false;
-                }
-            }
-        };
+        if has_ref_self {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: diagnostic_item,
+                message: "Functions of dojo::contract cannot have 'ref self' parameter."
+                    .to_string(),
+                severity: Severity::Error,
+            });
+        }
 
         if add_self {
             params.insert(0, "self: @ContractState".to_string());
@@ -301,7 +379,7 @@ impl DojoContract {
 
     /// Rewrites function declaration by:
     ///  * adding `self` parameter if missing,
-    ///  * removing `world` if present,
+    ///  * removing `world` if present as first parameter (self excluded),
     ///  * adding `let world = self.world_dispatcher.read();` statement at the beginning of the
     ///    function to restore the removed `world` parameter.
     pub fn rewrite_function(

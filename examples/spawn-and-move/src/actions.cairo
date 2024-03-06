@@ -1,4 +1,4 @@
-use dojo_examples::models::{Position, Vec2};
+use dojo_examples::models::{Direction, Position, Vec2};
 
 #[dojo::interface]
 trait IActions {
@@ -82,7 +82,7 @@ mod actions {
             );
         }
 
-        fn move(direction: Direction, world: IWorldDispatcher) {
+        fn move(world: IWorldDispatcher, direction: Direction) {
             let player = get_caller_address();
             let (mut position, mut moves) = get!(world, player, (Position, Moves));
             moves.remaining -= 1;
