@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709707682125,
+  "lastUpdate": 1709819527257,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2275,6 +2275,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 966909,
             "range": "± 37324",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9f062c3f84ca94ee5ed43926a041e7cd42f5d3c9",
+          "message": "Bump Cairo to `v2.5.4` (#1607)\n\n* bump cairo to 2.5.4\r\n\r\n* fix test",
+          "timestamp": "2024-03-07T08:42:44-05:00",
+          "tree_id": "78aa2969a25a4ff80c8702841a54edafeaa3e2ae",
+          "url": "https://github.com/dojoengine/dojo/commit/9f062c3f84ca94ee5ed43926a041e7cd42f5d3c9"
+        },
+        "date": 1709819526724,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 968445,
+            "range": "± 77940",
             "unit": "ns/iter"
           }
         ]
