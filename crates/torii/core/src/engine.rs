@@ -6,8 +6,8 @@ use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use futures_util::lock::Mutex;
 use starknet::core::types::{
-    BlockId, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, BlockWithTxs, EmittedEvent, Event, EventFilter, InvokeTransaction,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -124,32 +124,23 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
 
     pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<()> {
         // Process all blocks from current to latest.
-        let blocks = Arc::new(Mutex::new(Vec::new()));
+        let events_page = self
+            .provider
+            .get_events(
+                EventFilter {
+                    from_block: Some(BlockId::Number(from)),
+                    to_block: Some(BlockId::Number(to)),
+                    address: Some(self.world.address),
+                    keys: None,
+                },
+                None,
+                u64::MAX,
+            )
+            .await?;
 
-        thread::scope(|s| {
-            while from <= to {
-                s.spawn(|| async {
-                    blocks.lock().await.push(self.provider.get_block_with_txs(BlockId::Number(from)).await);
-                });
-            }
-        });
-        
-
-        for block in blocks.lock().await.iter() {
-            let block_with_txs = match block {
-                Ok(block) => block,
-                Err(e) => {
-                    error!("getting block: {}", e);
-                    continue;
-                }
-            };
-
-            // send the current block number
-            if let Some(ref block_tx) = self.block_tx {
-                block_tx.send(from).await.expect("failed to send block number to gRPC server");
-            }
-
-            match self.process(block_with_txs.clone()).await {
+        let mut current_block: u64 = 0;
+        for event in events_page.events {
+            match self.process(event, &mut current_block).await {
                 Ok(_) => {
                     self.db.set_head(from);
                     self.db.execute().await?;
@@ -165,34 +156,28 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
         Ok(())
     }
 
-    async fn process(&mut self, block: MaybePendingBlockWithTxs) -> Result<()> {
-        let block: BlockWithTxs = match block {
-            MaybePendingBlockWithTxs::Block(block) => block,
-            _ => return Ok(()),
-        };
+    async fn process(&mut self, event: EmittedEvent, current_block: &mut u64) -> Result<()> {
+        if event.block_number.unwrap() > *current_block {
+            *current_block = event.block_number.unwrap();
 
-        Self::process_block(self, &block).await?;
+            if let Some(ref block_tx) = self.block_tx {
+                block_tx.send(event.block_number.unwrap()).await?;
+            }
 
-        for (tx_idx, transaction) in block.clone().transactions.iter().enumerate() {
-            let transaction_hash = match transaction {
-                Transaction::Invoke(invoke_transaction) => {
-                    if let InvokeTransaction::V1(invoke_transaction) = invoke_transaction {
-                        invoke_transaction.transaction_hash
-                    } else {
-                        continue;
-                    }
-                }
-                Transaction::L1Handler(l1_handler_transaction) => {
-                    l1_handler_transaction.transaction_hash
-                }
-                _ => continue,
-            };
-
-            self.process_transaction_and_receipt(transaction_hash, transaction, &block, tx_idx)
+            Self::process_block(self, event.block_number.unwrap(), event.block_hash.unwrap())
                 .await?;
+            info!("processed block: {}", event.block_number.unwrap());
+
+            self.db.set_head(event.block_number.unwrap());
         }
 
-        info!("processed block: {}", block.block_number);
+        let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
+        self.process_transaction_and_receipt(
+            event.transaction_hash,
+            &transaction,
+            event.block_number.unwrap(),
+        )
+        .await?;
 
         Ok(())
     }
@@ -201,8 +186,7 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
         &mut self,
         transaction_hash: FieldElement,
         transaction: &Transaction,
-        block: &BlockWithTxs,
-        tx_idx: usize,
+        block_number: u64,
     ) -> Result<()> {
         let receipt = match self.provider.get_transaction_receipt(transaction_hash).await {
             Ok(receipt) => match receipt {
@@ -235,34 +219,38 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
 
                 world_event = true;
                 let event_id =
-                    format!("0x{:064x}:0x{:04x}:0x{:04x}", block.block_number, tx_idx, event_idx);
+                    format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
 
-                Self::process_event(self, block, &receipt, &event_id, event).await?;
+                Self::process_event(self, block_number, &receipt, &event_id, event).await?;
             }
 
             if world_event {
-                let transaction_id = format!("0x{:064x}:0x{:04x}", block.block_number, tx_idx);
-
-                Self::process_transaction(self, block, &receipt, &transaction_id, transaction)
-                    .await?;
+                Self::process_transaction(
+                    self,
+                    block_number,
+                    &receipt,
+                    transaction_hash,
+                    transaction,
+                )
+                .await?;
             }
         }
 
         Ok(())
     }
 
-    async fn process_block(&mut self, block: &BlockWithTxs) -> Result<()> {
+    async fn process_block(&mut self, block_number: u64, block_hash: FieldElement) -> Result<()> {
         for processor in &self.processors.block {
-            processor.process(self.db, self.provider.as_ref(), block).await?;
+            processor.process(self.db, self.provider.as_ref(), block_number, block_hash).await?;
         }
         Ok(())
     }
 
     async fn process_transaction(
         &mut self,
-        block: &BlockWithTxs,
+        block_number: u64,
         transaction_receipt: &TransactionReceipt,
-        transaction_id: &str,
+        transaction_hash: FieldElement,
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
@@ -270,10 +258,10 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
                 .process(
                     self.db,
                     self.provider.as_ref(),
-                    block,
+                    block_number,
                     transaction_receipt,
+                    transaction_hash,
                     transaction,
-                    transaction_id,
                 )
                 .await?
         }
@@ -283,7 +271,7 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
 
     async fn process_event(
         &mut self,
-        block: &BlockWithTxs,
+        block_number: u64,
         transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
@@ -301,7 +289,14 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, self.db, block, transaction_receipt, event_id, event)
+                    .process(
+                        &self.world,
+                        self.db,
+                        block_number,
+                        transaction_receipt,
+                        event_id,
+                        event,
+                    )
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {
