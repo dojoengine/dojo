@@ -3,10 +3,10 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Context, Ok, Result};
 use clap::Parser;
-use dojo_lang::compiler::DojoCompiler;
+use dojo_lang::compiler::{DojoCompiler, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::compile_workspace;
-use dojo_world::manifest::Manifest;
+use dojo_world::manifest::DeployedManifest;
 use futures::executor::block_on;
 use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;
@@ -15,6 +15,8 @@ use scarb::ops::CompileOpts;
 use sozo::args::{Commands, SozoArgs};
 use sozo::ops::migration;
 use starknet::core::types::FieldElement;
+use starknet::core::utils::parse_cairo_short_string;
+use starknet::providers::Provider;
 use tokio::process::Command;
 
 use crate::{CONTRACT, CONTRACT_RELATIVE_TO_TESTS, RUNTIME};
@@ -104,18 +106,25 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
         }
     }
 
-    let target_dir = ws.target_dir().path_existent().unwrap();
-    let target_dir = target_dir.join(ws.config().profile().as_str());
+    compile_workspace(
+        &config,
+        CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
+    )?;
 
-    if !target_dir.join("manifest.json").exists() {
-        compile_workspace(
-            &config,
-            CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-        )?;
-    }
-    let manifest = Manifest::load_from_path(target_dir.join("manifest.json"))
-        .expect("failed to load manifest");
+    let manifest_dir = ws.manifest_path().parent().unwrap();
+    let chain_id = migrate.starknet.provider(None).unwrap().chain_id().await.unwrap();
+    let chain_id = parse_cairo_short_string(&chain_id).unwrap();
 
-    migration::execute(&ws, migrate, target_dir).await?;
-    Ok(manifest.contracts[0].address.unwrap())
+    migration::execute(&ws, migrate, None).await?;
+
+    let manifest = DeployedManifest::load_from_path(
+        &manifest_dir
+            .join(MANIFESTS_DIR)
+            .join(DEPLOYMENTS_DIR)
+            .join(chain_id)
+            .with_extension("toml"),
+    )
+    .expect("failed to load manifest");
+
+    Ok(manifest.contracts[0].inner.address.unwrap())
 }

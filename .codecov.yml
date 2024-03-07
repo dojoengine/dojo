@@ -10,9 +10,9 @@ coverage:
   status:
     patch:
       default:
-        target: auto # target coverage percentage for the diff
-        threshold: 2.5%
+        target: auto
+        only_pulls: true
     project:
       default:
-        target: auto # the required coverage value
-        threshold: 2.5% # the leniency in hitting the target
+        target: auto
+        only_pulls: true

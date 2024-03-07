@@ -1,0 +1,23 @@
+kind = "DojoModel"
+class_hash = "0xf7a5bcc533f76d67c228de4583d2460538bb98900ad073c61c4ab18023b1ef"
+name = "types_test::models::subrecord"
+
+[[members]]
+name = "record_id"
+type = "u32"
+key = true
+
+[[members]]
+name = "subrecord_id"
+type = "u32"
+key = true
+
+[[members]]
+name = "type_u8"
+type = "u8"
+key = false
+
+[[members]]
+name = "random_u8"
+type = "u8"
+key = false

@@ -10,7 +10,7 @@ use dojo_test_utils::sequencer::{
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::Manifest;
+use dojo_world::manifest::DeployedManifest;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use serde::Deserialize;
@@ -260,7 +260,9 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-    let migration = prepare_migration("../types-test/target/dev".into()).unwrap();
+    let base_path = "../types-test";
+    let target_path = format!("{}/target/dev", base_path);
+    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
@@ -278,12 +280,14 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     let manifest =
-        Manifest::load_from_remote(&provider, migration.world_address().unwrap()).await.unwrap();
+        DeployedManifest::load_from_remote(&provider, migration.world_address().unwrap())
+            .await
+            .unwrap();
 
     //  Execute `create` and insert 11 records into storage
     let records_contract =
         manifest.contracts.iter().find(|contract| contract.name.eq("records")).unwrap();
-    let record_contract_address = records_contract.address.unwrap();
+    let record_contract_address = records_contract.inner.address.unwrap();
     let InvokeTransactionResult { transaction_hash } = account
         .execute(vec![Call {
             calldata: vec![FieldElement::from_str("0xa").unwrap()],

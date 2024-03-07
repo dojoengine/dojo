@@ -19,7 +19,8 @@ async fn test_model() {
     let provider = account.provider();
     let world_address = deploy_world(
         &sequencer,
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
+        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
+        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
     )
     .await;
 
