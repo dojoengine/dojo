@@ -136,7 +136,7 @@ impl Provider for JsonRpcProvider {
                 ContractClass::Legacy(legacy) => {
                     trace!(target: LOG_TARGET, version = "cairo 0", %class_hash, "set contract class");
 
-                    let (hash, class) = rpc_converter::legacy_rpc_to_inner_compiled_class(&legacy)?;
+                    let (hash, class) = rpc_converter::legacy_rpc_to_compiled_class(&legacy)?;
                     state_updates_with_classes.declared_compiled_classes.insert(hash, class);
                 }
                 ContractClass::Sierra(s) => {

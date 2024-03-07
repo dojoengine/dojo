@@ -3,6 +3,7 @@ use std::fmt;
 use derive_more::Deref;
 use starknet::core::utils::normalize_address;
 
+use crate::class::ClassHash;
 use crate::FieldElement;
 
 /// Represents the type for a contract storage key.
@@ -10,16 +11,8 @@ pub type StorageKey = FieldElement;
 /// Represents the type for a contract storage value.
 pub type StorageValue = FieldElement;
 
-/// The canonical hash of a contract class. This is the class hash value of a contract instance.
-pub type ClassHash = FieldElement;
-/// The hash of a compiled contract class.
-pub type CompiledClassHash = FieldElement;
-
 /// Represents the type for a contract nonce.
 pub type Nonce = FieldElement;
-
-pub type SierraClass = starknet::core::types::contract::SierraClass;
-pub type FlattenedSierraClass = starknet::core::types::FlattenedSierraClass;
 
 /// Represents a contract address.
 #[derive(Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Debug, Deref)]
@@ -59,13 +52,3 @@ pub struct GenericContractInfo {
     /// The hash of the contract class.
     pub class_hash: ClassHash,
 }
-
-/// Represents a runnable Starknet contract class (meaning, the program is runnable by the VM).
-#[cfg(feature = "blockifier")]
-pub type CompiledContractClass = ::blockifier::execution::contract_class::ContractClass;
-/// V0 of the compiled contract class
-#[cfg(feature = "blockifier")]
-pub type CompiledContractClassV0 = ::blockifier::execution::contract_class::ContractClassV0;
-/// V1 of the compiled contract class
-#[cfg(feature = "blockifier")]
-pub type CompiledContractClassV1 = ::blockifier::execution::contract_class::ContractClassV1;

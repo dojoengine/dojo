@@ -9,9 +9,6 @@ use katana_provider::error::ProviderError;
 
 use crate::transaction::TransactionsPageCursor;
 
-// TODO: to be removed once merge with execution abstraction.
-pub type TxWithHashAndReceiptPair = (TxWithHash, TxReceiptWithExecInfo);
-
 #[derive(Debug, thiserror::Error)]
 #[repr(i32)]
 pub enum ToriiApiError {
@@ -71,3 +68,4 @@ impl From<ToriiApiError> for Error {
         Error::Call(CallError::Custom(err))
     }
 }
+

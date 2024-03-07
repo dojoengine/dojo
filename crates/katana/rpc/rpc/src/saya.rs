@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::sequencer::KatanaSequencer;
+use katana_executor::ExecutorFactory;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_provider::traits::transaction::TransactionTraceProvider;
 use katana_rpc_api::saya::SayaApiServer;
@@ -9,13 +10,18 @@ use katana_rpc_types::error::saya::SayaApiError;
 use katana_rpc_types::transaction::{TransactionsExecutionsPage, TransactionsPageCursor};
 use katana_tasks::TokioTaskSpawner;
 
-#[derive(Clone)]
-pub struct SayaApi {
-    sequencer: Arc<KatanaSequencer>,
+pub struct SayaApi<EF: ExecutorFactory> {
+    sequencer: Arc<KatanaSequencer<EF>>,
 }
 
-impl SayaApi {
-    pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
+impl<EF: ExecutorFactory> Clone for SayaApi<EF> {
+    fn clone(&self) -> Self {
+        Self { sequencer: self.sequencer.clone() }
+    }
+}
+
+impl<EF: ExecutorFactory> SayaApi<EF> {
+    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
         Self { sequencer }
     }
 
@@ -30,7 +36,7 @@ impl SayaApi {
 }
 
 #[async_trait]
-impl SayaApiServer for SayaApi {
+impl<EF: ExecutorFactory> SayaApiServer for SayaApi<EF> {
     async fn get_transactions_executions(
         &self,
         cursor: TransactionsPageCursor,

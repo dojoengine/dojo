@@ -8,8 +8,6 @@ use cairo_vm::vm::runners::builtin_runner::{
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
 };
-use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
-use katana_executor::blockifier::TransactionExecutor;
 use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlock, SealedBlockWithStatus, SealedHeader,
 };
@@ -143,60 +141,6 @@ impl Blockchain {
         let receipts = vec![];
 
         Ok(provider.insert_block_with_states_and_receipts(block, states, receipts, vec![])?)
-    }
-
-    /// Executes the transactions against the given state to retrieve
-    /// the transaction execution info.
-    ///
-    /// TODO: to be replaced by Katana endpoint that exposes the execution info
-    /// for all transactions in a block.
-    pub fn execute_transactions(
-        &self,
-        block: &SealedBlock,
-        block_context: &BlockContext,
-    ) -> SayaResult<Vec<TransactionExecutionInfo>> {
-        let block_number = block.header.header.number;
-        let state_reader = self.state(&BlockIdOrTag::Number(block_number - 1))?;
-        let state: CachedStateWrapper = CachedStateWrapper::new(StateRefDb(state_reader));
-
-        let mut exec_txs: Vec<ExecutableTxWithHash> = vec![];
-        for tx_with_hash in &block.body {
-            match &tx_with_hash.transaction {
-                Tx::Invoke(t) => exec_txs.push(ExecutableTxWithHash {
-                    hash: tx_with_hash.hash,
-                    transaction: (*t).clone().into(),
-                }),
-                Tx::L1Handler(t) => exec_txs.push(ExecutableTxWithHash {
-                    hash: tx_with_hash.hash,
-                    transaction: (*t).clone().into(),
-                }),
-                Tx::DeployAccount(t) => exec_txs.push(ExecutableTxWithHash {
-                    hash: tx_with_hash.hash,
-                    transaction: (*t).clone().into(),
-                }),
-                // TODO DECLARE with class.
-                _ => {}
-            }
-        }
-
-        // TODO: this must be the same as katana.
-        let disable_fee = false;
-        let disable_validate = false;
-
-        let exec_infos: Vec<TransactionExecutionInfo> = TransactionExecutor::new(
-            &state,
-            block_context,
-            !disable_fee,
-            !disable_validate,
-            exec_txs.into_iter(),
-        )
-        .with_error_log()
-        .with_events_log()
-        .with_resources_log()
-        .filter_map(|res| if let Ok(info) = res { Some(info) } else { None })
-        .collect();
-
-        Ok(exec_infos)
     }
 }
 

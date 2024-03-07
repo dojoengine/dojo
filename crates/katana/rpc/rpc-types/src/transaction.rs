@@ -3,10 +3,11 @@ use std::sync::Arc;
 use anyhow::Result;
 use derive_more::Deref;
 use katana_primitives::chain::ChainId;
-use katana_primitives::contract::{ClassHash, ContractAddress};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
-    legacy_rpc_to_inner_compiled_class,
+    legacy_rpc_to_compiled_class,
 };
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
@@ -28,7 +29,7 @@ pub const CHUNK_SIZE_DEFAULT: u64 = 100;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
+pub struct BroadcastedInvokeTx(pub BroadcastedInvokeTransaction);
 
 impl BroadcastedInvokeTx {
     pub fn is_query(&self) -> bool {
@@ -68,7 +69,7 @@ impl BroadcastedInvokeTx {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedDeclareTx(BroadcastedDeclareTransaction);
+pub struct BroadcastedDeclareTx(pub BroadcastedDeclareTransaction);
 
 impl BroadcastedDeclareTx {
     /// Validates that the provided compiled class hash is computed correctly from the class
@@ -96,7 +97,7 @@ impl BroadcastedDeclareTx {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
                 let (class_hash, compiled_class) =
-                    legacy_rpc_to_inner_compiled_class(&tx.contract_class)?;
+                    legacy_rpc_to_compiled_class(&tx.contract_class)?;
 
                 Ok(DeclareTxWithClass {
                     compiled_class,
@@ -170,7 +171,7 @@ impl BroadcastedDeclareTx {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedDeployAccountTx(BroadcastedDeployAccountTransaction);
+pub struct BroadcastedDeployAccountTx(pub BroadcastedDeployAccountTransaction);
 
 impl BroadcastedDeployAccountTx {
     pub fn is_query(&self) -> bool {

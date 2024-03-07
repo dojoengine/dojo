@@ -9,9 +9,8 @@ use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
-use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -507,7 +506,7 @@ impl BlockWriter for ForkedProvider {
 }
 
 impl ContractClassWriter for ForkedProvider {
-    fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.state.shared_contract_classes.compiled_classes.write().insert(hash, class);
         Ok(())
     }

@@ -1,5 +1,5 @@
 [package]
-description = "Katana execution engine. This crate provides implementations for executing transactions."
+description = "Katana execution engine. This crate provides abstractions and implementations for transaction execution."
 edition.workspace = true
 name = "katana-executor"
 version.workspace = true
@@ -7,17 +7,39 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-katana-primitives = { path = "../primitives" }
-katana-provider = { path = "../storage/provider" }
+katana-primitives.workspace = true
+katana-provider.workspace = true
 
-anyhow.workspace = true
 convert_case.workspace = true
 futures.workspace = true
 parking_lot.workspace = true
+serde_json.workspace = true
 starknet.workspace = true
+starknet_api.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 
 # blockifier deps
-blockifier.workspace = true
-starknet_api.workspace = true
+blockifier = { workspace = true, optional = true }
+
+# starknet_in_rust deps
+cairo-lang-sierra = { workspace = true, optional = true }
+sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "47b65ca", optional = true }
+starknet-types-core = { version = "0.0.6", optional = true }
+
+[dev-dependencies]
+cairo-vm.workspace = true
+katana-provider.workspace = true
+katana-rpc-types.workspace = true
+rstest.workspace = true
+rstest_reuse.workspace = true
+serde_json.workspace = true
+similar-asserts.workspace = true
 tokio.workspace = true
+
+[features]
+default = [ "blockifier", "sir" ]
+
+blockifier = [ "dep:blockifier", "katana-primitives/blockifier" ]
+native = [ "sir", "sir/cairo-native" ]
+sir = [ "dep:sir", "dep:starknet-types-core" ]

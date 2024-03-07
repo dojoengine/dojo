@@ -1,7 +1,7 @@
 use starknet::core::crypto::compute_hash_on_elements;
 
 use crate::contract::ContractAddress;
-use crate::transaction::{TxHash, TxWithHash};
+use crate::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use crate::version::Version;
 use crate::FieldElement;
 
@@ -32,6 +32,7 @@ pub enum FinalityStatus {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
+    pub number: BlockNumber,
     pub parent_hash: FieldElement,
     pub gas_prices: GasPrices,
     pub timestamp: u64,
@@ -71,14 +72,10 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn new(
-        partial_header: PartialHeader,
-        number: BlockNumber,
-        state_root: FieldElement,
-    ) -> Self {
+    pub fn new(partial_header: PartialHeader, state_root: FieldElement) -> Self {
         Self {
-            number,
             state_root,
+            number: partial_header.number,
             version: partial_header.version,
             timestamp: partial_header.timestamp,
             gas_prices: partial_header.gas_prices,
@@ -109,7 +106,7 @@ impl Header {
 }
 
 /// Represents a Starknet full block.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Block {
     pub header: Header,
@@ -186,4 +183,12 @@ impl From<BlockHash> for BlockHashOrNumber {
     fn from(hash: BlockHash) -> Self {
         Self::Hash(hash)
     }
+}
+
+/// A block that can executed. This is a block whose transactions includes
+/// all the necessary information to be executed.
+#[derive(Debug, Clone)]
+pub struct ExecutableBlock {
+    pub header: PartialHeader,
+    pub body: Vec<ExecutableTxWithHash>,
 }

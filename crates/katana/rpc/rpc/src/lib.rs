@@ -19,6 +19,7 @@ use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
 use katana_core::sequencer::KatanaSequencer;
+use katana_executor::ExecutorFactory;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::katana::KatanaApiServer;
 use katana_rpc_api::saya::SayaApiServer;
@@ -33,7 +34,10 @@ use crate::saya::SayaApi;
 use crate::starknet::StarknetApi;
 use crate::torii::ToriiApi;
 
-pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Result<NodeHandle> {
+pub async fn spawn<EF: ExecutorFactory>(
+    sequencer: Arc<KatanaSequencer<EF>>,
+    config: ServerConfig,
+) -> Result<NodeHandle> {
     let mut methods = RpcModule::new(());
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
