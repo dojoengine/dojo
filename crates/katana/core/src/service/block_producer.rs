@@ -580,4 +580,3 @@ impl<EF: ExecutorFactory> Stream for InstantBlockProducer<EF> {
         Poll::Pending
     }
 }
-

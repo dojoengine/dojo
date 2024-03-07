@@ -9,10 +9,10 @@ use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_compiled_class,
 };
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
-    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxExecInfo, TxHash,
-    TxWithHash,
+    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash,
 };
 use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};

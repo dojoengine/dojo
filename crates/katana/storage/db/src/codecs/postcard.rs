@@ -1,7 +1,8 @@
 use katana_primitives::block::{BlockNumber, Header};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo};
 use katana_primitives::receipt::Receipt;
-use katana_primitives::transaction::{Tx, TxExecInfo};
+use katana_primitives::trace::TxExecInfo;
+use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use postcard;
 

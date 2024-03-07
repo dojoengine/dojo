@@ -26,7 +26,8 @@ use katana_primitives::contract::{
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::transaction::{TxExecInfo, TxHash, TxNumber, TxWithHash};
+use katana_primitives::trace::TxExecInfo;
+use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::FieldElement;
 
 use crate::error::ProviderError;

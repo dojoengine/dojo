@@ -14,13 +14,8 @@ use crate::{utils, FieldElement};
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
-/// The sequential number for all the transactions..
+/// The sequential number for all the transactions.
 pub type TxNumber = u64;
-
-/// Execution info of a transaction.
-#[cfg(feature = "blockifier")]
-pub type TxExecInfo = ::blockifier::transaction::objects::TransactionExecutionInfo;
-// TODO: define a fallback when blockifier is not used?
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

@@ -7,7 +7,8 @@ use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, Flat
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey, StorageValue};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
-use katana_primitives::transaction::{Tx, TxExecInfo, TxHash, TxNumber};
+use katana_primitives::trace::TxExecInfo;
+use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 use parking_lot::RwLock;
 
 type ContractStorageMap = HashMap<ContractAddress, HashMap<StorageKey, StorageValue>>;

@@ -11,7 +11,8 @@ use katana_primitives::block::{
 use katana_primitives::chain::ChainId;
 use katana_primitives::conversion::rpc as rpc_converter;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::transaction::{TxExecInfo, TxWithHash};
+use katana_primitives::trace::TxExecInfo;
+use katana_primitives::transaction::TxWithHash;
 use katana_primitives::version::Version;
 use katana_rpc_api::saya::SayaApiClient;
 use katana_rpc_types::transaction::{TransactionsExecutionsPage, TransactionsPageCursor};

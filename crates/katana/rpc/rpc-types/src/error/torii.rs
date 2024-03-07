@@ -68,4 +68,3 @@ impl From<ToriiApiError> for Error {
         Error::Call(CallError::Custom(err))
     }
 }
-

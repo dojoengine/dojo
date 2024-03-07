@@ -2,7 +2,8 @@ use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey};
 use katana_primitives::receipt::Receipt;
-use katana_primitives::transaction::{Tx, TxExecInfo, TxHash, TxNumber};
+use katana_primitives::trace::TxExecInfo;
+use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;

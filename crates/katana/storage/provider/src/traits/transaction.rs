@@ -2,7 +2,8 @@ use std::ops::Range;
 
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber, FinalityStatus};
 use katana_primitives::receipt::Receipt;
-use katana_primitives::transaction::{TxExecInfo, TxHash, TxNumber, TxWithHash};
+use katana_primitives::trace::TxExecInfo;
+use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 
 use crate::ProviderResult;
 

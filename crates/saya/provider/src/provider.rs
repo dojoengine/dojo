@@ -1,6 +1,6 @@
 use katana_primitives::block::{BlockNumber, SealedBlock};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::transaction::TxExecInfo;
+use katana_primitives::trace::TxExecInfo;
 use starknet::core::types::FieldElement;
 
 use crate::ProviderResult;

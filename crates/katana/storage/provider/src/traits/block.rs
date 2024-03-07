@@ -7,7 +7,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::transaction::TxExecInfo;
+use katana_primitives::trace::TxExecInfo;
 
 use super::transaction::{TransactionProvider, TransactionsProviderExt};
 use crate::ProviderResult;
