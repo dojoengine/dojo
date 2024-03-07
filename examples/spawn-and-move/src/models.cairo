@@ -21,7 +21,8 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Moves {
     #[key]
     player: ContractAddress,
@@ -35,7 +36,8 @@ struct Vec2 {
     y: u32
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Position {
     #[key]
     player: ContractAddress,

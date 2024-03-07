@@ -95,7 +95,7 @@ abigen!(
         "name": "model",
         "inputs": [
           {
-            "name": "name",
+            "name": "selector",
             "type": "core::felt252"
           }
         ],
@@ -325,7 +325,7 @@ abigen!(
             "type": "core::felt252"
           },
           {
-            "name": "system",
+            "name": "contract",
             "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
@@ -345,7 +345,7 @@ abigen!(
             "type": "core::felt252"
           },
           {
-            "name": "system",
+            "name": "contract",
             "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
@@ -361,7 +361,7 @@ abigen!(
             "type": "core::felt252"
           },
           {
-            "name": "system",
+            "name": "contract",
             "type": "core::starknet::contract_address::ContractAddress"
           }
         ],
@@ -489,13 +489,31 @@ abigen!(
     ]
   },
   {
+    "type": "struct",
+    "name": "core::byte_array::ByteArray",
+    "members": [
+      {
+        "name": "data",
+        "type": "core::array::Array::<core::bytes_31::bytes31>"
+      },
+      {
+        "name": "pending_word",
+        "type": "core::felt252"
+      },
+      {
+        "name": "pending_word_len",
+        "type": "core::integer::u32"
+      }
+    ]
+  },
+  {
     "type": "event",
     "name": "dojo::world::world::ModelRegistered",
     "kind": "struct",
     "members": [
       {
         "name": "name",
-        "type": "core::felt252",
+        "type": "core::byte_array::ByteArray",
         "kind": "data"
       },
       {
@@ -570,7 +588,7 @@ abigen!(
         "kind": "data"
       },
       {
-        "name": "system",
+        "name": "contract",
         "type": "core::starknet::contract_address::ContractAddress",
         "kind": "data"
       },

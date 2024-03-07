@@ -33,33 +33,6 @@ mod actions {
         direction: Direction
     }
 
-    #[abi(embed_v0)]
-    impl ActionsComputedImpl of IActionsComputed<ContractState> {
-        #[computed]
-        fn tile_terrain(vec: Vec2) -> felt252 {
-            'land'
-        }
-
-        #[computed(Position)]
-        fn quadrant(pos: Position) -> u8 {
-            // 10 is zero
-            if pos.vec.x < 10 {
-                if pos.vec.y < 10 {
-                    3 // Quadrant - -
-                } else {
-                    4 // Quadrant - +
-                }
-            } else {
-                if pos.vec.y < 10 {
-                    2 // Quadrant + -
-                } else {
-                    1 // Quadrant + +
-                }
-            }
-        }
-
-    }
-
     // impl: implement functions specified in trait
     #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {

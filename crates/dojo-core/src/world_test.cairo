@@ -16,7 +16,8 @@ use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Foo {
     #[key]
     caller: ContractAddress,
@@ -24,7 +25,8 @@ struct Foo {
     b: u128,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Fizz {
     #[key]
     caller: ContractAddress,
@@ -32,8 +34,9 @@ struct Fizz {
 }
 
 #[starknet::interface]
-trait ISelectorOnly<T> {
+trait IMetadataOnly<T> {
     fn selector(self: @T) -> felt252;
+    fn name(self: @T) -> ByteArray;
 }
 
 #[starknet::contract]
@@ -42,9 +45,13 @@ mod resource_metadata_malicious {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::ISelectorOnly<ContractState> {
+    impl InvalidModelName of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             selector!("ResourceMetadata")
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_model_name"
         }
     }
 }
@@ -85,7 +92,9 @@ mod bar {
             self
                 .world
                 .read()
-                .delete_entity(selector!("Foo"), array![get_caller_address().into()].span(), layout.span());
+                .delete_entity(
+                    selector!("Foo"), array![get_caller_address().into()].span(), layout.span()
+                );
         }
 
         fn delete_foo_macro(self: @ContractState, foo: Foo) {

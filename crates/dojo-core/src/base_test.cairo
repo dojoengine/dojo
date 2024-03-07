@@ -94,8 +94,9 @@ fn test_upgrade_direct() {
 }
 
 #[starknet::interface]
-trait INameOnly<T> {
+trait IMetadataOnly<T> {
     fn selector(self: @T) -> felt252;
+    fn name(self: @T) -> ByteArray;
 }
 
 #[starknet::contract]
@@ -104,10 +105,14 @@ mod invalid_legacy_model {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::INameOnly<ContractState> {
+    impl InvalidModelMetadata of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
             0x742c3d09472a40914dedcbd609788fd547bde613d6c4d4c2f15d41f4e241f25
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_legacy_model"
         }
     }
 }
@@ -118,18 +123,17 @@ mod invalid_legacy_model_world {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::INameOnly<ContractState> {
+    impl InvalidModelName of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // World address is 0, and not registered as deployed through the world
             // as it's itself.
             0
         }
-    }
-}
 
-#[starknet::interface]
-trait ISelectorOnly<T> {
-    fn selector(self: @T) -> felt252;
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_legacy_model"
+        }
+    }
 }
 
 #[starknet::contract]
@@ -138,10 +142,14 @@ mod invalid_model {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelSelector of super::ISelectorOnly<ContractState> {
+    impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x6b5539fa40b68b06beba0a0e797657ac97c8fe377600712316af5eaa5a10dc6
+            0xa4a104a045a21149f250a92784d614fc8748d6712653c824c07f1bf25d314a
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_model"
         }
     }
 }
@@ -152,11 +160,15 @@ mod invalid_model_world {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelSelector of super::ISelectorOnly<ContractState> {
+    impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // World address is 0, and not registered as deployed through the world
             // as it's itself.
             0
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_model_world"
         }
     }
 }

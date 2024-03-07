@@ -525,8 +525,8 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
             panic!("ModelRegistered expected");
         };
 
-        let model_name = format!("0x{:064x}", &model_event.name);
-
+        // TODO: Safely unwrap?
+        let model_name = model_event.name.to_string().unwrap();
         if let Some(current_class_hash) = models.get_mut(&model_name) {
             if current_class_hash == &model_event.prev_class_hash.into() {
                 *current_class_hash = model_event.class_hash.into();

@@ -46,6 +46,16 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
     }
 
     #[inline(always)]
+    fn name(self: @ResourceMetadata) -> ByteArray {
+        "ResourceMetadata"
+    }
+
+    #[inline(always)]
+    fn version(self: @ResourceMetadata) -> u8 {
+        1
+    }
+
+    #[inline(always)]
     fn selector(self: @ResourceMetadata) -> felt252 {
         selector!("ResourceMetadata")
     }
@@ -133,6 +143,14 @@ mod resource_metadata {
     #[external(v0)]
     fn selector(self: @ContractState) -> felt252 {
         selector!("ResourceMetadata")
+    }
+
+    fn name(self: @ContractState) -> ByteArray {
+        "ResourceMetadata"
+    }
+
+    fn version(self: @ContractState) -> u8 {
+        1
     }
 
     #[external(v0)]

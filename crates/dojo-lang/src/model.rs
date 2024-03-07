@@ -9,7 +9,6 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
 
-use crate::introspect::handle_introspect_struct;
 use crate::plugin::{DojoAuxData, Model};
 
 /// A handler for Dojo code that modifies a model struct.
@@ -83,124 +82,137 @@ pub fn handle_model_struct(
     (
         RewriteNode::interpolate_patched(
             "
-            impl $type_name$Model of dojo::model::Model<$type_name$> {
-                fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: \
-             Span<u8>) -> $type_name$ {
-                    let values = dojo::world::IWorldDispatcherTrait::entity(world, \
-             selector!(\"$type_name$\"), keys, layout);
+impl $type_name$Model of dojo::model::Model<$type_name$> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> \
+             $type_name$ {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!(\"$type_name$\"), \
+             keys, layout);
 
-                    // TODO: Generate method to deserialize from keys / values directly to avoid
-                    // serializing to intermediate array.
-                    let mut serialized = core::array::ArrayTrait::new();
-                    core::array::serialize_array_helper(keys, ref serialized);
-                    core::array::serialize_array_helper(values, ref serialized);
-                    let mut serialized = core::array::ArrayTrait::span(@serialized);
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
 
-                    let entity = core::serde::Serde::<$type_name$>::deserialize(ref serialized);
+        let entity = core::serde::Serde::<$type_name$>::deserialize(ref serialized);
 
-                    if core::option::OptionTrait::<$type_name$>::is_none(@entity) {
-                        panic!(
-                            \"Model `$type_name$`: deserialization failed. Ensure the length of \
-             the keys tuple is matching the number of #[key] fields in the model struct.\"
-                        );
-                    }
+        if core::option::OptionTrait::<$type_name$>::is_none(@entity) {
+            panic!(
+                \"Model `$type_name$`: deserialization failed. Ensure the length of the keys tuple \
+             is matching the number of #[key] fields in the model struct.\"
+            );
+        }
 
-                    core::option::OptionTrait::<$type_name$>::unwrap(entity)
-                }
+        core::option::OptionTrait::<$type_name$>::unwrap(entity)
+    }
 
-                #[inline(always)]
-                fn selector(self: @$type_name$) -> felt252 {
-                    selector!(\"$type_name$\")
-                }
+    #[inline(always)]
+    fn name(self: @$type_name$) -> ByteArray {
+        \"$type_name$\"
+    }
 
-                #[inline(always)]
-                fn keys(self: @$type_name$) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    $serialized_keys$
-                    core::array::ArrayTrait::span(@serialized)
-                }
+    #[inline(always)]
+    fn version(self: @$type_name$) -> u8 {
+        1
+    }
 
-                #[inline(always)]
-                fn values(self: @$type_name$) -> Span<felt252> {
-                    let mut serialized = core::array::ArrayTrait::new();
-                    $serialized_values$
-                    core::array::ArrayTrait::span(@serialized)
-                }
+    #[inline(always)]
+    fn selector(self: @$type_name$) -> felt252 {
+        selector!(\"$type_name$\")
+    }
 
-                #[inline(always)]
-                fn layout(self: @$type_name$) -> Span<u8> {
-                    let mut layout = core::array::ArrayTrait::new();
-                    dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
-                    core::array::ArrayTrait::span(@layout)
-                }
+    #[inline(always)]
+    fn keys(self: @$type_name$) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        $serialized_keys$
+        core::array::ArrayTrait::span(@serialized)
+    }
 
-                #[inline(always)]
-                fn packed_size(self: @$type_name$) -> usize {
-                    let mut layout = self.layout();
-                    dojo::packing::calculate_packed_size(ref layout)
-                }
-            }
+    #[inline(always)]
+    fn values(self: @$type_name$) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        $serialized_values$
+        core::array::ArrayTrait::span(@serialized)
+    }
 
-            $schema_introspection$
+    #[inline(always)]
+    fn layout(self: @$type_name$) -> Span<u8> {
+        let mut layout = core::array::ArrayTrait::new();
+        dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+        core::array::ArrayTrait::span(@layout)
+    }
 
-            #[starknet::interface]
-            trait I$contract_name$<T> {
-                fn ensure_abi(self: @T, model: $type_name$);
-            }
+    #[inline(always)]
+    fn packed_size(self: @$type_name$) -> usize {
+        let mut layout = self.layout();
+        dojo::packing::calculate_packed_size(ref layout)
+    }
+}
 
-            #[starknet::contract]
-            mod $contract_name$ {
-                use super::$type_name$;
-                use super::I$contract_name$;
+#[starknet::interface]
+trait I$contract_name$<T> {
+    fn ensure_abi(self: @T, model: $type_name$);
+}
 
-                #[storage]
-                struct Storage {}
+#[starknet::contract]
+mod $contract_name$ {
+    use super::$type_name$;
+    use super::I$contract_name$;
 
-                #[abi(embed_v0)]
-                impl DojoModelImpl of dojo::model::IDojoModel<ContractState>{
-                    fn selector(self: @ContractState) -> felt252 {
-                        selector!(\"$type_name$\")
-                    }
+    #[storage]
+    struct Storage {}
 
-                    fn unpacked_size(self: @ContractState) -> usize {
-                        dojo::database::introspect::Introspect::<$type_name$>::size()
-                    }
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+            selector!(\"$type_name$\")
+        }
 
-                    fn packed_size(self: @ContractState) -> usize {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
-                        let mut layout_span = layout.span();
-                        dojo::packing::calculate_packed_size(ref layout_span)
-                    }
+        fn name(self: @ContractState) -> ByteArray {
+            \"$type_name$\"
+        }
 
-                    fn layout(self: @ContractState) -> Span<u8> {
-                        let mut layout = core::array::ArrayTrait::new();
-                        dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
-                        core::array::ArrayTrait::span(@layout)
-                    }
+        fn version(self: @ContractState) -> u8 {
+            1
+        }
 
-                    fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
-                        dojo::database::introspect::Introspect::<$type_name$>::ty()
-                    }
-                }
+        fn unpacked_size(self: @ContractState) -> usize {
+            dojo::database::introspect::Introspect::<$type_name$>::size()
+        }
 
-                #[abi(embed_v0)]
-                impl $contract_name$Impl of I$contract_name$<ContractState>{
-                    fn ensure_abi(self: @ContractState, model: $type_name$) {
-                    }
-                }
-            }
-        ",
+        fn packed_size(self: @ContractState) -> usize {
+            let mut layout = core::array::ArrayTrait::new();
+            dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+            let mut layout_span = layout.span();
+            dojo::packing::calculate_packed_size(ref layout_span)
+        }
+
+        fn layout(self: @ContractState) -> Span<u8> {
+            let mut layout = core::array::ArrayTrait::new();
+            dojo::database::introspect::Introspect::<$type_name$>::layout(ref layout);
+            core::array::ArrayTrait::span(@layout)
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<$type_name$>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl $contract_name$Impl of I$contract_name$<ContractState>{
+        fn ensure_abi(self: @ContractState, model: $type_name$) {
+        }
+    }
+}
+",
             &UnorderedHashMap::from([
                 ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
                 (
                     "type_name".to_string(),
                     RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
                 ),
-                (
-                    "schema_introspection".to_string(),
-                    handle_introspect_struct(db, &mut diagnostics, struct_ast),
-                ),
+                ("namespace".to_string(), RewriteNode::Text("namespace".to_string())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
             ]),

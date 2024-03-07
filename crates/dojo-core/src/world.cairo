@@ -129,7 +129,7 @@ mod world {
 
     #[derive(Drop, starknet::Event)]
     struct ModelRegistered {
-        selector: felt252,
+        name: ByteArray,
         class_hash: ClassHash,
         prev_class_hash: ClassHash,
         address: ContractAddress,
@@ -345,7 +345,7 @@ mod world {
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let (address, selector) = dojo::model::deploy_and_get_selector(
+            let (address, name, selector) = dojo::model::deploy_and_get_metadata(
                 salt.into(), class_hash
             )
                 .unwrap_syscall();
@@ -375,7 +375,7 @@ mod world {
             self.models.write(selector, (class_hash, address));
             EventEmitter::emit(
                 ref self,
-                ModelRegistered { selector, prev_address, address, class_hash, prev_class_hash }
+                ModelRegistered { name, prev_address, address, class_hash, prev_class_hash }
             );
         }
 
@@ -469,7 +469,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name hash of the model to be set.
+        /// * `model` - The selector of the model to be set.
         /// * `keys` - The key to be used to find the entity.
         /// * `values` - The value to be set.
         /// * `layout` - The memory layout of the entity.
@@ -493,7 +493,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name hash of the model to be deleted.
+        /// * `model` - The selector of the model to be deleted.
         /// * `keys` - The key to be used to find the entity.
         /// * `layout` - The memory layout of the entity.
         fn delete_entity(
@@ -523,7 +523,7 @@ mod world {
         ///
         /// # Arguments
         ///
-        /// * `model` - The name hash of the model to be retrieved.
+        /// * `model` - The selector of the model to be retrieved.
         /// * `keys` - The keys used to find the entity.
         /// * `layout` - The memory layout of the entity.
         ///
@@ -574,8 +574,8 @@ mod world {
     ///
     /// # Arguments
     ///
-    /// * `resource` - The name hash of the resource being written to.
-    /// * `caller` - The name hash of the caller writing.
+    /// * `resource` - The selector of the resource being written to.
+    /// * `caller` - The selector of the caller writing.
     fn assert_can_write(self: @ContractState, resource: felt252, caller: ContractAddress) {
         assert(
             IWorld::is_writer(self, resource, caller) || is_account_owner(self, resource),
@@ -588,7 +588,7 @@ mod world {
     ///
     /// # Arguments
     ///
-    /// * `resource` - The name hash of the resource being verified.
+    /// * `resource` - The selector of the resource being verified.
     ///
     /// # Returns
     ///
