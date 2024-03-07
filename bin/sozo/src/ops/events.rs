@@ -76,9 +76,9 @@ fn parse_core_basic(
             let hex = format!("{:#x}", value);
             match parse_cairo_short_string(value) {
                 Ok(parsed) if !parsed.is_empty() && include_felt_string => {
-                    Ok(format!("{} \"{}\"", parsed, hex))
+                    Ok(format!("{} \"{}\"", hex, parsed))
                 }
-                _ => Ok(format!("\"{}\"", hex)),
+                _ => Ok(format!("{}", hex)),
             }
         }
         "bool" => {
@@ -267,7 +267,7 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("TestEvent".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x5465737431").expect("Invalid hex"),
+                FieldElement::from_hex_be("0x5465737431").unwrap(),
                 FieldElement::from(1u8), // bool true
                 FieldElement::from(1u8),
                 FieldElement::from(2u16),
@@ -275,13 +275,13 @@ mod tests {
                 FieldElement::from(4u64),
                 FieldElement::from(5u128),
                 FieldElement::from(6usize),
-                FieldElement::from_hex_be("0x54657374").expect("Invalid hex"),
-                FieldElement::from_hex_be("0x54657374").expect("Invalid hex"),
+                FieldElement::from_hex_be("0x54657374").unwrap(),
+                FieldElement::from_hex_be("0x54657374").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").expect("Invalid hex"),
-            block_hash: FieldElement::from_hex_be("0x456").expect("Invalid hex"),
+            from_address: FieldElement::from_hex_be("0x123").unwrap(),
+            block_hash: FieldElement::from_hex_be("0x456").unwrap(),
             block_number: 1,
-            transaction_hash: FieldElement::from_hex_be("0x789").expect("Invalid hex"),
+            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output =
@@ -334,16 +334,16 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("StoreDelRecord".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x54657374").expect("Invalid hex"),
+                FieldElement::from_hex_be("0x54657374").unwrap(),
                 FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x5465737431").expect("Invalid hex"),
-                FieldElement::from_hex_be("0x5465737432").expect("Invalid hex"),
-                FieldElement::from_hex_be("0x5465737433").expect("Invalid hex"),
+                FieldElement::from_hex_be("0x5465737431").unwrap(),
+                FieldElement::from_hex_be("0x5465737432").unwrap(),
+                FieldElement::from_hex_be("0x5465737433").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").expect("Invalid hex"),
-            block_hash: FieldElement::from_hex_be("0x456").expect("Invalid hex"),
+            from_address: FieldElement::from_hex_be("0x123").unwrap(),
+            block_hash: FieldElement::from_hex_be("0x456").unwrap(),
             block_number: 1,
-            transaction_hash: FieldElement::from_hex_be("0x789").expect("Invalid hex"),
+            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output =
@@ -410,13 +410,13 @@ mod tests {
             keys: vec![
                 starknet_keccak("CustomEvent".as_bytes()),
                 FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x5465737431").expect("Invalid hex"),
+                FieldElement::from_hex_be("0x5465737431").unwrap(),
             ],
             data: vec![FieldElement::from(1u128), FieldElement::from(2u128)],
-            from_address: FieldElement::from_hex_be("0x123").expect("Invalid hex"),
-            block_hash: FieldElement::from_hex_be("0x456").expect("Invalid hex"),
+            from_address: FieldElement::from_hex_be("0x123").unwrap(),
+            block_hash: FieldElement::from_hex_be("0x456").unwrap(),
             block_number: 1,
-            transaction_hash: FieldElement::from_hex_be("0x789").expect("Invalid hex"),
+            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output =
@@ -469,16 +469,16 @@ mod tests {
         let event = EmittedEvent {
             keys: vec![starknet_keccak("StoreDelRecord".as_bytes())],
             data: vec![
-                FieldElement::from_hex_be("0x0").expect("Invalid hex"),
+                FieldElement::from_hex_be("0x0").unwrap(),
                 FieldElement::from(3u128),
-                FieldElement::from_hex_be("0x0").expect("Invalid hex"),
-                FieldElement::from_hex_be("0x1").expect("Invalid hex"),
-                FieldElement::from_hex_be("0x2").expect("Invalid hex"),
+                FieldElement::from_hex_be("0x0").unwrap(),
+                FieldElement::from_hex_be("0x1").unwrap(),
+                FieldElement::from_hex_be("0x2").unwrap(),
             ],
-            from_address: FieldElement::from_hex_be("0x123").expect("Invalid hex"),
-            block_hash: FieldElement::from_hex_be("0x456").expect("Invalid hex"),
+            from_address: FieldElement::from_hex_be("0x123").unwrap(),
+            block_hash: FieldElement::from_hex_be("0x456").unwrap(),
             block_number: 1,
-            transaction_hash: FieldElement::from_hex_be("0x789").expect("Invalid hex"),
+            transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
         let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: \"0x0\"\nkeys: [\"0x0\", \"0x1\", \"0x2\"]\n".to_string();
