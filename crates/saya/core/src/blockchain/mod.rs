@@ -213,8 +213,8 @@ pub fn block_info_from_header(
     validate_max_n_steps: u32,
 ) -> BlockInfo {
     let gas_prices = GasPrices {
-        eth_l1_gas_price: header.header.gas_prices.eth as u128,
-        strk_l1_gas_price: header.header.gas_prices.strk as u128,
+        eth_l1_gas_price: header.header.gas_prices.eth,
+        strk_l1_gas_price: header.header.gas_prices.strk,
         eth_l1_data_gas_price: 0,
         strk_l1_data_gas_price: 0,
     };
