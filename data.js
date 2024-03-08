@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709819527257,
+  "lastUpdate": 1709907492333,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2305,6 +2305,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 968445,
             "range": "± 77940",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad60c39b1b90e41fc1b7705349087b0825c87264",
+          "message": "feat: add [dojo::interface] attribute (#1594)",
+          "timestamp": "2024-03-08T09:08:38-05:00",
+          "tree_id": "8ed073a9033a2001fd45103c03f843f67eacbbb6",
+          "url": "https://github.com/dojoengine/dojo/commit/ad60c39b1b90e41fc1b7705349087b0825c87264"
+        },
+        "date": 1709907491306,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1029253,
+            "range": "± 31818",
             "unit": "ns/iter"
           }
         ]
