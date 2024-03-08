@@ -4,6 +4,7 @@ use std::sync::Arc;
 use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
 use blockifier::execution::call_info::CallInfo;
 use blockifier::execution::common_hints::ExecutionMode;
+use blockifier::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
 use blockifier::execution::entry_point::{
     CallEntryPoint, EntryPointExecutionContext, ExecutionResources,
 };
@@ -21,16 +22,21 @@ use blockifier::transaction::transactions::{
     DeclareTransaction, DeployAccountTransaction, ExecutableTransaction, InvokeTransaction,
     L1HandlerTransaction,
 };
-use katana_primitives::conversion::blockifier::to_class;
+use cairo_vm::types::errors::program_errors::ProgramError;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
 use katana_provider::traits::contract::ContractClassProvider;
+use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
-use starknet_api::core::{self, ClassHash, CompiledClassHash, Nonce};
+use starknet_api::core::{
+    self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey,
+};
 use starknet_api::data_availability::DataAvailabilityMode;
+use starknet_api::hash::StarkHash;
+use starknet_api::patricia_key;
 use starknet_api::transaction::{
     AccountDeploymentData, Calldata, ContractAddressSalt,
     DeclareTransaction as ApiDeclareTransaction, DeclareTransactionV0V1, DeclareTransactionV2,
@@ -104,7 +110,7 @@ pub(super) fn call<S: StateReader>(
 
     let call = CallEntryPoint {
         initial_gas: initial_gas as u64,
-        storage_address: request.contract_address.into(),
+        storage_address: to_blk_address(request.contract_address),
         entry_point_selector: core::EntryPointSelector(request.entry_point_selector.into()),
         calldata: Calldata(Arc::new(request.calldata.into_iter().map(|f| f.into()).collect())),
         ..Default::default()
@@ -148,7 +154,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     tx: ApiInvokeTransaction::V1(starknet_api::transaction::InvokeTransactionV1 {
                         max_fee: Fee(tx.max_fee),
                         nonce: Nonce(tx.nonce.into()),
-                        sender_address: tx.sender_address.into(),
+                        sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
                         calldata: Calldata(Arc::new(calldata)),
                     }),
@@ -171,7 +177,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     tx: ApiInvokeTransaction::V3(starknet_api::transaction::InvokeTransactionV3 {
                         tip: Tip(tx.tip),
                         nonce: Nonce(tx.nonce.into()),
-                        sender_address: tx.sender_address.into(),
+                        sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
                         calldata: Calldata(Arc::new(calldata)),
                         paymaster_data: PaymasterData(paymaster_data),
@@ -194,7 +200,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
                 Transaction::AccountTransaction(AccountTransaction::DeployAccount(
                     DeployAccountTransaction {
-                        contract_address: tx.contract_address.into(),
+                        contract_address: to_blk_address(tx.contract_address),
                         tx: ApiDeployAccountTransaction::V1(DeployAccountTransactionV1 {
                             max_fee: Fee(tx.max_fee),
                             nonce: Nonce(tx.nonce.into()),
@@ -220,7 +226,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 
                 Transaction::AccountTransaction(AccountTransaction::DeployAccount(
                     DeployAccountTransaction {
-                        contract_address: tx.contract_address.into(),
+                        contract_address: to_blk_address(tx.contract_address),
                         tx: ApiDeployAccountTransaction::V3(DeployAccountTransactionV3 {
                             tip: Tip(tx.tip),
                             nonce: Nonce(tx.nonce.into()),
@@ -250,7 +256,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     ApiDeclareTransaction::V1(DeclareTransactionV0V1 {
                         max_fee: Fee(tx.max_fee),
                         nonce: Nonce(tx.nonce.into()),
-                        sender_address: tx.sender_address.into(),
+                        sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
                         class_hash: ClassHash(tx.class_hash.into()),
                     })
@@ -262,7 +268,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     ApiDeclareTransaction::V2(DeclareTransactionV2 {
                         max_fee: Fee(tx.max_fee),
                         nonce: Nonce(tx.nonce.into()),
-                        sender_address: tx.sender_address.into(),
+                        sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
                         class_hash: ClassHash(tx.class_hash.into()),
                         compiled_class_hash: CompiledClassHash(tx.compiled_class_hash.into()),
@@ -282,7 +288,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     ApiDeclareTransaction::V3(DeclareTransactionV3 {
                         tip: Tip(tx.tip),
                         nonce: Nonce(tx.nonce.into()),
-                        sender_address: tx.sender_address.into(),
+                        sender_address: to_blk_address(tx.sender_address),
                         signature: TransactionSignature(signature),
                         class_hash: ClassHash(tx.class_hash.into()),
                         account_deployment_data: AccountDeploymentData(account_deploy_data),
@@ -309,7 +315,7 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
                     nonce: core::Nonce(tx.nonce.into()),
                     calldata: Calldata(Arc::new(calldata)),
                     version: TransactionVersion(1u128.into()),
-                    contract_address: tx.contract_address.into(),
+                    contract_address: to_blk_address(tx.contract_address),
                     entry_point_selector: core::EntryPointSelector(tx.entry_point_selector.into()),
                 },
                 tx_hash: TransactionHash(hash.into()),
@@ -321,8 +327,8 @@ fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
 /// Create a block context from the chain environment values.
 pub(super) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
     let fee_token_addresses = FeeTokenAddresses {
-        eth_fee_token_address: cfg_env.fee_token_addresses.eth.into(),
-        strk_fee_token_address: cfg_env.fee_token_addresses.strk.into(),
+        eth_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.eth),
+        strk_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.strk),
     };
 
     let gas_prices = GasPrices {
@@ -338,13 +344,13 @@ pub(super) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) ->
             use_kzg_da: false,
             block_number: BlockNumber(block_env.number),
             block_timestamp: BlockTimestamp(block_env.timestamp),
-            sequencer_address: block_env.sequencer_address.into(),
+            sequencer_address: to_blk_address(block_env.sequencer_address),
             max_recursion_depth: cfg_env.max_recursion_depth,
             validate_max_n_steps: cfg_env.validate_max_n_steps,
             invoke_tx_max_n_steps: cfg_env.invoke_tx_max_n_steps,
             vm_resource_fee_cost: cfg_env.vm_resource_fee_cost.clone().into(),
         },
-        chain_info: ChainInfo { fee_token_addresses, chain_id: cfg_env.chain_id.into() },
+        chain_info: ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) },
     }
 }
 
@@ -378,7 +384,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .address_to_nonce
             .into_iter()
-            .map(|(key, value)| (key.into(), value.0.into()))
+            .map(|(key, value)| (to_address(key), value.0.into()))
             .collect::<HashMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::contract::Nonce,
@@ -396,7 +402,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
                     katana_primitives::contract::StorageValue,
                 >>();
 
-            (addr.into(), entries)
+            (to_address(addr), entries)
         })
         .collect::<HashMap<katana_primitives::contract::ContractAddress, _>>();
 
@@ -404,7 +410,7 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         state_diff
             .address_to_class_hash
             .into_iter()
-            .map(|(key, value)| (key.into(), value.0.into()))
+            .map(|(key, value)| (to_address(key), value.0.into()))
             .collect::<HashMap<
                 katana_primitives::contract::ContractAddress,
                 katana_primitives::class::ClassHash,
@@ -461,5 +467,55 @@ fn get_fee_type_from_tx(transaction: &Transaction) -> FeeType {
     match transaction {
         Transaction::AccountTransaction(tx) => tx.fee_type(),
         Transaction::L1HandlerTransaction(tx) => tx.fee_type(),
+    }
+}
+
+pub fn to_blk_address(address: katana_primitives::contract::ContractAddress) -> ContractAddress {
+    ContractAddress(patricia_key!(address.0))
+}
+
+pub fn to_address(address: ContractAddress) -> katana_primitives::contract::ContractAddress {
+    katana_primitives::contract::ContractAddress((*address.0.key()).into())
+}
+
+pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
+    match chain_id {
+        katana_primitives::chain::ChainId::Named(named) => ChainId(named.name().to_string()),
+        katana_primitives::chain::ChainId::Id(id) => {
+            let id = parse_cairo_short_string(&id).expect("valid cairo string");
+            ChainId(id)
+        }
+    }
+}
+
+pub fn to_class(
+    class: katana_primitives::class::CompiledClass,
+) -> Result<ContractClass, ProgramError> {
+    match class {
+        katana_primitives::class::CompiledClass::Deprecated(class) => {
+            Ok(ContractClass::V0(ContractClassV0::try_from(class)?))
+        }
+        katana_primitives::class::CompiledClass::Class(class) => {
+            Ok(ContractClass::V1(ContractClassV1::try_from(class.casm)?))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use katana_primitives::chain::{ChainId, NamedChainId};
+    use starknet::core::utils::parse_cairo_short_string;
+
+    use crate::implementation::blockifier::utils::to_blk_chain_id;
+
+    #[test]
+    fn convert_chain_id() {
+        let mainnet = to_blk_chain_id(ChainId::Named(NamedChainId::Mainnet));
+        let goerli = to_blk_chain_id(ChainId::Named(NamedChainId::Goerli));
+        let sepolia = to_blk_chain_id(ChainId::Named(NamedChainId::Sepolia));
+
+        assert_eq!(mainnet.0, parse_cairo_short_string(&NamedChainId::Mainnet.id()).unwrap());
+        assert_eq!(goerli.0, parse_cairo_short_string(&NamedChainId::Goerli.id()).unwrap());
+        assert_eq!(sepolia.0, parse_cairo_short_string(&NamedChainId::Sepolia.id()).unwrap());
     }
 }
