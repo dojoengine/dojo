@@ -148,12 +148,6 @@ impl From<StarknetApiError> for Error {
 impl From<SequencerError> for StarknetApiError {
     fn from(value: SequencerError) -> Self {
         match value {
-            SequencerError::TransactionExecution(e) => {
-                StarknetApiError::ContractError { revert_error: e.to_string() }
-            }
-            SequencerError::EntryPointExecution(e) => {
-                StarknetApiError::ContractError { revert_error: e.to_string() }
-            }
             SequencerError::BlockNotFound(_) => StarknetApiError::BlockNotFound,
             SequencerError::ContractNotFound(_) => StarknetApiError::ContractNotFound,
             err => StarknetApiError::UnexpectedError { reason: err.to_string() },
