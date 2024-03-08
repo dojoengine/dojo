@@ -3,8 +3,7 @@ use jsonrpsee::core::Error;
 use jsonrpsee::types::error::CallError;
 use jsonrpsee::types::ErrorObject;
 use katana_core::sequencer_error::SequencerError;
-use katana_primitives::receipt::Receipt;
-use katana_primitives::transaction::TxWithHash;
+use katana_core::service::block_producer::TxWithOutcome;
 use katana_provider::error::ProviderError;
 
 use crate::transaction::TransactionsPageCursor;
@@ -21,10 +20,7 @@ pub enum ToriiApiError {
     #[error("Transaction receipt not found")]
     TransactionReceiptNotFound,
     #[error("Transactions not ready")]
-    TransactionsNotReady {
-        rx: Receiver<Vec<(TxWithHash, Receipt)>>,
-        cursor: TransactionsPageCursor,
-    },
+    TransactionsNotReady { rx: Receiver<Vec<TxWithOutcome>>, cursor: TransactionsPageCursor },
     #[error("Long poll expired")]
     ChannelDisconnected,
     #[error("An unexpected error occured: {reason}")]

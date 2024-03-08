@@ -46,9 +46,9 @@ pub struct MinedBlockOutcome {
 
 #[derive(Debug, Clone)]
 pub struct TxWithOutcome {
-    tx: TxWithHash,
-    receipt: Receipt,
-    exec_info: TxExecInfo,
+    pub tx: TxWithHash,
+    pub receipt: Receipt,
+    pub exec_info: TxExecInfo,
 }
 
 type ServiceFuture<T> = Pin<Box<dyn Future<Output = BlockingTaskResult<T>> + Send + Sync>>;
@@ -266,7 +266,9 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
         let transactions = transactions
             .into_iter()
-            .filter_map(|(tx, rct)| rct.map(|rct| (tx, rct)))
+            .filter_map(|(tx, rct, exec)| {
+                rct.map(|rct| TxWithOutcome { tx, receipt: rct, exec_info: exec })
+            })
             .collect::<Vec<_>>();
 
         let outcome = backend.do_mine_block(&block_env, transactions, states)?;
@@ -499,16 +501,18 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
         executor.execute_block(block)?;
 
         let ExecutionOutput { states, transactions } = executor.take_execution_output().unwrap();
-        let tx_receipt_pairs = transactions
+        let txs_outcomes = transactions
             .into_iter()
-            .filter_map(|(tx, rct)| rct.map(|rct| (tx, rct)))
+            .filter_map(|(tx, rct, exec)| {
+                rct.map(|rct| TxWithOutcome { tx, receipt: rct, exec_info: exec })
+            })
             .collect::<Vec<_>>();
 
-        let outcome = backend.do_mine_block(&block_env, tx_receipt_pairs.clone(), states)?;
+        let outcome = backend.do_mine_block(&block_env, txs_outcomes.clone(), states)?;
 
         trace!(target: "miner", "created new block: {}", outcome.block_number);
 
-        Ok((outcome, tx_receipt_pairs))
+        Ok((outcome, txs_outcomes))
     }
 
     pub fn add_listener(&self) -> Receiver<Vec<TxWithOutcome>> {

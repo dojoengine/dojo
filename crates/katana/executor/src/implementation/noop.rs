@@ -100,7 +100,7 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
         Box::new(NoopStateProvider)
     }
 
-    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>)] {
+    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>, TxExecInfo)] {
         &[]
     }
 

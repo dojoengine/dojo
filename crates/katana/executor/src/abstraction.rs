@@ -108,7 +108,8 @@ pub struct ExecutionOutput {
     /// The state updates produced by the executions.
     pub states: StateUpdatesWithDeclaredClasses,
     /// The transactions that have been executed.
-    pub transactions: Vec<(TxWithHash, Option<Receipt>)>,
+    /// TODO: do we want a struct instead?
+    pub transactions: Vec<(TxWithHash, Option<Receipt>, TxExecInfo)>,
 }
 
 #[derive(Debug)]
@@ -153,7 +154,7 @@ pub trait BlockExecutor<'a>: TransactionExecutor + Send + Sync {
     fn state(&self) -> Box<dyn StateProvider + 'a>;
 
     /// Returns the transactions that have been executed.
-    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>)];
+    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>, TxExecInfo)];
 
     /// Returns the current block environment of the executor.
     fn block_env(&self) -> BlockEnv;

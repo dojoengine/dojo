@@ -182,7 +182,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         .read()
                         .transactions()
                         .iter()
-                        .map(|(tx, _)| tx.hash)
+                        .map(|(tx, _, _)| tx.hash)
                         .collect::<Vec<_>>();
 
                     return Ok(MaybePendingBlockWithTxHashes::Pending(
@@ -219,7 +219,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
                 let executor = executor.read();
                 let pending_txs = executor.transactions();
-                pending_txs.get(index as usize).map(|(tx, _)| tx.clone())
+                pending_txs.get(index as usize).map(|(tx, _, _)| tx.clone())
             } else {
                 let provider = &this.inner.sequencer.backend.blockchain.provider();
 
@@ -261,7 +261,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                         .read()
                         .transactions()
                         .iter()
-                        .map(|(tx, _)| tx.clone())
+                        .map(|(tx, _, _)| tx.clone())
                         .collect::<Vec<_>>();
 
                     return Ok(MaybePendingBlockWithTxs::Pending(PendingBlockWithTxs::new(
@@ -326,7 +326,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 None => {
                     let pending_receipt =
                         this.inner.sequencer.pending_executor().and_then(|executor| {
-                            executor.read().transactions().iter().find_map(|(tx, rct)| {
+                            executor.read().transactions().iter().find_map(|(tx, rct, _)| {
                                 if tx.hash == transaction_hash { rct.clone() } else { None }
                             })
                         });
@@ -697,13 +697,13 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
             let pending_txs = pending_executor.transactions();
             // filter only the valid executed transactions (the ones with a receipt)
-            let mut executed_txs = pending_txs.iter().filter(|(_, rct)| rct.is_some());
+            let mut executed_txs = pending_txs.iter().filter(|(_, rct, _)| rct.is_some());
 
             // attemps to find in the valid transactions list first (executed_txs)
             // if not found, then search in the rejected transactions list (rejected_txs)
             if let Some(is_reverted) = executed_txs
-                .find(|(tx, _)| tx.hash == transaction_hash)
-                .map(|(_, rct)| rct.as_ref().is_some_and(|r| r.is_reverted()))
+                .find(|(tx, _, _)| tx.hash == transaction_hash)
+                .map(|(_, rct, _)| rct.as_ref().is_some_and(|r| r.is_reverted()))
             {
                 let exec_status = if is_reverted {
                     TransactionExecutionStatus::Reverted
@@ -715,10 +715,10 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             } else {
                 // we filter out the executed transactions and only take the rejected ones (the ones
                 // with no receipt)
-                let mut rejected_txs = pending_txs.iter().filter(|(_, rct)| rct.is_none());
+                let mut rejected_txs = pending_txs.iter().filter(|(_, rct, _)| rct.is_none());
 
                 rejected_txs
-                    .find(|(tx, _)| tx.hash == transaction_hash)
+                    .find(|(tx, _, _)| tx.hash == transaction_hash)
                     .map(|_| TransactionStatus::Rejected)
                     .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
             }
