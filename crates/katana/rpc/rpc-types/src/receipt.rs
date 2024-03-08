@@ -3,11 +3,11 @@ use katana_primitives::receipt::{MessageToL1, Receipt, TxExecutionResources};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
-    DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult, Hash256,
-    InvokeTransactionReceipt, L1HandlerTransactionReceipt, PendingDeclareTransactionReceipt,
-    PendingDeployAccountTransactionReceipt, PendingInvokeTransactionReceipt,
-    PendingL1HandlerTransactionReceipt, PendingTransactionReceipt, TransactionFinalityStatus,
-    TransactionReceipt,
+    DeclareTransactionReceipt, DeployAccountTransactionReceipt, ExecutionResult, FeePayment,
+    Hash256, InvokeTransactionReceipt, L1HandlerTransactionReceipt,
+    PendingDeclareTransactionReceipt, PendingDeployAccountTransactionReceipt,
+    PendingInvokeTransactionReceipt, PendingL1HandlerTransactionReceipt, PendingTransactionReceipt,
+    PriceUnit, TransactionFinalityStatus, TransactionReceipt,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +40,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -62,7 +62,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -84,7 +84,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     message_hash: Hash256::from_bytes(rct.message_hash.to_fixed_bytes()),
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -107,7 +107,7 @@ impl TxReceipt {
                     messages_sent,
                     finality_status,
                     transaction_hash,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     contract_address: rct.contract_address.into(),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -139,7 +139,7 @@ impl PendingTxReceipt {
                     transaction_hash,
                     events,
                     messages_sent,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -158,7 +158,7 @@ impl PendingTxReceipt {
                     events,
                     transaction_hash,
                     messages_sent,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
@@ -177,7 +177,7 @@ impl PendingTxReceipt {
                     transaction_hash,
                     events,
                     messages_sent,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     message_hash: Hash256::from_bytes(rct.message_hash.0),
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -197,7 +197,7 @@ impl PendingTxReceipt {
                     transaction_hash,
                     events,
                     messages_sent,
-                    actual_fee: rct.actual_fee.into(),
+                    actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     contract_address: rct.contract_address.into(),
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
                     execution_result: if let Some(reason) = rct.revert_error {
@@ -257,13 +257,14 @@ impl From<TxExecutionResources> for ExecutionResources {
         ExecutionResources(starknet::core::types::ExecutionResources {
             steps: value.steps,
             memory_holes: value.memory_holes,
-            ec_op_builtin_applications: value.ec_op_builtin.unwrap_or_default(),
-            ecdsa_builtin_applications: value.ecdsa_builtin.unwrap_or_default(),
-            keccak_builtin_applications: value.keccak_builtin.unwrap_or_default(),
-            bitwise_builtin_applications: value.bitwise_builtin.unwrap_or_default(),
-            pedersen_builtin_applications: value.pedersen_builtin.unwrap_or_default(),
-            poseidon_builtin_applications: value.poseidon_builtin.unwrap_or_default(),
-            range_check_builtin_applications: value.range_check_builtin.unwrap_or_default(),
+            ec_op_builtin_applications: value.ec_op_builtin,
+            ecdsa_builtin_applications: value.ecdsa_builtin,
+            keccak_builtin_applications: value.keccak_builtin,
+            bitwise_builtin_applications: value.bitwise_builtin,
+            pedersen_builtin_applications: value.pedersen_builtin,
+            poseidon_builtin_applications: value.poseidon_builtin,
+            range_check_builtin_applications: value.range_check_builtin,
+            segment_arena_builtin: value.segment_arena_builtin,
         })
     }
 }

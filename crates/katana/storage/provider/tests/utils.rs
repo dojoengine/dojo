@@ -1,6 +1,6 @@
 use katana_primitives::block::{Block, BlockHash, FinalityStatus, Header, SealedBlockWithStatus};
 use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
-use katana_primitives::transaction::{Tx, TxHash, TxWithHash};
+use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
 use katana_primitives::FieldElement;
 
 pub fn generate_dummy_txs_and_receipts(count: usize) -> (Vec<TxWithHash>, Vec<Receipt>) {
@@ -11,7 +11,7 @@ pub fn generate_dummy_txs_and_receipts(count: usize) -> (Vec<TxWithHash>, Vec<Re
     for _ in 0..count {
         txs.push(TxWithHash {
             hash: TxHash::from(rand::random::<u128>()),
-            transaction: Tx::Invoke(Default::default()),
+            transaction: Tx::Invoke(InvokeTx::V1(Default::default())),
         });
 
         receipts.push(Receipt::Invoke(InvokeTxReceipt::default()));

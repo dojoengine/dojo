@@ -26,8 +26,9 @@ use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
-use starknet::core::types::FeeEstimate;
+use starknet::core::types::{FeeEstimate, PriceUnit};
 use starknet::core::utils::parse_cairo_short_string;
+use starknet::macros::felt;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::transaction::Calldata;
@@ -65,8 +66,8 @@ pub fn estimate_fee(
     state: Box<dyn StateProvider>,
     validate: bool,
 ) -> Result<Vec<FeeEstimate>, TransactionExecutionError> {
-    let state = CachedStateWrapper::new(StateRefDb::from(state));
-    let results = TransactionExecutor::new(&state, &block_context, false, validate, transactions)
+    let state = CachedStateWrapper::new(StateRefDb(state));
+    let results = TransactionExecutor::new(&state, &block_context, true, validate, transactions)
         .with_error_log()
         .execute();
 
@@ -93,7 +94,7 @@ pub fn raw_call(
     state: Box<dyn StateProvider>,
     initial_gas: u64,
 ) -> Result<CallInfo, TransactionExecutionError> {
-    let mut state = CachedState::new(StateRefDb::from(state), GlobalContractCache::default());
+    let mut state = CachedState::new(StateRefDb(state), GlobalContractCache::default());
     let mut state = CachedState::new(MutRefState::new(&mut state), GlobalContractCache::default());
 
     let call = CallEntryPoint {
@@ -146,19 +147,24 @@ pub fn calculate_execution_fee(
     let gas_consumed = total_l1_gas_usage.ceil() as u64;
     let overall_fee = total_l1_gas_usage.ceil() as u64 * gas_price;
 
-    Ok(FeeEstimate { gas_price, gas_consumed, overall_fee })
+    Ok(FeeEstimate {
+        gas_price: gas_price.into(),
+        gas_consumed: gas_consumed.into(),
+        overall_fee: overall_fee.into(),
+        unit: PriceUnit::Wei,
+    })
 }
 
 /// Create a block context from the chain environment values.
 pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
     let fee_token_addresses = FeeTokenAddresses {
         eth_fee_token_address: cfg_env.fee_token_addresses.eth.into(),
-        strk_fee_token_address: cfg_env.fee_token_addresses.strk.into(),
+        strk_fee_token_address: ContractAddress(felt!("0xb00b5")).into(),
     };
 
     let gas_prices = GasPrices {
-        eth_l1_gas_price: block_env.l1_gas_prices.eth.try_into().unwrap(),
-        strk_l1_gas_price: block_env.l1_gas_prices.strk.try_into().unwrap(),
+        eth_l1_gas_price: block_env.l1_gas_prices.eth,
+        strk_l1_gas_price: block_env.l1_gas_prices.strk,
         eth_l1_data_gas_price: 0,
         strk_l1_data_gas_price: 0,
     };
@@ -229,7 +235,7 @@ pub(crate) fn pretty_print_resources(resources: &ResourcesMapping) -> String {
 }
 
 pub fn get_state_update_from_cached_state(
-    state: &CachedStateWrapper<StateRefDb>,
+    state: &CachedStateWrapper,
 ) -> StateUpdatesWithDeclaredClasses {
     let state_diff = state.inner().to_state_diff();
 

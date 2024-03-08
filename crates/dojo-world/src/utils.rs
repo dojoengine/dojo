@@ -323,9 +323,9 @@ mod tests {
         get_default_test_starknet_config, SequencerConfig, TestSequencer,
     };
     use starknet::core::types::{
-        ExecutionResources, ExecutionResult, FieldElement, InvokeTransactionReceipt,
+        ExecutionResources, ExecutionResult, FeePayment, FieldElement, InvokeTransactionReceipt,
         MaybePendingTransactionReceipt, PendingInvokeTransactionReceipt, PendingTransactionReceipt,
-        TransactionFinalityStatus, TransactionReceipt,
+        PriceUnit, TransactionFinalityStatus, TransactionReceipt,
     };
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
@@ -343,13 +343,14 @@ mod tests {
     const EXECUTION_RESOURCES: ExecutionResources = ExecutionResources {
         steps: 0,
         memory_holes: None,
-        ec_op_builtin_applications: 0,
-        ecdsa_builtin_applications: 0,
-        keccak_builtin_applications: 0,
-        bitwise_builtin_applications: 0,
-        pedersen_builtin_applications: 0,
-        poseidon_builtin_applications: 0,
-        range_check_builtin_applications: 0,
+        ec_op_builtin_applications: Some(0),
+        ecdsa_builtin_applications: Some(0),
+        keccak_builtin_applications: Some(0),
+        bitwise_builtin_applications: Some(0),
+        pedersen_builtin_applications: Some(0),
+        poseidon_builtin_applications: Some(0),
+        range_check_builtin_applications: Some(0),
+        segment_arena_builtin: Some(0),
     };
 
     fn mock_receipt(
@@ -360,7 +361,7 @@ mod tests {
             finality_status,
             execution_result,
             events: Default::default(),
-            actual_fee: Default::default(),
+            actual_fee: FeePayment { amount: Default::default(), unit: PriceUnit::Wei },
             block_hash: Default::default(),
             block_number: Default::default(),
             messages_sent: Default::default(),
@@ -373,7 +374,7 @@ mod tests {
         PendingTransactionReceipt::Invoke(PendingInvokeTransactionReceipt {
             execution_result,
             events: Default::default(),
-            actual_fee: Default::default(),
+            actual_fee: FeePayment { amount: Default::default(), unit: PriceUnit::Wei },
             messages_sent: Default::default(),
             transaction_hash: Default::default(),
             execution_resources: EXECUTION_RESOURCES,

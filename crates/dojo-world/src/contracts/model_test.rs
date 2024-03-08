@@ -19,7 +19,8 @@ async fn test_model() {
     let provider = account.provider();
     let world_address = deploy_world(
         &sequencer,
-        Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
+        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move".into()).unwrap(),
+        &Utf8PathBuf::from_path_buf("../../examples/spawn-and-move/target/dev".into()).unwrap(),
     )
     .await;
 
@@ -63,7 +64,7 @@ async fn test_model() {
     assert_eq!(
         position.class_hash(),
         FieldElement::from_hex_be(
-            "0x053672d63a83f40ab5f3aeec55d1541a98aa822f5b197a30fbbac28e6f98a7d8"
+            "0x00b33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5"
         )
         .unwrap()
     );

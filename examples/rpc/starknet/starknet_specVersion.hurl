@@ -10,4 +10,4 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.error" not exists
-jsonpath "$.result" equals "0.5.1"
+jsonpath "$.result" equals "0.6.0"

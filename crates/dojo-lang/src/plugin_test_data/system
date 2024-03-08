@@ -84,6 +84,153 @@ mod withcomponent {
         testcomponent2_event: testcomponent2::Event,
     }
 }
+#[dojo::interface]
+trait IEmptyTrait;
+
+#[dojo::interface]
+trait IFaultyTrait {
+    /// Even if it looks weird, the expected pattern for a constant in a trait is
+    /// `const <name>: <type>;`
+    /// See: https://github.com/starkware-libs/cairo/blob/600553d34a1af93ff7fb038ac677efdd3fd07010/crates/cairo-lang-parser/src/parser.rs#L835
+    const ONE: u8;
+
+    fn do_ref_self(ref self: TContractState);
+
+    #[my_attr]
+    fn do_with_attrs(p1: u8) -> u16;
+}
+
+#[dojo::interface]
+trait INominalTrait {
+    fn do_no_param();
+    fn do_no_param_but_self(self: @TContractState);
+    fn do_params(p1: dojo_examples::models::Direction, p2: u8);
+    fn do_params_and_self(self: @TContractState, p2: u8);
+    fn do_return_value(p1: u8) -> u16;
+}
+
+#[dojo::contract]
+mod MyFaultyContract {
+
+    #[external(v0)]
+    fn do_with_ref_self(ref self: ContractState) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_several_world_dispatchers(
+        world: IWorldDispatcher,
+        vec: Vec2,
+        another_world: IWorldDispatcher
+    ) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[abi(embed_v0)]
+    impl ActionsImpl of IActions<ContractState> {
+        fn do_with_ref_self(ref self: ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_several_world_dispatchers(
+            world: IWorldDispatcher,
+            vec: Vec2,
+            another_world: IWorldDispatcher
+        ) -> felt252 {
+            'land'
+        }
+
+        fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+    }
+}
+
+#[dojo::contract]
+mod MyNominalContract {
+
+    #[derive(Drop)]
+    struct Action {
+        damage: u8
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do(vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do_with_world_first(world: IWorldDispatcher, vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do_with_self_and_world_first(self: @ContractState, world: IWorldDispatcher, vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[abi(embed_v0)]
+    impl ActionsImpl of IActions<ContractState> {
+
+        fn do(vec: Vec2) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
+            'land'
+        }
+
+        fn do_with_world_first(world: IWorldDispatcher, vec: Vec2) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_first(self: @ContractState, world: IWorldDispatcher, vec: Vec2) -> felt252 {
+            'land'
+        }
+    }
+}
 
 //! > generated_cairo_code
 #[starknet::contract]
@@ -205,6 +352,66 @@ error: Unsupported attribute.
 #[starknet::component]
 ^********************^
 
+error: Anything other than functions is not supported in a dojo::interface
+ --> test_src/lib.cairo:89:5
+    const ONE: u8;
+    ^************^
+
+error: Functions of dojo::interface cannot have `ref self` parameter.
+ --> test_src/lib.cairo:91:5
+    fn do_ref_self(ref self: TContractState);
+    ^***************************************^
+
+error: Only one parameter of type IWorldDispatcher is allowed.
+ --> test_src/lib.cairo:114:5
+    #[external(v0)]
+    ^*************^
+
+error: The IWorldDispatcher parameter must be named 'world'.
+ --> test_src/lib.cairo:124:38
+    fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
+                                     ^*****************************^
+
+error: The IWorldDispatcher parameter must be named 'world'.
+ --> test_src/lib.cairo:129:69
+    fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+                                                                    ^*****************************^
+
+error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
+ --> test_src/lib.cairo:134:43
+    fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
+                                          ^*********************^
+
+error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
+ --> test_src/lib.cairo:139:74
+    fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+                                                                         ^*********************^
+
+error: Only one parameter of type IWorldDispatcher is allowed.
+ --> test_src/lib.cairo:149:9
+        fn do_with_several_world_dispatchers(
+        ^***********************************^
+
+error: The IWorldDispatcher parameter must be named 'world'.
+ --> test_src/lib.cairo:157:42
+        fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
+                                         ^*****************************^
+
+error: The IWorldDispatcher parameter must be named 'world'.
+ --> test_src/lib.cairo:161:73
+        fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+                                                                        ^*****************************^
+
+error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
+ --> test_src/lib.cairo:165:47
+        fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
+                                              ^*********************^
+
+error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
+ --> test_src/lib.cairo:169:78
+        fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+                                                                             ^*********************^
+
 error: Unsupported attribute.
  --> test_src/lib.cairo[spawn]:2:17
                 #[starknet::contract]
@@ -227,6 +434,21 @@ error: Unsupported attribute.
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[withcomponent]:2:17
+                #[starknet::contract]
+                ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:93:5
+    #[my_attr]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyFaultyContract]:2:17
+                #[starknet::contract]
+                ^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyNominalContract]:2:17
                 #[starknet::contract]
                 ^*******************^
 
@@ -445,6 +667,136 @@ error: Unsupported attribute.
                         #[flat]
                         ^*****^
 
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[MyFaultyContract]:10:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyFaultyContract]:12:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyFaultyContract]:19:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyFaultyContract]:26:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:109:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:114:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:123:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:128:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:133:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:138:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:143:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyFaultyContract]:92:13
+            #[event]
+            ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyFaultyContract]:98:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyFaultyContract]:101:17
+                #[substorage(v0)]
+                ^***************^
+
+error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[MyNominalContract]:10:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyNominalContract]:12:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyNominalContract]:19:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyNominalContract]:26:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:184:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:190:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:196:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:202:5
+    #[external(v0)]
+    ^*************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:208:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyNominalContract]:83:13
+            #[event]
+            ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyNominalContract]:89:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[MyNominalContract]:92:17
+                #[substorage(v0)]
+                ^***************^
+
 //! > expanded_cairo_code
 
 #[starknet::component]
@@ -487,7 +839,7 @@ mod testcomponent2 {
                         use traits::Into;
     use dojo::world::Context;
 
-    fn execute(ctx: Context, name: felt252) {
+    fn execute(self: @ContractState, ctx: Context, name: felt252) {
         return ();
     }
 
@@ -532,7 +884,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
-                        fn execute(value: felt252) -> felt252 {
+                        fn execute(self: @ContractState, value: felt252) -> felt252 {
         value
     }
 
@@ -580,7 +932,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         use traits::Into;
     use dojo::world::Context;
 
-    fn execute(ctx2: Context, name: felt252) {
+    fn execute(self: @ContractState, ctx2: Context, name: felt252) {
         return ();
     }
 
@@ -639,7 +991,7 @@ impl EventDrop of core::traits::Drop::<Event>;
     }
 
     #[abi(embed_v0)]
-    fn test(value: felt252) -> value {
+    fn test(self: @ContractState, value: felt252) -> value {
         value
     }
 
@@ -698,6 +1050,229 @@ impl TestEventDrop of core::traits::Drop::<TestEvent>;
         testcomponent1_event: testcomponent1::Event,
         testcomponent2_event: testcomponent2::Event
             }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::interface]
+                trait IEmptyTrait<TContractState> {}
+
+                #[starknet::interface]
+                trait IFaultyTrait<TContractState> {
+                    
+    fn do_ref_self(ref self: TContractState);
+
+    #[my_attr]
+    fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
+
+                }
+
+                #[starknet::interface]
+                trait INominalTrait<TContractState> {
+                        fn do_no_param(self: @TContractState);
+    fn do_no_param_but_self(self: @TContractState);
+    fn do_params(self: @TContractState, p1: dojo_examples::models::Direction, p2: u8);
+    fn do_params_and_self(self: @TContractState, p2: u8);
+    fn do_return_value(self: @TContractState, p1: u8) -> u16;
+
+                }
+
+                #[starknet::contract]
+                mod MyFaultyContract {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'MyFaultyContract'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                    
+    #[external(v0)]
+    fn do_with_ref_self(ref self: ContractState) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_several_world_dispatchers(
+self: @ContractState,         world: IWorldDispatcher,         vec: Vec2,         another_world: IWorldDispatcher
+    ) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+        'land'
+    }
+
+    #[abi(embed_v0)]
+    impl ActionsImpl of IActions<ContractState> {
+        fn do_with_ref_self(ref self: ContractState) -> felt252 {
+            'land'
+        }
+
+        fn do_with_several_world_dispatchers(
+self: @ContractState,             world: IWorldDispatcher,             vec: Vec2,             another_world: IWorldDispatcher
+        ) -> felt252 {
+            'land'
+        }
+
+        fn do_with_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
+            'land'
+        }
+
+    }
+
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
+                }
+
+                #[starknet::contract]
+                mod MyNominalContract {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'MyNominalContract'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                    
+    #[derive(Drop)]
+    struct Action {
+        damage: u8
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do(self: @ContractState, vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do_with_world_first(self: @ContractState, vec: Vec2) -> felt252 {
+let world = self.world_dispatcher.read();
+        'land'
+    }
+
+    #[external(v0)]
+    #[computed]
+    fn do_with_self_and_world_first(self: @ContractState, vec: Vec2) -> felt252 {
+let world = self.world_dispatcher.read();
+        'land'
+    }
+
+    #[abi(embed_v0)]
+    impl ActionsImpl of IActions<ContractState> {
+
+        fn do(self: @ContractState, vec: Vec2) -> felt252 {
+            'land'
+        }
+
+        fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
+            'land'
+        }
+
+        fn do_with_world_first(self: @ContractState, vec: Vec2) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+
+        fn do_with_self_and_world_first(self: @ContractState, vec: Vec2) -> felt252 {
+let world = self.world_dispatcher.read();
+            'land'
+        }
+    }
+
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl ActionDrop of core::traits::Drop::<Action>;
 impl EventDrop of core::traits::Drop::<Event>;
             
                 }
