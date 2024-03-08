@@ -119,7 +119,7 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
         Ok(latest_block_number)
     }
 
-    pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<()> {
+    pub async fn sync_range(&mut self, from: u64, to: u64) -> Result<()> {
         // Process all blocks from current to latest.
         let get_event = |token: Option<String>| {
             self.provider.get_events(
@@ -148,6 +148,8 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
                 self.process(event, &mut last_block).await?;
             }
         }
+
+        self.db.execute().await?;
 
         Ok(())
     }
