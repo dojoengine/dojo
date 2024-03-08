@@ -169,6 +169,18 @@ impl Relay {
                                 }
                             };
 
+                            let parsed_message = match validate_message(&data.message.message) {
+                                Ok(parsed_message) => parsed_message,
+                                Err(e) => {
+                                    info!(
+                                        target: "torii::relay::server::gossipsub",
+                                        error = %e,
+                                        "Failed to validate message"
+                                    );
+                                    continue;
+                                }
+                            };
+
                             info!(
                                 target: "torii::relay::server",
                                 message_id = %message_id,
@@ -177,22 +189,70 @@ impl Relay {
                                 "Received message"
                             );
 
-                            // check if entity already exists
-                            let entity_identity = self.pool.read().await.
-
-                            // Verify the signature
-                            let message_hash = if let Ok(message) = data.message.encode(data.identity) {
-                                message
-                            } else {
-                                info!(
-                                    target: "torii::relay::server",
-                                    "Failed to encode message"
-                                );
-                                continue;
+                            // retrieve entity identity from db
+                            let pool = match self.pool.read().await.pool.acquire().await {
+                                Ok(pool) => pool,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to acquire pool"
+                                    );
+                                    continue;
+                                }
                             };
 
+                            // select only identity field
+                            let entity_identity = match sqlx::query_as::<_, (String,)>(
+                                "SELECT identity FROM ? WHERE id = ?",
+                            )
+                            .bind(parsed_message.model_name)
+                            .bind(parsed_message.hashed_keys.to_string())
+                            .fetch_one(&mut *pool)
+                            .await
+                            {
+                                Ok(entity_identity) => entity_identity.0,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to fetch entity identity"
+                                    );
+                                    continue;
+                                }
+                            };
+
+                            let entity_identity = match FieldElement::from_str(&entity_identity) {
+                                Ok(entity_identity) => entity_identity,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to parse entity identity"
+                                    );
+                                    continue;
+                                }
+                            };
+
+                            // Verify the signature
+                            let message_hash =
+                                if let Ok(message) = data.message.encode(entity_identity) {
+                                    message
+                                } else {
+                                    info!(
+                                        target: "torii::relay::server",
+                                        "Failed to encode message"
+                                    );
+                                    continue;
+                                };
+
                             // for the public key used for verification; use identity from model
-                            if let Ok(valid) = verify(&data.identity, &message_hash, &data.signature_r, &data.signature_s) {
+                            if let Ok(valid) = verify(
+                                &entity_identity,
+                                &message_hash,
+                                &data.signature_r,
+                                &data.signature_s,
+                            ) {
                                 if !valid {
                                     info!(
                                         target: "torii::relay::server",
@@ -207,8 +267,6 @@ impl Relay {
                                 );
                                 continue;
                             }
-
-                            
 
                             // if let Err(e) = self
                             //     .pool
@@ -285,8 +343,7 @@ struct ParsedMessage {
 // Validates the message model
 // and returns the identity and signature
 fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedMessage, Error> {
-    
-    let model_name = if let  Some(model_name) = message.get("model") {
+    let model_name = if let Some(model_name) = message.get("model") {
         if let PrimitiveType::String(model_name) = model_name {
             model_name
         } else {
@@ -296,12 +353,14 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
 
-    let hashed_keys = if let  Some(hashed_keys) = message.get("hashed_keys") {
+    let hashed_keys = if let Some(hashed_keys) = message.get("hashed_keys") {
         if let PrimitiveType::String(hashed_keys) = hashed_keys {
             if let Ok(hashed_keys) = FieldElement::from_str(hashed_keys) {
                 hashed_keys
             } else {
-                return Err(Error::InvalidMessageError("Hashed keys is not a valid field element".to_string()));
+                return Err(Error::InvalidMessageError(
+                    "Hashed keys is not a valid field element".to_string(),
+                ));
             }
         } else {
             return Err(Error::InvalidMessageError("Hashed keys is not a string".to_string()));
@@ -316,11 +375,7 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
 
-    Ok(ParsedMessage {
-        model_name: model_name.to_string(),
-        hashed_keys,
-        values,
-    })
+    Ok(ParsedMessage { model_name: model_name.to_string(), hashed_keys, values })
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
