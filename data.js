@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709907492333,
+  "lastUpdate": 1709913059902,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2335,6 +2335,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1029253,
             "range": "± 31818",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0bced71faeddebdca280cb5a95cbc9c66d9158de",
+          "message": "feat: dojoup - add a welcome message (#1605)\n\n* feat: dojoup - add a welcome message\r\n\r\n* Update dojoup/dojoup\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Update dojoup/dojoup\r\n\r\nCo-authored-by: Tarrence van As <tarrencev@users.noreply.github.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Rémy Baranx <remy.baranx@proton.me>\r\nCo-authored-by: glihm <dev@glihm.net>\r\nCo-authored-by: Tarrence van As <tarrencev@users.noreply.github.com>",
+          "timestamp": "2024-03-08T10:41:26-05:00",
+          "tree_id": "c9f9a1d5d1e0b8ec41b78bff54af2d78cc2ee0e3",
+          "url": "https://github.com/dojoengine/dojo/commit/0bced71faeddebdca280cb5a95cbc9c66d9158de"
+        },
+        "date": 1709913058889,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 974414,
+            "range": "± 38063",
             "unit": "ns/iter"
           }
         ]
