@@ -142,48 +142,41 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
             events_pages.push(get_event(Some(token.clone())).await?);
         }
 
-        let mut current_block: u64 = 0;
+        let mut last_block: u64 = 0;
         for events_page in events_pages {
             for event in events_page.events {
-                match self.process(event, &mut current_block).await {
-                    Ok(_) => {
-                        self.db.set_head(from);
-                        self.db.execute().await?;
-                        from += 1;
-                    }
-                    Err(e) => {
-                        error!("processing block: {}", e);
-                        continue;
-                    }
-                }
+                self.process(event, &mut last_block).await?;
             }
         }
 
         Ok(())
     }
 
-    async fn process(&mut self, event: EmittedEvent, current_block: &mut u64) -> Result<()> {
-        if event.block_number.unwrap() > *current_block {
-            *current_block = event.block_number.unwrap();
+    async fn process(&mut self, event: EmittedEvent, last_block: &mut u64) -> Result<()> {
+        let block_number = match event.block_number {
+            Some(block_number) => block_number,
+            None => {
+                error!("event without block number");
+                return Ok(());
+            }
+        };
+
+        if block_number > *last_block {
+            *last_block = block_number;
 
             if let Some(ref block_tx) = self.block_tx {
-                block_tx.send(event.block_number.unwrap()).await?;
+                block_tx.send(block_number).await?;
             }
 
-            Self::process_block(self, event.block_number.unwrap(), event.block_hash.unwrap())
-                .await?;
-            info!("processed block: {}", event.block_number.unwrap());
+            Self::process_block(self, block_number, event.block_hash.unwrap()).await?;
+            info!(target: "torii_core::engine", block = %block_number, "Processed block");
 
-            self.db.set_head(event.block_number.unwrap());
+            self.db.set_head(block_number);
         }
 
         let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
-        self.process_transaction_and_receipt(
-            event.transaction_hash,
-            &transaction,
-            event.block_number.unwrap(),
-        )
-        .await?;
+        self.process_transaction_and_receipt(event.transaction_hash, &transaction, block_number)
+            .await?;
 
         Ok(())
     }
