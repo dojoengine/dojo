@@ -5,7 +5,7 @@ use blockifier::state::cached_state::{self, GlobalContractCache};
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
-use katana_primitives::{conversion, FieldElement};
+use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
@@ -15,6 +15,7 @@ use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
+use super::utils::{self};
 use crate::StateProviderDb;
 
 /// A helper trait to enforce that a type must implement both [StateProvider] and [StateReader].
@@ -28,7 +29,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         contract_address: starknet_api::core::ContractAddress,
     ) -> StateResult<starknet_api::core::ClassHash> {
         self.0
-            .class_hash_of_contract(contract_address.into())
+            .class_hash_of_contract(utils::to_address(contract_address))
             .map(|v| ClassHash(v.unwrap_or_default().into()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
@@ -57,8 +58,8 @@ impl<'a> StateReader for StateProviderDb<'a> {
             .class(class_hash.0.into())
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            let class = conversion::blockifier::to_class(class)
-                .map_err(|e| StateError::StateReadError(e.to_string()))?;
+            let class =
+                utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
 
             Ok(class)
         } else {
@@ -71,7 +72,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         contract_address: starknet_api::core::ContractAddress,
     ) -> StateResult<starknet_api::core::Nonce> {
         self.0
-            .nonce(contract_address.into())
+            .nonce(utils::to_address(contract_address))
             .map(|n| Nonce(n.unwrap_or_default().into()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
@@ -82,7 +83,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         key: starknet_api::state::StorageKey,
     ) -> StateResult<starknet_api::hash::StarkFelt> {
         self.0
-            .storage(contract_address.into(), (*key.0.key()).into())
+            .storage(utils::to_address(contract_address), (*key.0.key()).into())
             .map(|v| v.unwrap_or_default().into())
             .map_err(|e| StateError::StateReadError(e.to_string()))
     }
@@ -162,7 +163,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         &self,
         address: katana_primitives::contract::ContractAddress,
     ) -> ProviderResult<Option<katana_primitives::class::ClassHash>> {
-        let Ok(hash) = self.write().inner.get_class_hash_at(address.into()) else {
+        let Ok(hash) = self.write().inner.get_class_hash_at(utils::to_blk_address(address)) else {
             return Ok(None);
         };
 
@@ -174,7 +175,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         &self,
         address: katana_primitives::contract::ContractAddress,
     ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
-        let Ok(nonce) = self.write().inner.get_nonce_at(address.into()) else {
+        let Ok(nonce) = self.write().inner.get_nonce_at(utils::to_blk_address(address)) else {
             return Ok(None);
         };
         Ok(Some(nonce.0.into()))
@@ -185,7 +186,7 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         address: katana_primitives::contract::ContractAddress,
         storage_key: katana_primitives::contract::StorageKey,
     ) -> ProviderResult<Option<katana_primitives::contract::StorageValue>> {
-        let address = address.into();
+        let address = utils::to_blk_address(address);
         let key = StorageKey(patricia_key!(storage_key));
 
         if let Ok(value) = self.write().inner.get_storage_at(address, key) {
