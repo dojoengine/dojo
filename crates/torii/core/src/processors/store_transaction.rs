@@ -1,6 +1,6 @@
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockWithTxs, Transaction, TransactionReceipt};
+use starknet::core::types::{Transaction, TransactionReceipt};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 

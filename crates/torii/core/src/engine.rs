@@ -1,14 +1,8 @@
-use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
-use futures_util::lock::Mutex;
-use starknet::core::types::{
-    BlockId, BlockWithTxs, EmittedEvent, Event, EventFilter, InvokeTransaction,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
-};
+use starknet::core::types::{BlockId, EmittedEvent, Event, EventFilter, MaybePendingTransactionReceipt, Transaction, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;

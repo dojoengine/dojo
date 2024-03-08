@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, Transaction, TransactionReceipt};
+use starknet::core::types::{Event, Transaction, TransactionReceipt};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
