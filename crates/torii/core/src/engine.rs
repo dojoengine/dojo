@@ -124,31 +124,40 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
 
     pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<()> {
         // Process all blocks from current to latest.
-        let events_page = self
-            .provider
-            .get_events(
+        let get_event = |token: Option<String>| {
+            self.provider.get_events(
                 EventFilter {
                     from_block: Some(BlockId::Number(from)),
                     to_block: Some(BlockId::Number(to)),
                     address: Some(self.world.address),
                     keys: None,
                 },
-                None,
-                u64::MAX,
+                token,
+                1000,
             )
-            .await?;
+        };
+
+        // handle next events pages
+        let mut events_pages = vec![];
+
+        events_pages.push(get_event(None).await?);
+        while let Some(token) = &events_pages.last().unwrap().continuation_token {
+            events_pages.push(get_event(Some(token.clone())).await?);
+        }
 
         let mut current_block: u64 = 0;
-        for event in events_page.events {
-            match self.process(event, &mut current_block).await {
-                Ok(_) => {
-                    self.db.set_head(from);
-                    self.db.execute().await?;
-                    from += 1;
-                }
-                Err(e) => {
-                    error!("processing block: {}", e);
-                    continue;
+        for events_page in events_pages {
+            for event in events_page.events {
+                match self.process(event, &mut current_block).await {
+                    Ok(_) => {
+                        self.db.set_head(from);
+                        self.db.execute().await?;
+                        from += 1;
+                    }
+                    Err(e) => {
+                        error!("processing block: {}", e);
+                        continue;
+                    }
                 }
             }
         }
