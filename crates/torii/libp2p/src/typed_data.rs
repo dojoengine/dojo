@@ -1,5 +1,9 @@
 use std::str::FromStr;
 
+use dojo_types::{
+    primitive::Primitive,
+    schema::{Enum, Member, Struct, Ty},
+};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{value::Index, Number};
@@ -223,59 +227,166 @@ struct FieldInfo {
     index: usize,
 }
 
-impl PrimitiveType {
-    fn get_value_type(
-        &self,
-        name: &str,
-        types: &IndexMap<String, Vec<Field>>,
-    ) -> Result<FieldInfo, Error> {
-        // iter both "types" and "preset_types" to find the field
-        for (idx, (key, value)) in types.iter().enumerate() {
-            if key == name {
-                return Ok(FieldInfo {
-                    name: name.to_string(),
-                    r#type: key.clone(),
-                    base_type: "".to_string(),
-                    index: idx,
-                });
-            }
+pub(crate) fn get_value_type(
+    name: &str,
+    types: &IndexMap<String, Vec<Field>>,
+) -> Result<FieldInfo, Error> {
+    // iter both "types" and "preset_types" to find the field
+    for (idx, (key, value)) in types.iter().enumerate() {
+        if key == name {
+            return Ok(FieldInfo {
+                name: name.to_string(),
+                r#type: key.clone(),
+                base_type: "".to_string(),
+                index: idx,
+            });
+        }
 
-            for (idx, field) in value.iter().enumerate() {
-                match field {
-                    Field::SimpleType(simple_field) => {
-                        if simple_field.name == name {
-                            return Ok(FieldInfo {
-                                name: name.to_string(),
-                                r#type: simple_field.r#type.clone(),
-                                base_type: "".to_string(),
-                                index: idx,
-                            });
-                        }
+        for (idx, field) in value.iter().enumerate() {
+            match field {
+                Field::SimpleType(simple_field) => {
+                    if simple_field.name == name {
+                        return Ok(FieldInfo {
+                            name: name.to_string(),
+                            r#type: simple_field.r#type.clone(),
+                            base_type: "".to_string(),
+                            index: idx,
+                        });
                     }
-                    Field::ParentType(parent_field) => {
-                        if parent_field.name == name {
-                            return Ok(FieldInfo {
-                                name: name.to_string(),
-                                r#type: parent_field.contains.clone(),
-                                base_type: parent_field.r#type.clone(),
-                                index: idx,
-                            });
-                        }
+                }
+                Field::ParentType(parent_field) => {
+                    if parent_field.name == name {
+                        return Ok(FieldInfo {
+                            name: name.to_string(),
+                            r#type: parent_field.contains.clone(),
+                            base_type: parent_field.r#type.clone(),
+                            index: idx,
+                        });
                     }
                 }
             }
         }
-
-        Err(Error::InvalidMessageError(format!("Field {} not found in types", name)))
     }
 
-    fn get_hex(&self, value: &str) -> Result<FieldElement, Error> {
-        if let Ok(felt) = FieldElement::from_str(value) {
-            Ok(felt)
-        } else {
-            // assume its a short string and encode
-            cairo_short_string_to_felt(value)
-                .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string()))
+    Err(Error::InvalidMessageError(format!("Field {} not found in types", name)))
+}
+
+fn get_hex(value: &str) -> Result<FieldElement, Error> {
+    if let Ok(felt) = FieldElement::from_str(value) {
+        Ok(felt)
+    } else {
+        // assume its a short string and encode
+        cairo_short_string_to_felt(value)
+            .map_err(|_| Error::InvalidMessageError("Invalid short string".to_string()))
+    }
+}
+
+impl PrimitiveType {
+    pub fn encode_ty(
+        &self,
+        r#type: &str,
+        types: &IndexMap<String, Vec<Field>>,
+        preset_types: &IndexMap<String, Vec<Field>>,
+        ctx: &mut Ctx,
+    ) -> Result<Ty, Error> {
+        match self {
+            PrimitiveType::Object(obj) => {
+                if preset_types.contains_key(r#type) {
+                    ctx.is_preset = true;
+                } else {
+                    ctx.is_preset = false;
+                }
+
+                if ctx.base_type == "enum" {
+                    let (variant_name, value) = obj.first().ok_or_else(|| {
+                        Error::InvalidMessageError("Enum value must be populated".to_string())
+                    })?;
+                    let variant_type = get_value_type(variant_name, types)?;
+
+                    let arr: &Vec<PrimitiveType> = match value {
+                        PrimitiveType::Array(arr) => arr,
+                        _ => {
+                            return Err(Error::InvalidMessageError(
+                                "Enum value must be an array".to_string(),
+                            ))
+                        }
+                    };
+
+                    return Ok(Ty::Enum(Enum {
+                        name: variant_type.r#type.clone(),
+                        option: Some(variant_type.index as u8),
+                        options: vec![],
+                    }));
+                }
+
+                let type_struct = Struct { name: r#type.to_string(), children: vec![] };
+
+                for (field_name, value) in obj {
+                    // recheck if we're currently in a preset type
+                    if preset_types.contains_key(r#type) {
+                        ctx.is_preset = true;
+                    } else {
+                        ctx.is_preset = false;
+                    }
+
+                    // pass correct types - preset or types
+                    let field_type = get_value_type(
+                        field_name,
+                        if ctx.is_preset { preset_types } else { types },
+                    )?;
+                    ctx.base_type = field_type.base_type;
+                    ctx.parent_type = r#type.to_string();
+                    let ty =
+                        value.encode_ty(&field_type.r#type.as_str(), types, preset_types, ctx)?;
+                    type_struct.children.push(Member { name: field_name.clone(), ty, key: false });
+                }
+
+                Ok(Ty::Struct(type_struct))
+            }
+            PrimitiveType::Array(array) => Ok(Ty::Tuple(
+                array
+                    .iter()
+                    .map(|x| x.encode_ty(r#type.trim_end_matches("*"), types, preset_types, ctx))
+                    .collect::<Result<Vec<_>, _>>()?
+                    .to_vec(),
+            )),
+            PrimitiveType::Bool(boolean) => Ok(Ty::Primitive(Primitive::Bool(Some(boolean)))),
+            PrimitiveType::String(string) => match r#type {
+                "shortstring" => get_hex(string),
+                "string" => {
+                    // split the string into short strings and encode
+                    let byte_array = byte_array_from_string(string).map_err(|_| {
+                        Error::InvalidMessageError("Invalid short string".to_string())
+                    })?;
+
+                    let mut hashes = vec![FieldElement::from(byte_array.0.len())];
+
+                    for hash in byte_array.0 {
+                        hashes.push(hash);
+                    }
+
+                    hashes.push(byte_array.1);
+                    hashes.push(FieldElement::from(byte_array.2));
+
+                    Ok(poseidon_hash_many(hashes.as_slice()))
+                }
+                "selector" => get_selector_from_name(string).map_err(|_| {
+                    Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
+                }),
+                "felt" => get_hex(string),
+                "ContractAddress" => get_hex(string),
+                "ClassHash" => get_hex(string),
+                "timestamp" => get_hex(string),
+                "u128" => get_hex(string),
+                "i128" => get_hex(string),
+                _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
+            },
+            PrimitiveType::Number(number) => {
+                let felt = FieldElement::from_str(&number.to_string()).map_err(|_| {
+                    Error::InvalidMessageError(format!("Invalid number {}", number.to_string()))
+                })?;
+                Ok(felt)
+            }
         }
     }
 
@@ -302,7 +413,7 @@ impl PrimitiveType {
                     let (variant_name, value) = obj.first().ok_or_else(|| {
                         Error::InvalidMessageError("Enum value must be populated".to_string())
                     })?;
-                    let variant_type = self.get_value_type(variant_name, types)?;
+                    let variant_type = get_value_type(variant_name, types)?;
 
                     let arr: &Vec<PrimitiveType> = match value {
                         PrimitiveType::Array(arr) => arr,
@@ -351,7 +462,7 @@ impl PrimitiveType {
                     }
 
                     // pass correct types - preset or types
-                    let field_type = self.get_value_type(
+                    let field_type = get_value_type(
                         field_name,
                         if ctx.is_preset { preset_types } else { types },
                     )?;
@@ -380,7 +491,7 @@ impl PrimitiveType {
                 Ok(v)
             }
             PrimitiveType::String(string) => match r#type {
-                "shortstring" => self.get_hex(string),
+                "shortstring" => get_hex(string),
                 "string" => {
                     // split the string into short strings and encode
                     let byte_array = byte_array_from_string(string).map_err(|_| {
@@ -401,12 +512,12 @@ impl PrimitiveType {
                 "selector" => get_selector_from_name(string).map_err(|_| {
                     Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
                 }),
-                "felt" => self.get_hex(string),
-                "ContractAddress" => self.get_hex(string),
-                "ClassHash" => self.get_hex(string),
-                "timestamp" => self.get_hex(string),
-                "u128" => self.get_hex(string),
-                "i128" => self.get_hex(string),
+                "felt" => get_hex(string),
+                "ContractAddress" => get_hex(string),
+                "ClassHash" => get_hex(string),
+                "timestamp" => get_hex(string),
+                "u128" => get_hex(string),
+                "i128" => get_hex(string),
                 _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
             },
             PrimitiveType::Number(number) => {

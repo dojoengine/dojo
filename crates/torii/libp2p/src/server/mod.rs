@@ -9,7 +9,7 @@ use std::time::Duration;
 use std::{fs, io};
 
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::Ty;
+use dojo_types::schema::{Struct, Ty};
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
@@ -33,8 +33,9 @@ use crate::errors::Error;
 mod events;
 
 use crate::server::events::ServerEvent;
-use crate::typed_data::{PrimitiveType, TypedData};
+use crate::typed_data::{get_value_type, Field, PrimitiveType, TypedData};
 use crate::types::Message;
+use sqlx::Row;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -190,7 +191,7 @@ impl Relay {
                             );
 
                             // retrieve entity identity from db
-                            let pool = match self.pool.read().await.pool.acquire().await {
+                            let mut pool = match self.pool.read().await.pool.acquire().await {
                                 Ok(pool) => pool,
                                 Err(e) => {
                                     warn!(
@@ -202,27 +203,49 @@ impl Relay {
                                 }
                             };
 
-                            // select only identity field
-                            let entity_identity = match sqlx::query_as::<_, (String,)>(
-                                "SELECT identity FROM ? WHERE id = ?",
+                            // select only identity field, if doesn't exist, empty string
+                            let entity = match sqlx::query(
+                                "SELECT * FROM ? WHERE id = ?",
                             )
                             .bind(parsed_message.model_name)
                             .bind(parsed_message.hashed_keys.to_string())
-                            .fetch_one(&mut *pool)
+                            .fetch_optional(&mut *pool)
                             .await
                             {
-                                Ok(entity_identity) => entity_identity.0,
+                                Ok(entity_identity) => entity_identity,
                                 Err(e) => {
                                     warn!(
                                         target: "torii::relay::server",
                                         error = %e,
-                                        "Failed to fetch entity identity"
+                                        "Failed to fetch entity"
                                     );
                                     continue;
                                 }
                             };
 
-                            let entity_identity = match FieldElement::from_str(&entity_identity) {
+                            if entity.is_none() {
+                                // we can set the entity without checking identity
+
+
+                            }
+
+                            let entity = entity.unwrap();
+                            let identity = match entity.try_get::<String, _>("identity") {
+                                Ok(identity) => identity,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to get identity from model"
+                                    );
+                                    continue;
+                                }
+                            };
+
+
+
+                            
+                            let entity_identity = match FieldElement::from_str(&identity) {
                                 Ok(entity_identity) => entity_identity,
                                 Err(e) => {
                                     warn!(
@@ -335,11 +358,9 @@ impl Relay {
 }
 
 struct ParsedMessage {
-    model_name: String,
     hashed_keys: FieldElement,
-    values: HashMap<String, PrimitiveType>,
+    model: Ty,
 }
-
 // Validates the message model
 // and returns the identity and signature
 fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedMessage, Error> {
@@ -369,13 +390,17 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
         return Err(Error::InvalidMessageError("Hashed keys is missing".to_string()));
     };
 
-    let values = message
-        .iter()
-        .filter(|(key, _)| *key != "model" && *key != "hashed_keys")
-        .map(|(key, value)| (key.clone(), value.clone()))
-        .collect();
+    let model = if let Some(object) = message.get(model_name) {
+        if let PrimitiveType::Object(object) = object {
+            parse_object_to_ty(object)
+        } else {
+            return Err(Error::InvalidMessageError("Model is not a struct".to_string()));
+        }
+    } else {
+        return Err(Error::InvalidMessageError("Model is missing".to_string()));
+    };
 
-    Ok(ParsedMessage { model_name: model_name.to_string(), hashed_keys, values })
+    Ok(ParsedMessage { model, hashed_keys })
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
