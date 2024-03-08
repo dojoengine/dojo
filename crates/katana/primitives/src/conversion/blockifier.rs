@@ -7,7 +7,7 @@ use blockifier::transaction::objects::TransactionExecutionInfo;
 use cairo_vm::types::errors::program_errors::ProgramError;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use starknet::core::utils::parse_cairo_short_string;
-use starknet_api::core::{ClassHash, ContractAddress, PatriciaKey};
+use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::deprecated_contract_class::EntryPointType as BlockifierEntryPointType;
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
@@ -64,13 +64,23 @@ fn starknet_api_ethaddr_to_felt(value: starknet_api::core::EthAddress) -> FieldE
 
 /// Currently only blockifier -> primitive is implemented as the traces
 /// are not sent back to the blockifier.
-// impl From<TransactionExecutionInfo> for TxExecInfo {
-//     fn from(v: TransactionExecutionInfo) -> Self {
-//         Self {
-
-//         }
-//     }
-// }
+impl From<TransactionExecutionInfo> for TxExecInfo {
+    fn from(v: TransactionExecutionInfo) -> Self {
+        Self {
+            validate_call_info: v.validate_call_info.map(|ci| ci.into()),
+            execute_call_info: v.execute_call_info.map(|ci| ci.into()),
+            fee_transfer_call_info: v.fee_transfer_call_info.map(|ci| ci.into()),
+            actual_fee: v.actual_fee.0,
+            actual_resources: v
+                .actual_resources
+                .0
+                .into_iter()
+                .map(|(k, v)| (k, v as u64))
+                .collect(),
+            revert_error: v.revert_error.map(|s| s.clone()),
+        }
+    }
+}
 
 impl From<BlockifierCallInfo> for CallInfo {
     fn from(v: BlockifierCallInfo) -> Self {
