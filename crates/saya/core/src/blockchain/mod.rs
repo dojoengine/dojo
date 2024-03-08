@@ -6,9 +6,7 @@ use cairo_vm::vm::runners::builtin_runner::{
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
 };
-use katana_primitives::block::{
-    BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus,
-};
+use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus};
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};

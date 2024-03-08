@@ -23,12 +23,12 @@ use blockifier::transaction::transactions::{
     L1HandlerTransaction,
 };
 use cairo_vm::types::errors::program_errors::ProgramError;
-use katana_primitives::FieldElement;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
+use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
@@ -512,7 +512,9 @@ fn starknet_api_ethaddr_to_felt(value: starknet_api::core::EthAddress) -> FieldE
     stark_felt.into()
 }
 
-pub fn to_exec_info(exec_info: blockifier::transaction::objects::TransactionExecutionInfo) -> katana_primitives::trace::TxExecInfo {
+pub fn to_exec_info(
+    exec_info: blockifier::transaction::objects::TransactionExecutionInfo,
+) -> katana_primitives::trace::TxExecInfo {
     katana_primitives::trace::TxExecInfo {
         validate_call_info: exec_info.validate_call_info.map(to_call_info),
         execute_call_info: exec_info.execute_call_info.map(to_call_info),
@@ -529,8 +531,11 @@ pub fn to_exec_info(exec_info: blockifier::transaction::objects::TransactionExec
 }
 
 fn to_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
-    let message_to_l1_from_address =
-        if let Some(a) = call_info.call.code_address { to_address(a) } else { to_address(call_info.call.caller_address) };
+    let message_to_l1_from_address = if let Some(a) = call_info.call.code_address {
+        to_address(a)
+    } else {
+        to_address(call_info.call.caller_address)
+    };
 
     katana_primitives::trace::CallInfo {
         caller_address: to_address(call_info.call.caller_address),
@@ -593,7 +598,6 @@ fn to_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
         failed: call_info.execution.failed,
     }
 }
-
 
 #[cfg(test)]
 mod tests {

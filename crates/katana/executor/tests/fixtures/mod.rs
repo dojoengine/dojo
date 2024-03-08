@@ -79,7 +79,7 @@ pub fn state_provider(genesis: &Genesis) -> Box<dyn StateProvider> {
     };
 
     provider
-        .insert_block_with_states_and_receipts(block, states, vec![])
+        .insert_block_with_states_and_receipts(block, states, vec![], vec![])
         .expect("able to insert block");
 
     <InMemoryProvider as StateFactoryProvider>::latest(&provider).unwrap()

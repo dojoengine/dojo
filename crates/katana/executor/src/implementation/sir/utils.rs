@@ -648,7 +648,11 @@ fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo
             .map(|f| to_felt(&f))
             .collect(),
         accessed_storage_keys: call_info.accessed_storage_keys.iter().map(to_class_hash).collect(),
-        inner_calls: call_info.internal_calls.iter().map(|c| from_sir_call_info(c.clone())).collect(),
+        inner_calls: call_info
+            .internal_calls
+            .iter()
+            .map(|c| from_sir_call_info(c.clone()))
+            .collect(),
         gas_consumed: call_info.gas_consumed,
         failed: call_info.failure_flag,
     }

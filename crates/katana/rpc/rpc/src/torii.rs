@@ -50,7 +50,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
         match self
             .on_io_blocking_task(move |this| {
                 let mut transactions = Vec::new();
-                let mut next_cursor = cursor.clone();
+                let mut next_cursor = cursor;
 
                 let provider = this.sequencer.backend.blockchain.provider();
                 let latest_block_number =
