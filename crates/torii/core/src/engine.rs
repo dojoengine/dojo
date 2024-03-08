@@ -2,7 +2,10 @@ use std::time::Duration;
 
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockId, EmittedEvent, Event, EventFilter, MaybePendingTransactionReceipt, Transaction, TransactionReceipt};
+use starknet::core::types::{
+    BlockId, EmittedEvent, Event, EventFilter, MaybePendingTransactionReceipt, Transaction,
+    TransactionReceipt,
+};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
