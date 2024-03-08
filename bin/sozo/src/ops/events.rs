@@ -1,19 +1,18 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 
-use crate::commands::events::EventsArgs;
 use anyhow::{anyhow, Context, Result};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
-use cairo_lang_starknet::abi;
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_world::manifest::{DeployedManifest, ManifestMethods};
 use dojo_world::metadata::Environment;
-use starknet::core::types::FieldElement;
-use starknet::core::types::{BlockId, EventFilter};
+use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::Provider;
+
+use crate::commands::events::EventsArgs;
 
 pub async fn execute(
     args: EventsArgs,
@@ -85,47 +84,49 @@ fn extract_events(
 ) -> Result<HashMap<String, Vec<Token>>> {
     fn process_abi(
         events: &mut HashMap<String, Vec<Token>>,
-        abi_path: &Utf8PathBuf,
-        manifest_dir: &Utf8PathBuf,
+        full_abi_path: &Utf8PathBuf,
     ) -> Result<()> {
-        let full_abi_path = manifest_dir.join(abi_path);
-        let abi: abi::Contract = serde_json::from_str(&fs::read_to_string(full_abi_path)?)?;
+        let abi_str = fs::read_to_string(full_abi_path)?;
 
-        match serde_json::to_string(&abi) {
-            Ok(abi_str) => match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
-                Ok(tokens) => {
-                    for token in tokens.structs {
-                        if is_event(&token) {
-                            let event_name = starknet_keccak(token.type_name().as_bytes());
-                            let vec = events.entry(event_name.to_string()).or_default();
-                            vec.push(token.clone());
-                        }
+        match AbiParser::tokens_from_abi_string(&abi_str, &HashMap::new()) {
+            Ok(tokens) => {
+                for token in tokens.structs {
+                    if is_event(&token) {
+                        let event_name = starknet_keccak(token.type_name().as_bytes());
+                        let vec = events.entry(event_name.to_string()).or_default();
+                        vec.push(token.clone());
                     }
                 }
-                Err(e) => return Err(anyhow!("Error parsing ABI: {}", e)),
-            },
-            Err(e) => return Err(anyhow!("Error serializing Contract to JSON: {}", e)),
+            }
+            Err(e) => return Err(anyhow!("Error parsing ABI: {}", e)),
         }
+
         Ok(())
     }
 
     let mut events_map = HashMap::new();
 
-    if let Some(abi_path) = manifest.world.inner.abi() {
-        process_abi(&mut events_map, abi_path, manifest_dir)?;
-    }
-
     for contract in &manifest.contracts {
         if let Some(abi_path) = contract.inner.abi() {
-            process_abi(&mut events_map, abi_path, manifest_dir)?;
+            let full_abi_path = manifest_dir.join(abi_path);
+            process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     for model in &manifest.contracts {
         if let Some(abi_path) = model.inner.abi() {
-            process_abi(&mut events_map, abi_path, manifest_dir)?;
+            let full_abi_path = manifest_dir.join(abi_path);
+            process_abi(&mut events_map, &full_abi_path)?;
         }
     }
+
+    // Read the world and base ABI from scarb artifacts as the
+    // manifest does not include them.
+    let world_abi_path = manifest_dir.join("target/dev/dojo::world::world.json");
+    process_abi(&mut events_map, &world_abi_path)?;
+
+    let base_abi_path = manifest_dir.join("target/dev/dojo::base::base.json");
+    process_abi(&mut events_map, &base_abi_path)?;
 
     Ok(events_map)
 }
@@ -161,10 +162,10 @@ fn parse_core_basic(
         "felt252" => {
             let hex = format!("{:#x}", value);
             match parse_cairo_short_string(value) {
-                Ok(parsed) if !parsed.is_empty() && include_felt_string => {
+                Ok(parsed) if !parsed.is_empty() && (include_felt_string && parsed.is_ascii()) => {
                     Ok(format!("{} \"{}\"", hex, parsed))
                 }
-                _ => Ok(format!("{}", hex)),
+                _ => Ok(hex.to_string()),
             }
         }
         "bool" => {
@@ -190,8 +191,9 @@ fn parse_event(
     let mut keys = VecDeque::from(event.keys.clone());
     let event_hash = keys.pop_front().ok_or(anyhow!("Event hash missing"))?;
 
-    let events =
-        events_map.get(&event_hash.to_string()).ok_or(anyhow!("Events for hash not found"))?;
+    let events = events_map
+        .get(&event_hash.to_string())
+        .ok_or(anyhow!("Events for hash not found: {:#x}", event_hash))?;
 
     for e in events {
         if let Token::Composite(composite) = e {
@@ -397,8 +399,10 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output =
-            "Event name: dojo::world::world::TestEvent\nfelt252: 0x5465737431 \"Test1\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n".to_string();
+        let expected_output = "Event name: dojo::world::world::TestEvent\nfelt252: 0x5465737431 \
+                               \"Test1\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: \
+                               5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n"
+            .to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -459,8 +463,9 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output =
-            "Event name: dojo::world::world::StoreDelRecord\ntable: 0x54657374 \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n".to_string();
+        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x54657374 \
+                               \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n"
+            .to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -532,8 +537,9 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output =
-            "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: 0x5465737431 \"Test1\"\ndata_1: 1\ndata_2: 2\n".to_string();
+        let expected_output = "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: \
+                               0x5465737431 \"Test1\"\ndata_1: 1\ndata_2: 2\n"
+            .to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -594,9 +600,9 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output =
-            "Event name: dojo::world::world::StoreDelRecord\ntable: 0x0\nkeys: [0x0, 0x1, 0x2]\n"
-                .to_string();
+        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: 0x0\nkeys: \
+                               [0x0, 0x1, 0x2]\n"
+            .to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
