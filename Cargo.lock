@@ -1263,9 +1263,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.15.3"
+version = "3.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ea184aa71bb362a1157c896979544cc23974e08fd265f29ea96b59f0b4a555b"
+checksum = "7ff69b9dd49fd426c69a0db9fc04dd934cdb6645ff000864d98f7e2af8830eaa"
 
 [[package]]
 name = "byte-slice-cast"
@@ -2168,7 +2168,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "1.0.0-rc1"
-source = "git+https://github.com/lambdaclass/cairo-vm#136296ab41ac228ba38f8e7475e59a90f56f20a0"
+source = "git+https://github.com/lambdaclass/cairo-vm#6ae7b32b0cb8cf758e52fbf795d6689b81a7ca0e"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -9664,9 +9664,9 @@ dependencies = [
 
 [[package]]
 name = "prometheus-client"
-version = "0.22.1"
+version = "0.22.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f87c10af16e0af74010d2a123d202e8363c04db5acfa91d8747f64a8524da3a"
+checksum = "c1ca959da22a332509f2a73ae9e5f23f9dcfc31fd3a54d71f159495bd5909baa"
 dependencies = [
  "dtoa",
  "itoa",

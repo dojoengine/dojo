@@ -9,7 +9,7 @@ version.workspace = true
 [dependencies]
 katana-primitives.workspace = true
 katana-provider.workspace = true
-cairo-vm.workspace = true
+
 convert_case.workspace = true
 futures.workspace = true
 parking_lot.workspace = true
@@ -28,6 +28,7 @@ sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/stark
 starknet-types-core = { version = "0.0.6", optional = true }
 
 [dev-dependencies]
+cairo-vm.workspace = true
 katana-provider.workspace = true
 katana-rpc-types.workspace = true
 rstest.workspace = true
