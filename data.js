@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709913059902,
+  "lastUpdate": 1709936631559,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2365,6 +2365,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 974414,
             "range": "± 38063",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ca9f892671d7e9358f5ed482ae6e0e29b9075eeb",
+          "message": "fix: add flat to the event to be consistent with all world events (#1639)\n\n* fix: add flat to the event to be consistent with all world events\r\n\r\n* fix: adjust class hash for the invalid model test",
+          "timestamp": "2024-03-08T16:14:13-06:00",
+          "tree_id": "7dc47921a23fba372822f2bcb8c8d4163a06bce4",
+          "url": "https://github.com/dojoengine/dojo/commit/ca9f892671d7e9358f5ed482ae6e0e29b9075eeb"
+        },
+        "date": 1709936630578,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 974991,
+            "range": "± 44335",
             "unit": "ns/iter"
           }
         ]
