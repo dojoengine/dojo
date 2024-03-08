@@ -89,7 +89,8 @@ impl<'a> StarknetVMProcessor<'a> {
         self.block_context.block_info.block_timestamp = timestamp;
         self.block_context.block_info.gas_prices.eth_l1_gas_price = eth_l1_gas_price;
         self.block_context.block_info.gas_prices.strk_l1_gas_price = strk_l1_gas_price;
-        self.block_context.block_info.sequencer_address = header.sequencer_address.into();
+        self.block_context.block_info.sequencer_address =
+            utils::to_blk_address(header.sequencer_address);
     }
 }
 
@@ -181,7 +182,7 @@ impl<'a> abstraction::BlockExecutor<'a> for StarknetVMProcessor<'a> {
         BlockEnv {
             number: self.block_context.block_info.block_number.0,
             timestamp: self.block_context.block_info.block_timestamp.0,
-            sequencer_address: self.block_context.block_info.sequencer_address.into(),
+            sequencer_address: utils::to_address(self.block_context.block_info.sequencer_address),
             l1_gas_prices: GasPrices {
                 eth: self.block_context.block_info.gas_prices.eth_l1_gas_price,
                 strk: self.block_context.block_info.gas_prices.strk_l1_gas_price,

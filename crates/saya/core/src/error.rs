@@ -12,8 +12,8 @@ pub enum Error {
     SayaProvider(#[from] saya_provider::error::ProviderError),
     #[error("Block {0:?} not found.")]
     BlockNotFound(katana_primitives::block::BlockIdOrTag),
-    #[error(transparent)]
-    Snos(#[from] snos::error::SnOsError),
+    // #[error(transparent)]
+    // Snos(#[from] snos::error::SnOsError),
 }
 
 pub type SayaResult<T, E = Error> = Result<T, E>;

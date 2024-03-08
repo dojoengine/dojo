@@ -142,13 +142,6 @@ impl Saya {
 
         let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
-        // Output the current state + the state diff in input file
-        // to be proven.
-
-        // let state = self.blockchain.state(&BlockIdOrTag::Number(block_number - 1))?;
-
-        // -> Get state at block n - 1 for current, and state diff.
-
         Ok(())
     }
 }

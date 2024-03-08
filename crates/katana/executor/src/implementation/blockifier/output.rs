@@ -11,6 +11,7 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 
+use super::utils;
 use crate::TransactionExecutionOutput;
 
 #[derive(Debug, Default)]
@@ -77,7 +78,7 @@ impl TransactionExecutionOutput for TransactionExecutionInfo {
     }
 
     fn execution_info(&self) -> TxExecInfo {
-        self.inner.clone().into()
+        utils::to_exec_info(self.inner.clone())
     }
 }
 
@@ -88,7 +89,7 @@ fn events_from_exec_info(info: &TransactionExecutionInfo) -> Vec<Event> {
         let mut events: Vec<Event> = vec![];
 
         events.extend(call_info.execution.events.iter().map(|e| Event {
-            from_address: call_info.call.storage_address.into(),
+            from_address: utils::to_address(call_info.call.storage_address),
             data: e.event.data.0.iter().map(|d| (*d).into()).collect(),
             keys: e.event.keys.iter().map(|k| k.0.into()).collect(),
         }));

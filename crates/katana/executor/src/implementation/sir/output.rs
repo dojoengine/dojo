@@ -76,7 +76,7 @@ impl TransactionExecutionOutput for TransactionExecutionInfo {
     }
 
     fn execution_info(&self) -> TxExecInfo {
-        utils::to_sir_exec_info(&self.inner)
+        utils::from_sir_exec_info(&self.inner)
     }
 }
 

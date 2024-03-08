@@ -1,18 +1,15 @@
 //! Blockchain fetched from Katana.
 use std::collections::HashMap;
 
-use blockifier::block_context::{BlockContext, BlockInfo, GasPrices};
-use blockifier::transaction::objects::TransactionExecutionInfo;
 use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
     SEGMENT_ARENA_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
 };
 use katana_primitives::block::{
-    BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlock, SealedBlockWithStatus, SealedHeader,
+    BlockHashOrNumber, BlockIdOrTag, BlockTag, SealedBlockWithStatus,
 };
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::transaction::{ExecutableTxWithHash, Tx};
 use katana_provider::providers::in_memory::InMemoryProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
 use katana_provider::traits::contract::ContractClassWriter;
@@ -25,11 +22,8 @@ use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;
-use starknet_api::block::{BlockNumber, BlockTimestamp};
 
 use crate::error::{Error as SayaError, SayaResult};
-
-const MAX_RECURSION_DEPTH: usize = 1000;
 
 pub trait Database:
     BlockProvider
@@ -144,39 +138,7 @@ impl Blockchain {
     }
 }
 
-/// Initializes a [`BlockInfo`] from a [`SealedHeader`] and additional information.
-///
-/// # Arguments
-///
-/// * `header` - The header to get information from.
-/// * `invoke_tx_max_n_steps` - Maximum number of steps for invoke tx.
-/// * `validate_max_n_steps` - Maximum number of steps to validate a tx.
-pub fn block_info_from_header(
-    header: &SealedHeader,
-    invoke_tx_max_n_steps: u32,
-    validate_max_n_steps: u32,
-) -> BlockInfo {
-    let gas_prices = GasPrices {
-        eth_l1_gas_price: header.header.gas_prices.eth,
-        strk_l1_gas_price: header.header.gas_prices.strk,
-        eth_l1_data_gas_price: 0,
-        strk_l1_data_gas_price: 0,
-    };
-
-    BlockInfo {
-        gas_prices,
-        block_number: BlockNumber(header.header.number),
-        block_timestamp: BlockTimestamp(header.header.timestamp),
-        sequencer_address: header.header.sequencer_address.into(),
-        vm_resource_fee_cost: get_default_vm_resource_fee_cost().into(),
-        validate_max_n_steps,
-        invoke_tx_max_n_steps,
-        max_recursion_depth: MAX_RECURSION_DEPTH,
-        use_kzg_da: false,
-    }
-}
-
-fn get_default_vm_resource_fee_cost() -> HashMap<String, f64> {
+fn _get_default_vm_resource_fee_cost() -> HashMap<String, f64> {
     HashMap::from([
         (String::from("n_steps"), 1_f64),
         (HASH_BUILTIN_NAME.to_string(), 1_f64),

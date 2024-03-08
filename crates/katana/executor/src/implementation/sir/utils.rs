@@ -562,13 +562,13 @@ fn to_sir_current_account_tx_fields(
     })
 }
 
-pub fn to_sir_exec_info(
+pub fn from_sir_exec_info(
     exec_info: &sir::execution::TransactionExecutionInfo,
 ) -> katana_primitives::trace::TxExecInfo {
     katana_primitives::trace::TxExecInfo {
-        validate_call_info: exec_info.validate_info.clone().map(to_sir_call_info),
-        execute_call_info: exec_info.call_info.clone().map(to_sir_call_info),
-        fee_transfer_call_info: exec_info.fee_transfer_info.clone().map(to_sir_call_info),
+        validate_call_info: exec_info.validate_info.clone().map(from_sir_call_info),
+        execute_call_info: exec_info.call_info.clone().map(from_sir_call_info),
+        fee_transfer_call_info: exec_info.fee_transfer_info.clone().map(from_sir_call_info),
         actual_fee: exec_info.actual_fee,
         actual_resources: exec_info
             .actual_resources
@@ -581,7 +581,7 @@ pub fn to_sir_exec_info(
     }
 }
 
-fn to_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
+fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
     let message_to_l1_from_address = if let Some(ref a) = call_info.code_address {
         to_address(a)
     } else {
@@ -648,7 +648,7 @@ fn to_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
             .map(|f| to_felt(&f))
             .collect(),
         accessed_storage_keys: call_info.accessed_storage_keys.iter().map(to_class_hash).collect(),
-        inner_calls: call_info.internal_calls.iter().map(|c| to_sir_call_info(c.clone())).collect(),
+        inner_calls: call_info.internal_calls.iter().map(|c| from_sir_call_info(c.clone())).collect(),
         gas_consumed: call_info.gas_consumed,
         failed: call_info.failure_flag,
     }
