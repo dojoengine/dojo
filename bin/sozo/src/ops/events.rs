@@ -254,6 +254,33 @@ fn process_inners(
 
 #[cfg(test)]
 mod tests {
+    use camino::Utf8Path;
+    use clap::Parser;
+    use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
+    use dojo_world::manifest::BaseManifest;
+
+    #[test]
+    fn events_are_parsed_correctly() {
+        let arg = EventsArgs::parse_from(["event", "Event1,Event2", "--chunk-size", "1"]);
+        assert!(arg.events.unwrap().len() == 2);
+        assert!(arg.from_block.is_none());
+        assert!(arg.to_block.is_none());
+        assert!(arg.chunk_size == 1);
+    }
+
+    #[test]
+    fn extract_events_work_as_expected() {
+        let manifest_dir = Utf8Path::new("../../examples/spawn-and-move").to_path_buf();
+        let manifest =
+            BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
+                .unwrap()
+                .into();
+        let result = extract_events(&manifest, &manifest_dir).unwrap();
+
+        // we are just collection all events from manifest file so just verifying count should work
+        assert!(result.len() == 2);
+    }
+
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use starknet::core::types::EmittedEvent;
 
@@ -371,7 +398,7 @@ mod tests {
         };
 
         let expected_output =
-            "Event name: dojo::world::world::TestEvent\nfelt252: Test1 \"0x5465737431\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n".to_string();
+            "Event name: dojo::world::world::TestEvent\nfelt252: 0x5465737431 \"Test1\"\nbool: true\nu8: 1\nu16: 2\nu32: 3\nu64: 4\nu128: 5\nusize: 6\nclass_hash: 0x54657374\ncontract_address: 0x54657374\n".to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -433,7 +460,7 @@ mod tests {
         };
 
         let expected_output =
-            "Event name: dojo::world::world::StoreDelRecord\ntable: Test \"0x54657374\"\nkeys: [\"0x5465737431\", \"0x5465737432\", \"0x5465737433\"]\n".to_string();
+            "Event name: dojo::world::world::StoreDelRecord\ntable: 0x54657374 \"Test\"\nkeys: [0x5465737431, 0x5465737432, 0x5465737433]\n".to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -506,7 +533,7 @@ mod tests {
         };
 
         let expected_output =
-            "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: Test1 \"0x5465737431\"\ndata_1: 1\ndata_2: 2\n".to_string();
+            "Event name: dojo::world::world::CustomEvent\nkey_1: 3\nkey_2: 0x5465737431 \"Test1\"\ndata_1: 1\ndata_2: 2\n".to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -567,7 +594,9 @@ mod tests {
             transaction_hash: FieldElement::from_hex_be("0x789").unwrap(),
         };
 
-        let expected_output = "Event name: dojo::world::world::StoreDelRecord\ntable: \"0x0\"\nkeys: [\"0x0\", \"0x1\", \"0x2\"]\n".to_string();
+        let expected_output =
+            "Event name: dojo::world::world::StoreDelRecord\ntable: 0x0\nkeys: [0x0, 0x1, 0x2]\n"
+                .to_string();
 
         let actual_output_option = parse_event(event, &events_map).expect("Failed to parse event");
 
@@ -575,36 +604,5 @@ mod tests {
             Some(actual_output) => assert_eq!(actual_output, expected_output),
             None => panic!("Expected event was not found."),
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use camino::Utf8Path;
-    use clap::Parser;
-    use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-    use dojo_world::manifest::BaseManifest;
-
-    use super::*;
-    #[test]
-    fn events_are_parsed_correctly() {
-        let arg = EventsArgs::parse_from(["event", "Event1,Event2", "--chunk-size", "1"]);
-        assert!(arg.events.unwrap().len() == 2);
-        assert!(arg.from_block.is_none());
-        assert!(arg.to_block.is_none());
-        assert!(arg.chunk_size == 1);
-    }
-
-    #[test]
-    fn extract_events_work_as_expected() {
-        let manifest_dir = Utf8Path::new("../../examples/spawn-and-move").to_path_buf();
-        let manifest =
-            BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
-                .unwrap()
-                .into();
-        let result = extract_events(&manifest, &manifest_dir).unwrap();
-
-        // we are just collection all events from manifest file so just verifying count should work
-        assert!(result.len() == 2);
     }
 }
