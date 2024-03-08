@@ -1,14 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
 use crate::event::OrderedEvent;
 use crate::message::OrderedL2ToL1Message;
 use crate::FieldElement;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TxExecInfo {
     /// Transaction validation call info; [None] for `L1Handler`.
@@ -24,6 +22,14 @@ pub struct TxExecInfo {
     pub actual_resources: HashMap<String, u64>,
     /// Error string for reverted transactions; [None] if transaction execution was successful.
     pub revert_error: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ExecutionResources {
+    pub n_steps: u64,
+    pub n_memory_holes: u64,
+    pub builtin_instance_counter: HashMap<String, u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

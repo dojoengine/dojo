@@ -1,11 +1,11 @@
 //! Translation layer for converting the primitive types to the execution engine types.
+//! Blockifier.
 
 use blockifier::execution::call_info::CallInfo as BlockifierCallInfo;
 use blockifier::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
 use blockifier::execution::entry_point::CallType as BlockifierCallType;
 use blockifier::transaction::objects::TransactionExecutionInfo;
 use cairo_vm::types::errors::program_errors::ProgramError;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::core::{ContractAddress, PatriciaKey};
 use starknet_api::deprecated_contract_class::EntryPointType as BlockifierEntryPointType;
@@ -16,7 +16,7 @@ use crate::chain::ChainId;
 use crate::class::CompiledClass;
 use crate::event::OrderedEvent;
 use crate::message::OrderedL2ToL1Message;
-use crate::trace::{CallInfo, CallType, EntryPointType, TxExecInfo};
+use crate::trace::{CallInfo, CallType, EntryPointType, ExecutionResources, TxExecInfo};
 use crate::FieldElement;
 
 impl From<crate::contract::ContractAddress> for ContractAddress {
@@ -62,8 +62,8 @@ fn starknet_api_ethaddr_to_felt(value: starknet_api::core::EthAddress) -> FieldE
     stark_felt.into()
 }
 
-/// Currently only blockifier -> primitive is implemented as the traces
-/// are not sent back to the blockifier.
+/// Currently the conversion from blockifier into Katana primitive is implemented
+/// as the traces are not sent back to the execution layer.
 impl From<TransactionExecutionInfo> for TxExecInfo {
     fn from(v: TransactionExecutionInfo) -> Self {
         Self {
@@ -77,7 +77,7 @@ impl From<TransactionExecutionInfo> for TxExecInfo {
                 .into_iter()
                 .map(|(k, v)| (k, v as u64))
                 .collect(),
-            revert_error: v.revert_error.map(|s| s.clone()),
+            revert_error: v.revert_error.clone(),
         }
     }
 }
@@ -104,9 +104,14 @@ impl From<BlockifierCallInfo> for CallInfo {
             calldata: v.call.calldata.0.iter().map(|f| (*f).into()).collect(),
             retdata: v.execution.retdata.0.iter().map(|f| (*f).into()).collect(),
             execution_resources: ExecutionResources {
-                n_steps: v.vm_resources.n_steps,
-                n_memory_holes: v.vm_resources.n_memory_holes,
-                builtin_instance_counter: v.vm_resources.builtin_instance_counter.clone(),
+                n_steps: v.vm_resources.n_steps as u64,
+                n_memory_holes: v.vm_resources.n_memory_holes as u64,
+                builtin_instance_counter: v
+                    .vm_resources
+                    .builtin_instance_counter
+                    .into_iter()
+                    .map(|(k, v)| (k, v as u64))
+                    .collect(),
             },
             events: v
                 .execution

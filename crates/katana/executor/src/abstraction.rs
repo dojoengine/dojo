@@ -4,6 +4,7 @@ use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageVal
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
@@ -192,6 +193,9 @@ pub trait TransactionExecutionOutput {
 
     /// The error message if the transaction execution reverted, otherwise the value is `None`.
     fn revert_error(&self) -> Option<&str>;
+
+    /// Retrieves the execution info of the transaction.
+    fn execution_info(&self) -> TxExecInfo;
 }
 
 /// A wrapper around a boxed [StateProvider] for implementing the executor's own state reader

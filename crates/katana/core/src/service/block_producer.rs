@@ -11,6 +11,7 @@ use futures::FutureExt;
 use katana_executor::{BlockExecutor, ExecutionOutput, ExecutorFactory};
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_provider::error::ProviderError;
@@ -43,17 +44,23 @@ pub struct MinedBlockOutcome {
     pub block_number: u64,
 }
 
+#[derive(Debug, Clone)]
+pub struct TxWithOutcome {
+    tx: TxWithHash,
+    receipt: Receipt,
+    exec_info: TxExecInfo,
+}
+
 type ServiceFuture<T> = Pin<Box<dyn Future<Output = BlockingTaskResult<T>> + Send + Sync>>;
 
 type BlockProductionResult = Result<MinedBlockOutcome, BlockProductionError>;
 type BlockProductionFuture = ServiceFuture<BlockProductionResult>;
 
-type TxExecutionResult = Result<TxWithHashAndReceiptPairs, BlockProductionError>;
+type TxExecutionResult = Result<Vec<TxWithOutcome>, BlockProductionError>;
 type TxExecutionFuture = ServiceFuture<TxExecutionResult>;
 
 type BlockProductionWithTxnsFuture =
-    ServiceFuture<Result<(MinedBlockOutcome, TxWithHashAndReceiptPairs), BlockProductionError>>;
-pub type TxWithHashAndReceiptPairs = Vec<(TxWithHash, Receipt)>;
+    ServiceFuture<Result<(MinedBlockOutcome, Vec<TxWithOutcome>), BlockProductionError>>;
 
 /// The type which responsible for block production.
 #[must_use = "BlockProducer does nothing unless polled"]
@@ -164,7 +171,7 @@ pub struct IntervalBlockProducer<EF: ExecutorFactory> {
     blocking_task_spawner: BlockingTaskPool,
     ongoing_execution: Option<TxExecutionFuture>,
     /// Listeners notified when a new executed tx is added.
-    tx_execution_listeners: RwLock<Vec<Sender<TxWithHashAndReceiptPairs>>>,
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithOutcome>>>>,
 }
 
 impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
@@ -272,19 +279,20 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
     fn execute_transactions(
         executor: PendingExecutor,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> Result<TxWithHashAndReceiptPairs, BlockProductionError> {
-        let tx_receipt_pair = transactions
+    ) -> Result<Vec<TxWithOutcome>, BlockProductionError> {
+        let tx_outcome = transactions
             .into_iter()
             .map(|tx| {
                 let tx_ = TxWithHash::from(&tx);
                 let output = executor.write().execute(tx)?;
-
                 let receipt = output.receipt(tx_.as_ref());
-                Ok((tx_, receipt))
-            })
-            .collect::<Result<TxWithHashAndReceiptPairs, BlockProductionError>>()?;
+                let exec_info = output.execution_info();
 
-        Ok(tx_receipt_pair)
+                Ok(TxWithOutcome { tx: tx_, receipt, exec_info })
+            })
+            .collect::<Result<Vec<TxWithOutcome>, BlockProductionError>>()?;
+
+        Ok(tx_outcome)
     }
 
     fn create_new_executor_for_next_block(&self) -> Result<PendingExecutor, BlockProductionError> {
@@ -301,7 +309,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         Ok(PendingExecutor::new(executor))
     }
 
-    pub fn add_listener(&self) -> Receiver<TxWithHashAndReceiptPairs> {
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithOutcome>> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.tx_execution_listeners.write().push(tx);
@@ -309,7 +317,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
     }
 
     /// notifies all listeners about the transaction
-    fn notify_listener(&self, txs: TxWithHashAndReceiptPairs) {
+    fn notify_listener(&self, txs: Vec<TxWithOutcome>) {
         let mut listener = self.tx_execution_listeners.write();
         // this is basically a retain but with mut reference
         for n in (0..listener.len()).rev() {
@@ -436,7 +444,7 @@ pub struct InstantBlockProducer<EF: ExecutorFactory> {
 
     blocking_task_pool: BlockingTaskPool,
     /// Listeners notified when a new executed tx is added.
-    tx_execution_listeners: RwLock<Vec<Sender<TxWithHashAndReceiptPairs>>>,
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithOutcome>>>>,
 }
 
 impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
@@ -462,7 +470,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
     fn do_mine(
         backend: Arc<Backend<EF>>,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> Result<(MinedBlockOutcome, TxWithHashAndReceiptPairs), BlockProductionError> {
+    ) -> Result<(MinedBlockOutcome, Vec<TxWithOutcome>), BlockProductionError> {
         trace!(target: "miner", "creating new block");
 
         let provider = backend.blockchain.provider();
@@ -503,7 +511,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
         Ok((outcome, tx_receipt_pairs))
     }
 
-    pub fn add_listener(&self) -> Receiver<TxWithHashAndReceiptPairs> {
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithOutcome>> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.tx_execution_listeners.write().push(tx);
@@ -511,7 +519,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
     }
 
     /// notifies all listeners about the transaction
-    fn notify_listener(&self, txs: TxWithHashAndReceiptPairs) {
+    fn notify_listener(&self, txs: Vec<TxWithOutcome>) {
         let mut listener = self.tx_execution_listeners.write();
         // this is basically a retain but with mut reference
         for n in (0..listener.len()).rev() {
