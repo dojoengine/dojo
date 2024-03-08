@@ -308,16 +308,17 @@ impl DojoContract {
                 {
                     let has_good_pos = (add_self && idx == 0) || (!add_self && idx == 1);
                     let has_good_name = name.eq(&"world".to_string());
-                    
+
                     if has_good_pos && has_good_name {
                         world_removed = true;
                         None
-                    }
-                    else {
+                    } else {
                         if !has_good_pos {
                             self.diagnostics.push(PluginDiagnostic {
                                 stable_ptr: param.stable_ptr().untyped(),
-                                message: "The IWorldDispatcher parameter must be the first parameter of the function (self excluded).".to_string(),
+                                message: "The IWorldDispatcher parameter must be the first \
+                                          parameter of the function (self excluded)."
+                                    .to_string(),
                                 severity: Severity::Error,
                             });
                         }
@@ -325,7 +326,8 @@ impl DojoContract {
                         if !has_good_name {
                             self.diagnostics.push(PluginDiagnostic {
                                 stable_ptr: param.stable_ptr().untyped(),
-                                message: "The IWorldDispatcher parameter must be named 'world'.".to_string(),
+                                message: "The IWorldDispatcher parameter must be named 'world'."
+                                    .to_string(),
                                 severity: Severity::Error,
                             });
                         }
