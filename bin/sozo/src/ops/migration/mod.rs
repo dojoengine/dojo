@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
@@ -6,11 +8,13 @@ use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
     AbstractManifestError, BaseManifest, DeployedManifest, DojoContract, Manifest, ManifestMethods,
-    OverlayManifest,
+    MaybeDeployedManifest, OverlayManifest,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::contract::ContractMigration;
-use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
+use dojo_world::migration::strategy::{
+    generate_salt, prepare_for_migration, MigrationResult, MigrationStrategy,
+};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
@@ -80,7 +84,7 @@ pub async fn execute(
         ui.print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
         // Mirate according to the diff.
-        let world_address = apply_diff(
+        let (world_address, migration_result) = apply_diff(
             ws,
             &target_dir,
             diff,
@@ -90,6 +94,24 @@ pub async fn execute(
             Some(args.transaction),
         )
         .await?;
+
+        if let Some(block_height) = migration_result.block_number {
+            ui.print(format!(
+                "\n🎉 Successfully migrated World on block #{} at address {}",
+                block_height,
+                bold_message(format!("{:#x}", world_address))
+            ));
+        } else {
+            ui.print(format!(
+                "\n🎉 Successfully migrated World at address {}",
+                bold_message(format!("{:#x}", world_address))
+            ));
+        }
+
+        let local_manifest = MaybeDeployedManifest::from_base_with_migration_result(
+            local_manifest,
+            migration_result,
+        );
 
         update_manifests_and_abis(
             ws,
@@ -107,7 +129,7 @@ pub async fn execute(
 
 async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
-    local_manifest: BaseManifest,
+    mut local_manifest: MaybeDeployedManifest,
     remote_manifest: Option<DeployedManifest>,
     manifest_dir: &Utf8PathBuf,
     world_address: FieldElement,
@@ -116,12 +138,21 @@ async fn update_manifests_and_abis(
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifests...");
 
-    let mut local_manifest: DeployedManifest = local_manifest.into();
-    local_manifest.world.inner.address = Some(world_address);
+    if let Some(m) = local_manifest.world.as_mut() {
+        m.inner.address = Some(world_address);
+    } else {
+        // we expect `world` and `base` to always successfully get deployed to write a manifest
+        return Ok(());
+    }
 
-    let base_class_hash = match remote_manifest {
-        Some(manifest) => *manifest.base.inner.class_hash(),
-        None => *local_manifest.base.inner.class_hash(),
+    let base_class_hash = if let Some(manifest) = remote_manifest {
+        *manifest.base.inner.class_hash()
+    } else {
+        match local_manifest.base {
+            Some(ref m) => *m.inner.class_hash(),
+            // we expect `world` and `base` to always successfully get deployed to write a manifest
+            None => return Ok(()),
+        }
     };
 
     local_manifest.contracts.iter_mut().for_each(|c| {
@@ -146,7 +177,7 @@ async fn update_manifests_and_abis(
 }
 
 async fn update_manifest_abis(
-    local_manifest: &mut DeployedManifest,
+    local_manifest: &mut MaybeDeployedManifest,
     manifest_dir: &Utf8PathBuf,
     chain_id: &str,
 ) {
@@ -191,7 +222,7 @@ pub(crate) async fn apply_diff<P, S>(
     world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
-) -> Result<FieldElement>
+) -> Result<(FieldElement, MigrationResult)>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -201,31 +232,12 @@ where
 
     println!("  ");
 
-    let block_height = execute_strategy(ws, &strategy, account, txn_config)
+    let migration_result = execute_strategy(ws, &strategy, account, txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
 
-    if let Some(block_height) = block_height {
-        ui.print(format!(
-            "\n🎉 Successfully migrated World on block #{} at address {}",
-            block_height,
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
-        ));
-    } else {
-        ui.print(format!(
-            "\n🎉 Successfully migrated World at address {}",
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
-        ));
-    }
-
-    strategy.world_address()
+    Ok((strategy.world_address()?, migration_result))
 }
 
 pub(crate) async fn setup_env(
@@ -364,12 +376,13 @@ pub async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
-) -> Result<Option<u64>>
+) -> Result<MigrationResult>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
+    let mut result = MigrationResult::default();
 
     match &strategy.base {
         Some(base) => {
@@ -381,6 +394,7 @@ where
             {
                 Ok(res) => {
                     ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
+                    result.base = true;
                 }
                 Err(MigrationError::ClassAlreadyDeclared) => {
                     ui.print_sub(format!("Already declared: {:#x}", base.diff.local));
@@ -405,6 +419,7 @@ where
                     ui.verbose(format!("{e:?}"));
                     anyhow!("Failed to deploy world: {e}")
                 })?;
+            result.world = true;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
@@ -451,13 +466,13 @@ where
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
 
-    register_models(strategy, migrator, &ui, txn_config.clone()).await?;
-    deploy_contracts(strategy, migrator, &ui, txn_config).await?;
+    register_models(strategy, migrator, &ui, txn_config.clone(), &mut result.models).await?;
+    deploy_contracts(strategy, migrator, &ui, txn_config, &mut result.contracts).await?;
 
     // This gets current block numder if helpful
     // let block_height = migrator.provider().block_number().await.ok();
 
-    Ok(None)
+    Ok(result)
 }
 
 enum ContractDeploymentOutput {
@@ -513,6 +528,7 @@ async fn register_models<P, S>(
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
     txn_config: Option<TransactionOptions>,
+    models_deployed: &mut HashSet<String>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -527,6 +543,7 @@ where
     ui.print_header(format!("# Models ({})", models.len()));
 
     let mut declare_output = vec![];
+    let mut tmp_models = HashSet::new();
 
     for c in models.iter() {
         ui.print(italic_message(&c.diff.name).to_string());
@@ -537,6 +554,7 @@ where
             Ok(output) => {
                 ui.print_hidden_sub(format!("Declare transaction: {:#x}", output.transaction_hash));
 
+                tmp_models.insert(c.diff.name.clone());
                 declare_output.push(output);
             }
 
@@ -570,6 +588,8 @@ where
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
+    // only when all the models are registered in world contract consider them as registered
+    models_deployed.extend(tmp_models);
     ui.print(format!("All models are registered at: {transaction_hash:#x}"));
 
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
@@ -580,6 +600,7 @@ async fn deploy_contracts<P, S>(
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
     txn_config: Option<TransactionOptions>,
+    contracts_deployed: &mut HashSet<String>,
 ) -> Result<Vec<Option<DeployOutput>>>
 where
     P: Provider + Sync + Send + 'static,
@@ -619,6 +640,7 @@ where
 
                 ui.print_hidden_sub(format!("Deploy transaction: {:#x}", output.transaction_hash));
                 ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
+                contracts_deployed.insert(contract.diff.name.clone());
                 deploy_output.push(Some(output));
             }
             Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {

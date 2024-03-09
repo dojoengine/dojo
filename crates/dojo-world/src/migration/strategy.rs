@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -27,6 +27,15 @@ pub struct MigrationStrategy {
     pub base: Option<ClassMigration>,
     pub contracts: Vec<ContractMigration>,
     pub models: Vec<ClassMigration>,
+}
+
+#[derive(Debug, Default)]
+pub struct MigrationResult {
+    pub block_number: Option<u64>,
+    pub world: bool,
+    pub base: bool,
+    pub contracts: HashSet<String>,
+    pub models: HashSet<String>,
 }
 
 #[derive(Debug)]

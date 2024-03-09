@@ -24,6 +24,7 @@ use toml;
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
 use crate::contracts::WorldContractReader;
+use crate::migration::strategy::MigrationResult;
 
 #[cfg(test)]
 #[path = "manifest_test.rs"]
@@ -199,6 +200,14 @@ pub struct DeployedManifest {
     pub models: Vec<Manifest<DojoModel>>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+pub struct MaybeDeployedManifest {
+    pub world: Option<Manifest<Contract>>,
+    pub base: Option<Manifest<Class>>,
+    pub contracts: Vec<Manifest<DojoContract>>,
+    pub models: Vec<Manifest<DojoModel>>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct OverlayManifest {
     pub contracts: Vec<OverlayDojoContract>,
@@ -339,6 +348,50 @@ impl DeployedManifest {
     }
 }
 
+impl MaybeDeployedManifest {
+    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
+
+        Ok(manifest)
+    }
+
+    pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
+        fs::create_dir_all(path.parent().unwrap())?;
+
+        let deployed_manifest = toml::to_string_pretty(&self)?;
+        fs::write(path, deployed_manifest)?;
+
+        Ok(())
+    }
+
+    pub fn from_base_with_migration_result(
+        base_manifest: BaseManifest,
+        migration_result: MigrationResult,
+    ) -> Self {
+        let mut result = MaybeDeployedManifest::default();
+
+        if migration_result.world {
+            result.world = Some(base_manifest.world.into());
+        }
+
+        if migration_result.base {
+            result.base = Some(base_manifest.base);
+        }
+
+        for c in migration_result.contracts {
+            // find contract with name `c` from base_manifests and push it to result
+            let contract = base_manifest.contracts.iter().find(|x| x.name == c).unwrap();
+            result.contracts.push(contract.clone());
+        }
+
+        for c in migration_result.models {
+            let model = base_manifest.models.iter().find(|x| x.name == c).unwrap();
+            result.models.push(model.clone());
+        }
+
+        result
+    }
+}
 // TODO: currently implementing this method using trait is causing lifetime issue due to
 // `async_trait` macro which is hard to debug. So moved it as a async method on type itself.
 // #[async_trait]
