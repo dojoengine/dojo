@@ -93,7 +93,8 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
         .map(|model| (model.cairo_package_name(), model.target.source_root().into()))
         .collect();
 
-    let corelib = Some(Directory::Real(unit.core_package_component().target.source_root().into()));
+    let corelib =
+        unit.core_package_component().map(|c| Directory::Real(c.target.source_root().into()));
 
     let content = ProjectConfigContent {
         crate_roots,
