@@ -24,21 +24,6 @@ name = "dojo_examples::actions::actions"
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0x53672d63a83f40ab5f3aeec55d1541a98aa822f5b197a30fbbac28e6f98a7d8"
-name = "dojo_examples::models::position"
-
-[[models.members]]
-name = "player"
-type = "ContractAddress"
-key = true
-
-[[models.members]]
-name = "vec"
-type = "Vec2"
-key = false
-
-[[models]]
-kind = "DojoModel"
 class_hash = "0x764906a97ff3e532e82b154908b25711cdec1c692bf68e3aba2a3dd9964a15c"
 name = "dojo_examples::models::moves"
 
@@ -55,4 +40,19 @@ key = false
 [[models.members]]
 name = "last_direction"
 type = "Direction"
+key = false
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x53672d63a83f40ab5f3aeec55d1541a98aa822f5b197a30fbbac28e6f98a7d8"
+name = "dojo_examples::models::position"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "vec"
+type = "Vec2"
 key = false
