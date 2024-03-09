@@ -29,7 +29,7 @@ pub struct MigrationStrategy {
     pub models: Vec<ClassMigration>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MigrationResult {
     pub block_number: Option<u64>,
     pub world: bool,

@@ -81,48 +81,40 @@ pub async fn execute(
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
     if total_diffs == 0 {
-        ui.print("\n✨ No changes to be made. Remote World is already up to date!")
-    } else {
-        // Mirate according to the diff.
-        let (world_address, migration_result) = apply_diff(
-            ws,
-            &target_dir,
-            diff,
-            name,
-            world_address,
-            &account,
-            Some(args.transaction),
-        )
-        .await?;
-
-        if let Some(block_height) = migration_result.block_number {
-            ui.print(format!(
-                "\n🎉 Successfully migrated World on block #{} at address {}",
-                block_height,
-                bold_message(format!("{:#x}", world_address))
-            ));
-        } else {
-            ui.print(format!(
-                "\n🎉 Successfully migrated World at address {}",
-                bold_message(format!("{:#x}", world_address))
-            ));
-        }
-
-        let local_manifest = MaybeDeployedManifest::from_base_with_migration_result(
-            local_manifest,
-            migration_result,
-        );
-
-        update_manifests_and_abis(
-            ws,
-            local_manifest,
-            remote_manifest,
-            &manifest_dir,
-            world_address,
-            &chain_id,
-        )
-        .await?;
+        ui.print("\n✨ No changes to be made. Remote World is already up to date!");
+        return Ok(());
     }
+
+    // Mirate according to the diff.
+    let (world_address, migration_result) =
+        apply_diff(ws, &target_dir, diff, name, world_address, &account, Some(args.transaction))
+            .await?;
+
+    if let Some(block_height) = migration_result.block_number {
+        ui.print(format!(
+            "\n🎉 Successfully migrated World on block #{} at address {}",
+            block_height,
+            bold_message(format!("{:#x}", world_address))
+        ));
+    } else {
+        ui.print(format!(
+            "\n🎉 Successfully migrated World at address {}",
+            bold_message(format!("{:#x}", world_address))
+        ));
+    }
+
+    let local_manifest =
+        MaybeDeployedManifest::from_base_with_migration_result(local_manifest, migration_result);
+
+    update_manifests_and_abis(
+        ws,
+        local_manifest,
+        remote_manifest,
+        &manifest_dir,
+        world_address,
+        &chain_id,
+    )
+    .await?;
 
     Ok(())
 }
@@ -232,10 +224,22 @@ where
 
     println!("  ");
 
-    let migration_result = execute_strategy(ws, &strategy, account, txn_config)
+    let mut migration_result = MigrationResult {
+        block_number: None,
+        world: true,
+        base: true,
+        contracts: HashSet::new(),
+        models: HashSet::new(),
+    };
+
+    let result = execute_strategy(ws, &strategy, account, txn_config, &mut migration_result)
         .await
         .map_err(|e| anyhow!(e))
-        .with_context(|| "Problem trying to migrate.")?;
+        .with_context(|| "Problem trying to migrate.");
+
+    if let Err(e) = result {
+        ui.anyhow(&e);
+    }
 
     Ok((strategy.world_address()?, migration_result))
 }
@@ -376,13 +380,13 @@ pub async fn execute_strategy<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
-) -> Result<MigrationResult>
+    migration_result: &mut MigrationResult,
+) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
-    let mut result = MigrationResult::default();
 
     match &strategy.base {
         Some(base) => {
@@ -394,12 +398,12 @@ where
             {
                 Ok(res) => {
                     ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
-                    result.base = true;
                 }
                 Err(MigrationError::ClassAlreadyDeclared) => {
                     ui.print_sub(format!("Already declared: {:#x}", base.diff.local));
                 }
                 Err(e) => {
+                    migration_result.base = false;
                     ui.verbose(format!("{e:?}"));
                     return Err(e.into());
                 }
@@ -413,13 +417,19 @@ where
             ui.print_header("# World");
 
             let calldata = vec![strategy.base.as_ref().unwrap().diff.local];
-            deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
-                .await
-                .map_err(|e| {
-                    ui.verbose(format!("{e:?}"));
-                    anyhow!("Failed to deploy world: {e}")
-                })?;
-            result.world = true;
+            let result =
+                deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
+                    .await
+                    .map_err(|e| {
+                        ui.verbose(format!("{e:?}"));
+                        anyhow!("Failed to deploy world: {e}")
+                    });
+
+            if result.is_err() {
+                migration_result.world = false;
+            }
+
+            result?;
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
@@ -466,13 +476,14 @@ where
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
 
-    register_models(strategy, migrator, &ui, txn_config.clone(), &mut result.models).await?;
-    deploy_contracts(strategy, migrator, &ui, txn_config, &mut result.contracts).await?;
+    register_models(strategy, migrator, &ui, txn_config.clone(), &mut migration_result.models)
+        .await?;
+    deploy_contracts(strategy, migrator, &ui, txn_config, &mut migration_result.contracts).await?;
 
     // This gets current block numder if helpful
     // let block_height = migrator.provider().block_number().await.ok();
 
-    Ok(result)
+    Ok(())
 }
 
 enum ContractDeploymentOutput {
