@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
+use std::{fs, io};
 
-use ::serde::{Deserialize, Serialize};
-use cainome::cairo_serde::{ContractAddress, Error as CainomeError};
-use cairo_lang_starknet::abi;
+use anyhow::Result;
+use cainome::cairo_serde::Error as CainomeError;
+use camino::Utf8PathBuf;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
@@ -18,6 +19,7 @@ use starknet::core::utils::{
 use starknet::macros::selector;
 use starknet::providers::{Provider, ProviderError};
 use thiserror::Error;
+use toml;
 
 use crate::contracts::model::ModelError;
 use crate::contracts::world::WorldEvent;
@@ -33,7 +35,7 @@ pub const RESOURCE_METADATA_CONTRACT_NAME: &str = "dojo::resource_metadata::reso
 pub const RESOURCE_METADATA_MODEL_NAME: &str = "0x5265736f757263654d65746164617461";
 
 #[derive(Error, Debug)]
-pub enum ManifestError {
+pub enum AbstractManifestError {
     #[error("Remote World not found.")]
     RemoteWorldNotFound,
     #[error("Entry point name contains non-ASCII characters.")]
@@ -48,6 +50,8 @@ pub enum ManifestError {
     ContractRead(#[from] CainomeError),
     #[error(transparent)]
     Model(#[from] ModelError),
+    #[error(transparent)]
+    IO(#[from] io::Error),
 }
 
 /// Represents a model member.
@@ -70,12 +74,12 @@ impl From<dojo_types::schema::Member> for Member {
 /// Represents a declaration of a model.
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Model {
-    pub name: String,
+#[serde(tag = "kind")]
+pub struct DojoModel {
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<abi::Contract>,
+    pub abi: Option<Utf8PathBuf>,
 }
 
 /// System input ABI.
@@ -106,13 +110,13 @@ pub struct ComputedValueEntrypoint {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Contract {
-    pub name: SmolStr,
+#[serde(tag = "kind")]
+pub struct DojoContract {
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<abi::Contract>,
+    pub abi: Option<Utf8PathBuf>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
     pub computed: Vec<ComputedValueEntrypoint>,
@@ -120,34 +124,175 @@ pub struct Contract {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Class {
+
+pub struct OverlayDojoContract {
     pub name: SmolStr,
+    pub reads: Option<Vec<String>>,
+    pub writes: Option<Vec<String>>,
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OverlayDojoModel {}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OverlayContract {}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OverlayClass {}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "kind")]
+pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<abi::Contract>,
+    pub abi: Option<Utf8PathBuf>,
 }
 
+#[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Manifest {
-    pub world: Contract,
-    pub base: Class,
-    pub resource_metadata: Contract,
-    pub contracts: Vec<Contract>,
-    pub models: Vec<Model>,
+#[serde(tag = "kind")]
+pub struct Contract {
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: FieldElement,
+    pub abi: Option<Utf8PathBuf>,
+    #[serde_as(as = "Option<UfeHex>")]
+    pub address: Option<FieldElement>,
 }
 
-impl Manifest {
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct BaseManifest {
+    pub world: Manifest<Class>,
+    pub base: Manifest<Class>,
+    pub contracts: Vec<Manifest<DojoContract>>,
+    pub models: Vec<Manifest<DojoModel>>,
+}
+
+impl From<Manifest<Class>> for Manifest<Contract> {
+    fn from(value: Manifest<Class>) -> Self {
+        Manifest::new(
+            Contract { class_hash: value.inner.class_hash, abi: value.inner.abi, address: None },
+            value.name,
+        )
+    }
+}
+
+impl From<BaseManifest> for DeployedManifest {
+    fn from(value: BaseManifest) -> Self {
+        DeployedManifest {
+            world: value.world.into(),
+            base: value.base,
+            contracts: value.contracts,
+            models: value.models,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct DeployedManifest {
+    pub world: Manifest<Contract>,
+    pub base: Manifest<Class>,
+    pub contracts: Vec<Manifest<DojoContract>>,
+    pub models: Vec<Manifest<DojoModel>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct OverlayManifest {
+    pub contracts: Vec<OverlayDojoContract>,
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub struct Manifest<T>
+where
+    T: ManifestMethods,
+{
+    #[serde(flatten)]
+    pub inner: T,
+    pub name: SmolStr,
+}
+
+impl<T> Manifest<T>
+where
+    T: ManifestMethods,
+{
+    pub fn new(inner: T, name: SmolStr) -> Self {
+        Self { inner, name }
+    }
+}
+
+pub trait ManifestMethods {
+    type OverlayType;
+    fn abi(&self) -> Option<&Utf8PathBuf>;
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>);
+    fn class_hash(&self) -> &FieldElement;
+    fn set_class_hash(&mut self, class_hash: FieldElement);
+
+    /// This method is called when during compilation base manifest file already exists.
+    /// Manifest generated during compilation won't contains properties manually updated by users
+    /// (like calldata) so this method should override those fields
+    fn merge(&mut self, old: Self::OverlayType);
+}
+
+impl BaseManifest {
     /// Load the manifest from a file at the given path.
-    pub fn load_from_path(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
-        let file = fs::File::open(path)?;
-        Ok(Self::try_from(file)?)
+    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let contract_dir = path.join("contracts");
+        let model_dir = path.join("models");
+
+        let world: Manifest<Class> =
+            toml::from_str(&fs::read_to_string(path.join("world.toml"))?).unwrap();
+        let base: Manifest<Class> =
+            toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
+
+        let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
+        let models = elements_from_path::<DojoModel>(&model_dir)?;
+
+        Ok(Self { world, base, contracts, models })
     }
 
-    /// Writes the manifest into a file at the given path. Will return error if the file doesn't
-    /// exist.
-    pub fn write_to_path(self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-        let fd = fs::File::options().write(true).open(path)?;
-        Ok(serde_json::to_writer_pretty(fd, &self)?)
+    pub fn merge(&mut self, overlay: OverlayManifest) {
+        let mut base_map = HashMap::new();
+
+        for contract in self.contracts.iter_mut() {
+            base_map.insert(contract.name.clone(), contract);
+        }
+
+        for contract in overlay.contracts {
+            base_map
+                .get_mut(&contract.name)
+                .expect("qed; overlay contract not found")
+                .inner
+                .merge(contract);
+        }
+    }
+}
+
+impl OverlayManifest {
+    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let contract_dir = path.join("contracts");
+        let contracts = overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?;
+
+        Ok(Self { contracts })
+    }
+}
+
+impl DeployedManifest {
+    pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
+
+        Ok(manifest)
+    }
+
+    pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
+        fs::create_dir_all(path.parent().unwrap())?;
+
+        let deployed_manifest = toml::to_string_pretty(&self)?;
+        fs::write(path, deployed_manifest)?;
+
+        Ok(())
     }
 
     /// Construct a manifest of a remote World.
@@ -158,7 +303,7 @@ impl Manifest {
     pub async fn load_from_remote<P>(
         provider: P,
         world_address: FieldElement,
-    ) -> Result<Self, ManifestError>
+    ) -> Result<Self, AbstractManifestError>
     where
         P: Provider + Send + Sync,
     {
@@ -167,7 +312,7 @@ impl Manifest {
         let world_class_hash =
             provider.get_class_hash_at(BLOCK_ID, world_address).await.map_err(|err| match err {
                 ProviderError::StarknetError(StarknetError::ContractNotFound) => {
-                    ManifestError::RemoteWorldNotFound
+                    AbstractManifestError::RemoteWorldNotFound
                 }
                 err => err.into(),
             })?;
@@ -176,64 +321,41 @@ impl Manifest {
 
         let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
 
-        let (resource_metadata_class_hash, resource_metadata_address) = world
-            .model(&FieldElement::from_hex_be(RESOURCE_METADATA_MODEL_NAME).unwrap())
-            .block_id(BLOCK_ID)
-            .call()
-            .await?;
-
-        let resource_metadata_address =
-            if resource_metadata_address == ContractAddress(FieldElement::ZERO) {
-                None
-            } else {
-                Some(resource_metadata_address.into())
-            };
-
         let (models, contracts) =
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
 
-        Ok(Manifest {
+        Ok(DeployedManifest {
             models,
             contracts,
-            world: Contract {
-                name: WORLD_CONTRACT_NAME.into(),
-                class_hash: world_class_hash,
-                address: Some(world_address),
-                ..Default::default()
-            },
-            resource_metadata: Contract {
-                name: RESOURCE_METADATA_CONTRACT_NAME.into(),
-                class_hash: resource_metadata_class_hash.into(),
-                address: resource_metadata_address,
-                ..Default::default()
-            },
-            base: Class {
-                name: BASE_CONTRACT_NAME.into(),
-                class_hash: base_class_hash.into(),
-                ..Default::default()
-            },
+            world: Manifest::new(
+                Contract { address: Some(world_address), class_hash: world_class_hash, abi: None },
+                WORLD_CONTRACT_NAME.into(),
+            ),
+            base: Manifest::new(
+                Class { class_hash: base_class_hash.into(), abi: None },
+                BASE_CONTRACT_NAME.into(),
+            ),
         })
     }
 }
 
-impl TryFrom<std::fs::File> for Manifest {
-    type Error = serde_json::Error;
-    fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
-        serde_json::from_reader(std::io::BufReader::new(file))
-    }
-}
+// TODO: currently implementing this method using trait is causing lifetime issue due to
+// `async_trait` macro which is hard to debug. So moved it as a async method on type itself.
+// #[async_trait]
+// pub trait RemoteLoadable<P: Provider + Sync + Send + 'static> {
+//     async fn load_from_remote(
+//         provider: P,
+//         world_address: FieldElement,
+//     ) -> Result<DeployedManifest, AbstractManifestError>;
+// }
 
-impl TryFrom<&std::fs::File> for Manifest {
-    type Error = serde_json::Error;
-    fn try_from(file: &std::fs::File) -> Result<Self, Self::Error> {
-        serde_json::from_reader(std::io::BufReader::new(file))
-    }
-}
+// #[async_trait]
+// impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeployedManifest {}
 
 async fn get_remote_models_and_contracts<P: Provider>(
     world: FieldElement,
     provider: P,
-) -> Result<(Vec<Model>, Vec<Contract>), ManifestError>
+) -> Result<(Vec<Manifest<DojoModel>>, Vec<Manifest<DojoContract>>), AbstractManifestError>
 where
     P: Provider + Send + Sync,
 {
@@ -281,7 +403,7 @@ where
                 FunctionCall {
                     calldata: vec![],
                     entry_point_selector: selector!("dojo_resource"),
-                    contract_address: contract.address.expect("qed; missing address"),
+                    contract_address: contract.inner.address.expect("qed; missing address"),
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
@@ -300,7 +422,7 @@ where
     Ok((models, contracts))
 }
 
-async fn get_events<P: Provider>(
+async fn get_events<P: Provider + Send + Sync>(
     provider: P,
     world: FieldElement,
     keys: Vec<Vec<FieldElement>>,
@@ -331,7 +453,7 @@ async fn get_events<P: Provider>(
 fn parse_contracts_events(
     deployed: Vec<EmittedEvent>,
     upgraded: Vec<EmittedEvent>,
-) -> Vec<Contract> {
+) -> Vec<Manifest<DojoContract>> {
     fn retain_only_latest_upgrade_events(
         events: Vec<EmittedEvent>,
     ) -> HashMap<FieldElement, FieldElement> {
@@ -378,12 +500,20 @@ fn parse_contracts_events(
                 class_hash = *upgrade;
             }
 
-            Contract { address: Some(address), class_hash, ..Default::default() }
+            Manifest::new(
+                DojoContract {
+                    address: Some(address),
+                    class_hash,
+                    abi: None,
+                    ..Default::default()
+                },
+                Default::default(),
+            )
         })
         .collect()
 }
 
-fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Model> {
+fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Manifest<DojoModel>> {
     let mut models: HashMap<String, FieldElement> = HashMap::with_capacity(events.len());
 
     for e in events {
@@ -409,6 +539,158 @@ fn parse_models_events(events: Vec<EmittedEvent>) -> Vec<Model> {
     // TODO: include address of the model in the manifest.
     models
         .into_iter()
-        .map(|(name, class_hash)| Model { name, class_hash, ..Default::default() })
+        .map(|(name, class_hash)| Manifest::<DojoModel> {
+            inner: DojoModel { class_hash, abi: None, ..Default::default() },
+            name: name.into(),
+        })
         .collect()
+}
+
+// fn elements_to_path<T>(item_dir: &Utf8PathBuf, items: &Vec<Manifest<T>>) -> Result<()>
+// where
+//     T: Serialize + ManifestMethods,
+// {
+//     fs::create_dir_all(item_dir)?;
+//     for item in items {
+//         let item_toml = toml::to_string_pretty(&item)?;
+//         let item_name = item.name.split("::").last().unwrap();
+//         fs::write(item_dir.join(item_name).with_extension("toml"), item_toml)?;
+//     }
+
+//     Ok(())
+// }
+
+fn elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<Manifest<T>>, AbstractManifestError>
+where
+    T: DeserializeOwned + ManifestMethods,
+{
+    let mut elements = vec![];
+
+    for entry in path.read_dir()? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            elements.push(manifest);
+        } else {
+            continue;
+        }
+    }
+
+    Ok(elements)
+}
+
+fn overlay_elements_from_path<T>(path: &Utf8PathBuf) -> Result<Vec<T>, AbstractManifestError>
+where
+    T: DeserializeOwned,
+{
+    let mut elements = vec![];
+
+    for entry in path.read_dir()? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let manifest: T = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            elements.push(manifest);
+        } else {
+            continue;
+        }
+    }
+
+    Ok(elements)
+}
+
+impl ManifestMethods for DojoContract {
+    type OverlayType = OverlayDojoContract;
+
+    fn abi(&self) -> Option<&Utf8PathBuf> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(reads) = old.reads {
+            self.reads = reads;
+        }
+        if let Some(writes) = old.writes {
+            self.writes = writes;
+        }
+    }
+}
+
+impl ManifestMethods for DojoModel {
+    type OverlayType = OverlayDojoModel;
+
+    fn abi(&self) -> Option<&Utf8PathBuf> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+
+    fn merge(&mut self, _: Self::OverlayType) {}
+}
+
+impl ManifestMethods for Contract {
+    type OverlayType = OverlayContract;
+
+    fn abi(&self) -> Option<&Utf8PathBuf> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+
+    fn merge(&mut self, _: Self::OverlayType) {}
+}
+
+impl ManifestMethods for Class {
+    type OverlayType = OverlayClass;
+
+    fn abi(&self) -> Option<&Utf8PathBuf> {
+        self.abi.as_ref()
+    }
+
+    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+        self.abi = abi;
+    }
+
+    fn class_hash(&self) -> &FieldElement {
+        self.class_hash.as_ref()
+    }
+
+    fn set_class_hash(&mut self, class_hash: FieldElement) {
+        self.class_hash = class_hash;
+    }
+
+    fn merge(&mut self, _: Self::OverlayType) {}
 }

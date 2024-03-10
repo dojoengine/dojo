@@ -8,8 +8,10 @@ use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroupEx, PrivRawFileContentQuery};
 use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
+use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_lang::scarb_internal::build_scarb_root_database;
-use dojo_world::manifest::Manifest;
+use dojo_world::manifest::{BaseManifest, DeployedManifest};
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
@@ -111,28 +113,34 @@ async fn migrate<P, S>(
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
     ws: &Workspace<'_>,
-    previous_manifest: Option<Manifest>,
-) -> Result<(Manifest, Option<FieldElement>)>
+    previous_manifest: Option<DeployedManifest>,
+) -> Result<(DeployedManifest, Option<FieldElement>)>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
-    let manifest_path = target_dir.join("manifest.json");
-    if !manifest_path.exists() {
-        return Err(anyhow!("manifest.json not found"));
+
+    // `parent` returns `None` only when its root path, so its safe to unwrap
+    let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
+
+    if !manifest_dir.join(MANIFESTS_DIR).exists() {
+        return Err(anyhow!("Build project using `sozo build` first"));
     }
-    let new_manifest = Manifest::load_from_path(manifest_path)?;
+
+    let new_manifest =
+        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
+
     let diff = WorldDiff::compute(new_manifest.clone(), previous_manifest);
     let total_diffs = diff.count_diffs();
     let config = ws.config();
     config.ui().print(format!("Total diffs found: {total_diffs}"));
     if total_diffs == 0 {
-        return Ok((new_manifest, world_address));
+        return Ok((new_manifest.into(), world_address));
     }
 
-    match migration::apply_diff(ws, target_dir, diff, name.clone(), world_address, account, None)
+    match migration::apply_diff(ws, &target_dir, diff, name.clone(), world_address, account, None)
         .await
     {
         Ok(address) => {
@@ -147,7 +155,7 @@ where
         }
     }
 
-    Ok((new_manifest, world_address))
+    Ok((new_manifest.into(), world_address))
 }
 
 fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAction {
@@ -183,6 +191,14 @@ fn handle_reload_action(context: &mut DevContext<'_>) {
 
 impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let env_metadata = if config.manifest_path().exists() {
+            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
+            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+        } else {
+            None
+        };
+
         let mut context = load_context(config)?;
         let (tx, rx) = channel();
         let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
@@ -192,10 +208,10 @@ impl DevArgs {
             RecursiveMode::Recursive,
         )?;
         let name = self.name.clone();
-        let mut previous_manifest: Option<Manifest> = Option::None;
+        let mut previous_manifest: Option<DeployedManifest> = Option::None;
         let result = build(&mut context);
 
-        let Some((mut world_address, account)) = context
+        let Some((mut world_address, account, _)) = context
             .ws
             .config()
             .tokio_handle()
@@ -205,6 +221,7 @@ impl DevArgs {
                 self.starknet,
                 self.world,
                 name.as_ref(),
+                env_metadata.as_ref(),
             ))
             .ok()
         else {

@@ -1,0 +1,13 @@
+kind = "DojoModel"
+class_hash = "0xb33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5"
+name = "dojo_examples::models::position"
+
+[[members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[members]]
+name = "vec"
+type = "Vec2"
+key = false

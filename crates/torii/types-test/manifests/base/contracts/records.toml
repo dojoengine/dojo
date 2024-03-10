@@ -1,0 +1,7 @@
+kind = "DojoContract"
+class_hash = "0x5f0a221b80b5667c20574d62953f99eb6ddf7d351f531a9f0c56f96adb0d48b"
+abi = "abis/base/contracts/records.json"
+reads = []
+writes = []
+computed = []
+name = "types_test::contracts::records"
