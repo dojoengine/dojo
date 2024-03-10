@@ -1,10 +1,14 @@
+use std::collections::HashMap;
+
 use anyhow::{Context, Result};
-use dojo_world::contracts::WorldContract;
+use dojo_world::contracts::model::ModelReader;
+use dojo_world::contracts::{WorldContract, WorldContractReader};
+use dojo_world::manifest::{Manifest, ManifestError};
 use dojo_world::metadata::Environment;
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
 use starknet::accounts::Account;
-use starknet_crypto::FieldElement;
+use starknet::core::types::{BlockId, BlockTag};
 
 use crate::commands::register::RegisterCommand;
 
@@ -18,18 +22,39 @@ pub async fn execute(
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
-            let account = account.account(&provider, env_metadata.as_ref()).await?;
-            let world = WorldContract::new(world_address, &account);
+            let world_reader = WorldContractReader::new(world_address, &provider)
+                .with_block(BlockId::Tag(BlockTag::Pending));
+            let remote_manifest = {
+                match Manifest::load_from_remote(&provider, world_address).await {
+                    Ok(manifest) => Some(manifest),
+                    Err(ManifestError::RemoteWorldNotFound) => None,
+                    Err(e) => {
+                        return Err(anyhow::anyhow!("Failed to build remote World state: {e}"));
+                    }
+                }
+            };
+
+            let manifest = remote_manifest.unwrap();
+            let registered_models_names =
+                manifest.models.into_iter().map(|m| m.name).collect::<Vec<String>>();
+
+            let mut model_class_hashes = HashMap::new();
+            for model_name in registered_models_names.iter() {
+                let read_model = world_reader.model_reader(model_name).await?;
+                let class_hash = read_model.class_hash();
+                model_class_hashes.insert(class_hash, model_name.clone());
+            }
+
             let mut models_to_register = Vec::new();
-            for model_class_hash in models.iter() {
-                let (class_hash, _contract_address) = world.model(model_class_hash).call().await?;
-                if class_hash.0 == FieldElement::ZERO {
-                    models_to_register.push(*model_class_hash);
-                } else {
+            for input_model in models {
+                if model_class_hashes.contains_key(&input_model) {
+                    let model_name = model_class_hashes.get(&input_model).unwrap();
                     config.ui().print(format!(
-                        "\"{:#x}\" model already registered with the given class hash",
-                        model_class_hash
+                        "\"{}\" model already registered with the class hash \"{:#x}\"",
+                        model_name, input_model
                     ));
+                } else {
+                    models_to_register.push(input_model);
                 }
             }
 
@@ -37,6 +62,9 @@ pub async fn execute(
                 config.ui().print("No new models to register.");
                 return Ok(());
             }
+
+            let account = account.account(&provider, env_metadata.as_ref()).await?;
+            let world = WorldContract::new(world_address, &account);
 
             let calls = models_to_register
                 .iter()
