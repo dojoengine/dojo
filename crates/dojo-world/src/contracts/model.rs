@@ -1,6 +1,6 @@
 pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
-use cainome::cairo_serde::Error as CainomeError;
+use cainome::cairo_serde::{ContractAddress, Error as CainomeError};
 use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
@@ -85,6 +85,12 @@ where
                 )) => ModelError::ModelNotFound,
                 err => err.into(),
             })?;
+
+        // World Cairo contract won't raise an error in case of unknown/unregistered
+        // model so raise an error here in case of Null address.
+        if contract_address == ContractAddress(FieldElement::ZERO) {
+            return Err(ModelError::ModelNotFound);
+        }
 
         let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
 
