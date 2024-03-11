@@ -252,7 +252,9 @@ impl Relay {
                             }
 
                             let entity = entity.unwrap();
-                            let identity = match entity.try_get::<String, _>("identity") {
+                            let identity = match FieldElement::from_str(&match entity
+                                .try_get::<String, _>("identity")
+                            {
                                 Ok(identity) => identity,
                                 Err(e) => {
                                     warn!(
@@ -262,35 +264,93 @@ impl Relay {
                                     );
                                     continue;
                                 }
-                            };
-
-                            let entity_identity = match FieldElement::from_str(&identity) {
-                                Ok(entity_identity) => entity_identity,
+                            }) {
+                                Ok(identity) => identity,
                                 Err(e) => {
                                     warn!(
                                         target: "torii::relay::server",
                                         error = %e,
-                                        "Failed to parse entity identity"
+                                        "Failed to parse identity"
                                     );
                                     continue;
                                 }
                             };
 
-                            // Verify the signature
-                            let message_hash =
-                                if let Ok(message) = data.message.encode(entity_identity) {
-                                    message
-                                } else {
-                                    info!(
+                            let signature_r = match FieldElement::from_str(&match entity
+                                .try_get::<String, _>("signature_r")
+                            {
+                                Ok(signature_r) => signature_r,
+                                Err(e) => {
+                                    warn!(
                                         target: "torii::relay::server",
-                                        "Failed to encode message"
+                                        error = %e,
+                                        "Failed to get signature r from model"
                                     );
                                     continue;
-                                };
+                                }
+                            }) {
+                                Ok(signature_r) => signature_r,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to parse signature r"
+                                    );
+                                    continue;
+                                }
+                            };
+
+                            let signature_s = match FieldElement::from_str(&match entity
+                                .try_get::<String, _>("signature_s")
+                            {
+                                Ok(signature_s) => signature_s,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to get signature s from model"
+                                    );
+                                    continue;
+                                }
+                            }) {
+                                Ok(signature_s) => signature_s,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to parse signature s"
+                                    );
+                                    continue;
+                                }
+                            };
+
+                            // Check if the signed last signature is the same as the entity's last signature in db
+                            if signature_r != parsed_message.last_signature.r
+                                || signature_s != parsed_message.last_signature.s
+                            {
+                                info!(
+                                    target: "torii::relay::server",
+                                    message_id = %message_id,
+                                    peer_id = %peer_id,
+                                    "Invalid signature"
+                                );
+                                continue;
+                            }
+
+                            // Verify the signature
+                            let message_hash = if let Ok(message) = data.message.encode(identity) {
+                                message
+                            } else {
+                                info!(
+                                    target: "torii::relay::server",
+                                    "Failed to encode message"
+                                );
+                                continue;
+                            };
 
                             // for the public key used for verification; use identity from model
                             if let Ok(valid) = verify(
-                                &entity_identity,
+                                &identity,
                                 &message_hash,
                                 &data.signature_r,
                                 &data.signature_s,
@@ -385,6 +445,7 @@ impl Relay {
 
 struct ParsedMessage {
     hashed_keys: FieldElement,
+    last_signature: Signature,
     model: Ty,
 }
 
@@ -552,6 +613,49 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
         return Err(Error::InvalidMessageError("Hashed keys is missing".to_string()));
     };
 
+    let signature = if let Some(signature) = message.get("signature") {
+        if let PrimitiveType::Object(signature) = signature {
+            signature
+        } else {
+            return Err(Error::InvalidMessageError("Signature is not an object".to_string()));
+        }
+    } else {
+        return Err(Error::InvalidMessageError("Signature is missing".to_string()));
+    };
+
+    // signature object has to have r and s fields
+    let r = if let Some(r) = signature.get("r") {
+        if let PrimitiveType::String(r) = r {
+            if let Ok(r) = FieldElement::from_str(r) {
+                r
+            } else {
+                return Err(Error::InvalidMessageError(
+                    "R is not a valid field element".to_string(),
+                ));
+            }
+        } else {
+            return Err(Error::InvalidMessageError("R is not a string".to_string()));
+        }
+    } else {
+        return Err(Error::InvalidMessageError("R is missing".to_string()));
+    };
+
+    let s = if let Some(s) = signature.get("s") {
+        if let PrimitiveType::String(s) = s {
+            if let Ok(s) = FieldElement::from_str(s) {
+                s
+            } else {
+                return Err(Error::InvalidMessageError(
+                    "S is not a valid field element".to_string(),
+                ));
+            }
+        } else {
+            return Err(Error::InvalidMessageError("S is not a string".to_string()));
+        }
+    } else {
+        return Err(Error::InvalidMessageError("S is missing".to_string()));
+    };
+
     let model = if let Some(object) = message.get(model_name) {
         if let PrimitiveType::Object(object) = object {
             parse_object_to_ty(model_name.clone(), object)?
@@ -562,7 +666,7 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
         return Err(Error::InvalidMessageError("Model is missing".to_string()));
     };
 
-    Ok(ParsedMessage { model, hashed_keys })
+    Ok(ParsedMessage { model, hashed_keys, last_signature: Signature { r, s } })
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
