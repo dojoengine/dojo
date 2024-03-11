@@ -8,8 +8,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, io};
 
+use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Struct, Ty};
+use dojo_types::schema::{Member, Struct, Ty};
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
@@ -361,6 +362,131 @@ struct ParsedMessage {
     hashed_keys: FieldElement,
     model: Ty,
 }
+
+struct TyValue {
+    r#type: String,
+    value: PrimitiveType,
+    key: bool
+}
+
+fn parse_object_to_ty(name: String, object: &IndexMap<String, PrimitiveType>) -> Result<Ty, Error> {
+    let mut ty_struct = Struct {
+        name,
+        children: vec![]
+    };
+    
+    for (field_name, value) in object {
+        // value has to be of type object
+        let object = if let PrimitiveType::Object(object) = value {
+            object
+        } else {
+            return Err(Error::InvalidMessageError("Value is not an object".to_string()));
+        };
+
+        let r#type = if let Some(r#type) = object.get("type") {
+            if let PrimitiveType::String(r#type) = r#type {
+                r#type
+            } else {
+                return Err(Error::InvalidMessageError("Type is not a string".to_string()));
+            }
+        } else {
+            return Err(Error::InvalidMessageError("Type is missing".to_string()));
+        };
+
+        let value = if let Some(value) = object.get("value") {
+            value
+        } else {
+            return Err(Error::InvalidMessageError("Value is missing".to_string()));
+        };
+
+        let key = if let Some(key) = object.get("key") {
+            if let PrimitiveType::Bool(key) = key {
+                *key
+            } else {
+                return Err(Error::InvalidMessageError("Key is not a boolean".to_string()));
+            }
+        } else {
+            return Err(Error::InvalidMessageError("Key is missing".to_string()));
+        };
+
+        match value {
+            PrimitiveType::Object(object) => {
+                let ty = parse_object_to_ty(field_name.clone(), object)?;
+                ty_struct.children.push(Member {
+                    name: field_name.clone(),
+                    ty,
+                    key
+                });
+            }
+            PrimitiveType::Array(array) => {
+                // tuples not supported yet
+                unimplemented!()
+            }
+            PrimitiveType::Number(number) => {
+                ty_struct.children.push(Member {
+                    name: field_name.clone(),
+                    ty: match r#type.as_str() {
+                        "u8" => Ty::Primitive(Primitive::U8(Some(number.as_u64().unwrap() as u8))),
+                        "u16" => Ty::Primitive(Primitive::U16(Some(number.as_u64().unwrap() as u16))),
+                        "u32" => Ty::Primitive(Primitive::U32(Some(number.as_u64().unwrap() as u32))),
+                        "usize" => Ty::Primitive(Primitive::USize(Some(number.as_u64().unwrap() as u32))),
+                        "u64" => Ty::Primitive(Primitive::U64(Some(number.as_u64().unwrap()))),
+                    },
+                    key
+                });
+            }
+            PrimitiveType::Bool(boolean) => {
+                ty_struct.children.push(Member {
+                    name: field_name.clone(),
+                    ty: Ty::Primitive(Primitive::Bool(Some(*boolean))),
+                    key
+                });
+            }
+            PrimitiveType::String(string) => {
+                match r#type.as_str() {
+                    "u128" => {
+                        ty_struct.children.push(Member {
+                            name: field_name.clone(),
+                            ty: Ty::Primitive(Primitive::U128(Some(u128::from_str(string).unwrap()))),
+                            key
+                        });
+                    }
+                    "u256" => {
+                        ty_struct.children.push(Member {
+                            name: field_name.clone(),
+                            ty: Ty::Primitive(Primitive::U256(Some(U256::from_be_hex(string)))),
+                            key
+                        });
+                    }
+                    "felt" => {
+                        ty_struct.children.push(Member {
+                            name: field_name.clone(),
+                            ty: Ty::Primitive(Primitive::Felt252(Some(FieldElement::from_str(string).unwrap()))),
+                            key
+                        });
+                    }
+                    "class_hash" => {
+                        ty_struct.children.push(Member {
+                            name: field_name.clone(),
+                            ty: Ty::Primitive(Primitive::ClassHash(Some(FieldElement::from_str(string).unwrap()))),
+                            key
+                        });
+                    }
+                    "contract_address" => {
+                        ty_struct.children.push(Member {
+                            name: field_name.clone(),
+                            ty: Ty::Primitive(Primitive::ContractAddress(Some(FieldElement::from_str(string).unwrap()))),
+                            key
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(Ty::Struct(ty_struct))
+}
+
 // Validates the message model
 // and returns the identity and signature
 fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedMessage, Error> {
@@ -392,7 +518,7 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
 
     let model = if let Some(object) = message.get(model_name) {
         if let PrimitiveType::Object(object) = object {
-            parse_object_to_ty(object)
+            parse_object_to_ty(model_name.clone(), object)?
         } else {
             return Err(Error::InvalidMessageError("Model is not a struct".to_string()));
         }
