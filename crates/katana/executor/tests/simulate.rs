@@ -32,6 +32,34 @@ fn simulate_tx<EF: ExecutorFactory>(
 ) {
 }
 
+#[allow(unused)]
+fn test_simulate_tx_impl<EF: ExecutorFactory>(
+    executor_factory: EF,
+    block_env: BlockEnv,
+    state_provider: Box<dyn StateProvider>,
+    tx: ExecutableTxWithHash,
+    flags: SimulationFlag,
+) {
+    let mut executor = executor_factory.with_state_and_block_env(state_provider, block_env);
+
+    // TODO: assert that the tx execution didn't fail
+    let _ = executor.simulate(tx, flags).expect("must simulate");
+
+    // check that the underlying state is not modified
+    let ExecutionOutput { states, transactions } =
+        executor.take_execution_output().expect("must take output");
+
+    assert!(transactions.is_empty(), "simulated tx should not be stored");
+
+    assert!(states.state_updates.nonce_updates.is_empty(), "no state updates");
+    assert!(states.state_updates.storage_updates.is_empty(), "no state updates");
+    assert!(states.state_updates.contract_updates.is_empty(), "no state updates");
+    assert!(states.state_updates.declared_classes.is_empty(), "no state updates");
+
+    assert!(states.declared_sierra_classes.is_empty(), "no new classes should be declared");
+    assert!(states.declared_compiled_classes.is_empty(), "no new classes should be declared");
+}
+
 #[cfg(feature = "blockifier")]
 mod blockifier {
     use fixtures::blockifier::factory;
@@ -47,23 +75,7 @@ mod blockifier {
         #[case] tx: ExecutableTxWithHash,
         #[case] flags: SimulationFlag,
     ) {
-        let mut executor = executor_factory.with_state_and_block_env(state_provider, block_env);
-
-        let _ = executor.simulate(tx, flags).expect("must simulate");
-
-        // check that the underlying state is not modified
-        let ExecutionOutput { states, transactions } =
-            executor.take_execution_output().expect("must take output");
-
-        assert!(transactions.is_empty(), "simulated tx should not be stored");
-
-        assert!(states.state_updates.nonce_updates.is_empty(), "no state updates");
-        assert!(states.state_updates.storage_updates.is_empty(), "no state updates");
-        assert!(states.state_updates.contract_updates.is_empty(), "no state updates");
-        assert!(states.state_updates.declared_classes.is_empty(), "no state updates");
-
-        assert!(states.declared_sierra_classes.is_empty(), "no new classes should be declared");
-        assert!(states.declared_compiled_classes.is_empty(), "no new classes should be declared");
+        test_simulate_tx_impl(executor_factory, block_env, state_provider, tx, flags);
     }
 }
 
@@ -74,8 +86,6 @@ mod sir {
 
     use super::*;
 
-    // TODO: unignore once wrong validate retdata issue is resolved https://github.com/dojoengine/dojo/issues/1592
-    #[ignore]
     #[apply(simulate_tx)]
     fn test_simulate_tx(
         #[with(factory::default())] executor_factory: NativeExecutorFactory,
@@ -84,22 +94,6 @@ mod sir {
         #[case] tx: ExecutableTxWithHash,
         #[case] flags: SimulationFlag,
     ) {
-        let mut executor = executor_factory.with_state_and_block_env(state_provider, block_env);
-
-        let _ = executor.simulate(tx, flags).expect("must simulate");
-
-        // check that the underlying state is not modified
-        let ExecutionOutput { states, transactions } =
-            executor.take_execution_output().expect("must take output");
-
-        assert!(transactions.is_empty(), "simulated tx should not be stored");
-
-        assert!(states.state_updates.nonce_updates.is_empty(), "no state updates");
-        assert!(states.state_updates.storage_updates.is_empty(), "no state updates");
-        assert!(states.state_updates.contract_updates.is_empty(), "no state updates");
-        assert!(states.state_updates.declared_classes.is_empty(), "no state updates");
-
-        assert!(states.declared_sierra_classes.is_empty(), "no new classes should be declared");
-        assert!(states.declared_compiled_classes.is_empty(), "no new classes should be declared");
+        test_simulate_tx_impl(executor_factory, block_env, state_provider, tx, flags);
     }
 }

@@ -29,6 +29,7 @@ sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/stark
 starknet-types-core = { version = "0.0.9", optional = true }
 
 [dev-dependencies]
+anyhow.workspace = true
 cairo-vm.workspace = true
 katana-provider.workspace = true
 katana-rpc-types.workspace = true

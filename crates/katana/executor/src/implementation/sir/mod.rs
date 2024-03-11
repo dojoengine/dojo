@@ -154,7 +154,8 @@ impl<'a> TransactionExecutor for StarknetVMProcessor<'a> {
 
         let tx_ = TxWithHash::from(&tx);
 
-        let gas = 0;
+        // TODO: this should be based on the transaction gas cost (refer to blockifier)
+        let gas = u128::MAX;
         let res = utils::transact(tx, &mut state.0.write().inner, block_context, gas, flags)?;
 
         let receipt = res.receipt(tx_.as_ref());
@@ -180,7 +181,8 @@ impl<'a> TransactionExecutor for StarknetVMProcessor<'a> {
 
         let block_context = &self.block_context;
 
-        let gas = 0;
+        // TODO: this should be based on the transaction gas cost (refer to blockifier)
+        let gas = u128::MAX;
         let res = utils::transact(tx, &mut state, block_context, gas, &flags)?;
 
         Ok(Box::new(res))
