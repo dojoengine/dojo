@@ -115,7 +115,7 @@ fn get_dependencies(
             Field::ParentType(parent_field) => parent_field.contains.clone(),
         };
 
-        field_type = field_type.trim_end_matches("*").to_string();
+        field_type = field_type.trim_end_matches('*').to_string();
 
         if types.contains_key(&field_type) && !dependencies.contains(&field_type) {
             get_dependencies(&field_type, types, dependencies)?;
