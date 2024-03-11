@@ -1,4 +1,3 @@
-pub mod entities;
 pub mod logger;
 pub mod subscriptions;
 
@@ -9,12 +8,14 @@ use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use dojo_types::schema::Ty;
 use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{Pool, Row, Sqlite};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -26,6 +27,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use torii_core::cache::ModelCache;
 use torii_core::error::{Error, ParseError, QueryError};
+use torii_core::model::{build_sql_query, map_row_to_ty};
 
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
@@ -33,6 +35,7 @@ use crate::proto::types::clause::ClauseType;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
+use crate::types::ComparisonOperator;
 
 #[derive(Clone)]
 pub struct DojoWorld {
@@ -513,6 +516,22 @@ impl DojoWorld {
             Some(keys) => self.events_by_keys(keys, query.limit, query.offset).await?,
         };
         Ok(RetrieveEventsResponse { events })
+    }
+
+    fn map_row_to_entity(row: &SqliteRow, schemas: &[Ty]) -> Result<proto::types::Entity, Error> {
+        let hashed_keys =
+            FieldElement::from_str(&row.get::<String, _>("id")).map_err(ParseError::FromStr)?;
+        let models = schemas
+            .iter()
+            .map(|schema| {
+                let mut struct_ty = schema.as_struct().expect("schema should be struct").to_owned();
+                map_row_to_ty(&schema.name(), &mut struct_ty, row)?;
+
+                Ok(struct_ty.try_into().unwrap())
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        Ok(proto::types::Entity { hashed_keys: hashed_keys.to_bytes_be().to_vec(), models })
     }
 }
 
