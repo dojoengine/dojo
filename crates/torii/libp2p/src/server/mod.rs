@@ -1,5 +1,4 @@
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::path::Path;
@@ -21,7 +20,7 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use starknet_crypto::{poseidon_hash_many, verify, Signature};
+use starknet_crypto::{verify, Signature};
 use starknet_ff::FieldElement;
 use tokio::sync::RwLock;
 use torii_core::sql::Sql;
@@ -36,7 +35,7 @@ mod events;
 use sqlx::Row;
 
 use crate::server::events::ServerEvent;
-use crate::typed_data::{get_value_type, Field, PrimitiveType, TypedData};
+use crate::typed_data::PrimitiveType;
 use crate::types::Message;
 
 #[derive(NetworkBehaviour)]
@@ -451,12 +450,6 @@ struct ParsedMessage {
     model: Ty,
 }
 
-struct TyValue {
-    r#type: String,
-    value: PrimitiveType,
-    key: bool,
-}
-
 fn parse_object_to_ty(name: String, object: &IndexMap<String, PrimitiveType>) -> Result<Ty, Error> {
     let mut ty_struct = Struct { name, children: vec![] };
 
@@ -499,7 +492,7 @@ fn parse_object_to_ty(name: String, object: &IndexMap<String, PrimitiveType>) ->
                 let ty = parse_object_to_ty(field_name.clone(), object)?;
                 ty_struct.children.push(Member { name: field_name.clone(), ty, key });
             }
-            PrimitiveType::Array(array) => {
+            PrimitiveType::Array(_) => {
                 // tuples not supported yet
                 unimplemented!()
             }

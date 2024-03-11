@@ -1,18 +1,13 @@
 use std::str::FromStr;
 
-use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, Member, Struct, Ty};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use serde_json::value::Index;
 use serde_json::Number;
 use starknet_core::utils::{
-    cairo_short_string_to_felt, get_selector_from_name, starknet_keccak,
-    CairoShortStringToFeltError,
+    cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
 };
-use starknet_crypto::{pedersen_hash, poseidon_hash, poseidon_hash_many};
+use starknet_crypto::poseidon_hash_many;
 use starknet_ff::FieldElement;
-use tracing::field;
 
 use crate::errors::Error;
 
@@ -123,7 +118,7 @@ fn get_dependencies(
         field_type = field_type.trim_end_matches("*").to_string();
 
         if types.contains_key(&field_type) && !dependencies.contains(&field_type) {
-            get_dependencies(&field_type, &types, dependencies)?;
+            get_dependencies(&field_type, types, dependencies)?;
         }
     }
 
@@ -138,7 +133,7 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
     get_dependencies(name, types, &mut dependencies)?;
 
     // sort dependencies
-    dependencies.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    dependencies.sort_by_key(|dep| dep.to_lowercase());
 
     for dep in dependencies {
         type_hash += &format!("\"{}\"", dep);
@@ -151,11 +146,14 @@ pub fn encode_type(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<S
                 Field::SimpleType(simple_field) => {
                     // if ( at start and ) at end
                     if simple_field.r#type.starts_with('(') && simple_field.r#type.ends_with(')') {
-                        let inner_types = &simple_field.r#type[1..simple_field.r#type.len() - 1]
-                            .split(',')
-                            .map(|t| if t != "" { format!("\"{}\"", t) } else { t.to_string() })
-                            .collect::<Vec<String>>()
-                            .join(",");
+                        let inner_types =
+                            &simple_field.r#type[1..simple_field.r#type.len() - 1]
+                                .split(',')
+                                .map(|t| {
+                                    if !t.is_empty() { format!("\"{}\"", t) } else { t.to_string() }
+                                })
+                                .collect::<Vec<String>>()
+                                .join(",");
                         type_hash += &format!("\"{}\":({})", simple_field.name, inner_types);
                     } else {
                         type_hash +=
@@ -219,8 +217,8 @@ pub struct Ctx {
     pub is_preset: bool,
 }
 
-struct FieldInfo {
-    name: String,
+pub(crate) struct FieldInfo {
+    _name: String,
     r#type: String,
     base_type: String,
     index: usize,
@@ -234,7 +232,7 @@ pub(crate) fn get_value_type(
     for (idx, (key, value)) in types.iter().enumerate() {
         if key == name {
             return Ok(FieldInfo {
-                name: name.to_string(),
+                _name: name.to_string(),
                 r#type: key.clone(),
                 base_type: "".to_string(),
                 index: idx,
@@ -246,7 +244,7 @@ pub(crate) fn get_value_type(
                 Field::SimpleType(simple_field) => {
                     if simple_field.name == name {
                         return Ok(FieldInfo {
-                            name: name.to_string(),
+                            _name: name.to_string(),
                             r#type: simple_field.r#type.clone(),
                             base_type: "".to_string(),
                             index: idx,
@@ -256,7 +254,7 @@ pub(crate) fn get_value_type(
                 Field::ParentType(parent_field) => {
                     if parent_field.name == name {
                         return Ok(FieldInfo {
-                            name: name.to_string(),
+                            _name: name.to_string(),
                             r#type: parent_field.contains.clone(),
                             base_type: parent_field.r#type.clone(),
                             index: idx,
@@ -292,11 +290,7 @@ impl PrimitiveType {
             PrimitiveType::Object(obj) => {
                 println!("r#type: {}", r#type);
 
-                if preset_types.contains_key(r#type) {
-                    ctx.is_preset = true;
-                } else {
-                    ctx.is_preset = false;
-                }
+                ctx.is_preset = preset_types.contains_key(r#type);
 
                 let mut hashes = Vec::new();
 
@@ -346,11 +340,7 @@ impl PrimitiveType {
 
                 for (field_name, value) in obj {
                     // recheck if we're currently in a preset type
-                    if preset_types.contains_key(r#type) {
-                        ctx.is_preset = true;
-                    } else {
-                        ctx.is_preset = false;
-                    }
+                    ctx.is_preset = preset_types.contains_key(r#type);
 
                     // pass correct types - preset or types
                     let field_type = get_value_type(
@@ -360,7 +350,7 @@ impl PrimitiveType {
                     ctx.base_type = field_type.base_type;
                     ctx.parent_type = r#type.to_string();
                     let field_hash =
-                        value.encode(&field_type.r#type.as_str(), types, preset_types, ctx)?;
+                        value.encode(field_type.r#type.as_str(), types, preset_types, ctx)?;
                     hashes.push(field_hash);
                 }
 
@@ -369,16 +359,13 @@ impl PrimitiveType {
             PrimitiveType::Array(array) => Ok(poseidon_hash_many(
                 array
                     .iter()
-                    .map(|x| x.encode(r#type.trim_end_matches("*"), types, preset_types, ctx))
+                    .map(|x| x.encode(r#type.trim_end_matches('*'), types, preset_types, ctx))
                     .collect::<Result<Vec<_>, _>>()?
                     .as_slice(),
             )),
             PrimitiveType::Bool(boolean) => {
-                let v = if *boolean {
-                    FieldElement::from(1 as u32)
-                } else {
-                    FieldElement::from(0 as u32)
-                };
+                let v =
+                    if *boolean { FieldElement::from(1_u32) } else { FieldElement::from(0_u32) };
                 Ok(v)
             }
             PrimitiveType::String(string) => match r#type {
@@ -413,7 +400,7 @@ impl PrimitiveType {
             },
             PrimitiveType::Number(number) => {
                 let felt = FieldElement::from_str(&number.to_string()).map_err(|_| {
-                    Error::InvalidMessageError(format!("Invalid number {}", number.to_string()))
+                    Error::InvalidMessageError(format!("Invalid number {}", number))
                 })?;
                 Ok(felt)
             }
@@ -490,6 +477,7 @@ impl TypedData {
 
 #[cfg(test)]
 mod tests {
+    use starknet_core::utils::starknet_keccak;
     use starknet_ff::FieldElement;
 
     use super::*;
