@@ -19,8 +19,8 @@ use katana_primitives::genesis::constant::{
 };
 use katana_primitives::genesis::Genesis;
 use katana_primitives::transaction::{
-    DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, DeployAccountTxV1,
-    ExecutableTx, ExecutableTxWithHash, InvokeTx, InvokeTxV1,
+    DeclareTx, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, DeployAccountTxV1, ExecutableTx,
+    ExecutableTxWithHash, InvokeTx, InvokeTxV1,
 };
 use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::version::Version;
@@ -30,6 +30,8 @@ use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use starknet::macros::felt;
 
+// TODO: remove support for legacy contract declaration
+#[allow(unused)]
 pub fn legacy_contract_class() -> CompiledClass {
     let json = include_str!("legacy_contract.json");
     let artifact = serde_json::from_str(json).unwrap();
@@ -76,7 +78,6 @@ pub fn state_provider() -> Box<dyn StateProvider> {
 }
 
 // TODO: update the txs to include valid signatures
-// TODO: add a declare transactions
 /// Returns an array of blocks with transaction that are valid against the state by
 /// [state_provider].
 #[rstest::fixture]
@@ -89,6 +90,8 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
         "0x06b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"
     ));
 
+    let gas_prices = GasPrices { eth: 100 * u128::pow(10, 9), strk: 100 * u128::pow(10, 9) };
+
     [
         ExecutableBlock {
             header: PartialHeader {
@@ -97,7 +100,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 100,
                 sequencer_address,
                 parent_hash: 123u64.into(),
-                gas_prices: GasPrices::default(),
+                gas_prices: gas_prices.clone(),
             },
             body: vec![
                 // fund the account to be deployed, sending 0x9999999999999 amount
@@ -113,7 +116,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         felt!("0x9999999999999"),
                         felt!("0x0"),
                     ],
-                    max_fee: 0,
+                    max_fee: 954300000000000,
                     signature: vec![],
                     nonce: FieldElement::ZERO,
                 }))),
@@ -125,12 +128,14 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         sierra_class: Some(sierra),
                         transaction: DeclareTx::V2(DeclareTxV2 {
                             nonce: FieldElement::ONE,
-                            max_fee: 0,
+                            max_fee: 666300000000000,
                             chain_id,
                             signature: vec![],
                             sender_address,
                             class_hash: felt!("0x420"),
-                            compiled_class_hash: felt!("0x1337"),
+                            compiled_class_hash: felt!(
+                                "0x16c6081eb34ad1e0c5513234ed0c025b3c7f305902d291bad534cd6474c85bc"
+                            ),
                         }),
                     }
                 })),
@@ -143,14 +148,14 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 200,
                 sequencer_address,
                 parent_hash: 1234u64.into(),
-                gas_prices: GasPrices::default(),
+                gas_prices: gas_prices.clone(),
             },
             body: vec![
                 // deploy account tx with the default account class
                 ExecutableTxWithHash::new(ExecutableTx::DeployAccount(DeployAccountTx::V1(
                     DeployAccountTxV1 {
                         chain_id,
-                        max_fee: 0,
+                        max_fee: 883800000000000,
                         signature: vec![],
                         nonce: 0u64.into(),
                         contract_address_salt: felt!(
@@ -176,7 +181,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 timestamp: 300,
                 sequencer_address,
                 parent_hash: 12345u64.into(),
-                gas_prices: GasPrices::default(),
+                gas_prices: gas_prices.clone(),
             },
             body: vec![
                 // deploy contract using UDC
@@ -199,23 +204,10 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         felt!("0x0"),
                         felt!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
                     ],
-                    max_fee: 0,
+                    max_fee: 2700700000000000,
                     signature: vec![],
                     nonce: FieldElement::TWO,
                 }))),
-                // legacy declare transaction
-                ExecutableTxWithHash::new(ExecutableTx::Declare(DeclareTxWithClass {
-                    sierra_class: None,
-                    compiled_class: legacy_contract_class(),
-                    transaction: DeclareTx::V1(DeclareTxV1 {
-                        chain_id,
-                        sender_address,
-                        max_fee: 0,
-                        signature: vec![],
-                        nonce: FieldElement::THREE,
-                        class_hash: felt!("0xbadbeef"),
-                    }),
-                })),
             ],
         },
     ]
@@ -251,15 +243,14 @@ pub fn cfg() -> CfgEnv {
 
 // TODO: test both with and without the flags turned on
 #[rstest::fixture]
-pub fn flags() -> SimulationFlag {
-    SimulationFlag {
-        skip_validate: true,
-        ignore_max_fee: true,
-        skip_fee_transfer: true,
-        ..Default::default()
-    }
+pub fn flags(
+    #[default(false)] skip_validate: bool,
+    #[default(false)] skip_fee_transfer: bool,
+) -> SimulationFlag {
+    SimulationFlag { skip_validate, skip_fee_transfer, ..Default::default() }
 }
 
+#[cfg(feature = "blockifier")]
 pub mod blockifier {
     use katana_executor::implementation::blockifier::BlockifierFactory;
     use katana_executor::SimulationFlag;
@@ -267,7 +258,20 @@ pub mod blockifier {
     use super::{cfg, flags, CfgEnv};
 
     #[rstest::fixture]
-    pub fn factory(cfg: CfgEnv, flags: SimulationFlag) -> BlockifierFactory {
+    pub fn factory(cfg: CfgEnv, #[with(true)] flags: SimulationFlag) -> BlockifierFactory {
         BlockifierFactory::new(cfg, flags)
+    }
+}
+
+#[cfg(feature = "sir")]
+pub mod sir {
+    use katana_executor::implementation::sir::NativeExecutorFactory;
+    use katana_executor::SimulationFlag;
+
+    use super::{cfg, flags, CfgEnv};
+
+    #[rstest::fixture]
+    pub fn factory(cfg: CfgEnv, #[with(true)] flags: SimulationFlag) -> NativeExecutorFactory {
+        NativeExecutorFactory::new(cfg, flags)
     }
 }

@@ -22,6 +22,11 @@ tracing.workspace = true
 # blockifier deps
 blockifier = { workspace = true, optional = true }
 
+# starknet_in_rust deps
+cairo-lang-sierra = { workspace = true, optional = true }
+sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "e5ccb5e", optional = true }
+starknet-types-core = { version = "0.0.9", optional = true }
+
 [dev-dependencies]
 cairo-vm.workspace = true
 katana-provider.workspace = true
@@ -30,6 +35,8 @@ serde_json.workspace = true
 similar-asserts.workspace = true
 
 [features]
-default = [ "blockifier" ]
+default = [ "blockifier", "sir" ]
 
 blockifier = [ "dep:blockifier", "katana-primitives/blockifier" ]
+native = [ "sir", "sir/cairo-native" ]
+sir = [ "dep:sir", "dep:starknet-types-core" ]
