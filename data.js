@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710130501103,
+  "lastUpdate": 1710187052366,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2485,6 +2485,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 971999,
             "range": "± 70694",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "88bae9f436acbf0325de27be68264aff979dce40",
+          "message": "fix(sozo): ensure warnings don't stop tests build (#1648)\n\n* fix: ensure warnings are not blocking the test build\r\n\r\n* fix: update default world address for spawn and move example",
+          "timestamp": "2024-03-11T13:48:08-06:00",
+          "tree_id": "0aa90c6959c0fecd0da0b6ed4d4ed0f679e96dcd",
+          "url": "https://github.com/dojoengine/dojo/commit/88bae9f436acbf0325de27be68264aff979dce40"
+        },
+        "date": 1710187051894,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 969724,
+            "range": "± 65960",
             "unit": "ns/iter"
           }
         ]
