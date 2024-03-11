@@ -120,11 +120,11 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         felt!("0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"),
                         felt!("0x83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e"),
                         felt!("0x3"),
-                        felt!("0x77880e2192169bc7107d213ebe643452e1e3e8f40bcc2ebba420b77b1522bd1"),
-                        felt!("0x9999999999999"),
+                        felt!("0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85"),
+                        felt!("0x9999999999999999"),
                         felt!("0x0"),
                     ],
-                    max_fee: 954300000000000,
+                    max_fee: 4367000000000000,
                     signature: vec![],
                     nonce: FieldElement::ZERO,
                 }))),
@@ -136,7 +136,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         sierra_class: Some(sierra),
                         transaction: DeclareTx::V2(DeclareTxV2 {
                             nonce: FieldElement::ONE,
-                            max_fee: 666300000000000,
+                            max_fee: 982300000000000,
                             chain_id,
                             signature: vec![],
                             sender_address,
@@ -163,7 +163,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                 ExecutableTxWithHash::new(ExecutableTx::DeployAccount(DeployAccountTx::V1(
                     DeployAccountTxV1 {
                         chain_id,
-                        max_fee: 883800000000000,
+                        max_fee: 1443900000000000,
                         signature: vec![],
                         nonce: 0u64.into(),
                         contract_address_salt: felt!(
@@ -176,7 +176,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                             "0x5400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c"
                         ),
                         contract_address: ContractAddress(felt!(
-                            "0x77880e2192169bc7107d213ebe643452e1e3e8f40bcc2ebba420b77b1522bd1"
+                            "0x3ddfa445a70b927497249f94ff7431fc2e2abc761a34417fd4891beb7c2db85"
                         )),
                     },
                 ))),
@@ -210,7 +210,7 @@ pub fn valid_blocks() -> [ExecutableBlock; 3] {
                         felt!("0x12"),
                         felt!("0x1b39"),
                         felt!("0x0"),
-                        felt!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114"),
+                        sender_address.into(),
                     ],
                     max_fee: 2700700000000000,
                     signature: vec![],
