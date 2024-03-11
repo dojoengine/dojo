@@ -25,8 +25,8 @@ cairo-vm = { workspace = true, optional = true }
 
 # starknet_in_rust deps
 cairo-lang-sierra = { workspace = true, optional = true }
-sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "47b65ca", optional = true }
-starknet-types-core = { version = "0.0.6", optional = true }
+sir = { package = "starknet_in_rust", git = "https://github.com/dojoengine/starknet_in_rust.git", rev = "e5ccb5e", optional = true }
+starknet-types-core = { version = "0.0.9", optional = true }
 
 [dev-dependencies]
 cairo-vm.workspace = true

@@ -107,7 +107,7 @@ mod invalid_model {
     impl InvalidModelName of super::INameOnly<ContractState> {
         fn name(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x742c3d09472a40914dedcbd609788fd547bde613d6c4d4c2f15d41f4e241f25
+            0x7b6cc67bb03efdf091487465df2037cad74111d8b616536b013e70da7491a30
         }
     }
 }
