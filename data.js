@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710124973570,
+  "lastUpdate": 1710130501103,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2455,6 +2455,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 971523,
             "range": "± 66840",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jasper@codictive.be",
+            "name": "RareSecond",
+            "username": "RareSecond"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac3c266604c930a3cd45a484b7f7895a1acb5f96",
+          "message": "fix: remove old reference to submodule (#1612)\n\n* fix: remove old reference to submodule\r\n\r\n* Update submodule\r\n\r\n* Will this now work?\r\n\r\n* Removed old files\r\n\r\n* Correctly updated gitmodules\r\n\r\n* chore: update forge std\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-10T22:05:37-06:00",
+          "tree_id": "0aef1e2ce4ac97c5487a06898d8597ba9a84faa3",
+          "url": "https://github.com/dojoengine/dojo/commit/ac3c266604c930a3cd45a484b7f7895a1acb5f96"
+        },
+        "date": 1710130500631,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 971999,
+            "range": "± 70694",
             "unit": "ns/iter"
           }
         ]
