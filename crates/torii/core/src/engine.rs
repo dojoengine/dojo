@@ -290,7 +290,14 @@ impl<P: Provider + Sync> Engine<P> {
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, self.db.clone(), block, transaction_receipt, event_id, event)
+                    .process(
+                        &self.world,
+                        self.db.clone(),
+                        block,
+                        transaction_receipt,
+                        event_id,
+                        event,
+                    )
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {

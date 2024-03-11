@@ -70,7 +70,16 @@ where
             "Registered model content"
         );
 
-        db.write().await.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size)
+        db.write()
+            .await
+            .register_model(
+                schema,
+                layout,
+                class_hash,
+                contract_address,
+                packed_size,
+                unpacked_size,
+            )
             .await?;
 
         Ok(())

@@ -1,12 +1,11 @@
 use std::str::FromStr;
 
-use dojo_types::{
-    primitive::Primitive,
-    schema::{Enum, Member, Struct, Ty},
-};
+use dojo_types::primitive::Primitive;
+use dojo_types::schema::{Enum, Member, Struct, Ty};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use serde_json::{value::Index, Number};
+use serde_json::value::Index;
+use serde_json::Number;
 use starknet_core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, starknet_keccak,
     CairoShortStringToFeltError,
@@ -312,7 +311,7 @@ impl PrimitiveType {
                         _ => {
                             return Err(Error::InvalidMessageError(
                                 "Enum value must be an array".to_string(),
-                            ))
+                            ));
                         }
                     };
 
@@ -491,8 +490,9 @@ impl TypedData {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use starknet_ff::FieldElement;
+
+    use super::*;
 
     #[test]
     fn test_read_json() {
@@ -532,7 +532,12 @@ mod tests {
 
         let encoded = encode_type(&typed_data.primary_type, &typed_data.types).unwrap();
 
-        assert_eq!(encoded, "\"Example\"(\"n0\":\"felt\",\"n1\":\"bool\",\"n2\":\"string\",\"n3\":\"selector\",\"n4\":\"u128\",\"n5\":\"ContractAddress\",\"n6\":\"ClassHash\",\"n7\":\"timestamp\",\"n8\":\"shortstring\")");
+        assert_eq!(
+            encoded,
+            "\"Example\"(\"n0\":\"felt\",\"n1\":\"bool\",\"n2\":\"string\",\"n3\":\"selector\",\"\
+             n4\":\"u128\",\"n5\":\"ContractAddress\",\"n6\":\"ClassHash\",\"n7\":\"timestamp\",\"\
+             n8\":\"shortstring\")"
+        );
 
         let path = "mocks/mail_StructArray.json";
         let file = std::fs::File::open(path).unwrap();
@@ -542,7 +547,12 @@ mod tests {
 
         let encoded = encode_type(&typed_data.primary_type, &typed_data.types).unwrap();
 
-        assert_eq!(encoded, "\"Mail\"(\"from\":\"Person\",\"to\":\"Person\",\"posts_len\":\"felt\",\"posts\":\"Post*\")\"Person\"(\"name\":\"felt\",\"wallet\":\"felt\")\"Post\"(\"title\":\"felt\",\"content\":\"felt\")");
+        assert_eq!(
+            encoded,
+            "\"Mail\"(\"from\":\"Person\",\"to\":\"Person\",\"posts_len\":\"felt\",\"posts\":\"\
+             Post*\")\"Person\"(\"name\":\"felt\",\"wallet\":\"felt\")\"Post\"(\"title\":\"felt\",\
+             \"content\":\"felt\")"
+        );
 
         let path = "mocks/example_enum.json";
         let file = std::fs::File::open(path).unwrap();
@@ -552,7 +562,11 @@ mod tests {
 
         let encoded = encode_type(&typed_data.primary_type, &typed_data.types).unwrap();
 
-        assert_eq!(encoded, "\"Example\"(\"someEnum\":\"MyEnum\")\"MyEnum\"(\"Variant 1\":(),\"Variant 2\":(\"u128\",\"u128*\"),\"Variant 3\":(\"u128\"))");
+        assert_eq!(
+            encoded,
+            "\"Example\"(\"someEnum\":\"MyEnum\")\"MyEnum\"(\"Variant 1\":(),\"Variant \
+             2\":(\"u128\",\"u128*\"),\"Variant 3\":(\"u128\"))"
+        );
 
         let path = "mocks/example_presetTypes.json";
         let file = std::fs::File::open(path).unwrap();

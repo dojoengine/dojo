@@ -33,10 +33,11 @@ use crate::errors::Error;
 
 mod events;
 
+use sqlx::Row;
+
 use crate::server::events::ServerEvent;
 use crate::typed_data::{get_value_type, Field, PrimitiveType, TypedData};
 use crate::types::Message;
-use sqlx::Row;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
@@ -324,7 +325,8 @@ impl Relay {
                                 }
                             };
 
-                            // Check if the signed last signature is the same as the entity's last signature in db
+                            // Check if the signed last signature is the same as the entity's last
+                            // signature in db
                             if signature_r != parsed_message.last_signature.r
                                 || signature_s != parsed_message.last_signature.s
                             {
