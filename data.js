@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710023979134,
+  "lastUpdate": 1710124973570,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2425,6 +2425,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1014872,
             "range": "± 67874",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5924911686d5cff2309dccfd9ad41c74908e014d",
+          "message": "fix: handle primitive and custom types for enum introspect (#1643)\n\nThe function `handle_introspect_enum` handles the derive Introspect attribute for an enum.\r\nAt the moment, two cases are supported: tuples and type paths.\r\n\r\nA type path may be a primitive type or a custom type (struct or enum).\r\nA tuple may be composed of primitive and/or custom types.\r\n\r\nThis PR updates the function `handle_introspect_enum` to handle all these cases properly.",
+          "timestamp": "2024-03-10T22:33:27-04:00",
+          "tree_id": "26f2f5d5491c15271586aef9d35eddcfee0e45b1",
+          "url": "https://github.com/dojoengine/dojo/commit/5924911686d5cff2309dccfd9ad41c74908e014d"
+        },
+        "date": 1710124972598,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 971523,
+            "range": "± 66840",
             "unit": "ns/iter"
           }
         ]
