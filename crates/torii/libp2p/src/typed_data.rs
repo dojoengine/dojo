@@ -352,40 +352,32 @@ impl PrimitiveType {
             )),
             PrimitiveType::Bool(boolean) => Ok(Ty::Primitive(Primitive::Bool(Some(boolean)))),
             PrimitiveType::String(string) => match r#type {
-                "shortstring" => get_hex(string),
+                "shortstring" => Ok(Ty::Primitive(Primitive::Felt252(Some(get_hex(string)?)))),
                 "string" => {
                     // split the string into short strings and encode
                     let byte_array = byte_array_from_string(string).map_err(|_| {
                         Error::InvalidMessageError("Invalid short string".to_string())
                     })?;
 
-                    let mut hashes = vec![FieldElement::from(byte_array.0.len())];
-
-                    for hash in byte_array.0 {
-                        hashes.push(hash);
-                    }
-
-                    hashes.push(byte_array.1);
-                    hashes.push(FieldElement::from(byte_array.2));
-
-                    Ok(poseidon_hash_many(hashes.as_slice()))
+                    unimplemented!()
                 }
-                "selector" => get_selector_from_name(string).map_err(|_| {
+                "selector" => Ok(Ty::Primitive(Primitive::Felt252(Some(get_selector_from_name(string).map_err(|_| {
                     Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
-                }),
-                "felt" => get_hex(string),
-                "ContractAddress" => get_hex(string),
-                "ClassHash" => get_hex(string),
-                "timestamp" => get_hex(string),
-                "u128" => get_hex(string),
-                "i128" => get_hex(string),
+                })?)))),
+                "felt" => Ok(Ty::Primitive(Primitive::Felt252(Some(get_hex(string)?)))),
+                "ContractAddress" => Ok(Ty::Primitive(Primitive::ContractAddress(Some(get_hex(string)?)))),
+                "ClassHash" => Ok(Ty::Primitive(Primitive::ClassHash(Some(get_hex(string)?)))),
+                "timestamp" => Ok(Ty::Primitive(Primitive::Felt252(Some(get_hex(string)?)))),
+                "u128" => Ok(Ty::Primitive(Primitive::U128(Some(u128::from_str(string).map_err(|_| {
+                    Error::InvalidMessageError(format!("Invalid number {}", string))
+                })?)))),
+                "i128" => Ok(Ty::Primitive(Primitive::(Some(i128::from_str(string).map_err(|_| {
+                    Error::InvalidMessageError(format!("Invalid number {}", string))
+                })?)))),
                 _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
             },
             PrimitiveType::Number(number) => {
-                let felt = FieldElement::from_str(&number.to_string()).map_err(|_| {
-                    Error::InvalidMessageError(format!("Invalid number {}", number.to_string()))
-                })?;
-                Ok(felt)
+                
             }
         }
     }
