@@ -6,6 +6,7 @@ use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
 use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
 use katana_primitives::FieldElement;
+use katana_provider::error::ProviderError;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
@@ -175,10 +176,15 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         &self,
         address: katana_primitives::contract::ContractAddress,
     ) -> ProviderResult<Option<katana_primitives::contract::Nonce>> {
-        let Ok(nonce) = self.write().inner.get_nonce_at(utils::to_blk_address(address)) else {
+        // check if the contract is deployed
+        if self.class_hash_of_contract(address)?.is_none() {
             return Ok(None);
-        };
-        Ok(Some(nonce.0.into()))
+        }
+
+        match self.0.write().inner.get_nonce_at(utils::to_blk_address(address)) {
+            Ok(nonce) => Ok(Some(nonce.0.into())),
+            Err(e) => Err(ProviderError::Other(e.to_string())),
+        }
     }
 
     fn storage(
@@ -186,13 +192,17 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         address: katana_primitives::contract::ContractAddress,
         storage_key: katana_primitives::contract::StorageKey,
     ) -> ProviderResult<Option<katana_primitives::contract::StorageValue>> {
+        // check if the contract is deployed
+        if self.class_hash_of_contract(address)?.is_none() {
+            return Ok(None);
+        }
+
         let address = utils::to_blk_address(address);
         let key = StorageKey(patricia_key!(storage_key));
 
-        if let Ok(value) = self.write().inner.get_storage_at(address, key) {
-            Ok(Some(value.into()))
-        } else {
-            Ok(None)
+        match self.write().inner.get_storage_at(address, key) {
+            Ok(value) => Ok(Some(value.into())),
+            Err(e) => Err(ProviderError::Other(e.to_string())),
         }
     }
 }
@@ -229,5 +239,302 @@ impl<S: StateDb> StateReader for CachedState<S> {
         key: StorageKey,
     ) -> StateResult<starknet_api::hash::StarkFelt> {
         self.write().inner.get_storage_at(contract_address, key)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use blockifier::state::state_api::{State, StateReader};
+    use katana_primitives::class::{CompiledClass, FlattenedSierraClass};
+    use katana_primitives::contract::ContractAddress;
+    use katana_primitives::genesis::constant::{
+        DEFAULT_LEGACY_ERC20_CONTRACT_CASM, DEFAULT_LEGACY_UDC_CASM, DEFAULT_OZ_ACCOUNT_CONTRACT,
+        DEFAULT_OZ_ACCOUNT_CONTRACT_CASM,
+    };
+    use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
+    use katana_primitives::FieldElement;
+    use katana_provider::providers::in_memory::InMemoryProvider;
+    use katana_provider::traits::contract::ContractClassWriter;
+    use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
+    use starknet::macros::felt;
+
+    use super::{CachedState, *};
+    use crate::StateProviderDb;
+
+    fn new_sierra_class() -> (FlattenedSierraClass, CompiledClass) {
+        let json = include_str!("../../../../primitives/contracts/compiled/cairo1_contract.json");
+        let artifact = serde_json::from_str(json).unwrap();
+        let compiled_class = parse_compiled_class(artifact).unwrap();
+        let sierra_class = parse_sierra_class(json).unwrap().flatten().unwrap();
+        (sierra_class, compiled_class)
+    }
+
+    fn state_provider() -> Box<dyn StateProvider> {
+        let address = ContractAddress::from(felt!("0x67"));
+        let nonce = felt!("0x7");
+        let storage_key = felt!("0x1");
+        let storage_value = felt!("0x2");
+        let class_hash = felt!("0x123");
+        let compiled_hash = felt!("0x456");
+        let sierra_class = DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten().unwrap();
+        let class = DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone();
+        let legacy_class_hash = felt!("0x111");
+        let legacy_class = DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone();
+
+        let provider = InMemoryProvider::new();
+        provider.set_nonce(address, nonce).unwrap();
+        provider.set_class_hash_of_contract(address, class_hash).unwrap();
+        provider.set_storage(address, storage_key, storage_value).unwrap();
+        provider.set_compiled_class_hash_of_class_hash(class_hash, compiled_hash).unwrap();
+        provider.set_class(class_hash, class).unwrap();
+        provider.set_sierra_class(class_hash, sierra_class).unwrap();
+        provider.set_class(legacy_class_hash, legacy_class).unwrap();
+
+        provider.latest().unwrap()
+    }
+
+    #[test]
+    fn can_fetch_from_inner_state_provider() -> anyhow::Result<()> {
+        let state = state_provider();
+        let mut cached_state = CachedState::new(StateProviderDb(state));
+
+        let address = ContractAddress::from(felt!("0x67"));
+        let legacy_class_hash = felt!("0x111");
+        let storage_key = felt!("0x1");
+
+        let api_address = utils::to_blk_address(address);
+        let actual_class_hash = cached_state.get_class_hash_at(api_address)?;
+        let actual_nonce = cached_state.get_nonce_at(api_address)?;
+        let actual_storage_value =
+            cached_state.get_storage_at(api_address, StorageKey(patricia_key!(storage_key)))?;
+        let actual_compiled_hash = cached_state.get_compiled_class_hash(actual_class_hash)?;
+        let actual_class = cached_state.get_compiled_contract_class(actual_class_hash)?;
+        let actual_legacy_class =
+            cached_state.get_compiled_contract_class(ClassHash(legacy_class_hash.into()))?;
+
+        assert_eq!(actual_nonce.0, felt!("0x7").into());
+        assert_eq!(actual_storage_value, felt!("0x2").into());
+        assert_eq!(actual_class_hash.0, felt!("0x123").into());
+        assert_eq!(actual_compiled_hash.0, felt!("0x456").into());
+        assert_eq!(
+            actual_class,
+            utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap()
+        );
+        assert_eq!(
+            actual_legacy_class,
+            utils::to_class(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()).unwrap()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_fetch_as_state_provider() -> anyhow::Result<()> {
+        let sp = state_provider();
+
+        // cache_state native data
+        let new_address = ContractAddress::from(felt!("0xdead"));
+        let new_storage_key = felt!("0xf00");
+        let new_storage_value = felt!("0xba");
+        let new_legacy_class_hash = felt!("0x1234");
+        let new_legacy_class = DEFAULT_LEGACY_UDC_CASM.clone();
+        let new_class_hash = felt!("0x777");
+        let (new_sierra_class, new_compiled_sierra_class) = new_sierra_class();
+        // let new_compiled_hash = felt!("0xdead");
+        // let new_legacy_compiled_hash = felt!("0x5678");
+
+        // we're asserting that the underlying state provider doesnt have cache state native data
+
+        let actual_new_nonce = sp.nonce(new_address)?;
+        let actual_new_class_hash = sp.class_hash_of_contract(new_address)?;
+        let actual_new_storage_value = sp.storage(new_address, new_storage_key)?;
+        let actual_new_legacy_class = sp.class(new_legacy_class_hash)?;
+        let actual_new_legacy_sierra_class = sp.class(new_legacy_class_hash)?;
+        let actual_new_sierra_class = sp.sierra_class(new_class_hash)?;
+        let actual_new_class = sp.class(new_class_hash)?;
+        // let actual_new_compiled_class_hash =
+        //     sp.compiled_class_hash_of_class_hash(new_class_hash)?;
+        // let actual_new_legacy_compiled_hash =
+        //     state_provider.compiled_class_hash_of_class_hash(new_class_hash)?;
+
+        assert_eq!(actual_new_nonce, None, "data shouldn't exist");
+        assert_eq!(actual_new_class_hash, None, "data shouldn't exist");
+        assert_eq!(actual_new_storage_value, None, "data shouldn't exist");
+        assert_eq!(actual_new_legacy_class, None, "data should'nt exist");
+        assert_eq!(actual_new_legacy_sierra_class, None, "data shouldn't exist");
+        assert_eq!(actual_new_sierra_class, None, "data shouldn't exist");
+        assert_eq!(actual_new_class, None, "data shouldn't exist");
+        // assert_eq!(actual_new_compiled_hash, None, "data shouldn't exist");
+        // assert_eq!(actual_new_legacy_compiled_hash, None, "data shouldn't exist");
+
+        let cached_state = CachedState::new(StateProviderDb(sp));
+
+        // insert some data to the cached state
+        {
+            let lock = &mut cached_state.0.write();
+            let blk_state = &mut lock.inner;
+
+            let address = utils::to_blk_address(new_address);
+            let storage_key = StorageKey(patricia_key!(new_storage_key));
+            let storage_value = new_storage_value.into();
+            let class_hash = ClassHash(new_class_hash.into());
+            let class = utils::to_class(new_compiled_sierra_class.clone()).unwrap();
+            let legacy_class_hash = ClassHash(new_legacy_class_hash.into());
+            let legacy_class = utils::to_class(DEFAULT_LEGACY_UDC_CASM.clone()).unwrap();
+
+            blk_state.increment_nonce(address)?;
+            blk_state.set_class_hash_at(address, legacy_class_hash)?;
+            blk_state.set_storage_at(address, storage_key, storage_value)?;
+            blk_state.set_contract_class(class_hash, class)?;
+            blk_state.set_contract_class(legacy_class_hash, legacy_class)?;
+
+            let declared_classes = &mut lock.declared_classes;
+            declared_classes.insert(new_legacy_class_hash, (new_legacy_class.clone(), None));
+            declared_classes.insert(
+                new_class_hash,
+                (new_compiled_sierra_class.clone(), Some(new_sierra_class.clone())),
+            );
+        }
+
+        // assert that can fetch data from the underlyign state provider
+        let sp: Box<dyn StateProvider> = Box::new(cached_state);
+
+        let address = ContractAddress::from(felt!("0x67"));
+        let class_hash = felt!("0x123");
+        let legacy_class_hash = felt!("0x111");
+
+        let actual_class_hash = sp.class_hash_of_contract(address)?;
+        let actual_nonce = sp.nonce(address)?;
+        let actual_storage_value = sp.storage(address, felt!("0x1"))?;
+        let actual_class = sp.class(class_hash)?;
+        let actual_sierra_class = sp.sierra_class(class_hash)?;
+        let actual_compiled_hash = sp.compiled_class_hash_of_class_hash(class_hash)?;
+        let actual_legacy_class = sp.class(legacy_class_hash)?;
+
+        assert_eq!(actual_nonce, Some(felt!("0x7")));
+        assert_eq!(actual_class_hash, Some(class_hash));
+        assert_eq!(actual_storage_value, Some(felt!("0x2")));
+        assert_eq!(actual_compiled_hash, Some(felt!("0x456")));
+        assert_eq!(actual_class, Some(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()));
+        assert_eq!(actual_sierra_class, Some(DEFAULT_OZ_ACCOUNT_CONTRACT.clone().flatten()?));
+        assert_eq!(actual_legacy_class, Some(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()));
+
+        // assert that can fetch data native to the cached state from the state provider
+
+        let actual_new_class_hash = sp.class_hash_of_contract(new_address)?;
+        let actual_new_nonce = sp.nonce(new_address)?;
+        let actual_new_storage_value = sp.storage(new_address, new_storage_key)?;
+        let actual_new_class = sp.class(new_class_hash)?;
+        let actual_new_sierra = sp.sierra_class(new_class_hash)?;
+        // let actual_new_compiled_hash = sp.compiled_class_hash_of_class_hash(new_class_hash)?;
+        let actual_legacy_class = sp.class(new_legacy_class_hash)?;
+        let actual_legacy_sierra = sp.sierra_class(new_legacy_class_hash)?;
+        // let actual_new_legacy_compiled_hash =
+        // sp.compiled_class_hash_of_class_hash(new_legacy_class_hash)?;
+
+        assert_eq!(actual_new_nonce, Some(felt!("0x1")), "data should be in cached state");
+        assert_eq!(
+            actual_new_class_hash,
+            Some(new_legacy_class_hash),
+            "data should be in cached state"
+        );
+        assert_eq!(
+            actual_new_storage_value,
+            Some(new_storage_value),
+            "data should be in cached state"
+        );
+        assert_eq!(actual_new_class, Some(new_compiled_sierra_class));
+        assert_eq!(actual_new_sierra, Some(new_sierra_class));
+        // assert_eq!(actual_new_compiled_hash, Some(new_compiled_hash));
+        assert_eq!(actual_legacy_class, Some(new_legacy_class));
+        assert_eq!(actual_legacy_sierra, None, "legacy class should not have sierra class");
+        // assert_eq!(actual_new_legacy_compiled_hash, Some(new_legacy_compiled_hash), "data should
+        // be in cached state");
+
+        Ok(())
+    }
+
+    #[test]
+    fn fetch_non_existant_data() -> anyhow::Result<()> {
+        let db = InMemoryProvider::new();
+
+        let address = ContractAddress::from(felt!("0x1"));
+        let class_hash = felt!("0x123");
+        let storage_key = felt!("0x1");
+
+        // edge case: the StateProvider::storage impl of CachedState will return
+        // default value for non-existant storage key of an existant contract. It will
+        // only return None if the contract does not exist. The intended behaviour for
+        // StateProvider::storage is to return None if the storage key or contract address
+        // does not exist.
+        let edge_address = ContractAddress::from(felt!("0x2"));
+        db.set_class_hash_of_contract(edge_address, class_hash)?;
+
+        let sp = db.latest()?;
+
+        let mut cached_state = CachedState::new(StateProviderDb(sp));
+
+        let api_address = utils::to_blk_address(address);
+        let api_storage_key = StorageKey(patricia_key!(storage_key));
+        let api_class_hash = ClassHash(class_hash.into());
+
+        let actual_nonce =
+            cached_state.get_nonce_at(api_address).expect("should return default value");
+        let actual_storage_value = cached_state
+            .get_storage_at(api_address, api_storage_key)
+            .expect("should return default value");
+        let actual_class_hash =
+            cached_state.get_class_hash_at(api_address).expect("should return default value");
+        let actual_compiled_hash = cached_state.get_compiled_class_hash(api_class_hash);
+        let actual_compiled_class = cached_state.get_compiled_contract_class(api_class_hash);
+        let actual_edge_storage_value = cached_state
+            .get_storage_at(utils::to_blk_address(edge_address), api_storage_key)
+            .expect("should return default value");
+
+        assert_eq!(
+            actual_nonce,
+            Default::default(),
+            "nonce of nonexistant contract should default to zero"
+        );
+        assert_eq!(
+            actual_storage_value,
+            Default::default(),
+            "value of nonexistant contract and storage key should default to zero"
+        );
+        assert_eq!(
+            actual_edge_storage_value,
+            Default::default(),
+            "value of nonexistant storage key but existant contract should default to zero"
+        );
+        assert_eq!(
+            actual_class_hash,
+            ClassHash::default(),
+            "class hash of nonexistant contract should default to zero"
+        );
+        assert!(actual_compiled_hash.unwrap_err().to_string().contains("is not declared"));
+        assert!(actual_compiled_class.unwrap_err().to_string().contains("is not declared"));
+
+        let sp: Box<dyn StateProvider> = Box::new(cached_state);
+
+        let actual_nonce = sp.nonce(address)?;
+        let actual_storage_value = sp.storage(address, storage_key)?;
+        let actual_edge_storage_value = sp.storage(edge_address, storage_key)?;
+        let actual_class_hash = sp.class_hash_of_contract(address)?;
+        let actual_compiled_hash = sp.compiled_class_hash_of_class_hash(class_hash)?;
+        let actual_class = sp.class(class_hash)?;
+
+        assert_eq!(actual_nonce, None, "nonce of nonexistant contract should be None");
+        assert_eq!(actual_class_hash, None, "class hash of nonexistant contract should be None");
+        assert_eq!(actual_storage_value, None, "value of nonexistant contract should be None");
+        assert_eq!(
+            actual_edge_storage_value,
+            Some(FieldElement::ZERO),
+            "edge case: value of nonexistant storage key but existant contract should return zero"
+        );
+        assert_eq!(actual_compiled_hash, None);
+        assert_eq!(actual_class, None);
+
+        Ok(())
     }
 }
