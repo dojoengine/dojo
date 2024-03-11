@@ -13,6 +13,7 @@ mod base {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        #[flat]
         UpgradeableEvent: upgradeable_component::Event
     }
 

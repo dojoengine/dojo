@@ -1,15 +1,15 @@
-use dojo_examples::models::{Position, Vec2};
+use dojo_examples::models::{Direction, Position, Vec2};
 
-#[starknet::interface]
-trait IActions<TContractState> {
-    fn spawn(self: @TContractState);
-    fn move(self: @TContractState, direction: dojo_examples::models::Direction);
+#[dojo::interface]
+trait IActions {
+    fn spawn();
+    fn move(direction: Direction);
 }
 
-#[starknet::interface]
-trait IActionsComputed<TContractState> {
-    fn tile_terrain(self: @TContractState, vec: Vec2) -> felt252 ;
-    fn quadrant(self: @TContractState, pos: Position) -> u8;
+#[dojo::interface]
+trait IActionsComputed {
+    fn tile_terrain(vec: Vec2) -> felt252;
+    fn quadrant(pos: Position) -> u8;
 }
 
 #[dojo::contract]
@@ -36,12 +36,12 @@ mod actions {
     #[abi(embed_v0)]
     impl ActionsComputedImpl of IActionsComputed<ContractState> {
         #[computed]
-        fn tile_terrain(self: @ContractState, vec: Vec2) -> felt252 {
+        fn tile_terrain(vec: Vec2) -> felt252 {
             'land'
         }
 
         #[computed(Position)]
-        fn quadrant(self: @ContractState, pos: Position) -> u8 {
+        fn quadrant(pos: Position) -> u8 {
             // 10 is zero
             if pos.vec.x < 10 {
                 if pos.vec.y < 10 {
@@ -64,8 +64,7 @@ mod actions {
     #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {
         // ContractState is defined by system decorator expansion
-        fn spawn(self: @ContractState) {
-            let world = self.world_dispatcher.read();
+        fn spawn(world: IWorldDispatcher) {
             let player = get_caller_address();
             let position = get!(world, player, (Position));
             let moves = get!(world, player, (Moves));
@@ -83,8 +82,7 @@ mod actions {
             );
         }
 
-        fn move(self: @ContractState, direction: Direction) {
-            let world = self.world_dispatcher.read();
+        fn move(world: IWorldDispatcher, direction: Direction) {
             let player = get_caller_address();
             let (mut position, mut moves) = get!(world, player, (Position, Moves));
             moves.remaining -= 1;
