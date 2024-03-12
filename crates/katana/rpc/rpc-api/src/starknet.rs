@@ -9,15 +9,14 @@ use katana_rpc_types::block::{
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::MaybePendingTxReceipt;
-use katana_rpc_types::simulation::SimulateTransactionsRequest;
 use katana_rpc_types::state_update::StateUpdate;
 use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
 use katana_rpc_types::{
-    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee,
-    SyncingStatus,
+    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag,
+    SimulationFlagForEstimateFee, SyncingStatus,
 };
 use starknet::core::types::{SimulatedTransaction, TransactionStatus};
 
@@ -191,6 +190,8 @@ pub trait StarknetApi {
     #[method(name = "simulateTransactions")]
     async fn simulate_transactions(
         &self,
-        request: SimulateTransactionsRequest,
+        block_id: BlockIdOrTag,
+        transactions: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlag>,
     ) -> RpcResult<Vec<SimulatedTransaction>>;
 }
