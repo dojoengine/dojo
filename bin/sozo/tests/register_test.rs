@@ -1,43 +1,41 @@
 mod utils;
 
-use clap::Parser;
 use dojo_test_utils::compiler::build_test_config;
 use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
-use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::ops;
-use sozo::args::{Commands, SozoArgs};
 use sozo::ops::migration::execute_strategy;
-use sozo::ops::register;
 use starknet::accounts::Account;
+use starknet::core::types::{BlockId, BlockTag};
+use utils::snapbox::get_snapbox;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn reregister_models() {
     let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let env_metadata = if config.manifest_path().exists() {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-        dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
-    } else {
-        None
-    };
 
-    let migration = prepare_migration("../../examples/spawn-and-move/target/dev".into()).unwrap();
+    let base_dir = "../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base_dir);
+    let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
 
-    let account = sequencer.account();
+    let mut account = sequencer.account();
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
     let world_address = &format!("0x{:x}", &migration.world_address().unwrap());
     let account_address = &format!("0x{:x}", account.address());
+    let private_key = &format!("0x{:x}", sequencer.raw_account().private_key);
+    let rpc_url = &sequencer.url().to_string();
+
     let moves_model_class_hash =
-        "0x764906a97ff3e532e82b154908b25711cdec1c692bf68e3aba2a3dd9964a15c";
+        "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54";
     let args_vec = [
-        "sozo",
         "register",
         "model",
         moves_model_class_hash,
@@ -45,17 +43,12 @@ async fn reregister_models() {
         world_address,
         "--account-address",
         account_address,
+        "--rpc-url",
+        rpc_url,
+        "--private-key",
+        private_key,
     ];
-    let mut updated_env = env_metadata.unwrap();
-    updated_env.rpc_url = Some(sequencer.url().to_string());
 
-    let args = SozoArgs::parse_from(args_vec);
-    match args.command {
-        Commands::Register(args) => {
-            register::execute(args.command, Some(updated_env.clone()), &config).await.unwrap();
-        }
-        _ => panic!("Expected \"sozo register model\" command!"),
-    }
-
-    sequencer.stop().unwrap();
+    let assert = get_snapbox().args(args_vec.iter()).assert().success();
+    assert!(format!("{:?}", assert.get_output()).contains("No new models to register"));
 }

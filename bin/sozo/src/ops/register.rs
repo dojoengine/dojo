@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
-use dojo_world::manifest::{Manifest, ManifestError};
+use dojo_world::manifest::DeployedManifest;
 use dojo_world::metadata::Environment;
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
@@ -25,9 +25,8 @@ pub async fn execute(
             let world_reader = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
             let remote_manifest = {
-                match Manifest::load_from_remote(&provider, world_address).await {
+                match DeployedManifest::load_from_remote(&provider, world_address).await {
                     Ok(manifest) => Some(manifest),
-                    Err(ManifestError::RemoteWorldNotFound) => None,
                     Err(e) => {
                         return Err(anyhow::anyhow!("Failed to build remote World state: {e}"));
                     }
@@ -36,7 +35,7 @@ pub async fn execute(
 
             let manifest = remote_manifest.unwrap();
             let registered_models_names =
-                manifest.models.into_iter().map(|m| m.name).collect::<Vec<String>>();
+                manifest.models.into_iter().map(|m| m.name.to_string()).collect::<Vec<String>>();
 
             let mut model_class_hashes = HashMap::new();
             for model_name in registered_models_names.iter() {
