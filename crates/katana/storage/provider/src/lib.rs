@@ -10,13 +10,14 @@ use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageK
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 use katana_primitives::FieldElement;
 use traits::block::{BlockIdReader, BlockStatusProvider, BlockWriter};
 use traits::contract::{ContractClassProvider, ContractClassWriter};
 use traits::env::BlockEnvProvider;
 use traits::state::{StateRootProvider, StateWriter};
-use traits::transaction::TransactionStatusProvider;
+use traits::transaction::{TransactionStatusProvider, TransactionTraceProvider};
 
 pub mod error;
 pub mod providers;
@@ -127,8 +128,9 @@ where
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
+        executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
-        self.provider.insert_block_with_states_and_receipts(block, states, receipts)
+        self.provider.insert_block_with_states_and_receipts(block, states, receipts, executions)
     }
 }
 
@@ -180,6 +182,22 @@ where
 {
     fn transaction_status(&self, hash: TxHash) -> ProviderResult<Option<FinalityStatus>> {
         TransactionStatusProvider::transaction_status(&self.provider, hash)
+    }
+}
+
+impl<Db> TransactionTraceProvider for BlockchainProvider<Db>
+where
+    Db: TransactionTraceProvider,
+{
+    fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        TransactionTraceProvider::transaction_execution(&self.provider, hash)
+    }
+
+    fn transactions_executions_by_block(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
+        TransactionTraceProvider::transactions_executions_by_block(&self.provider, block_id)
     }
 }
 

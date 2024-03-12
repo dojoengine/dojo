@@ -6,7 +6,7 @@ use blockifier::execution::call_info::CallInfo;
 use blockifier::execution::common_hints::ExecutionMode;
 use blockifier::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
 use blockifier::execution::entry_point::{
-    CallEntryPoint, EntryPointExecutionContext, ExecutionResources,
+    CallEntryPoint, CallType, EntryPointExecutionContext, ExecutionResources,
 };
 use blockifier::execution::errors::EntryPointExecutionError;
 use blockifier::fee::fee_utils::{self, calculate_tx_l1_gas_usages};
@@ -28,6 +28,7 @@ use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
+use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
@@ -35,6 +36,7 @@ use starknet_api::core::{
     self, ChainId, ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey,
 };
 use starknet_api::data_availability::DataAvailabilityMode;
+use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::hash::StarkHash;
 use starknet_api::patricia_key;
 use starknet_api::transaction::{
@@ -498,6 +500,102 @@ pub fn to_class(
         katana_primitives::class::CompiledClass::Class(class) => {
             Ok(ContractClass::V1(ContractClassV1::try_from(class.casm)?))
         }
+    }
+}
+
+/// TODO: remove this function once starknet api 0.8.0 is supported.
+fn starknet_api_ethaddr_to_felt(value: starknet_api::core::EthAddress) -> FieldElement {
+    let mut bytes = [0u8; 32];
+    // Padding H160 with zeros to 32 bytes (big endian)
+    bytes[12..32].copy_from_slice(value.0.as_bytes());
+    let stark_felt = starknet_api::hash::StarkFelt::new(bytes).expect("valid slice for stark felt");
+    stark_felt.into()
+}
+
+pub fn to_exec_info(
+    exec_info: blockifier::transaction::objects::TransactionExecutionInfo,
+) -> katana_primitives::trace::TxExecInfo {
+    katana_primitives::trace::TxExecInfo {
+        validate_call_info: exec_info.validate_call_info.map(to_call_info),
+        execute_call_info: exec_info.execute_call_info.map(to_call_info),
+        fee_transfer_call_info: exec_info.fee_transfer_call_info.map(to_call_info),
+        actual_fee: exec_info.actual_fee.0,
+        actual_resources: exec_info
+            .actual_resources
+            .0
+            .into_iter()
+            .map(|(k, v)| (k, v as u64))
+            .collect(),
+        revert_error: exec_info.revert_error.clone(),
+    }
+}
+
+fn to_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
+    let message_to_l1_from_address = if let Some(a) = call_info.call.code_address {
+        to_address(a)
+    } else {
+        to_address(call_info.call.caller_address)
+    };
+
+    katana_primitives::trace::CallInfo {
+        caller_address: to_address(call_info.call.caller_address),
+        call_type: match call_info.call.call_type {
+            CallType::Call => katana_primitives::trace::CallType::Call,
+            CallType::Delegate => katana_primitives::trace::CallType::Delegate,
+        },
+        code_address: call_info.call.code_address.map(to_address),
+        class_hash: call_info.call.class_hash.map(|a| a.0.into()),
+        entry_point_selector: call_info.call.entry_point_selector.0.into(),
+        entry_point_type: match call_info.call.entry_point_type {
+            EntryPointType::External => katana_primitives::trace::EntryPointType::External,
+            EntryPointType::L1Handler => katana_primitives::trace::EntryPointType::L1Handler,
+            EntryPointType::Constructor => katana_primitives::trace::EntryPointType::Constructor,
+        },
+        calldata: call_info.call.calldata.0.iter().map(|f| (*f).into()).collect(),
+        retdata: call_info.execution.retdata.0.iter().map(|f| (*f).into()).collect(),
+        execution_resources: katana_primitives::trace::ExecutionResources {
+            n_steps: call_info.vm_resources.n_steps as u64,
+            n_memory_holes: call_info.vm_resources.n_memory_holes as u64,
+            builtin_instance_counter: call_info
+                .vm_resources
+                .builtin_instance_counter
+                .into_iter()
+                .map(|(k, v)| (k, v as u64))
+                .collect(),
+        },
+        events: call_info
+            .execution
+            .events
+            .iter()
+            .map(|e| katana_primitives::event::OrderedEvent {
+                order: e.order as u64,
+                keys: e.event.keys.iter().map(|f| f.0.into()).collect(),
+                data: e.event.data.0.iter().map(|f| (*f).into()).collect(),
+            })
+            .collect(),
+        l2_to_l1_messages: call_info
+            .execution
+            .l2_to_l1_messages
+            .iter()
+            .map(|m| {
+                let to_address = starknet_api_ethaddr_to_felt(m.message.to_address);
+                katana_primitives::message::OrderedL2ToL1Message {
+                    order: m.order as u64,
+                    from_address: message_to_l1_from_address,
+                    to_address: to_address.into(),
+                    payload: m.message.payload.0.iter().map(|f| (*f).into()).collect(),
+                }
+            })
+            .collect(),
+        storage_read_values: call_info.storage_read_values.into_iter().map(|f| f.into()).collect(),
+        accessed_storage_keys: call_info
+            .accessed_storage_keys
+            .into_iter()
+            .map(|sk| (*sk.0.key()).into())
+            .collect(),
+        inner_calls: call_info.inner_calls.iter().map(|c| to_call_info(c.clone())).collect(),
+        gas_consumed: call_info.execution.gas_consumed as u128,
+        failed: call_info.execution.failed,
     }
 }
 

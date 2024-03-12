@@ -4,6 +4,7 @@ use katana_primitives::receipt::{
     DeclareTxReceipt, DeployAccountTxReceipt, Event, InvokeTxReceipt, L1HandlerTxReceipt,
     MessageToL1, Receipt, TxExecutionResources,
 };
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use sir::execution::CallInfo;
 
@@ -72,6 +73,10 @@ impl TransactionExecutionOutput for TransactionExecutionInfo {
 
     fn revert_error(&self) -> Option<&str> {
         self.inner.revert_error.as_deref()
+    }
+
+    fn execution_info(&self) -> TxExecInfo {
+        utils::from_sir_exec_info(&self.inner)
     }
 }
 

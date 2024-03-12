@@ -6,9 +6,7 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
-use katana_primitives::transaction::TxWithHash;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
@@ -28,7 +26,7 @@ pub mod storage;
 use self::config::StarknetConfig;
 use self::storage::Blockchain;
 use crate::env::BlockContextGenerator;
-use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
+use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome, TxWithOutcome};
 use crate::utils::get_current_timestamp;
 
 pub struct Backend<EF: ExecutorFactory> {
@@ -120,10 +118,18 @@ impl<EF: ExecutorFactory> Backend<EF> {
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
-        tx_receipt_pairs: Vec<(TxWithHash, Receipt)>,
+        txs_outcomes: Vec<TxWithOutcome>,
         state_updates: StateUpdatesWithDeclaredClasses,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        let (txs, receipts): (Vec<TxWithHash>, Vec<Receipt>) = tx_receipt_pairs.into_iter().unzip();
+        let mut txs = vec![];
+        let mut receipts = vec![];
+        let mut execs = vec![];
+
+        for t in txs_outcomes {
+            txs.push(t.tx);
+            receipts.push(t.receipt);
+            execs.push(t.exec_info);
+        }
 
         let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
         let block_number = block_env.number;
@@ -150,6 +156,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
             block,
             state_updates,
             receipts,
+            execs,
         )?;
 
         info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");

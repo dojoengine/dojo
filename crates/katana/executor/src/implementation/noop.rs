@@ -3,6 +3,7 @@ use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, Flat
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
@@ -99,7 +100,7 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
         Box::new(NoopStateProvider)
     }
 
-    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>)] {
+    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>, TxExecInfo)] {
         &[]
     }
 
@@ -126,6 +127,10 @@ impl TransactionExecutionOutput for NoopTransactionExecutionOutput {
 
     fn revert_error(&self) -> Option<&str> {
         None
+    }
+
+    fn execution_info(&self) -> TxExecInfo {
+        TxExecInfo::default()
     }
 }
 

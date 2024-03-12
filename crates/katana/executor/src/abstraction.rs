@@ -4,6 +4,7 @@ use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageVal
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
@@ -107,7 +108,8 @@ pub struct ExecutionOutput {
     /// The state updates produced by the executions.
     pub states: StateUpdatesWithDeclaredClasses,
     /// The transactions that have been executed.
-    pub transactions: Vec<(TxWithHash, Option<Receipt>)>,
+    /// TODO: do we want a struct instead?
+    pub transactions: Vec<(TxWithHash, Option<Receipt>, TxExecInfo)>,
 }
 
 #[derive(Debug)]
@@ -152,7 +154,7 @@ pub trait BlockExecutor<'a>: TransactionExecutor + Send + Sync {
     fn state(&self) -> Box<dyn StateProvider + 'a>;
 
     /// Returns the transactions that have been executed.
-    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>)];
+    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>, TxExecInfo)];
 
     /// Returns the current block environment of the executor.
     fn block_env(&self) -> BlockEnv;
@@ -192,6 +194,9 @@ pub trait TransactionExecutionOutput {
 
     /// The error message if the transaction execution reverted, otherwise the value is `None`.
     fn revert_error(&self) -> Option<&str>;
+
+    /// Retrieves the execution info of the transaction.
+    fn execution_info(&self) -> TxExecInfo;
 }
 
 /// A wrapper around a boxed [StateProvider] for implementing the executor's own state reader

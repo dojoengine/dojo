@@ -14,7 +14,7 @@ use crate::{utils, FieldElement};
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
-/// The sequential number for all the transactions..
+/// The sequential number for all the transactions.
 pub type TxNumber = u64;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -348,7 +348,7 @@ impl DeclareTx {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTx {
     pub nonce: Nonce,

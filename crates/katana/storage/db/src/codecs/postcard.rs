@@ -1,6 +1,7 @@
 use katana_primitives::block::{BlockNumber, Header};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo};
 use katana_primitives::receipt::Receipt;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use postcard;
@@ -32,6 +33,7 @@ macro_rules! impl_compress_and_decompress_for_table_values {
 impl_compress_and_decompress_for_table_values!(
     u64,
     Tx,
+    TxExecInfo,
     Header,
     Receipt,
     FieldElement,
