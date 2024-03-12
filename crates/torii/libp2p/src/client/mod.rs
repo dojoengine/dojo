@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use dojo_types::schema::Ty;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
@@ -17,6 +16,7 @@ pub mod events;
 use crate::client::events::ClientEvent;
 use crate::constants;
 use crate::errors::Error;
+use crate::types::Message;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClientEvent")]
@@ -38,7 +38,7 @@ pub struct EventLoop {
 
 #[derive(Debug)]
 enum Command {
-    Publish(Ty, oneshot::Sender<Result<MessageId, Error>>),
+    Publish(Message, oneshot::Sender<Result<MessageId, Error>>),
     WaitForRelay(oneshot::Sender<Result<(), Error>>),
 }
 
@@ -153,7 +153,7 @@ impl CommandSender {
         Self { sender }
     }
 
-    pub async fn publish(&mut self, data: Ty) -> Result<MessageId, Error> {
+    pub async fn publish(&mut self, data: Message) -> Result<MessageId, Error> {
         let (tx, rx) = oneshot::channel();
 
         self.sender.unbounded_send(Command::Publish(data, tx)).expect("Failed to send command");
@@ -218,7 +218,7 @@ impl EventLoop {
         }
     }
 
-    fn publish(&mut self, data: &Ty) -> Result<MessageId, Error> {
+    fn publish(&mut self, data: &Message) -> Result<MessageId, Error> {
         self.swarm
             .behaviour_mut()
             .gossipsub

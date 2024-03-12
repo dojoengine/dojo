@@ -20,6 +20,7 @@ use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
+use torii_relay::types::Message;
 
 use crate::client::error::{Error, ParseError};
 use crate::client::storage::ModelStorage;
@@ -105,7 +106,7 @@ impl Client {
 
     /// Publishes a message to a topic.
     /// Returns the message id.
-    pub async fn publish_message(&mut self, message: Ty) -> Result<Vec<u8>, Error> {
+    pub async fn publish_message(&mut self, message: Message) -> Result<Vec<u8>, Error> {
         self.relay_client
             .command_sender
             .publish(message)

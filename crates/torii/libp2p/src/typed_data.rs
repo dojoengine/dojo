@@ -418,6 +418,15 @@ pub struct Domain {
 }
 
 impl Domain {
+    pub fn new(name: &str, version: &str, chain_id: &str, revision: Option<&str>) -> Self {
+        Self {
+            name: name.to_string(),
+            version: version.to_string(),
+            chain_id: chain_id.to_string(),
+            revision: revision.map(|s| s.to_string()),
+        }
+    }
+
     pub fn encode(&self, types: &IndexMap<String, Vec<Field>>) -> Result<FieldElement, Error> {
         let mut object = IndexMap::new();
 
@@ -448,6 +457,15 @@ pub struct TypedData {
 }
 
 impl TypedData {
+    pub fn new(
+        types: IndexMap<String, Vec<Field>>,
+        primary_type: &str,
+        domain: Domain,
+        message: IndexMap<String, PrimitiveType>,
+    ) -> Self {
+        Self { types, primary_type: primary_type.to_string(), domain, message }
+    }
+
     pub fn encode(&self, account: FieldElement) -> Result<FieldElement, Error> {
         let preset_types = get_preset_types();
 

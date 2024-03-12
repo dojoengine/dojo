@@ -19,7 +19,8 @@ use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, Transport};
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use starknet_crypto::{verify, Signature};
+use serde_json::Number;
+use starknet_crypto::{poseidon_hash_many, verify};
 use starknet_ff::FieldElement;
 use torii_core::sql::Sql;
 use tracing::{info, warn};
@@ -169,7 +170,7 @@ impl Relay {
                                 }
                             };
 
-                            let parsed_message = match validate_message(&data.message.message) {
+                            let ty = match validate_message(&data.message.message) {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
                                     info!(
@@ -202,10 +203,22 @@ impl Relay {
                                 }
                             };
 
+                            let keys = match ty_keys(&ty) {
+                                Ok(keys) => keys,
+                                Err(e) => {
+                                    warn!(
+                                        target: "torii::relay::server",
+                                        error = %e,
+                                        "Failed to get message model keys"
+                                    );
+                                    continue;
+                                }
+                            };
+
                             // select only identity field, if doesn't exist, empty string
                             let entity = match sqlx::query("SELECT * FROM ? WHERE id = ?")
-                                .bind(&parsed_message.model.as_struct().unwrap().name)
-                                .bind(parsed_message.hashed_keys.to_string())
+                                .bind(&ty.as_struct().unwrap().name)
+                                .bind(format!("{:#x}", poseidon_hash_many(&keys)))
                                 .fetch_optional(&mut *pool)
                                 .await
                             {
@@ -222,13 +235,8 @@ impl Relay {
 
                             if entity.is_none() {
                                 // we can set the entity without checking identity
-                                if let Err(e) = self
-                                    .db
-                                    .set_entity(
-                                        parsed_message.model.clone(),
-                                        &message_id.to_string(),
-                                    )
-                                    .await
+                                if let Err(e) =
+                                    self.db.set_entity(ty, &message_id.to_string()).await
                                 {
                                     info!(
                                         target: "torii::relay::server",
@@ -272,67 +280,9 @@ impl Relay {
                                 }
                             };
 
-                            let signature_r = match FieldElement::from_str(&match entity
-                                .try_get::<String, _>("signature_r")
-                            {
-                                Ok(signature_r) => signature_r,
-                                Err(e) => {
-                                    warn!(
-                                        target: "torii::relay::server",
-                                        error = %e,
-                                        "Failed to get signature r from model"
-                                    );
-                                    continue;
-                                }
-                            }) {
-                                Ok(signature_r) => signature_r,
-                                Err(e) => {
-                                    warn!(
-                                        target: "torii::relay::server",
-                                        error = %e,
-                                        "Failed to parse signature r"
-                                    );
-                                    continue;
-                                }
-                            };
-
-                            let signature_s = match FieldElement::from_str(&match entity
-                                .try_get::<String, _>("signature_s")
-                            {
-                                Ok(signature_s) => signature_s,
-                                Err(e) => {
-                                    warn!(
-                                        target: "torii::relay::server",
-                                        error = %e,
-                                        "Failed to get signature s from model"
-                                    );
-                                    continue;
-                                }
-                            }) {
-                                Ok(signature_s) => signature_s,
-                                Err(e) => {
-                                    warn!(
-                                        target: "torii::relay::server",
-                                        error = %e,
-                                        "Failed to parse signature s"
-                                    );
-                                    continue;
-                                }
-                            };
-
-                            // Check if the signed last signature is the same as the entity's last
-                            // signature in db
-                            if signature_r != parsed_message.last_signature.r
-                                || signature_s != parsed_message.last_signature.s
-                            {
-                                info!(
-                                    target: "torii::relay::server",
-                                    message_id = %message_id,
-                                    peer_id = %peer_id,
-                                    "Invalid signature"
-                                );
-                                continue;
-                            }
+                            // TODO: have a nonce in model to check
+                            // against entity nonce and message nonce
+                            // to prevent replay attacks.
 
                             // Verify the signature
                             let message_hash = if let Ok(message) = data.message.encode(identity) {
@@ -370,7 +320,7 @@ impl Relay {
                             if let Err(e) = self
                                 .db
                                 // event id is message id
-                                .set_entity(parsed_message.model, &message_id.to_string())
+                                .set_entity(ty, &message_id.to_string())
                                 .await
                             {
                                 info!(
@@ -438,13 +388,104 @@ impl Relay {
     }
 }
 
-struct ParsedMessage {
-    hashed_keys: FieldElement,
-    last_signature: Signature,
-    model: Ty,
+fn ty_keys(ty: &Ty) -> Result<Vec<FieldElement>, Error> {
+    if let Ty::Struct(s) = &ty {
+        let mut keys = Vec::new();
+        for m in s.keys() {
+            keys.extend(m.serialize().map_err(|_| {
+                Error::InvalidMessageError("Failed to serialize model key".to_string())
+            })?);
+        }
+        Ok(keys)
+    } else {
+        return Err(Error::InvalidMessageError("Entity is not a struct".to_string()));
+    }
 }
 
-fn parse_object_to_ty(name: String, object: &IndexMap<String, PrimitiveType>) -> Result<Ty, Error> {
+pub fn parse_ty_to_object(ty: &Ty) -> Result<IndexMap<String, PrimitiveType>, Error> {
+    match ty {
+        Ty::Struct(struct_ty) => {
+            let mut object = IndexMap::new();
+            for member in &struct_ty.children {
+                let mut member_object = IndexMap::new();
+                member_object.insert("key".to_string(), PrimitiveType::Bool(member.key));
+                member_object.insert(
+                    "type".to_string(),
+                    PrimitiveType::String(ty_to_string_type(&member.ty)),
+                );
+                member_object.insert("value".to_string(), parse_ty_to_primitive(&member.ty)?);
+                object.insert(member.name.clone(), PrimitiveType::Object(member_object));
+            }
+            Ok(object)
+        }
+        _ => Err(Error::InvalidMessageError("Expected Struct type".to_string())),
+    }
+}
+
+pub fn ty_to_string_type(ty: &Ty) -> String {
+    match ty {
+        Ty::Primitive(primitive) => match primitive {
+            Primitive::U8(_) => "u8".to_string(),
+            Primitive::U16(_) => "u16".to_string(),
+            Primitive::U32(_) => "u32".to_string(),
+            Primitive::USize(_) => "usize".to_string(),
+            Primitive::U64(_) => "u64".to_string(),
+            Primitive::U128(_) => "u128".to_string(),
+            Primitive::U256(_) => "u256".to_string(),
+            Primitive::Felt252(_) => "felt".to_string(),
+            Primitive::ClassHash(_) => "class_hash".to_string(),
+            Primitive::ContractAddress(_) => "contract_address".to_string(),
+            Primitive::Bool(_) => "bool".to_string(),
+        },
+        Ty::Struct(_) => "struct".to_string(),
+        Ty::Tuple(_) => "array".to_string(),
+        Ty::Enum(_) => "enum".to_string(),
+    }
+}
+
+pub fn parse_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
+    match ty {
+        Ty::Primitive(primitive) => match primitive {
+            Primitive::U8(value) => {
+                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
+            }
+            Primitive::U16(value) => {
+                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
+            }
+            Primitive::U32(value) => {
+                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
+            }
+            Primitive::USize(value) => {
+                Ok(PrimitiveType::Number(Number::from(value.map(|v| v as u64).unwrap_or(0u64))))
+            }
+            Primitive::U64(value) => {
+                Ok(PrimitiveType::Number(Number::from(value.map(|v| v).unwrap_or(0u64))))
+            }
+            Primitive::U128(value) => Ok(PrimitiveType::String(
+                value.map(|v| v.to_string()).unwrap_or_else(|| "0".to_string()),
+            )),
+            Primitive::U256(value) => Ok(PrimitiveType::String(
+                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
+            )),
+            Primitive::Felt252(value) => Ok(PrimitiveType::String(
+                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
+            )),
+            Primitive::ClassHash(value) => Ok(PrimitiveType::String(
+                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
+            )),
+            Primitive::ContractAddress(value) => Ok(PrimitiveType::String(
+                value.map(|v| format!("{:#x}", v)).unwrap_or_else(|| "0".to_string()),
+            )),
+            Primitive::Bool(value) => Ok(PrimitiveType::Bool(value.unwrap_or(false))),
+        },
+        _ => Err(Error::InvalidMessageError("Expected Primitive type".to_string())),
+    }
+}
+
+pub fn parse_object_to_ty(
+    name: String,
+    object: &IndexMap<String, PrimitiveType>,
+) -> Result<Ty, Error> {
     let mut ty_struct = Struct { name, children: vec![] };
 
     for (field_name, value) in object {
@@ -522,6 +563,41 @@ fn parse_object_to_ty(name: String, object: &IndexMap<String, PrimitiveType>) ->
                 });
             }
             PrimitiveType::String(string) => match r#type.as_str() {
+                "u8" => {
+                    ty_struct.children.push(Member {
+                        name: field_name.clone(),
+                        ty: Ty::Primitive(Primitive::U8(Some(u8::from_str(string).unwrap()))),
+                        key,
+                    });
+                }
+                "u16" => {
+                    ty_struct.children.push(Member {
+                        name: field_name.clone(),
+                        ty: Ty::Primitive(Primitive::U16(Some(u16::from_str(string).unwrap()))),
+                        key,
+                    });
+                }
+                "u32" => {
+                    ty_struct.children.push(Member {
+                        name: field_name.clone(),
+                        ty: Ty::Primitive(Primitive::U32(Some(u32::from_str(string).unwrap()))),
+                        key,
+                    });
+                }
+                "usize" => {
+                    ty_struct.children.push(Member {
+                        name: field_name.clone(),
+                        ty: Ty::Primitive(Primitive::USize(Some(u32::from_str(string).unwrap()))),
+                        key,
+                    });
+                }
+                "u64" => {
+                    ty_struct.children.push(Member {
+                        name: field_name.clone(),
+                        ty: Ty::Primitive(Primitive::U64(Some(u64::from_str(string).unwrap()))),
+                        key,
+                    });
+                }
                 "u128" => {
                     ty_struct.children.push(Member {
                         name: field_name.clone(),
@@ -575,7 +651,7 @@ fn parse_object_to_ty(name: String, object: &IndexMap<String, PrimitiveType>) ->
 
 // Validates the message model
 // and returns the identity and signature
-fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedMessage, Error> {
+fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<Ty, Error> {
     let model_name = if let Some(model_name) = message.get("model") {
         if let PrimitiveType::String(model_name) = model_name {
             model_name
@@ -584,65 +660,6 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
         }
     } else {
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
-    };
-
-    let hashed_keys = if let Some(hashed_keys) = message.get("hashed_keys") {
-        if let PrimitiveType::String(hashed_keys) = hashed_keys {
-            if let Ok(hashed_keys) = FieldElement::from_str(hashed_keys) {
-                hashed_keys
-            } else {
-                return Err(Error::InvalidMessageError(
-                    "Hashed keys is not a valid field element".to_string(),
-                ));
-            }
-        } else {
-            return Err(Error::InvalidMessageError("Hashed keys is not a string".to_string()));
-        }
-    } else {
-        return Err(Error::InvalidMessageError("Hashed keys is missing".to_string()));
-    };
-
-    let signature = if let Some(signature) = message.get("signature") {
-        if let PrimitiveType::Object(signature) = signature {
-            signature
-        } else {
-            return Err(Error::InvalidMessageError("Signature is not an object".to_string()));
-        }
-    } else {
-        return Err(Error::InvalidMessageError("Signature is missing".to_string()));
-    };
-
-    // signature object has to have r and s fields
-    let r = if let Some(r) = signature.get("r") {
-        if let PrimitiveType::String(r) = r {
-            if let Ok(r) = FieldElement::from_str(r) {
-                r
-            } else {
-                return Err(Error::InvalidMessageError(
-                    "R is not a valid field element".to_string(),
-                ));
-            }
-        } else {
-            return Err(Error::InvalidMessageError("R is not a string".to_string()));
-        }
-    } else {
-        return Err(Error::InvalidMessageError("R is missing".to_string()));
-    };
-
-    let s = if let Some(s) = signature.get("s") {
-        if let PrimitiveType::String(s) = s {
-            if let Ok(s) = FieldElement::from_str(s) {
-                s
-            } else {
-                return Err(Error::InvalidMessageError(
-                    "S is not a valid field element".to_string(),
-                ));
-            }
-        } else {
-            return Err(Error::InvalidMessageError("S is not a string".to_string()));
-        }
-    } else {
-        return Err(Error::InvalidMessageError("S is missing".to_string()));
     };
 
     let model = if let Some(object) = message.get(model_name) {
@@ -655,7 +672,7 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<ParsedM
         return Err(Error::InvalidMessageError("Model is missing".to_string()));
     };
 
-    Ok(ParsedMessage { model, hashed_keys, last_signature: Signature { r, s } })
+    Ok(model)
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {

@@ -13,13 +13,16 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
-        use dojo_types::schema::{Member, Struct};
+        use dojo_types::schema::{Member, Struct, Ty};
+        use indexmap::IndexMap;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use starknet_ff::FieldElement;
         use tokio::time::sleep;
         use torii_core::sql::Sql;
 
-        use crate::server::Relay;
+        use crate::server::{parse_ty_to_object, Relay};
+        use crate::typed_data::{Domain, TypedData};
+        use crate::types::Message;
 
         let _ = tracing_subscriber::fmt()
             .with_env_filter("torii::relay::client=debug,torii::relay::server=debug")
@@ -65,7 +68,34 @@ mod test {
             key: false,
         });
 
-        client.command_sender.publish(dojo_types::schema::Ty::Struct(data)).await?;
+        let mut typed_data = TypedData::new(
+            IndexMap::new(),
+            "Message",
+            Domain::new("Message", "1", "0x0", Some("1")),
+            IndexMap::new(),
+        );
+
+        typed_data.message.insert(
+            "model".to_string(),
+            crate::typed_data::PrimitiveType::String("Message".to_string()),
+        );
+        typed_data.message.insert(
+            "Message".to_string(),
+            crate::typed_data::PrimitiveType::Object(
+                parse_ty_to_object(&Ty::Struct(data.clone())).unwrap(),
+            ),
+        );
+
+        println!("object ty: {:?}", parse_ty_to_object(&Ty::Struct(data)).unwrap());
+
+        client
+            .command_sender
+            .publish(Message {
+                message: typed_data,
+                signature_r: FieldElement::from_bytes_be(&[0; 32]).unwrap(),
+                signature_s: FieldElement::from_bytes_be(&[0; 32]).unwrap(),
+            })
+            .await?;
 
         sleep(std::time::Duration::from_secs(2)).await;
 
