@@ -9,7 +9,6 @@ pub mod error;
 pub mod event;
 pub mod message;
 pub mod receipt;
-pub mod simulation;
 pub mod state_update;
 pub mod transaction;
 
