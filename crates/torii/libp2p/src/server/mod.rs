@@ -398,7 +398,7 @@ fn ty_keys(ty: &Ty) -> Result<Vec<FieldElement>, Error> {
         }
         Ok(keys)
     } else {
-        return Err(Error::InvalidMessageError("Entity is not a struct".to_string()));
+        Err(Error::InvalidMessageError("Entity is not a struct".to_string()))
     }
 }
 
