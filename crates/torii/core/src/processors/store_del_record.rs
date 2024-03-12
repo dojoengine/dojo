@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
@@ -7,7 +5,6 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use tokio::sync::RwLock;
 use tracing::info;
 
 use super::EventProcessor;

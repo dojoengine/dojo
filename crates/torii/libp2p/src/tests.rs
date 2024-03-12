@@ -16,7 +16,6 @@ mod test {
         use dojo_types::schema::{Member, Struct};
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use starknet_ff::FieldElement;
-        use tokio::sync::RwLock;
         use tokio::time::sleep;
         use torii_core::sql::Sql;
 

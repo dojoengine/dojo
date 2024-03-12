@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use starknet::core::types::{BlockWithTxs, Transaction, TransactionReceipt};
 use starknet::providers::Provider;
-use tokio::sync::RwLock;
 
 use super::TransactionProcessor;
 use crate::sql::Sql;

@@ -3,7 +3,6 @@ use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::path::Path;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 use std::{fs, io};
 
@@ -22,7 +21,6 @@ use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use starknet_crypto::{verify, Signature};
 use starknet_ff::FieldElement;
-use tokio::sync::RwLock;
 use torii_core::sql::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;

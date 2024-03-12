@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Error, Result};
@@ -12,7 +11,6 @@ use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
-use tokio::sync::RwLock;
 use tokio_util::bytes::Bytes;
 use tracing::{error, info};
 
@@ -84,8 +82,7 @@ where
 async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
-            db
-                .update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
+            db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
                 .await
                 .unwrap();
             info!("Updated resource {resource:#x} metadata from ipfs");

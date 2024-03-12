@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -12,7 +11,6 @@ use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
-use tokio::sync::RwLock;
 use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
@@ -290,14 +288,7 @@ impl<P: Provider + Sync> Engine<P> {
                 && processor.validate(event)
             {
                 processor
-                    .process(
-                        &self.world,
-                        &mut self.db,
-                        block,
-                        transaction_receipt,
-                        event_id,
-                        event,
-                    )
+                    .process(&self.world, &mut self.db, block, transaction_receipt, event_id, event)
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {

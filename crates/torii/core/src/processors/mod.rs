@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, Transaction, TransactionReceipt};
 use starknet::providers::Provider;
-use tokio::sync::RwLock;
 
 use crate::sql::Sql;
 
@@ -46,12 +43,7 @@ where
 #[async_trait]
 pub trait BlockProcessor<P: Provider + Sync> {
     fn get_block_number(&self) -> String;
-    async fn process(
-        &self,
-        db: &mut Sql,
-        provider: &P,
-        block: &BlockWithTxs,
-    ) -> Result<(), Error>;
+    async fn process(&self, db: &mut Sql, provider: &P, block: &BlockWithTxs) -> Result<(), Error>;
 }
 
 #[async_trait]

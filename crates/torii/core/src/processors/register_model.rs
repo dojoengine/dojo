@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
@@ -7,7 +5,6 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 use super::EventProcessor;
@@ -70,15 +67,7 @@ where
             "Registered model content"
         );
 
-        db
-            .register_model(
-                schema,
-                layout,
-                class_hash,
-                contract_address,
-                packed_size,
-                unpacked_size,
-            )
+        db.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size)
             .await?;
 
         Ok(())
