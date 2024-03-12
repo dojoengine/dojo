@@ -22,7 +22,6 @@ use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
-use katana_rpc_types::simulation::SimulateTransactionsRequest;
 use katana_rpc_types::state_update::StateUpdate;
 use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
@@ -37,7 +36,6 @@ use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
     BlockTag, SimulatedTransaction, TransactionExecutionStatus, TransactionStatus,
 };
-use tracing::info;
 
 #[derive(Clone)]
 pub struct StarknetApi {
@@ -674,31 +672,42 @@ impl StarknetApiServer for StarknetApi {
 
     async fn simulate_transactions(
         &self,
-        request: SimulateTransactionsRequest,
+        block_id: BlockIdOrTag,
+        transactions: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlag>,
     ) -> RpcResult<Vec<SimulatedTransaction>> {
         self.on_cpu_blocking_task(move |this| {
-            let charge_fee = !request.simulation_flags.contains(&SimulationFlag::SkipFeeCharge);
-            let validate = !request.simulation_flags.contains(&SimulationFlag::SkipValidate);
-            let executables = request
-                .try_into_executables_with_hash(this.inner.sequencer.chain_id())
-                .map_err(|_| StarknetApiError::ContractError {
-                    revert_error: "Transaction conversion error".to_string(),
-                })?;
-            let simulated_transactions = executables
+            let charge_fee = !simulation_flags.contains(&SimulationFlag::SkipFeeCharge);
+            let validate = !simulation_flags.contains(&SimulationFlag::SkipValidate);
+            let chain_id = this.inner.sequencer.chain_id();
+            let executables = transactions
                 .into_iter()
-                .map(|exec| {
-                    this.inner.sequencer.simulate_transaction(
-                        exec,
-                        request.block_id,
-                        validate,
-                        charge_fee,
-                    )
+                .map(|tx| {
+                    let tx = match tx {
+                        BroadcastedTx::Invoke(tx) => ExecutableTxWithHash::new_query(
+                            ExecutableTx::Invoke(tx.into_tx_with_chain_id(chain_id)),
+                        ),
+                        BroadcastedTx::Declare(tx) => {
+                            ExecutableTxWithHash::new_query(ExecutableTx::Declare(
+                                tx.try_into_tx_with_chain_id(chain_id)
+                                    .map_err(|_| StarknetApiError::InvalidContractClass)?,
+                            ))
+                        }
+                        BroadcastedTx::DeployAccount(tx) => ExecutableTxWithHash::new_query(
+                            ExecutableTx::DeployAccount(tx.into_tx_with_chain_id(chain_id)),
+                        ),
+                    };
+                    Result::<ExecutableTxWithHash, StarknetApiError>::Ok(tx)
                 })
-                .collect::<Result<Vec<_>, _>>()
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let res = this
+                .inner
+                .sequencer
+                .simulate_transactions(executables, block_id, validate, charge_fee)
                 .map_err(StarknetApiError::from)?;
 
-            info!("Simulated transactions: {:?}", simulated_transactions);
-            Ok(simulated_transactions)
+            Ok(res)
         })
         .await
     }

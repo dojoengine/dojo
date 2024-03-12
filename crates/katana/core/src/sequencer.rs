@@ -217,21 +217,21 @@ impl KatanaSequencer {
         .map_err(SequencerError::TransactionExecution)
     }
 
-    pub fn simulate_transaction(
+    pub fn simulate_transactions(
         &self,
-        transaction: ExecutableTxWithHash,
+        transactions: Vec<ExecutableTxWithHash>,
         block_id: BlockIdOrTag,
         validate: bool,
         charge_fee: bool,
-    ) -> SequencerResult<SimulatedTransaction> {
+    ) -> SequencerResult<Vec<SimulatedTransaction>> {
         let state = self.state(&block_id)?;
 
         let block_context = self
             .block_execution_context_at(block_id)?
             .ok_or_else(|| SequencerError::BlockNotFound(block_id))?;
 
-        katana_executor::blockifier::utils::simulate_transaction(
-            transaction,
+        katana_executor::blockifier::utils::simulate_transactions(
+            transactions,
             &block_context,
             state,
             validate,

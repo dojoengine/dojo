@@ -15,8 +15,7 @@ use blockifier::fee::fee_utils::{calculate_l1_gas_by_vm_usage, extract_l1_gas_an
 use blockifier::state::state_api::State;
 use blockifier::transaction::errors::TransactionExecutionError;
 use blockifier::transaction::objects::{
-    DeprecatedAccountTransactionContext, HasRelatedFeeType, ResourcesMapping,
-    TransactionExecutionInfo,
+    DeprecatedAccountTransactionContext, ResourcesMapping, TransactionExecutionInfo,
 };
 use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
@@ -46,7 +45,6 @@ use starknet_api::transaction::Calldata;
 use tracing::trace;
 
 use super::state::{CachedStateWrapper, StateRefDb};
-use super::transactions::BlockifierTx;
 use super::TransactionExecutor;
 
 #[derive(Debug)]
@@ -100,100 +98,89 @@ pub fn estimate_fee(
 }
 
 /// Simulate a transaction's execution on the state
-pub fn simulate_transaction(
-    transaction: ExecutableTxWithHash,
+pub fn simulate_transactions(
+    transactions: Vec<ExecutableTxWithHash>,
     block_context: &BlockContext,
     state: Box<dyn StateProvider>,
     validate: bool,
     charge_fee: bool,
-) -> Result<SimulatedTransaction, TransactionExecutionError> {
+) -> Result<Vec<SimulatedTransaction>, TransactionExecutionError> {
     let state = CachedStateWrapper::new(StateRefDb::from(state));
-    let result = TransactionExecutor::new(
-        &state,
-        block_context,
-        charge_fee,
-        validate,
-        vec![transaction.clone()].into_iter(),
-    )
-    .with_error_log()
-    .next()
-    .ok_or(TransactionExecutionError::ExecutionError(
-        EntryPointExecutionError::ExecutionFailed { error_data: Default::default() },
-    ))?;
-    let result = result?;
+    let results = transactions
+        .clone()
+        .into_iter()
+        .map(|tx| {
+            TransactionExecutor::new(
+                &state,
+                block_context,
+                charge_fee,
+                validate,
+                std::iter::once(tx),
+            )
+            .with_error_log()
+            .next()
+            .ok_or(TransactionExecutionError::ExecutionError(
+                EntryPointExecutionError::ExecutionFailed { error_data: Default::default() },
+            ))?
+        })
+        .collect::<Result<Vec<_>, TransactionExecutionError>>()?;
 
-    let function_invocation =
-        result.execute_call_info.as_ref().map(function_invocation_from_call_info).ok_or(
-            TransactionExecutionError::ExecutionError(EntryPointExecutionError::ExecutionFailed {
-                error_data: Default::default(),
-            }),
-        );
+    results
+        .into_iter()
+        .zip(transactions)
+        .map(|(result, transaction)| {
+            let function_invocation = result
+                .execute_call_info
+                .as_ref()
+                .map(function_invocation_from_call_info)
+                .ok_or(TransactionExecutionError::ExecutionError(
+                    EntryPointExecutionError::ExecutionFailed { error_data: Default::default() },
+                ));
 
-    let validate_invocation =
-        result.validate_call_info.as_ref().map(function_invocation_from_call_info);
+            let validate_invocation =
+                result.validate_call_info.as_ref().map(function_invocation_from_call_info);
 
-    let fee_transfer_invocation =
-        result.fee_transfer_call_info.as_ref().map(function_invocation_from_call_info);
+            let fee_transfer_invocation =
+                result.fee_transfer_call_info.as_ref().map(function_invocation_from_call_info);
 
-    let transaction_trace = match &transaction.transaction {
-        ExecutableTx::Declare(_) => TransactionTrace::Declare(DeclareTransactionTrace {
-            validate_invocation,
-            fee_transfer_invocation,
-            state_diff: None,
-        }),
-        ExecutableTx::DeployAccount(_) => {
-            TransactionTrace::DeployAccount(DeployAccountTransactionTrace {
-                constructor_invocation: function_invocation?,
-                validate_invocation,
-                fee_transfer_invocation,
-                state_diff: None,
-            })
-        }
-        ExecutableTx::Invoke(_) => TransactionTrace::Invoke(InvokeTransactionTrace {
-            validate_invocation,
-            execute_invocation: if let Some(revert_reason) = result.revert_error {
-                ExecuteInvocation::Reverted(RevertedInvocation { revert_reason })
-            } else {
-                ExecuteInvocation::Success(function_invocation?)
-            },
-            fee_transfer_invocation,
-            state_diff: None,
-        }),
-        ExecutableTx::L1Handler(_) => TransactionTrace::L1Handler(L1HandlerTransactionTrace {
-            function_invocation: function_invocation?,
-            state_diff: None,
-        }),
-    };
+            let transaction_trace = match &transaction.transaction {
+                ExecutableTx::Declare(_) => TransactionTrace::Declare(DeclareTransactionTrace {
+                    validate_invocation,
+                    fee_transfer_invocation,
+                    state_diff: None,
+                }),
+                ExecutableTx::DeployAccount(_) => {
+                    TransactionTrace::DeployAccount(DeployAccountTransactionTrace {
+                        constructor_invocation: function_invocation?,
+                        validate_invocation,
+                        fee_transfer_invocation,
+                        state_diff: None,
+                    })
+                }
+                ExecutableTx::Invoke(_) => TransactionTrace::Invoke(InvokeTransactionTrace {
+                    validate_invocation,
+                    execute_invocation: if let Some(revert_reason) = result.revert_error.as_ref() {
+                        ExecuteInvocation::Reverted(RevertedInvocation {
+                            revert_reason: revert_reason.clone(),
+                        })
+                    } else {
+                        ExecuteInvocation::Success(function_invocation?)
+                    },
+                    fee_transfer_invocation,
+                    state_diff: None,
+                }),
+                ExecutableTx::L1Handler(_) => {
+                    TransactionTrace::L1Handler(L1HandlerTransactionTrace {
+                        function_invocation: function_invocation?,
+                        state_diff: None,
+                    })
+                }
+            };
+            let fee_estimation = calculate_execution_fee(block_context, &result)?;
 
-    let execute_gas_consumed =
-        result.execute_call_info.map(|e| e.execution.gas_consumed).unwrap_or_default();
-    let validate_gas_consumed =
-        result.validate_call_info.map(|e| e.execution.gas_consumed).unwrap_or_default();
-    let gas_consumed = execute_gas_consumed + validate_gas_consumed;
-    let overall_fee = result.actual_fee.0 as u64;
-    let gas_price = if gas_consumed != 0 { overall_fee / gas_consumed } else { 0 };
-
-    let blockifier_tx = BlockifierTx::from(transaction);
-    let fee_type = match blockifier_tx.0 {
-        blockifier::transaction::transaction_execution::Transaction::AccountTransaction(tx) => {
-            tx.fee_type()
-        }
-        blockifier::transaction::transaction_execution::Transaction::L1HandlerTransaction(tx) => {
-            tx.fee_type()
-        }
-    };
-
-    let fee_estimation = FeeEstimate {
-        gas_price: FieldElement::from(gas_price),
-        gas_consumed: FieldElement::from(execute_gas_consumed + validate_gas_consumed),
-        overall_fee: FieldElement::from(overall_fee),
-        unit: match fee_type {
-            blockifier::transaction::objects::FeeType::Eth => PriceUnit::Wei,
-            blockifier::transaction::objects::FeeType::Strk => PriceUnit::Fri,
-        },
-    };
-
-    Ok(SimulatedTransaction { transaction_trace, fee_estimation })
+            Ok(SimulatedTransaction { transaction_trace, fee_estimation })
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
 
 /// Perform a raw entrypoint call of a contract.
