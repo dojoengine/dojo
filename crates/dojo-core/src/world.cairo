@@ -180,6 +180,13 @@ mod world {
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct EventMessage {
+        model: felt252,
+        keys: Span<felt252>,
+        values: Span<felt252>,
+    }
+
     #[constructor]
     fn constructor(ref self: ContractState, contract_base: ClassHash) {
         let creator = starknet::get_tx_info().unbox().account_contract_address;

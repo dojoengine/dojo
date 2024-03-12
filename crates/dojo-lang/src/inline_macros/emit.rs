@@ -36,25 +36,86 @@ impl InlineMacroExprPlugin for EmitMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"emit!(world, event)\"".to_string(),
+                    message: "Invalid arguments. Expected \"emit!(world, models,)\"".to_string(),
                     severity: Severity::Error,
                 }],
             };
         }
 
         let world = &args[0];
-        let event = &args[1];
 
-        builder.add_str(
-            "\n            starknet::Event::append_keys_and_data(@core::traits::Into::<_, \
-             Event>::into(",
-        );
-        builder.add_node(event.as_syntax_node());
-        builder.add_str("), ref keys, ref data);");
+        let ast::ArgClause::Unnamed(models) = args[1].arg_clause(db) else {
+            return unsupported_arg_diagnostic(db, syntax);
+        };
 
-        builder.add_str("\n            ");
-        builder.add_node(world.as_syntax_node());
-        builder.add_str(".emit(keys, data.span());");
+        let mut bundle = vec![];
+
+        match models.value(db) {
+            ast::Expr::Parenthesized(parens) => {
+                let syntax_node = parens.expr(db).as_syntax_node();
+                bundle.push((syntax_node.get_text(db), syntax_node));
+            }
+            ast::Expr::Tuple(list) => {
+                list.expressions(db).elements(db).into_iter().for_each(|expr| {
+                    let syntax_node = expr.as_syntax_node();
+                    bundle.push((syntax_node.get_text(db), syntax_node));
+                })
+            }
+            ast::Expr::StructCtorCall(ctor) => {
+                let syntax_node = ctor.as_syntax_node();
+                bundle.push((syntax_node.get_text(db), syntax_node));
+            }
+            _ => {
+                return InlinePluginResult {
+                    code: None,
+                    diagnostics: vec![PluginDiagnostic {
+                        message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
+                        stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
+                        severity: Severity::Error,
+                    }],
+                };
+            }
+        }
+
+        if bundle.is_empty() {
+            return InlinePluginResult {
+                code: None,
+                diagnostics: vec![PluginDiagnostic {
+                    message: "Invalid arguments: No models provided.".to_string(),
+                    stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
+                    severity: Severity::Error,
+                }],
+            };
+        }
+
+        for (event, node) in bundle {
+            // builder.add_str(
+            //     "\n            starknet::Event::append_keys_and_data(@core::traits::Into::<_, \
+            //      Event>::into(",
+            // );
+            // builder.add_node(node);
+            // builder.add_str("), ref keys, ref data);");
+
+            // builder.add_str("\n            ");
+            // builder.add_node(world.as_syntax_node());
+            // builder.add_str(".emit(keys, data.span());");
+
+            builder.add_str("EventEmitter::emit(");
+            builder.add_node(world.as_syntax_node());
+            builder.add_str(", ");
+            builder.add_str(&format!(
+                "
+                let @__set_macro_value__ = {};
+                EventMessage {{
+                    model: dojo::model::Model::name(@__set_macro_value__),
+                    keys: dojo::model::Model::keys(@__set_macro_value__),
+                    values: dojo::model::Model::values(@__set_macro_value__)
+                }}
+            ",
+                event
+            ));
+        }
+
         builder.add_str("}");
 
         InlinePluginResult {
