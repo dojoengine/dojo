@@ -10,7 +10,7 @@ use dojo_test_utils::sequencer::{
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::DeployedManifest;
+use dojo_world::manifest::DeploymentManifest;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use serde::Deserialize;
@@ -280,7 +280,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     let manifest =
-        DeployedManifest::load_from_remote(&provider, migration.world_address().unwrap())
+        DeploymentManifest::load_from_remote(&provider, migration.world_address().unwrap())
             .await
             .unwrap();
 

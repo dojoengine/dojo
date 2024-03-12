@@ -6,7 +6,7 @@ use cairo_lang_starknet::abi::{self, Event, EventKind, Item};
 use cairo_lang_starknet::plugin::events::EventFieldKind;
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
-use dojo_world::manifest::{DeployedManifest, ManifestMethods};
+use dojo_world::manifest::{DeploymentManifest, ManifestMethods};
 use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
@@ -47,7 +47,10 @@ pub async fn execute(
             return Err(anyhow!("Run scarb migrate before running this command"));
         }
 
-        Some(extract_events(&DeployedManifest::load_from_path(&deployed_manifest)?, manifest_dir)?)
+        Some(extract_events(
+            &DeploymentManifest::load_from_path(&deployed_manifest)?,
+            manifest_dir,
+        )?)
     } else {
         None
     };
@@ -189,7 +192,7 @@ fn parse_event(
 }
 
 fn extract_events(
-    manifest: &DeployedManifest,
+    manifest: &DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
 ) -> Result<HashMap<String, Vec<Event>>, Error> {
     fn inner_helper(

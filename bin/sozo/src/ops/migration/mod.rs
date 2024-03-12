@@ -5,8 +5,8 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbstractManifestError, BaseManifest, DeployedManifest, DojoContract, Manifest, ManifestMethods,
-    OverlayManifest,
+    AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, Manifest,
+    ManifestMethods, OverlayManifest,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::contract::ContractMigration;
@@ -77,30 +77,25 @@ pub async fn execute(
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
     if total_diffs == 0 {
-        ui.print("\n✨ No changes to be made. Remote World is already up to date!")
-    } else {
-        // Mirate according to the diff.
-        let world_address = apply_diff(
-            ws,
-            &target_dir,
-            diff,
-            name,
-            world_address,
-            &account,
-            Some(args.transaction),
-        )
-        .await?;
-
-        update_manifests_and_abis(
-            ws,
-            local_manifest,
-            remote_manifest,
-            &manifest_dir,
-            world_address,
-            &chain_id,
-        )
-        .await?;
+        ui.print("\n✨ No changes to be made. Remote World is already up to date!");
+        return Ok(());
     }
+
+    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let world_address = strategy.world_address().expect("world address must exist");
+
+    update_manifests_and_abis(
+        ws,
+        local_manifest,
+        remote_manifest,
+        &manifest_dir,
+        world_address,
+        &chain_id,
+    )
+    .await?;
+
+    // Mirate according to the diff.
+    apply_diff(ws, &account, None, &strategy).await?;
 
     Ok(())
 }
@@ -108,7 +103,7 @@ pub async fn execute(
 async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
-    remote_manifest: Option<DeployedManifest>,
+    remote_manifest: Option<DeploymentManifest>,
     manifest_dir: &Utf8PathBuf,
     world_address: FieldElement,
     chain_id: &str,
@@ -116,7 +111,7 @@ async fn update_manifests_and_abis(
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifests...");
 
-    let mut local_manifest: DeployedManifest = local_manifest.into();
+    let mut local_manifest: DeploymentManifest = local_manifest.into();
     local_manifest.world.inner.address = Some(world_address);
 
     let base_class_hash = match remote_manifest {
@@ -146,7 +141,7 @@ async fn update_manifests_and_abis(
 }
 
 async fn update_manifest_abis(
-    local_manifest: &mut DeployedManifest,
+    local_manifest: &mut DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
     chain_id: &str,
 ) {
@@ -182,22 +177,17 @@ async fn update_manifest_abis(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn apply_diff<P, S>(
     ws: &Workspace<'_>,
-    target_dir: &Utf8PathBuf,
-    diff: WorldDiff,
-    name: Option<String>,
-    world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
+    strategy: &MigrationStrategy,
 ) -> Result<FieldElement>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
-    let strategy = prepare_migration(target_dir, diff, name, world_address, &ui)?;
 
     println!("  ");
 
@@ -278,7 +268,7 @@ async fn load_world_manifests<P, S>(
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
-) -> Result<(BaseManifest, Option<DeployedManifest>)>
+) -> Result<(BaseManifest, Option<DeploymentManifest>)>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -298,7 +288,7 @@ where
     }
 
     let remote_manifest = if let Some(address) = world_address {
-        match DeployedManifest::load_from_remote(account.provider(), address).await {
+        match DeploymentManifest::load_from_remote(account.provider(), address).await {
             Ok(manifest) => {
                 ui.print_sub(format!("Found remote World: {address:#x}"));
                 Some(manifest)
@@ -320,7 +310,7 @@ where
     Ok((local_manifest, remote_manifest))
 }
 
-fn prepare_migration(
+pub fn prepare_migration(
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
     name: Option<String>,

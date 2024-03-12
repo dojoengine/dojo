@@ -180,9 +180,9 @@ impl From<Manifest<Class>> for Manifest<Contract> {
     }
 }
 
-impl From<BaseManifest> for DeployedManifest {
+impl From<BaseManifest> for DeploymentManifest {
     fn from(value: BaseManifest) -> Self {
-        DeployedManifest {
+        DeploymentManifest {
             world: value.world.into(),
             base: value.base,
             contracts: value.contracts,
@@ -192,7 +192,7 @@ impl From<BaseManifest> for DeployedManifest {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct DeployedManifest {
+pub struct DeploymentManifest {
     pub world: Manifest<Contract>,
     pub base: Manifest<Class>,
     pub contracts: Vec<Manifest<DojoContract>>,
@@ -279,7 +279,7 @@ impl OverlayManifest {
     }
 }
 
-impl DeployedManifest {
+impl DeploymentManifest {
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
         let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
 
@@ -324,7 +324,7 @@ impl DeployedManifest {
         let (models, contracts) =
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
 
-        Ok(DeployedManifest {
+        Ok(DeploymentManifest {
             models,
             contracts,
             world: Manifest::new(
