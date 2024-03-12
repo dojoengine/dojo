@@ -2,13 +2,13 @@ use anyhow::{Context, Result};
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::Environment;
-use dojo_world::utils::TransactionWaiter;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
 
 use super::get_contract_address;
 use crate::commands::auth::{AuthCommand, AuthKind, ResourceType};
+use crate::utils::handle_transaction_result;
 
 pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) -> Result<()> {
     match command {
@@ -42,13 +42,13 @@ pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) ->
                         .await
                         .with_context(|| "Failed to send transaction")?;
 
-                    if transaction.wait {
-                        let receipt =
-                            TransactionWaiter::new(res.transaction_hash, &provider).await?;
-                        println!("{}", serde_json::to_string_pretty(&receipt)?);
-                    } else {
-                        println!("Transaction hash: {:#x}", res.transaction_hash);
-                    }
+                    handle_transaction_result(
+                        &provider,
+                        res,
+                        transaction.wait,
+                        transaction.receipt,
+                    )
+                    .await?;
                 }
             }
             AuthKind::Owner { owners_resources } => {
@@ -77,12 +77,8 @@ pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) ->
                     .await
                     .with_context(|| "Failed to send transaction")?;
 
-                if transaction.wait {
-                    let receipt = TransactionWaiter::new(res.transaction_hash, &provider).await?;
-                    println!("{}", serde_json::to_string_pretty(&receipt)?);
-                } else {
-                    println!("Transaction hash: {:#x}", res.transaction_hash);
-                }
+                handle_transaction_result(&provider, res, transaction.wait, transaction.receipt)
+                    .await?;
             }
         },
         _ => todo!(),
