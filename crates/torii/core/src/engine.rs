@@ -121,7 +121,7 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
 
     pub async fn sync_range(&mut self, from: u64, to: u64) -> Result<()> {
         // Process all blocks from current to latest.
-        let get_event = |token: Option<String>| {
+        let get_events = |token: Option<String>| {
             self.provider.get_events(
                 EventFilter {
                     from_block: Some(BlockId::Number(from)),
@@ -137,9 +137,9 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
         // handle next events pages
         let mut events_pages = vec![];
 
-        events_pages.push(get_event(None).await?);
+        events_pages.push(get_events(None).await?);
         while let Some(token) = &events_pages.last().unwrap().continuation_token {
-            events_pages.push(get_event(Some(token.clone())).await?);
+            events_pages.push(get_events(Some(token.clone())).await?);
         }
 
         let mut last_block: u64 = 0;
@@ -171,7 +171,7 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
             }
 
             Self::process_block(self, block_number, event.block_hash.unwrap()).await?;
-            info!(target: "torii_core::engine", block = %block_number, "Processed block");
+            info!(target: "torii_core::engine", block_number = %block_number, "Processed block");
 
             self.db.set_head(block_number);
         }
