@@ -9,6 +9,7 @@ use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
+use starknet::core::types::PriceUnit;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ExecutorError {
@@ -120,6 +121,19 @@ pub struct EntryPointCall {
     pub entry_point_selector: FieldElement,
 }
 
+/// Information regarding the fee and gas usages of a transaction.
+#[derive(Debug, Clone)]
+pub struct TxFee {
+    /// The total amount of L1 gas consumed by the transaction.
+    pub gas_consumed: u128,
+    /// The L1 gas price at the time of the transaction execution.
+    pub gas_price: u128,
+    /// The fee used by the transaction.
+    pub fee: u128,
+    /// The type of fee used to pay for the transaction, depending on the transaction type.
+    pub unit: PriceUnit,
+}
+
 /// A type that can create [BlockExecutor] instance.
 pub trait ExecutorFactory: Send + Sync + 'static {
     /// Construct a new [BlockExecutor] with the given state.
@@ -166,13 +180,13 @@ pub trait TransactionExecutor {
         tx: ExecutableTxWithHash,
     ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>>;
 
-    /// Executes the given transaction according to the simulation flags and returns the output,
-    /// without committing to the state.
+    /// Executes the given transactions according to the simulation flags and returns the output,
+    /// without committing to the underlying state.
     fn simulate(
         &self,
-        tx: ExecutableTxWithHash,
+        transactions: Vec<ExecutableTxWithHash>,
         flags: SimulationFlag,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>>;
+    ) -> ExecutorResult<Vec<Box<dyn TransactionExecutionOutput>>>;
 
     // TODO: make the `initial_gas` responsibility of the factory
     /// Perform a contract entry point call.
@@ -184,14 +198,11 @@ pub trait TransactionExecutionOutput {
     /// Retrieves the receipt from the transaction execution ouput.
     fn receipt(&self, tx: &Tx) -> Receipt;
 
-    /// The transaction fee that was actually paid.
-    fn actual_fee(&self) -> u128;
-
-    /// The total gas used by the transaction.
-    fn gas_used(&self) -> u128;
-
     /// The error message if the transaction execution reverted, otherwise the value is `None`.
     fn revert_error(&self) -> Option<&str>;
+
+    /// Retrieves the transaction fee information.
+    fn fee(&self) -> &TxFee;
 }
 
 /// A wrapper around a boxed [StateProvider] for implementing the executor's own state reader

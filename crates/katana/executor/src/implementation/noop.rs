@@ -8,10 +8,11 @@ use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
+use starknet::core::types::PriceUnit;
 
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionOutput, ExecutorFactory, ExecutorResult,
-    SimulationFlag, TransactionExecutionOutput, TransactionExecutor,
+    SimulationFlag, TransactionExecutionOutput, TransactionExecutor, TxFee,
 };
 
 /// A no-op executor factory. Creates an executor that does nothing.
@@ -70,12 +71,12 @@ impl TransactionExecutor for NoopExecutor {
 
     fn simulate(
         &self,
-        tx: ExecutableTxWithHash,
+        tx: Vec<ExecutableTxWithHash>,
         flags: SimulationFlag,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
+    ) -> ExecutorResult<Vec<Box<dyn TransactionExecutionOutput>>> {
         let _ = tx;
         let _ = flags;
-        Ok(Box::new(NoopTransactionExecutionOutput))
+        Ok(vec![])
     }
 
     fn call(&self, call: EntryPointCall, initial_gas: u128) -> ExecutorResult<Vec<FieldElement>> {
@@ -116,16 +117,12 @@ impl TransactionExecutionOutput for NoopTransactionExecutionOutput {
         Receipt::Invoke(InvokeTxReceipt::default())
     }
 
-    fn actual_fee(&self) -> u128 {
-        0
-    }
-
-    fn gas_used(&self) -> u128 {
-        0
-    }
-
     fn revert_error(&self) -> Option<&str> {
         None
+    }
+
+    fn fee(&self) -> &TxFee {
+        &TxFee { fee: 0, gas_consumed: 0, gas_price: 0, unit: PriceUnit::Wei }
     }
 }
 

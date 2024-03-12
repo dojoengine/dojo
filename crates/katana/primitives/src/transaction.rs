@@ -54,6 +54,15 @@ pub enum ExecutableTx {
 }
 
 impl ExecutableTx {
+    pub fn version(&self) -> u8 {
+        match self {
+            ExecutableTx::L1Handler(_) => 1,
+            ExecutableTx::Invoke(tx) => tx.version(),
+            ExecutableTx::Declare(tx) => tx.version(),
+            ExecutableTx::DeployAccount(tx) => tx.version(),
+        }
+    }
+
     pub fn tx_ref(&self) -> TxRef<'_> {
         match self {
             ExecutableTx::Invoke(tx) => TxRef::Invoke(tx),
@@ -181,6 +190,14 @@ pub struct InvokeTxV3 {
 }
 
 impl InvokeTx {
+    /// Get the version of the invoke transaction.
+    pub fn version(&self) -> u8 {
+        match self {
+            InvokeTx::V1(_) => 1,
+            InvokeTx::V3(_) => 3,
+        }
+    }
+
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
@@ -217,16 +234,6 @@ pub enum DeclareTx {
     V1(DeclareTxV1),
     V2(DeclareTxV2),
     V3(DeclareTxV3),
-}
-
-impl DeclareTx {
-    pub fn class_hash(&self) -> ClassHash {
-        match self {
-            DeclareTx::V1(tx) => tx.class_hash,
-            DeclareTx::V2(tx) => tx.class_hash,
-            DeclareTx::V3(tx) => tx.class_hash,
-        }
-    }
 }
 
 /// Represents a declare transaction type.
@@ -307,6 +314,22 @@ pub struct DeclareTxV3 {
 }
 
 impl DeclareTx {
+    pub fn class_hash(&self) -> ClassHash {
+        match self {
+            DeclareTx::V1(tx) => tx.class_hash,
+            DeclareTx::V2(tx) => tx.class_hash,
+            DeclareTx::V3(tx) => tx.class_hash,
+        }
+    }
+
+    pub fn version(&self) -> u8 {
+        match self {
+            DeclareTx::V1(_) => 1,
+            DeclareTx::V2(_) => 2,
+            DeclareTx::V3(_) => 3,
+        }
+    }
+
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
@@ -382,15 +405,6 @@ pub enum DeployAccountTx {
     V3(DeployAccountTxV3),
 }
 
-impl DeployAccountTx {
-    pub fn contract_address(&self) -> ContractAddress {
-        match self {
-            DeployAccountTx::V1(tx) => tx.contract_address,
-            DeployAccountTx::V3(tx) => tx.contract_address,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployAccountTxV1 {
@@ -448,6 +462,21 @@ pub struct DeployAccountTxV3 {
 }
 
 impl DeployAccountTx {
+    /// Get the version of the deploy account transaction.
+    pub fn version(&self) -> u8 {
+        match self {
+            DeployAccountTx::V1(_) => 1,
+            DeployAccountTx::V3(_) => 3,
+        }
+    }
+
+    pub fn contract_address(&self) -> ContractAddress {
+        match self {
+            DeployAccountTx::V1(tx) => tx.contract_address,
+            DeployAccountTx::V3(tx) => tx.contract_address,
+        }
+    }
+
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {

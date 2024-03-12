@@ -29,6 +29,7 @@ use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
 use katana_provider::traits::contract::ContractClassProvider;
+use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{
@@ -49,6 +50,7 @@ use starknet_api::transaction::{
 use super::output::TransactionExecutionInfo;
 use super::state::{CachedState, StateDb};
 use crate::abstraction::{EntryPointCall, SimulationFlag};
+use crate::TxFee;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -74,7 +76,7 @@ pub(super) fn transact<S: StateReader>(
     let transaction = to_executor_tx(tx);
     let fee_type = get_fee_type_from_tx(&transaction);
 
-    let mut info = match transaction {
+    let info = match transaction {
         Transaction::AccountTransaction(tx) => {
             tx.execute(state, block_context, charge_fee, validate)
         }
@@ -83,17 +85,27 @@ pub(super) fn transact<S: StateReader>(
         }
     }?;
 
+    let l1_gas_usages = calculate_tx_l1_gas_usages(&info.actual_resources, block_context)?;
+    let gas_consumed = l1_gas_usages.gas_usage;
+
     // There are a few case where the `actual_fee` field of the transaction info is not set where
     // the fee is skipped and thus not charged for the transaction (e.g. when the
     // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
     // these cases, we still want to calculate the fee.
-    if info.actual_fee == Fee(0) {
-        let fee = fee_utils::calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?;
-        info.actual_fee = fee;
-    }
+    let fee = if info.actual_fee == Fee(0) {
+        fee_utils::get_fee_by_l1_gas_usage(&block_context.block_info, l1_gas_usages, &fee_type).0
+    } else {
+        info.actual_fee.0
+    };
 
-    let gas_used = calculate_tx_l1_gas_usages(&info.actual_resources, block_context)?.gas_usage;
-    Ok(TransactionExecutionInfo { inner: info, gas_used })
+    let (fee_type, gas_price) = match fee_type {
+        FeeType::Eth => (PriceUnit::Wei, block_context.block_info.gas_prices.eth_l1_gas_price),
+        FeeType::Strk => (PriceUnit::Fri, block_context.block_info.gas_prices.strk_l1_gas_price),
+    };
+
+    let fee_info = TxFee { unit: fee_type, gas_price, gas_consumed, fee };
+
+    Ok(TransactionExecutionInfo::new(info, fee_info))
 }
 
 /// Perform a function call on a contract and retrieve the return values.

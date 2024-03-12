@@ -169,9 +169,9 @@ impl<'a> TransactionExecutor for StarknetVMProcessor<'a> {
 
     fn simulate(
         &self,
-        tx: ExecutableTxWithHash,
+        transactions: Vec<ExecutableTxWithHash>,
         flags: SimulationFlag,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
+    ) -> ExecutorResult<Vec<Box<dyn TransactionExecutionOutput>>> {
         let state = &self.state.0.read().inner;
 
         let state_reader = Arc::new(state);
@@ -179,11 +179,15 @@ impl<'a> TransactionExecutor for StarknetVMProcessor<'a> {
         let mut state = cached_state::CachedState::new(state_reader, contract_classes);
 
         let block_context = &self.block_context;
+        let gas = u128::MAX;
 
-        let gas = 0;
-        let res = utils::transact(tx, &mut state, block_context, gas, &flags)?;
-
-        Ok(Box::new(res))
+        transactions
+            .into_iter()
+            .map(|tx| {
+                let res = utils::transact(tx, &mut state, block_context, gas, &flags)?;
+                Ok(Box::new(res) as Box<dyn TransactionExecutionOutput>)
+            })
+            .collect::<ExecutorResult<Vec<_>>>()
     }
 
     fn call(&self, call: EntryPointCall, initial_gas: u128) -> ExecutorResult<Vec<FieldElement>> {

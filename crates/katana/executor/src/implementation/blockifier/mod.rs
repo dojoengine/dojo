@@ -124,16 +124,21 @@ impl<'a> abstraction::TransactionExecutor for StarknetVMProcessor<'a> {
 
     fn simulate(
         &self,
-        tx: ExecutableTxWithHash,
+        transactions: Vec<ExecutableTxWithHash>,
         flags: SimulationFlag,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
-        let block_context = &self.block_context;
-
+    ) -> ExecutorResult<Vec<Box<dyn TransactionExecutionOutput>>> {
+        // Wraps the state in another CacheState to avoid being written to.
         let state = &mut self.state.0.write().inner;
         let mut state = cached_state::CachedState::new(MutRefState::new(state), Default::default());
+        let block_context = &self.block_context;
 
-        let res = utils::transact(tx, &mut state, block_context, &flags)?;
-        Ok(Box::new(res))
+        let mut results = Vec::with_capacity(transactions.len());
+        for tx in transactions {
+            let res = utils::transact(tx, &mut state, block_context, &flags)?;
+            results.push(Box::new(res) as Box<dyn TransactionExecutionOutput>);
+        }
+
+        Ok(results)
     }
 
     fn call(&self, call: EntryPointCall, initial_gas: u128) -> ExecutorResult<Vec<FieldElement>> {

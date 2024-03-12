@@ -7,7 +7,7 @@ use katana_primitives::transaction::{
     DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
 use katana_primitives::FieldElement;
-use sir::definitions::block_context::BlockContext;
+use sir::definitions::block_context::{BlockContext, FeeType};
 use sir::definitions::constants::TRANSACTION_VERSION;
 use sir::execution::execution_entry_point::{ExecutionEntryPoint, ExecutionResult};
 use sir::execution::{CallType, TransactionExecutionContext};
@@ -18,7 +18,7 @@ use sir::state::state_api::StateReader;
 use sir::state::state_cache::StateCache;
 use sir::state::{cached_state, ExecutionResourcesManager, StateDiff};
 use sir::transaction::error::TransactionError;
-use sir::transaction::fee::calculate_tx_l1_gas_usage;
+use sir::transaction::fee;
 use sir::transaction::{
     Address, ClassHash, CurrentAccountTxFields, DataAvailabilityMode, Declare, DeclareDeprecated,
     DeployAccount, InvokeFunction, L1Handler, ResourceBounds, Transaction,
@@ -26,12 +26,13 @@ use sir::transaction::{
 };
 use sir::utils::calculate_sn_keccak;
 use sir::EntryPointType;
+use starknet::core::types::PriceUnit;
 use starknet_types_core::felt::Felt;
 
 use super::output::TransactionExecutionInfo;
 use super::state::StateDb;
 use super::SimulationFlag;
-use crate::EntryPointCall;
+use crate::{EntryPointCall, TxFee};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -50,55 +51,35 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let tx = to_executor_tx(tx, simulation_flag)?;
-    let res = match tx {
-        Transaction::InvokeFunction(tx) => tx.execute(
-            state,
-            block_context,
-            remaining_gas,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    let (tx, fee_type) = to_executor_tx_and_fee_type(tx, simulation_flag)?;
+    let info = tx.execute(
+        state,
+        block_context,
+        remaining_gas,
+        #[cfg(feature = "native")]
+        None,
+    )?;
 
-        Transaction::DeployAccount(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    let l1_gas_usage = fee::calculate_tx_l1_gas_usage(&info.actual_resources, block_context)?;
 
-        Transaction::DeclareDeprecated(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    // There are a few case where the `actual_fee` field of the transaction info is not set where
+    // the fee is skipped and thus not charged for the transaction (e.g. when the
+    // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
+    // these cases, we still want to calculate the fee.
+    let fee = if info.actual_fee == 0 {
+        l1_gas_usage * block_context.get_gas_price_by_fee_type(&fee_type)
+    } else {
+        info.actual_fee
+    };
 
-        Transaction::Deploy(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    let (unit, gas_price) = match fee_type {
+        FeeType::Eth => (PriceUnit::Wei, block_context.block_info().gas_price.eth_l1_gas_price),
+        FeeType::Strk => (PriceUnit::Fri, block_context.block_info().gas_price.strk_l1_gas_price),
+    };
 
-        Transaction::L1Handler(tx) => tx.execute(
-            state,
-            block_context,
-            remaining_gas,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    let fee_info = TxFee { unit, gas_price, fee, gas_consumed: l1_gas_usage };
 
-        Transaction::Declare(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
-    }?;
-
-    let gas_used = calculate_tx_l1_gas_usage(&res.actual_resources, block_context)?;
-    Ok(TransactionExecutionInfo { inner: res, gas_used })
+    Ok(TransactionExecutionInfo::new(info, fee_info))
 }
 
 pub(super) fn call<S, C>(
@@ -159,10 +140,10 @@ where
     Ok(result)
 }
 
-fn to_executor_tx(
+fn to_executor_tx_and_fee_type(
     katana_tx: ExecutableTxWithHash,
     simulation_flag: &SimulationFlag,
-) -> Result<Transaction, TransactionError> {
+) -> Result<(Transaction, FeeType), TransactionError> {
     match katana_tx.transaction {
         ExecutableTx::Invoke(tx) => match tx {
             InvokeTx::V1(tx) => {
@@ -194,7 +175,7 @@ fn to_executor_tx(
                     simulation_flag.skip_nonce_check,
                 );
 
-                Ok(tx)
+                Ok((tx, FeeType::Eth))
             }
 
             InvokeTx::V3(tx) => {
@@ -236,7 +217,7 @@ fn to_executor_tx(
                     simulation_flag.skip_nonce_check,
                 );
 
-                Ok(tx)
+                Ok((tx, FeeType::Strk))
             }
         },
 
@@ -269,7 +250,7 @@ fn to_executor_tx(
                     simulation_flag.skip_nonce_check,
                 );
 
-                Ok(tx)
+                Ok((tx, FeeType::Eth))
             }
 
             DeployAccountTx::V3(tx) => {
@@ -309,7 +290,7 @@ fn to_executor_tx(
                     simulation_flag.skip_nonce_check,
                 );
 
-                Ok(tx)
+                Ok((tx, FeeType::Strk))
             }
         },
 
@@ -345,7 +326,7 @@ fn to_executor_tx(
                     simulation_flag.skip_nonce_check,
                 );
 
-                Ok(tx)
+                Ok((tx, FeeType::Eth))
             }
 
             katana_primitives::transaction::DeclareTx::V2(tx) => {
@@ -383,7 +364,7 @@ fn to_executor_tx(
                     simulation_flag.skip_nonce_check,
                 );
 
-                Ok(tx)
+                Ok((tx, FeeType::Eth))
             }
 
             katana_primitives::transaction::DeclareTx::V3(tx) => {
@@ -429,7 +410,7 @@ fn to_executor_tx(
                     simulation_flag.skip_nonce_check,
                 );
 
-                Ok(tx)
+                Ok((tx, FeeType::Strk))
             }
         },
 
@@ -453,7 +434,7 @@ fn to_executor_tx(
             let tx = tx
                 .create_for_simulation(simulation_flag.skip_validate, simulation_flag.skip_execute);
 
-            Ok(tx)
+            Ok((tx, FeeType::Eth))
         }
     }
 }

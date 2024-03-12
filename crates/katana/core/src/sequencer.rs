@@ -23,7 +23,7 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionsProviderExt,
 };
-use starknet::core::types::{BlockTag, EmittedEvent, EventsPage, FeeEstimate, PriceUnit};
+use starknet::core::types::{BlockTag, EmittedEvent, EventsPage, FeeEstimate};
 
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
@@ -192,21 +192,19 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
         let simulation_flag =
             SimulationFlag { skip_validate: !should_validate, ..Default::default() };
 
-        let mut estimates: Vec<FeeEstimate> = Vec::with_capacity(transactions.len());
-        for tx in transactions {
-            let result = executor.simulate(tx, simulation_flag.clone()).unwrap();
-
-            let overall_fee = result.actual_fee().into();
-            let gas_consumed = result.gas_used().into();
-            let gas_price = executor.block_env().l1_gas_prices.eth.into();
-
-            estimates.push(FeeEstimate {
-                gas_consumed,
-                gas_price,
-                overall_fee,
-                unit: PriceUnit::Wei,
+        let results = executor.simulate(transactions, simulation_flag.clone()).unwrap();
+        let estimates = results
+            .into_iter()
+            .map(|res| {
+                let fee = res.fee();
+                FeeEstimate {
+                    unit: fee.unit,
+                    gas_price: fee.gas_price.into(),
+                    overall_fee: fee.fee.into(),
+                    gas_consumed: fee.gas_consumed.into(),
+                }
             })
-        }
+            .collect::<Vec<FeeEstimate>>();
 
         Ok(estimates)
     }
@@ -321,10 +319,13 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
 
         let tx @ Some(_) = tx else {
             return Ok(self.pending_executor().as_ref().and_then(|exec| {
-                exec.read()
-                    .transactions()
-                    .iter()
-                    .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
+                exec.read().transactions().iter().find_map(|tx| {
+                    if tx.0.hash == *hash {
+                        Some(tx.0.clone())
+                    } else {
+                        None
+                    }
+                })
             }));
         };
 

@@ -327,7 +327,11 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     let pending_receipt =
                         this.inner.sequencer.pending_executor().and_then(|executor| {
                             executor.read().transactions().iter().find_map(|(tx, rct)| {
-                                if tx.hash == transaction_hash { rct.clone() } else { None }
+                                if tx.hash == transaction_hash {
+                                    rct.clone()
+                                } else {
+                                    None
+                                }
                             })
                         });
 
@@ -528,54 +532,60 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let skip_validate =
-                simulation_flags.iter().any(|flag| flag == &SimulationFlags::SkipValidate);
+            let skip_validate = simulation_flags.contains(&SimulationFlags::SkipValidate);
 
             // If the node is run with transaction validation disabled, then we should not validate
             // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
             let should_validate =
                 !(skip_validate || this.inner.sequencer.backend.config.disable_validate);
 
-            let simulation_flag =
-                SimulationFlag { skip_validate: !should_validate, ..Default::default() };
+            let res = this
+                .inner
+                .sequencer
+                .estimate_fee(transactions, block_id, should_validate)
+                .map_err(StarknetApiError::from)?;
 
-            // get the state and block env at the specified block for execution
-            let state = sequencer.state(&block_id).map_err(StarknetApiError::from)?;
-            let env = sequencer
-                .block_env_at(block_id)
-                .map_err(StarknetApiError::from)?
-                .ok_or(StarknetApiError::BlockNotFound)?;
+            Ok(res)
+            // let simulation_flag =
+            //     SimulationFlag { skip_validate: !should_validate, ..Default::default() };
 
-            // create the executor
-            let executor = sequencer.backend.executor_factory.with_state_and_block_env(state, env);
+            // // get the state and block env at the specified block for execution
+            // let state = sequencer.state(&block_id).map_err(StarknetApiError::from)?;
+            // let env = sequencer
+            //     .block_env_at(block_id)
+            //     .map_err(StarknetApiError::from)?
+            //     .ok_or(StarknetApiError::BlockNotFound)?;
 
-            let mut estimates: Vec<FeeEstimate> = Vec::with_capacity(transactions.len());
+            // // create the executor
+            // let executor = sequencer.backend.executor_factory.with_state_and_block_env(state, env);
 
-            for (i, tx) in transactions.into_iter().enumerate() {
-                match executor.simulate(tx, simulation_flag.clone()) {
-                    Ok(output) => {
-                        let overall_fee = output.actual_fee().into();
-                        let gas_consumed = output.gas_used().into();
-                        let gas_price = executor.block_env().l1_gas_prices.eth.into();
+            // let mut estimates: Vec<FeeEstimate> = Vec::with_capacity(transactions.len());
 
-                        estimates.push(FeeEstimate {
-                            gas_consumed,
-                            gas_price,
-                            overall_fee,
-                            unit: PriceUnit::Wei,
-                        })
-                    }
+            // for (i, tx) in transactions.into_iter().enumerate() {
+            //     match executor.simulate(tx, simulation_flag.clone()) {
+            //         Ok(output) => {
+            //             let overall_fee = output.actual_fee().into();
+            //             let gas_consumed = output.gas_used().into();
+            //             let gas_price = executor.block_env().l1_gas_prices.eth.into();
 
-                    Err(err) => {
-                        return Err(Error::from(StarknetApiError::TransactionExecutionError {
-                            transaction_index: i,
-                            execution_error: err.to_string(),
-                        }));
-                    }
-                }
-            }
+            //             estimates.push(FeeEstimate {
+            //                 gas_consumed,
+            //                 gas_price,
+            //                 overall_fee,
+            //                 unit: PriceUnit::Wei,
+            //             })
+            //         }
 
-            Ok(estimates)
+            //         Err(err) => {
+            //             return Err(Error::from(StarknetApiError::TransactionExecutionError {
+            //                 transaction_index: i,
+            //                 execution_error: err.to_string(),
+            //             }));
+            //         }
+            //     }
+            // }
+
+            // Ok(estimates)
         })
         .await
     }

@@ -8,22 +8,28 @@ use katana_primitives::transaction::Tx;
 use sir::execution::CallInfo;
 
 use super::utils;
-use crate::abstraction::TransactionExecutionOutput;
+use crate::abstraction::{TransactionExecutionOutput, TxFee};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TransactionExecutionInfo {
-    pub gas_used: u128,
-    pub(super) inner: sir::execution::TransactionExecutionInfo,
+    fee: TxFee,
+    info: sir::execution::TransactionExecutionInfo,
+}
+
+impl TransactionExecutionInfo {
+    pub(super) fn new(info: sir::execution::TransactionExecutionInfo, fee: TxFee) -> Self {
+        Self { info, fee }
+    }
 }
 
 impl TransactionExecutionOutput for TransactionExecutionInfo {
     fn receipt(&self, tx: &Tx) -> Receipt {
-        let actual_fee = self.inner.actual_fee;
-        let revert_error = self.inner.revert_error.clone();
+        let actual_fee = self.info.actual_fee;
+        let revert_error = self.info.revert_error.clone();
 
         let events = events_from_exec_info(self);
         let messages_sent = l2_to_l1_messages_from_exec_info(self);
-        let execution_resources = parse_actual_resources(&self.inner.actual_resources);
+        let execution_resources = parse_actual_resources(&self.info.actual_resources);
 
         match tx {
             Tx::Invoke(_) => Receipt::Invoke(InvokeTxReceipt {
@@ -62,16 +68,12 @@ impl TransactionExecutionOutput for TransactionExecutionInfo {
         }
     }
 
-    fn actual_fee(&self) -> u128 {
-        self.inner.actual_fee
-    }
-
-    fn gas_used(&self) -> u128 {
-        self.gas_used
-    }
-
     fn revert_error(&self) -> Option<&str> {
-        self.inner.revert_error.as_deref()
+        self.info.revert_error.as_deref()
+    }
+
+    fn fee(&self) -> &TxFee {
+        &self.fee
     }
 }
 
@@ -94,15 +96,15 @@ fn events_from_exec_info(info: &TransactionExecutionInfo) -> Vec<Event> {
         events
     }
 
-    if let Some(ref call) = info.inner.validate_info {
+    if let Some(ref call) = info.info.validate_info {
         events.extend(get_events_recursively(call));
     }
 
-    if let Some(ref call) = info.inner.call_info {
+    if let Some(ref call) = info.info.call_info {
         events.extend(get_events_recursively(call));
     }
 
-    if let Some(ref call) = info.inner.fee_transfer_info {
+    if let Some(ref call) = info.info.fee_transfer_info {
         events.extend(get_events_recursively(call));
     }
 
@@ -137,15 +139,15 @@ fn l2_to_l1_messages_from_exec_info(info: &TransactionExecutionInfo) -> Vec<Mess
         messages
     }
 
-    if let Some(ref info) = info.inner.validate_info {
+    if let Some(ref info) = info.info.validate_info {
         messages.extend(get_messages_recursively(info));
     }
 
-    if let Some(ref info) = info.inner.call_info {
+    if let Some(ref info) = info.info.call_info {
         messages.extend(get_messages_recursively(info));
     }
 
-    if let Some(ref info) = info.inner.fee_transfer_info {
+    if let Some(ref info) = info.info.fee_transfer_info {
         messages.extend(get_messages_recursively(info));
     }
 

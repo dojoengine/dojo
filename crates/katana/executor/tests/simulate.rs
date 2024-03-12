@@ -49,7 +49,7 @@ mod blockifier {
     ) {
         let mut executor = executor_factory.with_state_and_block_env(state_provider, block_env);
 
-        let _ = executor.simulate(tx, flags).expect("must simulate");
+        let _ = executor.simulate(vec![tx], flags).expect("must simulate");
 
         // check that the underlying state is not modified
         let ExecutionOutput { states, transactions } =
@@ -86,7 +86,9 @@ mod sir {
     ) {
         let mut executor = executor_factory.with_state_and_block_env(state_provider, block_env);
 
-        let _ = executor.simulate(tx, flags).expect("must simulate");
+        let _ = executor.simulate(vec![tx], flags).expect("must simulate");
+
+        // assert that the output is correct
 
         // check that the underlying state is not modified
         let ExecutionOutput { states, transactions } =
