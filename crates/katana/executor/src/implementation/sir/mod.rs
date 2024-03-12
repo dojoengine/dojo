@@ -11,6 +11,7 @@ use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateProvider;
@@ -71,7 +72,7 @@ impl ExecutorFactory for NativeExecutorFactory {
 pub struct StarknetVMProcessor<'a> {
     block_context: BlockContext,
     state: Arc<CachedState<StateProviderDb<'a>, PermanentContractClassCache>>,
-    transactions: Vec<(TxWithHash, Option<Receipt>)>,
+    transactions: Vec<(TxWithHash, Option<Receipt>, TxExecInfo)>,
     simulation_flags: SimulationFlag,
 }
 
@@ -159,7 +160,8 @@ impl<'a> TransactionExecutor for StarknetVMProcessor<'a> {
         let res = utils::transact(tx, &mut state.0.write().inner, block_context, gas, flags)?;
 
         let receipt = res.receipt(tx_.as_ref());
-        self.transactions.push((tx_, Some(receipt)));
+        let exec_info = res.execution_info();
+        self.transactions.push((tx_, Some(receipt), exec_info));
 
         if let Some((class_hash, compiled_class, sierra_class)) = class_declaration_artifacts {
             state.0.write().declared_classes.insert(class_hash, (compiled_class, sierra_class));
@@ -281,7 +283,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
         Box::new(self.state.clone())
     }
 
-    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>)] {
+    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>, TxExecInfo)] {
         &self.transactions
     }
 

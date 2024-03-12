@@ -10,7 +10,7 @@ use katana_primitives::FieldElement;
 use sir::definitions::block_context::BlockContext;
 use sir::definitions::constants::TRANSACTION_VERSION;
 use sir::execution::execution_entry_point::{ExecutionEntryPoint, ExecutionResult};
-use sir::execution::{CallType, TransactionExecutionContext};
+use sir::execution::{CallInfo, CallType, TransactionExecutionContext};
 use sir::services::api::contract_classes::compiled_class::CompiledClass as SirCompiledClass;
 use sir::services::api::contract_classes::deprecated_contract_class::ContractClass as SirDeprecatedContractClass;
 use sir::state::contract_class_cache::ContractClassCache;
@@ -560,4 +560,100 @@ fn to_sir_current_account_tx_fields(
         fee_data_availability_mode,
         nonce_data_availability_mode,
     })
+}
+
+pub fn from_sir_exec_info(
+    exec_info: &sir::execution::TransactionExecutionInfo,
+) -> katana_primitives::trace::TxExecInfo {
+    katana_primitives::trace::TxExecInfo {
+        validate_call_info: exec_info.validate_info.clone().map(from_sir_call_info),
+        execute_call_info: exec_info.call_info.clone().map(from_sir_call_info),
+        fee_transfer_call_info: exec_info.fee_transfer_info.clone().map(from_sir_call_info),
+        actual_fee: exec_info.actual_fee,
+        actual_resources: exec_info
+            .actual_resources
+            .clone()
+            .into_iter()
+            .map(|(k, v)| (k, v as u64))
+            .collect(),
+        revert_error: exec_info.revert_error.clone(),
+        // exec_info.tx_type being dropped here.
+    }
+}
+
+fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
+    let message_to_l1_from_address = if let Some(ref a) = call_info.code_address {
+        to_address(a)
+    } else {
+        to_address(&call_info.caller_address)
+    };
+
+    katana_primitives::trace::CallInfo {
+        caller_address: to_address(&call_info.caller_address),
+        call_type: match call_info.call_type {
+            Some(CallType::Call) => katana_primitives::trace::CallType::Call,
+            Some(CallType::Delegate) => katana_primitives::trace::CallType::Delegate,
+            _ => panic!("CallType is expected"),
+        },
+        code_address: call_info.code_address.as_ref().map(to_address),
+        class_hash: call_info.class_hash.as_ref().map(to_class_hash),
+        entry_point_selector: to_felt(
+            &call_info.entry_point_selector.expect("EntryPointSelector is expected"),
+        ),
+        entry_point_type: match call_info.entry_point_type {
+            Some(EntryPointType::External) => katana_primitives::trace::EntryPointType::External,
+            Some(EntryPointType::L1Handler) => katana_primitives::trace::EntryPointType::L1Handler,
+            Some(EntryPointType::Constructor) => {
+                katana_primitives::trace::EntryPointType::Constructor
+            }
+            _ => panic!("EntryPointType is expected"),
+        },
+        calldata: call_info.calldata.iter().map(to_felt).collect(),
+        retdata: call_info.retdata.iter().map(to_felt).collect(),
+        execution_resources: if let Some(ei) = call_info.execution_resources {
+            katana_primitives::trace::ExecutionResources {
+                n_steps: ei.n_steps as u64,
+                n_memory_holes: ei.n_memory_holes as u64,
+                builtin_instance_counter: ei
+                    .builtin_instance_counter
+                    .into_iter()
+                    .map(|(k, v)| (k, v as u64))
+                    .collect(),
+            }
+        } else {
+            katana_primitives::trace::ExecutionResources::default()
+        },
+        events: call_info
+            .events
+            .iter()
+            .map(|e| katana_primitives::event::OrderedEvent {
+                order: e.order,
+                keys: e.keys.iter().map(to_felt).collect(),
+                data: e.data.iter().map(to_felt).collect(),
+            })
+            .collect(),
+        l2_to_l1_messages: call_info
+            .l2_to_l1_messages
+            .iter()
+            .map(|m| katana_primitives::message::OrderedL2ToL1Message {
+                order: m.order as u64,
+                from_address: message_to_l1_from_address,
+                to_address: to_address(&m.to_address),
+                payload: m.payload.iter().map(to_felt).collect(),
+            })
+            .collect(),
+        storage_read_values: call_info
+            .storage_read_values
+            .into_iter()
+            .map(|f| to_felt(&f))
+            .collect(),
+        accessed_storage_keys: call_info.accessed_storage_keys.iter().map(to_class_hash).collect(),
+        inner_calls: call_info
+            .internal_calls
+            .iter()
+            .map(|c| from_sir_call_info(c.clone()))
+            .collect(),
+        gas_consumed: call_info.gas_consumed,
+        failed: call_info.failure_flag,
+    }
 }

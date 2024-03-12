@@ -2,6 +2,7 @@ use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey};
 use katana_primitives::receipt::Receipt;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
@@ -189,6 +190,8 @@ tables! {
     Transactions: (TxNumber) => Tx,
     /// Stores the block number of a transaction.
     TxBlocks: (TxNumber) => BlockNumber,
+    /// Stores the transaction's execution info.
+    TxExecutions: (TxNumber) => TxExecInfo,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Store compiled classes

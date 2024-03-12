@@ -254,10 +254,10 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     // assert the state updates
     let ExecutionOutput { states, transactions } = executor.take_execution_output().unwrap();
     // asserts that the executed transactions are stored
-    let actual_txs: Vec<TxWithHash> = transactions.iter().map(|(tx, _)| tx.clone()).collect();
+    let actual_txs: Vec<TxWithHash> = transactions.iter().map(|(tx, _, _)| tx.clone()).collect();
 
     assert_eq!(actual_txs, expected_txs);
-    assert!(transactions.iter().all(|(_, rct)| rct.is_some()), "all txs should have a receipt");
+    assert!(transactions.iter().all(|(_, rct, _)| rct.is_some()), "all txs should have a receipt");
 
     let actual_nonce_updates = states.state_updates.nonce_updates;
     let expected_nonce_updates = HashMap::from([(main_account, felt!("3")), (new_acc, felt!("1"))]);

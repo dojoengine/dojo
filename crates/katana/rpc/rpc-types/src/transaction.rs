@@ -9,6 +9,7 @@ use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_compiled_class,
 };
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
     DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash,
@@ -23,6 +24,8 @@ use starknet::core::types::{
 use starknet::core::utils::get_contract_address;
 
 use crate::receipt::MaybePendingTxReceipt;
+
+pub const CHUNK_SIZE_DEFAULT: u64 = 100;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
@@ -498,14 +501,27 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct TransactionsPageCursor {
     pub block_number: u64,
     pub transaction_index: u64,
+    pub chunk_size: u64,
+}
+
+impl Default for TransactionsPageCursor {
+    fn default() -> Self {
+        Self { block_number: 0, transaction_index: 0, chunk_size: CHUNK_SIZE_DEFAULT }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPage {
     pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
+    pub cursor: TransactionsPageCursor,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsExecutionsPage {
+    pub transactions_executions: Vec<TxExecInfo>,
     pub cursor: TransactionsPageCursor,
 }

@@ -50,7 +50,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
         match self
             .on_io_blocking_task(move |this| {
                 let mut transactions = Vec::new();
-                let mut next_cursor = cursor.clone();
+                let mut next_cursor = cursor;
 
                 let provider = this.sequencer.backend.blockchain.provider();
                 let latest_block_number =
@@ -110,7 +110,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             .iter()
                             .skip(cursor.transaction_index as usize)
                             .take(remaining)
-                            .filter_map(|(tx, receipt)| {
+                            .filter_map(|(tx, receipt, _)| {
                                 receipt.as_ref().map(|rct| {
                                     (
                                         tx.clone(),
@@ -148,7 +148,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             .transactions()
                             .iter()
                             .take(remaining)
-                            .filter_map(|(tx, receipt)| {
+                            .filter_map(|(tx, receipt, _)| {
                                 receipt.as_ref().map(|rct| {
                                     (
                                         tx.clone(),
@@ -198,11 +198,12 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         .await
                         .ok_or(ToriiApiError::ChannelDisconnected)?
                         .into_iter()
-                        .map(|(tx, receipt)| {
+                        .map(|tx_outcome| {
                             (
-                                tx.clone(),
+                                tx_outcome.tx.clone(),
                                 MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
-                                    tx.hash, receipt,
+                                    tx_outcome.tx.hash,
+                                    tx_outcome.receipt,
                                 )),
                             )
                         })

@@ -49,7 +49,7 @@ pub struct SayaArgs {
 
 impl SayaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,saya_core=trace";
+        const DEFAULT_LOG_FILTER: &str = "info,saya_core=trace,blockchain=trace,provider=trace";
 
         let builder = fmt::Subscriber::builder().with_env_filter(
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
