@@ -6,6 +6,8 @@ use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
+use super::unsupported_arg_diagnostic;
+
 #[derive(Debug, Default)]
 pub struct EmitMacro;
 
@@ -23,11 +25,7 @@ impl InlineMacroExprPlugin for EmitMacro {
             return unsupported_bracket_diagnostic(db, syntax);
         };
         let mut builder = PatchBuilder::new(db);
-        builder.add_str(
-            "{
-                let mut keys = Default::<core::array::Array>::default();
-                let mut data = Default::<core::array::Array>::default();",
-        );
+        builder.add_str("{");
 
         let args = arg_list.arguments(db).elements(db);
 
@@ -88,32 +86,29 @@ impl InlineMacroExprPlugin for EmitMacro {
             };
         }
 
-        for (event, node) in bundle {
-            // builder.add_str(
-            //     "\n            starknet::Event::append_keys_and_data(@core::traits::Into::<_, \
-            //      Event>::into(",
-            // );
-            // builder.add_node(node);
-            // builder.add_str("), ref keys, ref data);");
+        for (event, _) in bundle {
+            builder.add_str("{");
+            builder.add_str(
+                "
+                let mut keys = Default::<core::array::Array>::default();
+                let mut data = Default::<core::array::Array>::default();",
+            );
 
-            // builder.add_str("\n            ");
-            // builder.add_node(world.as_syntax_node());
-            // builder.add_str(".emit(keys, data.span());");
-
-            builder.add_str("EventEmitter::emit(");
-            builder.add_node(world.as_syntax_node());
-            builder.add_str(", ");
             builder.add_str(&format!(
                 "
-                let @__set_macro_value__ = {};
-                EventMessage {{
-                    model: dojo::model::Model::name(@__set_macro_value__),
-                    keys: dojo::model::Model::keys(@__set_macro_value__),
-                    values: dojo::model::Model::values(@__set_macro_value__)
-                }}
-            ",
-                event
+                starknet::Event::append_keys_and_data(@dojo::world::world::EventMessage {{
+                    model: dojo::model::Model::name(@{event}),
+                    keys: dojo::model::Model::keys(@{event}),
+                    values: dojo::model::Model::values(@{event})
+                }}, ref keys, ref data);",
+                event = event
             ));
+
+            builder.add_str("\n            ");
+            builder.add_node(world.as_syntax_node());
+            builder.add_str(".emit(keys, data.span());");
+
+            builder.add_str("}");
         }
 
         builder.add_str("}");
