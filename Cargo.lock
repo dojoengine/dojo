@@ -11007,7 +11007,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
- "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome?tag=v0.2.2)",
+ "cainome 0.1.5",
  "cairo-lang-compiler",
  "cairo-lang-defs",
  "cairo-lang-filesystem",
