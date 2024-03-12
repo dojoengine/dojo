@@ -137,16 +137,12 @@ fn parse_and_print_events(
     println!("Continuation token: {:?}", res.continuation_token);
     println!("----------------------------------------------");
     for event in res.events {
-        match parse_event(event.clone(), &events_map) {
-            Ok(Some(e)) => {
-                println!("{e}");
-            }
-            Ok(None) => {
-                println!("No matching event found for {:?}", event);
-            }
-            Err(e) => {
-                println!("Error parsing event: {}", e);
-            }
+        let parsed_event = parse_event(event.clone(), &events_map)
+            .map_err(|e| anyhow!("Error parsing event: {}", e))?;
+
+        match parsed_event {
+            Some(e) => println!("{e}"),
+            None => return Err(anyhow!("No matching event found for {:?}", event)),
         }
     }
     Ok(())
