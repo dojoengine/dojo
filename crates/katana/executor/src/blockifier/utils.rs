@@ -106,29 +106,21 @@ pub fn simulate_transactions(
     charge_fee: bool,
 ) -> Result<Vec<SimulatedTransaction>, TransactionExecutionError> {
     let state = CachedStateWrapper::new(StateRefDb(state));
-    let results = transactions
-        .clone()
-        .into_iter()
-        .map(|tx| {
-            TransactionExecutor::new(
-                &state,
-                block_context,
-                charge_fee,
-                validate,
-                std::iter::once(tx),
-            )
-            .with_error_log()
-            .next()
-            .ok_or(TransactionExecutionError::ExecutionError(
-                EntryPointExecutionError::ExecutionFailed { error_data: Default::default() },
-            ))?
-        })
-        .collect::<Result<Vec<_>, TransactionExecutionError>>()?;
+    let results = TransactionExecutor::new(
+        &state,
+        block_context,
+        charge_fee,
+        validate,
+        transactions.clone().into_iter(),
+    )
+    .with_error_log()
+    .execute();
 
     results
         .into_iter()
         .zip(transactions)
-        .map(|(result, transaction)| {
+        .map(|(result, tx)| {
+            let result = result?;
             let function_invocation = result
                 .execute_call_info
                 .as_ref()
@@ -143,7 +135,7 @@ pub fn simulate_transactions(
             let fee_transfer_invocation =
                 result.fee_transfer_call_info.as_ref().map(function_invocation_from_call_info);
 
-            let transaction_trace = match &transaction.transaction {
+            let transaction_trace = match &tx.transaction {
                 ExecutableTx::Declare(_) => TransactionTrace::Declare(DeclareTransactionTrace {
                     validate_invocation,
                     fee_transfer_invocation,
