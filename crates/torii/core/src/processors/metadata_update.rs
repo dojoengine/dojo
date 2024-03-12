@@ -49,7 +49,7 @@ where
     async fn process(
         &self,
         _world: &WorldContractReader<P>,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         _block: &BlockWithTxs,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
@@ -69,7 +69,7 @@ where
         };
 
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
-        db.write().await.set_metadata(resource, &uri_str);
+        db.set_metadata(resource, &uri_str);
 
         let db = db.clone();
         let resource = *resource;
@@ -81,11 +81,10 @@ where
     }
 }
 
-async fn try_retrieve(db: Arc<RwLock<Sql>>, resource: FieldElement, uri_str: String) {
+async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
-            db.write()
-                .await
+            db
                 .update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
                 .await
                 .unwrap();

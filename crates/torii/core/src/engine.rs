@@ -45,7 +45,7 @@ impl Default for EngineConfig {
 
 pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
-    db: Arc<RwLock<Sql>>,
+    db: Sql,
     provider: Box<P>,
     processors: Processors<P>,
     config: EngineConfig,
@@ -61,7 +61,7 @@ struct UnprocessedEvent {
 impl<P: Provider + Sync> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
-        db: Arc<RwLock<Sql>>,
+        db: Sql,
         provider: P,
         processors: Processors<P>,
         config: EngineConfig,
@@ -72,7 +72,7 @@ impl<P: Provider + Sync> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        let mut head = self.db.read().await.head().await?;
+        let mut head = self.db.head().await?;
         if head == 0 {
             head = self.config.start_block;
         } else if self.config.start_block != 0 {
@@ -140,8 +140,8 @@ impl<P: Provider + Sync> Engine<P> {
 
             match self.process(block_with_txs).await {
                 Ok(_) => {
-                    self.db.write().await.set_head(from);
-                    self.db.write().await.execute().await?;
+                    self.db.set_head(from);
+                    self.db.execute().await?;
                     from += 1;
                 }
                 Err(e) => {
@@ -242,7 +242,7 @@ impl<P: Provider + Sync> Engine<P> {
 
     async fn process_block(&mut self, block: &BlockWithTxs) -> Result<()> {
         for processor in &self.processors.block {
-            processor.process(self.db.clone(), self.provider.as_ref(), block).await?;
+            processor.process(&mut self.db, self.provider.as_ref(), block).await?;
         }
         Ok(())
     }
@@ -257,7 +257,7 @@ impl<P: Provider + Sync> Engine<P> {
         for processor in &self.processors.transaction {
             processor
                 .process(
-                    self.db.clone(),
+                    &mut self.db,
                     self.provider.as_ref(),
                     block,
                     transaction_receipt,
@@ -284,7 +284,7 @@ impl<P: Provider + Sync> Engine<P> {
             }
             _ => return Ok(()),
         };
-        self.db.write().await.store_event(event_id, event, transaction_hash);
+        self.db.store_event(event_id, event, transaction_hash);
         for processor in &self.processors.event {
             if get_selector_from_name(&processor.event_key())? == event.keys[0]
                 && processor.validate(event)
@@ -292,7 +292,7 @@ impl<P: Provider + Sync> Engine<P> {
                 processor
                     .process(
                         &self.world,
-                        self.db.clone(),
+                        &mut self.db,
                         block,
                         transaction_receipt,
                         event_id,

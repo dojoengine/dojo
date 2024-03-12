@@ -145,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
-    let db = Arc::new(RwLock::new(Sql::new(pool.clone(), args.world_address).await?));
+    let db = Sql::new(pool.clone(), args.world_address).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
@@ -180,7 +180,7 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
-        db.clone(),
+        db,
         args.relay_port,
         args.relay_webrtc_port,
         args.relay_local_key_path,

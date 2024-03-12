@@ -41,7 +41,7 @@ where
     async fn process(
         &self,
         _world: &WorldContractReader<P>,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         _block: &BlockWithTxs,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
@@ -50,12 +50,12 @@ where
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
         info!("store delete record: {}", name);
 
-        let model = db.read().await.model(&name).await?;
+        let model = db.model(&name).await?;
 
         let keys_start = NUM_KEYS_INDEX + 1;
         let keys = event.data[keys_start..].to_vec();
         let entity = model.schema().await?;
-        db.write().await.delete_entity(keys, entity).await?;
+        db.delete_entity(keys, entity).await?;
         Ok(())
     }
 }

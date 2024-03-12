@@ -40,7 +40,7 @@ where
     async fn process(
         &self,
         world: &WorldContractReader<P>,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         _block: &BlockWithTxs,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
@@ -70,8 +70,7 @@ where
             "Registered model content"
         );
 
-        db.write()
-            .await
+        db
             .register_model(
                 schema,
                 layout,

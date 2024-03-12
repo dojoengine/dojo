@@ -23,7 +23,7 @@ use crate::sql::Sql;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
-    db: Arc<RwLock<Sql>>,
+    db: Sql,
     provider: P,
     migration: MigrationStrategy,
     sequencer: TestSequencer,
@@ -72,9 +72,7 @@ async fn test_load_from_remote() {
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
-    let db = Arc::new(RwLock::new(
-        Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap(),
-    ));
+    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
@@ -105,7 +103,7 @@ async fn test_load_from_remote() {
     assert_eq!(unpacked_size, 2);
 
     let event_id = format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 42, 69);
-    db.write().await.store_event(
+    db.store_event(
         &event_id,
         &Event {
             from_address: FieldElement::ONE,
@@ -115,7 +113,7 @@ async fn test_load_from_remote() {
         FieldElement::THREE,
     );
 
-    db.write().await.execute().await.unwrap();
+    db.execute().await.unwrap();
 
     let query =
         format!("SELECT keys, data, transaction_hash FROM events WHERE id = '{}'", event_id);

@@ -16,14 +16,14 @@ pub struct StoreTransactionProcessor;
 impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
     async fn process(
         &self,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         _provider: &P,
         _block: &BlockWithTxs,
         _receipt: &TransactionReceipt,
         transaction: &Transaction,
         transaction_id: &str,
     ) -> Result<(), Error> {
-        db.write().await.store_transaction(transaction, transaction_id);
+        db.store_transaction(transaction, transaction_id);
 
         Ok(())
     }

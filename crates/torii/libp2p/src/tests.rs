@@ -33,12 +33,10 @@ mod test {
         let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
-        let db = std::sync::Arc::new(RwLock::new(
-            Sql::new(pool.clone(), FieldElement::from_bytes_be(&[0; 32]).unwrap()).await?,
-        ));
+        let db = Sql::new(pool.clone(), FieldElement::from_bytes_be(&[0; 32]).unwrap()).await?;
 
         // Initialize the relay server
-        let mut relay_server: Relay = Relay::new(db.clone(), 9900, 9901, None, None)?;
+        let mut relay_server: Relay = Relay::new(db, 9900, 9901, None, None)?;
         tokio::spawn(async move {
             relay_server.run().await;
         });

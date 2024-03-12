@@ -49,12 +49,12 @@ pub struct Behaviour {
 
 pub struct Relay {
     swarm: Swarm<Behaviour>,
-    pool: Arc<RwLock<Sql>>,
+    db: Sql,
 }
 
 impl Relay {
     pub fn new(
-        pool: Arc<RwLock<Sql>>,
+        pool: Sql,
         port: u16,
         port_webrtc: u16,
         local_key_path: Option<String>,
@@ -144,7 +144,7 @@ impl Relay {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
-        Ok(Self { swarm, pool })
+        Ok(Self { swarm, db: pool })
     }
 
     pub async fn run(&mut self) {
@@ -192,7 +192,7 @@ impl Relay {
                             );
 
                             // retrieve entity identity from db
-                            let mut pool = match self.pool.read().await.pool.acquire().await {
+                            let mut pool = match self.db.pool.acquire().await {
                                 Ok(pool) => pool,
                                 Err(e) => {
                                     warn!(
@@ -225,9 +225,7 @@ impl Relay {
                             if entity.is_none() {
                                 // we can set the entity without checking identity
                                 if let Err(e) = self
-                                    .pool
-                                    .write()
-                                    .await
+                                    .db
                                     .set_entity(
                                         parsed_message.model.clone(),
                                         &message_id.to_string(),
@@ -372,9 +370,7 @@ impl Relay {
                             }
 
                             if let Err(e) = self
-                                .pool
-                                .write()
-                                .await
+                                .db
                                 // event id is message id
                                 .set_entity(parsed_message.model, &message_id.to_string())
                                 .await

@@ -35,7 +35,7 @@ where
     async fn process(
         &self,
         world: &WorldContractReader<P>,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         block: &BlockWithTxs,
         transaction_receipt: &TransactionReceipt,
         event_id: &str,
@@ -48,7 +48,7 @@ pub trait BlockProcessor<P: Provider + Sync> {
     fn get_block_number(&self) -> String;
     async fn process(
         &self,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         provider: &P,
         block: &BlockWithTxs,
     ) -> Result<(), Error>;
@@ -58,7 +58,7 @@ pub trait BlockProcessor<P: Provider + Sync> {
 pub trait TransactionProcessor<P: Provider + Sync> {
     async fn process(
         &self,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         provider: &P,
         block: &BlockWithTxs,
         transaction_receipt: &TransactionReceipt,

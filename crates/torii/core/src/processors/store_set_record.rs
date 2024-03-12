@@ -41,7 +41,7 @@ where
     async fn process(
         &self,
         _world: &WorldContractReader<P>,
-        db: Arc<RwLock<Sql>>,
+        db: &mut Sql,
         _block: &BlockWithTxs,
         _transaction_receipt: &TransactionReceipt,
         event_id: &str,
@@ -50,7 +50,7 @@ where
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
         info!("store set record: {}", name);
 
-        let model = db.read().await.model(&name).await?;
+        let model = db.model(&name).await?;
 
         let keys_start = NUM_KEYS_INDEX + 1;
         let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
@@ -67,7 +67,7 @@ where
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.write().await.set_entity(entity, event_id).await?;
+        db.set_entity(entity, event_id).await?;
         Ok(())
     }
 }
