@@ -684,18 +684,30 @@ impl StarknetApiServer for StarknetApi {
                 .into_iter()
                 .map(|tx| {
                     let tx = match tx {
-                        BroadcastedTx::Invoke(tx) => ExecutableTxWithHash::new_query(
-                            ExecutableTx::Invoke(tx.into_tx_with_chain_id(chain_id)),
-                        ),
-                        BroadcastedTx::Declare(tx) => {
-                            ExecutableTxWithHash::new_query(ExecutableTx::Declare(
-                                tx.try_into_tx_with_chain_id(chain_id)
-                                    .map_err(|_| StarknetApiError::InvalidContractClass)?,
-                            ))
+                        BroadcastedTx::Invoke(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::Invoke(tx.into_tx_with_chain_id(chain_id)),
+                                is_query,
+                            )
                         }
-                        BroadcastedTx::DeployAccount(tx) => ExecutableTxWithHash::new_query(
-                            ExecutableTx::DeployAccount(tx.into_tx_with_chain_id(chain_id)),
-                        ),
+                        BroadcastedTx::Declare(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::Declare(
+                                    tx.try_into_tx_with_chain_id(chain_id)
+                                        .map_err(|_| StarknetApiError::InvalidContractClass)?,
+                                ),
+                                is_query,
+                            )
+                        }
+                        BroadcastedTx::DeployAccount(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::DeployAccount(tx.into_tx_with_chain_id(chain_id)),
+                                is_query,
+                            )
+                        }
                     };
                     Result::<ExecutableTxWithHash, StarknetApiError>::Ok(tx)
                 })

@@ -105,7 +105,7 @@ pub fn simulate_transactions(
     validate: bool,
     charge_fee: bool,
 ) -> Result<Vec<SimulatedTransaction>, TransactionExecutionError> {
-    let state = CachedStateWrapper::new(StateRefDb::from(state));
+    let state = CachedStateWrapper::new(StateRefDb(state));
     let results = transactions
         .clone()
         .into_iter()
