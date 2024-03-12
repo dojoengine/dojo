@@ -1,5 +1,5 @@
 kind = "DojoModel"
-class_hash = "0x764906a97ff3e532e82b154908b25711cdec1c692bf68e3aba2a3dd9964a15c"
+class_hash = "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54"
 name = "dojo_examples::models::moves"
 
 [[members]]

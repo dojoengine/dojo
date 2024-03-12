@@ -37,5 +37,10 @@ pub fn corelib() -> PathBuf {
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
     let compilation_units = ops::generate_compilation_units(&resolve, &ws).unwrap();
-    compilation_units[0].core_package_component().target.source_root().into()
+    compilation_units[0]
+        .core_package_component()
+        .expect("should have component")
+        .target
+        .source_root()
+        .into()
 }

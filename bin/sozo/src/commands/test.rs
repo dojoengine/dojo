@@ -65,7 +65,7 @@ impl TestArgs {
                 main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
             }
 
-            if DiagnosticsReporter::stderr().check(&db) {
+            if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
                 bail!("failed to compile");
             }
 
@@ -107,7 +107,8 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
         .map(|model| (model.cairo_package_name(), model.target.source_root().into()))
         .collect();
 
-    let corelib = Some(Directory::Real(unit.core_package_component().target.source_root().into()));
+    let corelib =
+        unit.core_package_component().map(|c| Directory::Real(c.target.source_root().into()));
     let crates_config = crates_config_for_compilation_unit(unit);
 
     let content = ProjectConfigContent { crate_roots, crates_config };

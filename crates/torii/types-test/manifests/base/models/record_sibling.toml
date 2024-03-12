@@ -1,5 +1,5 @@
 kind = "DojoModel"
-class_hash = "0x7660a792b6d4e2c6790ff6df004cc1f903343ed7ccd8ea3da57e6163b05126b"
+class_hash = "0x4e92336e21ac7970b9bd9f4e294705f7864c0b29f53fdbf42ff7a9d7f0a53f3"
 name = "types_test::models::record_sibling"
 
 [[members]]

@@ -1,5 +1,5 @@
 kind = "DojoModel"
-class_hash = "0xf7a5bcc533f76d67c228de4583d2460538bb98900ad073c61c4ab18023b1ef"
+class_hash = "0x7a47c3a9c8509a1d4a0379e50799eba7b173db6e41961341fe3f856a51d627"
 name = "types_test::models::subrecord"
 
 [[members]]
