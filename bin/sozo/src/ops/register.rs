@@ -24,30 +24,26 @@ pub async fn execute(
 
             let world_reader = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
-            let remote_manifest = {
+            let manifest = {
                 match DeployedManifest::load_from_remote(&provider, world_address).await {
-                    Ok(manifest) => Some(manifest),
+                    Ok(manifest) => manifest,
                     Err(e) => {
                         return Err(anyhow::anyhow!("Failed to build remote World state: {e}"));
                     }
                 }
             };
 
-            let manifest = remote_manifest.unwrap();
-            let registered_models_names =
-                manifest.models.into_iter().map(|m| m.name.to_string()).collect::<Vec<String>>();
-
+            let registered_models_names = manifest.models.iter().map(|m| m.name.as_str());
             let mut model_class_hashes = HashMap::new();
-            for model_name in registered_models_names.iter() {
+            for model_name in registered_models_names {
                 let read_model = world_reader.model_reader(model_name).await?;
                 let class_hash = read_model.class_hash();
-                model_class_hashes.insert(class_hash, model_name.clone());
+                model_class_hashes.insert(class_hash, model_name);
             }
 
             let mut models_to_register = Vec::new();
             for input_model in models {
-                if model_class_hashes.contains_key(&input_model) {
-                    let model_name = model_class_hashes.get(&input_model).unwrap();
+                if let Some(model_name) = model_class_hashes.get(&input_model) {
                     config.ui().print(format!(
                         "\"{}\" model already registered with the class hash \"{:#x}\"",
                         model_name, input_model

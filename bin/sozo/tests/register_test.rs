@@ -33,8 +33,9 @@ async fn reregister_models() {
     let private_key = &format!("0x{:x}", sequencer.raw_account().private_key);
     let rpc_url = &sequencer.url().to_string();
 
-    let moves_model_class_hash =
-        "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54";
+    let moves_model =
+        migration.models.iter().find(|m| m.diff.name == "dojo_examples::models::moves").unwrap();
+    let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local);
     let args_vec = [
         "register",
         "model",
