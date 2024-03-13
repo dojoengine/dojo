@@ -161,6 +161,9 @@ pub struct Contract {
     pub abi: Option<Utf8PathBuf>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
+    #[serde_as(as = "Option<UfeHex>")]
+    pub transaction_hash: Option<FieldElement>,
+    pub block_number: Option<u64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -174,7 +177,13 @@ pub struct BaseManifest {
 impl From<Manifest<Class>> for Manifest<Contract> {
     fn from(value: Manifest<Class>) -> Self {
         Manifest::new(
-            Contract { class_hash: value.inner.class_hash, abi: value.inner.abi, address: None },
+            Contract {
+                class_hash: value.inner.class_hash,
+                abi: value.inner.abi,
+                address: None,
+                transaction_hash: None,
+                block_number: None,
+            },
             value.name,
         )
     }
@@ -328,7 +337,13 @@ impl DeployedManifest {
             models,
             contracts,
             world: Manifest::new(
-                Contract { address: Some(world_address), class_hash: world_class_hash, abi: None },
+                Contract {
+                    address: Some(world_address),
+                    class_hash: world_class_hash,
+                    abi: None,
+                    transaction_hash: None,
+                    block_number: None,
+                },
                 WORLD_CONTRACT_NAME.into(),
             ),
             base: Manifest::new(
