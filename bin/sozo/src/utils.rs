@@ -12,7 +12,7 @@ pub async fn handle_transaction_result<P>(
 where
     P: Provider + Send,
 {
-    println!("\nTransaction hash: {:#x}", transaction_result.transaction_hash);
+    println!("Transaction hash: {:#x}", transaction_result.transaction_hash);
 
     if wait_for_tx {
         let receipt =
