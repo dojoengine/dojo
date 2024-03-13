@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710327335368,
+  "lastUpdate": 1710341372795,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2575,6 +2575,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 967056,
             "range": "± 68332",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "947a3d0253859b7bb3bb4550ae8521c50fdf3a64",
+          "message": "fix: error on `world.model()` call gets mapped wrongly (#1661)",
+          "timestamp": "2024-03-13T22:39:58+08:00",
+          "tree_id": "e2b9cf671f4363b8888df1c2b301f69618da5daf",
+          "url": "https://github.com/dojoengine/dojo/commit/947a3d0253859b7bb3bb4550ae8521c50fdf3a64"
+        },
+        "date": 1710341371746,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1014329,
+            "range": "± 77046",
             "unit": "ns/iter"
           }
         ]
