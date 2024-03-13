@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710341372795,
+  "lastUpdate": 1710341774460,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2605,6 +2605,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1014329,
             "range": "± 77046",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "kawka.maciej.93@gmail.com",
+            "name": "kwkr",
+            "username": "kwkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b22b2b8bc8e3f36a058edeb19821f7f676b4dbd4",
+          "message": "sozo: check existing class-hashes before registering model (#1576)\n\n* check existing class-hashes before registering model\r\n\r\n* update checking if models registered logic\r\n\r\n* apply review feedback\r\n\r\n* add initial test fixture for reregister\r\n\r\n* check if models need reregistering using remote manifest\r\n\r\n* test ouput of the reregister command\r\n\r\n* apply further review feedback\r\n\r\n* allow dead code for test utils",
+          "timestamp": "2024-03-13T08:46:38-06:00",
+          "tree_id": "041726fd3495c05427349d64af006db24d9fa263",
+          "url": "https://github.com/dojoengine/dojo/commit/b22b2b8bc8e3f36a058edeb19821f7f676b4dbd4"
+        },
+        "date": 1710341773415,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 969809,
+            "range": "± 68746",
             "unit": "ns/iter"
           }
         ]
