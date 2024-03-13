@@ -31,7 +31,7 @@ pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) ->
                         let contract = get_contract_address(&world, mc.contract).await?;
                         calls.push(world.grant_writer_getcall(&mc.model, &contract.into()));
                     } else {
-                        println!("[WARN] Unknown model '{}' => IGNORED", model_name);
+                        println!("Unknown model '{}' => IGNORED", model_name);
                     }
                 }
 
