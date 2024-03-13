@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710187052366,
+  "lastUpdate": 1710294929128,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2515,6 +2515,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 969724,
             "range": "± 65960",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "akherchache@pm.me",
+            "name": "akhercha",
+            "username": "akhercha"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a007ca1de39becbc0750e674e05a3fcec134ff24",
+          "message": "fix: [torii/graphql] Added timezone information to timestamps strings (#1657)",
+          "timestamp": "2024-03-12T21:45:38-04:00",
+          "tree_id": "9c21ce8b3c54d97b2d0f40213469509c8e1b5a74",
+          "url": "https://github.com/dojoengine/dojo/commit/a007ca1de39becbc0750e674e05a3fcec134ff24"
+        },
+        "date": 1710294928699,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 968689,
+            "range": "± 70691",
             "unit": "ns/iter"
           }
         ]
