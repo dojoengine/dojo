@@ -122,10 +122,27 @@ async fn update_manifests_and_abis(
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifests...");
 
+    let deployed_path = manifest_dir
+            .join(MANIFESTS_DIR)
+            .join(DEPLOYMENTS_DIR)
+            .join(chain_id)
+            .with_extension("toml");
+
     let mut local_manifest: DeployedManifest = local_manifest.into();
+
+    if deployed_path.exists() {
+        let previous_manifest = DeployedManifest::load_from_path(&deployed_path)?;
+        local_manifest.merge_from_previous(previous_manifest);
+    };
+
     local_manifest.world.inner.address = Some(migration_output.world_address);
-    local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
-    local_manifest.world.inner.block_number = migration_output.world_block_number;
+
+    if migration_output.world_tx_hash.is_some() {
+        local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
+    }
+    if migration_output.world_block_number.is_some() {
+        local_manifest.world.inner.block_number = migration_output.world_block_number;
+    }
 
     let base_class_hash = match remote_manifest {
         Some(manifest) => *manifest.base.inner.class_hash(),
@@ -141,13 +158,7 @@ async fn update_manifests_and_abis(
     // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, chain_id).await;
 
-    local_manifest.write_to_path(
-        &manifest_dir
-            .join(MANIFESTS_DIR)
-            .join(DEPLOYMENTS_DIR)
-            .join(chain_id)
-            .with_extension("toml"),
-    )?;
+    local_manifest.write_to_path(&deployed_path)?;
     ui.print("\n✨ Done.");
 
     Ok(())

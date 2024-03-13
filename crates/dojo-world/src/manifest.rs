@@ -295,6 +295,11 @@ impl DeployedManifest {
         Ok(manifest)
     }
 
+    pub fn merge_from_previous(&mut self, previous: DeployedManifest) {
+        self.world.inner.transaction_hash = previous.world.inner.transaction_hash;
+        self.world.inner.block_number = previous.world.inner.block_number;
+    }
+
     pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
