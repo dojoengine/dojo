@@ -130,7 +130,10 @@ impl Sql {
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![Argument::String(entity_id.clone()), Argument::String(entity.name())],
+            vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
+            ],
         );
 
         let keys_str = felts_sql_string(&keys);
@@ -484,7 +487,10 @@ impl Sql {
                                  ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
                     Argument::String(table_id.clone()),
-                    Argument::String(format!("{:#x}", get_selector_from_name(&path[0].clone()).unwrap())),
+                    Argument::String(format!(
+                        "{:#x}",
+                        get_selector_from_name(&path[0].clone()).unwrap()
+                    )),
                     Argument::Int(model_idx),
                     Argument::Int(member_idx as i64),
                     Argument::String(name),
