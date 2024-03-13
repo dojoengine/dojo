@@ -47,7 +47,7 @@ use crate::commands::options::world::WorldOptions;
 pub struct MigrationOutput {
     pub world_address: FieldElement,
     pub world_tx_hash: Option<FieldElement>,
-    pub world_block_number: Option<u64>
+    pub world_block_number: Option<u64>,
 }
 
 pub async fn execute(
@@ -123,10 +123,10 @@ async fn update_manifests_and_abis(
     ui.print("\n✨ Updating manifests...");
 
     let deployed_path = manifest_dir
-            .join(MANIFESTS_DIR)
-            .join(DEPLOYMENTS_DIR)
-            .join(chain_id)
-            .with_extension("toml");
+        .join(MANIFESTS_DIR)
+        .join(DEPLOYMENTS_DIR)
+        .join(chain_id)
+        .with_extension("toml");
 
     let mut local_manifest: DeployedManifest = local_manifest.into();
 
@@ -151,7 +151,8 @@ async fn update_manifests_and_abis(
 
     local_manifest.contracts.iter_mut().for_each(|c| {
         let salt = generate_salt(&c.name);
-        c.inner.address = Some(get_contract_address(salt, base_class_hash, &[], migration_output.world_address));
+        c.inner.address =
+            Some(get_contract_address(salt, base_class_hash, &[], migration_output.world_address));
     });
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
@@ -426,11 +427,12 @@ where
                         anyhow!("Failed to deploy world: {e}")
                     })?;
 
-            (world_tx_hash, world_block_number) = if let ContractDeploymentOutput::Output(deploy_result) = deploy_result {
-                (Some(deploy_result.transaction_hash), deploy_result.block_number)
-            } else {
-                (None, None)
-            };
+            (world_tx_hash, world_block_number) =
+                if let ContractDeploymentOutput::Output(deploy_result) = deploy_result {
+                    (Some(deploy_result.transaction_hash), deploy_result.block_number)
+                } else {
+                    (None, None)
+                };
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
