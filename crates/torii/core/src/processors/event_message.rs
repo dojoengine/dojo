@@ -24,14 +24,6 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool {
-        if event.keys.len() > 1 {
-            info!(
-                "invalid keys for event {}: {}",
-                <EventMessageProcessor as EventProcessor<P>>::event_key(self),
-                <EventMessageProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
-            );
-            return false;
-        }
         true
     }
 
@@ -45,26 +37,29 @@ where
         event: &Event,
     ) -> Result<(), Error> {
         // silently ignore if the model is not found
-        let (model, name) = match parse_cairo_short_string(&event.data[MODEL_INDEX]) {
-            Ok(name) => match db.model(&name).await {
-                Ok(model) => (model, name),
-                Err(_) => return Ok(()),
-            },
+        let model = match parse_cairo_short_string(&event.keys[MODEL_INDEX]) {
+            Ok(name) => {
+                println!("name: {}", name);
+                
+                match db.model(&name).await {
+                    Ok(model) => model,
+                    Err(_) => return Ok(()),
+                }
+            }
             Err(_) => return Ok(()),
         };
-        info!("store event message: {}", name);
 
-        let keys_start = NUM_KEYS_INDEX + 1;
-        let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
-        let keys = event.data[keys_start..keys_end].to_vec();
+        // let keys_start = NUM_KEYS_INDEX;
+        // let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
+        // let keys = event.keys[keys_start..keys_end].to_vec();
 
-        // keys_end is already the length of the values array.
+        // // keys_end is already the length of the values array.
 
-        let values_start = keys_end + 1;
-        let values_end: usize = values_start + usize::from(u8::try_from(event.data[keys_end])?);
+        // let values_start = keys_end + 1;
+        // let values_end: usize = values_start + usize::from(u8::try_from(event.data[keys_end])?);
 
-        let values = event.data[values_start..values_end].to_vec();
-        let mut keys_and_unpacked = [keys, values].concat();
+        // let values = event.data[values_start..values_end].to_vec();
+        let mut keys_and_unpacked = [event.keys.clone(), event.data.clone()].concat();
 
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
