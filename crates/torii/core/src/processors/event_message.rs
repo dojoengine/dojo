@@ -1,4 +1,4 @@
-use anyhow::{Error, Ok, Result};
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
@@ -20,7 +20,7 @@ where
     P: Provider + Send + Sync,
 {
     fn event_key(&self) -> String {
-        "EventMessage".to_string()
+        "".to_string()
     }
 
     fn validate(&self, event: &Event) -> bool {
@@ -44,10 +44,15 @@ where
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {
-        let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
+        // silently ignore if the model is not found
+        let (model, name) = match parse_cairo_short_string(&event.data[MODEL_INDEX]) {
+            Ok(name) => match db.model(&name).await {
+                Ok(model) => (model, name),
+                Err(_) => return Ok(()),
+            },
+            Err(_) => return Ok(()),
+        };
         info!("store event message: {}", name);
-
-        let model = db.model(&name).await?;
 
         let keys_start = NUM_KEYS_INDEX + 1;
         let keys_end: usize = keys_start + usize::from(u8::try_from(event.data[NUM_KEYS_INDEX])?);
