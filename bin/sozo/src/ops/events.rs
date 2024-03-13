@@ -35,6 +35,7 @@ pub async fn execute(
     let chain_id = provider.chain_id().await?;
     let chain_id =
         parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
+    let world_address = world.address(env_metadata.as_ref())?;
 
     let events_map = if !json {
         let deployed_manifest = manifest_dir
@@ -60,7 +61,7 @@ pub async fn execute(
         events.map(|e| vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]);
 
     let provider = starknet.provider(env_metadata.as_ref())?;
-    let event_filter = EventFilter { from_block, to_block, address: world.world_address, keys };
+    let event_filter = EventFilter { from_block, to_block, address: Some(world_address), keys };
 
     let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
 
