@@ -9,6 +9,7 @@ use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransaction, Transaction};
+use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -95,7 +96,7 @@ impl Sql {
              layout=EXCLUDED.layout, packed_size=EXCLUDED.packed_size, \
              unpacked_size=EXCLUDED.unpacked_size RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
-            .bind(model.name())
+            .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
@@ -483,7 +484,7 @@ impl Sql {
                                  ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
                     Argument::String(table_id.clone()),
-                    Argument::String(path[0].clone()),
+                    Argument::String(format!("{:#x}", get_selector_from_name(&path[0].clone()).unwrap())),
                     Argument::Int(model_idx),
                     Argument::Int(member_idx as i64),
                     Argument::String(name),

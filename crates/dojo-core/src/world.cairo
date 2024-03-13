@@ -12,8 +12,7 @@ trait IWorld<T> {
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
-    fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
-    fn emit_message(ref self: T, model: felt252, keys: Span<felt252>, values: Span<felt252>);
+    fn emit(ref self: T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
         self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
     ) -> Span<felt252>;
@@ -458,23 +457,10 @@ mod world {
         ///
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
-        fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
+        fn emit(ref self: ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
             let system = get_caller_address();
             system.serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();
-        }
-
-
-        /// Emits an event message. 
-        /// An event that uses the Model structure
-        ///
-        /// # Arguments
-        ///
-        /// * `model` - The name of the model.
-        /// * `keys` - The keys of the event.
-        /// * `values` - The data to be logged by the event.
-        fn emit_message(ref self: ContractState, model: felt252, keys: Span<felt252>, values: Span<felt252>) {
-            EventEmitter::emit(ref self, EventMessage { model, keys, values });
         }
 
         /// Sets the model value for an entity.
