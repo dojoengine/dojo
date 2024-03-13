@@ -67,7 +67,7 @@ impl EventObject {
             (Name::new("transactionHash"), Value::from(event.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(event.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Value::from(event.created_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
             ),
         ])
     }
