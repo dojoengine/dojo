@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710294929128,
+  "lastUpdate": 1710327335368,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2545,6 +2545,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 968689,
             "range": "± 70691",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ff37ec53c9f38bc572201174d6b40df7e430b4c",
+          "message": "Check model exists on `sozo auth` (#1644)\n\n* feat: check model name and address before granting write access\r\n\r\n* Update crates/dojo-world/src/contracts/model.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Update bin/sozo/src/ops/auth.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-13T18:46:01+08:00",
+          "tree_id": "4a8a19350ae406f05952a78081f196f0627ba911",
+          "url": "https://github.com/dojoengine/dojo/commit/5ff37ec53c9f38bc572201174d6b40df7e430b4c"
+        },
+        "date": 1710327334403,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 967056,
+            "range": "± 68332",
             "unit": "ns/iter"
           }
         ]
