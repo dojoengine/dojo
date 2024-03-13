@@ -87,7 +87,7 @@ where
             })?;
 
         // World Cairo contract won't raise an error in case of unknown/unregistered
-        // model so raise an error here in case of Null address.
+        // model so raise an error here in case of zero address.
         if contract_address == ContractAddress(FieldElement::ZERO) {
             return Err(ModelError::ModelNotFound);
         }
