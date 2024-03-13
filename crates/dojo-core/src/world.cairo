@@ -13,6 +13,7 @@ trait IWorld<T> {
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
+    fn emit_message(ref self: T, model: felt252, keys: Span<felt252>, values: Span<felt252>);
     fn entity(
         self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
     ) -> Span<felt252>;
@@ -101,6 +102,14 @@ mod world {
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
+        EventMessage: EventMessage,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct EventMessage {
+        model: felt252,
+        keys: Span<felt252>,
+        values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -178,13 +187,6 @@ mod world {
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct EventMessage {
-        model: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
     }
 
     #[constructor]
@@ -460,6 +462,19 @@ mod world {
             let system = get_caller_address();
             system.serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();
+        }
+
+
+        /// Emits an event message. 
+        /// An event that uses the Model structure
+        ///
+        /// # Arguments
+        ///
+        /// * `model` - The name of the model.
+        /// * `keys` - The keys of the event.
+        /// * `values` - The data to be logged by the event.
+        fn emit_message(ref self: ContractState, model: felt252, keys: Span<felt252>, values: Span<felt252>) {
+            EventEmitter::emit(ref self, EventMessage { model, keys, values });
         }
 
         /// Sets the model value for an entity.

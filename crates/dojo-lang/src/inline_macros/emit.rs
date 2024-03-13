@@ -87,28 +87,8 @@ impl InlineMacroExprPlugin for EmitMacro {
         }
 
         for (event, _) in bundle {
-            builder.add_str("{");
-            builder.add_str(
-                "
-                let mut keys = Default::<core::array::Array>::default();
-                let mut data = Default::<core::array::Array>::default();",
-            );
-
-            builder.add_str(&format!(
-                "
-                starknet::Event::append_keys_and_data(@dojo::world::world::EventMessage {{
-                    model: dojo::model::Model::name(@{event}),
-                    keys: dojo::model::Model::keys(@{event}),
-                    values: dojo::model::Model::values(@{event})
-                }}, ref keys, ref data);",
-                event = event
-            ));
-
-            builder.add_str("\n            ");
             builder.add_node(world.as_syntax_node());
-            builder.add_str(".emit(keys, data.span());");
-
-            builder.add_str("}");
+            builder.add_str(&format!(".emit_message(dojo::model::Model::name(@{event}), dojo::model::Model::keys(@{event}), dojo::model::Model::values(@{event}))", event = event));
         }
 
         builder.add_str("}");
