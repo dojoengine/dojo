@@ -27,6 +27,7 @@ use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
+use crate::inline_macros::get_by_key::GetByKeyMacro;
 use crate::inline_macros::set::SetMacro;
 use crate::interface::DojoInterface;
 use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
@@ -63,7 +64,11 @@ impl GeneratedFileAuxData for DojoAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 
@@ -81,7 +86,11 @@ impl GeneratedFileAuxData for ComputedValuesAuxData {
         self
     }
     fn eq(&self, other: &dyn GeneratedFileAuxData) -> bool {
-        if let Some(other) = other.as_any().downcast_ref::<Self>() { self == other } else { false }
+        if let Some(other) = other.as_any().downcast_ref::<Self>() {
+            self == other
+        } else {
+            false
+        }
     }
 }
 
@@ -237,6 +246,7 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
         .add_inline_macro_plugin::<ArrayCapMacro>()
+        .add_inline_macro_plugin::<GetByKeyMacro>()
         .add_inline_macro_plugin::<EmitMacro>();
 
     suite

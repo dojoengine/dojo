@@ -13,13 +13,13 @@ use super::utils::{parent_of_kind, SYSTEM_READS};
 use super::{extract_models, unsupported_arg_diagnostic, CAIRO_ERR_MSG_LEN};
 
 #[derive(Debug, Default)]
-pub struct GetByKeysMacro;
+pub struct GetByKeyMacro;
 
-impl NamedPlugin for GetByKeysMacro {
-    const NAME: &'static str = "get_by_keys";
+impl NamedPlugin for GetByKeyMacro {
+    const NAME: &'static str = "get_by_key";
 }
 
-impl InlineMacroExprPlugin for GetByKeysMacro {
+impl InlineMacroExprPlugin for GetByKeyMacro {
     fn generate_code(
         &self,
         db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
@@ -81,7 +81,7 @@ impl InlineMacroExprPlugin for GetByKeysMacro {
         };
 
         builder.add_str(&format!(
-            "core::serde::Serde::serialize(@{args}, ref __get_macro_keys__);
+            "__get_macro_keys__.append({args});
             let __get_macro_keys__ = core::array::ArrayTrait::span(@__get_macro_keys__);\n"
         ));
 

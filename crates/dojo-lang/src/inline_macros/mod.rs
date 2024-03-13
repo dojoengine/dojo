@@ -9,6 +9,7 @@ pub mod delete;
 pub mod emit;
 pub mod get;
 pub mod set;
+pub mod get_by_key;
 pub mod utils;
 
 const CAIRO_ERR_MSG_LEN: usize = 31;

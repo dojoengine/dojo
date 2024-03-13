@@ -18,6 +18,8 @@ test_file_test!(
         set: "set",
 
         array_cap: "array_cap",
+
+        get_by_key: "get_by_key"
     },
     test_semantics
 );
