@@ -51,6 +51,8 @@ pub enum AbstractManifestError {
     #[error(transparent)]
     Model(#[from] ModelError),
     #[error(transparent)]
+    TOML(#[from] toml::de::Error),
+    #[error(transparent)]
     IO(#[from] io::Error),
 }
 
@@ -251,11 +253,8 @@ impl BaseManifest {
         let contract_dir = path.join("contracts");
         let model_dir = path.join("models");
 
-        let world: Manifest<Class> =
-            toml::from_str(&fs::read_to_string(path.join("world.toml"))?).unwrap();
-        let base: Manifest<Class> =
-            toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
-
+        let world: Manifest<Class> = toml::from_str(&fs::read_to_string(path.join("world.toml"))?)?;
+        let base: Manifest<Class> = toml::from_str(&fs::read_to_string(path.join("base.toml"))?)?;
         let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
         let models = elements_from_path::<DojoModel>(&model_dir)?;
 
@@ -590,7 +589,7 @@ where
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
-            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?)?;
             elements.push(manifest);
         } else {
             continue;
@@ -610,7 +609,7 @@ where
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
-            let manifest: T = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            let manifest: T = toml::from_str(&fs::read_to_string(path)?)?;
             elements.push(manifest);
         } else {
             continue;
