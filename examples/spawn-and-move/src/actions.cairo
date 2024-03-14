@@ -27,10 +27,13 @@ mod actions {
         Moved: Moved,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(starknet::Event, Model, Copy, Drop, Serde)]
     struct Moved {
+        #[key]
         player: ContractAddress,
-        direction: Direction
+        direction: Direction,
+        x: u32,
+        y: u32,
     }
 
     #[abi(embed_v0)]
@@ -57,7 +60,6 @@ mod actions {
                 }
             }
         }
-
     }
 
     // impl: implement functions specified in trait
@@ -80,6 +82,8 @@ mod actions {
                     },
                 )
             );
+
+            emit!(world, (Moved { player: player, direction: Direction::None(()), x: 2, y: 3 }));
         }
 
         fn move(world: IWorldDispatcher, direction: Direction) {
@@ -89,7 +93,6 @@ mod actions {
             moves.last_direction = direction;
             let next = next_position(position, direction);
             set!(world, (moves, next));
-            emit!(world, Moved { player, direction });
             return ();
         }
     }
