@@ -10,7 +10,7 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass, FunctionCall,
-    InvokeTransactionResult, StarknetError,
+    InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
@@ -32,6 +32,7 @@ pub type DeclareOutput = DeclareTransactionResult;
 #[derive(Clone, Debug)]
 pub struct DeployOutput {
     pub transaction_hash: FieldElement,
+    pub block_number: Option<u64>,
     pub contract_address: FieldElement,
     pub declare: Option<DeclareOutput>,
 }
@@ -200,9 +201,10 @@ pub trait Deployable: Declarable + Sync {
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
     }
 
     async fn deploy<P, S>(
@@ -264,9 +266,10 @@ pub trait Deployable: Declarable + Sync {
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
     }
 
     fn salt(&self) -> FieldElement;
@@ -297,4 +300,15 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
+}
+
+fn get_block_number_from_receipt(receipt: MaybePendingTransactionReceipt) -> Option<u64> {
+    match receipt {
+        MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
+            TransactionReceipt::Deploy(r) => Some(r.block_number),
+            TransactionReceipt::Invoke(r) => Some(r.block_number),
+            _ => None,
+        },
+        MaybePendingTransactionReceipt::PendingReceipt(_receipt) => None,
+    }
 }

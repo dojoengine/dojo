@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::Environment;
@@ -27,11 +28,19 @@ pub async fn execute(command: AuthCommand, env_metadata: Option<Environment>) ->
                 for mc in models_contracts {
                     let model_name = parse_cairo_short_string(&mc.model)?;
 
-                    if world_reader.model_reader(&model_name).await.is_ok() {
-                        let contract = get_contract_address(&world, mc.contract).await?;
-                        calls.push(world.grant_writer_getcall(&mc.model, &contract.into()));
-                    } else {
-                        println!("Unknown model '{}' => IGNORED", model_name);
+                    match world_reader.model_reader(&model_name).await {
+                        Ok(_) => {
+                            let contract = get_contract_address(&world, mc.contract).await?;
+                            calls.push(world.grant_writer_getcall(&mc.model, &contract.into()));
+                        }
+
+                        Err(ModelError::ModelNotFound) => {
+                            println!("Unknown model '{}' => IGNORED", model_name);
+                        }
+
+                        Err(err) => {
+                            return Err(err.into());
+                        }
                     }
                 }
 

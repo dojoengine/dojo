@@ -44,6 +44,12 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::transaction::TransactionOptions;
 use crate::commands::options::world::WorldOptions;
 
+pub struct MigrationOutput {
+    pub world_address: FieldElement,
+    pub world_tx_hash: Option<FieldElement>,
+    pub world_block_number: Option<u64>,
+}
+
 pub async fn execute(
     ws: &Workspace<'_>,
     args: MigrateArgs,
@@ -79,8 +85,8 @@ pub async fn execute(
     if total_diffs == 0 {
         ui.print("\n✨ No changes to be made. Remote World is already up to date!")
     } else {
-        // Mirate according to the diff.
-        let world_address = apply_diff(
+        // Migrate according to the diff.
+        let migration_output = apply_diff(
             ws,
             &target_dir,
             diff,
@@ -96,7 +102,7 @@ pub async fn execute(
             local_manifest,
             remote_manifest,
             &manifest_dir,
-            world_address,
+            migration_output,
             &chain_id,
         )
         .await?;
@@ -110,14 +116,33 @@ async fn update_manifests_and_abis(
     local_manifest: BaseManifest,
     remote_manifest: Option<DeployedManifest>,
     manifest_dir: &Utf8PathBuf,
-    world_address: FieldElement,
+    migration_output: MigrationOutput,
     chain_id: &str,
 ) -> Result<()> {
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifests...");
 
+    let deployed_path = manifest_dir
+        .join(MANIFESTS_DIR)
+        .join(DEPLOYMENTS_DIR)
+        .join(chain_id)
+        .with_extension("toml");
+
     let mut local_manifest: DeployedManifest = local_manifest.into();
-    local_manifest.world.inner.address = Some(world_address);
+
+    if deployed_path.exists() {
+        let previous_manifest = DeployedManifest::load_from_path(&deployed_path)?;
+        local_manifest.merge_from_previous(previous_manifest);
+    };
+
+    local_manifest.world.inner.address = Some(migration_output.world_address);
+
+    if migration_output.world_tx_hash.is_some() {
+        local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
+    }
+    if migration_output.world_block_number.is_some() {
+        local_manifest.world.inner.block_number = migration_output.world_block_number;
+    }
 
     let base_class_hash = match remote_manifest {
         Some(manifest) => *manifest.base.inner.class_hash(),
@@ -126,20 +151,15 @@ async fn update_manifests_and_abis(
 
     local_manifest.contracts.iter_mut().for_each(|c| {
         let salt = generate_salt(&c.name);
-        c.inner.address = Some(get_contract_address(salt, base_class_hash, &[], world_address));
+        c.inner.address =
+            Some(get_contract_address(salt, base_class_hash, &[], migration_output.world_address));
     });
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, chain_id).await;
 
-    local_manifest.write_to_path(
-        &manifest_dir
-            .join(MANIFESTS_DIR)
-            .join(DEPLOYMENTS_DIR)
-            .join(chain_id)
-            .with_extension("toml"),
-    )?;
+    local_manifest.write_to_path(&deployed_path)?;
     ui.print("\n✨ Done.");
 
     Ok(())
@@ -191,7 +211,7 @@ pub(crate) async fn apply_diff<P, S>(
     world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
-) -> Result<FieldElement>
+) -> Result<MigrationOutput>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -201,15 +221,15 @@ where
 
     println!("  ");
 
-    let block_height = execute_strategy(ws, &strategy, account, txn_config)
+    let migration_output = execute_strategy(ws, &strategy, account, txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
 
-    if let Some(block_height) = block_height {
+    if let Some(block_number) = migration_output.world_block_number {
         ui.print(format!(
             "\n🎉 Successfully migrated World on block #{} at address {}",
-            block_height,
+            block_number,
             bold_message(format!(
                 "{:#x}",
                 strategy.world_address().expect("world address must exist")
@@ -225,7 +245,7 @@ where
         ));
     }
 
-    strategy.world_address()
+    Ok(migration_output)
 }
 
 pub(crate) async fn setup_env(
@@ -357,19 +377,19 @@ fn prepare_migration(
     Ok(migration)
 }
 
-// returns the Some(block number) at which migration world is deployed, returns none if world was
-// not redeployed
 pub async fn execute_strategy<P, S>(
     ws: &Workspace<'_>,
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
-) -> Result<Option<u64>>
+) -> Result<MigrationOutput>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
+    let mut world_tx_hash: Option<FieldElement> = None;
+    let mut world_block_number: Option<u64> = None;
 
     match &strategy.base {
         Some(base) => {
@@ -399,12 +419,20 @@ where
             ui.print_header("# World");
 
             let calldata = vec![strategy.base.as_ref().unwrap().diff.local];
-            deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
-                .await
-                .map_err(|e| {
-                    ui.verbose(format!("{e:?}"));
-                    anyhow!("Failed to deploy world: {e}")
-                })?;
+            let deploy_result =
+                deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
+                    .await
+                    .map_err(|e| {
+                        ui.verbose(format!("{e:?}"));
+                        anyhow!("Failed to deploy world: {e}")
+                    })?;
+
+            (world_tx_hash, world_block_number) =
+                if let ContractDeploymentOutput::Output(deploy_result) = deploy_result {
+                    (Some(deploy_result.transaction_hash), deploy_result.block_number)
+                } else {
+                    (None, None)
+                };
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
@@ -454,10 +482,11 @@ where
     register_models(strategy, migrator, &ui, txn_config.clone()).await?;
     deploy_contracts(strategy, migrator, &ui, txn_config).await?;
 
-    // This gets current block numder if helpful
-    // let block_height = migrator.provider().block_number().await.ok();
-
-    Ok(None)
+    Ok(MigrationOutput {
+        world_address: strategy.world_address()?,
+        world_tx_hash,
+        world_block_number,
+    })
 }
 
 enum ContractDeploymentOutput {
