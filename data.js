@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710401051479,
+  "lastUpdate": 1710402481446,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2695,6 +2695,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 969303,
             "range": "± 37735",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6f72e33d70c03094f07c3f4f525ea9a837c6f2bb",
+          "message": "feat(sozo): add `--receipt` transaction option (#1647)",
+          "timestamp": "2024-03-14T01:38:31-06:00",
+          "tree_id": "1c5c864efc504f209cef9fc371075a8ea03b1921",
+          "url": "https://github.com/dojoengine/dojo/commit/6f72e33d70c03094f07c3f4f525ea9a837c6f2bb"
+        },
+        "date": 1710402480939,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1020952,
+            "range": "± 81643",
             "unit": "ns/iter"
           }
         ]
