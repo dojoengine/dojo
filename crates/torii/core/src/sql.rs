@@ -156,6 +156,47 @@ impl Sql {
         Ok(())
     }
 
+    pub async fn set_event_message(&mut self, entity: Ty, event_id: &str) -> Result<()> {
+        let keys = if let Ty::Struct(s) = &entity {
+            let mut keys = Vec::new();
+            for m in s.keys() {
+                keys.extend(m.serialize()?);
+            }
+            keys
+        } else {
+            return Err(anyhow!("Entity is not a struct"));
+        };
+
+        let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        self.query_queue.enqueue(
+            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING",
+            vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
+            ],
+        );
+
+        let keys_str = felts_sql_string(&keys);
+        let insert_entities = "INSERT INTO event_messages (id, keys, event_id) VALUES (?, ?, ?) ON \
+                               CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
+                               event_id=EXCLUDED.event_id RETURNING *";
+        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+            .bind(&entity_id)
+            .bind(&keys_str)
+            .bind(event_id)
+            .fetch_one(&self.pool)
+            .await?;
+
+        let path = vec![entity.name()];
+        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
+        self.query_queue.execute_all().await?;
+
+        SimpleBroker::publish(entity_updated);
+
+        Ok(())
+    }
+
     pub async fn delete_entity(&mut self, keys: Vec<FieldElement>, entity: Ty) -> Result<()> {
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         let path = vec![entity.name()];
@@ -439,8 +480,8 @@ impl Sql {
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
-             event_id, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, \
+             event_id, entity_id, event_message_id"
         );
 
         if let Ty::Struct(s) = model {
@@ -515,6 +556,9 @@ impl Sql {
         };
 
         create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
+        // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id));");
+        // create_table_query.push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
+
         self.query_queue.enqueue(create_table_query, vec![]);
 
         indices.iter().for_each(|s| {

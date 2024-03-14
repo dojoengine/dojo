@@ -75,6 +75,19 @@ CREATE INDEX idx_entities_keys ON entities (keys);
 
 CREATE INDEX idx_entities_event_id ON entities (event_id);
 
+CREATE TABLE event_messages (
+    id TEXT NOT NULL PRIMARY KEY,
+    keys TEXT,
+    event_id TEXT NOT NULL,
+    model_names TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_event_messages_keys ON event_messages (keys);
+
+CREATE INDEX idx_event_messages_event_id ON event_messages (event_id);
+
 CREATE TABLE events (
     id TEXT NOT NULL PRIMARY KEY,
     keys TEXT NOT NULL,

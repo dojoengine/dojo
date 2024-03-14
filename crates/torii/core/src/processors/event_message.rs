@@ -51,7 +51,7 @@ where
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_entity(entity, event_id).await?;
+        db.set_event_message(entity, event_id).await?;
         Ok(())
     }
 }
