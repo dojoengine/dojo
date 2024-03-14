@@ -586,9 +586,16 @@ where
 {
     let mut elements = vec![];
 
-    for entry in path.read_dir()? {
-        let entry = entry?;
-        let path = entry.path();
+    let mut entries = path
+        .read_dir()?
+        .map(|entry| entry.map(|e| e.path()))
+        .collect::<Result<Vec<_>, io::Error>>()?;
+
+    // `read_dir` doesn't guarantee any order, so we sort the entries ourself.
+    // see: https://doc.rust-lang.org/std/fs/fn.read_dir.html#platform-specific-behavior
+    entries.sort();
+
+    for path in entries {
         if path.is_file() {
             let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
             elements.push(manifest);
