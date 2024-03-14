@@ -109,9 +109,9 @@ fn remove_hex_leading_zeros(value: Value) -> Value {
     }
 }
 
-fn add_timezone_to_naive_dt(value: &Value, initial_format: &str) -> Option<Value> {
-    if let Value::String(s) = value {
-        if let Ok(dt) = NaiveDateTime::parse_from_str(s, initial_format) {
+fn add_timezone_to_naive_dt(wrapped_dt: &Value, initial_format: &str) -> Option<Value> {
+    if let Value::String(naive_dt) = wrapped_dt {
+        if let Ok(dt) = NaiveDateTime::parse_from_str(naive_dt, initial_format) {
             let dt_with_timezone = Utc.from_utc_datetime(&dt);
             return Some(Value::String(dt_with_timezone.format(DATETIME_FORMAT).to_string()));
         }
