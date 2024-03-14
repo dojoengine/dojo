@@ -6,12 +6,12 @@ use starknet::providers::Provider;
 
 use crate::sql::Sql;
 
+pub mod event_message;
 pub mod metadata_update;
 pub mod register_model;
 pub mod store_del_record;
 pub mod store_set_record;
 pub mod store_transaction;
-pub mod event_message;
 
 const MODEL_INDEX: usize = 0;
 const NUM_KEYS_INDEX: usize = 1;

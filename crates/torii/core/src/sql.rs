@@ -178,9 +178,8 @@ impl Sql {
         );
 
         let keys_str = felts_sql_string(&keys);
-        let insert_entities =
-            "INSERT INTO event_messages (id, keys, event_id) VALUES (?, ?, ?) ON \
-                               CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
+        let insert_entities = "INSERT INTO event_messages (id, keys, event_id) VALUES (?, ?, ?) \
+                               ON CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
@@ -503,8 +502,8 @@ impl Sql {
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, \
-             event_id TEXT NOT NULL, entity_id TEXT, event_message_id TEXT, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, event_id TEXT \
+             NOT NULL, entity_id TEXT, event_message_id TEXT, "
         );
 
         if let Ty::Struct(s) = model {

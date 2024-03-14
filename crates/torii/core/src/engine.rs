@@ -285,8 +285,9 @@ impl<'db, P: Provider + Sync> Engine<'db, P> {
         self.db.store_event(event_id, event, transaction_hash);
         for processor in &self.processors.event {
             // If the processor has no event_key, means it's a catch-all processor.
-            // We also validate the event 
-            if (processor.event_key().is_empty() || get_selector_from_name(&processor.event_key())? == event.keys[0])
+            // We also validate the event
+            if (processor.event_key().is_empty()
+                || get_selector_from_name(&processor.event_key())? == event.keys[0])
                 && processor.validate(event)
             {
                 processor
