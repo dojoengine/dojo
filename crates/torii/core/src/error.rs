@@ -39,6 +39,8 @@ pub enum QueryError {
     MissingParam(String),
     #[error("model not found: {0}")]
     ModelNotFound(String),
+    #[error("multiple entities found")]
+    MultipleEntities,
     #[error("exceeds sqlite `JOIN` limit (64)")]
     SqliteJoinLimit,
 }

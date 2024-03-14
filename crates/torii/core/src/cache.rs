@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
@@ -19,7 +19,7 @@ impl ModelCache {
         Self { pool, cache: RwLock::new(HashMap::new()) }
     }
 
-    pub async fn schemas(&self, models: Vec<&str>) -> Result<Vec<Ty>, Error> {
+    pub async fn schemas(&self, models: HashSet<&str>) -> Result<Vec<Ty>, Error> {
         let mut schemas = Vec::with_capacity(models.len());
         for model in models {
             schemas.push(self.schema(model).await?);

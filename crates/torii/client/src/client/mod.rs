@@ -21,7 +21,7 @@ use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
-use torii_grpc::types::{KeysClause, Query};
+use torii_grpc::types::{EntityQuery, ModelDiffKeys};
 use torii_relay::client::{EventLoop, Message};
 
 use crate::client::error::{Error, ParseError};
@@ -56,7 +56,7 @@ impl Client {
         rpc_url: String,
         relay_url: String,
         world: FieldElement,
-        models_keys: Option<Vec<KeysClause>>,
+        models_keys: Option<Vec<ModelDiffKeys>>,
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
@@ -146,7 +146,7 @@ impl Client {
         self.metadata.read()
     }
 
-    pub fn subscribed_models(&self) -> RwLockReadGuard<'_, HashSet<KeysClause>> {
+    pub fn subscribed_models(&self) -> RwLockReadGuard<'_, HashSet<ModelDiffKeys>> {
         self.subscribed_models.models_keys.read()
     }
 
@@ -156,7 +156,7 @@ impl Client {
     /// entities, this is less efficient as it requires an additional query for each entity's
     /// model data. Specifying a clause can optimize the query by limiting the retrieval to specific
     /// type of entites matching keys and/or models.
-    pub async fn entities(&self, query: Query) -> Result<Vec<Entity>, Error> {
+    pub async fn entities(&self, query: EntityQuery) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEntitiesResponse { entities, total_count: _ } =
             grpc_client.retrieve_entities(query).await?;
@@ -180,7 +180,7 @@ impl Client {
     ///
     /// If the requested model is not among the synced models, it will attempt to fetch it from
     /// the RPC.
-    pub async fn model(&self, keys: &KeysClause) -> Result<Option<Ty>, Error> {
+    pub async fn model(&self, keys: &ModelDiffKeys) -> Result<Option<Ty>, Error> {
         let Some(mut schema) = self.metadata.read().model(&keys.model).map(|m| m.schema.clone())
         else {
             return Ok(None);
@@ -216,7 +216,7 @@ impl Client {
     /// Initiate the model subscriptions and returns a [SubscriptionService] which when await'ed
     /// will execute the subscription service and starts the syncing process.
     pub async fn start_subscription(&self) -> Result<SubscriptionService, Error> {
-        let models_keys: Vec<KeysClause> =
+        let models_keys: Vec<ModelDiffKeys> =
             self.subscribed_models.models_keys.read().clone().into_iter().collect();
         let sub_res_stream = self.initiate_subscription(models_keys).await?;
 
@@ -234,7 +234,7 @@ impl Client {
     /// Adds entities to the list of entities to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn add_models_to_sync(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub async fn add_models_to_sync(&self, models_keys: Vec<ModelDiffKeys>) -> Result<(), Error> {
         for keys in &models_keys {
             self.initiate_model(&keys.model, keys.keys.clone()).await?;
         }
@@ -255,7 +255,10 @@ impl Client {
     /// Removes models from the list of models to be synced.
     ///
     /// NOTE: This will establish a new subscription stream with the server.
-    pub async fn remove_models_to_sync(&self, models_keys: Vec<KeysClause>) -> Result<(), Error> {
+    pub async fn remove_models_to_sync(
+        &self,
+        models_keys: Vec<ModelDiffKeys>,
+    ) -> Result<(), Error> {
         self.subscribed_models.remove_models(models_keys)?;
 
         let updated_entities =
@@ -275,10 +278,10 @@ impl Client {
 
     async fn initiate_subscription(
         &self,
-        keys: Vec<KeysClause>,
+        keys: Vec<ModelDiffKeys>,
     ) -> Result<ModelDiffsStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_model_diffs(keys).await?;
+        let stream = grpc_client.subscribe_diffs(keys).await?;
         Ok(stream)
     }
 
