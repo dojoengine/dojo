@@ -41,7 +41,7 @@ impl InlineMacroExprPlugin for GetByKeyMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: syntax.stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"get!(world, keys, (models,))\""
+                    message: "Invalid arguments. Expected \"get_by_key!(world, key, (models,))\""
                         .to_string(),
                     severity: Severity::Error,
                 }],
