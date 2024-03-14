@@ -11007,6 +11007,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
+ "cainome 0.1.5",
  "cairo-lang-compiler",
  "cairo-lang-defs",
  "cairo-lang-filesystem",
