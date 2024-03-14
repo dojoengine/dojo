@@ -3,12 +3,10 @@ use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
-use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
-use tracing::info;
 
 use super::EventProcessor;
-use crate::processors::{MODEL_INDEX, NUM_KEYS_INDEX};
+use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
 #[derive(Default)]
@@ -23,7 +21,7 @@ where
         "".to_string()
     }
 
-    fn validate(&self, event: &Event) -> bool {
+    fn validate(&self, _event: &Event) -> bool {
         true
     }
 
@@ -42,12 +40,16 @@ where
             Err(_) => return Ok(()),
         };
 
-        let mut keys_and_unpacked = [event.keys.clone(), event.data.clone()].concat();
+        // skip the first key, as its the event selector
+        // and dont include last key as its the system key
+        let mut keys_and_unpacked = [
+            event.keys.clone().into_iter().skip(1).skip(event.keys.len() - 2).collect(),
+            event.data.clone(),
+        ]
+        .concat();
 
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
-
-        println!("entity: {:?}", entity);
 
         db.set_entity(entity, event_id).await?;
         Ok(())

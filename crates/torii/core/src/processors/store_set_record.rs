@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string, starknet_keccak};
+use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use tracing::info;
 

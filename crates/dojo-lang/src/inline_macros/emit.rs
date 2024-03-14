@@ -96,6 +96,11 @@ impl InlineMacroExprPlugin for EmitMacro {
             );
 
             builder.add_str(&format!(
+                "keys.append(selector!(\"{}\"));",
+                event.split_whitespace().next().unwrap()
+            ));
+
+            builder.add_str(&format!(
                 "
                 starknet::Event::append_keys_and_data(@{event}, ref keys, ref data);",
                 event = event
