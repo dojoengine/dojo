@@ -45,11 +45,8 @@ where
 
         // skip the first key, as its the event selector
         // and dont include last key as its the system key
-        let mut keys_and_unpacked = [
-            event.keys.clone().into_iter().skip(1).skip(event.keys.len() - 2).collect(),
-            event.data.clone(),
-        ]
-        .concat();
+        let mut keys_and_unpacked =
+            [event.keys[1..event.keys.len() - 1].to_vec(), event.data.clone()].concat();
 
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
