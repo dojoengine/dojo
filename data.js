@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710341774460,
+  "lastUpdate": 1710400565466,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2635,6 +2635,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 969809,
             "range": "± 68746",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae8db1042d0c66e8ad795724a0362c8a90d8a377",
+          "message": "feat: add transaction_hash and block_number in the manifest file (#1651)\n\n* feat: add transaction_hash and block_number in the manifest file\r\n\r\nStore the `transaction_hash` and the `block_number` of the World deployment in the\r\nmanifest file.\r\n\r\n* merge transaction_hash and block_number from previous deployed manifest if exists\r\n\r\n* update spawn-and-move example\r\n\r\n* fix fmt issues",
+          "timestamp": "2024-03-14T01:06:40-06:00",
+          "tree_id": "619d8c3a8410ba9fd527bad08aeaf219c9f21357",
+          "url": "https://github.com/dojoengine/dojo/commit/ae8db1042d0c66e8ad795724a0362c8a90d8a377"
+        },
+        "date": 1710400564983,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1019335,
+            "range": "± 67626",
             "unit": "ns/iter"
           }
         ]
