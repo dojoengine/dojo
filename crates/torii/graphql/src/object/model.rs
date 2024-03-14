@@ -9,8 +9,8 @@ use torii_core::types::Model;
 
 use super::{resolve_many, BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    ID_COLUMN, MODEL_NAMES, MODEL_ORDER_FIELD_TYPE_NAME, MODEL_ORDER_TYPE_NAME, MODEL_TABLE,
-    MODEL_TYPE_NAME, ORDER_ASC, ORDER_DESC, ORDER_DIR_TYPE_NAME,
+    DATETIME_FORMAT, ID_COLUMN, MODEL_NAMES, MODEL_ORDER_FIELD_TYPE_NAME, MODEL_ORDER_TYPE_NAME,
+    MODEL_TABLE, MODEL_TYPE_NAME, ORDER_ASC, ORDER_DESC, ORDER_DIR_TYPE_NAME,
 };
 use crate::mapping::MODEL_TYPE_MAPPING;
 use crate::object::resolve_one;
@@ -74,8 +74,10 @@ impl ResolvableObject for ModelObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("modelRegistered", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "modelRegistered",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 {
                     SubscriptionFieldFuture::new(async move {
                         let id = match ctx.args.get("id") {
@@ -94,9 +96,9 @@ impl ResolvableObject for ModelObject {
                         }))
                     })
                 }
-            })
-            .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("id", TypeRef::named(TypeRef::ID)))])
     }
 }
 
@@ -110,7 +112,7 @@ impl ModelObject {
             (Name::new("transactionHash"), Value::from(model.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(model.created_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+                Value::from(model.created_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }

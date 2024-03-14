@@ -9,7 +9,7 @@ use torii_core::types::Event;
 
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{resolve_many, BasicObject, ResolvableObject, TypeMapping};
-use crate::constants::{EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
+use crate::constants::{DATETIME_FORMAT, EVENT_NAMES, EVENT_TABLE, EVENT_TYPE_NAME, ID_COLUMN};
 use crate::mapping::EVENT_TYPE_MAPPING;
 use crate::types::ValueMapping;
 
@@ -44,15 +44,17 @@ impl ResolvableObject for EventObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("eventEmitted", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "eventEmitted",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let input_keys = parse_keys_argument(&ctx)?;
                     Ok(EventObject::subscription_stream(input_keys))
                 })
-            })
-            .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING))),
-        ])
+            },
+        )
+        .argument(InputValue::new("keys", TypeRef::named_list(TypeRef::STRING)))])
     }
 }
 
@@ -67,7 +69,7 @@ impl EventObject {
             (Name::new("transactionHash"), Value::from(event.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(event.created_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+                Value::from(event.created_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }

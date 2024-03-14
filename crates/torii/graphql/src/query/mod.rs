@@ -2,13 +2,14 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
+use chrono::{NaiveDateTime, TimeZone, Utc};
 use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
 
-use crate::constants::{BOOLEAN_TRUE, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
+use crate::constants::{BOOLEAN_TRUE, DATETIME_FORMAT, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
 use crate::object::model_data::ModelMember;
 use crate::types::{TypeData, TypeMapping, ValueMapping};
 
@@ -108,6 +109,16 @@ fn remove_hex_leading_zeros(value: Value) -> Value {
     }
 }
 
+fn add_timezone_to_naive_dt(value: &Value, initial_format: &str) -> Option<Value> {
+    if let Value::String(s) = value {
+        if let Ok(dt) = NaiveDateTime::parse_from_str(s, initial_format) {
+            let dt_with_timezone = Utc.from_utc_datetime(&dt);
+            return Some(Value::String(dt_with_timezone.format(DATETIME_FORMAT).to_string()));
+        }
+    }
+    None
+}
+
 pub fn value_mapping_from_row(
     row: &SqliteRow,
     types: &TypeMapping,
@@ -119,6 +130,16 @@ pub fn value_mapping_from_row(
         .map(|(field_name, type_data)| {
             let mut value =
                 fetch_value(row, field_name, &type_data.type_ref().to_string(), is_external)?;
+
+            // add timezone information to naive datetime strings
+            if let TypeRef::Named(type_name) = &type_data.type_ref() {
+                if type_name == "DateTime" {
+                    let dt_with_timezone = add_timezone_to_naive_dt(&value, "%Y-%m-%d %H:%M:%S");
+                    if let Some(dt) = dt_with_timezone {
+                        value = dt;
+                    }
+                }
+            }
 
             // handles felt arrays stored as string (ex: keys)
             if let (TypeRef::List(_), Value::String(s)) = (&type_data.type_ref(), &value) {
