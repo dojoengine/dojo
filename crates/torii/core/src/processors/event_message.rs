@@ -4,6 +4,7 @@ use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
 use starknet::providers::Provider;
+use tracing::info;
 
 use super::EventProcessor;
 use crate::processors::MODEL_INDEX;
@@ -39,6 +40,8 @@ where
             Ok(model) => model,
             Err(_) => return Ok(()),
         };
+
+        info!("store event message: {}", model.name());
 
         // skip the first key, as its the event selector
         // and dont include last key as its the system key

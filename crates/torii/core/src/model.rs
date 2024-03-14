@@ -60,6 +60,10 @@ impl ModelSQLReader {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl ModelReader<Error> for ModelSQLReader {
+    fn name(&self) -> String {
+        self.name.to_string()
+    }
+
     fn class_hash(&self) -> FieldElement {
         self.class_hash
     }

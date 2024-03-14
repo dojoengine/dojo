@@ -148,7 +148,7 @@ impl Sql {
             .await?;
 
         let path = vec![entity.name()];
-        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
+        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity, false);
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(entity_updated);
@@ -178,7 +178,8 @@ impl Sql {
         );
 
         let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO event_messages (id, keys, event_id) VALUES (?, ?, ?) ON \
+        let insert_entities =
+            "INSERT INTO event_messages (id, keys, event_id) VALUES (?, ?, ?) ON \
                                CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
@@ -189,7 +190,7 @@ impl Sql {
             .await?;
 
         let path = vec![entity.name()];
-        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
+        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity, true);
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(entity_updated);
@@ -386,14 +387,28 @@ impl Sql {
         event_id: &str,
         entity_id: &str,
         entity: &Ty,
+        is_event_message: bool,
     ) {
         match entity {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
-                let mut columns = vec!["entity_id".to_string(), "event_id".to_string()];
+                let mut columns = vec![
+                    "id".to_string(),
+                    "event_id".to_string(),
+                    if is_event_message {
+                        "event_message_id".to_string()
+                    } else {
+                        "entity_id".to_string()
+                    },
+                ];
                 let mut arguments = vec![
-                    Argument::String(entity_id.to_string()),
+                    Argument::String(if is_event_message {
+                        "event:".to_string() + entity_id
+                    } else {
+                        entity_id.to_string()
+                    }),
                     Argument::String(event_id.to_string()),
+                    Argument::String(entity_id.to_string()),
                 ];
 
                 for member in s.children.iter() {
@@ -424,7 +439,11 @@ impl Sql {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
                         self.build_set_entity_queries_recursive(
-                            path_clone, event_id, entity_id, &member.ty,
+                            path_clone,
+                            event_id,
+                            entity_id,
+                            &member.ty,
+                            is_event_message,
                         );
                     }
                 }
@@ -434,7 +453,11 @@ impl Sql {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
                     self.build_set_entity_queries_recursive(
-                        path_clone, event_id, entity_id, &child.ty,
+                        path_clone,
+                        event_id,
+                        entity_id,
+                        &child.ty,
+                        is_event_message,
                     );
                 }
             }
@@ -481,7 +504,7 @@ impl Sql {
 
         let mut create_table_query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, \
-             event_id, entity_id, event_message_id"
+             event_id TEXT NOT NULL, entity_id TEXT, event_message_id TEXT, "
         );
 
         if let Ty::Struct(s) = model {
@@ -550,14 +573,14 @@ impl Sql {
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
-            create_table_query.push_str(&format!(
-                "FOREIGN KEY (entity_id) REFERENCES {parent_table_id} (entity_id), "
-            ));
+            create_table_query
+                .push_str(&format!("FOREIGN KEY (id) REFERENCES {parent_table_id} (id), "));
         };
 
-        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
-        // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id));");
-        // create_table_query.push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
+        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
+        // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id), ");
+        create_table_query
+            .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
 
         self.query_queue.enqueue(create_table_query, vec![]);
 
