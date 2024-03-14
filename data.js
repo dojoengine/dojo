@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710402481446,
+  "lastUpdate": 1710418364477,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2725,6 +2725,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1020952,
             "range": "± 81643",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d441619c66238b307264c67d02b2fee95bb01056",
+          "message": "feat(katana): add simulate transactions (#1590)\n\n* add simulation to the RPC\r\n\r\n* simulate transaction on sequencer\r\n\r\n* add `new_query`\r\n\r\n* add fee type\r\n\r\n* lint\r\n\r\n* update to `simulate_transactions`\r\n\r\n* remove `simulation.rs`\r\n\r\n* individual parameters for `simulate_transactions`\r\n\r\n* lint rebase\r\n\r\n* update to fit spec\r\n\r\n* pin link",
+          "timestamp": "2024-03-14T20:03:09+08:00",
+          "tree_id": "f5f197e0ce85808678ef945c4030943fefbd183a",
+          "url": "https://github.com/dojoengine/dojo/commit/d441619c66238b307264c67d02b2fee95bb01056"
+        },
+        "date": 1710418363953,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1025204,
+            "range": "± 66550",
             "unit": "ns/iter"
           }
         ]
