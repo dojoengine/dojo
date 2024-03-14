@@ -42,11 +42,12 @@ where
             Err(_) => return Ok(()),
         };
 
-        // let values = event.data[values_start..values_end].to_vec();
         let mut keys_and_unpacked = [event.keys.clone(), event.data.clone()].concat();
 
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
+
+        println!("entity: {:?}", entity);
 
         db.set_entity(entity, event_id).await?;
         Ok(())
