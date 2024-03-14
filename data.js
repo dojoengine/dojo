@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710400565466,
+  "lastUpdate": 1710401051479,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2665,6 +2665,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1019335,
             "range": "± 67626",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "matthias.monnier@gmail.com",
+            "name": "Matthias",
+            "username": "Matth26"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "948233c2af14b8276383c58c690af22656322949",
+          "message": "refactor(sozo): make event parsing logic modular and reusable (#1556)\n\n* refacto: using cainome parser in order to parse events in sozo\r\n\r\n* refacto: clean logs + add tests\r\n\r\n* fix: clippy error\r\n\r\n* refacto: best error handling\r\n\r\n* update how felt are displayed + remove  unnecessary expect in tests\r\n\r\n* fix tests\r\n\r\n* fix: fmt and artifacts parsing for missing events\r\n\r\n* fix: adjust event count as now world and base are included\r\n\r\n* return error from parse_and_print_events function\r\n\r\n* fix: ensure world address is always present to filter events\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-14T01:14:37-06:00",
+          "tree_id": "4d8743239815139b299d647eb1a5e351ad5c16ed",
+          "url": "https://github.com/dojoengine/dojo/commit/948233c2af14b8276383c58c690af22656322949"
+        },
+        "date": 1710401050995,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 969303,
+            "range": "± 37735",
             "unit": "ns/iter"
           }
         ]
