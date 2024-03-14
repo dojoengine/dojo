@@ -5,12 +5,12 @@ use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeployedManifest;
 use dojo_world::metadata::Environment;
-use dojo_world::utils::TransactionWaiter;
 use scarb::core::Config;
 use starknet::accounts::Account;
 use starknet::core::types::{BlockId, BlockTag};
 
 use crate::commands::register::RegisterCommand;
+use crate::utils::handle_transaction_result;
 
 pub async fn execute(
     command: RegisterCommand,
@@ -72,12 +72,8 @@ pub async fn execute(
                 .await
                 .with_context(|| "Failed to send transaction")?;
 
-            if transaction.wait {
-                let receipt = TransactionWaiter::new(res.transaction_hash, &provider).await?;
-                println!("{}", serde_json::to_string_pretty(&receipt)?);
-            } else {
-                println!("Transaction hash: {:#x}", res.transaction_hash);
-            }
+            handle_transaction_result(&provider, res, transaction.wait, transaction.receipt)
+                .await?;
         }
     }
     Ok(())

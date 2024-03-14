@@ -274,6 +274,18 @@ where
 }
 
 #[inline]
+pub fn execution_status_from_maybe_pending_receipt(
+    receipt: &MaybePendingTransactionReceipt,
+) -> &ExecutionResult {
+    match &receipt {
+        MaybePendingTransactionReceipt::PendingReceipt(r) => {
+            execution_status_from_pending_receipt(r)
+        }
+        MaybePendingTransactionReceipt::Receipt(r) => execution_status_from_receipt(r),
+    }
+}
+
+#[inline]
 fn execution_status_from_receipt(receipt: &TransactionReceipt) -> &ExecutionResult {
     match receipt {
         TransactionReceipt::Invoke(receipt) => &receipt.execution_result,
