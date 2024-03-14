@@ -65,7 +65,7 @@ impl TestArgs {
                 main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
             }
 
-            if DiagnosticsReporter::stderr().check(&db) {
+            if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
                 bail!("failed to compile");
             }
 

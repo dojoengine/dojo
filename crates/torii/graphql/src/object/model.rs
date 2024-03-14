@@ -110,7 +110,7 @@ impl ModelObject {
             (Name::new("transactionHash"), Value::from(model.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(model.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Value::from(model.created_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
             ),
         ])
     }

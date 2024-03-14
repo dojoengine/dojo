@@ -144,11 +144,12 @@ where
     let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
     match migration::apply_diff(ws, account, None, &strategy).await {
-        Ok(address) => {
-            config
-                .ui()
-                .print(format!("🎉 World at address {} updated!", format_args!("{:#x}", address)));
-            world_address = Some(address);
+        Ok(migration_output) => {
+            config.ui().print(format!(
+                "🎉 World at address {} updated!",
+                format_args!("{:#x}", migration_output.world_address)
+            ));
+            world_address = Some(migration_output.world_address);
         }
         Err(err) => {
             config.ui().error(err.to_string());
