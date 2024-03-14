@@ -103,7 +103,7 @@ impl InlineMacroExprPlugin for EmitMacro {
 
             builder.add_str("\n            ");
             builder.add_node(world.as_syntax_node());
-            builder.add_str(".emit(keys.span(), data.span());");
+            builder.add_str(".emit(keys, data.span());");
 
             builder.add_str("}");
         }
