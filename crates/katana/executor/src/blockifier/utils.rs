@@ -549,7 +549,7 @@ fn function_invocation_from_call_info(info: &CallInfo) -> FunctionInvocation {
         entry_point_selector: info.call.entry_point_selector.0.into(),
         calldata: info.call.calldata.0.iter().map(|f| (*f).into()).collect(),
         caller_address: (*info.call.caller_address.0.key()).into(),
-        // See https://github.com/starkware-libs/blockifier/blob/main/crates/blockifier/src/execution/call_info.rs#L167
+        // See <https://github.com/starkware-libs/blockifier/blob/cb464f5ac2ada88f2844d9f7d62bd6732ceb5b2c/crates/blockifier/src/execution/call_info.rs#L220>
         class_hash: info.call.class_hash.expect("Class hash mut be set after execution").0.into(),
         entry_point_type,
         call_type,
