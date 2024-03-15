@@ -4,9 +4,11 @@
 use async_trait::async_trait;
 
 mod serializer;
+mod stone_image;
 mod vec252;
 
 pub use serializer::parse_proof;
+pub use stone_image::StoneProver;
 
 /// The prover used to generate the proof.
 #[derive(Debug)]
