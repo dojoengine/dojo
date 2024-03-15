@@ -151,3 +151,63 @@ impl From<starknet::providers::ProviderError> for error::Error {
         Self::KatanaClient(format!("Katana client RPC provider error: {e}"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{fs::File, io::Write};
+
+    use crate::{
+        prover::{parse_proof, ProverClient, StoneProver},
+        verifier::starknet_verify,
+    };
+
+    #[tokio::test]
+    async fn test_proof_flow_with_example_data() {
+        let prover = StoneProver("state-diff-commitment:latest".to_string());
+        prover.setup("neotheprogramist/state-diff-commitment").await.unwrap();
+
+        let input = r#"{
+            "genesis_state_hash": 12312321313,
+            "prev_state_hash": 34343434343,
+            "nonce_updates": {
+                "1": 12,
+                "2": 1337
+            },
+            "storage_updates": {
+                "1": {
+                    "123456789": 89,
+                    "987654321": 98
+                },
+                "2": {
+                    "123456789": 899,
+                    "987654321": 98
+                }
+            },
+            "contract_updates": {
+                "3": 437267489
+            },
+            "declared_classes": {
+                "1234": 12345,
+                "12345": 123456,
+                "123456": 1234567
+            }
+        }"#
+        .to_owned();
+
+        let proof = prover.prove(input).await.unwrap();
+
+        let parsed = parse_proof(proof).unwrap();
+
+        // Saving to file, because proof is too big for shell, will be passed directly in the final implementation
+        File::create("proof.txt")
+            .unwrap()
+            .write_all(
+                parsed.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ").as_bytes(),
+            )
+            .unwrap();
+
+        // Proof verification
+        let result = starknet_verify("proof.txt").await.unwrap();
+        println!("Result: {}", result);
+    }
+}
