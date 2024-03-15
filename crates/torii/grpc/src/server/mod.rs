@@ -73,7 +73,14 @@ impl DojoWorld {
             Arc::clone(&model_cache),
         ));
 
-        Self { pool, world_address, model_cache, entity_manager, event_message_manager, state_diff_manager }
+        Self {
+            pool,
+            world_address,
+            model_cache,
+            entity_manager,
+            event_message_manager,
+            state_diff_manager,
+        }
     }
 }
 
@@ -143,7 +150,6 @@ impl DojoWorld {
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
         row_events.iter().map(map_row_to_event).collect()
     }
-
 
     async fn query_by_hashed_keys(
         &self,
@@ -492,8 +498,14 @@ impl DojoWorld {
                             return Err(QueryError::MissingParam("ids".into()).into());
                         }
 
-                        self.query_by_hashed_keys("entities", "entity_model", Some(hashed_keys), query.limit, query.offset)
-                            .await?
+                        self.query_by_hashed_keys(
+                            "entities",
+                            "entity_model",
+                            Some(hashed_keys),
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                     ClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
@@ -504,13 +516,34 @@ impl DojoWorld {
                             return Err(QueryError::MissingParam("model".into()).into());
                         }
 
-                        self.query_by_keys("entities", "entity_model", keys, query.limit, query.offset).await?
+                        self.query_by_keys(
+                            "entities",
+                            "entity_model",
+                            keys,
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                     ClauseType::Member(member) => {
-                        self.query_by_member("entities", "entity_model", member, query.limit, query.offset).await?
+                        self.query_by_member(
+                            "entities",
+                            "entity_model",
+                            member,
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                     ClauseType::Composite(composite) => {
-                        self.query_by_composite("entities", "entity_model", composite, query.limit, query.offset).await?
+                        self.query_by_composite(
+                            "entities",
+                            "entity_model",
+                            composite,
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                 }
             }
@@ -542,8 +575,14 @@ impl DojoWorld {
                             return Err(QueryError::MissingParam("ids".into()).into());
                         }
 
-                        self.query_by_hashed_keys("event_messages", "event_model", Some(hashed_keys), query.limit, query.offset)
-                            .await?
+                        self.query_by_hashed_keys(
+                            "event_messages",
+                            "event_model",
+                            Some(hashed_keys),
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                     ClauseType::Keys(keys) => {
                         if keys.keys.is_empty() {
@@ -554,13 +593,34 @@ impl DojoWorld {
                             return Err(QueryError::MissingParam("model".into()).into());
                         }
 
-                        self.query_by_keys("event_messages", "event_model", keys, query.limit, query.offset).await?
+                        self.query_by_keys(
+                            "event_messages",
+                            "event_model",
+                            keys,
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                     ClauseType::Member(member) => {
-                        self.query_by_member("event_messages", "event_model", member, query.limit, query.offset).await?
+                        self.query_by_member(
+                            "event_messages",
+                            "event_model",
+                            member,
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                     ClauseType::Composite(composite) => {
-                        self.query_by_composite("event_messages", "event_model", composite, query.limit, query.offset).await?
+                        self.query_by_composite(
+                            "event_messages",
+                            "event_model",
+                            composite,
+                            query.limit,
+                            query.offset,
+                        )
+                        .await?
                     }
                 }
             }
@@ -709,8 +769,10 @@ impl proto::world::world_server::World for DojoWorld {
             .query
             .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
-        let entities =
-            self.retrieve_event_messages(query).await.map_err(|e| Status::internal(e.to_string()))?;
+        let entities = self
+            .retrieve_event_messages(query)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(entities))
     }

@@ -3,6 +3,7 @@ pub const BOOLEAN_TRUE: i64 = 1;
 
 pub const ENTITY_TABLE: &str = "entities";
 pub const EVENT_TABLE: &str = "events";
+pub const EVENT_MESSAGE_TABLE: &str = "event_messages";
 pub const MODEL_TABLE: &str = "models";
 pub const TRANSACTION_TABLE: &str = "transactions";
 pub const METADATA_TABLE: &str = "metadata";
@@ -17,6 +18,7 @@ pub const INTERNAL_ENTITY_ID_KEY: &str = "$entity_id$";
 
 // objects namespaced to avoid conflicts with user models
 pub const ENTITY_TYPE_NAME: &str = "World__Entity";
+pub const EVENT_MESSAGE_TYPE_NAME: &str = "World__EventMessage";
 pub const MODEL_TYPE_NAME: &str = "World__Model";
 pub const EVENT_TYPE_NAME: &str = "World__Event";
 pub const SOCIAL_TYPE_NAME: &str = "World__Social";
@@ -31,6 +33,7 @@ pub const MODEL_ORDER_FIELD_TYPE_NAME: &str = "World__ModelOrderField";
 
 // objects' single and plural names
 pub const ENTITY_NAMES: (&str, &str) = ("entity", "entities");
+pub const EVENT_MESSAGE_NAMES: (&str, &str) = ("eventMessage", "eventMessages");
 pub const MODEL_NAMES: (&str, &str) = ("model", "models");
 pub const EVENT_NAMES: (&str, &str) = ("event", "events");
 pub const SOCIAL_NAMES: (&str, &str) = ("social", "socials");
