@@ -29,7 +29,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
     fn entity(
         world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>
     ) -> ResourceMetadata {
-        let values = world.entity(selector!("ResourceMetadata"), keys, layout);
+        let values = world.entity(RESOURCE_METADATA_MODEL, keys, layout);
         let mut serialized = core::array::ArrayTrait::new();
         core::array::serialize_array_helper(keys, ref serialized);
         core::array::serialize_array_helper(values, ref serialized);
@@ -57,7 +57,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn selector(self: @ResourceMetadata) -> felt252 {
-        selector!("ResourceMetadata")
+        RESOURCE_METADATA_MODEL
     }
 
     #[inline(always)]
@@ -136,13 +136,14 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
 #[starknet::contract]
 mod resource_metadata {
     use super::ResourceMetadata;
+    use super::RESOURCE_METADATA_MODEL;
 
     #[storage]
     struct Storage {}
 
     #[external(v0)]
     fn selector(self: @ContractState) -> felt252 {
-        selector!("ResourceMetadata")
+        RESOURCE_METADATA_MODEL
     }
 
     fn name(self: @ContractState) -> ByteArray {
