@@ -115,8 +115,6 @@ impl InlineMacroExprPlugin for EmitMacro {
 
         builder.add_str("}");
 
-        println!("builder: {:?}", builder.code);
-
         InlinePluginResult {
             code: Some(PluginGeneratedFile {
                 name: "emit_inline_macro".into(),

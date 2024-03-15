@@ -96,6 +96,7 @@ impl Sql {
              layout=EXCLUDED.layout, packed_size=EXCLUDED.packed_size, \
              unpacked_size=EXCLUDED.unpacked_size RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
+            // this is temporary until the model hash is precomputed
             .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
@@ -550,6 +551,7 @@ impl Sql {
                                  ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
                     Argument::String(table_id.clone()),
+                    // TEMP: this is temporary until the model hash is precomputed
                     Argument::String(format!(
                         "{:#x}",
                         get_selector_from_name(&path[0].clone()).unwrap()

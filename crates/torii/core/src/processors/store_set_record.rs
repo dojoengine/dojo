@@ -47,6 +47,7 @@ where
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
         info!("store set record: {}", name);
 
+        // this is temporary until the model name hash is precomputed
         let model = db.model(&format!("{:#x}", get_selector_from_name(&name)?)).await?;
 
         let keys_start = NUM_KEYS_INDEX + 1;

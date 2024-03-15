@@ -73,6 +73,7 @@ impl ModelReader<Error> for ModelSQLReader {
     }
 
     async fn schema(&self) -> Result<Ty, Error> {
+        // this is temporary until the hash for the model name is precomputed
         let model_selector =
             get_selector_from_name(&self.name).map_err(error::ParseError::NonAsciiName)?;
 
