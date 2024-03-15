@@ -48,6 +48,7 @@ pub struct MigrationOutput {
     pub world_address: FieldElement,
     pub world_tx_hash: Option<FieldElement>,
     pub world_block_number: Option<u64>,
+    pub success: bool,
 }
 
 pub async fn execute(
@@ -109,7 +110,12 @@ pub async fn execute(
                 local_manifest,
                 remote_manifest,
                 &manifest_dir,
-                MigrationOutput { world_address, world_tx_hash: None, world_block_number: None },
+                MigrationOutput {
+                    world_address,
+                    world_tx_hash: None,
+                    world_block_number: None,
+                    success: false,
+                },
                 &chain_id,
             )
             .await?;
@@ -230,18 +236,28 @@ where
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
 
-    if let Some(block_number) = migration_output.world_block_number {
-        ui.print(format!(
-            "\n🎉 Successfully migrated World on block #{} at address {}",
-            block_number,
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
-        ));
+    if migration_output.success {
+        if let Some(block_number) = migration_output.world_block_number {
+            ui.print(format!(
+                "\n🎉 Successfully migrated World on block #{} at address {}",
+                block_number,
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        } else {
+            ui.print(format!(
+                "\n🎉 Successfully migrated World at address {}",
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        }
     } else {
         ui.print(format!(
-            "\n🎉 Successfully migrated World at address {}",
+            "\n🚨 Partially migrated World at address {}",
             bold_message(format!(
                 "{:#x}",
                 strategy.world_address().expect("world address must exist")
@@ -480,17 +496,34 @@ where
         None => {}
     };
 
-    // Once Torii supports indexing arrays, we should declare and register the
-    // ResourceMetadata model.
-
-    register_models(strategy, migrator, &ui, txn_config.clone()).await?;
-    deploy_contracts(strategy, migrator, &ui, txn_config).await?;
-
-    Ok(MigrationOutput {
+    let mut migration_output = MigrationOutput {
         world_address: strategy.world_address()?,
         world_tx_hash,
         world_block_number,
-    })
+        success: false,
+    };
+
+    // Once Torii supports indexing arrays, we should declare and register the
+    // ResourceMetadata model.
+
+    match register_models(strategy, migrator, &ui, txn_config.clone()).await {
+        Ok(_) => (),
+        Err(e) => {
+            ui.anyhow(&e);
+            return Ok(migration_output);
+        }
+    }
+    match deploy_contracts(strategy, migrator, &ui, txn_config).await {
+        Ok(_) => (),
+        Err(e) => {
+            ui.anyhow(&e);
+            return Ok(migration_output);
+        }
+    };
+
+    migration_output.success = true;
+
+    Ok(migration_output)
 }
 
 enum ContractDeploymentOutput {
