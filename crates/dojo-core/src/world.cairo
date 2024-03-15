@@ -12,7 +12,7 @@ trait IWorld<T> {
     fn deploy_contract(ref self: T, salt: felt252, class_hash: ClassHash) -> ContractAddress;
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
-    fn emit(ref self: T, keys: Array<felt252>, values: Span<felt252>);
+    fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
     fn entity(
         self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
     ) -> Span<felt252>;
@@ -101,14 +101,6 @@ mod world {
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
-        EventMessage: EventMessage,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct EventMessage {
-        model: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -457,7 +449,7 @@ mod world {
         ///
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
-        fn emit(ref self: ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
+        fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
             let system = get_caller_address();
             system.serialize(ref keys);
             emit_event_syscall(keys.span(), values).unwrap_syscall();
