@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710423028214,
+  "lastUpdate": 1710469258105,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2785,6 +2785,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1030236,
             "range": "± 61507",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "953e5e5801990ed6857a08e02e625d09930cc106",
+          "message": "feat(relay): persist and expose messages through grpc (#1526)\n\n* feat(libp2p): start working on persistence & grpc\r\n\r\n* feat: add relay proto and db migration\r\n\r\n* feat(libp2p): relaystorage for message persistence\r\n\r\n* feat(libp2p): relay subscription service\r\n\r\n* refactor: start implementing models/ty for libp2p\r\n\r\n* refactor(torii-core): generic set ty query\r\n\r\n* feat: use models for libp2p messages\r\n\r\n* feat: rpcs for subscring and retrieving messages\r\n\r\n* refactor(torii-core): arc rwlock for sql database & work on messages for models\r\n\r\n* refactor: tests & write message to db\r\n\r\n* refactor(grpc): grpc service & subscription\r\n\r\n* refactor: use entitiy type and models for messages\r\n\r\n* chore: fmt & clippy\r\n\r\n* refactor: unused async\r\n\r\n* chore: world descriptor\r\n\r\n* refactor: unused deps & fmt\r\n\r\n* chore: remove post types\r\n\r\n* chore: unused libp2p deps\r\n\r\n* chore: non wasm deps\r\n\r\n* chore\r\n\r\n* chore: fmt\r\n\r\n* fix: test\r\n\r\n* refactor: check if entity already exists for libp2p messages\r\n\r\n* chore: fmt & clippy\r\n\r\n* feat(libp2p): start working on identity and signatures for messages\r\n\r\n* refactor(libp2p): use array for signature type and check its ocmponents\r\n\r\n* refactor: decouple logic\r\n\r\n* refactor(libpo2p): extract identity & signature from validate message\r\n\r\n* feat(libp2p): eip 712 typed data\r\n\r\n* feat(libp2p): start workling on typed data structure snip-12\r\n\r\n* refactor: change name\r\n\r\n* feat: handle type encoding\r\n\r\n* feat: typed data message encoding\r\n\r\n* refactor: rework in progress for using snip-12\r\n\r\n* feat(libp2p): testing typed data with mocks & tests\r\n\r\n* fix: typed data passing test for enums\r\n\r\n* feat: test for presets and refactor type primitives\r\n\r\n* refactor: string parsing for felts\r\n\r\n* fix: dont include type hash on children objects\r\n\r\n* fix: json ordering issue with serde_json\r\n\r\n* fix: typed data for shortstring\r\n\r\n* fix: message encoding - passes all tests\r\n\r\n* feat: start supporting enums\r\n\r\n* feat: handle enum variant types\r\n\r\n* chore: rebase and fix db rwlock\r\n\r\n* refactor: encode all object types & start fixing enums\r\n\r\n* fix: enum test\r\n\r\n* fix: preset types. full compatibility with starknet js\r\n\r\n* refactor: more optimized approach for preset types\r\n\r\n* feat(libp2p): valid message signature & identity\r\n\r\n* refactor: wip identity and verifying message\r\n\r\n* refactor: get entity model identity & check\r\n\r\n* wip: start working on encoding typed data to Ty\r\n\r\n* refactor: implement ty types for encode typed data\r\n\r\n* refactor: parse object to ty function\r\n\r\n* refactor: set entity from relay w verification\r\n\r\n* feat: sign last signature and check signed last sig against last sig in db\r\n\r\n* chore: fmt\r\n\r\n* fix: torii grpc\r\n\r\n* refactor: sqlx onlyu server side\r\n\r\n* chore: clippy\r\n\r\n* chore: use char\r\n\r\n* refactor: sql reference\r\n\r\n* chore: fmt & clippy\r\n\r\n* refactor: typed data payload\r\n\r\n* fix: clippy",
+          "timestamp": "2024-03-14T22:10:48-04:00",
+          "tree_id": "f561c3850730f4c295ff06f61af079e2829c773e",
+          "url": "https://github.com/dojoengine/dojo/commit/953e5e5801990ed6857a08e02e625d09930cc106"
+        },
+        "date": 1710469257071,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 978689,
+            "range": "± 36989",
             "unit": "ns/iter"
           }
         ]
