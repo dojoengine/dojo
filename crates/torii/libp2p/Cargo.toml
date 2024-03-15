@@ -11,26 +11,36 @@ version.workspace = true
 futures.workspace = true
 rand = "0.8.5"
 serde.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tracing.workspace = true
-async-trait = "0.1.77"
-regex = "1.10.3"
+# preserve order
 anyhow.workspace = true
+async-trait = "0.1.77"
+crypto-bigint.workspace = true
+dojo-types.workspace = true
+regex = "1.10.3"
+serde_json = { version = "1.0.114", features = [ "preserve_order" ] }
+starknet-core = "0.9.0"
+starknet-crypto.workspace = true
+starknet-ff = "0.3.6"
+thiserror.workspace = true
+tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
+tracing.workspace = true
+indexmap = "2.2.5"
 
 [dev-dependencies]
+dojo-world = { path = "../../dojo-world", features = [ "metadata" ] }
 tempfile = "3.9.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio.workspace = true
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }
-libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "tokio", "pem" ] }
+libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ] }
+tokio.workspace = true
+torii-core.workspace = true
+sqlx.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "ping", "tcp", "wasm-bindgen" ] }
 libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p" }
 tracing-wasm = "0.2.1"
-wasm-bindgen-test = "0.3.40"
 wasm-bindgen-futures = "0.4.40"
+wasm-bindgen-test = "0.3.40"
 wasm-timer = "0.2.5"

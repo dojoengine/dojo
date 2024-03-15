@@ -145,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
-    let mut db = Sql::new(pool.clone(), args.world_address).await?;
+    let db = Sql::new(pool.clone(), args.world_address).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
@@ -161,7 +161,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut engine = Engine::new(
         world,
-        &mut db,
+        db.clone(),
         &provider,
         processors,
         EngineConfig { start_block: args.start_block, ..Default::default() },
@@ -179,6 +179,15 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
+    let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        db,
+        args.relay_port,
+        args.relay_webrtc_port,
+        args.relay_local_key_path,
+        args.relay_cert_path,
+    )
+    .expect("Failed to start libp2p relay server");
+
     let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
 
     let graphql_server = spawn_rebuilding_graphql_server(
@@ -187,14 +196,6 @@ async fn main() -> anyhow::Result<()> {
         args.external_url,
         proxy_server.clone(),
     );
-
-    let mut libp2p_relay_server = torii_relay::server::Relay::new(
-        args.relay_port,
-        args.relay_webrtc_port,
-        args.relay_local_key_path,
-        args.relay_cert_path,
-    )
-    .expect("Failed to start libp2p relay server");
 
     let endpoint = format!("http://{}", args.addr);
     let gql_endpoint = format!("{}/graphql", endpoint);

@@ -264,7 +264,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let target_path = format!("{}/target/dev", base_path);
     let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
-    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+    let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -316,7 +316,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
-        &mut db,
+        db,
         &provider,
         Processors {
             event: vec![

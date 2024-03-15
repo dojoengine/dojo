@@ -570,7 +570,7 @@ dependencies = [
  "futures-util",
  "handlebars",
  "http",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "mime",
  "multer",
  "num-traits 0.2.17",
@@ -621,7 +621,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "323a5143f5bdd2030f45e3f2e0c821c9b1d36e79cf382129c64299c50a7f3750"
 dependencies = [
  "bytes",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "serde",
  "serde_json",
 ]
@@ -1125,7 +1125,7 @@ dependencies = [
  "cairo-vm",
  "ctor",
  "derive_more",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "itertools 0.10.5",
  "keccak",
  "log",
@@ -2012,7 +2012,7 @@ checksum = "12d0939f42d40fb1d975cae073d7d4f82d83de4ba2149293115525245425f909"
 dependencies = [
  "env_logger",
  "hashbrown 0.14.3",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "itertools 0.11.0",
  "log",
  "num-bigint",
@@ -5329,7 +5329,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "http",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "slab",
  "tokio",
  "tokio-util",
@@ -5929,9 +5929,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.2.2"
+version = "2.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "824b2ae422412366ba479e8111fd301f7b5faece8149317bb81925979a53f520"
+checksum = "7b0b929d511467233429c45a44ac1dcaa21ba0f5ba11e4879e6ed28ddb4f9df4"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.3",
@@ -8764,7 +8764,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1d3afd2628e69da2be385eb6f2fd57c8ac7977ceeff6dc166ff1657b0e386a9"
 dependencies = [
  "fixedbitset",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
 ]
 
 [[package]]
@@ -9727,7 +9727,7 @@ dependencies = [
  "bitflags 2.4.2",
  "byteorder",
  "derive_more",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "libc",
  "parking_lot 0.12.1",
  "reth-mdbx-sys",
@@ -10606,10 +10606,11 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.113"
+version = "1.0.114"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69801b70b1c3dac963ecb03a364ba0ceda9cf60c71cfe475e99864759c8b8a79"
+checksum = "c5f09b1bd632ef549eaa9f60a1f8de742bdbc698e6cee2095fc84dde5f549ae0"
 dependencies = [
+ "indexmap 2.2.5",
  "itoa",
  "ryu",
  "serde",
@@ -11143,7 +11144,7 @@ dependencies = [
  "futures-util",
  "hashlink",
  "hex",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "log",
  "memchr",
  "once_cell",
@@ -11615,7 +11616,7 @@ dependencies = [
  "cairo-lang-starknet",
  "derive_more",
  "hex",
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "once_cell",
  "primitive-types",
  "serde",
@@ -12186,7 +12187,7 @@ version = "0.19.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
 dependencies = [
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "serde",
  "serde_spanned",
  "toml_datetime",
@@ -12199,7 +12200,7 @@ version = "0.20.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70f427fce4d84c72b5b732388bf4a9f4531b53f74e2887e3ecb2481f68f66d81"
 dependencies = [
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "toml_datetime",
  "winnow",
 ]
@@ -12210,7 +12211,7 @@ version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a8534fd7f78b5405e860340ad6575217ce99f38d4d5c8f2442cb5ecb50090e1"
 dependencies = [
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "toml_datetime",
  "winnow",
 ]
@@ -12221,7 +12222,7 @@ version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c9ffdf896f8daaabf9b66ba8e77ea1ed5ed0f72821b398aba62352e95062951"
 dependencies = [
- "indexmap 2.2.2",
+ "indexmap 2.2.5",
  "serde",
  "serde_spanned",
  "toml_datetime",
@@ -12554,7 +12555,11 @@ version = "0.6.0-alpha.6"
 dependencies = [
  "anyhow",
  "async-trait",
+ "crypto-bigint",
+ "dojo-types",
+ "dojo-world",
  "futures",
+ "indexmap 2.2.5",
  "libp2p",
  "libp2p-webrtc",
  "libp2p-webrtc-websys",
@@ -12562,9 +12567,14 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "sqlx",
+ "starknet-core 0.9.0",
+ "starknet-crypto 0.6.1",
+ "starknet-ff",
  "tempfile",
  "thiserror",
  "tokio",
+ "torii-core",
  "tracing",
  "tracing-subscriber",
  "tracing-wasm",
