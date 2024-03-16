@@ -109,14 +109,15 @@ fn remove_hex_leading_zeros(value: Value) -> Value {
     }
 }
 
-fn add_timezone_to_naive_dt(wrapped_dt: &Value, initial_format: &str) -> Option<Value> {
-    if let Value::String(naive_dt) = wrapped_dt {
-        if let Ok(dt) = NaiveDateTime::parse_from_str(naive_dt, initial_format) {
+fn add_timezone_to_naive_dt(naive_dt: String, initial_format: &str) -> Option<Value> {
+    match NaiveDateTime::parse_from_str(&naive_dt, initial_format) {
+        Ok(dt) => {
             let dt_with_timezone = Utc.from_utc_datetime(&dt);
-            return Some(Value::String(dt_with_timezone.format(DATETIME_FORMAT).to_string()));
+            let wrapped_dt = Value::String(dt_with_timezone.format(DATETIME_FORMAT).to_string());
+            Some(wrapped_dt)
         }
+        Err(_) => None,
     }
-    None
 }
 
 pub fn value_mapping_from_row(
@@ -174,12 +175,15 @@ fn fetch_value(
                 row.try_get::<String, &str>(&column_name).map(Value::from)?,
             )),
         },
-        // fetch everything else as non-formated string
+        // fetch everything else
         _ => {
             let mut value = row.try_get::<String, &str>(&column_name).map(Value::from)?;
             // add timezone to naive datetime strings
             if type_name == "DateTime" {
-                value = add_timezone_to_naive_dt(&value, "%Y-%m-%d %H:%M:%S").unwrap_or(value);
+                match add_timezone_to_naive_dt(value.to_string(), "\"%Y-%m-%d %H:%M:%S\"") {
+                    Some(dt) => value = dt,
+                    None => {}
+                };
             }
             Ok(value)
         }
