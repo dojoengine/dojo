@@ -67,6 +67,7 @@ where
             "Registered model content"
         );
 
+        // TODO(Adel): use the block timestamp here for created_at
         db.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size)
             .await?;
 

@@ -64,6 +64,7 @@ where
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
 
+        // TODO(Adel): Use the block timestamp for the event.
         db.set_entity(entity, event_id).await?;
         Ok(())
     }

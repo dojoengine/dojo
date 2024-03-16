@@ -160,6 +160,7 @@ impl Sql {
         Ok(())
     }
 
+    // TODO(Adel): do we want to pass the block timestamp here? Not sure
     pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str) {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
@@ -284,6 +285,7 @@ impl Sql {
         );
     }
 
+    // TODO(Adel): Add the block timestamp for storing as created_at
     pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {
         let id = Argument::String(event_id.to_string());
         let keys = Argument::String(felts_sql_string(&event.keys));

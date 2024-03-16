@@ -282,6 +282,7 @@ impl<P: Provider + Sync> Engine<P> {
             }
             _ => return Ok(()),
         };
+        // TODO(Adel): send the block timestamp to store it
         self.db.store_event(event_id, event, transaction_hash);
         for processor in &self.processors.event {
             if get_selector_from_name(&processor.event_key())? == event.keys[0]

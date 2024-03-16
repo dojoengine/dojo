@@ -344,6 +344,7 @@ mod tests {
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
+            // TODO(Adel): send the block timestamp for storing as created_at
             db.store_event(
                 "0x0",
                 &Event {

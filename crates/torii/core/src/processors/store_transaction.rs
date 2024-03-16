@@ -20,6 +20,7 @@ impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
         transaction: &Transaction,
         transaction_id: &str,
     ) -> Result<(), Error> {
+        // TODO(Adel): Store the transaction in the database using _block
         db.store_transaction(transaction, transaction_id);
 
         Ok(())

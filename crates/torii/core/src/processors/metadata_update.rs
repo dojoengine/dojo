@@ -48,6 +48,7 @@ where
         &self,
         _world: &WorldContractReader<P>,
         db: &mut Sql,
+        // TODO(Adel): Use the block timestamp for 
         _block: &BlockWithTxs,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,

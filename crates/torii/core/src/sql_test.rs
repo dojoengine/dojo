@@ -102,6 +102,7 @@ async fn test_load_from_remote() {
     assert_eq!(unpacked_size, 2);
 
     let event_id = format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 42, 69);
+    // TODO(Adel): send the block timestamp for storing as created_at
     db.store_event(
         &event_id,
         &Event {
