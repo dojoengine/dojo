@@ -184,6 +184,7 @@ impl<P: Provider + Sync> Engine<P> {
         Ok(())
     }
 
+    // TODO(Adel): main loop here
     async fn process_transaction_and_receipt(
         &mut self,
         transaction_hash: FieldElement,

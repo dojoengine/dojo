@@ -88,6 +88,7 @@ impl Sql {
             .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
             .collect::<Vec<u8>>();
 
+        // TODO(Adel): need to add block timestamp here?
         let insert_models =
             "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
              unpacked_size) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
@@ -125,6 +126,7 @@ impl Sql {
             return Err(anyhow!("Entity is not a struct"));
         };
 
+        // TODO(Adel): need to add block timestamp here?
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
@@ -239,6 +241,7 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
+    // TODO(Adel): need to add block timestamp here?
     pub fn store_transaction(&mut self, transaction: &Transaction, transaction_id: &str) {
         let id = Argument::String(transaction_id.to_string());
 
