@@ -131,16 +131,6 @@ pub fn value_mapping_from_row(
             let mut value =
                 fetch_value(row, field_name, &type_data.type_ref().to_string(), is_external)?;
 
-            // add timezone information to naive datetime strings
-            if let TypeRef::Named(type_name) = &type_data.type_ref() {
-                if type_name == "DateTime" {
-                    let dt_with_timezone = add_timezone_to_naive_dt(&value, "%Y-%m-%d %H:%M:%S");
-                    if let Some(dt) = dt_with_timezone {
-                        value = dt;
-                    }
-                }
-            }
-
             // handles felt arrays stored as string (ex: keys)
             if let (TypeRef::List(_), Value::String(s)) = (&type_data.type_ref(), &value) {
                 let mut felts: Vec<_> = s.split(FELT_DELIMITER).map(Value::from).collect();
@@ -185,6 +175,13 @@ fn fetch_value(
             )),
         },
         // fetch everything else as non-formated string
-        _ => Ok(row.try_get::<String, &str>(&column_name).map(Value::from)?),
+        _ => {
+            let mut value = row.try_get::<String, &str>(&column_name).map(Value::from)?;
+            // add timezone to naive datetime strings
+            if type_name == "DateTime" {
+                value = add_timezone_to_naive_dt(&value, "%Y-%m-%d %H:%M:%S").unwrap_or(value);
+            }
+            Ok(value)
+        }
     }
 }
