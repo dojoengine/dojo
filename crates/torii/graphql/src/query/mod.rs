@@ -180,10 +180,10 @@ fn fetch_value(
             let mut value = row.try_get::<String, &str>(&column_name).map(Value::from)?;
             // add timezone to naive datetime strings
             if type_name == "DateTime" {
-                match add_timezone_to_naive_dt(value.to_string(), "\"%Y-%m-%d %H:%M:%S\"") {
-                    Some(dt) => value = dt,
-                    None => {}
-                };
+                let dt_format = "\"%Y-%m-%d %H:%M:%S\"";
+                if let Some(dt) = add_timezone_to_naive_dt(value.to_string(), dt_format) {
+                    value = dt
+                }
             }
             Ok(value)
         }
