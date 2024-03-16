@@ -44,11 +44,14 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::transaction::TransactionOptions;
 use crate::commands::options::world::WorldOptions;
 
+#[derive(Debug, Default, Clone)]
 pub struct MigrationOutput {
     pub world_address: FieldElement,
     pub world_tx_hash: Option<FieldElement>,
     pub world_block_number: Option<u64>,
-    pub success: bool,
+    // Represents if full migration got completeled.
+    // If false that means migration got partially completed.
+    pub full: bool,
 }
 
 pub async fn execute(
@@ -110,12 +113,7 @@ pub async fn execute(
                 local_manifest,
                 remote_manifest,
                 &manifest_dir,
-                MigrationOutput {
-                    world_address,
-                    world_tx_hash: None,
-                    world_block_number: None,
-                    success: false,
-                },
+                MigrationOutput { world_address, ..Default::default() },
                 &chain_id,
             )
             .await?;
@@ -236,7 +234,7 @@ where
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
 
-    if migration_output.success {
+    if migration_output.full {
         if let Some(block_number) = migration_output.world_block_number {
             ui.print(format!(
                 "\n🎉 Successfully migrated World on block #{} at address {}",
@@ -500,7 +498,7 @@ where
         world_address: strategy.world_address()?,
         world_tx_hash,
         world_block_number,
-        success: false,
+        full: false,
     };
 
     // Once Torii supports indexing arrays, we should declare and register the
@@ -521,7 +519,7 @@ where
         }
     };
 
-    migration_output.success = true;
+    migration_output.full = true;
 
     Ok(migration_output)
 }
