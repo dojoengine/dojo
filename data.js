@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710469258105,
+  "lastUpdate": 1710713212986,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2815,6 +2815,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 978689,
             "range": "± 36989",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "akherchache@pm.me",
+            "name": "akhercha",
+            "username": "akhercha"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4f0d71b8d2fae591fa4e9f65972fe4dac2a760f",
+          "message": "fix(torii): Added timezone informations to naive datetime strings (#1668)\n\n* fix(torii): Added timezone informations to naive datetimes\r\n\r\n* fix(torii_naive_datetimes): Quick parameters renaming\r\n\r\n* fix(torii_naive_datetimes): Used rust fmt script\r\n\r\n* fix(torii_naive_datetimes): Naive datetime refacto\r\n\r\n* fix(torii_naive_datetimes): Quick refacotring\r\n\r\n* fix(torii_naive_datetimes): Fixed cargo clippy error\r\n\r\n* fix(torii_naive_datetimes): Updated datetime retrieval",
+          "timestamp": "2024-03-17T17:57:27-04:00",
+          "tree_id": "a5d7ad8534d6f70403f6b98dc905fa891fd77027",
+          "url": "https://github.com/dojoengine/dojo/commit/b4f0d71b8d2fae591fa4e9f65972fe4dac2a760f"
+        },
+        "date": 1710713212502,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1019658,
+            "range": "± 69408",
             "unit": "ns/iter"
           }
         ]
