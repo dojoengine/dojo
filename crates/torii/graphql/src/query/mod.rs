@@ -2,14 +2,14 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
-use chrono::{NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Row, SqliteConnection};
 use torii_core::sql::FELT_DELIMITER;
 
-use crate::constants::{BOOLEAN_TRUE, DATETIME_FORMAT, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
+use crate::constants::{BOOLEAN_TRUE, ENTITY_ID_COLUMN, INTERNAL_ENTITY_ID_KEY};
 use crate::object::model_data::ModelMember;
 use crate::types::{TypeData, TypeMapping, ValueMapping};
 
@@ -109,17 +109,6 @@ fn remove_hex_leading_zeros(value: Value) -> Value {
     }
 }
 
-fn add_timezone_to_naive_dt(naive_dt: String, initial_format: &str) -> Option<Value> {
-    match NaiveDateTime::parse_from_str(&naive_dt, initial_format) {
-        Ok(dt) => {
-            let dt_with_timezone = Utc.from_utc_datetime(&dt);
-            let wrapped_dt = Value::String(dt_with_timezone.format(DATETIME_FORMAT).to_string());
-            Some(wrapped_dt)
-        }
-        Err(_) => None,
-    }
-}
-
 pub fn value_mapping_from_row(
     row: &SqliteRow,
     types: &TypeMapping,
@@ -177,14 +166,19 @@ fn fetch_value(
         },
         // fetch everything else
         _ => {
-            let mut value = row.try_get::<String, &str>(&column_name).map(Value::from)?;
-            // add timezone to naive datetime strings
-            if type_name == "DateTime" {
-                let dt_format = "\"%Y-%m-%d %H:%M:%S\"";
-                if let Some(dt) = add_timezone_to_naive_dt(value.to_string(), dt_format) {
-                    value = dt
+            let value = match type_name {
+                "DateTime" => {
+                    let dt = row
+                        .try_get::<DateTime<Utc>, &str>(&column_name)
+                        .expect("Should be a stored as UTC Datetime")
+                        .to_rfc3339();
+                    Value::from(dt)
                 }
-            }
+                _ => {
+                    let s = row.try_get::<String, &str>(&column_name)?;
+                    Value::from(s)
+                }
+            };
             Ok(value)
         }
     }
