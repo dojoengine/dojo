@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
+use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
 use sqlx::sqlite::SqliteRow;
@@ -163,7 +164,22 @@ fn fetch_value(
                 row.try_get::<String, &str>(&column_name).map(Value::from)?,
             )),
         },
-        // fetch everything else as non-formated string
-        _ => Ok(row.try_get::<String, &str>(&column_name).map(Value::from)?),
+        // fetch everything else
+        _ => {
+            let value = match type_name {
+                "DateTime" => {
+                    let dt = row
+                        .try_get::<DateTime<Utc>, &str>(&column_name)
+                        .expect("Should be a stored as UTC Datetime")
+                        .to_rfc3339();
+                    Value::from(dt)
+                }
+                _ => {
+                    let s = row.try_get::<String, &str>(&column_name)?;
+                    Value::from(s)
+                }
+            };
+            Ok(value)
+        }
     }
 }

@@ -1,3 +1,5 @@
+pub const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
+
 pub const DEFAULT_LIMIT: u64 = 10;
 pub const BOOLEAN_TRUE: i64 = 1;
 
