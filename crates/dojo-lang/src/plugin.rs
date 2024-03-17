@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use anyhow::Result;
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
@@ -35,7 +37,7 @@ use crate::print::{handle_print_enum, handle_print_struct};
 
 const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
 const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
-const DOJO_MODEL_ATTR: &str = "dojo::model";
+pub const DOJO_MODEL_ATTR: &str = "dojo::model";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
@@ -393,11 +395,24 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     }
                 }
 
-                for _ in struct_ast.attributes(db).query_attr(db, "dojo::model") {
-                    let (model_rewrite_nodes, model_diagnostics) =
-                        handle_model_struct(db, &mut aux_data, struct_ast.clone());
-                    rewrite_nodes.push(model_rewrite_nodes);
-                    diagnostics.extend(model_diagnostics);
+                let attributes = struct_ast.attributes(db).query_attr(db, DOJO_MODEL_ATTR);
+
+                match attributes.len().cmp(&1) {
+                    Ordering::Equal => {
+                        let (model_rewrite_nodes, model_diagnostics) =
+                            handle_model_struct(db, &mut aux_data, struct_ast.clone());
+                        rewrite_nodes.push(model_rewrite_nodes);
+                        diagnostics.extend(model_diagnostics);
+                    }
+                    Ordering::Greater => {
+                        diagnostics.push(PluginDiagnostic {
+                            message: "A Dojo model must have zero or one dojo::model attribute."
+                                .into(),
+                            stable_ptr: struct_ast.stable_ptr().untyped(),
+                            severity: Severity::Error,
+                        });
+                    }
+                    _ => {}
                 }
 
                 if rewrite_nodes.is_empty() {
