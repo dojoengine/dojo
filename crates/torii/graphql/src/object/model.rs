@@ -9,8 +9,8 @@ use torii_core::types::Model;
 
 use super::{resolve_many, BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    ID_COLUMN, MODEL_NAMES, MODEL_ORDER_FIELD_TYPE_NAME, MODEL_ORDER_TYPE_NAME, MODEL_TABLE,
-    MODEL_TYPE_NAME, ORDER_ASC, ORDER_DESC, ORDER_DIR_TYPE_NAME,
+    DATETIME_FORMAT, ID_COLUMN, MODEL_NAMES, MODEL_ORDER_FIELD_TYPE_NAME, MODEL_ORDER_TYPE_NAME,
+    MODEL_TABLE, MODEL_TYPE_NAME, ORDER_ASC, ORDER_DESC, ORDER_DIR_TYPE_NAME,
 };
 use crate::mapping::MODEL_TYPE_MAPPING;
 use crate::object::resolve_one;
@@ -110,7 +110,7 @@ impl ModelObject {
             (Name::new("transactionHash"), Value::from(model.transaction_hash)),
             (
                 Name::new("createdAt"),
-                Value::from(model.created_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+                Value::from(model.created_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }

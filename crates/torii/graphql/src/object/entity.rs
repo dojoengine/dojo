@@ -12,7 +12,9 @@ use torii_core::types::Entity;
 
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
-use crate::constants::{ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN};
+use crate::constants::{
+    DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
+};
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
@@ -94,11 +96,11 @@ impl EntityObject {
             (Name::new("eventId"), Value::from(entity.event_id)),
             (
                 Name::new("createdAt"),
-                Value::from(entity.created_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+                Value::from(entity.created_at.format(DATETIME_FORMAT).to_string()),
             ),
             (
                 Name::new("updatedAt"),
-                Value::from(entity.updated_at.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+                Value::from(entity.updated_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }
