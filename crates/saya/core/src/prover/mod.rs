@@ -4,6 +4,7 @@
 use async_trait::async_trait;
 
 mod serializer;
+pub mod state_diff;
 mod stone_image;
 mod vec252;
 
