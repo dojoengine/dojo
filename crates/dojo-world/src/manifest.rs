@@ -182,10 +182,7 @@ impl From<Manifest<Class>> for Manifest<Contract> {
             Contract {
                 class_hash: value.inner.class_hash,
                 abi: value.inner.abi,
-                address: None,
-                transaction_hash: None,
-                block_number: None,
-                seed: None,
+                ..Default::default()
             },
             value.name,
         )
@@ -349,10 +346,7 @@ impl DeploymentManifest {
                 Contract {
                     address: Some(world_address),
                     class_hash: world_class_hash,
-                    abi: None,
-                    transaction_hash: None,
-                    block_number: None,
-                    seed: None,
+                    ..Default::default()
                 },
                 WORLD_CONTRACT_NAME.into(),
             ),
