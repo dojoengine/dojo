@@ -144,7 +144,7 @@ impl Sql {
         );
 
         let keys_str = felts_sql_string(&keys);
-        // TODO(Adel): Don't use CURRENT_TIMESTAMP
+        // TODO(Adel): Don't use CURRENT_TIMESTAMP here
         let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
                                CONFLICT(id) DO UPDATE SET executed_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
