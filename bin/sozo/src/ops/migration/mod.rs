@@ -454,39 +454,49 @@ where
 
             ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
-            let metadata = dojo_metadata_from_workspace(ws);
-            if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
-                match meta.upload().await {
-                    Ok(hash) => {
-                        let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+            let offline = ws.config().offline();
 
-                        // Metadata is expecting an array of capacity 3.
-                        if encoded_uri.len() < 3 {
-                            encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
+            if offline {
+                ui.print_sub("Skipping metadata upload because of offline mode");
+            } else {
+                let metadata = dojo_metadata_from_workspace(ws);
+                if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
+                    match meta.upload().await {
+                        Ok(hash) => {
+                            let mut encoded_uri =
+                                cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+
+                            // Metadata is expecting an array of capacity 3.
+                            if encoded_uri.len() < 3 {
+                                encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
+                            }
+
+                            let world_metadata = ResourceMetadata {
+                                resource_id: FieldElement::ZERO,
+                                metadata_uri: encoded_uri,
+                            };
+
+                            let InvokeTransactionResult { transaction_hash } =
+                                WorldContract::new(world.contract_address, migrator)
+                                    .set_metadata(&world_metadata)
+                                    .send()
+                                    .await
+                                    .map_err(|e| {
+                                        ui.verbose(format!("{e:?}"));
+                                        anyhow!("Failed to set World metadata: {e}")
+                                    })?;
+
+                            TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+                            ui.print_sub(format!(
+                                "Set Metadata transaction: {:#x}",
+                                transaction_hash
+                            ));
+                            ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
                         }
-
-                        let world_metadata = ResourceMetadata {
-                            resource_id: FieldElement::ZERO,
-                            metadata_uri: encoded_uri,
-                        };
-
-                        let InvokeTransactionResult { transaction_hash } =
-                            WorldContract::new(world.contract_address, migrator)
-                                .set_metadata(&world_metadata)
-                                .send()
-                                .await
-                                .map_err(|e| {
-                                    ui.verbose(format!("{e:?}"));
-                                    anyhow!("Failed to set World metadata: {e}")
-                                })?;
-
-                        TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
-
-                        ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
-                        ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
-                    }
-                    Err(err) => {
-                        ui.print_sub(format!("Failed to set World metadata:\n{err}"));
+                        Err(err) => {
+                            ui.print_sub(format!("Failed to set World metadata:\n{err}"));
+                        }
                     }
                 }
             }
