@@ -936,12 +936,12 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
 
     #[inline(always)]
     fn version(self: @Modelv0) -> u8 {
-        1
+        0
     }
 
     #[inline(always)]
     fn selector(self: @Modelv0) -> felt252 {
-        selector!("Modelv0")
+        "Modelv0"
     }
 
     #[inline(always)]
@@ -988,7 +988,7 @@ mod modelv_0 {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("Modelv0")
+            "Modelv0"
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -996,7 +996,7 @@ mod modelv_0 {
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+            0
         }
 
         fn unpacked_size(self: @ContractState) -> usize {

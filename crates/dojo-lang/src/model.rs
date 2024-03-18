@@ -148,7 +148,16 @@ pub fn handle_model_struct(
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
-    let _version = get_model_version(db, struct_ast.clone(), &mut diagnostics);
+    let version = get_model_version(db, struct_ast.clone(), &mut diagnostics);
+
+    let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
+    let (model_version, model_selector) = match version {
+        0 => (RewriteNode::Text("0".to_string()), RewriteNode::Text(format!("\"{model_name}\""))),
+        _ => (
+            RewriteNode::Text("1".to_string()),
+            RewriteNode::Text(format!("selector!(\"{model_name}\")")),
+        ),
+    };
 
     let elements = struct_ast.members(db).elements(db);
     let members: &Vec<_> = &elements
@@ -240,12 +249,12 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
 
     #[inline(always)]
     fn version(self: @$type_name$) -> u8 {
-        1
+        $model_version$
     }
 
     #[inline(always)]
     fn selector(self: @$type_name$) -> felt252 {
-        selector!(\"$type_name$\")
+        $model_selector$
     }
 
     #[inline(always)]
@@ -292,7 +301,7 @@ mod $contract_name$ {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!(\"$type_name$\")
+            $model_selector$
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -300,7 +309,7 @@ mod $contract_name$ {
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+            $model_version$
         }
 
         fn unpacked_size(self: @ContractState) -> usize {
@@ -334,13 +343,12 @@ mod $contract_name$ {
 ",
             &UnorderedHashMap::from([
                 ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
-                (
-                    "type_name".to_string(),
-                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-                ),
+                ("type_name".to_string(), RewriteNode::Text(model_name)),
                 ("namespace".to_string(), RewriteNode::Text("namespace".to_string())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("model_version".to_string(), model_version),
+                ("model_selector".to_string(), model_selector),
             ]),
         ),
         diagnostics,
