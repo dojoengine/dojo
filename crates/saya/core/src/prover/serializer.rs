@@ -1,7 +1,6 @@
 use anyhow::Ok;
 use cairo_felt::Felt252;
 use cairo_proof_parser::parse;
-use itertools::{chain, Itertools};
 
 use super::vec252::VecFelt252;
 
@@ -14,13 +13,13 @@ pub fn parse_proof(proof: String) -> anyhow::Result<Vec<Felt252>> {
         serde_json::from_str(&parsed.unsent_commitment.to_string()).unwrap();
     let witness: VecFelt252 = serde_json::from_str(&parsed.witness.to_string()).unwrap();
 
-    let serialized = chain!(
-        config.to_vec(),
-        public_input.to_vec(),
-        unsent_commitment.to_vec(),
-        witness.to_vec()
-    )
-    .collect_vec();
+    let serialized = config
+        .to_vec()
+        .into_iter()
+        .chain(public_input.to_vec().into_iter())
+        .chain(unsent_commitment.to_vec().into_iter())
+        .chain(witness.to_vec().into_iter())
+        .collect();
 
     Ok(serialized)
 }
