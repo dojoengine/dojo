@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710794196006,
+  "lastUpdate": 1710794265767,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2905,6 +2905,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1020906,
             "range": "± 67560",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "22072dd62792fd3625d5c02c1f10254b6b10f9f5",
+          "message": "fix(sozo): don't upload to ipfs if in offline mode (#1678)",
+          "timestamp": "2024-03-18T14:27:59-06:00",
+          "tree_id": "4e00633d257ca92538406fb42637dac172cb07cd",
+          "url": "https://github.com/dojoengine/dojo/commit/22072dd62792fd3625d5c02c1f10254b6b10f9f5"
+        },
+        "date": 1710794264786,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1018553,
+            "range": "± 28778",
             "unit": "ns/iter"
           }
         ]
