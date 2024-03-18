@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710778591886,
+  "lastUpdate": 1710794196006,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2875,6 +2875,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 969372,
             "range": "± 34549",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "26791fb0a62d481a99ac125838c900d85b75d45a",
+          "message": "feat(sozo): add seed to manifest (#1674)\n\n* feat(sozo): add seed to manifest\r\n\r\n* make suggested changes",
+          "timestamp": "2024-03-18T14:27:03-06:00",
+          "tree_id": "e7960fe721711722012fa0c0edddf7998de9507c",
+          "url": "https://github.com/dojoengine/dojo/commit/26791fb0a62d481a99ac125838c900d85b75d45a"
+        },
+        "date": 1710794194912,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1020906,
+            "range": "± 67560",
             "unit": "ns/iter"
           }
         ]
