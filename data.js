@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710713212986,
+  "lastUpdate": 1710778591886,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2845,6 +2845,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1019658,
             "range": "± 69408",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b9d592eb0883b3efcba309d0ec65e85290dd2258",
+          "message": "refactor: write manifest file even if migration failed (#1652)\n\n* refactor: write manifest file before trying to deploy them\r\n\r\n* fix lints\r\n\r\n* sort fs entries for deterministic order in manifest\r\n\r\n* write migration output for partial migrations\r\n\r\n* make suggested changes",
+          "timestamp": "2024-03-18T10:06:53-06:00",
+          "tree_id": "9e222f0d76754deedfbdd90be42597e8cab481a1",
+          "url": "https://github.com/dojoengine/dojo/commit/b9d592eb0883b3efcba309d0ec65e85290dd2258"
+        },
+        "date": 1710778591223,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 969372,
+            "range": "± 34549",
             "unit": "ns/iter"
           }
         ]
