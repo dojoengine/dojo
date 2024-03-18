@@ -5,8 +5,8 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbstractManifestError, BaseManifest, DeployedManifest, DojoContract, Manifest, ManifestMethods,
-    OverlayManifest,
+    AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, Manifest,
+    ManifestMethods, OverlayManifest,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
 use dojo_world::migration::contract::ContractMigration;
@@ -44,10 +44,14 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::transaction::TransactionOptions;
 use crate::commands::options::world::WorldOptions;
 
+#[derive(Debug, Default, Clone)]
 pub struct MigrationOutput {
     pub world_address: FieldElement,
     pub world_tx_hash: Option<FieldElement>,
     pub world_block_number: Option<u64>,
+    // Represents if full migration got completeled.
+    // If false that means migration got partially completed.
+    pub full: bool,
 }
 
 pub async fn execute(
@@ -83,30 +87,39 @@ pub async fn execute(
     ui.print_sub(format!("Total diffs found: {total_diffs}"));
 
     if total_diffs == 0 {
-        ui.print("\n✨ No changes to be made. Remote World is already up to date!")
-    } else {
-        // Migrate according to the diff.
-        let migration_output = apply_diff(
-            ws,
-            &target_dir,
-            diff,
-            name,
-            world_address,
-            &account,
-            Some(args.transaction),
-        )
-        .await?;
-
-        update_manifests_and_abis(
-            ws,
-            local_manifest,
-            remote_manifest,
-            &manifest_dir,
-            migration_output,
-            &chain_id,
-        )
-        .await?;
+        ui.print("\n✨ No changes to be made. Remote World is already up to date!");
+        return Ok(());
     }
+
+    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let world_address = strategy.world_address().expect("world address must exist");
+
+    // Migrate according to the diff.
+    match apply_diff(ws, &account, None, &strategy).await {
+        Ok(migration_output) => {
+            update_manifests_and_abis(
+                ws,
+                local_manifest,
+                remote_manifest,
+                &manifest_dir,
+                migration_output,
+                &chain_id,
+            )
+            .await?;
+        }
+        Err(e) => {
+            update_manifests_and_abis(
+                ws,
+                local_manifest,
+                remote_manifest,
+                &manifest_dir,
+                MigrationOutput { world_address, ..Default::default() },
+                &chain_id,
+            )
+            .await?;
+            return Err(e)?;
+        }
+    };
 
     Ok(())
 }
@@ -114,7 +127,7 @@ pub async fn execute(
 async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
-    remote_manifest: Option<DeployedManifest>,
+    remote_manifest: Option<DeploymentManifest>,
     manifest_dir: &Utf8PathBuf,
     migration_output: MigrationOutput,
     chain_id: &str,
@@ -128,10 +141,10 @@ async fn update_manifests_and_abis(
         .join(chain_id)
         .with_extension("toml");
 
-    let mut local_manifest: DeployedManifest = local_manifest.into();
+    let mut local_manifest: DeploymentManifest = local_manifest.into();
 
     if deployed_path.exists() {
-        let previous_manifest = DeployedManifest::load_from_path(&deployed_path)?;
+        let previous_manifest = DeploymentManifest::load_from_path(&deployed_path)?;
         local_manifest.merge_from_previous(previous_manifest);
     };
 
@@ -166,7 +179,7 @@ async fn update_manifests_and_abis(
 }
 
 async fn update_manifest_abis(
-    local_manifest: &mut DeployedManifest,
+    local_manifest: &mut DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
     chain_id: &str,
 ) {
@@ -202,42 +215,47 @@ async fn update_manifest_abis(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn apply_diff<P, S>(
     ws: &Workspace<'_>,
-    target_dir: &Utf8PathBuf,
-    diff: WorldDiff,
-    name: Option<String>,
-    world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
     txn_config: Option<TransactionOptions>,
+    strategy: &MigrationStrategy,
 ) -> Result<MigrationOutput>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
-    let strategy = prepare_migration(target_dir, diff, name, world_address, &ui)?;
 
     println!("  ");
 
-    let migration_output = execute_strategy(ws, &strategy, account, txn_config)
+    let migration_output = execute_strategy(ws, strategy, account, txn_config)
         .await
         .map_err(|e| anyhow!(e))
         .with_context(|| "Problem trying to migrate.")?;
 
-    if let Some(block_number) = migration_output.world_block_number {
-        ui.print(format!(
-            "\n🎉 Successfully migrated World on block #{} at address {}",
-            block_number,
-            bold_message(format!(
-                "{:#x}",
-                strategy.world_address().expect("world address must exist")
-            ))
-        ));
+    if migration_output.full {
+        if let Some(block_number) = migration_output.world_block_number {
+            ui.print(format!(
+                "\n🎉 Successfully migrated World on block #{} at address {}",
+                block_number,
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        } else {
+            ui.print(format!(
+                "\n🎉 Successfully migrated World at address {}",
+                bold_message(format!(
+                    "{:#x}",
+                    strategy.world_address().expect("world address must exist")
+                ))
+            ));
+        }
     } else {
         ui.print(format!(
-            "\n🎉 Successfully migrated World at address {}",
+            "\n🚨 Partially migrated World at address {}",
             bold_message(format!(
                 "{:#x}",
                 strategy.world_address().expect("world address must exist")
@@ -298,7 +316,7 @@ async fn load_world_manifests<P, S>(
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
-) -> Result<(BaseManifest, Option<DeployedManifest>)>
+) -> Result<(BaseManifest, Option<DeploymentManifest>)>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -318,7 +336,7 @@ where
     }
 
     let remote_manifest = if let Some(address) = world_address {
-        match DeployedManifest::load_from_remote(account.provider(), address).await {
+        match DeploymentManifest::load_from_remote(account.provider(), address).await {
             Ok(manifest) => {
                 ui.print_sub(format!("Found remote World: {address:#x}"));
                 Some(manifest)
@@ -340,7 +358,7 @@ where
     Ok((local_manifest, remote_manifest))
 }
 
-fn prepare_migration(
+pub fn prepare_migration(
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
     name: Option<String>,
@@ -476,17 +494,34 @@ where
         None => {}
     };
 
-    // Once Torii supports indexing arrays, we should declare and register the
-    // ResourceMetadata model.
-
-    register_models(strategy, migrator, &ui, txn_config.clone()).await?;
-    deploy_contracts(strategy, migrator, &ui, txn_config).await?;
-
-    Ok(MigrationOutput {
+    let mut migration_output = MigrationOutput {
         world_address: strategy.world_address()?,
         world_tx_hash,
         world_block_number,
-    })
+        full: false,
+    };
+
+    // Once Torii supports indexing arrays, we should declare and register the
+    // ResourceMetadata model.
+
+    match register_models(strategy, migrator, &ui, txn_config.clone()).await {
+        Ok(_) => (),
+        Err(e) => {
+            ui.anyhow(&e);
+            return Ok(migration_output);
+        }
+    }
+    match deploy_contracts(strategy, migrator, &ui, txn_config).await {
+        Ok(_) => (),
+        Err(e) => {
+            ui.anyhow(&e);
+            return Ok(migration_output);
+        }
+    };
+
+    migration_output.full = true;
+
+    Ok(migration_output)
 }
 
 enum ContractDeploymentOutput {

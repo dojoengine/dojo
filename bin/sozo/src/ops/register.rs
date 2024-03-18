@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
-use dojo_world::manifest::DeployedManifest;
+use dojo_world::manifest::DeploymentManifest;
 use dojo_world::metadata::Environment;
 use scarb::core::Config;
 use starknet::accounts::Account;
@@ -25,7 +25,7 @@ pub async fn execute(
             let world_reader = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
             let manifest = {
-                match DeployedManifest::load_from_remote(&provider, world_address).await {
+                match DeploymentManifest::load_from_remote(&provider, world_address).await {
                     Ok(manifest) => manifest,
                     Err(e) => {
                         return Err(anyhow::anyhow!("Failed to build remote World state: {e}"));
