@@ -21,7 +21,7 @@ cairo-vm.workspace = true
 convert_case.workspace = true
 flate2.workspace = true
 futures.workspace = true
-lazy_static = "1.4.0"
+lazy_static.workspace = true
 parking_lot.workspace = true
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
@@ -40,10 +40,5 @@ cairo-lang-utils = "2"
 celestia-rpc = "0.1.1"
 celestia-types = "0.1.1"
 
-cairo-lang-casm = "2"
-cairo-lang-runner = "2"
-cairo-lang-sierra = "2"
 cairo-felt = "0.9.1"
-clap.workspace = true
-itertools.workspace = true
 num-bigint = "0.4.4"
