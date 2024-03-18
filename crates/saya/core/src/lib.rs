@@ -158,7 +158,7 @@ mod tests {
 
     use crate::{
         prover::{parse_proof, ProverClient, StoneProver},
-        verifier::starknet_verify,
+        verifier::{starknet_verify, starknet_verify_script},
     };
 
     #[tokio::test]
@@ -207,7 +207,7 @@ mod tests {
             .unwrap();
 
         // Proof verification
-        let result = starknet_verify("proof.txt").await.unwrap();
+        let result = starknet_verify_script("proof.txt").await.unwrap();
         println!("Result: {}", result);
     }
 }
