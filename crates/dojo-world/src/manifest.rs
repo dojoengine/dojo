@@ -164,6 +164,8 @@ pub struct Contract {
     #[serde_as(as = "Option<UfeHex>")]
     pub transaction_hash: Option<FieldElement>,
     pub block_number: Option<u64>,
+    // used by World contract
+    pub seed: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -180,9 +182,7 @@ impl From<Manifest<Class>> for Manifest<Contract> {
             Contract {
                 class_hash: value.inner.class_hash,
                 abi: value.inner.abi,
-                address: None,
-                transaction_hash: None,
-                block_number: None,
+                ..Default::default()
             },
             value.name,
         )
@@ -298,6 +298,7 @@ impl DeploymentManifest {
     pub fn merge_from_previous(&mut self, previous: DeploymentManifest) {
         self.world.inner.transaction_hash = previous.world.inner.transaction_hash;
         self.world.inner.block_number = previous.world.inner.block_number;
+        self.world.inner.seed = previous.world.inner.seed;
     }
 
     pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
@@ -345,9 +346,7 @@ impl DeploymentManifest {
                 Contract {
                     address: Some(world_address),
                     class_hash: world_class_hash,
-                    abi: None,
-                    transaction_hash: None,
-                    block_number: None,
+                    ..Default::default()
                 },
                 WORLD_CONTRACT_NAME.into(),
             ),
