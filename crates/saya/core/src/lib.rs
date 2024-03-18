@@ -154,11 +154,11 @@ impl From<starknet::providers::ProviderError> for error::Error {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Write};
+    use starknet::core::types::FieldElement;
 
     use crate::{
         prover::{parse_proof, ProverClient, StoneProver},
-        verifier::{starknet_verify, starknet_verify_script},
+        verifier::verify,
     };
 
     #[tokio::test]
@@ -197,17 +197,15 @@ mod tests {
         let proof = prover.prove(input).await.unwrap();
 
         let parsed = parse_proof(proof).unwrap();
-
-        // Saving to file, because proof is too big for shell, will be passed directly in the final implementation
-        File::create("proof.txt")
-            .unwrap()
-            .write_all(
-                parsed.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ").as_bytes(),
-            )
-            .unwrap();
+        let mapped = parsed
+            .into_iter()
+            .map(|x| FieldElement::from_dec_str(&x.to_string()))
+            .map(Result::unwrap)
+            .collect::<Vec<_>>();
 
         // Proof verification
-        let result = starknet_verify_script("proof.txt").await.unwrap();
+        let result =
+            verify(mapped, crate::verifier::VerifierIdentifier::StarkwareEthereum).await.unwrap();
         println!("Result: {}", result);
     }
 }
