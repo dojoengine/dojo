@@ -19,6 +19,7 @@ use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::sql::Sql;
+use crate::utils::timestamp_to_str_utc_date;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
@@ -74,6 +75,7 @@ async fn test_load_from_remote() {
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
+    let block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 2);
 
@@ -102,7 +104,6 @@ async fn test_load_from_remote() {
     assert_eq!(unpacked_size, 2);
 
     let event_id = format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 42, 69);
-    // TODO(Adel): send the block timestamp for storing as created_at
     db.store_event(
         &event_id,
         &Event {
@@ -111,16 +112,20 @@ async fn test_load_from_remote() {
             data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
         },
         FieldElement::THREE,
+        block_timestamp,
     );
 
     db.execute().await.unwrap();
 
-    let query =
-        format!("SELECT keys, data, transaction_hash FROM events WHERE id = '{}'", event_id);
-    let (keys, data, tx_hash): (String, String, String) =
+    let query = format!(
+        "SELECT keys, data, transaction_hash, created_at FROM events WHERE id = '{}'",
+        event_id
+    );
+    let (keys, data, tx_hash, created_at): (String, String, String, String) =
         sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
 
     assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
     assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
-    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE))
+    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE));
+    assert_eq!(created_at, timestamp_to_str_utc_date(block_timestamp));
 }

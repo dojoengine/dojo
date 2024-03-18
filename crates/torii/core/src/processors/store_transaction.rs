@@ -15,13 +15,12 @@ impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
         &self,
         db: &mut Sql,
         _provider: &P,
-        _block: &BlockWithTxs,
+        block: &BlockWithTxs,
         _receipt: &TransactionReceipt,
         transaction: &Transaction,
         transaction_id: &str,
     ) -> Result<(), Error> {
-        // TODO(Adel): Store the transaction in the database using _block
-        db.store_transaction(transaction, transaction_id);
+        db.store_transaction(transaction, transaction_id, block.timestamp);
 
         Ok(())
     }

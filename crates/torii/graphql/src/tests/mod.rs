@@ -249,6 +249,7 @@ pub async fn model_fixtures(db: &mut Sql) {
         FieldElement::TWO,
         0,
         0,
+        1710754478_u64,
     )
     .await
     .unwrap();

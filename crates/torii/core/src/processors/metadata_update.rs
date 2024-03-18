@@ -48,8 +48,7 @@ where
         &self,
         _world: &WorldContractReader<P>,
         db: &mut Sql,
-        // TODO(Adel): Use the block timestamp for 
-        _block: &BlockWithTxs,
+        block: &BlockWithTxs,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
@@ -68,24 +67,32 @@ where
         };
 
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
-        db.set_metadata(resource, &uri_str);
+        db.set_metadata(resource, &uri_str, block.timestamp);
 
         let db = db.clone();
         let resource = *resource;
+        let block_timestamp = block.timestamp;
         tokio::spawn(async move {
-            try_retrieve(db, resource, uri_str).await;
+            try_retrieve(db, resource, uri_str, block_timestamp).await;
         });
 
         Ok(())
     }
 }
 
-async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
+async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String, block_timestamp: u64) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
-            db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
-                .await
-                .unwrap();
+            db.update_metadata(
+                &resource,
+                &uri_str,
+                block_timestamp,
+                &metadata,
+                &icon_img,
+                &cover_img,
+            )
+            .await
+            .unwrap();
             info!("Updated resource {resource:#x} metadata from ipfs");
         }
         Err(e) => {

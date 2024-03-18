@@ -38,7 +38,7 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        _block: &BlockWithTxs,
+        block: &BlockWithTxs,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
@@ -67,9 +67,16 @@ where
             "Registered model content"
         );
 
-        // TODO(Adel): use the block timestamp here for created_at
-        db.register_model(schema, layout, class_hash, contract_address, packed_size, unpacked_size)
-            .await?;
+        db.register_model(
+            schema,
+            layout,
+            class_hash,
+            contract_address,
+            packed_size,
+            unpacked_size,
+            block.timestamp,
+        )
+        .await?;
 
         Ok(())
     }

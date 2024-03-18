@@ -245,6 +245,7 @@ mod tests {
         let model_id = model_name.clone();
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
+        let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":model_name }
         });
@@ -262,7 +263,9 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U32(None)),
                 }],
             });
-            db.register_model(model, vec![], class_hash, contract_address, 0, 0).await.unwrap();
+            db.register_model(model, vec![], class_hash, contract_address, 0, 0, block_timestamp)
+                .await
+                .unwrap();
 
             // 3. fn publish() is called from state.set_entity()
 
@@ -295,6 +298,7 @@ mod tests {
         let model_id = model_name.clone();
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
+        let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":model_name }
         });
@@ -312,7 +316,9 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U8(None)),
                 }],
             });
-            db.register_model(model, vec![], class_hash, contract_address, 0, 0).await.unwrap();
+            db.register_model(model, vec![], class_hash, contract_address, 0, 0, block_timestamp)
+                .await
+                .unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
@@ -339,12 +345,11 @@ mod tests {
     #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-
+        let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_secs(1)).await;
 
-            // TODO(Adel): send the block timestamp for storing as created_at
             db.store_event(
                 "0x0",
                 &Event {
@@ -359,6 +364,7 @@ mod tests {
                     ],
                 },
                 FieldElement::ZERO,
+                block_timestamp,
             );
 
             tx.send(()).await.unwrap();
