@@ -91,7 +91,7 @@ pub async fn execute(
         return Ok(());
     }
 
-    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
     // Migrate according to the diff.
@@ -104,6 +104,7 @@ pub async fn execute(
                 &manifest_dir,
                 migration_output,
                 &chain_id,
+                name.as_ref(),
             )
             .await?;
         }
@@ -115,6 +116,7 @@ pub async fn execute(
                 &manifest_dir,
                 MigrationOutput { world_address, ..Default::default() },
                 &chain_id,
+                name.as_ref(),
             )
             .await?;
             return Err(e)?;
@@ -131,6 +133,7 @@ async fn update_manifests_and_abis(
     manifest_dir: &Utf8PathBuf,
     migration_output: MigrationOutput,
     chain_id: &str,
+    salt: Option<&String>,
 ) -> Result<()> {
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifests...");
@@ -149,6 +152,9 @@ async fn update_manifests_and_abis(
     };
 
     local_manifest.world.inner.address = Some(migration_output.world_address);
+    if let Some(salt) = salt {
+        local_manifest.world.inner.seed = Some(salt.to_owned());
+    }
 
     if migration_output.world_tx_hash.is_some() {
         local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
