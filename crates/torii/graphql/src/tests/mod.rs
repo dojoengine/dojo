@@ -178,6 +178,8 @@ pub struct Metadata {
 pub async fn run_graphql_query(schema: &Schema, query: &str) -> Value {
     let res = schema.execute(query).await;
 
+    println!("Trying to execute query: {}", query);
+
     assert!(res.errors.is_empty(), "GraphQL query returned errors: {:?}", res.errors);
     serde_json::to_value(res.data).expect("Failed to serialize GraphQL response")
 }

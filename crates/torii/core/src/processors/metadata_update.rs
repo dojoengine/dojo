@@ -56,6 +56,7 @@ where
         let resource = &event.data[0];
         let uri_len: u8 = event.data[1].try_into().unwrap();
 
+        let block_timestamp = block.timestamp;
         let uri_str = if uri_len > 0 {
             event.data[2..=uri_len as usize + 1]
                 .iter()
@@ -67,11 +68,10 @@ where
         };
 
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
-        db.set_metadata(resource, &uri_str, block.timestamp);
+        db.set_metadata(resource, &uri_str, block_timestamp);
 
         let db = db.clone();
         let resource = *resource;
-        let block_timestamp = block.timestamp;
         tokio::spawn(async move {
             try_retrieve(db, resource, uri_str, block_timestamp).await;
         });

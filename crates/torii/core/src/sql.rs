@@ -38,6 +38,7 @@ impl Sql {
             "INSERT OR IGNORE INTO indexers (id, head) VALUES (?, ?)",
             vec![Argument::FieldElement(world_address), Argument::Int(0)],
         );
+        // TODO(Adel): get a timestamp here?
         query_queue.enqueue(
             "INSERT OR IGNORE INTO worlds (id, world_address) VALUES (?, ?)",
             vec![Argument::FieldElement(world_address), Argument::FieldElement(world_address)],
@@ -90,13 +91,15 @@ impl Sql {
             .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
             .collect::<Vec<u8>>();
 
-        let insert_models =
-            "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
-             unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
-             UPDATE SET contract_address=EXCLUDED.contract_address, \
-             class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
-             packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
-             executed_at=EXCLUDED.executed_at RETURNING *";
+        let executed_at = utc_dt_string_from_timestamp(block_timestamp);
+
+        let insert_models = "INSERT INTO models (id, name, class_hash, contract_address, layout, \
+                             packed_size, unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
+                             ?, ?) ON CONFLICT(id) DO UPDATE SET \
+                             contract_address=EXCLUDED.contract_address, \
+                             class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
+                             packed_size=EXCLUDED.packed_size, \
+                             unpacked_size=EXCLUDED.unpacked_size, executed_at=? RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             .bind(model.name())
             .bind(model.name())
@@ -105,8 +108,8 @@ impl Sql {
             .bind(hex::encode(&layout_blob))
             .bind(packed_size)
             .bind(unpacked_size)
-            .bind(utc_dt_string_from_timestamp(block_timestamp))
-            .bind(utc_dt_string_from_timestamp(block_timestamp))
+            .bind(executed_at.clone())
+            .bind(executed_at)
             .fetch_one(&self.pool)
             .await?;
 
@@ -145,8 +148,9 @@ impl Sql {
 
         let keys_str = felts_sql_string(&keys);
         // TODO(Adel): Don't use CURRENT_TIMESTAMP here
-        let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
-                               CONFLICT(id) DO UPDATE SET executed_at=CURRENT_TIMESTAMP, \
+        let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
+                               ?, ?, CURRENT_TIMESTAMP)
+                               ON CONFLICT(id) DO UPDATE SET executed_at=EXCLUDED.executed_at, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
@@ -175,12 +179,16 @@ impl Sql {
     pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str, block_timestamp: u64) {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
-        let at_timestamp = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
         self.query_queue.enqueue(
             "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
              UPDATE SET id=excluded.id, executed_at=?",
-            vec![resource, uri, at_timestamp.clone(), at_timestamp],
+            vec![
+                resource,
+                uri,
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            ],
         );
     }
 
@@ -195,15 +203,16 @@ impl Sql {
     ) -> Result<()> {
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
 
-        let mut columns = vec!["id", "uri", "executed_at", "json"];
-        let mut update =
-            vec!["id=excluded.id", "json=excluded.json", "executed_at=excluded.executed_at"];
+        let mut columns = vec!["id", "executed_at", "uri", "json"];
         let mut arguments = vec![
             Argument::FieldElement(*resource),
-            Argument::String(uri.to_string()),
             Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+            Argument::String(uri.to_string()),
             Argument::String(json),
         ];
+        // TODO(Adel): Updated executed_at with block_timestamp
+        let mut update =
+            vec!["id=excluded.id", "json=excluded.json", "executed_at=CURRENT_TIMESTAMP"];
 
         if let Some(icon) = icon_img {
             columns.push("icon_img");

@@ -168,8 +168,6 @@ fn fetch_value(
         _ => {
             let value = match type_name {
                 "DateTime" => {
-                    println!("Fetching column {} as DateTime", column_name);
-                    println!("Original field_name: {}", field_name);
                     let dt = row
                         .try_get::<DateTime<Utc>, &str>(&column_name)
                         .expect("Should be a stored as UTC Datetime")

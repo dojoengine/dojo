@@ -1,6 +1,7 @@
 CREATE TABLE indexers (
     id TEXT PRIMARY KEY NOT NULL,
-    head BIGINT NOT NULL DEFAULT 0
+    head BIGINT NOT NULL DEFAULT 0,
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE worlds (
@@ -9,13 +10,13 @@ CREATE TABLE worlds (
     world_class_hash TEXT,
     executor_address TEXT,
     executor_class_hash TEXT,
-    executed_at DATETIME NOT NULL
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE metadata (
     id TEXT PRIMARY KEY NOT NULL,
     uri TEXT,
-    executed_at DATETIME NOT NULL
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE models (
@@ -54,7 +55,7 @@ CREATE TABLE system_calls (
     data TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
-    executed_at DATETIME NOT NULL,
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (transaction_hash)
 );
 
