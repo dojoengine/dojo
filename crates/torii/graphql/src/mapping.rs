@@ -13,11 +13,7 @@ lazy_static! {
         (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
         (Name::new("eventId"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
-            Name::new("createdAt"),
-            TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
-        ),
-        (
-            Name::new("updatedAt"),
+            Name::new("executedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
@@ -26,7 +22,7 @@ lazy_static! {
         (Name::new("keys"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
         (Name::new("data"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
         (
-            Name::new("createdAt"),
+            Name::new("executedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
         (Name::new("transactionHash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
@@ -47,7 +43,7 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
         ),
         (
-            Name::new("createdAt"),
+            Name::new("executedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
@@ -78,7 +74,7 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string()))
         ),
         (
-            Name::new("createdAt"),
+            Name::new("executedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
@@ -115,11 +111,7 @@ lazy_static! {
         (Name::new("iconImg"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("coverImg"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (
-            Name::new("createdAt"),
-            TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
-        ),
-        (
-            Name::new("updatedAt"),
+            Name::new("executedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string()))
         ),
     ]);

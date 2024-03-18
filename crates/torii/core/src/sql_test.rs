@@ -19,7 +19,7 @@ use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::sql::Sql;
-use crate::utils::timestamp_to_str_utc_date;
+use crate::utils::utc_dt_string_from_timestamp;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
@@ -118,14 +118,14 @@ async fn test_load_from_remote() {
     db.execute().await.unwrap();
 
     let query = format!(
-        "SELECT keys, data, transaction_hash, created_at FROM events WHERE id = '{}'",
+        "SELECT keys, data, transaction_hash, executed_at FROM events WHERE id = '{}'",
         event_id
     );
-    let (keys, data, tx_hash, created_at): (String, String, String, String) =
+    let (keys, data, tx_hash, executed_at): (String, String, String, String) =
         sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
 
     assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
     assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
     assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE));
-    assert_eq!(created_at, timestamp_to_str_utc_date(block_timestamp));
+    assert_eq!(executed_at, utc_dt_string_from_timestamp(block_timestamp));
 }

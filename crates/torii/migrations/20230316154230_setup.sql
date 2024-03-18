@@ -1,7 +1,6 @@
 CREATE TABLE indexers (
     id TEXT PRIMARY KEY NOT NULL,
-    head BIGINT NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    head BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE worlds (
@@ -10,14 +9,13 @@ CREATE TABLE worlds (
     world_class_hash TEXT,
     executor_address TEXT,
     executor_class_hash TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE TABLE metadata (
     id TEXT PRIMARY KEY NOT NULL,
     uri TEXT,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE TABLE models (
@@ -28,10 +26,10 @@ CREATE TABLE models (
     class_hash TEXT NOT NULL,
     packed_size INTEGER NOT NULL,
     unpacked_size INTEGER NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
-CREATE INDEX idx_models_created_at ON models (created_at);
+CREATE INDEX idx_models_executed_at ON models (executed_at);
 
 CREATE TABLE model_members(
     id TEXT NOT NULL,
@@ -45,7 +43,7 @@ CREATE TABLE model_members(
     ) NOT NULL,
     enum_options TEXT NULL,  -- TEMP: Remove once enum support is properly added
     key BOOLEAN NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    executed_at DATETIME NOT NULL,
     PRIMARY KEY (id, member_idx) FOREIGN KEY (model_id) REFERENCES models(id)
 );
 
@@ -56,19 +54,18 @@ CREATE TABLE system_calls (
     data TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    executed_at DATETIME NOT NULL,
     UNIQUE (transaction_hash)
 );
 
-CREATE INDEX idx_system_calls_created_at ON system_calls (created_at);
+CREATE INDEX idx_system_calls_executed_at ON system_calls (executed_at);
 
 CREATE TABLE entities (
     id TEXT NOT NULL PRIMARY KEY,
     keys TEXT,
     event_id TEXT NOT NULL,
     model_names TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE INDEX idx_entities_keys ON entities (keys);
@@ -80,7 +77,7 @@ CREATE TABLE events (
     keys TEXT NOT NULL,
     data TEXT NOT NULL,
     transaction_hash TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE INDEX idx_events_keys ON events (keys);

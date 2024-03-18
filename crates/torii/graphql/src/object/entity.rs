@@ -95,12 +95,8 @@ impl EntityObject {
             (Name::new("keys"), Value::from(keys)),
             (Name::new("eventId"), Value::from(entity.event_id)),
             (
-                Name::new("createdAt"),
-                Value::from(entity.created_at.format(DATETIME_FORMAT).to_string()),
-            ),
-            (
-                Name::new("updatedAt"),
-                Value::from(entity.updated_at.format(DATETIME_FORMAT).to_string()),
+                Name::new("executedAt"),
+                Value::from(entity.executed_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }
