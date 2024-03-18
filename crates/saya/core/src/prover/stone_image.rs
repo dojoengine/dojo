@@ -65,7 +65,6 @@ async fn run(mut command: Command, input: Option<String>) -> anyhow::Result<Stri
     let mut lines = reader.lines();
     let mut out = String::new();
     while let Some(line) = lines.next_line().await? {
-        println!("{}", line);
         out.push_str(&line);
     }
 
