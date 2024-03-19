@@ -6,9 +6,31 @@ use async_trait::async_trait;
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     process::Command,
+    sync::OnceCell,
 };
 
+async fn get_prover() -> StoneProver {
+    static STONE_PROVER: OnceCell<StoneProver> = OnceCell::const_new();
+
+    STONE_PROVER
+        .get_or_init(|| async {
+            let prover = StoneProver("neotheprogramist/state-diff-commitment:latest".to_string());
+            prover
+                .setup("neotheprogramist/state-diff-commitment")
+                .await
+                .expect("Pulling the Stone prover image failed");
+            prover
+        })
+        .await
+        .clone()
+}
+
+#[derive(Clone)]
 pub struct StoneProver(pub String);
+
+pub async fn prove_stone(input: String) -> anyhow::Result<String> {
+    get_prover().await.prove(input).await
+}
 
 #[async_trait]
 impl ProverClient for StoneProver {

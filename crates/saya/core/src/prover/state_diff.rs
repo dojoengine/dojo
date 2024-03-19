@@ -1,14 +1,13 @@
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
+use katana_primitives::state::StateUpdates;
 use starknet::core::types::FieldElement;
 
-struct StateDiff {
-    genesis_state_hash: FieldElement,
-    prev_state_hash: FieldElement,
-    nonce_updates: HashMap<FieldElement, FieldElement>,
-    storage_updates: Vec<(FieldElement, Vec<(FieldElement, FieldElement)>)>,
-    contract_updates: Vec<(FieldElement, FieldElement)>,
-    declared_classes: Vec<(FieldElement, FieldElement)>,
+#[derive(serde::Serialize)]
+pub struct ProvedStateDiff {
+    pub genesis_state_hash: FieldElement,
+    pub prev_state_hash: FieldElement,
+    pub state_updates: StateUpdates,
 }
 
 #[cfg(test)]
@@ -40,7 +39,7 @@ pub const EXAMPLE_STATE_DIFF: &str = r#"{
 }"#;
 
 /// We need custom implentation because of dynamic keys in json
-impl fmt::Display for StateDiff {
+impl fmt::Display for ProvedStateDiff {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", "{")?;
         write!(f, r#""genesis_state_hash":{}"#, self.genesis_state_hash)?;
@@ -48,6 +47,7 @@ impl fmt::Display for StateDiff {
 
         write!(f, r#","nonce_updates":{}"#, "{")?;
         let nonce_updates = self
+            .state_updates
             .nonce_updates
             .iter()
             .map(|(k, v)| format!(r#""{}":{}"#, k, v))
@@ -57,6 +57,7 @@ impl fmt::Display for StateDiff {
 
         write!(f, r#","storage_updates":{}"#, "{")?;
         let storage_updates = self
+            .state_updates
             .storage_updates
             .iter()
             .map(|(k, v)| {
@@ -74,6 +75,7 @@ impl fmt::Display for StateDiff {
 
         write!(f, r#","contract_updates":{}"#, "{")?;
         let contract_updates = self
+            .state_updates
             .contract_updates
             .iter()
             .map(|(k, v)| format!(r#""{}":{}"#, k, v))
@@ -83,6 +85,7 @@ impl fmt::Display for StateDiff {
 
         write!(f, r#","declared_classes":{}"#, "{")?;
         let declared_classes = self
+            .state_updates
             .declared_classes
             .iter()
             .map(|(k, v)| format!(r#""{}":{}"#, k, v))
@@ -99,36 +102,49 @@ impl fmt::Display for StateDiff {
 mod tests {
     use std::collections::HashMap;
 
+    use katana_primitives::contract::ContractAddress;
     use starknet::macros::felt;
 
-    use crate::prover::state_diff::{StateDiff, EXAMPLE_STATE_DIFF};
+    use super::*;
 
     #[test]
     fn serialize_state_diff() {
         let mut nonce_updates = HashMap::new();
-        nonce_updates.insert(felt!("1"), felt!("12"));
-        nonce_updates.insert(felt!("2"), felt!("1337"));
+        nonce_updates.insert(ContractAddress::from(felt!("1")), felt!("12"));
+        nonce_updates.insert(ContractAddress::from(felt!("2")), felt!("1337"));
 
-        let state_diff = StateDiff {
+        let state_diff = ProvedStateDiff {
             genesis_state_hash: felt!("12312321313"),
             prev_state_hash: felt!("34343434343"),
-            nonce_updates,
-            storage_updates: vec![
-                (
-                    felt!("1"),
-                    vec![(felt!("123456789"), felt!("89")), (felt!("987654321"), felt!("98"))],
-                ),
-                (
-                    felt!("2"),
-                    vec![(felt!("123456789"), felt!("899")), (felt!("987654321"), felt!("98"))],
-                ),
-            ],
-            contract_updates: vec![(felt!("3"), felt!("437267489"))],
-            declared_classes: vec![
-                (felt!("1234"), felt!("12345")),
-                (felt!("12345"), felt!("123456")),
-                (felt!("123456"), felt!("1234567")),
-            ],
+            state_updates: StateUpdates {
+                nonce_updates,
+                storage_updates: vec![
+                    (
+                        ContractAddress::from(felt!("1")),
+                        vec![(felt!("123456789"), felt!("89")), (felt!("987654321"), felt!("98"))]
+                            .into_iter()
+                            .collect(),
+                    ),
+                    (
+                        ContractAddress::from(felt!("2")),
+                        vec![(felt!("123456789"), felt!("899")), (felt!("987654321"), felt!("98"))]
+                            .into_iter()
+                            .collect(),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+                contract_updates: vec![(ContractAddress::from(felt!("3")), felt!("437267489"))]
+                    .into_iter()
+                    .collect(),
+                declared_classes: vec![
+                    (felt!("1234"), felt!("12345")),
+                    (felt!("12345"), felt!("123456")),
+                    (felt!("123456"), felt!("1234567")),
+                ]
+                .into_iter()
+                .collect(),
+            },
         };
 
         // let serialized = serde_json::to_string(&state_diff).unwrap();
