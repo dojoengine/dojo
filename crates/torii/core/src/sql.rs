@@ -145,7 +145,7 @@ impl Sql {
 
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
-                               CONFLICT(id) DO UPDATE SET created_at=CURRENT_TIMESTAMP, \
+                               CONFLICT(id) DO UPDATE SET executed_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
@@ -178,7 +178,7 @@ impl Sql {
 
         self.query_queue.enqueue(
             "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
-             UPDATE SET id=excluded.id, created_at=?",
+             UPDATE SET id=excluded.id, executed_at=?",
             vec![resource, uri, executed_at.clone(), executed_at],
         );
     }
@@ -194,9 +194,9 @@ impl Sql {
     ) -> Result<()> {
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
 
-        let mut columns = vec!["id", "uri", "created_at", "json"];
+        let mut columns = vec!["id", "uri", "executed_at", "json"];
         let mut update =
-            vec!["id=excluded.id", "json=excluded.json", "created_at=CURRENT_TIMESTAMP"];
+            vec!["id=excluded.id", "json=excluded.json", "executed_at=CURRENT_TIMESTAMP"];
         let mut arguments = vec![
             Argument::FieldElement(*resource),
             Argument::String(uri.to_string()),
