@@ -6,12 +6,14 @@ use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlockWithStatu
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
+use starknet::macros::felt;
 use tracing::{error, trace};
 use url::Url;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
+use crate::prover::state_diff::ProvedStateDiff;
 
 pub mod blockchain;
 pub mod data_availability;
@@ -134,6 +136,7 @@ impl Saya {
 
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 
+        let state_updates_to_prove = state_updates.state_updates.clone();
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
         if block_number == 0 {
@@ -141,6 +144,20 @@ impl Saya {
         }
 
         let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
+
+        let to_prove = ProvedStateDiff {
+            genesis_state_hash: felt!("0"),
+            prev_state_hash: felt!("0"),
+            state_updates: state_updates_to_prove,
+        };
+
+        let serialized = format!("{}", to_prove);
+        let proof = prover::prove(serialized, prover::ProverIdentifier::Stone).await?;
+        let parsed = prover::parse_proof(proof)?;
+        let transaction_hash =
+            verifier::verify(parsed, verifier::VerifierIdentifier::StarkwareEthereum).await?;
+
+        trace!(block_number, "transaction hash: {}", transaction_hash);
 
         Ok(())
     }
@@ -154,30 +171,19 @@ impl From<starknet::providers::ProviderError> for error::Error {
 
 #[cfg(test)]
 mod tests {
-
     use crate::{
-        prover::{parse_proof, state_diff::EXAMPLE_STATE_DIFF, ProverClient, StoneProver},
-        verifier::verify,
+        prover::{parse_proof, prove, state_diff::EXAMPLE_STATE_DIFF, ProverIdentifier},
+        verifier::{verify, VerifierIdentifier},
     };
-    use starknet::core::types::FieldElement;
 
     #[tokio::test]
     async fn test_proof_flow_with_example_data() {
-        let prover = StoneProver("state-diff-commitment:latest".to_string());
-        prover.setup("neotheprogramist/state-diff-commitment").await.unwrap();
-
-        let proof = prover.prove(EXAMPLE_STATE_DIFF.into()).await.unwrap();
+        let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
 
         let parsed = parse_proof(proof).unwrap();
-        let mapped = parsed
-            .into_iter()
-            .map(|x| FieldElement::from_dec_str(&x.to_string()))
-            .map(Result::unwrap)
-            .collect::<Vec<_>>();
 
-        // Proof verification
-        let result =
-            verify(mapped, crate::verifier::VerifierIdentifier::StarkwareEthereum).await.unwrap();
-        println!("Result: {}", result);
+        let result = verify(parsed, VerifierIdentifier::StarkwareEthereum).await.unwrap();
+
+        println!("Tx: {:?}", result);
     }
 }
