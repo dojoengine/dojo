@@ -55,7 +55,7 @@ CREATE TABLE system_calls (
     data TEXT NOT NULL,
     transaction_hash TEXT NOT NULL,
     system_id TEXT NOT NULL,
-    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (transaction_hash)
 );
 
