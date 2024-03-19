@@ -212,7 +212,7 @@ async fn main() -> anyhow::Result<()> {
 
     if args.explorer {
         if let Err(e) = webbrowser::open(&explorer_url) {
-            error!("Failed to opene World Explorer on the browser: {e}");
+            error!("Failed to open World Explorer on the browser: {e}");
         }
     }
 
