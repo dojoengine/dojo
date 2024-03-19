@@ -50,6 +50,6 @@ impl RegisterArgs {
             None
         };
 
-        config.tokio_handle().block_on(register::execute(self.command, env_metadata))
+        config.tokio_handle().block_on(register::execute(self.command, env_metadata, config))
     }
 }

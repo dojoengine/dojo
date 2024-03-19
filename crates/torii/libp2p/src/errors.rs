@@ -39,4 +39,7 @@ pub enum Error {
 
     #[error("Failed to read certificate: {0}")]
     ReadCertificateError(anyhow::Error),
+
+    #[error("Invalid message provided: {0}")]
+    InvalidMessageError(String),
 }

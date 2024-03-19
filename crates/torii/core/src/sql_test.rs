@@ -22,11 +22,11 @@ use crate::sql::Sql;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
-    db: &mut Sql,
+    db: Sql,
     provider: P,
     migration: MigrationStrategy,
     sequencer: TestSequencer,
-) -> Result<Engine<'_, P>, Box<dyn std::error::Error>>
+) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
     P: Provider + Send + Sync,
 {
@@ -72,7 +72,7 @@ async fn test_load_from_remote() {
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
-    let _ = bootstrap_engine(world, &mut db, &provider, migration, sequencer).await;
+    let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 2);

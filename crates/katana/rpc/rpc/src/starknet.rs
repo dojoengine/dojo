@@ -27,10 +27,15 @@ use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
-use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags};
+use katana_rpc_types::{
+    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag,
+    SimulationFlagForEstimateFee,
+};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
-use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
+use starknet::core::types::{
+    BlockTag, SimulatedTransaction, TransactionExecutionStatus, TransactionStatus,
+};
 
 #[derive(Clone)]
 pub struct StarknetApi {
@@ -470,7 +475,7 @@ impl StarknetApiServer for StarknetApi {
     async fn estimate_fee(
         &self,
         request: Vec<BroadcastedTx>,
-        simulation_flags: Vec<SimulationFlags>,
+        simulation_flags: Vec<SimulationFlagForEstimateFee>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
@@ -508,8 +513,9 @@ impl StarknetApiServer for StarknetApi {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let skip_validate =
-                simulation_flags.iter().any(|flag| flag == &SimulationFlags::SkipValidate);
+            let skip_validate = simulation_flags
+                .iter()
+                .any(|flag| flag == &SimulationFlagForEstimateFee::SkipValidate);
 
             let res = this
                 .inner
@@ -660,6 +666,60 @@ impl StarknetApiServer for StarknetApi {
                     .map(|_| TransactionStatus::Rejected)
                     .ok_or(Error::from(StarknetApiError::TxnHashNotFound))
             }
+        })
+        .await
+    }
+
+    async fn simulate_transactions(
+        &self,
+        block_id: BlockIdOrTag,
+        transactions: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlag>,
+    ) -> RpcResult<Vec<SimulatedTransaction>> {
+        self.on_cpu_blocking_task(move |this| {
+            let charge_fee = !simulation_flags.contains(&SimulationFlag::SkipFeeCharge);
+            let validate = !simulation_flags.contains(&SimulationFlag::SkipValidate);
+            let chain_id = this.inner.sequencer.chain_id();
+            let executables = transactions
+                .into_iter()
+                .map(|tx| {
+                    let tx = match tx {
+                        BroadcastedTx::Invoke(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::Invoke(tx.into_tx_with_chain_id(chain_id)),
+                                is_query,
+                            )
+                        }
+                        BroadcastedTx::Declare(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::Declare(
+                                    tx.try_into_tx_with_chain_id(chain_id)
+                                        .map_err(|_| StarknetApiError::InvalidContractClass)?,
+                                ),
+                                is_query,
+                            )
+                        }
+                        BroadcastedTx::DeployAccount(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::DeployAccount(tx.into_tx_with_chain_id(chain_id)),
+                                is_query,
+                            )
+                        }
+                    };
+                    Result::<ExecutableTxWithHash, StarknetApiError>::Ok(tx)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let res = this
+                .inner
+                .sequencer
+                .simulate_transactions(executables, block_id, validate, charge_fee)
+                .map_err(StarknetApiError::from)?;
+
+            Ok(res)
         })
         .await
     }

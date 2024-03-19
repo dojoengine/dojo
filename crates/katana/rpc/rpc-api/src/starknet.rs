@@ -15,9 +15,10 @@ use katana_rpc_types::transaction::{
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
 use katana_rpc_types::{
-    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags, SyncingStatus,
+    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag,
+    SimulationFlagForEstimateFee, SyncingStatus,
 };
-use starknet::core::types::TransactionStatus;
+use starknet::core::types::{SimulatedTransaction, TransactionStatus};
 
 /// The currently supported version of the Starknet JSON-RPC specification.
 pub const RPC_SPEC_VERSION: &str = "0.6.0";
@@ -122,7 +123,7 @@ pub trait StarknetApi {
     async fn estimate_fee(
         &self,
         request: Vec<BroadcastedTx>,
-        simulation_flags: Vec<SimulationFlags>,
+        simulation_flags: Vec<SimulationFlagForEstimateFee>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>>;
 
@@ -184,4 +185,13 @@ pub trait StarknetApi {
         &self,
         deploy_account_transaction: BroadcastedDeployAccountTx,
     ) -> RpcResult<DeployAccountTxResult>;
+
+    /// Simulates a list of transactions on the provided block.
+    #[method(name = "simulateTransactions")]
+    async fn simulate_transactions(
+        &self,
+        block_id: BlockIdOrTag,
+        transactions: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlag>,
+    ) -> RpcResult<Vec<SimulatedTransaction>>;
 }

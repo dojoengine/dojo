@@ -36,7 +36,7 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::Model;
 use torii_server::proxy::Proxy;
-use tracing::info;
+use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::{form_urlencoded, Url};
 
@@ -98,6 +98,10 @@ struct Args {
     /// The metrics will be served at the given interface and port.
     #[arg(long, value_name = "SOCKET", value_parser = parse_socket_address, help_heading = "Metrics")]
     metrics: Option<SocketAddr>,
+
+    /// Open World Explorer on the browser.
+    #[arg(long)]
+    explorer: bool,
 }
 
 #[tokio::main]
@@ -145,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
 
-    let mut db = Sql::new(pool.clone(), args.world_address).await?;
+    let db = Sql::new(pool.clone(), args.world_address).await?;
     let processors = Processors {
         event: vec![
             Box::new(RegisterModelProcessor),
@@ -161,7 +165,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut engine = Engine::new(
         world,
-        &mut db,
+        db.clone(),
         &provider,
         processors,
         EngineConfig { start_block: args.start_block, ..Default::default() },
@@ -179,6 +183,15 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
+    let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        db,
+        args.relay_port,
+        args.relay_webrtc_port,
+        args.relay_local_key_path,
+        args.relay_cert_path,
+    )
+    .expect("Failed to start libp2p relay server");
+
     let proxy_server = Arc::new(Proxy::new(args.addr, args.allowed_origins, Some(grpc_addr), None));
 
     let graphql_server = spawn_rebuilding_graphql_server(
@@ -188,22 +201,21 @@ async fn main() -> anyhow::Result<()> {
         proxy_server.clone(),
     );
 
-    let mut libp2p_relay_server = torii_relay::server::Relay::new(
-        args.relay_port,
-        args.relay_webrtc_port,
-        args.relay_local_key_path,
-        args.relay_cert_path,
-    )
-    .expect("Failed to start libp2p relay server");
-
     let endpoint = format!("http://{}", args.addr);
     let gql_endpoint = format!("{}/graphql", endpoint);
     let encoded: String =
         form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
             .collect();
+    let explorer_url = format!("https://worlds.dev/torii?url={}", encoded);
     info!(target: "torii::cli", "Starting torii endpoint: {}", endpoint);
     info!(target: "torii::cli", "Serving Graphql playground: {}", gql_endpoint);
-    info!(target: "torii::cli", "World Explorer is available on: {}\n", format!("https://worlds.dev/torii?url={}", encoded));
+    info!(target: "torii::cli", "World Explorer is available on: {}\n", explorer_url);
+
+    if args.explorer {
+        if let Err(e) = webbrowser::open(&explorer_url) {
+            error!("Failed to open World Explorer in the browser: {e}");
+        }
+    }
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("torii")?;

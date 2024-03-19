@@ -5,7 +5,7 @@ use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
-use dojo_world::manifest::{BaseManifest, DeployedManifest};
+use dojo_world::manifest::{BaseManifest, DeploymentManifest};
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
 use scarb::ops;
@@ -95,7 +95,11 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
             &ws,
             &migration,
             &account,
-            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
+            Some(TransactionOptions {
+                fee_estimate_multiplier: Some(0.2f64),
+                wait: false,
+                receipt: false
+            }),
         )
         .await
         .is_err()
@@ -158,7 +162,7 @@ async fn migration_from_remote() {
         &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
     )
     .unwrap();
-    let remote_manifest = DeployedManifest::load_from_remote(
+    let remote_manifest = DeploymentManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),
     )

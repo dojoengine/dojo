@@ -10,7 +10,7 @@ use dojo_test_utils::sequencer::{
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::WorldContractReader;
-use dojo_world::manifest::DeployedManifest;
+use dojo_world::manifest::DeploymentManifest;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use serde::Deserialize;
@@ -32,6 +32,7 @@ use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::sql::Sql;
 
 mod entities_test;
+mod events_test;
 mod metadata_test;
 mod models_ordering_test;
 mod models_test;
@@ -58,6 +59,15 @@ pub struct Edge<T> {
 pub struct Entity {
     pub keys: Option<Vec<String>>,
     pub created_at: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Event {
+    pub id: String,
+    pub keys: Vec<String>,
+    pub data: Vec<String>,
+    pub transaction_hash: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -256,7 +266,8 @@ pub async fn model_fixtures(db: &mut Sql) {
 
 pub async fn spinup_types_test() -> Result<SqlitePool> {
     // change sqlite::memory: to sqlite:~/.test.db to dump database to disk
-    let options = SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true);
+    let options =
+        SqliteConnectOptions::from_str("sqlite::memory:")?.create_if_missing(true).with_regexp();
     let pool = SqlitePoolOptions::new().max_connections(5).connect_with(options).await.unwrap();
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
@@ -264,7 +275,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let target_path = format!("{}/target/dev", base_path);
     let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
-    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+    let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -280,7 +291,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     execute_strategy(&ws, &migration, &account, None).await.unwrap();
 
     let manifest =
-        DeployedManifest::load_from_remote(&provider, migration.world_address().unwrap())
+        DeploymentManifest::load_from_remote(&provider, migration.world_address().unwrap())
             .await
             .unwrap();
 
@@ -316,7 +327,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
-        &mut db,
+        db,
         &provider,
         Processors {
             event: vec![

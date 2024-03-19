@@ -41,9 +41,9 @@ impl Default for EngineConfig {
     }
 }
 
-pub struct Engine<'db, P: Provider + Sync> {
+pub struct Engine<P: Provider + Sync> {
     world: WorldContractReader<P>,
-    db: &'db mut Sql,
+    db: Sql,
     provider: Box<P>,
     processors: Processors<P>,
     config: EngineConfig,
@@ -56,10 +56,10 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
+impl<P: Provider + Sync> Engine<P> {
     pub fn new(
         world: WorldContractReader<P>,
-        db: &'db mut Sql,
+        db: Sql,
         provider: P,
         processors: Processors<P>,
         config: EngineConfig,
@@ -257,7 +257,7 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
         for processor in &self.processors.transaction {
             processor
                 .process(
-                    self.db,
+                    &mut self.db,
                     self.provider.as_ref(),
                     block_number,
                     transaction_receipt,
@@ -290,14 +290,7 @@ impl<'db, P: Provider + Sync + Send> Engine<'db, P> {
                 && processor.validate(event)
             {
                 processor
-                    .process(
-                        &self.world,
-                        self.db,
-                        block_number,
-                        transaction_receipt,
-                        event_id,
-                        event,
-                    )
+                    .process(&self.world, &mut self.db, block, transaction_receipt, event_id, event)
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {

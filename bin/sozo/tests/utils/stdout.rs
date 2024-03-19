@@ -2,6 +2,7 @@ use std::fs;
 
 const STDOUT_DIR: &str = "tests/fixtures/stdout/";
 
+#[allow(dead_code)]
 pub fn expected_stdout(cmd: &str) -> String {
     let without_whitespaces: String = cmd.split_whitespace().collect();
     let file_name = without_whitespaces.replace('-', "_");
