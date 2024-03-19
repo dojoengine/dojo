@@ -5,7 +5,7 @@ CREATE TABLE entities_new (
     id TEXT NOT NULL PRIMARY KEY,
     keys TEXT,
     event_id TEXT NOT NULL,
-    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 -- Copy from old entities

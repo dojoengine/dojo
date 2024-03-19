@@ -195,8 +195,9 @@ impl Sql {
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
 
         let mut columns = vec!["id", "uri", "executed_at", "json"];
+        // TODO(Adel): Replace executed_at= with block_timestamp
         let mut update =
-            vec!["id=excluded.id", "json=excluded.json", "executed_at=CURRENT_TIMESTAMP"];
+            vec!["id=excluded.id", "json=excluded.json", "executed_at=excluded.executed_at"];
         let mut arguments = vec![
             Argument::FieldElement(*resource),
             Argument::String(uri.to_string()),

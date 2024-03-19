@@ -1,7 +1,6 @@
 CREATE TABLE indexers (
     id TEXT PRIMARY KEY NOT NULL,
-    head BIGINT NOT NULL DEFAULT 0,
-    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    head BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE worlds (
@@ -10,13 +9,14 @@ CREATE TABLE worlds (
     world_class_hash TEXT,
     executor_address TEXT,
     executor_class_hash TEXT,
+    -- TEMP: Remove DEFAULT once real timestamp is added
     executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE metadata (
     id TEXT PRIMARY KEY NOT NULL,
     uri TEXT,
-    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE TABLE models (
@@ -27,7 +27,7 @@ CREATE TABLE models (
     class_hash TEXT NOT NULL,
     packed_size INTEGER NOT NULL,
     unpacked_size INTEGER NOT NULL,
-    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE INDEX idx_models_executed_at ON models (executed_at);
@@ -66,7 +66,7 @@ CREATE TABLE entities (
     keys TEXT,
     event_id TEXT NOT NULL,
     model_names TEXT,
-    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE INDEX idx_entities_keys ON entities (keys);
@@ -78,7 +78,7 @@ CREATE TABLE events (
     keys TEXT NOT NULL,
     data TEXT NOT NULL,
     transaction_hash TEXT,
-    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL
 );
 
 CREATE INDEX idx_events_keys ON events (keys);
