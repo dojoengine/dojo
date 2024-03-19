@@ -47,7 +47,8 @@ CREATE TABLE model_members(
     ) NOT NULL,
     enum_options TEXT NULL,  -- TEMP: Remove once enum support is properly added
     key BOOLEAN NOT NULL,
-    executed_at DATETIME NOT NULL,
+    -- TEMP: Remove CURRENT_TIMESTAMP
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id, member_idx) FOREIGN KEY (model_id) REFERENCES models(id)
 );
@@ -70,6 +71,7 @@ CREATE TABLE entities (
     keys TEXT,
     event_id TEXT NOT NULL,
     model_names TEXT,
+    executed_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
