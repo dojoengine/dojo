@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710852411812,
+  "lastUpdate": 1710864638948,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3025,6 +3025,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 968299,
             "range": "± 68596",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jun.sugiura.jp@gmail.com",
+            "name": "Junichi Sugiura",
+            "username": "JunichiSugiura"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "91d8dac307e5f09b06cc47e2e5427d930b593a39",
+          "message": "Add explorer flag to open World Explorer in browser (#1581)\n\n* Add explorer flag to open World Explorer\r\n\r\n* Log error message instead of unwrap when fail to open world explorer on browser\r\n\r\n* fix typo\r\n\r\n* fix typo 2\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-19T10:01:10-06:00",
+          "tree_id": "0d1ecb6fa08f6363228094ca520f178658e469bf",
+          "url": "https://github.com/dojoengine/dojo/commit/91d8dac307e5f09b06cc47e2e5427d930b593a39"
+        },
+        "date": 1710864637926,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 966668,
+            "range": "± 68349",
             "unit": "ns/iter"
           }
         ]
