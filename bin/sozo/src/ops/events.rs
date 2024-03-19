@@ -6,7 +6,7 @@ use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Tok
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
-use dojo_world::manifest::{DeployedManifest, ManifestMethods};
+use dojo_world::manifest::{DeploymentManifest, ManifestMethods};
 use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
@@ -48,7 +48,10 @@ pub async fn execute(
             return Err(anyhow!("Run scarb migrate before running this command"));
         }
 
-        Some(extract_events(&DeployedManifest::load_from_path(&deployed_manifest)?, manifest_dir)?)
+        Some(extract_events(
+            &DeploymentManifest::load_from_path(&deployed_manifest)?,
+            manifest_dir,
+        )?)
     } else {
         None
     };
@@ -80,7 +83,7 @@ fn is_event(token: &Token) -> bool {
 }
 
 fn extract_events(
-    manifest: &DeployedManifest,
+    manifest: &DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
 ) -> Result<HashMap<String, Vec<Token>>> {
     fn process_abi(

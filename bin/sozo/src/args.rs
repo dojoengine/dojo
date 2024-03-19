@@ -9,6 +9,7 @@ use tracing_log::AsTrace;
 
 use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
+use crate::commands::clean::CleanArgs;
 use crate::commands::completions::CompletionsArgs;
 use crate::commands::dev::DevArgs;
 use crate::commands::events::EventsArgs;
@@ -54,6 +55,8 @@ pub enum Commands {
     Build(BuildArgs),
     #[command(about = "Initialize a new project")]
     Init(InitArgs),
+    #[command(about = "Remove generated artifacts, manifests and abis")]
+    Clean(CleanArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]
     Migrate(Box<MigrateArgs>),

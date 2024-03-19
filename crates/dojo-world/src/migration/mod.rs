@@ -59,6 +59,8 @@ pub enum MigrationError<S> {
     Provider(#[from] ProviderError),
     #[error(transparent)]
     WaitingError(#[from] TransactionWaitingError),
+    #[error(transparent)]
+    ArtifactError(#[from] anyhow::Error),
 }
 
 /// Represents the type of migration that should be performed.
@@ -98,7 +100,7 @@ pub trait Declarable {
         S: Signer + Sync + Send,
     {
         let (flattened_class, casm_class_hash) =
-            prepare_contract_declaration_params(self.artifact_path()).unwrap();
+            prepare_contract_declaration_params(self.artifact_path())?;
 
         match account
             .provider()
@@ -146,10 +148,7 @@ pub trait Deployable: Declarable + Sync {
         let declare = match self.declare(account, txn_config).await {
             Ok(res) => Some(res),
             Err(MigrationError::ClassAlreadyDeclared) => None,
-            Err(e) => {
-                println!("{:?}", e);
-                return Err(e);
-            }
+            Err(e) => return Err(e),
         };
 
         let base_class_hash = account
