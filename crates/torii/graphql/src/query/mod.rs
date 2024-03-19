@@ -42,7 +42,7 @@ async fn fetch_model_members(
             type AS ty,
             type_enum,
             key,
-            created_at
+            executed_at
         from model_members WHERE model_id = ?
         "#,
     )

@@ -118,14 +118,14 @@ async fn test_load_from_remote() {
     db.execute().await.unwrap();
 
     let query = format!(
-        "SELECT keys, data, transaction_hash, created_at FROM events WHERE id = '{}'",
+        "SELECT keys, data, transaction_hash, executed_at FROM events WHERE id = '{}'",
         event_id
     );
-    let (keys, data, tx_hash, created_at): (String, String, String, String) =
+    let (keys, data, tx_hash, executed_at): (String, String, String, String) =
         sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
 
     assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
     assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
     assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE));
-    assert_eq!(created_at, utc_dt_string_from_timestamp(block_timestamp));
+    assert_eq!(executed_at, utc_dt_string_from_timestamp(block_timestamp));
 }

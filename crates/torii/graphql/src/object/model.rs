@@ -109,8 +109,8 @@ impl ModelObject {
             (Name::new("contractAddress"), Value::from(model.contract_address)),
             (Name::new("transactionHash"), Value::from(model.transaction_hash)),
             (
-                Name::new("createdAt"),
-                Value::from(model.created_at.format(DATETIME_FORMAT).to_string()),
+                Name::new("executedAt"),
+                Value::from(model.executed_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }

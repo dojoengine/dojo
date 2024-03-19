@@ -8,7 +8,7 @@ CREATE TABLE transactions (
     max_fee TEXT NOT NULL,
     signature TEXT NOT NULL,
     nonce TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (transaction_hash)
 );
 
@@ -20,6 +20,6 @@ CREATE TABLE transaction_receipts (
     block_hash TEXT NOT NULL,
     block_number INTEGER NOT NULL,
     execution_result TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (transaction_hash)
 );
