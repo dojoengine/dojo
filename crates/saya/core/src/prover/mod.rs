@@ -11,12 +11,22 @@ mod vec252;
 pub use serializer::parse_proof;
 pub use stone_image::StoneProver;
 
+use self::stone_image::prove_stone;
+
 /// The prover used to generate the proof.
 #[derive(Debug)]
 pub enum ProverIdentifier {
     Sharp,
     Stone,
     Platinum,
+}
+
+pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
+    match prover {
+        ProverIdentifier::Sharp => todo!(),
+        ProverIdentifier::Stone => prove_stone(input).await,
+        ProverIdentifier::Platinum => todo!(),
+    }
 }
 
 /// The prover client. in charge of producing the proof.
