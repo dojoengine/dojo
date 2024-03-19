@@ -36,7 +36,7 @@ use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::Model;
 use torii_server::proxy::Proxy;
-use tracing::info;
+use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::{form_urlencoded, Url};
 
@@ -211,7 +211,9 @@ async fn main() -> anyhow::Result<()> {
     info!(target: "torii::cli", "World Explorer is available on: {}\n", explorer_url);
 
     if args.explorer {
-        webbrowser::open(&explorer_url)?;
+        if let Err(e) = webbrowser::open(&explorer_url) {
+            error!("Failed to opene World Explorer on the browser: {e}");
+        }
     }
 
     if let Some(listen_addr) = args.metrics {
