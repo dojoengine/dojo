@@ -15,7 +15,7 @@ use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
 use crate::types::{Entity as EntityUpdated, Event as EventEmitted, Model as ModelRegistered};
-use crate::utils::{utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
+use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -38,7 +38,6 @@ impl Sql {
             "INSERT OR IGNORE INTO indexers (id, head) VALUES (?, ?)",
             vec![Argument::FieldElement(world_address), Argument::Int(0)],
         );
-        // TODO(Adel): get a timestamp here?
         query_queue.enqueue(
             "INSERT OR IGNORE INTO worlds (id, world_address) VALUES (?, ?)",
             vec![Argument::FieldElement(world_address), Argument::FieldElement(world_address)],
@@ -91,15 +90,12 @@ impl Sql {
             .map(|x| <FieldElement as TryInto<u8>>::try_into(*x).unwrap())
             .collect::<Vec<u8>>();
 
-        let executed_at = utc_dt_string_from_timestamp(block_timestamp);
-
-        let insert_models = "INSERT INTO models (id, name, class_hash, contract_address, layout, \
-                             packed_size, unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
-                             ?, ?) ON CONFLICT(id) DO UPDATE SET \
-                             contract_address=EXCLUDED.contract_address, \
-                             class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
-                             packed_size=EXCLUDED.packed_size, \
-                             unpacked_size=EXCLUDED.unpacked_size, executed_at=? RETURNING *";
+        let insert_models =
+            "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
+             unpacked_size, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE \
+             SET contract_address=EXCLUDED.contract_address, class_hash=EXCLUDED.class_hash, \
+             layout=EXCLUDED.layout, packed_size=EXCLUDED.packed_size, \
+             unpacked_size=EXCLUDED.unpacked_size, created_at=? RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             .bind(model.name())
             .bind(model.name())
@@ -108,8 +104,8 @@ impl Sql {
             .bind(hex::encode(&layout_blob))
             .bind(packed_size)
             .bind(unpacked_size)
-            .bind(executed_at.clone())
-            .bind(executed_at)
+            .bind(utc_dt_string_from_timestamp(block_timestamp))
+            .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
 
@@ -147,10 +143,8 @@ impl Sql {
         );
 
         let keys_str = felts_sql_string(&keys);
-        // TODO(Adel): Don't use CURRENT_TIMESTAMP here
-        let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
-                               ?, ?, CURRENT_TIMESTAMP)
-                               ON CONFLICT(id) DO UPDATE SET executed_at=EXCLUDED.executed_at, \
+        let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
+                               CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
@@ -179,16 +173,12 @@ impl Sql {
     pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str, block_timestamp: u64) {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
+        let created_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
         self.query_queue.enqueue(
-            "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
-             UPDATE SET id=excluded.id, executed_at=?",
-            vec![
-                resource,
-                uri,
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-            ],
+            "INSERT INTO metadata (id, uri, created_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
+             UPDATE SET id=excluded.id, updated_at=?",
+            vec![resource, uri, created_at.clone(), created_at],
         );
     }
 
@@ -203,16 +193,15 @@ impl Sql {
     ) -> Result<()> {
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
 
-        let mut columns = vec!["id", "executed_at", "uri", "json"];
+        let mut columns = vec!["id", "uri", "updated_at", "json"];
+        let mut update =
+            vec!["id=excluded.id", "json=excluded.json", "updated_at=CURRENT_TIMESTAMP"];
         let mut arguments = vec![
             Argument::FieldElement(*resource),
-            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             Argument::String(uri.to_string()),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             Argument::String(json),
         ];
-        // TODO(Adel): Updated executed_at with block_timestamp
-        let mut update =
-            vec!["id=excluded.id", "json=excluded.json", "executed_at=CURRENT_TIMESTAMP"];
 
         if let Some(icon) = icon_img {
             columns.push("icon_img");
@@ -299,7 +288,7 @@ impl Sql {
 
         self.query_queue.enqueue(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
+             max_fee, signature, nonce, transaction_type, created_at) VALUES (?, ?, ?, ?, ?, ?, \
              ?, ?, ?)",
             vec![
                 id,
@@ -326,12 +315,12 @@ impl Sql {
         let keys = Argument::String(felts_sql_string(&event.keys));
         let data = Argument::String(felts_sql_string(&event.data));
         let hash = Argument::FieldElement(transaction_hash);
-        let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
+        let created_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
         self.query_queue.enqueue(
-            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, executed_at) VALUES \
+            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, created_at) VALUES \
              (?, ?, ?, ?, ?)",
-            vec![id, keys, data, hash, executed_at],
+            vec![id, keys, data, hash, created_at],
         );
 
         SimpleBroker::publish(EventEmitted {
@@ -339,7 +328,7 @@ impl Sql {
             keys: felts_sql_string(&event.keys),
             data: felts_sql_string(&event.data),
             transaction_hash: format!("{:#x}", transaction_hash),
-            executed_at: utc_datetime_from_timestamp(block_timestamp),
+            created_at: must_utc_datetime_from_timestamp(block_timestamp),
         });
     }
 
@@ -527,7 +516,7 @@ impl Sql {
 
                 let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
                                  member_idx, name, type, type_enum, enum_options, key, \
-                                 executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                                 created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
                     Argument::String(table_id.clone()),
                     Argument::String(path[0].clone()),
@@ -545,7 +534,7 @@ impl Sql {
             }
         }
 
-        create_table_query.push_str("executed_at DATETIME NOT NULL, ");
+        create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {

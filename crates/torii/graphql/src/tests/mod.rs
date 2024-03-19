@@ -57,7 +57,7 @@ pub struct Edge<T> {
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub keys: Option<Vec<String>>,
-    pub executed_at: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -78,7 +78,7 @@ pub struct WorldModel {
     pub name: String,
     pub class_hash: String,
     pub transaction_hash: String,
-    pub executed_at: String,
+    pub created_at: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

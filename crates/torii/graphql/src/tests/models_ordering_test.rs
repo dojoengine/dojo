@@ -20,7 +20,7 @@ mod tests {
                     name
                     classHash
                     transactionHash
-                    executedAt
+                    createdAt
                 }}
               }}
               pageInfo {{
