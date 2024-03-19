@@ -118,11 +118,20 @@ fn model_union_field() -> Field {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
                     let entity_id = extract::<String>(indexmap, "id")?;
-                    let model_ids: Vec<(String,)> =
-                        sqlx::query_as("SELECT model_id from event_model WHERE entity_id = ?")
-                            .bind(&entity_id)
-                            .fetch_all(&mut *conn)
-                            .await?;
+                    // fetch name from the models table
+                    // using the model id (hashed model name)
+                    let model_ids: Vec<(String,)> = sqlx::query_as(
+                        "SELECT name
+                        FROM models
+                        WHERE id = (
+                            SELECT model_id
+                            FROM event_model
+                            WHERE entity_id = ?
+                        )",
+                    )
+                    .bind(&entity_id)
+                    .fetch_all(&mut *conn)
+                    .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
                     for (name,) in model_ids {

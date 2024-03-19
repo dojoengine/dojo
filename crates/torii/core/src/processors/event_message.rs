@@ -28,11 +28,6 @@ where
         // 2: model keys, arbitrary length
         // last key: system key
         if event.keys.len() < 3 {
-            info!(
-                "invalid keys for event {}: {}",
-                <EventMessageProcessor as EventProcessor<P>>::event_key(self),
-                <EventMessageProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
-            );
             return false;
         }
 
