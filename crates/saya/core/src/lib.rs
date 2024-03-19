@@ -2,11 +2,11 @@
 
 use std::sync::Arc;
 
+use futures::future::join_all;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlockWithStatus};
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet::macros::felt;
 use tracing::{error, trace};
 use url::Url;
 
@@ -126,7 +126,19 @@ impl Saya {
     async fn process_block(&mut self, block_number: BlockNumber) -> SayaResult<()> {
         trace!(block_number, "processing block");
 
-        let block = self.provider.fetch_block(block_number).await?;
+        let prev_block_index = if block_number == 0 { 0 } else { block_number - 1 };
+        let relevant_blocks = join_all(
+            vec![block_number, prev_block_index, 0]
+                .into_iter()
+                .map(|block_number| self.provider.fetch_block(block_number)),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
+
+        let (block, prev_block, genesis_block) =
+            (relevant_blocks[0].clone(), relevant_blocks[1].clone(), relevant_blocks[2].clone());
+
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
 
@@ -146,8 +158,8 @@ impl Saya {
         let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         let to_prove = ProvedStateDiff {
-            genesis_state_hash: felt!("0"),
-            prev_state_hash: felt!("0"),
+            genesis_state_hash: genesis_block.header.header.state_root,
+            prev_state_hash: prev_block.header.header.state_root,
             state_updates: state_updates_to_prove,
         };
 
