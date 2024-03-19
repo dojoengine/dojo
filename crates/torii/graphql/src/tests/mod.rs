@@ -68,6 +68,7 @@ pub struct Event {
     pub keys: Vec<String>,
     pub data: Vec<String>,
     pub transaction_hash: String,
+    pub executed_at: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
