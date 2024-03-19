@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
@@ -75,9 +77,14 @@ pub async fn execute(
     let target_dir = target_dir.join(ws.config().profile().as_str());
 
     // Load local and remote World manifests.
-
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&manifest_dir, &account, world_address, &ui).await?;
+        load_world_manifests(&manifest_dir, &account, world_address, &ui).await.map_err(|e| {
+            ui.error(e.to_string());
+            anyhow!(
+                "\n Use `sozo clean` to clean your project, or `sozo clean --manifests-abis` to \
+                 clean manifest and abi files only.\nThen, rebuild your project with `sozo build`.",
+            )
+        })?;
 
     // Calculate diff between local and remote World manifests.
 
@@ -330,12 +337,14 @@ where
     ui.print_step(1, "🌎", "Building World state...");
 
     let mut local_manifest =
-        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))?;
+        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
+            .map_err(|_| anyhow!("Fail to load local manifest file."))?;
 
     let overlay_path = manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR);
     if overlay_path.exists() {
         let overlay_manifest =
-            OverlayManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR))?;
+            OverlayManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR))
+                .map_err(|_| anyhow!("Fail to load overlay manifest file."))?;
 
         // merge user defined changes to base manifest
         local_manifest.merge(overlay_manifest);
@@ -428,6 +437,9 @@ where
                 }
                 Err(MigrationError::ClassAlreadyDeclared) => {
                     ui.print_sub(format!("Already declared: {:#x}", base.diff.local));
+                }
+                Err(MigrationError::ArtifactError(e)) => {
+                    return Err(handle_artifact_error(&ui, base.artifact_path(), e));
                 }
                 Err(e) => {
                     ui.verbose(format!("{e:?}"));
@@ -581,6 +593,9 @@ where
         Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
             Ok(ContractDeploymentOutput::AlreadyDeployed(contract_address))
         }
+        Err(MigrationError::ArtifactError(e)) => {
+            return Err(handle_artifact_error(ui, contract.artifact_path(), e));
+        }
         Err(e) => {
             ui.verbose(format!("{e:?}"));
             Err(anyhow!("Failed to migrate {contract_id}: {e}"))
@@ -624,6 +639,9 @@ where
             Err(MigrationError::ClassAlreadyDeclared) => {
                 ui.print_sub(format!("Already declared: {:#x}", c.diff.local));
                 continue;
+            }
+            Err(MigrationError::ArtifactError(e)) => {
+                return Err(handle_artifact_error(ui, c.artifact_path(), e));
             }
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
@@ -705,6 +723,9 @@ where
                 ui.print_sub(format!("Already deployed: {:#x}", contract_address));
                 deploy_output.push(None);
             }
+            Err(MigrationError::ArtifactError(e)) => {
+                return Err(handle_artifact_error(ui, contract.artifact_path(), e));
+            }
             Err(e) => {
                 ui.verbose(format!("{e:?}"));
                 return Err(anyhow!("Failed to migrate {name}: {e}"));
@@ -713,4 +734,15 @@ where
     }
 
     Ok(deploy_output)
+}
+
+pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error) -> anyhow::Error {
+    let path = artifact_path.to_string_lossy();
+    let name = artifact_path.file_name().unwrap().to_string_lossy();
+    ui.verbose(format!("{path}: {error:?}"));
+
+    anyhow!(
+        "Discrepancy detected in {name}.\nUse `sozo clean` to clean your project or `sozo clean \
+         --artifacts` to clean artifacts only.\nThen, rebuild your project with `sozo build`."
+    )
 }
