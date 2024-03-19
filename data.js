@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710794265767,
+  "lastUpdate": 1710813406083,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -2935,6 +2935,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1018553,
             "range": "± 28778",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fe050bb65dd6da0f8508c4258a9267a83eaa4c1b",
+          "message": "Torii fix queries with keys regex (#1609)",
+          "timestamp": "2024-03-18T21:46:56-04:00",
+          "tree_id": "9407727a89099a55a393faa723053d7070e75b0d",
+          "url": "https://github.com/dojoengine/dojo/commit/fe050bb65dd6da0f8508c4258a9267a83eaa4c1b"
+        },
+        "date": 1710813405111,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1016077,
+            "range": "± 35098",
             "unit": "ns/iter"
           }
         ]
