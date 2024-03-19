@@ -15,7 +15,7 @@ pub fn utc_dt_string_from_timestamp(timestamp: u64) -> String {
 mod tests {
     use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 
-    use super::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
+    use super::*;
 
     #[test]
     fn test_must_utc_datetime_from_timestamp() {

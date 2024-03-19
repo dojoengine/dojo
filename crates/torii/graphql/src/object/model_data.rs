@@ -29,6 +29,7 @@ pub struct ModelMember {
     pub type_enum: String,
     pub key: bool,
     pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }
 
 pub struct ModelDataObject {

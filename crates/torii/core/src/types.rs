@@ -35,6 +35,8 @@ pub struct Entity {
     pub keys: String,
     pub event_id: String,
     pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -46,6 +48,7 @@ pub struct Model {
     pub contract_address: String,
     pub transaction_hash: String,
     pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -56,4 +59,5 @@ pub struct Event {
     pub data: String,
     pub transaction_hash: String,
     pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }

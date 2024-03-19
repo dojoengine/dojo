@@ -2,6 +2,7 @@ use std::convert::TryInto;
 use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
+use chrono::Utc;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::metadata::WorldMetadata;
@@ -145,7 +146,7 @@ impl Sql {
 
         let keys_str = felts_sql_string(&keys);
         let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
-                               CONFLICT(id) DO UPDATE SET executed_at=CURRENT_TIMESTAMP, \
+                               CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
                                event_id=EXCLUDED.event_id RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
@@ -194,10 +195,9 @@ impl Sql {
     ) -> Result<()> {
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
 
-        let mut columns = vec!["id", "uri", "executed_at", "json"];
-        // TODO(Adel): Replace executed_at= with block_timestamp
+        let mut columns = vec!["id", "uri", "updated_at", "json"];
         let mut update =
-            vec!["id=excluded.id", "json=excluded.json", "executed_at=excluded.executed_at"];
+            vec!["id=excluded.id", "json=excluded.json", "updated_at=CURRENT_TIMESTAMP"];
         let mut arguments = vec![
             Argument::FieldElement(*resource),
             Argument::String(uri.to_string()),
@@ -330,6 +330,7 @@ impl Sql {
             keys: felts_sql_string(&event.keys),
             data: felts_sql_string(&event.data),
             transaction_hash: format!("{:#x}", transaction_hash),
+            created_at: Utc::now(),
             executed_at: must_utc_datetime_from_timestamp(block_timestamp),
         });
     }
@@ -536,7 +537,8 @@ impl Sql {
             }
         }
 
-        create_table_query.push_str("executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
+        create_table_query.push_str("executed_at DATETIME NOT NULL, ");
+        create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
