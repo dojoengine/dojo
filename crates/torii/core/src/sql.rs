@@ -124,8 +124,12 @@ impl Sql {
         Ok(())
     }
 
-    // TODO(Adel): didn't send the block_timestamp here - have to dig more
-    pub async fn set_entity(&mut self, entity: Ty, event_id: &str) -> Result<()> {
+    pub async fn set_entity(
+        &mut self,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
             for m in s.keys() {
@@ -144,20 +148,26 @@ impl Sql {
         );
 
         let keys_str = felts_sql_string(&keys);
-        // TODO(Adel) : update CURRENT_TIMESTAMP with block_timestamp when added
         let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
-                               ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET \
+                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
                                executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id \
                                RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
+            .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
 
         let path = vec![entity.name()];
-        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity);
+        self.build_set_entity_queries_recursive(
+            path,
+            event_id,
+            &entity_id,
+            &entity,
+            block_timestamp,
+        );
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(entity_updated);
@@ -376,6 +386,7 @@ impl Sql {
         event_id: &str,
         entity_id: &str,
         entity: &Ty,
+        block_timestamp: u64,
     ) {
         match entity {
             Ty::Struct(s) => {
@@ -388,8 +399,7 @@ impl Sql {
                 let mut arguments = vec![
                     Argument::String(entity_id.to_string()),
                     Argument::String(event_id.to_string()),
-                    // TODO(Adel): remove this constant when block_timestamp is added
-                    Argument::String(utc_dt_string_from_timestamp(1710865727)),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ];
 
                 for member in s.children.iter() {
@@ -420,7 +430,11 @@ impl Sql {
                         let mut path_clone = path.clone();
                         path_clone.push(member.name.clone());
                         self.build_set_entity_queries_recursive(
-                            path_clone, event_id, entity_id, &member.ty,
+                            path_clone,
+                            event_id,
+                            entity_id,
+                            &member.ty,
+                            block_timestamp,
                         );
                     }
                 }
@@ -430,7 +444,11 @@ impl Sql {
                     let mut path_clone = path.clone();
                     path_clone.push(child.name.clone());
                     self.build_set_entity_queries_recursive(
-                        path_clone, event_id, entity_id, &child.ty,
+                        path_clone,
+                        event_id,
+                        entity_id,
+                        &child.ty,
+                        block_timestamp,
                     );
                 }
             }

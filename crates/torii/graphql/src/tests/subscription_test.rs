@@ -26,6 +26,7 @@ mod tests {
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let block_timestamp = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
@@ -100,6 +101,7 @@ mod tests {
                     ],
                 }),
                 &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
+                block_timestamp,
             )
             .await
             .unwrap();
@@ -146,6 +148,7 @@ mod tests {
         let model_name = "Record".to_string();
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
+        let block_timestamp = 1710754478_u64;
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
@@ -203,6 +206,7 @@ mod tests {
                     ],
                 }),
                 &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
+                block_timestamp,
             )
             .await
             .unwrap();

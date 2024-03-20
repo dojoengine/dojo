@@ -12625,6 +12625,7 @@ version = "0.6.0-alpha.7"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chrono",
  "crypto-bigint",
  "dojo-types",
  "dojo-world",

@@ -10,6 +10,7 @@ CREATE TABLE worlds (
     world_class_hash TEXT,
     executor_address TEXT,
     executor_class_hash TEXT,
+    -- TODO: Add executed_at timestamp once we have a way to get it
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
