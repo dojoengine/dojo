@@ -21,12 +21,6 @@ mod actions {
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
 
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        Moved: Moved,
-    }
-
     #[abi(embed_v0)]
     impl ActionsComputedImpl of IActionsComputed<ContractState> {
         #[computed]
