@@ -3,8 +3,8 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockWithTxs, Event, InvokeTransaction, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, EmittedEvent, Event, EventFilter, MaybePendingTransactionReceipt, Transaction,
+    TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -33,11 +33,12 @@ impl<P: Provider + Sync> Default for Processors<P> {
 pub struct EngineConfig {
     pub block_time: Duration,
     pub start_block: u64,
+    pub events_chunk_size: u64,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self { block_time: Duration::from_secs(1), start_block: 0 }
+        Self { block_time: Duration::from_secs(1), start_block: 0, events_chunk_size: 1000 }
     }
 }
 
@@ -119,67 +120,65 @@ impl<P: Provider + Sync> Engine<P> {
         Ok(latest_block_number)
     }
 
-    pub async fn sync_range(&mut self, mut from: u64, to: u64) -> Result<()> {
+    pub async fn sync_range(&mut self, from: u64, to: u64) -> Result<()> {
         // Process all blocks from current to latest.
-        while from <= to {
-            let block_with_txs = match self.provider.get_block_with_txs(BlockId::Number(from)).await
-            {
-                Ok(block_with_txs) => block_with_txs,
-                Err(e) => {
-                    error!("getting block: {}", e);
-                    continue;
-                }
-            };
+        let get_events = |token: Option<String>| {
+            self.provider.get_events(
+                EventFilter {
+                    from_block: Some(BlockId::Number(from)),
+                    to_block: Some(BlockId::Number(to)),
+                    address: Some(self.world.address),
+                    keys: None,
+                },
+                token,
+                self.config.events_chunk_size,
+            )
+        };
 
-            // send the current block number
-            if let Some(ref block_tx) = self.block_tx {
-                block_tx.send(from).await.expect("failed to send block number to gRPC server");
-            }
+        // handle next events pages
+        let mut events_pages = vec![get_events(None).await?];
 
-            match self.process(block_with_txs).await {
-                Ok(_) => {
-                    self.db.set_head(from);
-                    self.db.execute().await?;
-                    from += 1;
-                }
-                Err(e) => {
-                    error!("processing block: {}", e);
-                    continue;
-                }
+        while let Some(token) = &events_pages.last().unwrap().continuation_token {
+            events_pages.push(get_events(Some(token.clone())).await?);
+        }
+
+        let mut last_block: u64 = 0;
+        for events_page in events_pages {
+            for event in events_page.events {
+                self.process(event, &mut last_block).await?;
             }
         }
+
+        self.db.execute().await?;
 
         Ok(())
     }
 
-    async fn process(&mut self, block: MaybePendingBlockWithTxs) -> Result<()> {
-        let block: BlockWithTxs = match block {
-            MaybePendingBlockWithTxs::Block(block) => block,
-            _ => return Ok(()),
+    async fn process(&mut self, event: EmittedEvent, last_block: &mut u64) -> Result<()> {
+        let block_number = match event.block_number {
+            Some(block_number) => block_number,
+            None => {
+                error!("event without block number");
+                return Ok(());
+            }
         };
 
-        Self::process_block(self, &block).await?;
+        if block_number > *last_block {
+            *last_block = block_number;
 
-        for (tx_idx, transaction) in block.clone().transactions.iter().enumerate() {
-            let transaction_hash = match transaction {
-                Transaction::Invoke(invoke_transaction) => {
-                    if let InvokeTransaction::V1(invoke_transaction) = invoke_transaction {
-                        invoke_transaction.transaction_hash
-                    } else {
-                        continue;
-                    }
-                }
-                Transaction::L1Handler(l1_handler_transaction) => {
-                    l1_handler_transaction.transaction_hash
-                }
-                _ => continue,
-            };
+            if let Some(ref block_tx) = self.block_tx {
+                block_tx.send(block_number).await?;
+            }
 
-            self.process_transaction_and_receipt(transaction_hash, transaction, &block, tx_idx)
-                .await?;
+            Self::process_block(self, block_number, event.block_hash.unwrap()).await?;
+            info!(target: "torii_core::engine", block_number = %block_number, "Processed block");
+
+            self.db.set_head(block_number);
         }
 
-        info!("processed block: {}", block.block_number);
+        let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
+        self.process_transaction_and_receipt(event.transaction_hash, &transaction, block_number)
+            .await?;
 
         Ok(())
     }
@@ -188,8 +187,7 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         transaction_hash: FieldElement,
         transaction: &Transaction,
-        block: &BlockWithTxs,
-        tx_idx: usize,
+        block_number: u64,
     ) -> Result<()> {
         let receipt = match self.provider.get_transaction_receipt(transaction_hash).await {
             Ok(receipt) => match receipt {
@@ -222,34 +220,40 @@ impl<P: Provider + Sync> Engine<P> {
 
                 world_event = true;
                 let event_id =
-                    format!("0x{:064x}:0x{:04x}:0x{:04x}", block.block_number, tx_idx, event_idx);
+                    format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
 
-                Self::process_event(self, block, &receipt, &event_id, event).await?;
+                Self::process_event(self, block_number, &receipt, &event_id, event).await?;
             }
 
             if world_event {
-                let transaction_id = format!("0x{:064x}:0x{:04x}", block.block_number, tx_idx);
-
-                Self::process_transaction(self, block, &receipt, &transaction_id, transaction)
-                    .await?;
+                Self::process_transaction(
+                    self,
+                    block_number,
+                    &receipt,
+                    transaction_hash,
+                    transaction,
+                )
+                .await?;
             }
         }
 
         Ok(())
     }
 
-    async fn process_block(&mut self, block: &BlockWithTxs) -> Result<()> {
+    async fn process_block(&mut self, block_number: u64, block_hash: FieldElement) -> Result<()> {
         for processor in &self.processors.block {
-            processor.process(&mut self.db, self.provider.as_ref(), block).await?;
+            processor
+                .process(&mut self.db, self.provider.as_ref(), block_number, block_hash)
+                .await?;
         }
         Ok(())
     }
 
     async fn process_transaction(
         &mut self,
-        block: &BlockWithTxs,
+        block_number: u64,
         transaction_receipt: &TransactionReceipt,
-        transaction_id: &str,
+        transaction_hash: FieldElement,
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
@@ -257,10 +261,10 @@ impl<P: Provider + Sync> Engine<P> {
                 .process(
                     &mut self.db,
                     self.provider.as_ref(),
-                    block,
+                    block_number,
                     transaction_receipt,
+                    transaction_hash,
                     transaction,
-                    transaction_id,
                 )
                 .await?
         }
@@ -270,7 +274,7 @@ impl<P: Provider + Sync> Engine<P> {
 
     async fn process_event(
         &mut self,
-        block: &BlockWithTxs,
+        block_number: u64,
         transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
@@ -288,7 +292,14 @@ impl<P: Provider + Sync> Engine<P> {
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, &mut self.db, block, transaction_receipt, event_id, event)
+                    .process(
+                        &self.world,
+                        &mut self.db,
+                        block_number,
+                        transaction_receipt,
+                        event_id,
+                        event,
+                    )
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {

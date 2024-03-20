@@ -1,8 +1,9 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, Transaction, TransactionReceipt};
+use starknet::core::types::{Event, Transaction, TransactionReceipt};
 use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 
 use crate::sql::Sql;
 
@@ -33,7 +34,7 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        block: &BlockWithTxs,
+        block_number: u64,
         transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
@@ -43,7 +44,13 @@ where
 #[async_trait]
 pub trait BlockProcessor<P: Provider + Sync> {
     fn get_block_number(&self) -> String;
-    async fn process(&self, db: &mut Sql, provider: &P, block: &BlockWithTxs) -> Result<(), Error>;
+    async fn process(
+        &self,
+        db: &mut Sql,
+        provider: &P,
+        block_number: u64,
+        block_hash: FieldElement,
+    ) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -52,9 +59,9 @@ pub trait TransactionProcessor<P: Provider + Sync> {
         &self,
         db: &mut Sql,
         provider: &P,
-        block: &BlockWithTxs,
+        block_number: u64,
         transaction_receipt: &TransactionReceipt,
+        transaction_hash: FieldElement,
         transaction: &Transaction,
-        transaction_id: &str,
     ) -> Result<(), Error>;
 }
