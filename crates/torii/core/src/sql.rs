@@ -200,42 +200,27 @@ impl Sql {
         &mut self,
         resource: &FieldElement,
         uri: &str,
-        block_timestamp: u64,
         metadata: &WorldMetadata,
         icon_img: &Option<String>,
         cover_img: &Option<String>,
     ) -> Result<()> {
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
 
-        let mut columns = vec!["id", "uri", "executed_at", "json"];
-        let mut update =
-            vec!["id=excluded.id", "json=excluded.json", "updated_at=excluded.updated_at"];
-        let mut arguments = vec![
-            Argument::FieldElement(*resource),
-            Argument::String(uri.to_string()),
-            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
-            Argument::String(json),
-        ];
+        let mut update = vec!["uri=?", "json=?", "updated_at=CURRENT_TIMESTAMP"];
+        let mut arguments = vec![Argument::String(uri.to_string()), Argument::String(json)];
 
         if let Some(icon) = icon_img {
-            columns.push("icon_img");
+            update.push("icon_img=?");
             arguments.push(Argument::String(icon.clone()));
-            update.push("icon_img=excluded.icon_img");
         }
 
         if let Some(cover) = cover_img {
-            columns.push("cover_img");
+            update.push("cover_img=?");
             arguments.push(Argument::String(cover.clone()));
-            update.push("cover_img=excluded.cover_img");
         }
 
-        let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-        let statement = format!(
-            "INSERT INTO metadata ({}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {}",
-            columns.join(","),
-            placeholders.join(","),
-            update.join(",")
-        );
+        let statement = format!("UPDATE metadata SET {} WHERE id = ?", update.join(","));
+        arguments.push(Argument::FieldElement(*resource));
 
         self.query_queue.enqueue(statement, arguments);
         self.query_queue.execute_all().await?;

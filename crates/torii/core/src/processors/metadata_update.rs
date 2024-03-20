@@ -73,26 +73,19 @@ where
         let db = db.clone();
         let resource = *resource;
         tokio::spawn(async move {
-            try_retrieve(db, resource, uri_str, block_timestamp).await;
+            try_retrieve(db, resource, uri_str).await;
         });
 
         Ok(())
     }
 }
 
-async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String, block_timestamp: u64) {
+async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
     match metadata(uri_str.clone()).await {
         Ok((metadata, icon_img, cover_img)) => {
-            db.update_metadata(
-                &resource,
-                &uri_str,
-                block_timestamp,
-                &metadata,
-                &icon_img,
-                &cover_img,
-            )
-            .await
-            .unwrap();
+            db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
+                .await
+                .unwrap();
             info!("Updated resource {resource:#x} metadata from ipfs");
         }
         Err(e) => {
