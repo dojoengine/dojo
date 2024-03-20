@@ -322,12 +322,15 @@ mod tests {
         // 2. The subscription is executed and it is listeing, waiting for publish() to be executed
         let response_value = run_graphql_subscription(
             &pool,
-            r#"
-                subscription {
-                    modelRegistered(id: "Subrecord") {
-                            id, name
-                        }
-                }"#,
+            &format!(
+                r#"
+            subscription {{
+                modelRegistered(id: "{}") {{
+                        id, name
+                    }}
+            }}"#,
+                model_id
+            ),
         )
         .await;
         // 4. The subcription has received the message from publish()
