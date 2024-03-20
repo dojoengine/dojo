@@ -243,7 +243,7 @@ mod tests {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let model_name = "Subrecord".to_string();
-        let model_id = get_selector_from_name(&model_name).unwrap();
+        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
         let expected_value: async_graphql::Value = value!({
@@ -293,7 +293,7 @@ mod tests {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let model_name = "Subrecord".to_string();
-        let model_id = get_selector_from_name(&model_name).unwrap();
+        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
         let expected_value: async_graphql::Value = value!({
