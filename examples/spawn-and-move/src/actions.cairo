@@ -27,15 +27,6 @@ mod actions {
         Moved: Moved,
     }
 
-    #[derive(starknet::Event, Model, Copy, Drop, Serde)]
-    struct Moved {
-        #[key]
-        player: ContractAddress,
-        direction: Direction,
-        x: u32,
-        y: u32,
-    }
-
     #[abi(embed_v0)]
     impl ActionsComputedImpl of IActionsComputed<ContractState> {
         #[computed]
@@ -82,8 +73,6 @@ mod actions {
                     },
                 )
             );
-
-            emit!(world, (Moved { player: player, direction: Direction::None(()), x: 2, y: 3 }));
         }
 
         fn move(world: IWorldDispatcher, direction: Direction) {

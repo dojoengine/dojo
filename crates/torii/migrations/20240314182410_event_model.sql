@@ -1,5 +1,18 @@
 -- NOTE: sqlite does not support deleteing columns. Workaround is to create new table, copy, and delete old.
 
+CREATE TABLE event_messages (
+    id TEXT NOT NULL PRIMARY KEY,
+    keys TEXT,
+    event_id TEXT NOT NULL,
+    model_names TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_event_messages_keys ON event_messages (keys);
+
+CREATE INDEX idx_event_messages_event_id ON event_messages (event_id);
+
 -- Create new table without model_names column
 CREATE TABLE event_messages_new (
     id TEXT NOT NULL PRIMARY KEY,
