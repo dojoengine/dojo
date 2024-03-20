@@ -50,7 +50,6 @@ where
         EngineConfig::default(),
         shutdown_tx,
         None,
-        1000,
     );
 
     let _ = engine.sync_to_head(0).await?;

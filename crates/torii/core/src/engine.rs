@@ -33,12 +33,12 @@ impl<P: Provider + Sync> Default for Processors<P> {
 pub struct EngineConfig {
     pub block_time: Duration,
     pub start_block: u64,
-    events_chunk_size: u64,
+    pub events_chunk_size: u64,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self { block_time: Duration::from_secs(1), start_block: 0 }
+        Self { block_time: Duration::from_secs(1), start_block: 0, events_chunk_size: 1000 }
     }
 }
 
