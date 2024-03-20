@@ -6,7 +6,7 @@ use super::class::ClassDiff;
 use super::contract::ContractDiff;
 use super::StateDiff;
 use crate::manifest::{
-    BaseManifest, DeployedManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
+    BaseManifest, DeploymentManifest, ManifestMethods, BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
 
 #[cfg(test)]
@@ -23,7 +23,7 @@ pub struct WorldDiff {
 }
 
 impl WorldDiff {
-    pub fn compute(local: BaseManifest, remote: Option<DeployedManifest>) -> WorldDiff {
+    pub fn compute(local: BaseManifest, remote: Option<DeploymentManifest>) -> WorldDiff {
         let models = local
             .models
             .iter()

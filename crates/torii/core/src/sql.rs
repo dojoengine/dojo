@@ -27,7 +27,7 @@ mod test;
 #[derive(Debug, Clone)]
 pub struct Sql {
     world_address: FieldElement,
-    pool: Pool<Sqlite>,
+    pub pool: Pool<Sqlite>,
     query_queue: QueryQueue,
 }
 

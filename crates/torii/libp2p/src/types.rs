@@ -1,13 +1,11 @@
 use serde::{Deserialize, Serialize};
+use starknet_ff::FieldElement;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct ClientMessage {
-    pub topic: String,
-    pub data: Vec<u8>,
-}
+use crate::typed_data::TypedData;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct ServerMessage {
-    pub peer_id: Vec<u8>,
-    pub data: Vec<u8>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Message {
+    pub message: TypedData,
+    pub signature_r: FieldElement,
+    pub signature_s: FieldElement,
 }

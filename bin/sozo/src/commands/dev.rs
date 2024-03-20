@@ -10,7 +10,7 @@ use cairo_lang_filesystem::ids::FileId;
 use clap::Args;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_lang::scarb_internal::build_scarb_root_database;
-use dojo_world::manifest::{BaseManifest, DeployedManifest};
+use dojo_world::manifest::{BaseManifest, DeploymentManifest};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
 use notify_debouncer_mini::notify::RecursiveMode;
@@ -26,7 +26,7 @@ use tracing_log::log;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::ops::migration;
+use crate::ops::migration::{self, prepare_migration};
 
 #[derive(Args)]
 pub struct DevArgs {
@@ -113,8 +113,8 @@ async fn migrate<P, S>(
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
     ws: &Workspace<'_>,
-    previous_manifest: Option<DeployedManifest>,
-) -> Result<(DeployedManifest, Option<FieldElement>)>
+    previous_manifest: Option<DeploymentManifest>,
+) -> Result<(DeploymentManifest, Option<FieldElement>)>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -140,14 +140,16 @@ where
         return Ok((new_manifest.into(), world_address));
     }
 
-    match migration::apply_diff(ws, &target_dir, diff, name.clone(), world_address, account, None)
-        .await
-    {
-        Ok(address) => {
-            config
-                .ui()
-                .print(format!("🎉 World at address {} updated!", format_args!("{:#x}", address)));
-            world_address = Some(address);
+    let ui = ws.config().ui();
+    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+
+    match migration::apply_diff(ws, account, None, &strategy).await {
+        Ok(migration_output) => {
+            config.ui().print(format!(
+                "🎉 World at address {} updated!",
+                format_args!("{:#x}", migration_output.world_address)
+            ));
+            world_address = Some(migration_output.world_address);
         }
         Err(err) => {
             config.ui().error(err.to_string());
@@ -208,7 +210,7 @@ impl DevArgs {
             RecursiveMode::Recursive,
         )?;
         let name = self.name.clone();
-        let mut previous_manifest: Option<DeployedManifest> = Option::None;
+        let mut previous_manifest: Option<DeploymentManifest> = Option::None;
         let result = build(&mut context);
 
         let Some((mut world_address, account, _)) = context

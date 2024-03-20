@@ -6,7 +6,7 @@ use clap::Parser;
 use dojo_lang::compiler::{DojoCompiler, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::compile_workspace;
-use dojo_world::manifest::DeployedManifest;
+use dojo_world::manifest::DeploymentManifest;
 use futures::executor::block_on;
 use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;
@@ -117,7 +117,7 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
 
     migration::execute(&ws, migrate, None).await?;
 
-    let manifest = DeployedManifest::load_from_path(
+    let manifest = DeploymentManifest::load_from_path(
         &manifest_dir
             .join(MANIFESTS_DIR)
             .join(DEPLOYMENTS_DIR)
