@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710864638948,
+  "lastUpdate": 1710960506522,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3055,6 +3055,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 966668,
             "range": "± 68349",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35d789a77156cff98b7c3c43b12372f187cd394d",
+          "message": "refactor(torii): retrieve events and store only relevant txns (#1631)\n\n* feat(torii): parallelize torii sync_range func\r\n\r\n* refactor: retrieve events & store only relevant txns\r\n\r\n* refactor: fix chunk size overflow & handle next events pages\r\n\r\n* chore: fmt\r\n\r\n* chore: clippy\r\n\r\n* chore: fmt\r\n\r\n* refactor: execute all txns at end of sync\r\n\r\n* chore: code\r\n\r\n* chroe: suggested changes\r\n\r\n* feat: configure events page chunk size\r\n\r\n* fmt\r\n\r\n* refactor: include chink size in config\r\n\r\n* fix",
+          "timestamp": "2024-03-20T14:38:42-04:00",
+          "tree_id": "35214aeb261c1aa3446a0c24054d6ee390f8f106",
+          "url": "https://github.com/dojoengine/dojo/commit/35d789a77156cff98b7c3c43b12372f187cd394d"
+        },
+        "date": 1710960506070,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 1020553,
+            "range": "± 34079",
             "unit": "ns/iter"
           }
         ]
