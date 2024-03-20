@@ -114,7 +114,7 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
     let chain_id = migrate.starknet.provider(None).unwrap().chain_id().await.unwrap();
     let chain_id = parse_cairo_short_string(&chain_id).unwrap();
 
-    let _ = migrate.run(&config);
+    migrate.run(&config)?;
 
     let manifest = DeploymentManifest::load_from_path(
         &manifest_dir
