@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710960506522,
+  "lastUpdate": 1710976010327,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3085,6 +3085,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 1020553,
             "range": "± 34079",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jonathan.chaverri12@gmail.com",
+            "name": "Jonatan Chaverri",
+            "username": "Jonatan-Chaverri"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f4c8111aefe2672d04356df64914871a5bcb536d",
+          "message": "Split sozo ops into its own crate (#1546)\n\n* Split sozo ops into its own crate\r\n\r\n* fix: minor fixes and adjust commands documentation\r\n\r\n* fix: add missing file\r\n\r\n* fix: ensure migration failure is not silent\r\n\r\n---------\r\n\r\nCo-authored-by: Jonatan Chaverri <jonatan.chaverri@kyndryl.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-20T16:57:19-06:00",
+          "tree_id": "af15ebe23f89677e5d1472e965d0f3aaea2af4cc",
+          "url": "https://github.com/dojoengine/dojo/commit/f4c8111aefe2672d04356df64914871a5bcb536d"
+        },
+        "date": 1710976009828,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 966408,
+            "range": "± 66400",
             "unit": "ns/iter"
           }
         ]
