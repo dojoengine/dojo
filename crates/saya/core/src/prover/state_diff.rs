@@ -3,7 +3,6 @@ use std::fmt;
 use katana_primitives::state::StateUpdates;
 use starknet::core::types::FieldElement;
 
-#[derive(serde::Serialize)]
 pub struct ProvedStateDiff {
     pub genesis_state_hash: FieldElement,
     pub prev_state_hash: FieldElement,
@@ -38,6 +37,25 @@ pub const EXAMPLE_STATE_DIFF: &str = r#"{
     }
 }"#;
 
+#[cfg(test)]
+pub const EXAMPLE_KATANA_DIFF: &str = r#"{
+    "genesis_state_hash": 0,
+    "prev_state_hash": 0,
+    "nonce_updates": {
+        "2753027862869584298471002046734263971941226372316454331586763888183773261315": 1
+    },
+    "storage_updates": {
+        "2087021424722619777119509474943472645767659996348769578120564519014510906823": {
+            "2080372569135727803323277605537468839623406868880224375222092136867736091483": 9999999366500000000000,
+            "3488041066649332616440110253331181934927363442882040970594983370166361489161": 633500000000000
+        }
+    },
+    "contract_updates": {},
+    "declared_classes": {
+        "2927827620326415540917522810963695348790596370636511605071677066526091865974": 3454128523693959991357220485501659129201494257878487792088502805686335557901
+    }
+}"#;
+
 /// We need custom implentation because of dynamic keys in json
 impl fmt::Display for ProvedStateDiff {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -50,7 +68,7 @@ impl fmt::Display for ProvedStateDiff {
             .state_updates
             .nonce_updates
             .iter()
-            .map(|(k, v)| format!(r#""{}":{}"#, k, v))
+            .map(|(k, v)| format!(r#""{}":{}"#, k.0, v))
             .collect::<Vec<_>>()
             .join(",");
         write!(f, "{}{}", nonce_updates, "}")?;
@@ -67,7 +85,7 @@ impl fmt::Display for ProvedStateDiff {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                format!(r#""{}":{{{}}}"#, k, storage)
+                format!(r#""{}":{{{}}}"#, k.0, storage)
             })
             .collect::<Vec<_>>()
             .join(",");
@@ -78,7 +96,7 @@ impl fmt::Display for ProvedStateDiff {
             .state_updates
             .contract_updates
             .iter()
-            .map(|(k, v)| format!(r#""{}":{}"#, k, v))
+            .map(|(k, v)| format!(r#""{}":{}"#, k.0, v))
             .collect::<Vec<_>>()
             .join(",");
         write!(f, "{}{}", contract_updates, "}")?;

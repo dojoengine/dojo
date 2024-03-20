@@ -1,5 +1,7 @@
 //! Saya core library.
 
+use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
 
 use futures::future::join_all;
@@ -163,9 +165,27 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
+        println!("{}", to_prove);
+
         let serialized = format!("{}", to_prove);
         let proof = prover::prove(serialized, prover::ProverIdentifier::Stone).await?;
-        let parsed = prover::parse_proof(proof)?;
+        let parsed = prover::parse_proof(proof.clone())?;
+
+        // File::create("proof.json")
+        //     .unwrap()
+        //     .write_all(
+        //         parsed
+        //             .clone()
+        //             .into_iter()
+        //             .map(|p| format!("{}", p))
+        //             .collect::<Vec<_>>()
+        //             .join(" ")
+        //             .as_bytes(),
+        //     )
+        //     .unwrap();
+
+        File::create("proof.json").unwrap().write_all(proof.as_bytes()).unwrap();
+
         let transaction_hash =
             verifier::verify(parsed, verifier::VerifierIdentifier::StarkwareEthereum).await?;
 
@@ -184,13 +204,28 @@ impl From<starknet::providers::ProviderError> for error::Error {
 #[cfg(test)]
 mod tests {
     use crate::{
-        prover::{parse_proof, prove, state_diff::EXAMPLE_STATE_DIFF, ProverIdentifier},
+        prover::{
+            parse_proof, prove,
+            state_diff::{EXAMPLE_KATANA_DIFF, EXAMPLE_STATE_DIFF},
+            ProverIdentifier,
+        },
         verifier::{verify, VerifierIdentifier},
     };
 
     #[tokio::test]
     async fn test_proof_flow_with_example_data() {
         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
+
+        let parsed = parse_proof(proof).unwrap();
+
+        let result = verify(parsed, VerifierIdentifier::StarkwareEthereum).await.unwrap();
+
+        println!("Tx: {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn test_proof_flow_with_katana_data() {
+        let proof = prove(EXAMPLE_KATANA_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
 
         let parsed = parse_proof(proof).unwrap();
 
