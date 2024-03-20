@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::io::Write;
 use std::iter::zip;
 use std::ops::DerefMut;
 
@@ -8,6 +9,7 @@ use cairo_lang_defs::db::DefsGroup;
 use cairo_lang_defs::ids::{ModuleId, ModuleItemId};
 use cairo_lang_filesystem::db::FilesGroup;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
+use cairo_lang_formatter::format_string;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_starknet::abi;
 use cairo_lang_starknet::contract::{find_contracts, ContractDeclaration};
@@ -116,11 +118,38 @@ impl Compiler for DojoCompiler {
 
         for (decl, class) in zip(contracts, classes) {
             let contract_full_path = decl.module_id().full_path(db.upcast_mut());
-            let file_name = format!("{contract_full_path}.json");
 
-            let mut file = target_dir.open_rw(file_name.clone(), "output file", ws.config())?;
-            serde_json::to_writer_pretty(file.deref_mut(), &class)
-                .with_context(|| format!("failed to serialize contract: {contract_full_path}"))?;
+            // save expanded contract source file
+            if let Ok(file_id) = db.module_main_file(decl.module_id()) {
+                if let Some(file_content) = db.file_content(file_id) {
+                    let src_file_name = format!("{contract_full_path}.cairo");
+
+                    let mut file =
+                        target_dir.open_rw(src_file_name.clone(), "source file", ws.config())?;
+                    file.write(format_string(db, file_content.to_string()).as_bytes())
+                        .with_context(|| {
+                            format!("failed to serialize contract source: {contract_full_path}")
+                        })?;
+                } else {
+                    return Err(anyhow!("failed to get source file content: {contract_full_path}"));
+                }
+            } else {
+                return Err(anyhow!("failed to get source file: {contract_full_path}"));
+            }
+
+            // save JSON artifact file
+            let file_name = format!("{contract_full_path}.json");
+            let mut file = target_dir.open_rw(file_name.clone(), "class file", ws.config())?;
+            serde_json::to_writer_pretty(file.deref_mut(), &class).with_context(|| {
+                format!("failed to serialize contract artifact: {contract_full_path}")
+            })?;
+
+            // save JSON ABI file
+            let file_name = format!("{contract_full_path}.abi.json");
+            let mut file = target_dir.open_rw(file_name.clone(), "abi file", ws.config())?;
+            serde_json::to_writer_pretty(file.deref_mut(), &class.abi).with_context(|| {
+                format!("failed to serialize contract ABI: {contract_full_path}")
+            })?;
 
             let class_hash = compute_class_hash_of_contract_class(&class).with_context(|| {
                 format!("problem computing class hash for contract `{contract_full_path}`")

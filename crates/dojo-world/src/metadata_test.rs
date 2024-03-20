@@ -22,6 +22,8 @@ name = "example"
 description = "example world"
 cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
+abi = "file://example_abi.json"
+source = "file://example_source.cairo"
 website = "https://dojoengine.org"
 socials.x = "https://x.com/dojostarknet"
         "#,
@@ -54,6 +56,8 @@ socials.x = "https://x.com/dojostarknet"
     assert_eq!(world.description(), Some("example world"));
     assert_eq!(world.cover_uri, Some(Uri::File("example_cover.png".into())));
     assert_eq!(world.icon_uri, Some(Uri::File("example_icon.png".into())));
+    assert_eq!(world.abi, Some(Uri::File("example_abi.json".into())));
+    assert_eq!(world.source, Some(Uri::File("example_source.cairo".into())));
     assert_eq!(world.website, Some(Url::parse("https://dojoengine.org").unwrap()));
     assert_eq!(world.socials.unwrap().get("x"), Some(&"https://x.com/dojostarknet".to_string()));
 }
@@ -65,6 +69,8 @@ async fn world_metadata_hash_and_upload() {
         description: Some("A world used for testing".to_string()),
         cover_uri: Some(Uri::File("src/metadata_test_data/cover.png".into())),
         icon_uri: None,
+        abi: Some(Uri::File("src/metadata_test_data/abi.json".into())),
+        source: Some(Uri::File("src/metadata_test_data/source.cairo".into())),
         website: Some(Url::parse("https://dojoengine.org").unwrap()),
         socials: Some(HashMap::from([("x".to_string(), "https://x.com/dojostarknet".to_string())])),
     };
@@ -89,6 +95,8 @@ name = "example"
 description = "example world"
 cover_uri = "file://example_cover.png"
 icon_uri = "file://example_icon.png"
+abi = "file://example_abi.json"
+source = "file://example_source.cairo"
 website = "https://dojoengine.org"
 # socials.x = "https://x.com/dojostarknet"
         "#,

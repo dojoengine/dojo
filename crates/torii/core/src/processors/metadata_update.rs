@@ -103,6 +103,8 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
     let icon_img = fetch_image(&metadata.icon_uri).await;
     let cover_img = fetch_image(&metadata.cover_uri).await;
 
+    // TODO RBA
+
     Ok((metadata, icon_img, cover_img))
 }
 
