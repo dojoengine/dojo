@@ -102,6 +102,10 @@ struct Args {
     /// Open World Explorer on the browser.
     #[arg(long)]
     explorer: bool,
+
+    /// Chunk size of the events page when indexing using events
+    #[arg(long, default_value = "1000")]
+    events_chunk_size: u64,
 }
 
 #[tokio::main]
@@ -171,6 +175,7 @@ async fn main() -> anyhow::Result<()> {
         EngineConfig { start_block: args.start_block, ..Default::default() },
         shutdown_tx.clone(),
         Some(block_tx),
+        args.events_chunk_size
     );
 
     let shutdown_rx = shutdown_tx.subscribe();

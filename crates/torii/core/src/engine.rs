@@ -49,6 +49,7 @@ pub struct Engine<P: Provider + Sync> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
+    events_chunk_size: u64,
 }
 
 struct UnprocessedEvent {
@@ -65,8 +66,9 @@ impl<P: Provider + Sync> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
+        events_chunk_size: u64,
     ) -> Self {
-        Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx }
+        Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx, events_chunk_size }
     }
 
     pub async fn start(&mut self) -> Result<()> {
@@ -130,14 +132,13 @@ impl<P: Provider + Sync> Engine<P> {
                     keys: None,
                 },
                 token,
-                1000,
+                self.events_chunk_size,
             )
         };
 
         // handle next events pages
-        let mut events_pages = vec![];
+        let mut events_pages = vec![get_events(None).await?];
 
-        events_pages.push(get_events(None).await?);
         while let Some(token) = &events_pages.last().unwrap().continuation_token {
             events_pages.push(get_events(Some(token.clone())).await?);
         }
@@ -242,7 +243,7 @@ impl<P: Provider + Sync> Engine<P> {
 
     async fn process_block(&mut self, block_number: u64, block_hash: FieldElement) -> Result<()> {
         for processor in &self.processors.block {
-            processor.process(self.db, self.provider.as_ref(), block_number, block_hash).await?;
+            processor.process(&mut self.db, self.provider.as_ref(), block_number, block_hash).await?;
         }
         Ok(())
     }
@@ -290,7 +291,7 @@ impl<P: Provider + Sync> Engine<P> {
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, &mut self.db, block, transaction_receipt, event_id, event)
+                    .process(&self.world, &mut self.db, block_number, transaction_receipt, event_id, event)
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {
