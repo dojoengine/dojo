@@ -34,8 +34,8 @@ impl FromStr for ModelContract {
         let (model, contract) = match parts.as_slice() {
             [model, contract] => (model, contract),
             _ => anyhow::bail!(
-                "Model and contract address are expected to be comma separated: `sozo auth writer \
-                 model_name,0x1234`"
+                "Model and contract address are expected to be comma separated: `sozo auth grant \
+                 writer model_name,0x1234`"
             ),
         };
 
@@ -61,7 +61,7 @@ impl FromStr for OwnerResource {
         let (resource_part, owner_part) = match parts.as_slice() {
             [resource, owner] => (*resource, *owner),
             _ => anyhow::bail!(
-                "Owner and resource are expected to be comma separated: `sozo auth owner \
+                "Owner and resource are expected to be comma separated: `sozo auth grant owner \
                  resource_type:resource_name,0x1234`"
             ),
         };
@@ -79,7 +79,7 @@ impl FromStr for OwnerResource {
             }
             _ => anyhow::bail!(
                 "Resource is expected to be in the format `resource_type:resource_name`: `sozo \
-                 auth owner 0x1234,resource_type:resource_name`"
+                 auth grant owner resource_type:resource_name,0x1234`"
             ),
         };
 
@@ -133,6 +133,7 @@ where
         )
         .await?;
     }
+
     Ok(())
 }
 

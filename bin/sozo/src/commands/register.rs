@@ -54,7 +54,7 @@ impl RegisterArgs {
 
         let world_address = world.world_address.unwrap_or_default();
 
-        let _ = config.tokio_handle().block_on(async {
+        config.tokio_handle().block_on(async {
             let world =
                 utils::world_from_env_metadata(world, account, starknet, &env_metadata).await?;
             let provider = world.account.provider();
@@ -70,7 +70,6 @@ impl RegisterArgs {
                 config,
             )
             .await
-        });
-        Ok(())
+        })
     }
 }

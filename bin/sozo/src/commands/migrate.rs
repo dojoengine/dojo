@@ -108,7 +108,7 @@ impl MigrateArgs {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 
-        let _ = config.tokio_handle().block_on(async {
+        config.tokio_handle().block_on(async {
             let (world_address, account, chain_id) = setup_env(
                 &ws,
                 self.account,
@@ -120,8 +120,6 @@ impl MigrateArgs {
             .await?;
 
             migration::migrate(&ws, world_address, chain_id, &account, self.name).await
-        });
-
-        Ok(())
+        })
     }
 }

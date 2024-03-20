@@ -30,13 +30,6 @@ where
         .await
         .with_context(|| "Failed to send transaction")?;
 
-    handle_transaction_result(
-        &world.account.provider(),
-        res,
-        transaction.wait,
-        transaction.receipt,
-    )
-    .await?;
-
-    Ok(())
+    handle_transaction_result(&world.account.provider(), res, transaction.wait, transaction.receipt)
+        .await
 }

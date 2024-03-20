@@ -44,7 +44,7 @@ pub enum AuthKind {
     },
 }
 
-pub async fn execute(
+pub async fn grant(
     world: WorldOptions,
     account: AccountOptions,
     starknet: StarknetOptions,
@@ -59,16 +59,14 @@ pub async fn execute(
     let world_reader = WorldContractReader::new(world_address, &provider)
         .with_block(BlockId::Tag(BlockTag::Pending));
 
-    let _ = match kind {
+    match kind {
         AuthKind::Writer { models_contracts } => {
             auth::grant_writer(&world, models_contracts, world_reader, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
             auth::grant_owner(world, owners_resources, transaction.into()).await
         }
-    };
-
-    Ok(())
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -113,16 +111,12 @@ impl AuthArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = utils::load_metadata_from_config(config)?;
 
-        let _ = match self.command {
+        match self.command {
             AuthCommand::Grant { kind, world, starknet, account, transaction } => config
                 .tokio_handle()
-                .block_on(execute(world, account, starknet, env_metadata, kind, transaction)),
-            AuthCommand::Revoke { kind, world, starknet, account, transaction } => config
-                .tokio_handle()
-                .block_on(execute(world, account, starknet, env_metadata, kind, transaction)),
-        };
-
-        Ok(())
+                .block_on(grant(world, account, starknet, env_metadata, kind, transaction)),
+            _ => todo!(),
+        }
     }
 }
 

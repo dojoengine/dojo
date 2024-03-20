@@ -54,7 +54,7 @@ impl EventsArgs {
             self.world.world_address,
         );
 
-        let _ = config.tokio_handle().block_on(async {
+        config.tokio_handle().block_on(async {
             events::parse(
                 self.chunk_size,
                 provider,
@@ -64,7 +64,6 @@ impl EventsArgs {
                 &manifest_dir,
             )
             .await
-        });
-        Ok(())
+        })
     }
 }

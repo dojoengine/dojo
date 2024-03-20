@@ -79,7 +79,7 @@ impl ModelArgs {
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {
-            let _ = match self.command {
+            match self.command {
                 ModelCommands::ClassHash { name, starknet, world } => {
                     let world_address = world.address(env_metadata.as_ref()).unwrap();
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
@@ -100,9 +100,7 @@ impl ModelArgs {
                     let provider = starknet.provider(env_metadata.as_ref()).unwrap();
                     model::model_get(name, keys, world_address, provider).await
                 }
-            };
-        });
-
-        Ok(())
+            }
+        })
     }
 }

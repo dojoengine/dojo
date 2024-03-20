@@ -43,7 +43,7 @@ impl ExecuteArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = utils::load_metadata_from_config(config)?;
 
-        let _ = config.tokio_handle().block_on(async {
+        config.tokio_handle().block_on(async {
             let world = utils::world_from_env_metadata(
                 self.world,
                 self.account,
@@ -55,7 +55,6 @@ impl ExecuteArgs {
             let tx_config = self.transaction.into();
 
             execute::execute(self.contract, self.entrypoint, self.calldata, world, tx_config).await
-        });
-        Ok(())
+        })
     }
 }
