@@ -13,7 +13,6 @@ use scarb::compiler::CompilerRepository;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 use sozo::args::{Commands, SozoArgs};
-use sozo::ops::migration;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
@@ -115,7 +114,7 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
     let chain_id = migrate.starknet.provider(None).unwrap().chain_id().await.unwrap();
     let chain_id = parse_cairo_short_string(&chain_id).unwrap();
 
-    migration::execute(&ws, migrate, None).await?;
+    migrate.run(&config)?;
 
     let manifest = DeploymentManifest::load_from_path(
         &manifest_dir

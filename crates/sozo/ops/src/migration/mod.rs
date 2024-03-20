@@ -10,24 +10,19 @@ use dojo_world::manifest::{
     AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, Manifest,
     ManifestMethods, OverlayManifest,
 };
-use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
+use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
+    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff, TxConfig,
 };
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{
-    BlockId, BlockTag, FieldElement, InvokeTransactionResult, StarknetError,
-};
-use starknet::core::utils::{
-    cairo_short_string_to_felt, get_contract_address, parse_cairo_short_string,
-};
-use starknet::providers::jsonrpc::HttpTransport;
+use starknet::core::types::{FieldElement, InvokeTransactionResult};
+use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
 use tokio::fs;
 
 #[cfg(test)]
@@ -35,16 +30,11 @@ use tokio::fs;
 mod migration_test;
 mod ui;
 
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
-use starknet::signers::{LocalWallet, Signer};
+use starknet::providers::Provider;
+use starknet::signers::Signer;
 use ui::MigrationUi;
 
 use self::ui::{bold_message, italic_message};
-use crate::commands::migrate::MigrateArgs;
-use crate::commands::options::account::AccountOptions;
-use crate::commands::options::starknet::StarknetOptions;
-use crate::commands::options::transaction::TransactionOptions;
-use crate::commands::options::world::WorldOptions;
 
 #[derive(Debug, Default, Clone)]
 pub struct MigrationOutput {
@@ -56,18 +46,20 @@ pub struct MigrationOutput {
     pub full: bool,
 }
 
-pub async fn execute(
+pub async fn migrate<P, S>(
     ws: &Workspace<'_>,
-    args: MigrateArgs,
-    env_metadata: Option<Environment>,
-) -> Result<()> {
+    world_address: Option<FieldElement>,
+    chain_id: String,
+    account: &SingleOwnerAccount<P, S>,
+    name: Option<String>,
+) -> Result<()>
+where
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
     let ui = ws.config().ui();
-    let MigrateArgs { account, starknet, world, name, .. } = args;
 
     // Setup account for migration and fetch world address if it exists.
-
-    let (world_address, account, chain_id) =
-        setup_env(ws, account, starknet, world, name.as_ref(), env_metadata.as_ref()).await?;
     ui.print(format!("Chain ID: {}\n", &chain_id));
 
     // its path to a file so `parent` should never return `None`
@@ -78,7 +70,7 @@ pub async fn execute(
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&manifest_dir, &account, world_address, &ui).await.map_err(|e| {
+        load_world_manifests(&manifest_dir, account, world_address, &ui).await.map_err(|e| {
             ui.error(e.to_string());
             anyhow!(
                 "\n Use `sozo clean` to clean your project, or `sozo clean --manifests-abis` to \
@@ -87,7 +79,6 @@ pub async fn execute(
         })?;
 
     // Calculate diff between local and remote World manifests.
-
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
     let diff = WorldDiff::compute(local_manifest.clone(), remote_manifest.clone());
     let total_diffs = diff.count_diffs();
@@ -102,7 +93,7 @@ pub async fn execute(
     let world_address = strategy.world_address().expect("world address must exist");
 
     // Migrate according to the diff.
-    match apply_diff(ws, &account, None, &strategy).await {
+    match apply_diff(ws, account, None, &strategy).await {
         Ok(migration_output) => {
             update_manifests_and_abis(
                 ws,
@@ -228,10 +219,10 @@ async fn update_manifest_abis(
     }
 }
 
-pub(crate) async fn apply_diff<P, S>(
+pub async fn apply_diff<P, S>(
     ws: &Workspace<'_>,
     account: &SingleOwnerAccount<P, S>,
-    txn_config: Option<TransactionOptions>,
+    txn_config: Option<TxConfig>,
     strategy: &MigrationStrategy,
 ) -> Result<MigrationOutput>
 where
@@ -277,51 +268,6 @@ where
     }
 
     Ok(migration_output)
-}
-
-pub(crate) async fn setup_env(
-    ws: &Workspace<'_>,
-    account: AccountOptions,
-    starknet: StarknetOptions,
-    world: WorldOptions,
-    name: Option<&String>,
-    env: Option<&Environment>,
-) -> Result<(
-    Option<FieldElement>,
-    SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    String,
-)> {
-    let ui = ws.config().ui();
-
-    let world_address = world.address(env).ok();
-
-    let (account, chain_id) = {
-        let provider = starknet.provider(env)?;
-        let chain_id = provider.chain_id().await?;
-        let chain_id = parse_cairo_short_string(&chain_id)
-            .with_context(|| "Cannot parse chain_id as string")?;
-
-        let mut account = account.account(provider, env).await?;
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-        let address = account.address();
-
-        ui.print(format!("\nMigration account: {address:#x}"));
-        if let Some(name) = name {
-            ui.print(format!("\nWorld name: {name}\n"));
-        }
-
-        match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-            Ok(_) => Ok((account, chain_id)),
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
-            }
-            Err(e) => Err(e.into()),
-        }
-    }
-    .with_context(|| "Problem initializing account for migration.")?;
-
-    Ok((world_address, account, chain_id))
 }
 
 async fn load_world_manifests<P, S>(
@@ -414,7 +360,7 @@ pub async fn execute_strategy<P, S>(
     ws: &Workspace<'_>,
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
-    txn_config: Option<TransactionOptions>,
+    txn_config: Option<TxConfig>,
 ) -> Result<MigrationOutput>
 where
     P: Provider + Sync + Send + 'static,
@@ -428,10 +374,7 @@ where
         Some(base) => {
             ui.print_header("# Base Contract");
 
-            match base
-                .declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default())
-                .await
-            {
+            match base.declare(migrator, txn_config.unwrap_or_default()).await {
                 Ok(res) => {
                     ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
                 }
@@ -532,7 +475,7 @@ where
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
 
-    match register_models(strategy, migrator, &ui, txn_config.clone()).await {
+    match register_models(strategy, migrator, &ui, txn_config).await {
         Ok(_) => (),
         Err(e) => {
             ui.anyhow(&e);
@@ -563,19 +506,14 @@ async fn deploy_contract<P, S>(
     constructor_calldata: Vec<FieldElement>,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: &Option<TransactionOptions>,
+    txn_config: &Option<TxConfig>,
 ) -> Result<ContractDeploymentOutput>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
     match contract
-        .deploy(
-            contract.diff.local,
-            constructor_calldata,
-            migrator,
-            txn_config.clone().map(|c| c.into()).unwrap_or_default(),
-        )
+        .deploy(contract.diff.local, constructor_calldata, migrator, txn_config.unwrap_or_default())
         .await
     {
         Ok(val) => {
@@ -607,7 +545,7 @@ async fn register_models<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: Option<TransactionOptions>,
+    txn_config: Option<TxConfig>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -626,8 +564,7 @@ where
     for c in models.iter() {
         ui.print(italic_message(&c.diff.name).to_string());
 
-        let res =
-            c.declare(migrator, txn_config.clone().map(|c| c.into()).unwrap_or_default()).await;
+        let res = c.declare(migrator, txn_config.unwrap_or_default()).await;
         match res {
             Ok(output) => {
                 ui.print_hidden_sub(format!("Declare transaction: {:#x}", output.transaction_hash));
@@ -677,7 +614,7 @@ async fn deploy_contracts<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: Option<TransactionOptions>,
+    txn_config: Option<TxConfig>,
 ) -> Result<Vec<Option<DeployOutput>>>
 where
     P: Provider + Sync + Send + 'static,
@@ -703,7 +640,7 @@ where
                 world_address,
                 contract.diff.local,
                 migrator,
-                txn_config.clone().map(|c| c.into()).unwrap_or_default(),
+                txn_config.unwrap_or_default(),
             )
             .await
         {
