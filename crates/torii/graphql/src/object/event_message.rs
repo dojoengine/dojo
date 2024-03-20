@@ -120,8 +120,8 @@ fn model_union_field() -> Field {
                     let entity_id = extract::<String>(indexmap, "id")?;
                     // fetch name from the models table
                     // using the model id (hashed model name)
-                    let model_ids: Vec<(String,)> = sqlx::query_as(
-                        "SELECT name
+                    let model_ids: Vec<(String, String)> = sqlx::query_as(
+                        "SELECT id, name
                         FROM models
                         WHERE id = (
                             SELECT model_id
@@ -134,9 +134,11 @@ fn model_union_field() -> Field {
                     .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (name,) in model_ids {
-                        let type_mapping = type_mapping_query(&mut conn, &name).await?;
+                    for (id, name) in model_ids {
+                        // the model id is used as the id for the model members
+                        let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
+                        // but the model data tables use the unhashed model name as the table name
                         let data = model_data_recursive_query(
                             &mut conn,
                             vec![name.clone()],
