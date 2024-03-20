@@ -2,7 +2,7 @@ use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
+use starknet::core::types::{Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tracing::{debug, info};
@@ -38,7 +38,7 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        _block: &BlockWithTxs,
+        _block_number: u64,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,

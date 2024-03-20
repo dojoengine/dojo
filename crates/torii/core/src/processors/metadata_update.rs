@@ -7,7 +7,7 @@ use base64::Engine as _;
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::metadata::{Uri, WorldMetadata};
 use reqwest::Client;
-use starknet::core::types::{BlockWithTxs, Event, TransactionReceipt};
+use starknet::core::types::{Event, TransactionReceipt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
@@ -48,7 +48,7 @@ where
         &self,
         _world: &WorldContractReader<P>,
         db: &mut Sql,
-        _block: &BlockWithTxs,
+        _block_number: u64,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
