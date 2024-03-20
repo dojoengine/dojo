@@ -199,7 +199,7 @@ impl DevArgs {
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+            dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
             None
         };
