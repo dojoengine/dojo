@@ -9,6 +9,7 @@ mod tests {
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
+    use starknet::core::utils::get_selector_from_name;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
     use torii_core::sql::Sql;
@@ -292,7 +293,7 @@ mod tests {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let model_name = "Subrecord".to_string();
-        let model_id = model_name.clone();
+        let model_id = get_selector_from_name(&model_name).unwrap();
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
         let expected_value: async_graphql::Value = value!({
