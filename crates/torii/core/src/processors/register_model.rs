@@ -39,6 +39,7 @@ where
         world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
+        block_timestamp: u64,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
@@ -74,7 +75,7 @@ where
             contract_address,
             packed_size,
             unpacked_size,
-            block.timestamp,
+            block_timestamp,
         )
         .await?;
 

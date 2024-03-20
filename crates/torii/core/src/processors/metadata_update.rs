@@ -49,6 +49,7 @@ where
         _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
+        block_timestamp: u64,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
@@ -56,7 +57,6 @@ where
         let resource = &event.data[0];
         let uri_len: u8 = event.data[1].try_into().unwrap();
 
-        let block_timestamp = block.timestamp;
         let uri_str = if uri_len > 0 {
             event.data[2..=uri_len as usize + 1]
                 .iter()
