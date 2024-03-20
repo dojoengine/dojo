@@ -11,6 +11,7 @@ use scarb::ops;
 use sozo::ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
@@ -84,7 +85,7 @@ async fn test_load_from_remote() {
     .await
     .unwrap();
 
-    assert_eq!(id, "Position");
+    assert_eq!(id, format!("{:#x}", get_selector_from_name("Position").unwrap()));
     assert_eq!(name, "Position");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
@@ -96,7 +97,7 @@ async fn test_load_from_remote() {
     .await
     .unwrap();
 
-    assert_eq!(id, "Moves");
+    assert_eq!(id, format!("{:#x}", get_selector_from_name("Moves").unwrap()));
     assert_eq!(name, "Moves");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
