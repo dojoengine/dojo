@@ -75,10 +75,10 @@ async fn test_load_from_remote() {
     let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 2);
+    assert_eq!(models.len(), 3);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Position'",
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
     )
     .fetch_one(&pool)
     .await
@@ -90,7 +90,7 @@ async fn test_load_from_remote() {
     assert_eq!(unpacked_size, 2);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Moves'",
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Moves'",
     )
     .fetch_one(&pool)
     .await
