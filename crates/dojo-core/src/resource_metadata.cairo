@@ -5,7 +5,7 @@
 //!
 use dojo::world::IWorldDispatcherTrait;
 
-const RESOURCE_METADATA_MODEL: felt252 = selector!("ResourceMetadata");
+const RESOURCE_METADATA_SELECTOR: felt252 = selector!("ResourceMetadata");
 
 fn initial_address() -> starknet::ContractAddress {
     starknet::contract_address_const::<0>()
@@ -29,7 +29,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
     fn entity(
         world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>
     ) -> ResourceMetadata {
-        let values = world.entity(RESOURCE_METADATA_MODEL, keys, layout);
+        let values = world.entity(RESOURCE_METADATA_SELECTOR, keys, layout);
         let mut serialized = core::array::ArrayTrait::new();
         core::array::serialize_array_helper(keys, ref serialized);
         core::array::serialize_array_helper(values, ref serialized);
@@ -57,7 +57,7 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
 
     #[inline(always)]
     fn selector(self: @ResourceMetadata) -> felt252 {
-        RESOURCE_METADATA_MODEL
+        RESOURCE_METADATA_SELECTOR
     }
 
     #[inline(always)]
@@ -136,14 +136,14 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
 #[starknet::contract]
 mod resource_metadata {
     use super::ResourceMetadata;
-    use super::RESOURCE_METADATA_MODEL;
+    use super::RESOURCE_METADATA_SELECTOR;
 
     #[storage]
     struct Storage {}
 
     #[external(v0)]
     fn selector(self: @ContractState) -> felt252 {
-        RESOURCE_METADATA_MODEL
+        RESOURCE_METADATA_SELECTOR
     }
 
     fn name(self: @ContractState) -> ByteArray {

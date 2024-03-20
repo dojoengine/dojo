@@ -76,7 +76,7 @@ mod world {
     use dojo::model::Model;
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
-    use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
+    use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_SELECTOR};
 
     use super::Errors;
 
@@ -182,7 +182,7 @@ mod world {
         self
             .models
             .write(
-                RESOURCE_METADATA_MODEL,
+                RESOURCE_METADATA_SELECTOR,
                 (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
             );
 
@@ -201,7 +201,7 @@ mod world {
             Introspect::<ResourceMetadata>::layout(ref layout);
 
             let mut data = self
-                .entity(RESOURCE_METADATA_MODEL, array![resource_id].span(), layout.span(),);
+                .entity(RESOURCE_METADATA_SELECTOR, array![resource_id].span(), layout.span(),);
 
             let mut model = array![resource_id];
             core::array::serialize_array_helper(data, ref model);

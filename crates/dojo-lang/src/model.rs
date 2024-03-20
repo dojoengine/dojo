@@ -154,7 +154,7 @@ pub fn handle_model_struct(
     let (model_version, model_selector) = match version {
         0 => (RewriteNode::Text("0".to_string()), RewriteNode::Text(format!("\"{model_name}\""))),
         _ => (
-            RewriteNode::Text("1".to_string()),
+            RewriteNode::Text(CURRENT_MODEL_VERSION.to_string()),
             RewriteNode::Text(format!("selector!(\"{model_name}\")")),
         ),
     };
