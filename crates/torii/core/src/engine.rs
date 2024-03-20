@@ -68,7 +68,16 @@ impl<P: Provider + Sync> Engine<P> {
         block_tx: Option<BoundedSender<u64>>,
         events_chunk_size: u64,
     ) -> Self {
-        Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx, events_chunk_size }
+        Self {
+            world,
+            db,
+            provider: Box::new(provider),
+            processors,
+            config,
+            shutdown_tx,
+            block_tx,
+            events_chunk_size,
+        }
     }
 
     pub async fn start(&mut self) -> Result<()> {
@@ -243,7 +252,9 @@ impl<P: Provider + Sync> Engine<P> {
 
     async fn process_block(&mut self, block_number: u64, block_hash: FieldElement) -> Result<()> {
         for processor in &self.processors.block {
-            processor.process(&mut self.db, self.provider.as_ref(), block_number, block_hash).await?;
+            processor
+                .process(&mut self.db, self.provider.as_ref(), block_number, block_hash)
+                .await?;
         }
         Ok(())
     }
@@ -291,7 +302,14 @@ impl<P: Provider + Sync> Engine<P> {
                 && processor.validate(event)
             {
                 processor
-                    .process(&self.world, &mut self.db, block_number, transaction_receipt, event_id, event)
+                    .process(
+                        &self.world,
+                        &mut self.db,
+                        block_number,
+                        transaction_receipt,
+                        event_id,
+                        event,
+                    )
                     .await?;
             } else {
                 let unprocessed_event = UnprocessedEvent {
