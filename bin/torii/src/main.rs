@@ -172,10 +172,13 @@ async fn main() -> anyhow::Result<()> {
         db.clone(),
         &provider,
         processors,
-        EngineConfig { start_block: args.start_block, ..Default::default() },
+        EngineConfig {
+            start_block: args.start_block,
+            events_chunk_size: args.events_chunk_size,
+            ..Default::default()
+        },
         shutdown_tx.clone(),
         Some(block_tx),
-        args.events_chunk_size,
     );
 
     let shutdown_rx = shutdown_tx.subscribe();

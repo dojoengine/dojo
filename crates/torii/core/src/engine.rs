@@ -33,6 +33,7 @@ impl<P: Provider + Sync> Default for Processors<P> {
 pub struct EngineConfig {
     pub block_time: Duration,
     pub start_block: u64,
+    events_chunk_size: u64,
 }
 
 impl Default for EngineConfig {
@@ -49,7 +50,6 @@ pub struct Engine<P: Provider + Sync> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    events_chunk_size: u64,
 }
 
 struct UnprocessedEvent {
@@ -66,18 +66,8 @@ impl<P: Provider + Sync> Engine<P> {
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
-        events_chunk_size: u64,
     ) -> Self {
-        Self {
-            world,
-            db,
-            provider: Box::new(provider),
-            processors,
-            config,
-            shutdown_tx,
-            block_tx,
-            events_chunk_size,
-        }
+        Self { world, db, provider: Box::new(provider), processors, config, shutdown_tx, block_tx }
     }
 
     pub async fn start(&mut self) -> Result<()> {
@@ -141,7 +131,7 @@ impl<P: Provider + Sync> Engine<P> {
                     keys: None,
                 },
                 token,
-                self.events_chunk_size,
+                self.config.events_chunk_size,
             )
         };
 
