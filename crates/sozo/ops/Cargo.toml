@@ -34,7 +34,7 @@ dojo-world = { workspace = true, features = [ "contracts", "metadata", "migratio
 futures.workspace = true
 notify = "6.0.1"
 notify-debouncer-mini = "0.3.0"
-rpassword = "7.2.0"
+rpassword.workspace = true
 scarb-ui.workspace = true
 scarb.workspace = true
 semver.workspace = true

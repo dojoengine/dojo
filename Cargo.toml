@@ -91,8 +91,8 @@ torii-server = { path = "crates/torii/server" }
 saya-core = { path = "crates/saya/core" }
 
 # sozo
-sozo-signers = { path = "crates/sozo/signers" }
 sozo-ops = { path = "crates/sozo/ops" }
+sozo-signers = { path = "crates/sozo/signers" }
 
 anyhow = "1.0.75"
 assert_matches = "1.5.0"
@@ -142,6 +142,8 @@ once_cell = "1.0"
 parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"
 rayon = "1.8.0"
+regex = "1.10.3"
+rpassword = "7.2.0"
 salsa = "0.16.1"
 scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.5.4" }
 scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.5.4" }
@@ -163,7 +165,6 @@ tokio = { version = "1.32.0", features = [ "full" ] }
 toml = "0.7.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
-regex = "1.10.3"
 url = { version = "2.4.0", features = [ "serde" ] }
 
 # server

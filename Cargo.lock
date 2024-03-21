@@ -11153,6 +11153,7 @@ dependencies = [
  "notify-debouncer-mini",
  "num-bigint",
  "num-integer",
+ "rpassword",
  "scarb",
  "scarb-ui",
  "semver 1.0.21",

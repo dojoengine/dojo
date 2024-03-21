@@ -50,17 +50,19 @@ impl SignerOptions {
             .as_deref()
             .or_else(|| env_metadata.and_then(|env| env.keystore_path()))
         {
-            if let Some(password) = self
-                .keystore_password
-                .as_deref()
-                .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
-            {
-                return Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
-                    path, password,
-                )?));
-            } else {
-                return Err(anyhow!("Keystore path is specified but password is not."));
-            }
+            let password = {
+                if let Some(password) = self
+                    .keystore_password
+                    .as_deref()
+                    .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
+                {
+                    password.to_owned()
+                } else {
+                    rpassword::prompt_password("Enter password: ")?
+                }
+            };
+            let private_key = SigningKey::from_keystore(path, &password)?;
+            return Ok(LocalWallet::from_signing_key(private_key));
         }
 
         Err(anyhow!(
