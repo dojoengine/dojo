@@ -169,7 +169,7 @@ pub async fn model_data_recursive_query(
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
-    let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", table_name, entity_id);
+    let query = format!("SELECT * FROM {} WHERE event_message_id = '{}'", table_name, entity_id);
     let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
     let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
 
