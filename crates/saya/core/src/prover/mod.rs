@@ -9,9 +9,7 @@ mod stone_image;
 mod vec252;
 
 pub use serializer::parse_proof;
-pub use stone_image::StoneProver;
-
-use self::stone_image::prove_stone;
+pub use stone_image::*;
 
 /// The prover used to generate the proof.
 #[derive(Debug)]
@@ -39,5 +37,5 @@ pub trait ProverClient {
 
     /// Generates the proof from the given trace.
     async fn prove(&self, input: String) -> anyhow::Result<String>;
-    async fn local_verify(proof: String) -> anyhow::Result<()>;
+    async fn local_verify(&self, proof: String) -> anyhow::Result<()>;
 }
