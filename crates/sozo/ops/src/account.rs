@@ -17,9 +17,6 @@ use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
 use starknet_crypto::FieldElement;
 
-// use crate::commands::account::AccountCommand;
-// use crate::commands::options::fee::FeeSetting;
-
 /// The canonical hash of a contract class. This is the class hash value of a contract instance.
 pub type ClassHash = FieldElement;
 
