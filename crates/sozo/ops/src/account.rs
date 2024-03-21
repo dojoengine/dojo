@@ -1,15 +1,15 @@
 use std::io::Write;
 use std::path::PathBuf;
-use std::time::Duration;
 
 use anyhow::Result;
 use colored::Colorize;
 use colored_json::{ColorMode, Output};
+use dojo_world::utils::TransactionWaiter;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::accounts::{AccountFactory, AccountFactoryError, OpenZeppelinAccountFactory};
 use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::{BlockId, BlockTag, ExecutionResult, StarknetError};
+use starknet::core::types::{BlockId, BlockTag, StarknetError, TransactionFinalityStatus};
 use starknet::core::utils::get_contract_address;
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -302,7 +302,14 @@ pub async fn deploy(
         format!("{:#064x}", account_deployment_tx).bright_yellow(),
         "sozo account fetch".bright_yellow(),
     );
-    watch_tx(&provider, account_deployment_tx, Duration::from_millis(poll_interval)).await?;
+    TransactionWaiter::new(account_deployment_tx, &provider)
+        .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
+        .with_interval(poll_interval)
+        .await?;
+    eprintln!(
+        "Transaction {} confirmed",
+        format!("{:#064x}", account_deployment_tx).bright_yellow()
+    );
 
     account.deployment = DeploymentStatus::Deployed(DeployedStatus {
         class_hash: undeployed_status.class_hash,
@@ -349,39 +356,6 @@ fn map_starknet_error(err: StarknetError) -> anyhow::Error {
             anyhow::anyhow!("UnexpectedError: {}", err.trim())
         }
         err => anyhow::anyhow!("{}", err),
-    }
-}
-
-pub async fn watch_tx<P>(
-    provider: P,
-    transaction_hash: FieldElement,
-    poll_interval: Duration,
-) -> Result<()>
-where
-    P: Provider,
-{
-    loop {
-        match provider.get_transaction_receipt(transaction_hash).await {
-            Ok(receipt) => match receipt.execution_result() {
-                ExecutionResult::Succeeded => {
-                    eprintln!(
-                        "Transaction {} confirmed",
-                        format!("{:#064x}", transaction_hash).bright_yellow()
-                    );
-
-                    return Ok(());
-                }
-                ExecutionResult::Reverted { reason } => {
-                    return Err(anyhow::anyhow!("transaction reverted: {}", reason));
-                }
-            },
-            Err(ProviderError::StarknetError(StarknetError::TransactionHashNotFound)) => {
-                eprintln!("Transaction not confirmed yet...");
-            }
-            Err(err) => return Err(err.into()),
-        }
-
-        tokio::time::sleep(poll_interval).await;
     }
 }
 
