@@ -52,6 +52,7 @@ pub async fn migrate<P, S>(
     chain_id: String,
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
+    dry_run: bool,
 ) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
@@ -92,32 +93,36 @@ where
     let strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
-    // Migrate according to the diff.
-    match apply_diff(ws, account, None, &strategy).await {
-        Ok(migration_output) => {
-            update_manifests_and_abis(
-                ws,
-                local_manifest,
-                remote_manifest,
-                &manifest_dir,
-                migration_output,
-                &chain_id,
-                name.as_ref(),
-            )
-            .await?;
-        }
-        Err(e) => {
-            update_manifests_and_abis(
-                ws,
-                local_manifest,
-                remote_manifest,
-                &manifest_dir,
-                MigrationOutput { world_address, ..Default::default() },
-                &chain_id,
-                name.as_ref(),
-            )
-            .await?;
-            return Err(e)?;
+    if dry_run {
+        print_strategy(&ui, &strategy);
+    } else {
+        // Migrate according to the diff.
+        match apply_diff(ws, account, None, &strategy).await {
+            Ok(migration_output) => {
+                update_manifests_and_abis(
+                    ws,
+                    local_manifest,
+                    remote_manifest,
+                    &manifest_dir,
+                    migration_output,
+                    &chain_id,
+                    name.as_ref(),
+                )
+                .await?;
+            }
+            Err(e) => {
+                update_manifests_and_abis(
+                    ws,
+                    local_manifest,
+                    remote_manifest,
+                    &manifest_dir,
+                    MigrationOutput { world_address, ..Default::default() },
+                    &chain_id,
+                    name.as_ref(),
+                )
+                .await?;
+                return Err(e)?;
+            }
         }
     };
 
@@ -682,4 +687,34 @@ pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error
         "Discrepancy detected in {name}.\nUse `sozo clean` to clean your project or `sozo clean \
          --artifacts` to clean artifacts only.\nThen, rebuild your project with `sozo build`."
     )
+}
+
+pub fn print_strategy(ui: &Ui, strategy: &MigrationStrategy) {
+    ui.print("\n📋 Migration Strategy\n");
+
+    if let Some(base) = &strategy.base {
+        ui.print_header("# Base Contract");
+        ui.print_sub(format!("declare (classhash: {:#x})\n", base.diff.local));
+    }
+
+    if let Some(world) = &strategy.world {
+        ui.print_header("# World");
+        ui.print_sub(format!("declare (classhash: {:#x})\n", world.diff.local));
+    }
+
+    if !&strategy.models.is_empty() {
+        ui.print_header(format!("# Models ({})", &strategy.models.len()));
+        for m in &strategy.models {
+            ui.print_sub(format!("register {} (classhash: {:#x})", m.diff.name, m.diff.local));
+        }
+        ui.print(" ");
+    }
+
+    if !&strategy.contracts.is_empty() {
+        ui.print_header(format!("# Contracts ({})", &strategy.contracts.len()));
+        for c in &strategy.contracts {
+            ui.print_sub(format!("deploy {} (classhash: {:#x})", c.diff.name, c.diff.local));
+        }
+        ui.print(" ");
+    }
 }
