@@ -59,15 +59,10 @@ metrics = { path = "crates/metrics" }
 
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo-bindgen" }
-dojo-core = { path = "crates/dojo-core" }
 dojo-lang = { path = "crates/dojo-lang" }
 dojo-test-utils = { path = "crates/dojo-test-utils" }
 dojo-types = { path = "crates/dojo-types" }
 dojo-world = { path = "crates/dojo-world" }
-
-# katana
-katana-codecs = { path = "crates/katana/storage/codecs" }
-katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core" }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor" }
@@ -76,11 +71,7 @@ katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
 katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
-katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
 katana-runner = { path = "crates/katana/runner" }
-
-# torii
-torii-client = { path = "crates/torii/client" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
@@ -89,9 +80,6 @@ torii-server = { path = "crates/torii/server" }
 
 # saya
 saya-core = { path = "crates/saya/core" }
-
-# sozo
-sozo-signers = { path = "crates/sozo/signers" }
 sozo-ops = { path = "crates/sozo/ops" }
 
 anyhow = "1.0.75"
