@@ -178,7 +178,7 @@ impl<P: Provider + Sync> Engine<P> {
                 block_tx.send(block_number).await?;
             }
 
-            Self::process_block(self, block_number, event.block_hash.unwrap(), block_timestamp)
+            Self::process_block(self, block_number, block_timestamp, event.block_hash.unwrap())
                 .await?;
             info!(target: "torii_core::engine", block_number = %block_number, "Processed block");
 
@@ -267,8 +267,8 @@ impl<P: Provider + Sync> Engine<P> {
     async fn process_block(
         &mut self,
         block_number: u64,
-        block_hash: FieldElement,
         block_timestamp: u64,
+        block_hash: FieldElement,
     ) -> Result<()> {
         for processor in &self.processors.block {
             processor
