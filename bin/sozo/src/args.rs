@@ -7,6 +7,7 @@ use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
 
+use crate::commands::account::AccountArgs;
 use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
 use crate::commands::clean::CleanArgs;
@@ -15,6 +16,7 @@ use crate::commands::dev::DevArgs;
 use crate::commands::events::EventsArgs;
 use crate::commands::execute::ExecuteArgs;
 use crate::commands::init::InitArgs;
+use crate::commands::keystore::KeystoreArgs;
 use crate::commands::migrate::MigrateArgs;
 use crate::commands::model::ModelArgs;
 use crate::commands::register::RegisterArgs;
@@ -51,6 +53,8 @@ pub struct SozoArgs {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    #[command(about = "Manage accounts")]
+    Account(AccountArgs),
     #[command(about = "Build the world, generating the necessary artifacts for deployment")]
     Build(BuildArgs),
     #[command(about = "Initialize a new project")]
@@ -74,6 +78,8 @@ pub enum Commands {
     Events(EventsArgs),
     #[command(about = "Manage world authorization")]
     Auth(AuthArgs),
+    #[clap(about = "Manage keystore files")]
+    Keystore(KeystoreArgs),
     #[command(about = "Generate shell completion file for specified shell")]
     Completions(CompletionsArgs),
 }

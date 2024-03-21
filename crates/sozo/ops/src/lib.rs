@@ -4,9 +4,11 @@ use dojo_world::migration::strategy::generate_salt;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
 
+pub mod account;
 pub mod auth;
 pub mod events;
 pub mod execute;
+pub mod keystore;
 pub mod migration;
 pub mod model;
 pub mod register;
