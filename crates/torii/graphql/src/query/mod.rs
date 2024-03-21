@@ -71,12 +71,19 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
     match member.type_enum.as_str() {
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
         "Enum" => TypeData::Simple(TypeRef::named("Enum")),
-        _ => parse_nested_type(&member.model_id, &member.name, &member.ty, nested_members),
+        _ => parse_nested_type(
+            &member.model_id,
+            &member.id,
+            &member.name,
+            &member.ty,
+            nested_members,
+        ),
     }
 }
 
 fn parse_nested_type(
     model_id: &str,
+    member_id: &str,
     member_name: &str,
     member_type: &str,
     nested_members: &[&ModelMember],
@@ -92,7 +99,9 @@ fn parse_nested_type(
             }
         })
         .collect();
-    let namespaced = format!("{}_{}", model_id, member_type);
+
+    let model_name = member_id.split('$').next().unwrap();
+    let namespaced = format!("{}_{}", model_name, member_type);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 

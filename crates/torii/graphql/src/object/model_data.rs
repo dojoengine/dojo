@@ -23,6 +23,7 @@ pub struct ModelMember {
     pub id: String,
     pub model_id: String,
     pub model_idx: i64,
+    pub model_name: String,
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
