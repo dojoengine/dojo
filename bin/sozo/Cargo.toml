@@ -28,6 +28,7 @@ console.workspace = true
 dojo-bindgen.workspace = true
 dojo-lang.workspace = true
 dojo-types.workspace = true
+dojo-utils.workspace = true
 dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 futures.workspace = true
 notify = "6.0.1"

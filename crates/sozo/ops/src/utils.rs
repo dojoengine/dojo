@@ -1,5 +1,5 @@
 use anyhow::Result;
-use dojo_world::utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
+use dojo_utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
 use starknet::core::types::{ExecutionResult, InvokeTransactionResult};
 use starknet::providers::Provider;
 

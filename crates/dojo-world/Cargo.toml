@@ -7,6 +7,8 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+dojo-utils.workspace = true
+
 anyhow.workspace = true
 async-trait.workspace = true
 cairo-lang-filesystem.workspace = true
@@ -14,7 +16,6 @@ cairo-lang-project.workspace = true
 cairo-lang-starknet.workspace = true
 camino.workspace = true
 convert_case.workspace = true
-futures.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -45,4 +46,4 @@ tokio.workspace = true
 contracts = [ "dep:dojo-types", "dep:http" ]
 manifest = [ "contracts", "dep:dojo-types", "dep:url" ]
 metadata = [ "dep:ipfs-api-backend-hyper", "dep:scarb", "dep:url" ]
-migration = [ "dep:tokio" ]
+migration = [  ]

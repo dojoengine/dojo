@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
+use dojo_utils::{TransactionWaiter, TransactionWaitingError};
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
@@ -19,8 +20,6 @@ use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use starknet::signers::Signer;
 use thiserror::Error;
-
-use crate::utils::{TransactionWaiter, TransactionWaitingError};
 
 pub mod class;
 pub mod contract;
