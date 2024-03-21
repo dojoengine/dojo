@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710976010327,
+  "lastUpdate": 1711041552236,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3115,6 +3115,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 966408,
             "range": "± 66400",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1bed7045c674d5d506c4671a6fc8b82da020a2e2",
+          "message": "feat: add eventmessage for emitting models & start refactoring emit macro (#1656)\n\n* feat: add eventmessage for emitting models & start refactoring emit macro\r\n\r\n* refactor: emit multiple models event\r\n\r\n* feat: event message processor\r\n\r\n* feat: emit_message world func emit event mssage\r\n\r\n* refactor: catch all event processor\r\n\r\n* refactor: check model key as name\r\n\r\n* feat: model name keccak as id & rework model events\r\n\r\n* fix: storing entities with model hash\r\n\r\n* refactor: catch all event message  and store\r\n\r\n* feat: emit model evrnt from spawn and move spawn\r\n\r\n* fix: pass keys as array\r\n\r\n* feat: fix emit macro and correctly index model events\r\n\r\n* feat: event messages migrations & set\r\n\r\n* feat: store events messages and new id system\r\n\r\n* chore: fmt\r\n\r\n* fix: keys array\r\n\r\n* feat: add grpc endpoint for event messages\r\n\r\n* feat: graphql schema for event messages\r\n\r\n* cadd comments for moel name hash\r\n\r\n* revert world.cario changes\r\n\r\n* fix: graphql entity and model connection\r\n\r\n* refactor: only test models name ordering\r\n\r\n* fix: entity/modeldata relation\r\n\r\n* refactor: remove event testing\r\n\r\n* fix: cairo code\r\n\r\n* refactor: add back event rxample\r\n\r\n* fix: merge\r\n\r\n* chore: migration\r\n\r\n* fix: subscription test\r\n\r\n* fix: tests\r\n\r\n* fix: subscription test\r\n\r\n* fix: sql test\r\n\r\n* chore: format model id correctly in test\r\n\r\n* fix: model subscription with id\r\n\r\n* fix: schema for model\r\n\r\n* chore: revert modelmmeber type\r\n\r\n* fix: event message query",
+          "timestamp": "2024-03-21T13:09:31-04:00",
+          "tree_id": "15712e252f16253a1a4feb51cdfe535b4b5a401a",
+          "url": "https://github.com/dojoengine/dojo/commit/1bed7045c674d5d506c4671a6fc8b82da020a2e2"
+        },
+        "date": 1711041551213,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 966058,
+            "range": "± 56940",
             "unit": "ns/iter"
           }
         ]
