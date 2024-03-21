@@ -36,7 +36,9 @@ pub async fn execute(command: ModelCommands, env_metadata: Option<Environment>) 
             let world_address = world.address(env_metadata.as_ref())?;
             let provider = starknet.provider(env_metadata.as_ref())?;
 
-            let world = WorldContractReader::new(world_address, &provider)
+            let world: WorldContractReader<
+                &starknet::providers::JsonRpcClient<starknet::providers::jsonrpc::HttpTransport>,
+            > = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
 
             let model = world.model_reader(&name).await?;
