@@ -47,6 +47,7 @@ pub enum ModelError {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
+    fn name(&self) -> String;
     fn class_hash(&self) -> FieldElement;
     fn contract_address(&self) -> FieldElement;
     async fn schema(&self) -> Result<Ty, E>;
@@ -147,6 +148,10 @@ impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
 where
     P: Provider + Sync + Send,
 {
+    fn name(&self) -> String {
+        self.name.to_string()
+    }
+
     fn class_hash(&self) -> FieldElement {
         self.class_hash
     }

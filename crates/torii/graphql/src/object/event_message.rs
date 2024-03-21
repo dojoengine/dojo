@@ -13,22 +13,22 @@ use torii_core::types::Entity;
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
-    DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
+    EVENT_ID_COLUMN, EVENT_MESSAGE_NAMES, EVENT_MESSAGE_TABLE, EVENT_MESSAGE_TYPE_NAME, ID_COLUMN,
 };
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
 use crate::types::TypeData;
 use crate::utils::extract;
-pub struct EntityObject;
+pub struct EventMessageObject;
 
-impl BasicObject for EntityObject {
+impl BasicObject for EventMessageObject {
     fn name(&self) -> (&str, &str) {
-        ENTITY_NAMES
+        EVENT_MESSAGE_NAMES
     }
 
     fn type_name(&self) -> &str {
-        ENTITY_TYPE_NAME
+        EVENT_MESSAGE_TYPE_NAME
     }
 
     fn type_mapping(&self) -> &TypeMapping {
@@ -40,10 +40,10 @@ impl BasicObject for EntityObject {
     }
 }
 
-impl ResolvableObject for EntityObject {
+impl ResolvableObject for EventMessageObject {
     fn resolvers(&self) -> Vec<Field> {
         let resolve_one = resolve_one(
-            ENTITY_TABLE,
+            EVENT_MESSAGE_TABLE,
             ID_COLUMN,
             self.name().0,
             self.type_name(),
@@ -51,7 +51,7 @@ impl ResolvableObject for EntityObject {
         );
 
         let mut resolve_many = resolve_many(
-            ENTITY_TABLE,
+            EVENT_MESSAGE_TABLE,
             EVENT_ID_COLUMN,
             self.name().1,
             self.type_name(),
@@ -64,30 +64,34 @@ impl ResolvableObject for EntityObject {
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         Some(vec![
-            SubscriptionField::new("entityUpdated", TypeRef::named_nn(self.type_name()), |ctx| {
-                SubscriptionFieldFuture::new(async move {
-                    let id = match ctx.args.get("id") {
-                        Some(id) => Some(id.string()?.to_string()),
-                        None => None,
-                    };
-                    // if id is None, then subscribe to all entities
-                    // if id is Some, then subscribe to only the entity with that id
-                    Ok(SimpleBroker::<Entity>::subscribe().filter_map(move |entity: Entity| {
-                        if id.is_none() || id == Some(entity.id.clone()) {
-                            Some(Ok(Value::Object(EntityObject::value_mapping(entity))))
-                        } else {
-                            // id != entity.id , then don't send anything, still listening
-                            None
-                        }
-                    }))
-                })
-            })
+            SubscriptionField::new(
+                "eventMessageUpdated",
+                TypeRef::named_nn(self.type_name()),
+                |ctx| {
+                    SubscriptionFieldFuture::new(async move {
+                        let id = match ctx.args.get("id") {
+                            Some(id) => Some(id.string()?.to_string()),
+                            None => None,
+                        };
+                        // if id is None, then subscribe to all entities
+                        // if id is Some, then subscribe to only the entity with that id
+                        Ok(SimpleBroker::<Entity>::subscribe().filter_map(move |entity: Entity| {
+                            if id.is_none() || id == Some(entity.id.clone()) {
+                                Some(Ok(Value::Object(EventMessageObject::value_mapping(entity))))
+                            } else {
+                                // id != entity.id , then don't send anything, still listening
+                                None
+                            }
+                        }))
+                    })
+                },
+            )
             .argument(InputValue::new("id", TypeRef::named(TypeRef::ID))),
         ])
     }
 }
 
-impl EntityObject {
+impl EventMessageObject {
     pub fn value_mapping(entity: Entity) -> ValueMapping {
         let keys: Vec<&str> = entity.keys.split('/').filter(|&k| !k.is_empty()).collect();
         IndexMap::from([
@@ -96,11 +100,11 @@ impl EntityObject {
             (Name::new("eventId"), Value::from(entity.event_id)),
             (
                 Name::new("createdAt"),
-                Value::from(entity.created_at.format(DATETIME_FORMAT).to_string()),
+                Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
             (
                 Name::new("updatedAt"),
-                Value::from(entity.updated_at.format(DATETIME_FORMAT).to_string()),
+                Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ),
         ])
     }
@@ -121,7 +125,7 @@ fn model_union_field() -> Field {
                         FROM models
                         WHERE id = (
                             SELECT model_id
-                            FROM entity_model
+                            FROM event_model
                             WHERE entity_id = ?
                         )",
                     )
@@ -131,10 +135,10 @@ fn model_union_field() -> Field {
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
                     for (id, name) in model_ids {
-                        // the model id in the model mmeebrs table is the hashed model name (id)
+                        // the model id is used as the id for the model members
                         let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
-                        // but the table name for the model data is the unhashed model name
+                        // but the model data tables use the unhashed model name as the table name
                         let data = model_data_recursive_query(
                             &mut conn,
                             vec![name.clone()],
@@ -165,7 +169,7 @@ pub async fn model_data_recursive_query(
     // For nested types, we need to remove prefix in path array
     let namespace = format!("{}_", path_array[0]);
     let table_name = &path_array.join("$").replace(&namespace, "");
-    let query = format!("SELECT * FROM {} WHERE entity_id = '{}'", table_name, entity_id);
+    let query = format!("SELECT * FROM {} WHERE event_message_id = '{}'", table_name, entity_id);
     let row = sqlx::query(&query).fetch_one(conn.as_mut()).await?;
     let mut value_mapping = value_mapping_from_row(&row, type_mapping, true)?;
 
