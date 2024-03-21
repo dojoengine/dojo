@@ -145,7 +145,7 @@ mod invalid_model {
     impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
         fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0xa4a104a045a21149f250a92784d614fc8748d6712653c824c07f1bf25d314a
+            0x78d01dde6c9d61e26dfc3fcc8d1dea6fd86e3afe324bf24c61ebc1e82fad12a
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -180,8 +180,10 @@ fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
     let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
-    // The print is required for invalid_model name to be a valid address as the
-    // register_model will use the gas consumed as salt.
+
+    // This print allows to know the address of the deployed contract which must be returned
+    // by the selector() function of invalid model, to simulate a ACL issue
+    // (see register_model function)
     base_address.print();
 
     world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());
