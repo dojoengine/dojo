@@ -75,7 +75,7 @@ pub enum AccountCommand {
         #[clap(
             long,
             env = "STARKNET_POLL_INTERVAL",
-            default_value = "5000",
+            default_value = "1000",
             help = "Transaction result poll interval in milliseconds"
         )]
         poll_interval: u64,
