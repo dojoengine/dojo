@@ -32,6 +32,11 @@ pub async fn prove_stone(input: String) -> anyhow::Result<String> {
     get_prover().await.prove(input).await
 }
 
+pub async fn local_verify(input: String) -> anyhow::Result<String> {
+    get_prover().await.local_verify(input).await?;
+    Ok(String::from("ok"))
+}
+
 #[async_trait]
 impl ProverClient for StoneProver {
     fn identifier() -> ProverIdentifier {
@@ -59,7 +64,7 @@ impl ProverClient for StoneProver {
         run(command, Some(input)).await
     }
 
-    async fn local_verify(proof: String) -> anyhow::Result<()> {
+    async fn local_verify(&self, proof: String) -> anyhow::Result<()> {
         let mut command = Command::new("podman");
         command.arg("run").arg("-i").arg("--rm").arg("verifier");
 

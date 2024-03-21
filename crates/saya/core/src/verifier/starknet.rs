@@ -1,6 +1,9 @@
 use starknet::{
     accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount},
-    core::{types::FieldElement, utils::get_selector_from_name},
+    core::{
+        types::{BlockId, BlockTag, FieldElement},
+        utils::get_selector_from_name,
+    },
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
     signers::{LocalWallet, SigningKey},
 };
@@ -24,7 +27,9 @@ lazy_static::lazy_static!(
         let address = FieldElement::from_hex_be(SIGNER_ADDRESS).expect("invalid signer address");
         let chain_id = FieldElement::from_hex_be(CHAIN_ID).expect("invalid chain id");
 
-        SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::Legacy)
+        let mut account = SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::Legacy);
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+        account
     };
 
 );
