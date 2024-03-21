@@ -10,6 +10,7 @@ pub mod execute;
 pub mod migration;
 pub mod model;
 pub mod register;
+pub mod utils;
 
 pub async fn get_contract_address<A: ConnectedAccount + Sync>(
     world: &WorldContract<A>,

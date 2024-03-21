@@ -35,6 +35,7 @@ tracing.workspace = true
 regex.workspace = true
 url.workspace = true
 warp.workspace = true
+sozo-ops.workspace = true
 
 [dev-dependencies]
 camino.workspace = true

@@ -17,10 +17,7 @@ kind = "DojoContract"
 address = "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7"
 class_hash = "0xd43bce39922ec3857da231e3bb5c365c29f837c6dce322e4d61dfae83a4c18"
 abi = "abis/deployments/KATANA/contracts/actions.json"
-reads = [
-    "Moves",
-    "Position",
-]
+reads = []
 writes = []
 computed = []
 name = "dojo_examples::actions::actions"

@@ -17,6 +17,12 @@ service World {
     // Retrieve entities
     rpc RetrieveEntities (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
 
+    // Subscribe to entity updates.
+    rpc SubscribeEventMessages (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
+
+    // Retrieve entities
+    rpc RetrieveEventMessages (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
+
     // Retrieve events
     rpc RetrieveEvents (RetrieveEventsRequest) returns (RetrieveEventsResponse);
 }
@@ -46,6 +52,10 @@ message SubscribeEntitiesRequest {
     repeated bytes hashed_keys = 1;
 }
 
+message SubscribeEventMessagesRequest {
+    repeated bytes hashed_keys = 1;
+}
+
 message SubscribeEntityResponse {
     types.Entity entity = 1;
 }
@@ -57,6 +67,16 @@ message RetrieveEntitiesRequest {
 
 message RetrieveEntitiesResponse {
     repeated types.Entity entities = 1;
+    uint32 total_count = 2;
+}
+
+message RetrieveEventMessagesRequest {
+    // The entities to retrieve
+    types.Query query = 1;
+}
+
+message RetrieveEventMessagesResponse {
+    repeated types.Entity events = 1;
     uint32 total_count = 2;
 }
 

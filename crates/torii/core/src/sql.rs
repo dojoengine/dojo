@@ -9,6 +9,7 @@ use dojo_world::metadata::WorldMetadata;
 use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, FieldElement, InvokeTransaction, Transaction};
+use starknet::core::utils::get_selector_from_name;
 use starknet_crypto::poseidon_hash_many;
 
 use super::World;
@@ -99,7 +100,8 @@ impl Sql {
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
-            .bind(model.name())
+            // this is temporary until the model hash is precomputed
+            .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
             .bind(model.name())
             .bind(format!("{class_hash:#x}"))
             .bind(format!("{contract_address:#x}"))
@@ -144,7 +146,10 @@ impl Sql {
         self.query_queue.enqueue(
             "INSERT INTO entity_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
              model_id) DO NOTHING",
-            vec![Argument::String(entity_id.clone()), Argument::String(entity.name())],
+            vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
+            ],
         );
 
         let keys_str = felts_sql_string(&keys);
@@ -167,6 +172,62 @@ impl Sql {
             &entity_id,
             &entity,
             block_timestamp,
+            false,
+        );
+        self.query_queue.execute_all().await?;
+
+        SimpleBroker::publish(entity_updated);
+
+        Ok(())
+    }
+
+    pub async fn set_event_message(
+        &mut self,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let keys = if let Ty::Struct(s) = &entity {
+            let mut keys = Vec::new();
+            for m in s.keys() {
+                keys.extend(m.serialize()?);
+            }
+            keys
+        } else {
+            return Err(anyhow!("Entity is not a struct"));
+        };
+
+        let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
+        self.query_queue.enqueue(
+            "INSERT INTO event_model (entity_id, model_id) VALUES (?, ?) ON CONFLICT(entity_id, \
+             model_id) DO NOTHING",
+            vec![
+                Argument::String(entity_id.clone()),
+                Argument::String(format!("{:#x}", get_selector_from_name(&entity.name())?)),
+            ],
+        );
+
+        let keys_str = felts_sql_string(&keys);
+        let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
+                               VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+                               updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
+                               *";
+        let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
+            .bind(&entity_id)
+            .bind(&keys_str)
+            .bind(event_id)
+            .bind(utc_dt_string_from_timestamp(block_timestamp))
+            .fetch_one(&self.pool)
+            .await?;
+
+        let path = vec![entity.name()];
+        self.build_set_entity_queries_recursive(
+            path,
+            event_id,
+            &entity_id,
+            &entity,
+            block_timestamp,
+            true,
         );
         self.query_queue.execute_all().await?;
 
@@ -372,19 +433,30 @@ impl Sql {
         entity_id: &str,
         entity: &Ty,
         block_timestamp: u64,
+        is_event_message: bool,
     ) {
         match entity {
             Ty::Struct(s) => {
                 let table_id = path.join("$");
                 let mut columns = vec![
-                    "entity_id".to_string(),
+                    "id".to_string(),
                     "event_id".to_string(),
                     "executed_at".to_string(),
+                    if is_event_message {
+                        "event_message_id".to_string()
+                    } else {
+                        "entity_id".to_string()
+                    },
                 ];
                 let mut arguments = vec![
-                    Argument::String(entity_id.to_string()),
+                    Argument::String(if is_event_message {
+                        "event:".to_string() + entity_id
+                    } else {
+                        entity_id.to_string()
+                    }),
                     Argument::String(event_id.to_string()),
                     Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                    Argument::String(entity_id.to_string()),
                 ];
 
                 for member in s.children.iter() {
@@ -420,6 +492,7 @@ impl Sql {
                             entity_id,
                             &member.ty,
                             block_timestamp,
+                            is_event_message,
                         );
                     }
                 }
@@ -434,6 +507,7 @@ impl Sql {
                         entity_id,
                         &child.ty,
                         block_timestamp,
+                        is_event_message,
                     );
                 }
             }
@@ -485,8 +559,8 @@ impl Sql {
         let mut indices = Vec::new();
 
         let mut create_table_query = format!(
-            "CREATE TABLE IF NOT EXISTS [{table_id}] (entity_id TEXT NOT NULL PRIMARY KEY, \
-             event_id, "
+            "CREATE TABLE IF NOT EXISTS [{table_id}] (id TEXT NOT NULL PRIMARY KEY, event_id TEXT \
+             NOT NULL, entity_id TEXT, event_message_id TEXT, "
         );
 
         if let Ty::Struct(s) = model {
@@ -533,7 +607,11 @@ impl Sql {
                                  executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
                     Argument::String(table_id.clone()),
-                    Argument::String(path[0].clone()),
+                    // TEMP: this is temporary until the model hash is precomputed
+                    Argument::String(format!(
+                        "{:#x}",
+                        get_selector_from_name(&path[0].clone()).unwrap()
+                    )),
                     Argument::Int(model_idx),
                     Argument::Int(member_idx as i64),
                     Argument::String(name),
@@ -554,12 +632,15 @@ impl Sql {
         // If this is not the Model's root table, create a reference to the parent.
         if path.len() > 1 {
             let parent_table_id = path[..path.len() - 1].join("$");
-            create_table_query.push_str(&format!(
-                "FOREIGN KEY (entity_id) REFERENCES {parent_table_id} (entity_id), "
-            ));
+            create_table_query
+                .push_str(&format!("FOREIGN KEY (id) REFERENCES {parent_table_id} (id), "));
         };
 
-        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id));");
+        create_table_query.push_str("FOREIGN KEY (entity_id) REFERENCES entities(id), ");
+        // create_table_query.push_str("FOREIGN KEY (event_id) REFERENCES events(id), ");
+        create_table_query
+            .push_str("FOREIGN KEY (event_message_id) REFERENCES event_messages(id));");
+
         self.query_queue.enqueue(create_table_query, vec![]);
 
         indices.iter().for_each(|s| {

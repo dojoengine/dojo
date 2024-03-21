@@ -7,6 +7,7 @@ use starknet_crypto::FieldElement;
 
 use crate::sql::Sql;
 
+pub mod event_message;
 pub mod metadata_update;
 pub mod register_model;
 pub mod store_del_record;

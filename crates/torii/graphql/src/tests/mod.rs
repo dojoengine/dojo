@@ -15,7 +15,7 @@ use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;
-use sozo::ops::migration::execute_strategy;
+use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::accounts::{Account, Call};
