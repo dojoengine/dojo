@@ -70,7 +70,7 @@ impl AccountArgs {
         config.tokio_handle().block_on(async {
             match self.command {
                 AccountCommand::New { signer, force, output } => {
-                    let signer: LocalWallet = signer.signer(env_metadata.as_ref()).unwrap();
+                    let signer: LocalWallet = signer.signer(env_metadata.as_ref())?;
                     account::new(signer, force, output).await
                 }
                 AccountCommand::Deploy {
@@ -82,8 +82,8 @@ impl AccountArgs {
                     poll_interval,
                     file,
                 } => {
-                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
-                    let signer = signer.signer(env_metadata.as_ref()).unwrap();
+                    let provider = starknet.provider(env_metadata.as_ref())?;
+                    let signer = signer.signer(env_metadata.as_ref())?;
                     let fee_setting = fee.into_setting()?;
                     account::deploy(
                         provider,
