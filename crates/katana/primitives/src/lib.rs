@@ -4,6 +4,7 @@ pub mod class;
 pub mod contract;
 pub mod env;
 pub mod event;
+pub mod fee;
 pub mod genesis;
 pub mod message;
 pub mod receipt;
