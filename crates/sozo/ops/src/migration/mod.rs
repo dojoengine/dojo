@@ -699,7 +699,7 @@ pub fn print_strategy(ui: &Ui, strategy: &MigrationStrategy) {
 
     if let Some(world) = &strategy.world {
         ui.print_header("# World");
-        ui.print_sub(format!("declare (classhash: {:#x})\n", world.diff.local));
+        ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local));
     }
 
     if !&strategy.models.is_empty() {
