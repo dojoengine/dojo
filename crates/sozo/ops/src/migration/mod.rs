@@ -705,7 +705,7 @@ pub fn print_strategy(ui: &Ui, strategy: &MigrationStrategy) {
     if !&strategy.models.is_empty() {
         ui.print_header(format!("# Models ({})", &strategy.models.len()));
         for m in &strategy.models {
-            ui.print_sub(format!("register {} (classhash: {:#x})", m.diff.name, m.diff.local));
+            ui.print_sub(format!("register {} (class hash: {:#x})", m.diff.name, m.diff.local));
         }
         ui.print(" ");
     }
