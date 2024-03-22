@@ -694,7 +694,7 @@ pub fn print_strategy(ui: &Ui, strategy: &MigrationStrategy) {
 
     if let Some(base) = &strategy.base {
         ui.print_header("# Base Contract");
-        ui.print_sub(format!("declare (classhash: {:#x})\n", base.diff.local));
+        ui.print_sub(format!("declare (class hash: {:#x})\n", base.diff.local));
     }
 
     if let Some(world) = &strategy.world {
