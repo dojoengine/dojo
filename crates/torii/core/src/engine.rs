@@ -17,6 +17,8 @@ use tracing::{error, info, trace, warn};
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
 
+use crate::provider::provider::KatanaProvider;
+
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
     pub transaction: Vec<Box<dyn TransactionProcessor<P>>>,
@@ -42,11 +44,11 @@ impl Default for EngineConfig {
     }
 }
 
-pub struct Engine<P: Provider + Sync> {
-    world: WorldContractReader<P>,
+pub struct Engine<P: KatanaProvider + Sync, R: Provider + Sync> {
+    world: WorldContractReader<R>,
     db: Sql,
     provider: Box<P>,
-    processors: Processors<P>,
+    processors: Processors<R>,
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
@@ -57,12 +59,12 @@ struct UnprocessedEvent {
     data: Vec<String>,
 }
 
-impl<P: Provider + Sync> Engine<P> {
+impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
     pub fn new(
-        world: WorldContractReader<P>,
+        world: WorldContractReader<R>,
         db: Sql,
         provider: P,
-        processors: Processors<P>,
+        processors: Processors<R>,
         config: EngineConfig,
         shutdown_tx: Sender<()>,
         block_tx: Option<BoundedSender<u64>>,
@@ -243,7 +245,7 @@ impl<P: Provider + Sync> Engine<P> {
     async fn process_block(&mut self, block_number: u64, block_hash: FieldElement) -> Result<()> {
         for processor in &self.processors.block {
             processor
-                .process(&mut self.db, self.provider.as_ref(), block_number, block_hash)
+                .process(&mut self.db, &self.world.provider, block_number, block_hash)
                 .await?;
         }
         Ok(())
@@ -260,7 +262,7 @@ impl<P: Provider + Sync> Engine<P> {
             processor
                 .process(
                     &mut self.db,
-                    self.provider.as_ref(),
+                    &self.world.provider,
                     block_number,
                     transaction_receipt,
                     transaction_hash,

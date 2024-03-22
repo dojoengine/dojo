@@ -17,7 +17,7 @@ use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[auto_impl(&, Box, Arc)]
-pub trait Provider {
+pub trait KatanaProvider {
     /// Returns the version of the Starknet JSON-RPC specification being used
     async fn spec_version(&self) -> Result<String, ProviderError>;
 

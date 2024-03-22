@@ -1,5 +1,6 @@
 pub mod provider;
 pub mod transport;
+pub mod http;
 
 use std::{any::Any, error::Error, fmt::Display};
 
@@ -23,7 +24,7 @@ use starknet::core::{
     },
 };
 
-use provider::{ProviderImplError, Provider, ProviderError};
+use provider::{ProviderImplError, KatanaProvider, ProviderError};
 
 use self::transport::JsonRpcTransport;
 
@@ -211,7 +212,7 @@ where
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-impl<T> Provider for JsonRpcClient<T>
+impl<T> KatanaProvider for JsonRpcClient<T>
 where
     T: 'static + JsonRpcTransport + Sync + Send,
 {
