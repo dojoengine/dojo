@@ -70,7 +70,6 @@ katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
 katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
-katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-runner = { path = "crates/katana/runner" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }

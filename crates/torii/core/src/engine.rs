@@ -17,7 +17,7 @@ use tracing::{error, info, trace, warn};
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
 use crate::sql::Sql;
 
-use crate::provider::provider::KatanaProvider;
+use crate::provider::provider::{KatanaProvider, TransactionsPageCursor};
 
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
@@ -73,6 +73,15 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
+        let is_katana = match self
+            .provider
+            .get_transactions(TransactionsPageCursor { block_number: 0, transaction_index: 0 })
+            .await
+        {
+            Ok(_) => true,
+            Err(_) => false,
+        };
+
         let mut head = self.db.head().await?;
         if head == 0 {
             head = self.config.start_block;
@@ -91,7 +100,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                     break Ok(());
                 }
                 _ = async {
-                    match self.sync_to_head(head).await {
+                    match self.sync_to_head(head, is_katana).await {
                         Ok(latest_block_number) => {
                             head = latest_block_number;
                             backoff_delay = Duration::from_secs(1);
@@ -110,13 +119,19 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         }
     }
 
-    pub async fn sync_to_head(&mut self, from: u64) -> Result<u64> {
+    pub async fn sync_to_head(&mut self, from: u64, is_katana: bool) -> Result<u64> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         if from < latest_block_number {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
-            self.sync_range(from, latest_block_number).await?;
+
+            if is_katana {
+                // we fetch pending block too
+                self.sync_range_katana(from, latest_block_number + 1).await?;
+            } else {
+                self.sync_range(from, latest_block_number).await?;
+            }
         };
 
         Ok(latest_block_number)
@@ -156,6 +171,30 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         Ok(())
     }
 
+    async fn sync_range_katana(&mut self, from: u64, to: u64) -> Result<()> {
+        for block_number in from..to {
+            let transactions = self
+                .provider
+                .get_transactions(TransactionsPageCursor { block_number, transaction_index: 0 })
+                .await?;
+
+            if let Some(ref block_tx) = self.block_tx {
+                block_tx.send(block_number).await?;
+            }
+
+            self.process_block(block_number).await?;
+
+            for (transaction, receipt) in transactions.transactions {
+                self.process_transaction_and_receipt(transaction.hash, &transaction.transaction, block_number)
+                    .await?;
+            }
+        }
+
+        self.db.execute().await?;
+
+        Ok(())
+    }
+
     async fn process(&mut self, event: EmittedEvent, last_block: &mut u64) -> Result<()> {
         let block_number = match event.block_number {
             Some(block_number) => block_number,
@@ -172,7 +211,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                 block_tx.send(block_number).await?;
             }
 
-            Self::process_block(self, block_number, event.block_hash.unwrap()).await?;
+            self.process_block(block_number).await?;
             info!(target: "torii_core::engine", block_number = %block_number, "Processed block");
 
             self.db.set_head(block_number);
@@ -189,6 +228,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         &mut self,
         transaction_hash: FieldElement,
         transaction: &Transaction,
+        receipt: &MaybePendingTransactionReceipt,
         block_number: u64,
     ) -> Result<()> {
         let receipt = match self.provider.get_transaction_receipt(transaction_hash).await {
@@ -242,11 +282,9 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         Ok(())
     }
 
-    async fn process_block(&mut self, block_number: u64, block_hash: FieldElement) -> Result<()> {
+    async fn process_block(&mut self, block_number: u64) -> Result<()> {
         for processor in &self.processors.block {
-            processor
-                .process(&mut self.db, &self.world.provider, block_number, block_hash)
-                .await?;
+            processor.process(&mut self.db, &self.world.provider, block_number).await?;
         }
         Ok(())
     }

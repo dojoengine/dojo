@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use auto_impl::auto_impl;
+use serde::{Serialize, Deserialize};
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
@@ -12,7 +13,23 @@ use starknet::core::types::{
 };
 use std::{any::Any, error::Error, fmt::Debug};
 
-use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPageCursor {
+    pub block_number: u64,
+    pub transaction_index: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionWithHash {
+    pub hash: FieldElement,
+    pub transaction: Transaction,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsPage {
+    pub transactions: Vec<(TransactionWithHash, MaybePendingTransactionReceipt)>,
+    pub cursor: TransactionsPageCursor,
+}
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]

@@ -5,7 +5,6 @@ pub mod http;
 use std::{any::Any, error::Error, fmt::Display};
 
 use async_trait::async_trait;
-use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::core::{

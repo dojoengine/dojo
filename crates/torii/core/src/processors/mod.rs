@@ -50,7 +50,6 @@ pub trait BlockProcessor<P: Provider + Sync> {
         db: &mut Sql,
         provider: &P,
         block_number: u64,
-        block_hash: FieldElement,
     ) -> Result<(), Error>;
 }
 
