@@ -114,11 +114,11 @@ impl<S: StateDb> CachedState<S> {
         Self(Arc::new(RwLock::new(inner)))
     }
 
-    fn read(&self) -> RwLockReadGuard<'_, CachedStateInner<S>> {
+    pub(super) fn read(&self) -> RwLockReadGuard<'_, CachedStateInner<S>> {
         self.0.read()
     }
 
-    fn write(&self) -> RwLockWriteGuard<'_, CachedStateInner<S>> {
+    pub(super) fn write(&self) -> RwLockWriteGuard<'_, CachedStateInner<S>> {
         self.0.write()
     }
 }
@@ -169,7 +169,11 @@ impl<S: StateDb> StateProvider for CachedState<S> {
         };
 
         let hash = hash.0.into();
-        if hash == FieldElement::ZERO { Ok(None) } else { Ok(Some(hash)) }
+        if hash == FieldElement::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash))
+        }
     }
 
     fn nonce(
@@ -339,10 +343,10 @@ mod tests {
         let new_storage_value = felt!("0xba");
         let new_legacy_class_hash = felt!("0x1234");
         let new_legacy_class = DEFAULT_LEGACY_UDC_CASM.clone();
+        let new_legacy_compiled_hash = felt!("0x5678");
         let new_class_hash = felt!("0x777");
         let (new_sierra_class, new_compiled_sierra_class) = new_sierra_class();
-        // let new_compiled_hash = felt!("0xdead");
-        // let new_legacy_compiled_hash = felt!("0x5678");
+        let new_compiled_hash = felt!("0xdead");
 
         // we're asserting that the underlying state provider doesnt have cache state native data
 
@@ -353,10 +357,10 @@ mod tests {
         let actual_new_legacy_sierra_class = sp.class(new_legacy_class_hash)?;
         let actual_new_sierra_class = sp.sierra_class(new_class_hash)?;
         let actual_new_class = sp.class(new_class_hash)?;
-        // let actual_new_compiled_class_hash =
-        //     sp.compiled_class_hash_of_class_hash(new_class_hash)?;
-        // let actual_new_legacy_compiled_hash =
-        //     state_provider.compiled_class_hash_of_class_hash(new_class_hash)?;
+        let actual_new_compiled_class_hash =
+            sp.compiled_class_hash_of_class_hash(new_class_hash)?;
+        let actual_new_legacy_compiled_hash =
+            sp.compiled_class_hash_of_class_hash(new_legacy_class_hash)?;
 
         assert_eq!(actual_new_nonce, None, "data shouldn't exist");
         assert_eq!(actual_new_class_hash, None, "data shouldn't exist");
@@ -365,8 +369,8 @@ mod tests {
         assert_eq!(actual_new_legacy_sierra_class, None, "data shouldn't exist");
         assert_eq!(actual_new_sierra_class, None, "data shouldn't exist");
         assert_eq!(actual_new_class, None, "data shouldn't exist");
-        // assert_eq!(actual_new_compiled_hash, None, "data shouldn't exist");
-        // assert_eq!(actual_new_legacy_compiled_hash, None, "data shouldn't exist");
+        assert_eq!(actual_new_compiled_class_hash, None, "data shouldn't exist");
+        assert_eq!(actual_new_legacy_compiled_hash, None, "data shouldn't exist");
 
         let cached_state = CachedState::new(StateProviderDb(sp));
 
@@ -380,14 +384,18 @@ mod tests {
             let storage_value = new_storage_value.into();
             let class_hash = ClassHash(new_class_hash.into());
             let class = utils::to_class(new_compiled_sierra_class.clone()).unwrap();
+            let compiled_hash = CompiledClassHash(new_compiled_hash.into());
             let legacy_class_hash = ClassHash(new_legacy_class_hash.into());
             let legacy_class = utils::to_class(DEFAULT_LEGACY_UDC_CASM.clone()).unwrap();
+            let legacy_compiled_hash = CompiledClassHash(new_legacy_compiled_hash.into());
 
             blk_state.increment_nonce(address)?;
             blk_state.set_class_hash_at(address, legacy_class_hash)?;
             blk_state.set_storage_at(address, storage_key, storage_value)?;
             blk_state.set_contract_class(class_hash, class)?;
+            blk_state.set_compiled_class_hash(class_hash, compiled_hash)?;
             blk_state.set_contract_class(legacy_class_hash, legacy_class)?;
+            blk_state.set_compiled_class_hash(legacy_class_hash, legacy_compiled_hash)?;
 
             let declared_classes = &mut lock.declared_classes;
             declared_classes.insert(new_legacy_class_hash, (new_legacy_class.clone(), None));
@@ -427,11 +435,11 @@ mod tests {
         let actual_new_storage_value = sp.storage(new_address, new_storage_key)?;
         let actual_new_class = sp.class(new_class_hash)?;
         let actual_new_sierra = sp.sierra_class(new_class_hash)?;
-        // let actual_new_compiled_hash = sp.compiled_class_hash_of_class_hash(new_class_hash)?;
+        let actual_new_compiled_hash = sp.compiled_class_hash_of_class_hash(new_class_hash)?;
         let actual_legacy_class = sp.class(new_legacy_class_hash)?;
         let actual_legacy_sierra = sp.sierra_class(new_legacy_class_hash)?;
-        // let actual_new_legacy_compiled_hash =
-        // sp.compiled_class_hash_of_class_hash(new_legacy_class_hash)?;
+        let actual_new_legacy_compiled_hash =
+            sp.compiled_class_hash_of_class_hash(new_legacy_class_hash)?;
 
         assert_eq!(actual_new_nonce, Some(felt!("0x1")), "data should be in cached state");
         assert_eq!(
@@ -446,11 +454,15 @@ mod tests {
         );
         assert_eq!(actual_new_class, Some(new_compiled_sierra_class));
         assert_eq!(actual_new_sierra, Some(new_sierra_class));
-        // assert_eq!(actual_new_compiled_hash, Some(new_compiled_hash));
+        assert_eq!(actual_new_compiled_hash, Some(new_compiled_hash));
         assert_eq!(actual_legacy_class, Some(new_legacy_class));
         assert_eq!(actual_legacy_sierra, None, "legacy class should not have sierra class");
-        // assert_eq!(actual_new_legacy_compiled_hash, Some(new_legacy_compiled_hash), "data should
-        // be in cached state");
+        assert_eq!(
+            actual_new_legacy_compiled_hash,
+            Some(new_legacy_compiled_hash),
+            "data should
+        be in cached state"
+        );
 
         Ok(())
     }

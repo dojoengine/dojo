@@ -8,6 +8,7 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::traits::state::StateProvider;
 use rstest_reuse::{self, *};
+use starknet::core::types::PriceUnit;
 use starknet::macros::felt;
 
 #[rstest::fixture]
@@ -40,10 +41,25 @@ fn test_simulate_tx_impl<EF: ExecutorFactory>(
     tx: ExecutableTxWithHash,
     flags: SimulationFlag,
 ) {
+    let transactions = vec![tx];
     let mut executor = executor_factory.with_state_and_block_env(state_provider, block_env);
 
-    // TODO: assert that the tx execution didn't fail
-    let _ = executor.simulate(tx, flags).expect("must simulate");
+    let results = executor.simulate(transactions.clone(), flags.clone());
+    let fees = executor.estimate_fee(transactions, flags);
+
+    assert!(results.iter().all(|res| res.result.is_success()), "all txs should be successful");
+    assert!(fees.iter().all(|res| {
+        match res {
+            // makes sure that the fee is non-zero
+            Ok(fee) => {
+                fee.gas_price != 0
+                    && fee.gas_consumed != 0
+                    && fee.overall_fee != 0
+                    && fee.unit == PriceUnit::Wei // TODO: add a tx that use STRK
+            }
+            Err(_) => false,
+        }
+    }),);
 
     // check that the underlying state is not modified
     let ExecutionOutput { states, transactions } =

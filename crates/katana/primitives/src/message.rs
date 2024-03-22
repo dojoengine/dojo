@@ -6,6 +6,6 @@ use crate::FieldElement;
 pub struct OrderedL2ToL1Message {
     pub order: u64,
     pub from_address: ContractAddress,
-    pub to_address: ContractAddress,
+    pub to_address: FieldElement,
     pub payload: Vec<FieldElement>,
 }

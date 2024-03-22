@@ -8,7 +8,8 @@ use std::time::Duration;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
-use katana_executor::{BlockExecutor, ExecutionOutput, ExecutorFactory};
+use katana_executor::{BlockExecutor, ExecutorFactory};
+use katana_executor::{ExecutionOutput, ExecutionResult};
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
@@ -266,8 +267,11 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
         let transactions = transactions
             .into_iter()
-            .filter_map(|(tx, rct, exec)| {
-                rct.map(|rct| TxWithOutcome { tx, receipt: rct, exec_info: exec })
+            .filter_map(|(tx, res)| match res {
+                ExecutionResult::Failed { .. } => None,
+                ExecutionResult::Success { receipt, trace, .. } => {
+                    Some(TxWithOutcome { tx, receipt, exec_info: trace })
+                }
             })
             .collect::<Vec<_>>();
 
@@ -281,20 +285,30 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
     fn execute_transactions(
         executor: PendingExecutor,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> Result<Vec<TxWithOutcome>, BlockProductionError> {
-        let tx_outcome = transactions
-            .into_iter()
-            .map(|tx| {
-                let tx_ = TxWithHash::from(&tx);
-                let output = executor.write().execute(tx)?;
-                let receipt = output.receipt(tx_.as_ref());
-                let exec_info = output.execution_info();
+    ) -> TxExecutionResult {
+        let executor = &mut executor.write();
 
-                Ok(TxWithOutcome { tx: tx_, receipt, exec_info })
+        let new_txs_count = transactions.len();
+        executor.execute_transactions(transactions)?;
+
+        let txs = executor.transactions();
+        let total_txs = txs.len();
+
+        // Take only the results of the newly executed transactions
+        let results = txs
+            .iter()
+            .skip(total_txs - new_txs_count)
+            .filter_map(|(tx, res)| match res {
+                ExecutionResult::Failed { .. } => None,
+                ExecutionResult::Success { receipt, trace, .. } => Some(TxWithOutcome {
+                    tx: tx.clone(),
+                    receipt: receipt.clone(),
+                    exec_info: trace.clone(),
+                }),
             })
-            .collect::<Result<Vec<TxWithOutcome>, BlockProductionError>>()?;
+            .collect::<Vec<TxWithOutcome>>();
 
-        Ok(tx_outcome)
+        Ok(results)
     }
 
     fn create_new_executor_for_next_block(&self) -> Result<PendingExecutor, BlockProductionError> {
@@ -500,11 +514,14 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         executor.execute_block(block)?;
 
-        let ExecutionOutput { states, transactions } = executor.take_execution_output().unwrap();
+        let ExecutionOutput { states, transactions } = executor.take_execution_output()?;
         let txs_outcomes = transactions
             .into_iter()
-            .filter_map(|(tx, rct, exec)| {
-                rct.map(|rct| TxWithOutcome { tx, receipt: rct, exec_info: exec })
+            .filter_map(|(tx, res)| match res {
+                ExecutionResult::Success { receipt, trace, .. } => {
+                    Some(TxWithOutcome { tx, receipt, exec_info: trace })
+                }
+                _ => None,
             })
             .collect::<Vec<_>>();
 

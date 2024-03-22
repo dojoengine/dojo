@@ -4,7 +4,7 @@ use std::slice::Iter;
 use std::sync::Arc;
 
 use anyhow::Result;
-use katana_executor::{ExecutorFactory, SimulationFlag};
+use katana_executor::ExecutorFactory;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber};
 use katana_primitives::chain::ChainId;
 use katana_primitives::class::{ClassHash, CompiledClass};
@@ -23,7 +23,7 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionsProviderExt,
 };
-use starknet::core::types::{BlockTag, EmittedEvent, EventsPage, FeeEstimate, PriceUnit};
+use starknet::core::types::{BlockTag, EmittedEvent, EventsPage};
 
 use crate::backend::config::StarknetConfig;
 use crate::backend::contract::StarknetContract;
@@ -176,41 +176,6 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
         self.pool.add_transaction(tx);
     }
 
-    pub fn estimate_fee(
-        &self,
-        transactions: Vec<ExecutableTxWithHash>,
-        block_id: BlockIdOrTag,
-        skip_validate: bool,
-    ) -> SequencerResult<Vec<FeeEstimate>> {
-        let state = self.state(&block_id)?;
-        let env = self.block_env_at(block_id)?.ok_or(SequencerError::BlockNotFound(block_id))?;
-        let executor = self.backend.executor_factory.with_state_and_block_env(state, env);
-
-        // If the node is run with transaction validation disabled, then we should not validate
-        // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
-        let should_validate = !(skip_validate || self.backend.config.disable_validate);
-        let simulation_flag =
-            SimulationFlag { skip_validate: !should_validate, ..Default::default() };
-
-        let mut estimates: Vec<FeeEstimate> = Vec::with_capacity(transactions.len());
-        for tx in transactions {
-            let result = executor.simulate(tx, simulation_flag.clone()).unwrap();
-
-            let overall_fee = result.actual_fee().into();
-            let gas_consumed = result.gas_used().into();
-            let gas_price = executor.block_env().l1_gas_prices.eth.into();
-
-            estimates.push(FeeEstimate {
-                gas_consumed,
-                gas_price,
-                overall_fee,
-                unit: PriceUnit::Wei,
-            })
-        }
-
-        Ok(estimates)
-    }
-
     pub fn block_hash_and_number(&self) -> SequencerResult<(BlockHash, BlockNumber)> {
         let provider = self.backend.blockchain.provider();
         let hash = BlockHashProvider::latest_hash(provider)?;
@@ -321,10 +286,13 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
 
         let tx @ Some(_) = tx else {
             return Ok(self.pending_executor().as_ref().and_then(|exec| {
-                exec.read()
-                    .transactions()
-                    .iter()
-                    .find_map(|tx| if tx.0.hash == *hash { Some(tx.0.clone()) } else { None })
+                exec.read().transactions().iter().find_map(|tx| {
+                    if tx.0.hash == *hash {
+                        Some(tx.0.clone())
+                    } else {
+                        None
+                    }
+                })
             }));
         };
 

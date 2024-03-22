@@ -1,24 +1,31 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use katana_primitives::class::{CompiledClass, DeprecatedCompiledClass};
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::class::{CompiledClass, CompiledClassHash, DeprecatedCompiledClass};
+use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
+use katana_primitives::env::{BlockEnv, CfgEnv};
+use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{
     DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
 use katana_primitives::FieldElement;
-use sir::definitions::block_context::BlockContext;
+use sir::definitions::block_context::{
+    BlockContext, FeeTokenAddresses, FeeType, GasPrices, StarknetOsConfig,
+};
 use sir::definitions::constants::TRANSACTION_VERSION;
-use sir::execution::execution_entry_point::{ExecutionEntryPoint, ExecutionResult};
-use sir::execution::{CallInfo, CallType, TransactionExecutionContext};
+use sir::execution::execution_entry_point::ExecutionEntryPoint;
+use sir::execution::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo};
 use sir::services::api::contract_classes::compiled_class::CompiledClass as SirCompiledClass;
 use sir::services::api::contract_classes::deprecated_contract_class::ContractClass as SirDeprecatedContractClass;
-use sir::state::contract_class_cache::ContractClassCache;
+use sir::state::contract_class_cache::{ContractClassCache, PermanentContractClassCache};
 use sir::state::state_api::StateReader;
 use sir::state::state_cache::StateCache;
-use sir::state::{cached_state, ExecutionResourcesManager, StateDiff};
+use sir::state::{cached_state, BlockInfo, ExecutionResourcesManager, StateDiff};
 use sir::transaction::error::TransactionError;
-use sir::transaction::fee::calculate_tx_l1_gas_usage;
+use sir::transaction::fee::{calculate_tx_fee, calculate_tx_l1_gas_usage};
 use sir::transaction::{
     Address, ClassHash, CurrentAccountTxFields, DataAvailabilityMode, Declare, DeclareDeprecated,
     DeployAccount, InvokeFunction, L1Handler, ResourceBounds, Transaction,
@@ -26,98 +33,68 @@ use sir::transaction::{
 };
 use sir::utils::calculate_sn_keccak;
 use sir::EntryPointType;
+use starknet::core::types::PriceUnit;
 use starknet_types_core::felt::Felt;
 
-use super::output::TransactionExecutionInfo;
-use super::state::StateDb;
+use super::state::{CachedState, StateDb};
 use super::SimulationFlag;
-use crate::EntryPointCall;
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("failed to execute transaction: {0}")]
-    TransactionError(#[from] sir::transaction::error::TransactionError),
-}
+use crate::{EntryPointCall, ExecutionError};
 
 pub(super) fn transact<S, C>(
     tx: ExecutableTxWithHash,
     state: &mut cached_state::CachedState<S, C>,
     block_context: &BlockContext,
-    remaining_gas: u128,
     simulation_flag: &SimulationFlag,
-) -> Result<TransactionExecutionInfo, Error>
+) -> Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError>
 where
     S: StateReader,
     C: ContractClassCache,
 {
     let tx = to_executor_tx(tx, simulation_flag)?;
-    let res = match tx {
-        Transaction::InvokeFunction(tx) => tx.execute(
-            state,
-            block_context,
-            remaining_gas,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    let fee_type = tx.fee_type();
 
-        Transaction::DeployAccount(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    let info = tx.execute(
+        state,
+        block_context,
+        u128::MAX, // TODO: this should be set as part of the transaction fee
+        #[cfg(feature = "native")]
+        None,
+    )?;
 
-        Transaction::DeclareDeprecated(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    // There are a few case where the `actual_fee` field of the transaction info is not set where
+    // the fee is skipped and thus not charged for the transaction (e.g. when the
+    // `skip_fee_transfer` is explicitly set, or when the transaction `max_fee` is set to 0). In
+    // these cases, we still want to calculate the fee.
+    let overall_fee = if info.actual_fee == 0 {
+        calculate_tx_fee(&info.actual_resources, block_context, &fee_type)?
+    } else {
+        info.actual_fee
+    };
 
-        Transaction::Deploy(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
+    let gas_consumed = calculate_tx_l1_gas_usage(&info.actual_resources, block_context)?;
+    let (unit, gas_price) = match fee_type {
+        FeeType::Eth => (PriceUnit::Wei, block_context.get_gas_price_by_fee_type(&FeeType::Eth)),
+        FeeType::Strk => (PriceUnit::Fri, block_context.get_gas_price_by_fee_type(&FeeType::Strk)),
+    };
+    let fee = TxFeeInfo { gas_consumed, gas_price, unit, overall_fee };
 
-        Transaction::L1Handler(tx) => tx.execute(
-            state,
-            block_context,
-            remaining_gas,
-            #[cfg(feature = "native")]
-            None,
-        ),
-
-        Transaction::Declare(tx) => tx.execute(
-            state,
-            block_context,
-            #[cfg(feature = "native")]
-            None,
-        ),
-    }?;
-
-    let gas_used = calculate_tx_l1_gas_usage(&res.actual_resources, block_context)?;
-    Ok(TransactionExecutionInfo { inner: res, gas_used })
+    Ok((info, fee))
 }
 
-pub(super) fn call<S, C>(
-    params: EntryPointCall,
-    state: &mut cached_state::CachedState<S, C>,
+pub fn call(
+    request: EntryPointCall,
+    state: impl StateReader,
     block_context: &BlockContext,
     initial_gas: u128,
-) -> Result<ExecutionResult, Error>
-where
-    S: StateDb + Send + Sync,
-    C: ContractClassCache + Send + Sync,
-{
-    // let state_reader = Arc::new(state);
-    // let contract_classes = Arc::new(PermanentContractClassCache::default());
-    // let mut state = cached_state::CachedState::new(state_reader, contract_classes);
+) -> Result<Vec<FieldElement>, ExecutionError> {
+    let mut state = cached_state::CachedState::new(
+        Arc::new(state),
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
-    let contract_address = to_sir_address(&params.contract_address);
-    let entry_point_selector = to_sir_felt(&params.entry_point_selector);
-    let calldata = params.calldata.iter().map(to_sir_felt).collect::<Vec<Felt>>();
+    let contract_address = to_sir_address(&request.contract_address);
+    let entry_point_selector = to_sir_felt(&request.entry_point_selector);
+    let calldata = request.calldata.iter().map(to_sir_felt).collect::<Vec<Felt>>();
     let call_type = Some(CallType::Call);
     let caller_address = Address::default();
     let entry_point_type = EntryPointType::External;
@@ -146,7 +123,7 @@ where
     );
 
     let result = call.execute(
-        state,
+        &mut state,
         block_context,
         &mut resources_manager,
         &mut tx_execution_context,
@@ -156,7 +133,10 @@ where
         None,
     )?;
 
-    Ok(result)
+    let info = result.call_info.expect("should exist in call result");
+    let retdata = info.retdata.iter().map(to_felt).collect();
+
+    Ok(retdata)
 }
 
 fn to_executor_tx(
@@ -458,7 +438,7 @@ fn to_executor_tx(
     }
 }
 
-pub(super) fn state_diff_from_state_cache(mut cache: StateCache) -> StateDiff {
+fn state_diff_from_state_cache(mut cache: StateCache) -> StateDiff {
     let address_to_class_hash = std::mem::take(cache.class_hash_writes_mut());
     let address_to_nonce = std::mem::take(cache.nonce_writes_mut());
     let class_hash_to_compiled_class = std::mem::take(cache.compiled_class_hash_writes_mut());
@@ -562,10 +542,8 @@ fn to_sir_current_account_tx_fields(
     })
 }
 
-pub fn from_sir_exec_info(
-    exec_info: &sir::execution::TransactionExecutionInfo,
-) -> katana_primitives::trace::TxExecInfo {
-    katana_primitives::trace::TxExecInfo {
+pub fn to_exec_info(exec_info: &TransactionExecutionInfo) -> TxExecInfo {
+    TxExecInfo {
         validate_call_info: exec_info.validate_info.clone().map(from_sir_call_info),
         execute_call_info: exec_info.call_info.clone().map(from_sir_call_info),
         fee_transfer_call_info: exec_info.fee_transfer_info.clone().map(from_sir_call_info),
@@ -638,7 +616,7 @@ fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo
             .map(|m| katana_primitives::message::OrderedL2ToL1Message {
                 order: m.order as u64,
                 from_address: message_to_l1_from_address,
-                to_address: to_address(&m.to_address),
+                to_address: *to_address(&m.to_address),
                 payload: m.payload.iter().map(to_felt).collect(),
             })
             .collect(),
@@ -655,5 +633,98 @@ fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo
             .collect(),
         gas_consumed: call_info.gas_consumed,
         failed: call_info.failure_flag,
+    }
+}
+
+pub(super) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockContext {
+    let chain_id = to_sir_felt(&cfg_env.chain_id.id());
+    let fee_token_addreses = FeeTokenAddresses::new(
+        to_sir_address(&cfg_env.fee_token_addresses.eth),
+        to_sir_address(&cfg_env.fee_token_addresses.strk),
+    );
+
+    let gas_price = GasPrices {
+        eth_l1_gas_price: block_env.l1_gas_prices.eth,
+        strk_l1_gas_price: block_env.l1_gas_prices.strk,
+    };
+
+    let block_info = BlockInfo {
+        gas_price,
+        block_number: block_env.number,
+        block_timestamp: block_env.timestamp,
+        sequencer_address: to_sir_address(&block_env.sequencer_address),
+    };
+
+    BlockContext::new(
+        StarknetOsConfig::new(chain_id, fee_token_addreses),
+        Default::default(),
+        Default::default(),
+        cfg_env.vm_resource_fee_cost.clone(),
+        cfg_env.invoke_tx_max_n_steps as u64,
+        cfg_env.validate_max_n_steps as u64,
+        block_info,
+        Default::default(),
+        false,
+    )
+}
+pub(super) fn state_update_from_cached_state<S, C>(
+    state: &CachedState<S, C>,
+) -> StateUpdatesWithDeclaredClasses
+where
+    S: StateDb,
+    C: ContractClassCache + Send + Sync,
+{
+    use katana_primitives::class::ClassHash;
+
+    let state = &mut state.0.write();
+    let state_changes = std::mem::take(state.inner.cache_mut());
+    let state_diffs = state_diff_from_state_cache(state_changes);
+    let compiled_classes = std::mem::take(&mut state.declared_classes);
+
+    let nonce_updates: HashMap<ContractAddress, FieldElement> =
+        state_diffs.address_to_nonce().iter().map(|(k, v)| (to_address(k), to_felt(v))).collect();
+
+    let declared_classes: HashMap<ClassHash, CompiledClassHash> = state_diffs
+        .class_hash_to_compiled_class()
+        .iter()
+        .map(|(k, v)| (to_class_hash(k), to_class_hash(v)))
+        .collect();
+
+    let contract_updates: HashMap<ContractAddress, ClassHash> = state_diffs
+        .address_to_class_hash()
+        .iter()
+        .map(|(k, v)| (to_address(k), to_class_hash(v)))
+        .collect();
+
+    let storage_updates: HashMap<ContractAddress, HashMap<StorageKey, StorageValue>> = state_diffs
+        .storage_updates()
+        .iter()
+        .map(|(k, v)| {
+            let k = to_address(k);
+            let v = v.iter().map(|(k, v)| (to_felt(k), to_felt(v))).collect();
+            (k, v)
+        })
+        .collect();
+
+    let total_classes = declared_classes.len();
+    let mut declared_compiled_classes = HashMap::with_capacity(total_classes);
+    let mut declared_sierra_classes = HashMap::with_capacity(total_classes);
+
+    for (hash, (compiled, sierra)) in compiled_classes {
+        declared_compiled_classes.insert(hash, compiled);
+        if let Some(sierra) = sierra {
+            declared_sierra_classes.insert(hash, sierra);
+        }
+    }
+
+    StateUpdatesWithDeclaredClasses {
+        declared_sierra_classes,
+        declared_compiled_classes,
+        state_updates: StateUpdates {
+            nonce_updates,
+            storage_updates,
+            contract_updates,
+            declared_classes,
+        },
     }
 }

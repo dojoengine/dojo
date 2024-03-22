@@ -110,8 +110,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             .iter()
                             .skip(cursor.transaction_index as usize)
                             .take(remaining)
-                            .filter_map(|(tx, receipt, _)| {
-                                receipt.as_ref().map(|rct| {
+                            .filter_map(|(tx, res)| {
+                                res.receipt().map(|rct| {
                                     (
                                         tx.clone(),
                                         MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
@@ -148,8 +148,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             .transactions()
                             .iter()
                             .take(remaining)
-                            .filter_map(|(tx, receipt, _)| {
-                                receipt.as_ref().map(|rct| {
+                            .filter_map(|(tx, res)| {
+                                res.receipt().map(|rct| {
                                     (
                                         tx.clone(),
                                         MaybePendingTxReceipt::Pending(PendingTxReceipt::new(

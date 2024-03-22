@@ -2,18 +2,20 @@ use katana_primitives::block::ExecutableBlock;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
-use katana_primitives::trace::TxExecInfo;
-use katana_primitives::transaction::{ExecutableTxWithHash, Tx, TxWithHash};
+use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
 
-use crate::{
-    BlockExecutor, EntryPointCall, ExecutionOutput, ExecutorFactory, ExecutorResult,
-    SimulationFlag, TransactionExecutionOutput, TransactionExecutor,
+use crate::abstraction::ExecutorExt;
+use crate::abstraction::ResultAndStates;
+use crate::abstraction::{BlockExecutor, ExecutorFactory};
+use crate::abstraction::{
+    EntryPointCall, ExecutionOutput, ExecutionResult, ExecutorResult, SimulationFlag,
 };
+use crate::ExecutionError;
 
 /// A no-op executor factory. Creates an executor that does nothing.
 #[derive(Debug, Default)]
@@ -60,28 +62,29 @@ struct NoopExecutor {
     block_env: BlockEnv,
 }
 
-impl TransactionExecutor for NoopExecutor {
-    fn execute(
-        &mut self,
-        tx: ExecutableTxWithHash,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
-        let _ = tx;
-        Ok(Box::new(NoopTransactionExecutionOutput))
-    }
-
+impl ExecutorExt for NoopExecutor {
     fn simulate(
         &self,
-        tx: ExecutableTxWithHash,
+        transactions: Vec<ExecutableTxWithHash>,
         flags: SimulationFlag,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
-        let _ = tx;
+    ) -> Vec<ResultAndStates> {
+        let _ = transactions;
         let _ = flags;
-        Ok(Box::new(NoopTransactionExecutionOutput))
+        vec![]
     }
 
-    fn call(&self, call: EntryPointCall, initial_gas: u128) -> ExecutorResult<Vec<FieldElement>> {
+    fn estimate_fee(
+        &self,
+        transactions: Vec<ExecutableTxWithHash>,
+        flags: SimulationFlag,
+    ) -> Vec<Result<TxFeeInfo, ExecutionError>> {
+        let _ = transactions;
+        let _ = flags;
+        vec![]
+    }
+
+    fn call(&self, call: EntryPointCall) -> Result<Vec<FieldElement>, ExecutionError> {
         let _ = call;
-        let _ = initial_gas;
         Ok(vec![])
     }
 }
@@ -89,6 +92,14 @@ impl TransactionExecutor for NoopExecutor {
 impl<'a> BlockExecutor<'a> for NoopExecutor {
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()> {
         let _ = block;
+        Ok(())
+    }
+
+    fn execute_transactions(
+        &mut self,
+        transactions: Vec<ExecutableTxWithHash>,
+    ) -> ExecutorResult<()> {
+        let _ = transactions;
         Ok(())
     }
 
@@ -100,37 +111,12 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
         Box::new(NoopStateProvider)
     }
 
-    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>, TxExecInfo)] {
+    fn transactions(&self) -> &[(TxWithHash, ExecutionResult)] {
         &[]
     }
 
     fn block_env(&self) -> BlockEnv {
         self.block_env.clone()
-    }
-}
-
-struct NoopTransactionExecutionOutput;
-
-impl TransactionExecutionOutput for NoopTransactionExecutionOutput {
-    fn receipt(&self, tx: &Tx) -> Receipt {
-        let _ = tx;
-        Receipt::Invoke(InvokeTxReceipt::default())
-    }
-
-    fn actual_fee(&self) -> u128 {
-        0
-    }
-
-    fn gas_used(&self) -> u128 {
-        0
-    }
-
-    fn revert_error(&self) -> Option<&str> {
-        None
-    }
-
-    fn execution_info(&self) -> TxExecInfo {
-        TxExecInfo::default()
     }
 }
 

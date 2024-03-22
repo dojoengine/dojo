@@ -1,23 +1,29 @@
+mod error;
 mod output;
 mod state;
 mod utils;
 
 use blockifier::block_context::BlockContext;
 use blockifier::state::cached_state::{self, MutRefState};
+use blockifier::state::state_api::StateReader;
+use blockifier::transaction::objects::TransactionExecutionInfo;
 use katana_primitives::block::{ExecutableBlock, GasPrices, PartialHeader};
 use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::receipt::Receipt;
-use katana_primitives::trace::TxExecInfo;
+use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
 use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateProvider;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
+use tracing::info;
 
+use self::output::receipt_from_exec_info;
 use self::state::CachedState;
-pub use self::utils::Error;
+use crate::ExecutionError;
+use crate::ResultAndStates;
+use crate::{BlockExecutor, ExecutorExt, ExecutorFactory};
 use crate::{
-    abstraction, BlockExecutor, EntryPointCall, ExecutionOutput, ExecutorResult, SimulationFlag,
-    StateProviderDb, TransactionExecutionOutput, TransactionExecutor,
+    EntryPointCall, ExecutionOutput, ExecutionResult, ExecutorResult, SimulationFlag,
+    StateProviderDb,
 };
 
 #[derive(Debug)]
@@ -33,7 +39,7 @@ impl BlockifierFactory {
     }
 }
 
-impl abstraction::ExecutorFactory for BlockifierFactory {
+impl ExecutorFactory for BlockifierFactory {
     fn with_state<'a, P>(&self, state: P) -> Box<dyn BlockExecutor<'a> + 'a>
     where
         P: StateProvider + 'a,
@@ -62,7 +68,7 @@ impl abstraction::ExecutorFactory for BlockifierFactory {
 pub struct StarknetVMProcessor<'a> {
     block_context: BlockContext,
     state: CachedState<StateProviderDb<'a>>,
-    transactions: Vec<(TxWithHash, Option<Receipt>, TxExecInfo)>,
+    transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: SimulationFlag,
 }
 
@@ -92,73 +98,80 @@ impl<'a> StarknetVMProcessor<'a> {
         self.block_context.block_info.sequencer_address =
             utils::to_blk_address(header.sequencer_address);
     }
-}
 
-impl<'a> abstraction::TransactionExecutor for StarknetVMProcessor<'a> {
-    fn execute(
-        &mut self,
-        tx: ExecutableTxWithHash,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
-        let state = &self.state;
+    fn simulate_with<F, T>(
+        &self,
+        transactions: Vec<ExecutableTxWithHash>,
+        flags: &SimulationFlag,
+        mut op: F,
+    ) -> Vec<T>
+    where
+        F: FnMut(
+            &mut dyn StateReader,
+            (TxWithHash, Result<(TransactionExecutionInfo, TxFeeInfo), ExecutionError>),
+        ) -> T,
+    {
         let block_context = &self.block_context;
-        let flags = &self.simulation_flags;
+        let state = &mut self.state.0.write().inner;
+        let mut state = cached_state::CachedState::new(MutRefState::new(state), Default::default());
 
-        let class_declaration_artifacts = if let ExecutableTx::Declare(tx) = tx.as_ref() {
-            let class_hash = tx.class_hash();
-            Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
-        } else {
-            None
-        };
-
-        let tx_ = TxWithHash::from(&tx);
-        let res = utils::transact(tx, &mut state.0.write().inner, block_context, flags)?;
-
-        let receipt = res.receipt(tx_.as_ref());
-        let exec_info = res.execution_info();
-        self.transactions.push((tx_, Some(receipt), exec_info));
-
-        if let Some((class_hash, compiled_class, sierra_class)) = class_declaration_artifacts {
-            state.0.write().declared_classes.insert(class_hash, (compiled_class, sierra_class));
+        let mut results = Vec::with_capacity(transactions.len());
+        for exec_tx in transactions {
+            let tx = TxWithHash::from(&exec_tx);
+            let res = utils::transact(exec_tx, &mut state, block_context, flags);
+            results.push(op(&mut state, (tx, res)));
         }
 
-        Ok(Box::new(res))
-    }
-
-    fn simulate(
-        &self,
-        tx: ExecutableTxWithHash,
-        flags: SimulationFlag,
-    ) -> ExecutorResult<Box<dyn TransactionExecutionOutput>> {
-        let block_context = &self.block_context;
-
-        let state = &mut self.state.0.write().inner;
-        let mut state = cached_state::CachedState::new(MutRefState::new(state), Default::default());
-
-        let res = utils::transact(tx, &mut state, block_context, &flags)?;
-        Ok(Box::new(res))
-    }
-
-    fn call(&self, call: EntryPointCall, initial_gas: u128) -> ExecutorResult<Vec<FieldElement>> {
-        let block_context = &self.block_context;
-
-        let state = &mut self.state.0.write().inner;
-        let mut state = cached_state::CachedState::new(MutRefState::new(state), Default::default());
-
-        let res = utils::call(call, &mut state, block_context, initial_gas)?;
-
-        let retdata = res.execution.retdata.0;
-        let retdata = retdata.into_iter().map(|f| f.into()).collect::<Vec<FieldElement>>();
-
-        Ok(retdata)
+        results
     }
 }
 
-impl<'a> abstraction::BlockExecutor<'a> for StarknetVMProcessor<'a> {
+impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()> {
         self.fill_block_env_from_header(&block.header);
+        self.execute_transactions(block.body)?;
+        Ok(())
+    }
 
-        for tx in block.body {
-            let _ = self.execute(tx)?;
+    fn execute_transactions(
+        &mut self,
+        transactions: Vec<ExecutableTxWithHash>,
+    ) -> ExecutorResult<()> {
+        let block_context = &self.block_context;
+        let flags = &self.simulation_flags;
+        let mut state = self.state.write();
+
+        for exec_tx in transactions {
+            // Collect class artifacts if its a declare tx
+            let class_decl_artifacts = if let ExecutableTx::Declare(tx) = exec_tx.as_ref() {
+                let class_hash = tx.class_hash();
+                Some((class_hash, tx.compiled_class.clone(), tx.sierra_class.clone()))
+            } else {
+                None
+            };
+
+            let tx = TxWithHash::from(&exec_tx);
+            let res = match utils::transact(exec_tx, &mut state.inner, block_context, flags) {
+                Ok((info, fee)) => {
+                    // get the trace and receipt from the execution info
+                    let trace = utils::to_exec_info(info);
+                    let receipt = receipt_from_exec_info(&tx, &trace);
+                    ExecutionResult::new_success(receipt, trace, fee)
+                }
+                Err(e) => {
+                    info!(target: "executor", "transaction execution failed: {e}");
+                    ExecutionResult::new_failed(e)
+                }
+            };
+
+            // if the tx succeed, inserts the class artifacts into the contract class cache
+            if res.is_success() {
+                if let Some((class_hash, compiled, sierra)) = class_decl_artifacts {
+                    state.declared_classes.insert(class_hash, (compiled, sierra));
+                }
+            }
+
+            self.transactions.push((tx, res));
         }
 
         Ok(())
@@ -174,7 +187,7 @@ impl<'a> abstraction::BlockExecutor<'a> for StarknetVMProcessor<'a> {
         Box::new(self.state.clone())
     }
 
-    fn transactions(&self) -> &[(TxWithHash, Option<Receipt>, TxExecInfo)] {
+    fn transactions(&self) -> &[(TxWithHash, ExecutionResult)] {
         &self.transactions
     }
 
@@ -188,5 +201,51 @@ impl<'a> abstraction::BlockExecutor<'a> for StarknetVMProcessor<'a> {
                 strk: self.block_context.block_info.gas_prices.strk_l1_gas_price,
             },
         }
+    }
+}
+
+impl ExecutorExt for StarknetVMProcessor<'_> {
+    fn simulate(
+        &self,
+        transactions: Vec<ExecutableTxWithHash>,
+        flags: SimulationFlag,
+    ) -> Vec<ResultAndStates> {
+        self.simulate_with(transactions, &flags, |_, (tx, res)| {
+            let result = match res {
+                Ok((info, fee)) => {
+                    let trace = utils::to_exec_info(info);
+                    let receipt = receipt_from_exec_info(&tx, &trace);
+                    ExecutionResult::new_success(receipt, trace, fee)
+                }
+                Err(e) => {
+                    info!(target: "executor", "transaction simulation failed: {e}");
+                    ExecutionResult::new_failed(e)
+                }
+            };
+
+            ResultAndStates { result, states: Default::default() }
+        })
+    }
+
+    fn estimate_fee(
+        &self,
+        transactions: Vec<ExecutableTxWithHash>,
+        flags: SimulationFlag,
+    ) -> Vec<Result<TxFeeInfo, ExecutionError>> {
+        self.simulate_with(transactions, &flags, |_, (_, res)| match res {
+            Ok((_, fee)) => Ok(fee),
+            Err(e) => {
+                info!(target: "executor", "fee estimation failed: {e}");
+                Err(e)
+            }
+        })
+    }
+
+    fn call(&self, call: EntryPointCall) -> Result<Vec<FieldElement>, ExecutionError> {
+        let block_context = &self.block_context;
+        let mut state = self.state.0.write();
+        let state = MutRefState::new(&mut state.inner);
+        let retdata = utils::call(call, state, block_context, 100_000_000)?;
+        Ok(retdata)
     }
 }

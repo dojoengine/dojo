@@ -372,7 +372,7 @@ mod tests {
         let new_legacy_class = DEFAULT_LEGACY_UDC_CASM.clone();
         let new_class_hash = felt!("0x777");
         let (new_sierra_class, new_compiled_sierra_class) = new_sierra_class();
-        // let new_compiled_hash = felt!("0xdead");
+        let new_compiled_hash = felt!("0xdead");
         // let new_legacy_compiled_hash = felt!("0x5678");
 
         // we're asserting that the underlying state provider doesnt have cache state native data
@@ -384,10 +384,10 @@ mod tests {
         let actual_new_legacy_sierra_class = sp.class(new_legacy_class_hash)?;
         let actual_new_sierra_class = sp.sierra_class(new_class_hash)?;
         let actual_new_class = sp.class(new_class_hash)?;
-        // let actual_new_compiled_class_hash =
-        //     sp.compiled_class_hash_of_class_hash(new_class_hash)?;
-        // let actual_new_legacy_compiled_hash =
-        //     state_provider.compiled_class_hash_of_class_hash(new_class_hash)?;
+        let actual_new_compiled_class_hash =
+            sp.compiled_class_hash_of_class_hash(new_class_hash)?;
+        let actual_new_legacy_compiled_hash =
+            sp.compiled_class_hash_of_class_hash(new_class_hash)?;
 
         assert_eq!(actual_new_nonce, None, "data shouldn't exist");
         assert_eq!(actual_new_class_hash, None, "data shouldn't exist");
@@ -396,8 +396,8 @@ mod tests {
         assert_eq!(actual_new_legacy_sierra_class, None, "data shouldn't exist");
         assert_eq!(actual_new_sierra_class, None, "data shouldn't exist");
         assert_eq!(actual_new_class, None, "data shouldn't exist");
-        // assert_eq!(actual_new_compiled_hash, None, "data shouldn't exist");
-        // assert_eq!(actual_new_legacy_compiled_hash, None, "data shouldn't exist");
+        assert_eq!(actual_new_compiled_class_hash, None, "data shouldn't exist");
+        assert_eq!(actual_new_legacy_compiled_hash, None, "data shouldn't exist");
 
         let classes_cache = PermanentContractClassCache::default();
         let cached_state = CachedState::new(StateProviderDb(sp), classes_cache);
@@ -410,7 +410,7 @@ mod tests {
             let sir_storage_key = new_storage_key.to_bytes_be();
             let sir_storage_value = to_sir_felt(&new_storage_value);
             let sir_class_hash = to_sir_class_hash(&new_class_hash);
-            // let sir_compiled_hash = to_sir_compiled_class(&new_compiled_hash);
+            let sir_compiled_hash = to_sir_felt(&new_compiled_hash);
 
             let lock = &mut cached_state.0.write();
             let sir_state = &mut lock.inner;
@@ -422,11 +422,14 @@ mod tests {
                 &sir_class_hash,
                 &to_sir_compiled_class(new_compiled_sierra_class.clone()),
             )?;
+            sir_state.set_compiled_class_hash(
+                &Felt252::from_bytes_be(&sir_class_hash.0),
+                &sir_compiled_hash,
+            )?;
             sir_state.set_contract_class(
                 &sir_legacy_class_hash,
                 &to_sir_compiled_class(DEFAULT_LEGACY_UDC_CASM.clone()),
             )?;
-            // write.set_compiled_class_hash(&to_sir_felt(&felt!("0x1234")), &new_compiled_hash)?;
 
             let declared_classes = &mut lock.declared_classes;
             declared_classes.insert(new_legacy_class_hash, (new_legacy_class.clone(), None));
@@ -466,11 +469,11 @@ mod tests {
         let actual_new_storage_value = sp.storage(new_address, new_storage_key)?;
         let actual_new_class = sp.class(new_class_hash)?;
         let actual_new_sierra = sp.sierra_class(new_class_hash)?;
-        // let actual_new_compiled_hash = sp.compiled_class_hash_of_class_hash(new_class_hash)?;
+        let actual_new_compiled_hash = sp.compiled_class_hash_of_class_hash(new_class_hash)?;
         let actual_legacy_class = sp.class(new_legacy_class_hash)?;
         let actual_legacy_sierra = sp.sierra_class(new_legacy_class_hash)?;
         // let actual_new_legacy_compiled_hash =
-        // sp.compiled_class_hash_of_class_hash(new_legacy_class_hash)?;
+        //     sp.compiled_class_hash_of_class_hash(new_legacy_class_hash)?;
 
         assert_eq!(actual_new_nonce, Some(felt!("0x1")), "data should be in cached state");
         assert_eq!(
@@ -485,11 +488,9 @@ mod tests {
         );
         assert_eq!(actual_new_class, Some(new_compiled_sierra_class));
         assert_eq!(actual_new_sierra, Some(new_sierra_class));
-        // assert_eq!(actual_new_compiled_hash, Some(new_compiled_hash));
+        assert_eq!(actual_new_compiled_hash, Some(new_compiled_hash));
         assert_eq!(actual_legacy_class, Some(new_legacy_class));
         assert_eq!(actual_legacy_sierra, None, "legacy class should not have sierra class");
-        // assert_eq!(actual_new_legacy_compiled_hash, Some(new_legacy_compiled_hash), "data should
-        // be in cached state");
 
         Ok(())
     }
@@ -552,9 +553,10 @@ mod tests {
             ClassHash::default(),
             "class hash of nonexistant contract should default to zero"
         );
-        assert!(
-            actual_compiled_hash.unwrap_err().to_string().contains("No compiled class hash found")
-        );
+        assert!(actual_compiled_hash
+            .unwrap_err()
+            .to_string()
+            .contains("No compiled class hash found"));
         assert!(actual_compiled_class.unwrap_err().to_string().contains("No compiled class found"));
 
         let sp: Box<dyn StateProvider> = Box::new(cached_state);
