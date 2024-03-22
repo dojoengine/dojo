@@ -61,6 +61,21 @@ pub enum AccountCommand {
         #[clap(help = "Path to the account config file")]
         file: PathBuf,
     },
+
+    #[clap(about = "Fetch account config from an already deployed account contract.")]
+    Fetch {
+        #[clap(flatten)]
+        starknet: StarknetOptions,
+
+        #[clap(long, help = "Overwrite the file if it already exists")]
+        force: bool,
+
+        #[clap(long, help = "Path to save the account config file")]
+        output: PathBuf,
+
+        #[clap(help = "Contract address")]
+        address: FieldElement,
+    },
 }
 
 impl AccountArgs {
@@ -95,6 +110,10 @@ impl AccountArgs {
                         file,
                     )
                     .await
+                }
+                AccountCommand::Fetch { starknet, force, output, address } => {
+                    let provider = starknet.provider(env_metadata.as_ref())?;
+                    account::fetch(provider, force, output, address).await
                 }
             }
         })

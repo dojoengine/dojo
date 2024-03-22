@@ -9,9 +9,11 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::accounts::{AccountFactory, AccountFactoryError, OpenZeppelinAccountFactory};
 use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::{BlockId, BlockTag, StarknetError, TransactionFinalityStatus};
+use starknet::core::types::{
+    BlockId, BlockTag, FunctionCall, StarknetError, TransactionFinalityStatus,
+};
 use starknet::core::utils::get_contract_address;
-use starknet::macros::felt;
+use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, ProviderError};
 use starknet::signers::{LocalWallet, Signer, SigningKey};
@@ -329,6 +331,47 @@ pub async fn deploy(
     serde_json::to_writer_pretty(&mut temp_file, &account)?;
     temp_file.write_all(b"\n")?;
     std::fs::rename(temp_path, file)?;
+
+    Ok(())
+}
+
+pub async fn fetch(
+    provider: JsonRpcClient<HttpTransport>,
+    force: bool,
+    output: PathBuf,
+    address: FieldElement,
+) -> Result<()> {
+    if output.exists() && !force {
+        anyhow::bail!("account config file already exists");
+    }
+
+    let class_hash = provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await?;
+
+    let public_key = provider
+        .call(
+            FunctionCall {
+                contract_address: address,
+                entry_point_selector: selector!("get_public_key"),
+                calldata: vec![],
+            },
+            BlockId::Tag(BlockTag::Pending),
+        )
+        .await?[0];
+
+    let variant =
+        AccountVariant::OpenZeppelin(OzAccountConfig { version: 1, public_key, legacy: false });
+
+    let account = AccountConfig {
+        version: 1,
+        variant,
+        deployment: DeploymentStatus::Deployed(DeployedStatus { class_hash, address }),
+    };
+
+    let mut file = std::fs::File::create(&output)?;
+    serde_json::to_writer_pretty(&mut file, &account)?;
+    file.write_all(b"\n")?;
+
+    eprintln!("Downloaded new account config file: {}", std::fs::canonicalize(&output)?.display());
 
     Ok(())
 }
