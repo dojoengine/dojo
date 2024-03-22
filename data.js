@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711041552236,
+  "lastUpdate": 1711076813522,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3145,6 +3145,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 966058,
             "range": "± 56940",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7bddd4a118ea2a56c631edd43e17f7b24ec677f9",
+          "message": "fix: ensure sozo clean only affect base (#1685)\n\nThe overlays are managed by the user. We don't want to clean them.\r\nThe deployments are only output, and can't cause any conflict.\r\nFor this reason, only base should be clean.",
+          "timestamp": "2024-03-21T20:57:33-06:00",
+          "tree_id": "c045b6fef797f0a22abb67f9af26ad8a2d03ad4f",
+          "url": "https://github.com/dojoengine/dojo/commit/7bddd4a118ea2a56c631edd43e17f7b24ec677f9"
+        },
+        "date": 1711076813004,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 967531,
+            "range": "± 46959",
             "unit": "ns/iter"
           }
         ]
