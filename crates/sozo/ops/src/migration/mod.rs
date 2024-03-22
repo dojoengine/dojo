@@ -713,7 +713,7 @@ pub fn print_strategy(ui: &Ui, strategy: &MigrationStrategy) {
     if !&strategy.contracts.is_empty() {
         ui.print_header(format!("# Contracts ({})", &strategy.contracts.len()));
         for c in &strategy.contracts {
-            ui.print_sub(format!("deploy {} (classhash: {:#x})", c.diff.name, c.diff.local));
+            ui.print_sub(format!("deploy {} (class hash: {:#x})", c.diff.name, c.diff.local));
         }
         ui.print(" ");
     }
