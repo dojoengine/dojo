@@ -6,3 +6,5 @@ pub mod manifest;
 pub mod metadata;
 #[cfg(feature = "migration")]
 pub mod migration;
+#[cfg(feature = "migration")]
+pub mod utils; // TODO: move to somewhere else

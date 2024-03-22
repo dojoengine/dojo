@@ -3393,18 +3393,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-utils"
-version = "0.6.0-alpha.7"
-dependencies = [
- "assert_matches",
- "dojo-test-utils",
- "futures",
- "starknet 0.9.0",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "dojo-world"
 version = "0.6.0-alpha.7"
 dependencies = [
@@ -3421,7 +3409,7 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
- "dojo-utils",
+ "futures",
  "http",
  "ipfs-api-backend-hyper",
  "scarb",
@@ -11158,7 +11146,6 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
- "dojo-utils",
  "dojo-world",
  "futures",
  "katana-runner",
@@ -11213,7 +11200,6 @@ dependencies = [
  "dojo-lang",
  "dojo-test-utils",
  "dojo-types",
- "dojo-utils",
  "dojo-world",
  "futures",
  "katana-runner",
@@ -12674,7 +12660,6 @@ dependencies = [
  "convert_case 0.6.0",
  "dojo-test-utils",
  "dojo-types",
- "dojo-utils",
  "dojo-world",
  "lazy_static",
  "regex",

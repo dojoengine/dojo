@@ -9,9 +9,9 @@ use dojo_test_utils::sequencer::{
 };
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use dojo_utils::TransactionWaiter;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::manifest::DeploymentManifest;
+use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use serde::Deserialize;
 use serde_json::Value;

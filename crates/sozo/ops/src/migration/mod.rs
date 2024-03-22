@@ -3,7 +3,6 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
-use dojo_utils::TransactionWaiter;
 use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
@@ -18,6 +17,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff, TxConfig,
 };
+use dojo_world::utils::TransactionWaiter;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};

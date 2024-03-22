@@ -17,8 +17,7 @@ async-trait.workspace = true
 base64.workspace = true
 chrono.workspace = true
 convert_case = "0.6.0"
-dojo-types.workspace = true
-dojo-utils.workspace = true
+dojo-types = { path = "../../dojo-types" }
 lazy_static.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true
@@ -40,8 +39,8 @@ sozo-ops.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
-dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-dojo-world.workspace = true
+dojo-test-utils = { path = "../../dojo-test-utils", features = [ "build-examples" ] }
+dojo-world = { path = "../../dojo-world" }
 scarb.workspace = true
 serial_test = "2.0.0"
 sozo = { path = "../../../bin/sozo" }
