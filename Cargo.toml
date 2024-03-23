@@ -188,3 +188,19 @@ blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979"
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
+
+alloy-sol-macro = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-primitives = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-sol-types = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-json-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-dyn-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+syn-solidity = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-core = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }

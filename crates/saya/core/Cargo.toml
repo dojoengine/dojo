@@ -15,7 +15,6 @@ katana-provider.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 convert_case.workspace = true
-ethers = "2.0.11"
 flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"
@@ -34,3 +33,5 @@ url.workspace = true
 # TODO: use features for each possible DA.
 celestia-rpc = "0.1.1"
 celestia-types = "0.1.1"
+
+alloy-primitives = { version = "0.6.4", default-features = false }

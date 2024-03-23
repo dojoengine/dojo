@@ -35,7 +35,7 @@ use crate::FieldElement;
 
 mod primitives {
     pub use crate::contract::{CompiledContractClass, ContractAddress, Nonce};
-    pub use crate::transaction::{DeclareTx, DeployAccountTx, InvokeTx, L1HandlerTx, Tx};
+    pub use crate::transaction::{DeployAccountTx, InvokeTx, L1HandlerTx, Tx};
     pub use crate::FieldElement;
 }
 

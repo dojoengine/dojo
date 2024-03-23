@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use ethers::types::U256;
+use alloy_primitives::U256;
 use serde::{Deserialize, Serialize};
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -248,7 +248,7 @@ impl Default for Genesis {
             decimals: 18,
             name: "Ether".into(),
             symbol: "ETH".into(),
-            total_supply: 0.into(),
+            total_supply: U256::ZERO,
             address: DEFAULT_FEE_TOKEN_ADDRESS,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
             storage: None,

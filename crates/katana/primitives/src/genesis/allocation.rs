@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use alloy_primitives::U256;
 use derive_more::{Deref, DerefMut};
-use ethers::types::U256;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -238,7 +238,7 @@ impl DevAllocationsGenerator {
         Self {
             total,
             seed: [0u8; 32],
-            balance: U256::zero(),
+            balance: U256::ZERO,
             class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
         }
     }
