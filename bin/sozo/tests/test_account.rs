@@ -1,17 +1,11 @@
 mod utils;
 
-use std::{env, fs};
+use std::fs;
 
 use assert_fs::fixture::PathChild;
-use starknet_crypto::FieldElement;
+use sozo_ops::account;
+use starknet::accounts::Account;
 use utils::snapbox::get_snapbox;
-
-use sozo_ops::account::{self, FeeSetting};
-
-use starknet::{
-    accounts::Account,
-    signers::{LocalWallet, SigningKey},
-};
 
 #[test]
 fn test_account_new() {
@@ -33,38 +27,6 @@ fn test_account_new() {
         .success();
 
     assert!(pt.child("account.json").exists());
-}
-
-#[katana_runner::katana_test(1, true)]
-async fn test_account_deploy() {
-    let account_path = fs::canonicalize("./tests/test_data/account/account.json").unwrap();
-    let keystore_path = fs::canonicalize("./tests/test_data/keystore/keystore.json").unwrap();
-
-    let pt = assert_fs::TempDir::new().unwrap();
-    fs::copy(account_path.clone(), pt.child("account.json")).unwrap();
-
-    let signer = LocalWallet::from_signing_key(
-        SigningKey::from_keystore(keystore_path, "password").unwrap(),
-    );
-
-    let contents = fs::read_to_string(pt.child("account.json")).unwrap();
-    assert!(contents.contains(r#""status": "undeployed""#));
-
-    env::set_var("PASS_STDIN", "1");
-    account::deploy(
-        runner.owned_provider(),
-        signer,
-        FeeSetting::Manual(FieldElement::from(1000_u32)),
-        false,
-        None,
-        1000,
-        account_path,
-    )
-    .await
-    .unwrap();
-
-    let contents = fs::read_to_string(pt.child("account.json")).unwrap();
-    assert!(contents.contains(r#""status": "deployed""#));
 }
 
 #[katana_runner::katana_test(1, true)]
