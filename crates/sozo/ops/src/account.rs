@@ -113,6 +113,19 @@ impl MaxFeeType {
     }
 }
 
+#[derive(Debug)]
+pub enum FeeSetting {
+    Manual(FieldElement),
+    EstimateOnly,
+    None,
+}
+
+impl FeeSetting {
+    pub fn is_estimate_only(&self) -> bool {
+        matches!(self, FeeSetting::EstimateOnly)
+    }
+}
+
 pub async fn new(signer: LocalWallet, force: bool, output: PathBuf) -> Result<()> {
     if output.exists() && !force {
         anyhow::bail!("account config file already exists");
@@ -399,18 +412,5 @@ fn map_starknet_error(err: StarknetError) -> anyhow::Error {
             anyhow::anyhow!("UnexpectedError: {}", err.trim())
         }
         err => anyhow::anyhow!("{}", err),
-    }
-}
-
-#[derive(Debug)]
-pub enum FeeSetting {
-    Manual(FieldElement),
-    EstimateOnly,
-    None,
-}
-
-impl FeeSetting {
-    pub fn is_estimate_only(&self) -> bool {
-        matches!(self, FeeSetting::EstimateOnly)
     }
 }

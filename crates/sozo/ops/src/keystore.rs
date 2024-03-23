@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -6,15 +5,7 @@ use colored::Colorize;
 use starknet::signers::SigningKey;
 use starknet_crypto::FieldElement;
 
-const RAW_PASSWORD_WARNING: &str = "WARNING: setting passwords via --password is generally \
-                                    considered insecure, as they will be stored in your shell \
-                                    history or other log files.";
-
 pub fn new(password: Option<String>, force: bool, file: PathBuf) -> Result<()> {
-    if password.is_some() {
-        eprintln!("{}", RAW_PASSWORD_WARNING.bright_magenta());
-    }
-
     if file.exists() && !force {
         anyhow::bail!("keystore file already exists");
     }
@@ -32,23 +23,16 @@ pub fn new(password: Option<String>, force: bool, file: PathBuf) -> Result<()> {
 
 pub fn from_key(
     force: bool,
-    private_key_stdin: bool,
+    private_key: Option<String>,
     password: Option<String>,
     file: PathBuf,
 ) -> Result<()> {
-    if password.is_some() {
-        eprintln!("{}", RAW_PASSWORD_WARNING.bright_magenta());
-    }
-
     if file.exists() && !force {
         anyhow::bail!("keystore file already exists");
     }
 
-    let private_key = if private_key_stdin {
-        let mut buffer = String::new();
-        std::io::stdin().read_to_string(&mut buffer)?;
-
-        buffer
+    let private_key = if let Some(private_key) = private_key {
+        private_key
     } else {
         rpassword::prompt_password("Enter private key: ")?
     };
@@ -66,10 +50,6 @@ pub fn from_key(
 }
 
 pub fn inspect(password: Option<String>, raw: bool, file: PathBuf) -> Result<()> {
-    if password.is_some() {
-        eprintln!("{}", RAW_PASSWORD_WARNING.bright_magenta());
-    }
-
     if !file.exists() {
         anyhow::bail!("keystore file not found");
     }
@@ -88,10 +68,6 @@ pub fn inspect(password: Option<String>, raw: bool, file: PathBuf) -> Result<()>
 }
 
 pub fn inspect_private(password: Option<String>, raw: bool, file: PathBuf) -> Result<()> {
-    if password.is_some() {
-        eprintln!("{}", RAW_PASSWORD_WARNING.bright_magenta());
-    }
-
     if !file.exists() {
         anyhow::bail!("keystore file not found");
     }

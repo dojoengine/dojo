@@ -29,8 +29,8 @@ pub enum KeystoreCommand {
         #[clap(long, help = "Overwrite the file if it already exists")]
         force: bool,
 
-        #[clap(long, help = "Take the private key from stdin instead of prompt")]
-        private_key_stdin: bool,
+        #[clap(long, help = "Supply private key from command line option instead of prompt")]
+        private_key: Option<String>,
 
         #[clap(long, help = "Supply password from command line option instead of prompt")]
         password: Option<String>,
@@ -68,8 +68,8 @@ impl KeystoreArgs {
     pub fn run(self) -> Result<()> {
         match self.command {
             KeystoreCommand::New { password, force, file } => keystore::new(password, force, file),
-            KeystoreCommand::FromKey { force, private_key_stdin, password, file } => {
-                keystore::from_key(force, private_key_stdin, password, file)
+            KeystoreCommand::FromKey { force, private_key, password, file } => {
+                keystore::from_key(force, private_key, password, file)
             }
             KeystoreCommand::Inspect { password, raw, file } => {
                 keystore::inspect(password, raw, file)
