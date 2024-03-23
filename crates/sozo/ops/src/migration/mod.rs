@@ -734,11 +734,8 @@ where
     format!("deploy {}", contract.diff.name)
 }
 
-pub async fn print_strategy<P>(
-    ui: &Ui,
-    provider: &P,
-    strategy: &MigrationStrategy,
-) where
+pub async fn print_strategy<P>(ui: &Ui, provider: &P, strategy: &MigrationStrategy)
+where
     P: Provider + Sync + Send + 'static,
 {
     ui.print("\n📋 Migration Strategy\n");
