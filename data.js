@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711076813522,
+  "lastUpdate": 1711219086765,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3175,6 +3175,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 967531,
             "range": "± 46959",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "810b0f45739d96f865fb6e402a30f4e3cf99a977",
+          "message": "sozo: add dry-run mode (#1686)",
+          "timestamp": "2024-03-23T12:28:37-06:00",
+          "tree_id": "3662023c81f2a24bfb1b1824ac7d1db4ee41650e",
+          "url": "https://github.com/dojoengine/dojo/commit/810b0f45739d96f865fb6e402a30f4e3cf99a977"
+        },
+        "date": 1711219086257,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 964197,
+            "range": "± 28257",
             "unit": "ns/iter"
           }
         ]
