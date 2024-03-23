@@ -21,8 +21,13 @@ use dojo_world::utils::TransactionWaiter;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::{FieldElement, InvokeTransactionResult};
-use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
+use starknet::core::types::{
+    BlockId, BlockTag, FieldElement, FunctionCall, InvokeTransactionResult, StarknetError,
+};
+use starknet::core::utils::{
+    cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
+};
+use starknet::providers::{Provider, ProviderError};
 use tokio::fs;
 
 #[cfg(test)]
@@ -30,7 +35,6 @@ use tokio::fs;
 mod migration_test;
 mod ui;
 
-use starknet::providers::Provider;
 use starknet::signers::Signer;
 use ui::MigrationUi;
 
@@ -52,6 +56,7 @@ pub async fn migrate<P, S>(
     chain_id: String,
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
+    dry_run: bool,
 ) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
@@ -92,32 +97,36 @@ where
     let strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
-    // Migrate according to the diff.
-    match apply_diff(ws, account, None, &strategy).await {
-        Ok(migration_output) => {
-            update_manifests_and_abis(
-                ws,
-                local_manifest,
-                remote_manifest,
-                &manifest_dir,
-                migration_output,
-                &chain_id,
-                name.as_ref(),
-            )
-            .await?;
-        }
-        Err(e) => {
-            update_manifests_and_abis(
-                ws,
-                local_manifest,
-                remote_manifest,
-                &manifest_dir,
-                MigrationOutput { world_address, ..Default::default() },
-                &chain_id,
-                name.as_ref(),
-            )
-            .await?;
-            return Err(e)?;
+    if dry_run {
+        print_strategy(&ui, account.provider(), &strategy).await;
+    } else {
+        // Migrate according to the diff.
+        match apply_diff(ws, account, None, &strategy).await {
+            Ok(migration_output) => {
+                update_manifests_and_abis(
+                    ws,
+                    local_manifest,
+                    remote_manifest,
+                    &manifest_dir,
+                    migration_output,
+                    &chain_id,
+                    name.as_ref(),
+                )
+                .await?;
+            }
+            Err(e) => {
+                update_manifests_and_abis(
+                    ws,
+                    local_manifest,
+                    remote_manifest,
+                    &manifest_dir,
+                    MigrationOutput { world_address, ..Default::default() },
+                    &chain_id,
+                    name.as_ref(),
+                )
+                .await?;
+                return Err(e)?;
+            }
         }
     };
 
@@ -682,4 +691,79 @@ pub fn handle_artifact_error(ui: &Ui, artifact_path: &Path, error: anyhow::Error
         "Discrepancy detected in {name}.\nUse `sozo clean` to clean your project or `sozo clean \
          --artifacts` to clean artifacts only.\nThen, rebuild your project with `sozo build`."
     )
+}
+
+pub async fn get_contract_operation_name<P>(
+    provider: &P,
+    contract: &ContractMigration,
+    world_address: Option<FieldElement>,
+) -> String
+where
+    P: Provider + Sync + Send + 'static,
+{
+    if let Some(world_address) = world_address {
+        if let Ok(base_class_hash) = provider
+            .call(
+                FunctionCall {
+                    contract_address: world_address,
+                    calldata: vec![],
+                    entry_point_selector: get_selector_from_name("base").unwrap(),
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await
+        {
+            let contract_address =
+                get_contract_address(contract.salt, base_class_hash[0], &[], world_address);
+
+            match provider
+                .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
+                .await
+            {
+                Ok(current_class_hash) if current_class_hash != contract.diff.local => {
+                    return format!("upgrade {}", contract.diff.name);
+                }
+                Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                    return format!("deploy {}", contract.diff.name);
+                }
+                Ok(_) => return "already deployed".to_string(),
+                Err(_) => return format!("deploy {}", contract.diff.name),
+            }
+        }
+    }
+    format!("deploy {}", contract.diff.name)
+}
+
+pub async fn print_strategy<P>(ui: &Ui, provider: &P, strategy: &MigrationStrategy)
+where
+    P: Provider + Sync + Send + 'static,
+{
+    ui.print("\n📋 Migration Strategy\n");
+
+    if let Some(base) = &strategy.base {
+        ui.print_header("# Base Contract");
+        ui.print_sub(format!("declare (class hash: {:#x})\n", base.diff.local));
+    }
+
+    if let Some(world) = &strategy.world {
+        ui.print_header("# World");
+        ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local));
+    }
+
+    if !&strategy.models.is_empty() {
+        ui.print_header(format!("# Models ({})", &strategy.models.len()));
+        for m in &strategy.models {
+            ui.print_sub(format!("register {} (class hash: {:#x})", m.diff.name, m.diff.local));
+        }
+        ui.print(" ");
+    }
+
+    if !&strategy.contracts.is_empty() {
+        ui.print_header(format!("# Contracts ({})", &strategy.contracts.len()));
+        for c in &strategy.contracts {
+            let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
+            ui.print_sub(format!("{op_name} (class hash: {:#x})", c.diff.local));
+        }
+        ui.print(" ");
+    }
 }
