@@ -73,6 +73,8 @@ pub struct DojoContract {
     pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub original_class_hash: FieldElement,
     pub abi: Option<Utf8PathBuf>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
@@ -87,6 +89,8 @@ pub struct DojoModel {
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub original_class_hash: FieldElement,
     pub abi: Option<Utf8PathBuf>,
 }
 
@@ -96,6 +100,8 @@ pub struct DojoModel {
 pub struct Contract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub original_class_hash: FieldElement,
     pub abi: Option<Utf8PathBuf>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
@@ -112,6 +118,8 @@ pub struct Contract {
 pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub original_class_hash: FieldElement,
     pub abi: Option<Utf8PathBuf>,
 }
 
