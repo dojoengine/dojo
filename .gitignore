@@ -15,3 +15,4 @@ output.txt
 **/katana-logs
 crates/benches/bench_results.txt
 **/generated
+.vscode/settings.json
