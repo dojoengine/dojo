@@ -81,7 +81,7 @@ pub struct DojoModel {
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
 }
 
 /// System input ABI.
@@ -110,6 +110,26 @@ pub struct ComputedValueEntrypoint {
     pub model: Option<String>,
 }
 
+/// Format of the ABI into the manifest file.
+#[serde_as]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum AbiFormat {
+    /// Only a relative path to the ABI file is stored.
+    Path(Utf8PathBuf),
+    /// The full ABI is embedded as a string.
+    Embed(String),
+}
+
+impl AbiFormat {
+    pub fn to_path(&self) -> Option<&Utf8PathBuf> {
+        match self {
+            AbiFormat::Path(p) => Some(p),
+            AbiFormat::Embed(_) => None,
+        }
+    }
+}
+
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind")]
@@ -118,7 +138,7 @@ pub struct DojoContract {
     pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
     pub computed: Vec<ComputedValueEntrypoint>,
@@ -151,7 +171,7 @@ pub struct OverlayClass {}
 pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
 }
 
 #[serde_as]
@@ -160,7 +180,7 @@ pub struct Class {
 pub struct Contract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
     #[serde_as(as = "Option<UfeHex>")]
@@ -236,8 +256,8 @@ where
 
 pub trait ManifestMethods {
     type OverlayType;
-    fn abi(&self) -> Option<&Utf8PathBuf>;
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>);
+    fn abi(&self) -> Option<&AbiFormat>;
+    fn set_abi(&mut self, abi: Option<AbiFormat>);
     fn class_hash(&self) -> &FieldElement;
     fn set_class_hash(&mut self, class_hash: FieldElement);
 
@@ -300,10 +320,35 @@ impl DeploymentManifest {
         self.world.inner.seed = previous.world.inner.seed;
     }
 
-    pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
+    pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
         let deployed_manifest = toml::to_string_pretty(&self)?;
+        fs::write(path, deployed_manifest)?;
+
+        Ok(())
+    }
+
+    pub fn write_to_path_json(&self, path: &Utf8PathBuf, manifest_dir: &Utf8PathBuf) -> Result<()> {
+        fs::create_dir_all(path.parent().unwrap())?;
+
+        // Embedding ABIs into the manifest.
+        let mut manifest_with_abis = self.clone();
+        for contract in &mut manifest_with_abis.contracts {
+            if let Some(abi_path) = &contract.inner.abi {
+                match abi_path {
+                    AbiFormat::Path(p) => {
+                        println!("PATH {}", p.to_string());
+                        let abi_content = fs::read_to_string(manifest_dir.join(p))?;
+                        contract.inner.abi = Some(AbiFormat::Embed(abi_content));
+                    }
+                    // If the ABI is already embedded, do nothing.
+                    _ => {}
+                }
+            }
+        }
+
+        let deployed_manifest = serde_json::to_string(&manifest_with_abis)?;
         fs::write(path, deployed_manifest)?;
 
         Ok(())
@@ -628,11 +673,11 @@ where
 impl ManifestMethods for DojoContract {
     type OverlayType = OverlayDojoContract;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -657,11 +702,11 @@ impl ManifestMethods for DojoContract {
 impl ManifestMethods for DojoModel {
     type OverlayType = OverlayDojoModel;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -679,11 +724,11 @@ impl ManifestMethods for DojoModel {
 impl ManifestMethods for Contract {
     type OverlayType = OverlayContract;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -701,11 +746,11 @@ impl ManifestMethods for Contract {
 impl ManifestMethods for Class {
     type OverlayType = OverlayClass;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
