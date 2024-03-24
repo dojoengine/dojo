@@ -335,16 +335,9 @@ impl DeploymentManifest {
         // Embedding ABIs into the manifest.
         let mut manifest_with_abis = self.clone();
         for contract in &mut manifest_with_abis.contracts {
-            if let Some(abi_path) = &contract.inner.abi {
-                match abi_path {
-                    AbiFormat::Path(p) => {
-                        println!("PATH {}", p.to_string());
-                        let abi_content = fs::read_to_string(manifest_dir.join(p))?;
-                        contract.inner.abi = Some(AbiFormat::Embed(abi_content));
-                    }
-                    // If the ABI is already embedded, do nothing.
-                    _ => {}
-                }
+            if let Some(AbiFormat::Path(abi_path)) = &contract.inner.abi {
+                let abi_content = fs::read_to_string(manifest_dir.join(abi_path))?;
+                contract.inner.abi = Some(AbiFormat::Embed(abi_content));
             }
         }
 
