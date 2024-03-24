@@ -807,7 +807,9 @@ mod tests {
             address: ContractAddress::from(felt!("0x55")),
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
-            total_supply: U256::from_str("0xD3C21BCECCEDA1000000").unwrap() * 5,
+            total_supply: U256::from_str("0xD3C21BCECCEDA1000000")
+                .unwrap()
+                .wrapping_mul(U256::from(5)),
             decimals: 18,
             class_hash: felt!("0x8"),
             storage: Some(HashMap::from([

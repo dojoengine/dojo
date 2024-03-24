@@ -395,7 +395,7 @@ mod tests {
                 ContractAddress::from(felt!("0x2")),
                 GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
                     public_key: felt!("0x2"),
-                    balance: Some(U256::zero()),
+                    balance: Some(U256::ZERO),
                     class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
                     nonce: None,
                     storage: None,
@@ -651,7 +651,7 @@ mod tests {
         assert_eq!(fee_token_storage.get(&felt!("0x111")), Some(&felt!("0x1")));
         assert_eq!(fee_token_storage.get(&felt!("0x222")), Some(&felt!("0x2")));
 
-        let mut actual_total_supply = U256::zero();
+        let mut actual_total_supply = U256::ZERO;
 
         // check for balance
         for (address, alloc) in &allocations {
