@@ -20,7 +20,7 @@ use tracing::{debug, trace, warn};
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 
 sol! {
-    #[sol(rpc, rename_all = "camelcase")]
+    #[sol(rpc, rename_all = "snakecase")]
     #[derive(serde::Serialize, serde::Deserialize)]
     StarknetMessagingLocal,
     "../primitives/contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json"
