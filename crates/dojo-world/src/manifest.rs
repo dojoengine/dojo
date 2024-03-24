@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
+use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, FunctionCall, StarknetError,
 };
@@ -110,15 +111,31 @@ pub struct ComputedValueEntrypoint {
     pub model: Option<String>,
 }
 
-/// Format of the ABI into the manifest file.
+/// Format of the ABI into the manifest.
 #[serde_as]
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AbiFormat {
     /// Only a relative path to the ABI file is stored.
     Path(Utf8PathBuf),
-    /// The full ABI is embedded as a string.
-    Embed(String),
+    /// The full ABI is embedded.
+    Embed(Vec<AbiEntry>),
+}
+
+impl PartialEq for AbiFormat {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AbiFormat::Path(p1), AbiFormat::Path(p2)) => p1 == p2,
+            (AbiFormat::Embed(e1), AbiFormat::Embed(e2)) => {
+                // Currently, [`AbiEntry`] does not implement [`PartialEq`] so we cannot compare
+                // them directly.
+                let e1_json = serde_json::to_string(e1).expect("valid JSON from ABI");
+                let e2_json = serde_json::to_string(e2).expect("valid JSON from ABI");
+                e1_json == e2_json
+            }
+            _ => false,
+        }
+    }
 }
 
 impl AbiFormat {
@@ -336,12 +353,13 @@ impl DeploymentManifest {
         let mut manifest_with_abis = self.clone();
         for contract in &mut manifest_with_abis.contracts {
             if let Some(AbiFormat::Path(abi_path)) = &contract.inner.abi {
-                let abi_content = fs::read_to_string(manifest_dir.join(abi_path))?;
-                contract.inner.abi = Some(AbiFormat::Embed(abi_content));
+                let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
+                let abi_entries: Vec<AbiEntry> = serde_json::from_reader(&mut abi_file)?;
+                contract.inner.abi = Some(AbiFormat::Embed(abi_entries));
             }
         }
 
-        let deployed_manifest = serde_json::to_string(&manifest_with_abis)?;
+        let deployed_manifest = serde_json::to_string_pretty(&manifest_with_abis)?;
         fs::write(path, deployed_manifest)?;
 
         Ok(())
