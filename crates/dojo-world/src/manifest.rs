@@ -76,7 +76,8 @@ impl From<dojo_types::schema::Member> for Member {
 
 /// Represents a declaration of a model.
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct DojoModel {
     pub members: Vec<Member>,
@@ -122,6 +123,7 @@ pub enum AbiFormat {
     Embed(Vec<AbiEntry>),
 }
 
+#[cfg(test)]
 impl PartialEq for AbiFormat {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -148,7 +150,8 @@ impl AbiFormat {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct DojoContract {
     #[serde_as(as = "Option<UfeHex>")]
@@ -162,8 +165,8 @@ pub struct DojoContract {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoContract {
     pub name: SmolStr,
     pub reads: Option<Vec<String>>,
@@ -171,19 +174,23 @@ pub struct OverlayDojoContract {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoModel {}
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayContract {}
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayClass {}
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct Class {
     #[serde_as(as = "UfeHex")]
@@ -192,7 +199,8 @@ pub struct Class {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct Contract {
     #[serde_as(as = "UfeHex")]
@@ -207,7 +215,8 @@ pub struct Contract {
     pub seed: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct BaseManifest {
     pub world: Manifest<Class>,
     pub base: Manifest<Class>,
@@ -239,7 +248,8 @@ impl From<BaseManifest> for DeploymentManifest {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct DeploymentManifest {
     pub world: Manifest<Contract>,
     pub base: Manifest<Class>,
@@ -247,12 +257,14 @@ pub struct DeploymentManifest {
     pub models: Vec<Manifest<DojoModel>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayManifest {
     pub contracts: Vec<OverlayDojoContract>,
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Manifest<T>
 where
     T: ManifestMethods,
