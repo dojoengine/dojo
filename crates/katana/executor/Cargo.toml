@@ -43,5 +43,5 @@ tokio.workspace = true
 default = [ "blockifier", "sir" ]
 
 blockifier = [ "dep:blockifier", "dep:cairo-vm" ]
-native = [ "sir", "sir/cairo-native" ]
+# native = [ "sir", "sir/cairo-native" ]
 sir = [ "dep:sir", "dep:starknet-types-core" ]
