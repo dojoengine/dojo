@@ -3,6 +3,7 @@ use std::process::exit;
 use std::str::FromStr;
 
 use anyhow::Result;
+use args::{Commands, SozoArgs};
 use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
@@ -11,7 +12,10 @@ use scarb::compiler::CompilerRepository;
 use scarb::core::{Config, TomlManifest};
 use scarb_ui::{OutputFormat, Ui};
 use semver::Version;
-use sozo::args::{Commands, SozoArgs};
+
+mod args;
+mod commands;
+mod utils;
 
 fn main() {
     let args = SozoArgs::parse();
@@ -48,7 +52,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .compilers(compilers)
         .build()?;
 
-    sozo::commands::run(args.command, &config)
+    commands::run(args.command, &config)
 }
 
 fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result<()> {

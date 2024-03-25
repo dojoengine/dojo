@@ -488,7 +488,7 @@ impl ManifestMethods for DojoContract {
     }
 
     fn original_class_hash(&self) -> &FieldElement {
-        &self.original_class_hash.as_ref()
+        self.original_class_hash.as_ref()
     }
 
     fn merge(&mut self, old: Self::OverlayType) {
@@ -524,7 +524,7 @@ impl ManifestMethods for DojoModel {
     }
 
     fn original_class_hash(&self) -> &FieldElement {
-        &self.original_class_hash.as_ref()
+        self.original_class_hash.as_ref()
     }
 
     fn merge(&mut self, old: Self::OverlayType) {
@@ -554,7 +554,7 @@ impl ManifestMethods for Contract {
     }
 
     fn original_class_hash(&self) -> &FieldElement {
-        &self.original_class_hash.as_ref()
+        self.original_class_hash.as_ref()
     }
 
     fn merge(&mut self, old: Self::OverlayType) {
@@ -584,7 +584,7 @@ impl ManifestMethods for Class {
     }
 
     fn original_class_hash(&self) -> &FieldElement {
-        &self.original_class_hash.as_ref()
+        self.original_class_hash.as_ref()
     }
 
     fn merge(&mut self, old: Self::OverlayType) {

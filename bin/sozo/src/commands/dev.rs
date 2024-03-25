@@ -17,16 +17,17 @@ use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::CompilationUnit;
 use scarb::core::{Config, Workspace};
+use sozo_ops::migration::{self, prepare_migration};
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
 use tracing_log::log;
 
+use super::migrate::setup_env;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::ops::migration::{self, prepare_migration};
 
 #[derive(Args)]
 pub struct DevArgs {
@@ -217,7 +218,7 @@ impl DevArgs {
             .ws
             .config()
             .tokio_handle()
-            .block_on(migration::setup_env(
+            .block_on(setup_env(
                 &context.ws,
                 self.account,
                 self.starknet,

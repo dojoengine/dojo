@@ -7,35 +7,38 @@ use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_world::manifest::{DeploymentManifest, ManifestMethods};
-use dojo_world::metadata::Environment;
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
-use starknet::providers::Provider;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 
-use crate::commands::events::EventsArgs;
+pub fn get_event_filter(
+    from_block: Option<u64>,
+    to_block: Option<u64>,
+    events: Option<Vec<String>>,
+    world_address: Option<FieldElement>,
+) -> EventFilter {
+    let from_block = from_block.map(BlockId::Number);
+    let to_block = to_block.map(BlockId::Number);
+    // Currently dojo doesn't use custom keys for events. In future if custom keys are used this
+    // needs to be updated for granular queries.
+    let keys =
+        events.map(|e| vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]);
 
-pub async fn execute(
-    args: EventsArgs,
-    env_metadata: Option<Environment>,
+    EventFilter { from_block, to_block, address: world_address, keys }
+}
+
+pub async fn parse(
+    chunk_size: u64,
+    provider: JsonRpcClient<HttpTransport>,
+    continuation_token: Option<String>,
+    event_filter: EventFilter,
+    json: bool,
     manifest_dir: &Utf8PathBuf,
 ) -> Result<()> {
-    let EventsArgs {
-        chunk_size,
-        starknet,
-        world,
-        from_block,
-        to_block,
-        events,
-        continuation_token,
-        json,
-        ..
-    } = args;
-
-    let provider = starknet.provider(env_metadata.as_ref())?;
     let chain_id = provider.chain_id().await?;
     let chain_id =
         parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
-    let world_address = world.address(env_metadata.as_ref())?;
 
     let events_map = if !json {
         let deployed_manifest = manifest_dir
@@ -55,16 +58,6 @@ pub async fn execute(
     } else {
         None
     };
-
-    let from_block = from_block.map(BlockId::Number);
-    let to_block = to_block.map(BlockId::Number);
-    // Currently dojo doesn't use custom keys for events. In future if custom keys are used this
-    // needs to be updated for granular queries.
-    let keys =
-        events.map(|e| vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]);
-
-    let provider = starknet.provider(env_metadata.as_ref())?;
-    let event_filter = EventFilter { from_block, to_block, address: Some(world_address), keys };
 
     let res = provider.get_events(event_filter, continuation_token, chunk_size).await?;
 
@@ -257,22 +250,12 @@ fn process_inners(
 #[cfg(test)]
 mod tests {
     use camino::Utf8Path;
-    use clap::Parser;
     use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
     use dojo_world::manifest::BaseManifest;
 
     #[test]
-    fn events_are_parsed_correctly() {
-        let arg = EventsArgs::parse_from(["event", "Event1,Event2", "--chunk-size", "1"]);
-        assert!(arg.events.unwrap().len() == 2);
-        assert!(arg.from_block.is_none());
-        assert!(arg.to_block.is_none());
-        assert!(arg.chunk_size == 1);
-    }
-
-    #[test]
     fn extract_events_work_as_expected() {
-        let manifest_dir = Utf8Path::new("../../examples/spawn-and-move").to_path_buf();
+        let manifest_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
         let manifest =
             BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
                 .unwrap()

@@ -93,6 +93,8 @@ pub struct TxConfig {
     /// The multiplier for how much the actual transaction max fee should be relative to the
     /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
     pub fee_estimate_multiplier: Option<f64>,
+    pub wait: bool,
+    pub receipt: bool,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -122,7 +124,7 @@ pub trait Declarable {
 
         let mut txn = account.declare(Arc::new(flattened_class), casm_class_hash);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
@@ -201,7 +203,7 @@ pub trait Deployable: Declarable + Sync {
 
         let mut txn = account.execute(vec![call]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
@@ -266,7 +268,7 @@ pub trait Deployable: Declarable + Sync {
             to: felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
         }]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
@@ -306,10 +308,11 @@ pub trait Upgradable: Deployable + Declarable + Sync {
         let original_constructor_calldata = vec![original_base_class_hash];
         let calldata = [
             vec![
-                original_class_hash,                                     // class hash
-                self.salt(),                                             // salt
-                FieldElement::ZERO,                                      // unique
-                FieldElement::from(original_constructor_calldata.len()), // constructor calldata len
+                original_class_hash, // class hash
+                self.salt(),         // salt
+                FieldElement::ZERO,  // unique
+                FieldElement::from(original_constructor_calldata.len()), /* constructor calldata
+                                      * len */
             ],
             original_constructor_calldata.clone(),
         ]
@@ -334,7 +337,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
             to: contract_address,
         }]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
