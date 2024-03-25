@@ -11,12 +11,17 @@ use super::{Declarable, MigrationType, StateDiff};
 pub struct ClassDiff {
     pub name: String,
     pub local: FieldElement,
+    pub original: FieldElement,
     pub remote: Option<FieldElement>,
 }
 
 impl StateDiff for ClassDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote { self.local == remote } else { false }
+        if let Some(remote) = self.remote {
+            self.local == remote
+        } else {
+            false
+        }
     }
 }
 

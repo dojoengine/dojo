@@ -49,6 +49,7 @@ pub trait ManifestMethods {
     fn set_abi(&mut self, abi: Option<Utf8PathBuf>);
     fn class_hash(&self) -> &FieldElement;
     fn set_class_hash(&mut self, class_hash: FieldElement);
+    fn original_class_hash(&self) -> &FieldElement;
 
     /// This method is called when during compilation base manifest file already exists.
     /// Manifest generated during compilation won't contains properties manually updated by users
@@ -75,6 +76,9 @@ pub struct DojoContract {
     pub class_hash: FieldElement,
     #[serde_as(as = "UfeHex")]
     pub original_class_hash: FieldElement,
+    // base class hash used to deploy the contract
+    #[serde_as(as = "UfeHex")]
+    pub base_class_hash: FieldElement,
     pub abi: Option<Utf8PathBuf>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
@@ -102,6 +106,8 @@ pub struct Contract {
     pub class_hash: FieldElement,
     #[serde_as(as = "UfeHex")]
     pub original_class_hash: FieldElement,
+    #[serde_as(as = "UfeHex")]
+    pub base_class_hash: FieldElement,
     pub abi: Option<Utf8PathBuf>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
@@ -128,21 +134,31 @@ pub struct Class {
 
 pub struct OverlayDojoContract {
     pub name: SmolStr,
+    pub original_class_hash: Option<FieldElement>,
     pub reads: Option<Vec<String>>,
     pub writes: Option<Vec<String>>,
 }
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct OverlayDojoModel {}
+pub struct OverlayDojoModel {
+    pub name: SmolStr,
+    pub original_class_hash: Option<FieldElement>,
+}
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct OverlayContract {}
+pub struct OverlayContract {
+    pub name: SmolStr,
+    pub original_class_hash: Option<FieldElement>,
+}
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct OverlayClass {}
+pub struct OverlayClass {
+    pub name: SmolStr,
+    pub original_class_hash: Option<FieldElement>,
+}
 
 // Types used by manifest
 

@@ -487,7 +487,14 @@ impl ManifestMethods for DojoContract {
         self.class_hash = class_hash;
     }
 
+    fn original_class_hash(&self) -> &FieldElement {
+        &self.original_class_hash.as_ref()
+    }
+
     fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
         if let Some(reads) = old.reads {
             self.reads = reads;
         }
@@ -516,7 +523,15 @@ impl ManifestMethods for DojoModel {
         self.class_hash = class_hash;
     }
 
-    fn merge(&mut self, _: Self::OverlayType) {}
+    fn original_class_hash(&self) -> &FieldElement {
+        &self.original_class_hash.as_ref()
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
+    }
 }
 
 impl ManifestMethods for Contract {
@@ -538,7 +553,15 @@ impl ManifestMethods for Contract {
         self.class_hash = class_hash;
     }
 
-    fn merge(&mut self, _: Self::OverlayType) {}
+    fn original_class_hash(&self) -> &FieldElement {
+        &self.original_class_hash.as_ref()
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
+    }
 }
 
 impl ManifestMethods for Class {
@@ -560,5 +583,13 @@ impl ManifestMethods for Class {
         self.class_hash = class_hash;
     }
 
-    fn merge(&mut self, _: Self::OverlayType) {}
+    fn original_class_hash(&self) -> &FieldElement {
+        &self.original_class_hash.as_ref()
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
+    }
 }

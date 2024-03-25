@@ -37,6 +37,14 @@ pub struct DeployOutput {
     pub declare: Option<DeclareOutput>,
 }
 
+#[derive(Clone, Debug)]
+pub struct UpgradeOutput {
+    pub transaction_hash: FieldElement,
+    pub block_number: Option<u64>,
+    pub contract_address: FieldElement,
+    pub declare: Option<DeclareOutput>,
+}
+
 #[derive(Debug)]
 pub struct RegisterOutput {
     pub transaction_hash: FieldElement,
@@ -134,7 +142,7 @@ pub trait Declarable {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait Deployable: Declarable + Sync {
-    async fn world_deploy<P, S>(
+    async fn deploy_dojo_contract<P, S>(
         &self,
         world_address: FieldElement,
         class_hash: FieldElement,
@@ -272,6 +280,72 @@ pub trait Deployable: Declarable + Sync {
     }
 
     fn salt(&self) -> FieldElement;
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+pub trait Upgradable: Deployable + Declarable + Sync {
+    async fn upgrade_world<P, S>(
+        &self,
+        class_hash: FieldElement,
+        original_class_hash: FieldElement,
+        original_base_class_hash: FieldElement,
+        account: &SingleOwnerAccount<P, S>,
+        txn_config: TxConfig,
+    ) -> Result<UpgradeOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
+    where
+        P: Provider + Sync + Send,
+        S: Signer + Sync + Send,
+    {
+        let declare = match self.declare(account, txn_config).await {
+            Ok(res) => Some(res),
+            Err(MigrationError::ClassAlreadyDeclared) => None,
+            Err(e) => return Err(e),
+        };
+
+        let original_constructor_calldata = vec![original_base_class_hash];
+        let calldata = [
+            vec![
+                original_class_hash,                                     // class hash
+                self.salt(),                                             // salt
+                FieldElement::ZERO,                                      // unique
+                FieldElement::from(original_constructor_calldata.len()), // constructor calldata len
+            ],
+            original_constructor_calldata.clone(),
+        ]
+        .concat();
+
+        let contract_address =
+            get_contract_address(self.salt(), original_class_hash, &calldata, FieldElement::ZERO);
+
+        match account
+            .provider()
+            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
+            .await
+        {
+            Ok(_) => {}
+            Err(e) => return Err(MigrationError::Provider(e)),
+        }
+
+        let calldata = vec![class_hash];
+        let mut txn = account.execute(vec![Call {
+            calldata,
+            selector: selector!("upgrade"),
+            to: contract_address,
+        }]);
+
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+            txn = txn.fee_estimate_multiplier(multiplier);
+        }
+
+        let InvokeTransactionResult { transaction_hash } =
+            txn.send().await.map_err(MigrationError::Migrator)?;
+
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let block_number = get_block_number_from_receipt(receipt);
+
+        Ok(UpgradeOutput { transaction_hash, block_number, contract_address, declare })
+    }
 }
 
 fn prepare_contract_declaration_params(

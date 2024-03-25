@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use starknet::core::types::{DeclareTransactionResult, FieldElement};
 
-use super::{Declarable, Deployable, MigrationType, StateDiff};
+use super::{Declarable, Deployable, MigrationType, StateDiff, Upgradable};
 
 pub type DeclareOutput = DeclareTransactionResult;
 
@@ -13,12 +13,17 @@ pub type DeclareOutput = DeclareTransactionResult;
 pub struct ContractDiff {
     pub name: String,
     pub local: FieldElement,
+    pub original: FieldElement,
     pub remote: Option<FieldElement>,
 }
 
 impl StateDiff for ContractDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote { self.local == remote } else { false }
+        if let Some(remote) = self.remote {
+            self.local == remote
+        } else {
+            false
+        }
     }
 }
 
@@ -70,3 +75,6 @@ impl Deployable for ContractMigration {
         self.salt
     }
 }
+
+#[async_trait]
+impl Upgradable for ContractMigration {}

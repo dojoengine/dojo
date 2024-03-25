@@ -15,7 +15,8 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff,
+    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff, Upgradable,
+    UpgradeOutput,
 };
 use dojo_world::utils::TransactionWaiter;
 use scarb::core::Workspace;
@@ -454,68 +455,51 @@ where
         Some(world) => {
             ui.print_header("# World");
 
-            let calldata = vec![strategy.base.as_ref().unwrap().diff.local];
-            let deploy_result =
-                deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
-                    .await
-                    .map_err(|e| {
-                        ui.verbose(format!("{e:?}"));
-                        anyhow!("Failed to deploy world: {e}")
-                    })?;
+            if world.diff.remote.is_some() {
+                let _deploy_result = upgrade_contract(
+                    world,
+                    "world",
+                    world.diff.original,
+                    strategy.base.as_ref().unwrap().diff.original,
+                    migrator,
+                    &ui,
+                    &txn_config,
+                )
+                .await
+                .map_err(|e| {
+                    ui.verbose(format!("{e:?}"));
+                    anyhow!("Failed to upgrade world: {e}")
+                })?;
 
-            (world_tx_hash, world_block_number) =
-                if let ContractDeploymentOutput::Output(deploy_result) = deploy_result {
-                    (Some(deploy_result.transaction_hash), deploy_result.block_number)
-                } else {
-                    (None, None)
-                };
-
-            ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
-
-            let offline = ws.config().offline();
-
-            if offline {
-                ui.print_sub("Skipping metadata upload because of offline mode");
+                ui.print_sub(format!(
+                    "Upgraded Contract at address: {:#x}",
+                    world.contract_address
+                ));
             } else {
-                let metadata = dojo_metadata_from_workspace(ws);
-                if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
-                    match meta.upload().await {
-                        Ok(hash) => {
-                            let mut encoded_uri =
-                                cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+                let calldata = vec![strategy.base.as_ref().unwrap().diff.local];
+                let deploy_result =
+                    deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
+                        .await
+                        .map_err(|e| {
+                            ui.verbose(format!("{e:?}"));
+                            anyhow!("Failed to deploy world: {e}")
+                        })?;
 
-                            // Metadata is expecting an array of capacity 3.
-                            if encoded_uri.len() < 3 {
-                                encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
-                            }
+                (world_tx_hash, world_block_number) =
+                    if let ContractDeploymentOutput::Output(deploy_result) = deploy_result {
+                        (Some(deploy_result.transaction_hash), deploy_result.block_number)
+                    } else {
+                        (None, None)
+                    };
 
-                            let world_metadata = ResourceMetadata {
-                                resource_id: FieldElement::ZERO,
-                                metadata_uri: encoded_uri,
-                            };
+                ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
 
-                            let InvokeTransactionResult { transaction_hash } =
-                                WorldContract::new(world.contract_address, migrator)
-                                    .set_metadata(&world_metadata)
-                                    .send()
-                                    .await
-                                    .map_err(|e| {
-                                        ui.verbose(format!("{e:?}"));
-                                        anyhow!("Failed to set World metadata: {e}")
-                                    })?;
+                let offline = ws.config().offline();
 
-                            TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
-
-                            ui.print_sub(format!(
-                                "Set Metadata transaction: {:#x}",
-                                transaction_hash
-                            ));
-                            ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
-                        }
-                        Err(err) => {
-                            ui.print_sub(format!("Failed to set World metadata:\n{err}"));
-                        }
-                    }
+                if offline {
+                    ui.print_sub("Skipping metadata upload because of offline mode");
+                } else {
+                    upload_metadata(ws, world, migrator, &ui).await?;
                 }
             }
         }
@@ -539,7 +523,7 @@ where
             return Ok(migration_output);
         }
     }
-    match deploy_contracts(strategy, migrator, &ui, txn_config).await {
+    match deploy_dojo_contracts(strategy, migrator, &ui, txn_config).await {
         Ok(_) => (),
         Err(e) => {
             ui.anyhow(&e);
@@ -552,9 +536,59 @@ where
     Ok(migration_output)
 }
 
+async fn upload_metadata<P, S>(
+    ws: &Workspace<'_>,
+    world: &ContractMigration,
+    migrator: &SingleOwnerAccount<P, S>,
+    ui: &Ui,
+) -> Result<(), anyhow::Error>
+where
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
+    let metadata = dojo_metadata_from_workspace(ws);
+    Ok(if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
+        match meta.upload().await {
+            Ok(hash) => {
+                let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+
+                // Metadata is expecting an array of capacity 3.
+                if encoded_uri.len() < 3 {
+                    encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
+                }
+
+                let world_metadata =
+                    ResourceMetadata { resource_id: FieldElement::ZERO, metadata_uri: encoded_uri };
+
+                let InvokeTransactionResult { transaction_hash } =
+                    WorldContract::new(world.contract_address, migrator)
+                        .set_metadata(&world_metadata)
+                        .send()
+                        .await
+                        .map_err(|e| {
+                            ui.verbose(format!("{e:?}"));
+                            anyhow!("Failed to set World metadata: {e}")
+                        })?;
+
+                TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+                ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
+                ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
+            }
+            Err(err) => {
+                ui.print_sub(format!("Failed to set World metadata:\n{err}"));
+            }
+        }
+    })
+}
+
 enum ContractDeploymentOutput {
     AlreadyDeployed(FieldElement),
     Output(DeployOutput),
+}
+
+enum ContractUpgradeOutput {
+    Output(UpgradeOutput),
 }
 
 async fn deploy_contract<P, S>(
@@ -599,6 +633,51 @@ where
         Err(e) => {
             ui.verbose(format!("{e:?}"));
             Err(anyhow!("Failed to migrate {contract_id}: {e}"))
+        }
+    }
+}
+
+async fn upgrade_contract<P, S>(
+    contract: &ContractMigration,
+    contract_id: &str,
+    original_class_hash: FieldElement,
+    original_base_class_hash: FieldElement,
+    migrator: &SingleOwnerAccount<P, S>,
+    ui: &Ui,
+    txn_config: &Option<TransactionOptions>,
+) -> Result<ContractUpgradeOutput>
+where
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
+    match contract
+        .upgrade_world(
+            contract.diff.local,
+            original_class_hash,
+            original_base_class_hash,
+            migrator,
+            txn_config.clone().map(|c| c.into()).unwrap_or_default(),
+        )
+        .await
+    {
+        Ok(val) => {
+            if let Some(declare) = val.clone().declare {
+                ui.print_hidden_sub(format!(
+                    "Declare transaction: {:#x}",
+                    declare.transaction_hash
+                ));
+            }
+
+            ui.print_hidden_sub(format!("Upgrade transaction: {:#x}", val.transaction_hash));
+
+            Ok(ContractUpgradeOutput::Output(val))
+        }
+        Err(MigrationError::ArtifactError(e)) => {
+            return Err(handle_artifact_error(ui, contract.artifact_path(), e));
+        }
+        Err(e) => {
+            ui.verbose(format!("{e:?}"));
+            Err(anyhow!("Failed to upgrade {contract_id}: {e}"))
         }
     }
 }
@@ -673,7 +752,7 @@ where
     Ok(Some(RegisterOutput { transaction_hash, declare_output }))
 }
 
-async fn deploy_contracts<P, S>(
+async fn deploy_dojo_contracts<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
@@ -699,7 +778,7 @@ where
         let name = &contract.diff.name;
         ui.print(italic_message(name).to_string());
         match contract
-            .world_deploy(
+            .deploy_dojo_contract(
                 world_address,
                 contract.diff.local,
                 migrator,

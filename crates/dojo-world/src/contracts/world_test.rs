@@ -91,7 +91,12 @@ pub async fn deploy_world(
     for contract in strategy.contracts {
         let declare_res = contract.declare(&account, Default::default()).await.unwrap();
         contract
-            .world_deploy(world_address, declare_res.class_hash, &account, Default::default())
+            .deploy_dojo_contract(
+                world_address,
+                declare_res.class_hash,
+                &account,
+                Default::default(),
+            )
             .await
             .unwrap();
     }

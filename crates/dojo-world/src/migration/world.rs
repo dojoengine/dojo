@@ -30,6 +30,7 @@ impl WorldDiff {
             .map(|model| ClassDiff {
                 name: model.name.to_string(),
                 local: *model.inner.class_hash(),
+                original: *model.inner.original_class_hash(),
                 remote: remote.as_ref().and_then(|m| {
                     // Remote models are detected from events, where only the struct
                     // name (pascal case) is emitted.
@@ -54,6 +55,7 @@ impl WorldDiff {
             .map(|contract| ContractDiff {
                 name: contract.name.to_string(),
                 local: *contract.inner.class_hash(),
+                original: *contract.inner.original_class_hash(),
                 remote: remote.as_ref().and_then(|m| {
                     m.contracts
                         .iter()
@@ -66,12 +68,14 @@ impl WorldDiff {
         let base = ClassDiff {
             name: BASE_CONTRACT_NAME.into(),
             local: *local.base.inner.class_hash(),
+            original: *local.base.inner.original_class_hash(),
             remote: remote.as_ref().map(|m| *m.base.inner.class_hash()),
         };
 
         let world = ContractDiff {
             name: WORLD_CONTRACT_NAME.into(),
             local: *local.world.inner.class_hash(),
+            original: *local.world.inner.original_class_hash(),
             remote: remote.map(|m| *m.world.inner.class_hash()),
         };
 
