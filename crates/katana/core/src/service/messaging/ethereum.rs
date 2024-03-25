@@ -6,7 +6,6 @@ use alloy_network::Ethereum;
 use alloy_primitives::{Address, LogData, U256};
 use alloy_provider::{HttpProvider, Provider};
 use alloy_rpc_types::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet, Log, Topic};
-use alloy_signer_wallet::LocalWallet;
 use alloy_sol_types::{sol, SolEvent};
 use anyhow::Result;
 use async_trait::async_trait;

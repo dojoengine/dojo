@@ -20,7 +20,7 @@ use starknet::core::types::{
 };
 
 // 2 ^ 128
-const CLASS_INFO_FLAG_TRUE: &str = "0x100000000000000000000000000000000";
+const CLASS_INFO_FLAG_TRUE: &str = "100000000000000000000000000000000";
 
 /// Converts the [`StateDiff`] from RPC types into a [`Vec<FieldElement>`].
 ///
