@@ -1,7 +1,7 @@
 [world]
 kind = "Contract"
-class_hash = "0x799bc4e9da10bfb3dd88e6f223c9cfbf7745435cd14f5d69675ea448e578cd"
-address = "0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295"
+class_hash = "0x3d4d3b30023220949d5389c16f8ec7d273f86017e02e7e90a1fb6840326457b"
+address = "0x62cb58eb21c24a4aef40058506cf4526f0e6af8e22a2228061692c6559a5cfd"
 name = "dojo::world::world"
 
 [base]
@@ -11,8 +11,8 @@ name = "dojo::base::base"
 
 [[contracts]]
 kind = "DojoContract"
-address = "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7"
-class_hash = "0xd43bce39922ec3857da231e3bb5c365c29f837c6dce322e4d61dfae83a4c18"
+address = "0x61c8186138c7f3de2f9efa25a3d63c94ca18c3e67d4c43cec76a5e22bf04b28"
+class_hash = "0x3daa4c1e90a3f816240ee39c4dfdb7e1f3c090d36f2e85f6d0e590de94714ef"
 abi = "abis/deployments/KATANA/contracts/actions.json"
 reads = [
     "Moves",
@@ -24,7 +24,7 @@ name = "dojo_examples::actions::actions"
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0x511fbd833938f5c4b743eea1e67605a125d7ff60e8a09e8dc227ad2fb59ca54"
+class_hash = "0x794152290b915762781dc8cdd9e3c8ad9ae34f280f36c607fbe19e2d3c17d61"
 name = "dojo_examples::models::moves"
 
 [[models.members]]
@@ -44,7 +44,7 @@ key = false
 
 [[models]]
 kind = "DojoModel"
-class_hash = "0xb33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5"
+class_hash = "0x7aba2182c890a0bcc98666d373e9744e32983f466594d57023f3ab4fc6fb3e9"
 name = "dojo_examples::models::position"
 
 [[models.members]]
