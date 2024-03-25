@@ -6,14 +6,13 @@ use clap::Parser;
 use dojo_lang::compiler::{DojoCompiler, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::compile_workspace;
-use dojo_world::manifest::DeployedManifest;
+use dojo_world::manifest::DeploymentManifest;
 use futures::executor::block_on;
 use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 use sozo::args::{Commands, SozoArgs};
-use sozo::ops::migration;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
@@ -115,9 +114,9 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
     let chain_id = migrate.starknet.provider(None).unwrap().chain_id().await.unwrap();
     let chain_id = parse_cairo_short_string(&chain_id).unwrap();
 
-    migration::execute(&ws, migrate, None).await?;
+    migrate.run(&config)?;
 
-    let manifest = DeployedManifest::load_from_path(
+    let manifest = DeploymentManifest::load_from_path(
         &manifest_dir
             .join(MANIFESTS_DIR)
             .join(DEPLOYMENTS_DIR)

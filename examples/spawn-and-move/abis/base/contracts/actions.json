@@ -164,7 +164,7 @@
       {
         "name": "player",
         "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "data"
+        "kind": "key"
       },
       {
         "name": "direction",

@@ -11,14 +11,7 @@ use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
 use super::class::{ClassDiff, ClassMigration};
 use super::contract::{ContractDiff, ContractMigration};
 use super::world::WorldDiff;
-use super::{DeployOutput, MigrationType, RegisterOutput};
-
-#[derive(Debug)]
-pub struct MigrationOutput {
-    pub world: Option<DeployOutput>,
-    pub contracts: Vec<DeployOutput>,
-    pub models: Option<RegisterOutput>,
-}
+use super::MigrationType;
 
 #[derive(Debug)]
 pub struct MigrationStrategy {

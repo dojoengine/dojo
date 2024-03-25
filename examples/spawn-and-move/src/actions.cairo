@@ -27,10 +27,11 @@ mod actions {
         Moved: Moved,
     }
 
-    #[derive(Drop, starknet::Event)]
+    #[derive(starknet::Event, Model, Copy, Drop, Serde)]
     struct Moved {
+        #[key]
         player: ContractAddress,
-        direction: Direction
+        direction: Direction,
     }
 
     // impl: implement functions specified in trait
@@ -62,7 +63,7 @@ mod actions {
             moves.last_direction = direction;
             let next = next_position(position, direction);
             set!(world, (moves, next));
-            emit!(world, Moved { player, direction });
+            emit!(world, (Moved { player, direction }));
             return ();
         }
     }

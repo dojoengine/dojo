@@ -8,6 +8,7 @@ use dojo_world::contracts::model::ModelReader;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::FieldElement;
+use starknet::core::utils::get_selector_from_name;
 
 use super::error::{self, Error};
 use crate::error::{ParseError, QueryError};
@@ -59,6 +60,10 @@ impl ModelSQLReader {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl ModelReader<Error> for ModelSQLReader {
+    fn name(&self) -> String {
+        self.name.to_string()
+    }
+
     fn class_hash(&self) -> FieldElement {
         self.class_hash
     }
@@ -68,11 +73,15 @@ impl ModelReader<Error> for ModelSQLReader {
     }
 
     async fn schema(&self) -> Result<Ty, Error> {
+        // this is temporary until the hash for the model name is precomputed
+        let model_selector =
+            get_selector_from_name(&self.name).map_err(error::ParseError::NonAsciiName)?;
+
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
             "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
         )
-        .bind(self.name.clone())
+        .bind(format!("{:#x}", model_selector))
         .fetch_all(&self.pool)
         .await?;
 

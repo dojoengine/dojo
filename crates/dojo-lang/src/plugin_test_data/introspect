@@ -19,13 +19,13 @@ enum PlainEnum {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumPrimitive {
+enum EnumTupleOnePrimitive {
     Left: (u16,),
     Right: (u16,),
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTuple {
+enum EnumTupleSeveralPrimitive {
     Left: (u8, u8),
     Right: (u8, u8),
 }
@@ -34,6 +34,18 @@ enum EnumTuple {
 enum EnumCustom {
     Left: Vec2,
     Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumPrimitive{
+    Left: u64,
+    Right: u64
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTupleMix{
+    Left: (Vec2, u64, EnumCustom),
+    Right: (Vec2, u64, EnumCustom),
 }
 
 #[derive(Copy, Drop, Introspect)]
@@ -84,13 +96,13 @@ enum PlainEnum {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumPrimitive {
+enum EnumTupleOnePrimitive {
     Left: (u16,),
     Right: (u16,),
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTuple {
+enum EnumTupleSeveralPrimitive {
     Left: (u8, u8),
     Right: (u8, u8),
 }
@@ -99,6 +111,18 @@ enum EnumTuple {
 enum EnumCustom {
     Left: Vec2,
     Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumPrimitive{
+    Left: u64,
+    Right: u64
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTupleMix{
+    Left: (Vec2, u64, EnumCustom),
+    Right: (Vec2, u64, EnumCustom),
 }
 
 #[derive(Copy, Drop, Introspect)]
@@ -230,28 +254,28 @@ impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>
         )
     }
 }
-impl EnumPrimitiveSerde of core::serde::Serde::<EnumPrimitive> {
-    fn serialize(self: @EnumPrimitive, ref output: core::array::Array<felt252>) {
+impl EnumTupleOnePrimitiveSerde of core::serde::Serde::<EnumTupleOnePrimitive> {
+    fn serialize(self: @EnumTupleOnePrimitive, ref output: core::array::Array<felt252>) {
         match self {
-            EnumPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
-            EnumPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumTupleOnePrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumTupleOnePrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
         }
     }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumPrimitive> {
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTupleOnePrimitive> {
         let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
         core::option::Option::Some(
             match idx {
-                0 => EnumPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
-                1 => EnumPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
+                0 => EnumTupleOnePrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumTupleOnePrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
                 _ => { return core::option::Option::None; }
             }
         )
     }
 }
-impl EnumPrimitiveCopy of core::traits::Copy::<EnumPrimitive>;
-impl EnumPrimitiveDrop of core::traits::Drop::<EnumPrimitive>;
+impl EnumTupleOnePrimitiveCopy of core::traits::Copy::<EnumTupleOnePrimitive>;
+impl EnumTupleOnePrimitiveDrop of core::traits::Drop::<EnumTupleOnePrimitive>;
 
-impl EnumPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumPrimitive<>> {
+impl EnumTupleOnePrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumTupleOnePrimitive<>> {
     #[inline(always)]
     fn size() -> usize {
         2
@@ -268,48 +292,48 @@ layout.append(16);
     fn ty() -> dojo::database::introspect::Ty {
         dojo::database::introspect::Ty::Enum(
             dojo::database::introspect::Enum {
-                name: 'EnumPrimitive',
+                name: 'EnumTupleOnePrimitive',
                 attrs: array![].span(),
                 children: array![(
                     'Left',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                            @dojo::database::introspect::Ty::Primitive('u16')
-                        )].span()))
+                @dojo::database::introspect::Ty::Primitive('u16')
+            )].span()))
                 ),
 (
                     'Right',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                            @dojo::database::introspect::Ty::Primitive('u16')
-                        )].span()))
+                @dojo::database::introspect::Ty::Primitive('u16')
+            )].span()))
                 )].span()
             }
         )
     }
 }
-impl EnumTupleSerde of core::serde::Serde::<EnumTuple> {
-    fn serialize(self: @EnumTuple, ref output: core::array::Array<felt252>) {
+impl EnumTupleSeveralPrimitiveSerde of core::serde::Serde::<EnumTupleSeveralPrimitive> {
+    fn serialize(self: @EnumTupleSeveralPrimitive, ref output: core::array::Array<felt252>) {
         match self {
-            EnumTuple::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
-            EnumTuple::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumTupleSeveralPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumTupleSeveralPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
         }
     }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTuple> {
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTupleSeveralPrimitive> {
         let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
         core::option::Option::Some(
             match idx {
-                0 => EnumTuple::Left(core::serde::Serde::deserialize(ref serialized)?),
-                1 => EnumTuple::Right(core::serde::Serde::deserialize(ref serialized)?),
+                0 => EnumTupleSeveralPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumTupleSeveralPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
                 _ => { return core::option::Option::None; }
             }
         )
     }
 }
-impl EnumTupleCopy of core::traits::Copy::<EnumTuple>;
-impl EnumTupleDrop of core::traits::Drop::<EnumTuple>;
+impl EnumTupleSeveralPrimitiveCopy of core::traits::Copy::<EnumTupleSeveralPrimitive>;
+impl EnumTupleSeveralPrimitiveDrop of core::traits::Drop::<EnumTupleSeveralPrimitive>;
 
-impl EnumTupleIntrospect<> of dojo::database::introspect::Introspect<EnumTuple<>> {
+impl EnumTupleSeveralPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumTupleSeveralPrimitive<>> {
     #[inline(always)]
     fn size() -> usize {
         3
@@ -327,25 +351,25 @@ layout.append(8);
     fn ty() -> dojo::database::introspect::Ty {
         dojo::database::introspect::Ty::Enum(
             dojo::database::introspect::Enum {
-                name: 'EnumTuple',
+                name: 'EnumTupleSeveralPrimitive',
                 attrs: array![].span(),
                 children: array![(
                     'Left',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                            @dojo::database::introspect::Ty::Primitive('u8')
-                        ), dojo::database::introspect::serialize_member_type(
-                            @dojo::database::introspect::Ty::Primitive('u8')
-                        )].span()))
+                @dojo::database::introspect::Ty::Primitive('u8')
+            ), dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u8')
+            )].span()))
                 ),
 (
                     'Right',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                            @dojo::database::introspect::Ty::Primitive('u8')
-                        ), dojo::database::introspect::serialize_member_type(
-                            @dojo::database::introspect::Ty::Primitive('u8')
-                        )].span()))
+                @dojo::database::introspect::Ty::Primitive('u8')
+            ), dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u8')
+            )].span()))
                 )].span()
             }
         )
@@ -395,15 +419,141 @@ dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
                     'Left',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                        @dojo::database::introspect::Introspect::<Vec2>::ty()
-                    )].span()))
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            )].span()))
                 ),
 (
                     'Right',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                        @dojo::database::introspect::Introspect::<Vec2>::ty()
-                    )].span()))
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            )].span()))
+                )].span()
+            }
+        )
+    }
+}
+impl EnumPrimitiveSerde of core::serde::Serde::<EnumPrimitive> {
+    fn serialize(self: @EnumPrimitive, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumPrimitive> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumPrimitiveCopy of core::traits::Copy::<EnumPrimitive>;
+impl EnumPrimitiveDrop of core::traits::Drop::<EnumPrimitive>;
+
+impl EnumPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumPrimitive<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        2
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
+layout.append(64);
+
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumPrimitive',
+                attrs: array![].span(),
+                children: array![(
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u64')
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u64')
+            )].span()))
+                )].span()
+            }
+        )
+    }
+}
+impl EnumTupleMixSerde of core::serde::Serde::<EnumTupleMix> {
+    fn serialize(self: @EnumTupleMix, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumTupleMix::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumTupleMix::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTupleMix> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumTupleMix::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumTupleMix::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumTupleMixCopy of core::traits::Copy::<EnumTupleMix>;
+impl EnumTupleMixDrop of core::traits::Drop::<EnumTupleMix>;
+
+impl EnumTupleMixIntrospect<> of dojo::database::introspect::Introspect<EnumTupleMix<>> {
+    #[inline(always)]
+    fn size() -> usize {
+        dojo::database::introspect::Introspect::<Vec2>::size() + dojo::database::introspect::Introspect::<EnumCustom>::size() + 2
+    }
+
+    #[inline(always)]
+    fn layout(ref layout: Array<u8>) {
+        layout.append(8);
+dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
+layout.append(64);
+dojo::database::introspect::Introspect::<EnumCustom>::layout(ref layout);
+
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumTupleMix',
+                attrs: array![].span(),
+                children: array![(
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            ), dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u64')
+            ), dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            ), dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u64')
+            ), dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<EnumCustom>::ty()
+            )].span()))
                 )].span()
             }
         )
@@ -626,26 +776,26 @@ impl FeltsArrayBadCapacityIntrospect<T, impl TIntrospect: dojo::database::intros
 
 //! > expected_diagnostics
 error: Unsupported attribute.
- --> test_src/lib.cairo:49:5
+ --> test_src/lib.cairo:61:5
     #[capacity(10)]
     ^*************^
 
 error: Capacity is only supported for Array<felt252> or Span<felt252>.
- --> test_src/lib.cairo:55:5
+ --> test_src/lib.cairo:67:5
     #[capacity(10)]
     ^*************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:55:5
+ --> test_src/lib.cairo:67:5
     #[capacity(10)]
     ^*************^
 
 error: Capacity must be greater than 0.
- --> test_src/lib.cairo:61:5
+ --> test_src/lib.cairo:73:5
     #[capacity(0)]
     ^************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:61:5
+ --> test_src/lib.cairo:73:5
     #[capacity(0)]
     ^************^

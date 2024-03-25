@@ -1,7 +1,9 @@
+use std::cmp::Ordering;
+
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::node::ast::ItemStruct;
+use cairo_lang_syntax::node::ast::{ArgClause, Expr, ItemStruct, OptionArgListParenthesized};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
@@ -9,7 +11,129 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::Member;
 
-use crate::plugin::{DojoAuxData, Model};
+use crate::plugin::{DojoAuxData, Model, DOJO_MODEL_ATTR};
+
+const CURRENT_MODEL_VERSION: u8 = 1;
+const MODEL_VERSION_NAME: &str = "version";
+
+/// Get the version associated with the dojo::model attribute.
+///
+/// Note: dojo::model attribute has already been checked so there is one and only one attribute.
+///
+/// Parameters:
+/// * db: The semantic database.
+/// * struct_ast: The AST of the model struct.
+/// * diagnostics: vector of compiler diagnostics.
+///
+/// Returns:
+/// * The model version associated with the dojo:model attribute.
+pub fn get_model_version(
+    db: &dyn SyntaxGroup,
+    struct_ast: ItemStruct,
+    diagnostics: &mut Vec<PluginDiagnostic>,
+) -> u8 {
+    if let OptionArgListParenthesized::ArgListParenthesized(arguments) =
+        struct_ast.attributes(db).query_attr(db, DOJO_MODEL_ATTR).first().unwrap().arguments(db)
+    {
+        let version_args = arguments
+            .arguments(db)
+            .elements(db)
+            .iter()
+            .filter_map(|a| match a.arg_clause(db) {
+                ArgClause::Named(x) => {
+                    let arg_name = x.name(db).text(db).to_string();
+                    if arg_name.eq(MODEL_VERSION_NAME) {
+                        Some(x.value(db))
+                    } else {
+                        diagnostics.push(PluginDiagnostic {
+                            message: format!("Unexpected argument '{}' for dojo::model", arg_name),
+                            stable_ptr: x.stable_ptr().untyped(),
+                            severity: Severity::Warning,
+                        });
+                        None
+                    }
+                }
+                ArgClause::Unnamed(x) => {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!(
+                            "Unexpected argument '{}' for dojo::model",
+                            x.as_syntax_node().get_text(db)
+                        ),
+                        stable_ptr: x.stable_ptr().untyped(),
+                        severity: Severity::Warning,
+                    });
+                    None
+                }
+                ArgClause::FieldInitShorthand(x) => {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!(
+                            "Unexpected argument '{}' for dojo::model",
+                            x.name(db).name(db).text(db).to_string()
+                        ),
+                        stable_ptr: x.stable_ptr().untyped(),
+                        severity: Severity::Warning,
+                    });
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let version = match version_args.len().cmp(&1) {
+            Ordering::Equal => match version_args.first().unwrap() {
+                Expr::Literal(v) => {
+                    if let Ok(int_value) = v.text(db).parse::<u8>() {
+                        if int_value <= CURRENT_MODEL_VERSION {
+                            Some(int_value)
+                        } else {
+                            diagnostics.push(PluginDiagnostic {
+                                message: format!("dojo::model version {} not supported", int_value),
+                                stable_ptr: v.stable_ptr().untyped(),
+                                severity: Severity::Error,
+                            });
+                            None
+                        }
+                    } else {
+                        diagnostics.push(PluginDiagnostic {
+                            message: format!(
+                                "The argument '{}' of dojo::model must be an integer",
+                                MODEL_VERSION_NAME
+                            ),
+                            stable_ptr: struct_ast.stable_ptr().untyped(),
+                            severity: Severity::Error,
+                        });
+                        None
+                    }
+                }
+                _ => {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!(
+                            "The argument '{}' of dojo::model must be an integer",
+                            MODEL_VERSION_NAME
+                        ),
+                        stable_ptr: struct_ast.stable_ptr().untyped(),
+                        severity: Severity::Error,
+                    });
+                    None
+                }
+            },
+            Ordering::Greater => {
+                diagnostics.push(PluginDiagnostic {
+                    message: format!(
+                        "Too many '{}' attributes for dojo::model",
+                        MODEL_VERSION_NAME
+                    ),
+                    stable_ptr: struct_ast.stable_ptr().untyped(),
+                    severity: Severity::Error,
+                });
+                None
+            }
+            Ordering::Less => None,
+        };
+
+        return if let Some(v) = version { v } else { CURRENT_MODEL_VERSION };
+    }
+    CURRENT_MODEL_VERSION
+}
 
 /// A handler for Dojo code that modifies a model struct.
 /// Parameters:
@@ -23,6 +147,17 @@ pub fn handle_model_struct(
     struct_ast: ItemStruct,
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
+
+    let version = get_model_version(db, struct_ast.clone(), &mut diagnostics);
+
+    let model_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
+    let (model_version, model_selector) = match version {
+        0 => (RewriteNode::Text("0".to_string()), RewriteNode::Text(format!("\"{model_name}\""))),
+        _ => (
+            RewriteNode::Text(CURRENT_MODEL_VERSION.to_string()),
+            RewriteNode::Text(format!("selector!(\"{model_name}\")")),
+        ),
+    };
 
     let elements = struct_ast.members(db).elements(db);
     let members: &Vec<_> = &elements
@@ -114,12 +249,12 @@ impl $type_name$Model of dojo::model::Model<$type_name$> {
 
     #[inline(always)]
     fn version(self: @$type_name$) -> u8 {
-        1
+        $model_version$
     }
 
     #[inline(always)]
     fn selector(self: @$type_name$) -> felt252 {
-        selector!(\"$type_name$\")
+        $model_selector$
     }
 
     #[inline(always)]
@@ -166,7 +301,7 @@ mod $contract_name$ {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!(\"$type_name$\")
+            $model_selector$
         }
 
         fn name(self: @ContractState) -> ByteArray {
@@ -174,7 +309,7 @@ mod $contract_name$ {
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+            $model_version$
         }
 
         fn unpacked_size(self: @ContractState) -> usize {
@@ -208,13 +343,12 @@ mod $contract_name$ {
 ",
             &UnorderedHashMap::from([
                 ("contract_name".to_string(), RewriteNode::Text(name.to_case(Case::Snake))),
-                (
-                    "type_name".to_string(),
-                    RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node()),
-                ),
+                ("type_name".to_string(), RewriteNode::Text(model_name)),
                 ("namespace".to_string(), RewriteNode::Text("namespace".to_string())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("model_version".to_string(), model_version),
+                ("model_selector".to_string(), model_selector),
             ]),
         ),
         diagnostics,
