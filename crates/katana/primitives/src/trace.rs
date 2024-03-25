@@ -54,6 +54,8 @@ pub struct CallInfo {
     pub caller_address: ContractAddress,
     /// The call type.
     pub call_type: CallType,
+    /// The contract address.
+    pub contract_address: ContractAddress,
     /// The address where the code is being executed.
     /// Optional, since there is no address to the code implementation in a delegate call.
     pub code_address: Option<ContractAddress>,

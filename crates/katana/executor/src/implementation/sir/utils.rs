@@ -567,6 +567,7 @@ fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo
     };
 
     katana_primitives::trace::CallInfo {
+        contract_address: to_address(&call_info.contract_address),
         caller_address: to_address(&call_info.caller_address),
         call_type: match call_info.call_type {
             Some(CallType::Call) => katana_primitives::trace::CallType::Call,

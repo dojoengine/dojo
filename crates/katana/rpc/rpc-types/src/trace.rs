@@ -33,8 +33,7 @@ impl From<CallInfo> for FunctionInvocation {
                 order: m.order,
                 payload: m.payload,
                 to_address: m.to_address,
-                // TODO: fix missing storage address in `TxExecInfo`
-                from_address: Default::default(),
+                from_address: m.from_address.into(),
             })
             .collect();
 
@@ -65,9 +64,8 @@ impl From<CallInfo> for FunctionInvocation {
             execution_resources,
             result: info.retdata,
             calldata: info.calldata,
-            // TODO: fix missing storage address in `CallInfo`
-            contract_address: Default::default(),
             caller_address: info.caller_address.into(),
+            contract_address: info.contract_address.into(),
             entry_point_selector: info.entry_point_selector,
             // See <https://github.com/starkware-libs/blockifier/blob/cb464f5ac2ada88f2844d9f7d62bd6732ceb5b2c/crates/blockifier/src/execution/call_info.rs#L220>
             class_hash: info.class_hash.expect("Class hash mut be set after execution"),
