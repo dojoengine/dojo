@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711219086765,
+  "lastUpdate": 1711388858966,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3205,6 +3205,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 964197,
             "range": "± 28257",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "akherchache@pm.me",
+            "name": "akhercha",
+            "username": "akhercha"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "13990411f2dd05efecd034c107b4cd9f3994ae97",
+          "message": "feat(torii): Expose block timestamp (#1676)\n\n* feat(torii_block_timestamp): first work - Added some TODOs\r\n\r\n* feat(torii_block_timestamp): Ongoing reading - added TODOs\r\n\r\n* feat(torii_block_timestamp): Usage of block_timestamp in progress.\r\n\r\n* feat(torii_block_timestamp): Removed indexers timestamps createdAt + updatedAt for executedAt\r\n\r\n* feat(torii_block_timestamp): CI re-trigger\r\n\r\n* feat(torii_block_timestamp): Fixing bugs in progress\r\n\r\n* feat(torii_block_timestamp): Reverted last change - safe state working\r\n\r\n* feat(torii_block_timestamp): Removed updated_at & renamed created_at by executed_at\r\n\r\n* feat(torii_block_timestamp): Fixed SQL error\r\n\r\n* feat(torii_block_timestamp): Fixed created_at misses\r\n\r\n* feat(torii_block_timestamp): Slow update to check the CI\r\n\r\n* feat(torii_block_timestamp): Re-added created_at/updated_at + Check CI\r\n\r\n* feat(torii_block_timestamp): CI should pass 😨\r\n\r\n* feat(torii_block_timestamp): Merge with main + adapted test\r\n\r\n* feat(torii_block_timestamp): CI Trigger\r\n\r\n* feat(torii_block_timestamp): Removed TODO in SQL migration\r\n\r\n* feat(torii_block_timestamp): Fixed conflicts\r\n\r\n* feat(torii_block_timestamp): Removed executed_at for update_metadata\r\n\r\n* feat(torii_block_timestamp): Updated arguments order to align with other functions",
+          "timestamp": "2024-03-25T13:37:59-04:00",
+          "tree_id": "63cca84a23ed7e1008d659924f2612a46670d5e9",
+          "url": "https://github.com/dojoengine/dojo/commit/13990411f2dd05efecd034c107b4cd9f3994ae97"
+        },
+        "date": 1711388857910,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 965185,
+            "range": "± 68400",
             "unit": "ns/iter"
           }
         ]
