@@ -1,11 +1,12 @@
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
-    EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
+    ContractClass, DeclareTransaction, DeclareTransactionResult, DeployAccountTransaction,
+    DeployAccountTransactionResult, DeployTransaction, EventFilter, EventsPage, FeeEstimate,
+    FieldElement, FunctionCall, InvokeTransaction, InvokeTransactionResult, L1HandlerTransaction,
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
     MaybePendingTransactionReceipt, MsgFromL1, SimulatedTransaction, SimulationFlag,
     SimulationFlagForEstimateFee, StarknetError, SyncStatusType, Transaction, TransactionStatus,
@@ -13,21 +14,19 @@ use starknet::core::types::{
 };
 use std::{any::Any, error::Error, fmt::Debug};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct GetTransactionsRequest {
+    pub cursor: TransactionsPageCursor,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TransactionsPageCursor {
     pub block_number: u64,
     pub transaction_index: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TransactionWithHash {
-    pub hash: FieldElement,
-    pub transaction: Transaction,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TransactionsPage {
-    pub transactions: Vec<(TransactionWithHash, MaybePendingTransactionReceipt)>,
+    pub transactions: Vec<(Transaction, MaybePendingTransactionReceipt)>,
     pub cursor: TransactionsPageCursor,
 }
 
@@ -270,9 +269,8 @@ pub trait KatanaProvider {
         S: AsRef<[SimulationFlagForEstimateFee]> + Send + Sync,
         B: AsRef<BlockId> + Send + Sync,
     {
-        let mut result = self
-            .estimate_fee([request.as_ref().to_owned()], simulation_flags, block_id)
-            .await?;
+        let mut result =
+            self.estimate_fee([request.as_ref().to_owned()], simulation_flags, block_id).await?;
 
         if result.len() == 1 {
             // Unwrapping here is safe becuase we already checked length
@@ -295,11 +293,7 @@ pub trait KatanaProvider {
         S: AsRef<[SimulationFlag]> + Send + Sync,
     {
         let mut result = self
-            .simulate_transactions(
-                block_id,
-                [transaction.as_ref().to_owned()],
-                simulation_flags,
-            )
+            .simulate_transactions(block_id, [transaction.as_ref().to_owned()], simulation_flags)
             .await?;
 
         if result.len() == 1 {

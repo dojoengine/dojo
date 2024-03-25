@@ -1,6 +1,6 @@
+pub mod http;
 pub mod provider;
 pub mod transport;
-pub mod http;
 
 use std::{any::Any, error::Error, fmt::Display};
 
@@ -23,9 +23,12 @@ use starknet::core::{
     },
 };
 
-use provider::{ProviderImplError, KatanaProvider, ProviderError};
+use provider::{KatanaProvider, ProviderError, ProviderImplError};
 
-use self::{provider::{TransactionsPage, TransactionsPageCursor}, transport::JsonRpcTransport};
+use self::{
+    provider::{GetTransactionsRequest, TransactionsPage, TransactionsPageCursor},
+    transport::JsonRpcTransport,
+};
 
 #[derive(Debug)]
 pub struct KatanaClient<T> {
@@ -130,7 +133,7 @@ pub enum JsonRpcRequestData {
     TraceTransaction(TraceTransactionRequest),
     SimulateTransactions(SimulateTransactionsRequest),
     TraceBlockTransactions(TraceBlockTransactionsRequest),
-    GetTransactions(TransactionsPageCursor),
+    GetTransactions(GetTransactionsRequest),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -217,8 +220,7 @@ where
 {
     /// Returns the version of the Starknet JSON-RPC specification being used
     async fn spec_version(&self) -> Result<String, ProviderError> {
-        self.send_request(JsonRpcMethod::SpecVersion, SpecVersionRequest)
-            .await
+        self.send_request(JsonRpcMethod::SpecVersion, SpecVersionRequest).await
     }
 
     /// Get block information with transaction hashes given the block id
@@ -231,9 +233,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetBlockWithTxHashes,
-            GetBlockWithTxHashesRequestRef {
-                block_id: block_id.as_ref(),
-            },
+            GetBlockWithTxHashesRequestRef { block_id: block_id.as_ref() },
         )
         .await
     }
@@ -248,9 +248,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetBlockWithTxs,
-            GetBlockWithTxsRequestRef {
-                block_id: block_id.as_ref(),
-            },
+            GetBlockWithTxsRequestRef { block_id: block_id.as_ref() },
         )
         .await
     }
@@ -265,9 +263,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetStateUpdate,
-            GetStateUpdateRequestRef {
-                block_id: block_id.as_ref(),
-            },
+            GetStateUpdateRequestRef { block_id: block_id.as_ref() },
         )
         .await
     }
@@ -308,9 +304,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetTransactionStatus,
-            GetTransactionStatusRequestRef {
-                transaction_hash: transaction_hash.as_ref(),
-            },
+            GetTransactionStatusRequestRef { transaction_hash: transaction_hash.as_ref() },
         )
         .await
     }
@@ -325,9 +319,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetTransactionByHash,
-            GetTransactionByHashRequestRef {
-                transaction_hash: transaction_hash.as_ref(),
-            },
+            GetTransactionByHashRequestRef { transaction_hash: transaction_hash.as_ref() },
         )
         .await
     }
@@ -361,9 +353,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetTransactionReceipt,
-            GetTransactionReceiptRequestRef {
-                transaction_hash: transaction_hash.as_ref(),
-            },
+            GetTransactionReceiptRequestRef { transaction_hash: transaction_hash.as_ref() },
         )
         .await
     }
@@ -380,10 +370,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetClass,
-            GetClassRequestRef {
-                block_id: block_id.as_ref(),
-                class_hash: class_hash.as_ref(),
-            },
+            GetClassRequestRef { block_id: block_id.as_ref(), class_hash: class_hash.as_ref() },
         )
         .await
     }
@@ -437,9 +424,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::GetBlockTransactionCount,
-            GetBlockTransactionCountRequestRef {
-                block_id: block_id.as_ref(),
-            },
+            GetBlockTransactionCountRequestRef { block_id: block_id.as_ref() },
         )
         .await
     }
@@ -453,10 +438,7 @@ where
         Ok(self
             .send_request::<_, FeltArray>(
                 JsonRpcMethod::Call,
-                CallRequestRef {
-                    request: request.as_ref(),
-                    block_id: block_id.as_ref(),
-                },
+                CallRequestRef { request: request.as_ref(), block_id: block_id.as_ref() },
             )
             .await?
             .0)
@@ -497,38 +479,29 @@ where
     {
         self.send_request(
             JsonRpcMethod::EstimateMessageFee,
-            EstimateMessageFeeRequestRef {
-                message: message.as_ref(),
-                block_id: block_id.as_ref(),
-            },
+            EstimateMessageFeeRequestRef { message: message.as_ref(), block_id: block_id.as_ref() },
         )
         .await
     }
 
     /// Get the most recent accepted block number
     async fn block_number(&self) -> Result<u64, ProviderError> {
-        self.send_request(JsonRpcMethod::BlockNumber, BlockNumberRequest)
-            .await
+        self.send_request(JsonRpcMethod::BlockNumber, BlockNumberRequest).await
     }
 
     /// Get the most recent accepted block hash and number
     async fn block_hash_and_number(&self) -> Result<BlockHashAndNumber, ProviderError> {
-        self.send_request(JsonRpcMethod::BlockHashAndNumber, BlockHashAndNumberRequest)
-            .await
+        self.send_request(JsonRpcMethod::BlockHashAndNumber, BlockHashAndNumberRequest).await
     }
 
     /// Return the currently configured Starknet chain id
     async fn chain_id(&self) -> Result<FieldElement, ProviderError> {
-        Ok(self
-            .send_request::<_, Felt>(JsonRpcMethod::ChainId, ChainIdRequest)
-            .await?
-            .0)
+        Ok(self.send_request::<_, Felt>(JsonRpcMethod::ChainId, ChainIdRequest).await?.0)
     }
 
     /// Returns an object about the sync status, or false if the node is not synching
     async fn syncing(&self) -> Result<SyncStatusType, ProviderError> {
-        self.send_request(JsonRpcMethod::Syncing, SyncingRequest)
-            .await
+        self.send_request(JsonRpcMethod::Syncing, SyncingRequest).await
     }
 
     /// Returns all events matching the given filter
@@ -543,10 +516,7 @@ where
             GetEventsRequestRef {
                 filter: &EventFilterWithPage {
                     event_filter: filter,
-                    result_page_request: ResultPageRequest {
-                        continuation_token,
-                        chunk_size,
-                    },
+                    result_page_request: ResultPageRequest { continuation_token, chunk_size },
                 },
             },
         )
@@ -585,9 +555,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::AddInvokeTransaction,
-            AddInvokeTransactionRequestRef {
-                invoke_transaction: invoke_transaction.as_ref(),
-            },
+            AddInvokeTransactionRequestRef { invoke_transaction: invoke_transaction.as_ref() },
         )
         .await
     }
@@ -602,9 +570,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::AddDeclareTransaction,
-            AddDeclareTransactionRequestRef {
-                declare_transaction: declare_transaction.as_ref(),
-            },
+            AddDeclareTransactionRequestRef { declare_transaction: declare_transaction.as_ref() },
         )
         .await
     }
@@ -637,9 +603,7 @@ where
     {
         self.send_request(
             JsonRpcMethod::TraceTransaction,
-            TraceTransactionRequestRef {
-                transaction_hash: transaction_hash.as_ref(),
-            },
+            TraceTransactionRequestRef { transaction_hash: transaction_hash.as_ref() },
         )
         .await
     }
@@ -682,15 +646,16 @@ where
     {
         self.send_request(
             JsonRpcMethod::TraceBlockTransactions,
-            TraceBlockTransactionsRequestRef {
-                block_id: block_id.as_ref(),
-            },
+            TraceBlockTransactionsRequestRef { block_id: block_id.as_ref() },
         )
         .await
     }
 
-    async fn get_transactions(&self, cursor: TransactionsPageCursor) -> Result<TransactionsPage, ProviderError> {
-        self.send_request(JsonRpcMethod::GetTransactions, cursor).await
+    async fn get_transactions(
+        &self,
+        cursor: TransactionsPageCursor,
+    ) -> Result<TransactionsPage, ProviderError> {
+        self.send_request(JsonRpcMethod::GetTransactions, GetTransactionsRequest { cursor }).await
     }
 }
 
@@ -833,15 +798,12 @@ impl<'de> Deserialize<'de> for JsonRpcRequest {
                     .map_err(error_mapper)?,
             ),
             JsonRpcMethod::GetTransactions => JsonRpcRequestData::GetTransactions(
-                serde_json::from_value::<TransactionsPageCursor>(raw_request.params)
+                serde_json::from_value::<GetTransactionsRequest>(raw_request.params)
                     .map_err(error_mapper)?,
             ),
         };
 
-        Ok(Self {
-            id: raw_request.id,
-            data: request_data,
-        })
+        Ok(Self { id: raw_request.id, data: request_data })
     }
 }
 
@@ -886,20 +848,14 @@ impl TryFrom<&JsonRpcError> for StarknetError {
             34 => Ok(StarknetError::TooManyKeysInFilter),
             40 => {
                 let data = ContractErrorData::deserialize(
-                    value
-                        .data
-                        .as_ref()
-                        .ok_or(JsonRpcErrorConversionError::MissingData)?,
+                    value.data.as_ref().ok_or(JsonRpcErrorConversionError::MissingData)?,
                 )
                 .map_err(|_| JsonRpcErrorConversionError::DataParsingFailure)?;
                 Ok(StarknetError::ContractError(data))
             }
             41 => {
                 let data = TransactionExecutionErrorData::deserialize(
-                    value
-                        .data
-                        .as_ref()
-                        .ok_or(JsonRpcErrorConversionError::MissingData)?,
+                    value.data.as_ref().ok_or(JsonRpcErrorConversionError::MissingData)?,
                 )
                 .map_err(|_| JsonRpcErrorConversionError::DataParsingFailure)?;
                 Ok(StarknetError::TransactionExecutionError(data))
@@ -910,10 +866,7 @@ impl TryFrom<&JsonRpcError> for StarknetError {
             54 => Ok(StarknetError::InsufficientAccountBalance),
             55 => {
                 let data = String::deserialize(
-                    value
-                        .data
-                        .as_ref()
-                        .ok_or(JsonRpcErrorConversionError::MissingData)?,
+                    value.data.as_ref().ok_or(JsonRpcErrorConversionError::MissingData)?,
                 )
                 .map_err(|_| JsonRpcErrorConversionError::DataParsingFailure)?;
                 Ok(StarknetError::ValidationFailure(data))
@@ -927,20 +880,14 @@ impl TryFrom<&JsonRpcError> for StarknetError {
             62 => Ok(StarknetError::UnsupportedContractClassVersion),
             63 => {
                 let data = String::deserialize(
-                    value
-                        .data
-                        .as_ref()
-                        .ok_or(JsonRpcErrorConversionError::MissingData)?,
+                    value.data.as_ref().ok_or(JsonRpcErrorConversionError::MissingData)?,
                 )
                 .map_err(|_| JsonRpcErrorConversionError::DataParsingFailure)?;
                 Ok(StarknetError::UnexpectedError(data))
             }
             10 => {
                 let data = NoTraceAvailableErrorData::deserialize(
-                    value
-                        .data
-                        .as_ref()
-                        .ok_or(JsonRpcErrorConversionError::MissingData)?,
+                    value.data.as_ref().ok_or(JsonRpcErrorConversionError::MissingData)?,
                 )
                 .map_err(|_| JsonRpcErrorConversionError::DataParsingFailure)?;
                 Ok(StarknetError::NoTraceAvailable(data))
@@ -965,11 +912,7 @@ impl Display for JsonRpcError {
                 )
             }
             None => {
-                write!(
-                    f,
-                    "JSON-RPC error: code={}, message=\"{}\"",
-                    self.code, self.message
-                )
+                write!(f, "JSON-RPC error: code={}, message=\"{}\"", self.code, self.message)
             }
         }
     }

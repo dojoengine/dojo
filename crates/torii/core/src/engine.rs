@@ -79,7 +79,10 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             .await
         {
             Ok(_) => true,
-            Err(_) => false,
+            Err(err) => {
+                info!("provider does not support katana, fetching events instead: {}", err);
+                false
+            }
         };
 
         let mut head = self.db.head().await?;
@@ -183,11 +186,12 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             }
 
             self.process_block(block_number).await?;
+            self.db.set_head(block_number);
 
             for (transaction, receipt) in transactions.transactions {
                 self.process_transaction_and_receipt(
-                    transaction.hash,
-                    &transaction.transaction,
+                    transaction.transaction_hash().clone(),
+                    &transaction,
                     Some(receipt),
                     block_number,
                 )
@@ -217,7 +221,6 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             }
 
             self.process_block(block_number).await?;
-            info!(target: "torii_core::engine", block_number = %block_number, "Processed block");
 
             self.db.set_head(block_number);
         }
@@ -300,6 +303,9 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         for processor in &self.processors.block {
             processor.process(&mut self.db, &self.world.provider, block_number).await?;
         }
+
+        info!(target: "torii_core::engine", block_number = %block_number, "Processed block");
+
         Ok(())
     }
 

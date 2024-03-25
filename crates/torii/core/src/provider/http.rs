@@ -75,6 +75,7 @@ impl JsonRpcTransport for HttpTransport {
         let response_body = response.text().await.map_err(Self::Error::Reqwest)?;
         trace!("Response from JSON-RPC: {}", response_body);
 
+
         let parsed_response = serde_json::from_str(&response_body).map_err(Self::Error::Json)?;
 
         Ok(parsed_response)
