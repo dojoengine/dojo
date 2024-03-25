@@ -96,7 +96,10 @@ async fn test_get_transactions() {
         .unwrap();
 
     assert!(response.transactions.len() == 1);
-    assert!(response.transactions[0].0.hash == deploy_txn_future.transaction_hash);
+    assert!(
+        response.transactions[0].0 .0.transaction_hash().clone()
+            == deploy_txn_future.transaction_hash
+    );
     assert!(response.cursor.block_number == 3);
     assert!(response.cursor.transaction_index == 1);
 
@@ -206,7 +209,10 @@ async fn test_get_transactions_with_instant_mining() {
         .unwrap();
 
     assert!(response.transactions.len() == 1);
-    assert!(response.transactions[0].0.hash == deploy_txn_future.transaction_hash);
+    assert!(
+        response.transactions[0].0 .0.transaction_hash().clone()
+            == deploy_txn_future.transaction_hash
+    );
     assert!(response.cursor.block_number == 3);
     assert!(response.cursor.transaction_index == 1);
 

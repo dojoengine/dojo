@@ -10,7 +10,7 @@ use katana_primitives::conversion::rpc::{
 };
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
-    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash,
+    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash as InternalTxWithHash, Tx as InternalTx
 };
 use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};
@@ -250,10 +250,126 @@ pub struct DeclareTxResult(DeclareTransactionResult);
 #[serde(transparent)]
 pub struct InvokeTxResult(InvokeTransactionResult);
 
-impl From<TxWithHash> for Tx {
-    fn from(value: TxWithHash) -> Self {
-        use katana_primitives::transaction::Tx as InternalTx;
+impl DeployAccountTxResult {
+    pub fn new(transaction_hash: TxHash, contract_address: ContractAddress) -> Self {
+        Self(DeployAccountTransactionResult {
+            transaction_hash,
+            contract_address: contract_address.into(),
+        })
+    }
+}
 
+impl DeclareTxResult {
+    pub fn new(transaction_hash: TxHash, class_hash: ClassHash) -> Self {
+        Self(DeclareTransactionResult { transaction_hash, class_hash })
+    }
+}
+
+impl InvokeTxResult {
+    pub fn new(transaction_hash: TxHash) -> Self {
+        Self(InvokeTransactionResult { transaction_hash })
+    }
+}
+
+impl From<(TxHash, ContractAddress)> for DeployAccountTxResult {
+    fn from((transaction_hash, contract_address): (TxHash, ContractAddress)) -> Self {
+        Self::new(transaction_hash, contract_address)
+    }
+}
+
+impl From<(TxHash, ClassHash)> for DeclareTxResult {
+    fn from((transaction_hash, class_hash): (TxHash, ClassHash)) -> Self {
+        Self::new(transaction_hash, class_hash)
+    }
+}
+
+impl From<TxHash> for InvokeTxResult {
+    fn from(transaction_hash: TxHash) -> Self {
+        Self::new(transaction_hash)
+    }
+}
+
+impl From<BroadcastedInvokeTx> for InvokeTx {
+    fn from(tx: BroadcastedInvokeTx) -> Self {
+        match tx.0 {
+            BroadcastedInvokeTransaction::V1(tx) => InvokeTx::V1(InvokeTxV1 {
+                nonce: tx.nonce,
+                calldata: tx.calldata,
+                signature: tx.signature,
+                chain_id: ChainId::default(),
+                sender_address: tx.sender_address.into(),
+                max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
+            }),
+
+            BroadcastedInvokeTransaction::V3(tx) => InvokeTx::V3(InvokeTxV3 {
+                nonce: tx.nonce,
+                calldata: tx.calldata,
+                signature: tx.signature,
+                chain_id: ChainId::default(),
+                sender_address: tx.sender_address.into(),
+                account_deployment_data: tx.account_deployment_data,
+                fee_data_availability_mode: tx.fee_data_availability_mode,
+                nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                paymaster_data: tx.paymaster_data,
+                resource_bounds: tx.resource_bounds,
+                tip: tx.tip,
+            }),
+        }
+    }
+}
+
+impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
+    fn from(tx: BroadcastedDeployAccountTx) -> Self {
+        match tx.0 {
+            BroadcastedDeployAccountTransaction::V1(tx) => {
+                let contract_address = get_contract_address(
+                    tx.contract_address_salt,
+                    tx.class_hash,
+                    &tx.constructor_calldata,
+                    FieldElement::ZERO,
+                );
+
+                DeployAccountTx::V1(DeployAccountTxV1 {
+                    nonce: tx.nonce,
+                    signature: tx.signature,
+                    class_hash: tx.class_hash,
+                    chain_id: ChainId::default(),
+                    contract_address: contract_address.into(),
+                    constructor_calldata: tx.constructor_calldata,
+                    contract_address_salt: tx.contract_address_salt,
+                    max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
+                })
+            }
+
+            BroadcastedDeployAccountTransaction::V3(tx) => {
+                let contract_address = get_contract_address(
+                    tx.contract_address_salt,
+                    tx.class_hash,
+                    &tx.constructor_calldata,
+                    FieldElement::ZERO,
+                );
+
+                DeployAccountTx::V3(DeployAccountTxV3 {
+                    nonce: tx.nonce,
+                    signature: tx.signature,
+                    class_hash: tx.class_hash,
+                    chain_id: ChainId::default(),
+                    contract_address: contract_address.into(),
+                    constructor_calldata: tx.constructor_calldata,
+                    contract_address_salt: tx.contract_address_salt,
+                    fee_data_availability_mode: tx.fee_data_availability_mode,
+                    nonce_data_availability_mode: tx.nonce_data_availability_mode,
+                    paymaster_data: tx.paymaster_data,
+                    resource_bounds: tx.resource_bounds,
+                    tip: tx.tip,
+                })
+            }
+        }
+    }
+}
+
+impl From<InternalTxWithHash> for Tx {
+    fn from(value: InternalTxWithHash) -> Self {
         let transaction_hash = value.hash;
         let tx = match value.transaction {
             InternalTx::Invoke(invoke) => match invoke {
@@ -375,127 +491,10 @@ impl From<TxWithHash> for Tx {
             }
         };
 
-        Tx(tx)
+        Tx(tx)        
     }
 }
 
-impl DeployAccountTxResult {
-    pub fn new(transaction_hash: TxHash, contract_address: ContractAddress) -> Self {
-        Self(DeployAccountTransactionResult {
-            transaction_hash,
-            contract_address: contract_address.into(),
-        })
-    }
-}
-
-impl DeclareTxResult {
-    pub fn new(transaction_hash: TxHash, class_hash: ClassHash) -> Self {
-        Self(DeclareTransactionResult { transaction_hash, class_hash })
-    }
-}
-
-impl InvokeTxResult {
-    pub fn new(transaction_hash: TxHash) -> Self {
-        Self(InvokeTransactionResult { transaction_hash })
-    }
-}
-
-impl From<(TxHash, ContractAddress)> for DeployAccountTxResult {
-    fn from((transaction_hash, contract_address): (TxHash, ContractAddress)) -> Self {
-        Self::new(transaction_hash, contract_address)
-    }
-}
-
-impl From<(TxHash, ClassHash)> for DeclareTxResult {
-    fn from((transaction_hash, class_hash): (TxHash, ClassHash)) -> Self {
-        Self::new(transaction_hash, class_hash)
-    }
-}
-
-impl From<TxHash> for InvokeTxResult {
-    fn from(transaction_hash: TxHash) -> Self {
-        Self::new(transaction_hash)
-    }
-}
-
-impl From<BroadcastedInvokeTx> for InvokeTx {
-    fn from(tx: BroadcastedInvokeTx) -> Self {
-        match tx.0 {
-            BroadcastedInvokeTransaction::V1(tx) => InvokeTx::V1(InvokeTxV1 {
-                nonce: tx.nonce,
-                calldata: tx.calldata,
-                signature: tx.signature,
-                chain_id: ChainId::default(),
-                sender_address: tx.sender_address.into(),
-                max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
-            }),
-
-            BroadcastedInvokeTransaction::V3(tx) => InvokeTx::V3(InvokeTxV3 {
-                nonce: tx.nonce,
-                calldata: tx.calldata,
-                signature: tx.signature,
-                chain_id: ChainId::default(),
-                sender_address: tx.sender_address.into(),
-                account_deployment_data: tx.account_deployment_data,
-                fee_data_availability_mode: tx.fee_data_availability_mode,
-                nonce_data_availability_mode: tx.nonce_data_availability_mode,
-                paymaster_data: tx.paymaster_data,
-                resource_bounds: tx.resource_bounds,
-                tip: tx.tip,
-            }),
-        }
-    }
-}
-
-impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
-    fn from(tx: BroadcastedDeployAccountTx) -> Self {
-        match tx.0 {
-            BroadcastedDeployAccountTransaction::V1(tx) => {
-                let contract_address = get_contract_address(
-                    tx.contract_address_salt,
-                    tx.class_hash,
-                    &tx.constructor_calldata,
-                    FieldElement::ZERO,
-                );
-
-                DeployAccountTx::V1(DeployAccountTxV1 {
-                    nonce: tx.nonce,
-                    signature: tx.signature,
-                    class_hash: tx.class_hash,
-                    chain_id: ChainId::default(),
-                    contract_address: contract_address.into(),
-                    constructor_calldata: tx.constructor_calldata,
-                    contract_address_salt: tx.contract_address_salt,
-                    max_fee: tx.max_fee.try_into().expect("max_fee is too big"),
-                })
-            }
-
-            BroadcastedDeployAccountTransaction::V3(tx) => {
-                let contract_address = get_contract_address(
-                    tx.contract_address_salt,
-                    tx.class_hash,
-                    &tx.constructor_calldata,
-                    FieldElement::ZERO,
-                );
-
-                DeployAccountTx::V3(DeployAccountTxV3 {
-                    nonce: tx.nonce,
-                    signature: tx.signature,
-                    class_hash: tx.class_hash,
-                    chain_id: ChainId::default(),
-                    contract_address: contract_address.into(),
-                    constructor_calldata: tx.constructor_calldata,
-                    contract_address_salt: tx.contract_address_salt,
-                    fee_data_availability_mode: tx.fee_data_availability_mode,
-                    nonce_data_availability_mode: tx.nonce_data_availability_mode,
-                    paymaster_data: tx.paymaster_data,
-                    resource_bounds: tx.resource_bounds,
-                    tip: tx.tip,
-                })
-            }
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPageCursor {
@@ -505,6 +504,6 @@ pub struct TransactionsPageCursor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPage {
-    pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
+    pub transactions: Vec<(Tx, MaybePendingTxReceipt)>,
     pub cursor: TransactionsPageCursor,
 }

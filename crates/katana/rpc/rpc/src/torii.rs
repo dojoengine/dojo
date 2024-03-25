@@ -9,7 +9,7 @@ use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
 use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
-use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
+use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor, Tx};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::TokioTaskSpawner;
 
@@ -43,7 +43,7 @@ impl ToriiApiServer for ToriiApi {
     ) -> RpcResult<TransactionsPage> {
         match self
             .on_io_blocking_task(move |this| {
-                let mut transactions = Vec::new();
+                let mut transactions: Vec<(Tx, MaybePendingTxReceipt)> = Vec::new();
                 let mut next_cursor = cursor.clone();
 
                 let provider = this.sequencer.backend.blockchain.provider();
@@ -83,7 +83,7 @@ impl ToriiApiServer for ToriiApi {
 
                         // Add transactions to the total and break if MAX_PAGE_SIZE is reached
                         for transaction in block_transactions {
-                            transactions.push(transaction);
+                            transactions.push((transaction.0.into(), transaction.1.clone()));
                             if transactions.len() >= MAX_PAGE_SIZE {
                                 next_cursor.block_number = block_number;
                                 next_cursor.transaction_index = MAX_PAGE_SIZE as u64;
@@ -106,7 +106,7 @@ impl ToriiApiServer for ToriiApi {
                             .take(remaining)
                             .map(|(tx, info)| {
                                 (
-                                    tx.clone(),
+                                    tx.clone().into(),
                                     MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
                                         tx.hash,
                                         info.receipt.clone(),
@@ -142,7 +142,7 @@ impl ToriiApiServer for ToriiApi {
                             .take(remaining)
                             .map(|(tx, info)| {
                                 (
-                                    tx.clone(),
+                                    tx.clone().into(),
                                     MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
                                         tx.hash,
                                         info.receipt.clone(),
@@ -190,7 +190,7 @@ impl ToriiApiServer for ToriiApi {
                         .into_iter()
                         .map(|(tx, receipt)| {
                             (
-                                tx.clone(),
+                                tx.clone().into(),
                                 MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
                                     tx.hash, receipt,
                                 )),
