@@ -39,6 +39,7 @@ where
         _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
+        block_timestamp: u64,
         _transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
@@ -59,7 +60,7 @@ where
         let mut entity = model.schema().await?;
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        db.set_event_message(entity, event_id).await?;
+        db.set_event_message(entity, event_id, block_timestamp).await?;
         Ok(())
     }
 }

@@ -112,6 +112,10 @@ impl ModelObject {
                 Name::new("createdAt"),
                 Value::from(model.created_at.format(DATETIME_FORMAT).to_string()),
             ),
+            (
+                Name::new("executedAt"),
+                Value::from(model.executed_at.format(DATETIME_FORMAT).to_string()),
+            ),
         ])
     }
 }
