@@ -94,8 +94,46 @@ fn test_upgrade_direct() {
 }
 
 #[starknet::interface]
-trait INameOnly<T> {
-    fn name(self: @T) -> felt252;
+trait IMetadataOnly<T> {
+    fn selector(self: @T) -> felt252;
+    fn name(self: @T) -> ByteArray;
+}
+
+#[starknet::contract]
+mod invalid_legacy_model {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelMetadata of super::IMetadataOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
+            // Pre-computed address of a contract deployed through the world.
+            0x742c3d09472a40914dedcbd609788fd547bde613d6c4d4c2f15d41f4e241f25
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_legacy_model"
+        }
+    }
+}
+
+#[starknet::contract]
+mod invalid_legacy_model_world {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl InvalidModelName of super::IMetadataOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
+            // World address is 0, and not registered as deployed through the world
+            // as it's itself.
+            0
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_legacy_model"
+        }
+    }
 }
 
 #[starknet::contract]
@@ -104,10 +142,14 @@ mod invalid_model {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::INameOnly<ContractState> {
-        fn name(self: @ContractState) -> felt252 {
+    impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x7b6cc67bb03efdf091487465df2037cad74111d8b616536b013e70da7491a30
+            0x78d01dde6c9d61e26dfc3fcc8d1dea6fd86e3afe324bf24c61ebc1e82fad12a
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_model"
         }
     }
 }
@@ -118,11 +160,15 @@ mod invalid_model_world {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl InvalidModelName of super::INameOnly<ContractState> {
-        fn name(self: @ContractState) -> felt252 {
+    impl InvalidModelSelector of super::IMetadataOnly<ContractState> {
+        fn selector(self: @ContractState) -> felt252 {
             // World address is 0, and not registered as deployed through the world
             // as it's itself.
             0
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+            "invalid_model_world"
         }
     }
 }
@@ -134,8 +180,10 @@ fn test_deploy_from_world_invalid_model() {
     let world = deploy_world();
 
     let base_address = world.deploy_contract(0, base::TEST_CLASS_HASH.try_into().unwrap());
-    // The print is required for invalid_model name to be a valid address as the
-    // register_model will use the gas consumed as salt.
+
+    // This print allows to know the address of the deployed contract which must be returned
+    // by the selector() function of invalid model, to simulate a ACL issue
+    // (see register_model function)
     base_address.print();
 
     world.register_model(invalid_model::TEST_CLASS_HASH.try_into().unwrap());

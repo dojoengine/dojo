@@ -134,9 +134,9 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::new,
+                            function: ?4::new,
                             args: [],
-                            ty: core::array::Array::<core::felt252>,
+                            ty: core::array::Array::<?5>,
                         },
                     ),
                 },
@@ -145,7 +145,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::Felt252Serde::serialize,
+                            function: ?5::serialize,
                             args: [
                                 Value(
                                     Snapshot(
@@ -173,7 +173,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::span,
+                            function: ?6::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -186,7 +186,7 @@ Block(
                                     ),
                                 ),
                             ],
-                            ty: core::array::Span::<core::felt252>,
+                            ty: core::array::Span::<?7>,
                         },
                     ),
                 },
@@ -198,9 +198,9 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::integer::u8>::new,
+                            function: ?7::new,
                             args: [],
-                            ty: core::array::Array::<core::integer::u8>,
+                            ty: core::array::Array::<?8>,
                         },
                     ),
                 },
@@ -209,7 +209,7 @@ Block(
                 StatementExpr {
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: test::HealthIntrospect::layout,
+                            function: ?8::layout,
                             args: [
                                 Reference(
                                     LocalVarId(test::__Health_layout__),
@@ -223,36 +223,11 @@ Block(
             Let(
                 StatementLet {
                     pattern: Variable(
-                        __Health_layout_clone__,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::array::ArrayTCloneImpl::<core::integer::u8, core::clone::TCopyClone::<core::integer::u8, core::integer::u8Copy>, core::integer::u8Drop>::clone,
-                            args: [
-                                Value(
-                                    Snapshot(
-                                        ExprSnapshot {
-                                            inner: Var(
-                                                LocalVarId(test::__Health_layout__),
-                                            ),
-                                            ty: @core::array::Array::<core::integer::u8>,
-                                        },
-                                    ),
-                                ),
-                            ],
-                            ty: core::array::Array::<core::integer::u8>,
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
                         __Health_layout_span__,
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::integer::u8>::span,
+                            function: ?9::span,
                             args: [
                                 Value(
                                     Snapshot(
@@ -265,7 +240,7 @@ Block(
                                     ),
                                 ),
                             ],
-                            ty: core::array::Span::<core::integer::u8>,
+                            ty: core::array::Span::<?9>,
                         },
                     ),
                 },
@@ -273,48 +248,15 @@ Block(
             Let(
                 StatementLet {
                     pattern: Variable(
-                        __Health_layout_clone_span__,
+                        __Health,
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::integer::u8>::span,
-                            args: [
-                                Value(
-                                    Snapshot(
-                                        ExprSnapshot {
-                                            inner: Var(
-                                                LocalVarId(test::__Health_layout_clone__),
-                                            ),
-                                            ty: @core::array::Array::<core::integer::u8>,
-                                        },
-                                    ),
-                                ),
-                            ],
-                            ty: core::array::Span::<core::integer::u8>,
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
-                        __Health_values__,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: dojo::world::IWorldDispatcherImpl::entity,
+                            function: ?10::entity,
                             args: [
                                 Value(
                                     Var(
                                         LocalVarId(test::world),
-                                    ),
-                                ),
-                                Value(
-                                    Literal(
-                                        ExprLiteral {
-                                            value: 79600263394408,
-                                            ty: core::felt252,
-                                        },
                                     ),
                                 ),
                                 Value(
@@ -328,407 +270,7 @@ Block(
                                     ),
                                 ),
                             ],
-                            ty: core::array::Span::<core::felt252>,
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
-                        __Health_model__,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::new,
-                            args: [],
-                            ty: core::array::Array::<core::felt252>,
-                        },
-                    ),
-                },
-            ),
-            Expr(
-                StatementExpr {
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::array::serialize_array_helper::<core::felt252, core::Felt252Serde, core::felt252Drop>,
-                            args: [
-                                Value(
-                                    Var(
-                                        LocalVarId(test::__get_macro_keys__),
-                                    ),
-                                ),
-                                Reference(
-                                    LocalVarId(test::__Health_model__),
-                                ),
-                            ],
-                            ty: (),
-                        },
-                    ),
-                },
-            ),
-            Expr(
-                StatementExpr {
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::array::serialize_array_helper::<core::felt252, core::Felt252Serde, core::felt252Drop>,
-                            args: [
-                                Value(
-                                    Var(
-                                        LocalVarId(test::__Health_values__),
-                                    ),
-                                ),
-                                Reference(
-                                    LocalVarId(test::__Health_model__),
-                                ),
-                            ],
-                            ty: (),
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
-                        __Health_model_span__,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::array::ArrayImpl::<core::felt252>::span,
-                            args: [
-                                Value(
-                                    Snapshot(
-                                        ExprSnapshot {
-                                            inner: Var(
-                                                LocalVarId(test::__Health_model__),
-                                            ),
-                                            ty: @core::array::Array::<core::felt252>,
-                                        },
-                                    ),
-                                ),
-                            ],
-                            ty: core::array::Span::<core::felt252>,
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
-                        __Health,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: test::HealthSerde::deserialize,
-                            args: [
-                                Reference(
-                                    LocalVarId(test::__Health_model_span__),
-                                ),
-                            ],
-                            ty: core::option::Option::<test::Health>,
-                        },
-                    ),
-                },
-            ),
-            Expr(
-                StatementExpr {
-                    expr: If(
-                        ExprIf {
-                            condition: FunctionCall(
-                                ExprFunctionCall {
-                                    function: core::option::OptionTraitImpl::<test::Health>::is_none,
-                                    args: [
-                                        Value(
-                                            Snapshot(
-                                                ExprSnapshot {
-                                                    inner: Var(
-                                                        LocalVarId(test::__Health),
-                                                    ),
-                                                    ty: @core::option::Option::<test::Health>,
-                                                },
-                                            ),
-                                        ),
-                                    ],
-                                    ty: core::bool,
-                                },
-                            ),
-                            if_block: Block(
-                                ExprBlock {
-                                    statements: [
-                                        Expr(
-                                            StatementExpr {
-                                                expr: Block(
-                                                    ExprBlock {
-                                                        statements: [
-                                                            Let(
-                                                                StatementLet {
-                                                                    pattern: Variable(
-                                                                        __formatter_for_panic_macro__,
-                                                                    ),
-                                                                    expr: FunctionCall(
-                                                                        ExprFunctionCall {
-                                                                            function: core::fmt::FormatterDefault::default,
-                                                                            args: [],
-                                                                            ty: core::fmt::Formatter,
-                                                                        },
-                                                                    ),
-                                                                },
-                                                            ),
-                                                            Expr(
-                                                                StatementExpr {
-                                                                    expr: FunctionCall(
-                                                                        ExprFunctionCall {
-                                                                            function: core::result::ResultTraitImpl::<(), core::fmt::Error>::unwrap::<core::fmt::ErrorDrop>,
-                                                                            args: [
-                                                                                Value(
-                                                                                    Block(
-                                                                                        ExprBlock {
-                                                                                            statements: [
-                                                                                                Expr(
-                                                                                                    StatementExpr {
-                                                                                                        expr: FunctionCall(
-                                                                                                            ExprFunctionCall {
-                                                                                                                function: core::byte_array::ByteArrayImpl::append_word,
-                                                                                                                args: [
-                                                                                                                    Reference(
-                                                                                                                        LocalVarId(test::__formatter_for_panic_macro__)::buffer,
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 136816024508118168988575128292127322950586093870590548369522287650670210926,
-                                                                                                                                ty: core::felt252,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 31,
-                                                                                                                                ty: core::integer::u32,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ],
-                                                                                                                ty: (),
-                                                                                                            },
-                                                                                                        ),
-                                                                                                    },
-                                                                                                ),
-                                                                                                Expr(
-                                                                                                    StatementExpr {
-                                                                                                        expr: FunctionCall(
-                                                                                                            ExprFunctionCall {
-                                                                                                                function: core::byte_array::ByteArrayImpl::append_word,
-                                                                                                                args: [
-                                                                                                                    Reference(
-                                                                                                                        LocalVarId(test::__formatter_for_panic_macro__)::buffer,
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 57245710417489827494872497475953274453670361818009142277461875365354283124,
-                                                                                                                                ty: core::felt252,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 31,
-                                                                                                                                ty: core::integer::u32,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ],
-                                                                                                                ty: (),
-                                                                                                            },
-                                                                                                        ),
-                                                                                                    },
-                                                                                                ),
-                                                                                                Expr(
-                                                                                                    StatementExpr {
-                                                                                                        expr: FunctionCall(
-                                                                                                            ExprFunctionCall {
-                                                                                                                function: core::byte_array::ByteArrayImpl::append_word,
-                                                                                                                args: [
-                                                                                                                    Reference(
-                                                                                                                        LocalVarId(test::__formatter_for_panic_macro__)::buffer,
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 184450045146430526813493865095770350343962517127059696327898282247556767854,
-                                                                                                                                ty: core::felt252,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 31,
-                                                                                                                                ty: core::integer::u32,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ],
-                                                                                                                ty: (),
-                                                                                                            },
-                                                                                                        ),
-                                                                                                    },
-                                                                                                ),
-                                                                                                Expr(
-                                                                                                    StatementExpr {
-                                                                                                        expr: FunctionCall(
-                                                                                                            ExprFunctionCall {
-                                                                                                                function: core::byte_array::ByteArrayImpl::append_word,
-                                                                                                                args: [
-                                                                                                                    Reference(
-                                                                                                                        LocalVarId(test::__formatter_for_panic_macro__)::buffer,
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 207476049689134978464526160084214572942096890522908346890176432476061507693,
-                                                                                                                                ty: core::felt252,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 31,
-                                                                                                                                ty: core::integer::u32,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ],
-                                                                                                                ty: (),
-                                                                                                            },
-                                                                                                        ),
-                                                                                                    },
-                                                                                                ),
-                                                                                                Expr(
-                                                                                                    StatementExpr {
-                                                                                                        expr: FunctionCall(
-                                                                                                            ExprFunctionCall {
-                                                                                                                function: core::byte_array::ByteArrayImpl::append_word,
-                                                                                                                args: [
-                                                                                                                    Reference(
-                                                                                                                        LocalVarId(test::__formatter_for_panic_macro__)::buffer,
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 34474207625732236007199437870,
-                                                                                                                                ty: core::felt252,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                    Value(
-                                                                                                                        Literal(
-                                                                                                                            ExprLiteral {
-                                                                                                                                value: 12,
-                                                                                                                                ty: core::integer::u32,
-                                                                                                                            },
-                                                                                                                        ),
-                                                                                                                    ),
-                                                                                                                ],
-                                                                                                                ty: (),
-                                                                                                            },
-                                                                                                        ),
-                                                                                                    },
-                                                                                                ),
-                                                                                            ],
-                                                                                            tail: Some(
-                                                                                                EnumVariantCtor(
-                                                                                                    ExprEnumVariantCtor {
-                                                                                                        variant: ConcreteVariant {
-                                                                                                            concrete_enum_id: core::result::Result::<(), core::fmt::Error>,
-                                                                                                            id: VariantId(core::result::Ok),
-                                                                                                            ty: (),
-                                                                                                            idx: 0,
-                                                                                                        },
-                                                                                                        value_expr: Tuple(
-                                                                                                            ExprTuple {
-                                                                                                                items: [],
-                                                                                                                ty: (),
-                                                                                                            },
-                                                                                                        ),
-                                                                                                        ty: core::result::Result::<(), core::fmt::Error>,
-                                                                                                    },
-                                                                                                ),
-                                                                                            ),
-                                                                                            ty: core::result::Result::<(), core::fmt::Error>,
-                                                                                        },
-                                                                                    ),
-                                                                                ),
-                                                                            ],
-                                                                            ty: (),
-                                                                        },
-                                                                    ),
-                                                                },
-                                                            ),
-                                                        ],
-                                                        tail: Some(
-                                                            FunctionCall(
-                                                                ExprFunctionCall {
-                                                                    function: core::panics::panic_with_byte_array,
-                                                                    args: [
-                                                                        Value(
-                                                                            Snapshot(
-                                                                                ExprSnapshot {
-                                                                                    inner: MemberAccess(
-                                                                                        ExprMemberAccess {
-                                                                                            expr: Var(
-                                                                                                LocalVarId(test::__formatter_for_panic_macro__),
-                                                                                            ),
-                                                                                            concrete_struct_id: core::fmt::Formatter,
-                                                                                            member: MemberId(core::fmt::buffer),
-                                                                                            ty: core::byte_array::ByteArray,
-                                                                                        },
-                                                                                    ),
-                                                                                    ty: @core::byte_array::ByteArray,
-                                                                                },
-                                                                            ),
-                                                                        ),
-                                                                    ],
-                                                                    ty: core::never,
-                                                                },
-                                                            ),
-                                                        ),
-                                                        ty: core::never,
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                    ],
-                                    tail: None,
-                                    ty: (),
-                                },
-                            ),
-                            else_block: None,
-                            ty: (),
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
-                        __Health,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: core::option::OptionTraitImpl::<test::Health>::unwrap,
-                            args: [
-                                Value(
-                                    Var(
-                                        LocalVarId(test::__Health),
-                                    ),
-                                ),
-                            ],
-                            ty: test::Health,
+                            ty: ?10,
                         },
                     ),
                 },
@@ -744,3 +286,7 @@ Block(
 )
 
 //! > semantic_diagnostics
+error: Trait has no implementation in context: dojo::model::Model::<test::Health>
+ --> lib.cairo[get_inline_macro]:9:61
+                 let __Health: Health = dojo::model::Model::entity(world, __get_macro_keys__, __Health_layout_span__);
+                                                            ^****^

@@ -33,6 +33,8 @@ fn no_diff_when_local_and_remote_are_equal() {
 
     let diff = WorldDiff::compute(local, Some(remote));
 
+    println!("{:?}", diff);
+
     assert_eq!(diff.count_diffs(), 0);
 }
 

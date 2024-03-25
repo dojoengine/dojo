@@ -1,7 +1,8 @@
 use starknet::{ContractAddress, get_caller_address};
 
 // TODO import all this when complex benchmarks are merged
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Character {
     #[key]
     caller: ContractAddress,
@@ -47,7 +48,8 @@ struct Sword {
     damage: u32,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Case {
     #[key]
     owner: ContractAddress,
@@ -55,7 +57,8 @@ struct Case {
     material: felt252,
 }
 
-#[derive(Model, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
 struct Alias {
     #[key]
     player: ContractAddress,

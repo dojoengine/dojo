@@ -7,7 +7,7 @@ abigen!(
     r#"[
   {
     "type": "function",
-    "name": "name",
+    "name": "selector",
     "inputs": [],
     "outputs": [
       {
