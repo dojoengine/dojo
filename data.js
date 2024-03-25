@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711388858966,
+  "lastUpdate": 1711395732471,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3235,6 +3235,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 965185,
             "range": "± 68400",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4a77ef7f10b6f9c71c09afc2f5bfde69db20e699",
+          "message": "[sozo] generate JSON manifest (#1694)\n\n* feat: add support for AbiFormat (path or embed)\r\n\r\n* fix: add example updated manifests\r\n\r\n* editor: add custom build commands\r\n\r\n* fix: remove print and fmt + clippy\r\n\r\n* add vscode settings to gitignore\r\n\r\n* fix: ensure pretty formatting of the json\r\n\r\n* chore: add all .vscode to gitignore\r\n\r\n* chore: remove vscode tasks\r\n\r\n* fix: enable PartialEq only for testing when required",
+          "timestamp": "2024-03-25T13:32:30-06:00",
+          "tree_id": "28372756051cc71535f435bb16fe0806ac6bcdd2",
+          "url": "https://github.com/dojoengine/dojo/commit/4a77ef7f10b6f9c71c09afc2f5bfde69db20e699"
+        },
+        "date": 1711395731823,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 977143,
+            "range": "± 41075",
             "unit": "ns/iter"
           }
         ]
