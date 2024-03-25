@@ -18,6 +18,7 @@ use crate::{utils, FieldElement};
 pub type TxHash = FieldElement;
 /// The sequential number for all the transactions..
 pub type TxNumber = u64;
+pub type Transaction = starknet::core::types::Transaction;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
