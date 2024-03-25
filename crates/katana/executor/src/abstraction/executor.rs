@@ -1,10 +1,8 @@
-use katana_primitives::{
-    block::ExecutableBlock,
-    env::{BlockEnv, CfgEnv},
-    fee::TxFeeInfo,
-    transaction::{ExecutableTxWithHash, TxWithHash},
-    FieldElement,
-};
+use katana_primitives::block::ExecutableBlock;
+use katana_primitives::env::{BlockEnv, CfgEnv};
+use katana_primitives::fee::TxFeeInfo;
+use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
+use katana_primitives::FieldElement;
 use katana_provider::traits::state::StateProvider;
 
 use crate::{

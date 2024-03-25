@@ -9,11 +9,9 @@ use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::StateProvider;
 use katana_provider::ProviderResult;
 
-use crate::abstraction::ExecutorExt;
-use crate::abstraction::ResultAndStates;
-use crate::abstraction::{BlockExecutor, ExecutorFactory};
 use crate::abstraction::{
-    EntryPointCall, ExecutionOutput, ExecutionResult, ExecutorResult, SimulationFlag,
+    BlockExecutor, EntryPointCall, ExecutionOutput, ExecutionResult, ExecutorExt, ExecutorFactory,
+    ExecutorResult, ResultAndStates, SimulationFlag,
 };
 use crate::ExecutionError;
 

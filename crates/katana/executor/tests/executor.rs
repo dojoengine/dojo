@@ -3,8 +3,7 @@ mod fixtures;
 use std::collections::HashMap;
 
 use fixtures::{state_provider, valid_blocks};
-use katana_executor::ExecutionOutput;
-use katana_executor::ExecutorFactory;
+use katana_executor::{ExecutionOutput, ExecutorFactory};
 use katana_primitives::block::ExecutableBlock;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::constant::{

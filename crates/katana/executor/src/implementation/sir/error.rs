@@ -1,9 +1,8 @@
 use katana_primitives::FieldElement;
 use sir::transaction::error::TransactionError;
 
-use crate::ExecutionError;
-
 use super::utils::{to_class_hash, to_felt};
+use crate::ExecutionError;
 
 impl From<TransactionError> for ExecutionError {
     fn from(error: TransactionError) -> Self {
@@ -34,7 +33,9 @@ impl From<TransactionError> for ExecutionError {
             }
 
             TransactionError::MaxFeeTooLow(max_fee, min) => Self::MaxFeeTooLow { max_fee, min },
-            TransactionError::EntryPointNotFound(selector) => Self::EntryPointNotFound(to_felt(&selector)),
+            TransactionError::EntryPointNotFound(selector) => {
+                Self::EntryPointNotFound(to_felt(&selector))
+            }
             TransactionError::FeeTransferError(e) => Self::FeeTransferError(e.to_string()),
             e => Self::Other(e.to_string()),
         }

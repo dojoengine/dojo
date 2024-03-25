@@ -553,10 +553,9 @@ mod tests {
             ClassHash::default(),
             "class hash of nonexistant contract should default to zero"
         );
-        assert!(actual_compiled_hash
-            .unwrap_err()
-            .to_string()
-            .contains("No compiled class hash found"));
+        assert!(
+            actual_compiled_hash.unwrap_err().to_string().contains("No compiled class hash found")
+        );
         assert!(actual_compiled_class.unwrap_err().to_string().contains("No compiled class found"));
 
         let sp: Box<dyn StateProvider> = Box::new(cached_state);

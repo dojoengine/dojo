@@ -3,7 +3,6 @@ mod executor;
 
 pub use error::*;
 pub use executor::*;
-
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::fee::TxFeeInfo;

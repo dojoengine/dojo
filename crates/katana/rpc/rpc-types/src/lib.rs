@@ -10,6 +10,7 @@ pub mod event;
 pub mod message;
 pub mod receipt;
 pub mod state_update;
+pub mod trace;
 pub mod transaction;
 
 use std::ops::Deref;
@@ -49,7 +50,9 @@ pub type FeeEstimate = starknet::core::types::FeeEstimate;
 
 pub type ContractClass = starknet::core::types::ContractClass;
 
-pub type SimulationFlags = starknet::core::types::SimulationFlagForEstimateFee;
+pub type SimulationFlagForEstimateFee = starknet::core::types::SimulationFlagForEstimateFee;
+
+pub type SimulationFlag = starknet::core::types::SimulationFlag;
 
 pub type SyncingStatus = starknet::core::types::SyncStatusType;
 

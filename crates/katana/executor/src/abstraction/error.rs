@@ -1,8 +1,6 @@
-use katana_primitives::{
-    class::ClassHash,
-    contract::{ContractAddress, Nonce},
-    FieldElement,
-};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::{ContractAddress, Nonce};
+use katana_primitives::FieldElement;
 
 /// Errors that can be returned by the executor.
 #[derive(Debug, thiserror::Error)]
@@ -32,7 +30,10 @@ pub enum ExecutionError {
     #[error("invalid transaction nonce: expected {expected} got {actual}")]
     InvalidNonce { actual: Nonce, expected: Nonce },
 
-    #[error("insufficient balance: max fee {max_fee} exceeds account balance u256({balance_low}, {balance_high})")]
+    #[error(
+        "insufficient balance: max fee {max_fee} exceeds account balance u256({balance_low}, \
+         {balance_high})"
+    )]
     InsufficientBalance { max_fee: u128, balance_low: FieldElement, balance_high: FieldElement },
 
     #[error("actual fee {max_fee} exceeded transaction max fee {actual_fee}")]

@@ -1,12 +1,12 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
+use sozo_ops::model;
 use starknet::core::types::FieldElement;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::ops::model;
+use crate::utils;
 
 #[derive(Debug, Args)]
 pub struct ModelArgs {
@@ -76,14 +76,31 @@ pub enum ModelCommands {
 
 impl ModelArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = if config.manifest_path().exists() {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let env_metadata = utils::load_metadata_from_config(config)?;
 
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
-        } else {
-            None
-        };
-
-        config.tokio_handle().block_on(model::execute(self.command, env_metadata))
+        config.tokio_handle().block_on(async {
+            match self.command {
+                ModelCommands::ClassHash { name, starknet, world } => {
+                    let world_address = world.address(env_metadata.as_ref()).unwrap();
+                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
+                    model::model_class_hash(name, world_address, provider).await
+                }
+                ModelCommands::ContractAddress { name, starknet, world } => {
+                    let world_address = world.address(env_metadata.as_ref()).unwrap();
+                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
+                    model::model_contract_address(name, world_address, provider).await
+                }
+                ModelCommands::Schema { name, to_json, starknet, world } => {
+                    let world_address = world.address(env_metadata.as_ref()).unwrap();
+                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
+                    model::model_schema(name, world_address, provider, to_json).await
+                }
+                ModelCommands::Get { name, keys, starknet, world } => {
+                    let world_address = world.address(env_metadata.as_ref()).unwrap();
+                    let provider = starknet.provider(env_metadata.as_ref()).unwrap();
+                    model::model_get(name, keys, world_address, provider).await
+                }
+            }
+        })
     }
 }

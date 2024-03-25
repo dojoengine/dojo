@@ -5,6 +5,7 @@ use crate::args::Commands;
 
 pub(crate) mod auth;
 pub(crate) mod build;
+pub(crate) mod clean;
 pub(crate) mod completions;
 pub(crate) mod dev;
 pub(crate) mod events;
@@ -19,6 +20,7 @@ pub(crate) mod test;
 pub fn run(command: Commands, config: &Config) -> Result<()> {
     match command {
         Commands::Init(args) => args.run(config),
+        Commands::Clean(args) => args.run(config),
         Commands::Test(args) => args.run(config),
         Commands::Build(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),

@@ -3,9 +3,10 @@ use std::sync::Arc;
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_core::backend::contract::StarknetContract;
 use katana_core::sequencer::KatanaSequencer;
-use katana_executor::{EntryPointCall, ExecutionResult, ExecutorFactory, SimulationFlag};
+use katana_executor::{EntryPointCall, ExecutionResult, ExecutorFactory, ResultAndStates};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, FinalityStatus, PartialHeader};
 use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
+use katana_primitives::receipt::Receipt;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
@@ -23,14 +24,22 @@ use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
 use katana_rpc_types::state_update::StateUpdate;
+use katana_rpc_types::trace::FunctionInvocation;
 use katana_rpc_types::transaction::{
     BroadcastedDeclareTx, BroadcastedDeployAccountTx, BroadcastedInvokeTx, BroadcastedTx,
     DeclareTxResult, DeployAccountTxResult, InvokeTxResult, Tx,
 };
-use katana_rpc_types::{ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlags};
+use katana_rpc_types::{
+    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlag,
+    SimulationFlagForEstimateFee,
+};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
-use starknet::core::types::{BlockTag, TransactionExecutionStatus, TransactionStatus};
+use starknet::core::types::{
+    BlockTag, DeclareTransactionTrace, DeployAccountTransactionTrace, ExecuteInvocation,
+    InvokeTransactionTrace, L1HandlerTransactionTrace, RevertedInvocation, SimulatedTransaction,
+    TransactionExecutionStatus, TransactionStatus, TransactionTrace,
+};
 
 pub struct StarknetApi<EF: ExecutorFactory> {
     inner: Arc<StarknetApiInner<EF>>,
@@ -76,7 +85,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         transactions: Vec<ExecutableTxWithHash>,
         block_id: BlockIdOrTag,
-        flags: SimulationFlag,
+        flags: katana_executor::SimulationFlag,
     ) -> Result<Vec<FeeEstimate>, StarknetApiError> {
         let sequencer = &self.inner.sequencer;
         // get the state and block env at the specified block for execution
@@ -537,7 +546,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn estimate_fee(
         &self,
         request: Vec<BroadcastedTx>,
-        simulation_flags: Vec<SimulationFlags>,
+        simulation_flags: Vec<SimulationFlagForEstimateFee>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
@@ -576,13 +585,17 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let skip_validate = simulation_flags.contains(&SimulationFlags::SkipValidate);
+            let skip_validate =
+                simulation_flags.contains(&SimulationFlagForEstimateFee::SkipValidate);
 
             // If the node is run with transaction validation disabled, then we should not validate
             // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
             let should_validate =
                 !(skip_validate || this.inner.sequencer.backend.config.disable_validate);
-            let flags = SimulationFlag { skip_validate: !should_validate, ..Default::default() };
+            let flags = katana_executor::SimulationFlag {
+                skip_validate: !should_validate,
+                ..Default::default()
+            };
 
             let results = this.estimate_fee_with(transactions, block_id, flags)?;
             Ok(results)
@@ -729,6 +742,160 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 });
 
             status.ok_or(Error::from(StarknetApiError::TxnHashNotFound))
+        })
+        .await
+    }
+
+    async fn simulate_transactions(
+        &self,
+        block_id: BlockIdOrTag,
+        transactions: Vec<BroadcastedTx>,
+        simulation_flags: Vec<SimulationFlag>,
+    ) -> RpcResult<Vec<SimulatedTransaction>> {
+        self.on_cpu_blocking_task(move |this| {
+            let chain_id = this.inner.sequencer.chain_id();
+
+            let executables = transactions
+                .into_iter()
+                .map(|tx| {
+                    let tx = match tx {
+                        BroadcastedTx::Invoke(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::Invoke(tx.into_tx_with_chain_id(chain_id)),
+                                is_query,
+                            )
+                        }
+                        BroadcastedTx::Declare(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::Declare(
+                                    tx.try_into_tx_with_chain_id(chain_id)
+                                        .map_err(|_| StarknetApiError::InvalidContractClass)?,
+                                ),
+                                is_query,
+                            )
+                        }
+                        BroadcastedTx::DeployAccount(tx) => {
+                            let is_query = tx.is_query();
+                            ExecutableTxWithHash::new_query(
+                                ExecutableTx::DeployAccount(tx.into_tx_with_chain_id(chain_id)),
+                                is_query,
+                            )
+                        }
+                    };
+                    Result::<ExecutableTxWithHash, StarknetApiError>::Ok(tx)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            // If the node is run with transaction validation disabled, then we should not validate
+            // even if the `SKIP_VALIDATE` flag is not set.
+            let should_validate = !(simulation_flags.contains(&SimulationFlag::SkipValidate)
+                || this.inner.sequencer.backend.config.disable_validate);
+            // If the node is run with fee charge disabled, then we should disable charing fees even
+            // if the `SKIP_FEE_CHARGE` flag is not set.
+            let should_skip_fee = !(simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
+                || this.inner.sequencer.backend.config.disable_fee);
+
+            let flags = katana_executor::SimulationFlag {
+                skip_validate: !should_validate,
+                skip_fee_transfer: !should_skip_fee,
+                ..Default::default()
+            };
+
+            let sequencer = &this.inner.sequencer;
+            // get the state and block env at the specified block for execution
+            let state = sequencer.state(&block_id).map_err(StarknetApiError::from)?;
+            let env = sequencer
+                .block_env_at(block_id)
+                .map_err(StarknetApiError::from)?
+                .ok_or(StarknetApiError::BlockNotFound)?;
+
+            // create the executor
+            let executor = sequencer.backend.executor_factory.with_state_and_block_env(state, env);
+            let results = executor.simulate(executables, flags);
+
+            let mut simulated = Vec::with_capacity(results.len());
+            for (i, ResultAndStates { result, .. }) in results.into_iter().enumerate() {
+                match result {
+                    ExecutionResult::Success { trace, fee, receipt } => {
+                        let fee_transfer_invocation =
+                            trace.fee_transfer_call_info.map(|f| FunctionInvocation::from(f).0);
+                        let validate_invocation =
+                            trace.validate_call_info.map(|f| FunctionInvocation::from(f).0);
+                        let execute_invocation =
+                            trace.execute_call_info.map(|f| FunctionInvocation::from(f).0);
+                        let revert_reason = trace.revert_error;
+                        // TODO: compute the state diff
+                        let state_diff = None;
+
+                        let transaction_trace = match receipt {
+                            Receipt::Invoke(_) => {
+                                TransactionTrace::Invoke(InvokeTransactionTrace {
+                                    fee_transfer_invocation,
+                                    validate_invocation,
+                                    state_diff,
+                                    execute_invocation: if let Some(revert_reason) = revert_reason {
+                                        ExecuteInvocation::Reverted(RevertedInvocation {
+                                            revert_reason,
+                                        })
+                                    } else {
+                                        ExecuteInvocation::Success(
+                                            execute_invocation
+                                                .expect("should exist if not reverted"),
+                                        )
+                                    },
+                                })
+                            }
+
+                            Receipt::Declare(_) => {
+                                TransactionTrace::Declare(DeclareTransactionTrace {
+                                    fee_transfer_invocation,
+                                    validate_invocation,
+                                    state_diff,
+                                })
+                            }
+
+                            Receipt::DeployAccount(_) => {
+                                TransactionTrace::DeployAccount(DeployAccountTransactionTrace {
+                                    fee_transfer_invocation,
+                                    validate_invocation,
+                                    state_diff,
+                                    constructor_invocation: execute_invocation
+                                        .expect("should exist bcs tx succeed"),
+                                })
+                            }
+
+                            Receipt::L1Handler(_) => {
+                                TransactionTrace::L1Handler(L1HandlerTransactionTrace {
+                                    state_diff,
+                                    function_invocation: execute_invocation
+                                        .expect("should exist bcs tx succeed"),
+                                })
+                            }
+                        };
+
+                        simulated.push(SimulatedTransaction {
+                            transaction_trace,
+                            fee_estimation: FeeEstimate {
+                                unit: fee.unit,
+                                gas_price: fee.gas_price.into(),
+                                overall_fee: fee.overall_fee.into(),
+                                gas_consumed: fee.gas_consumed.into(),
+                            },
+                        })
+                    }
+
+                    ExecutionResult::Failed { error } => {
+                        return Err(Error::from(StarknetApiError::TransactionExecutionError {
+                            transaction_index: i,
+                            execution_error: error.to_string(),
+                        }));
+                    }
+                }
+            }
+
+            Ok(simulated)
         })
         .await
     }

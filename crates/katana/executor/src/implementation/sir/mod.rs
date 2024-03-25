@@ -3,6 +3,8 @@ mod output;
 mod state;
 pub mod utils;
 
+use std::sync::Arc;
+
 use katana_primitives::block::{ExecutableBlock, PartialHeader};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
@@ -13,13 +15,14 @@ use sir::definitions::block_context::{self, BlockContext};
 use sir::execution::TransactionExecutionInfo;
 use sir::state::cached_state;
 use sir::state::contract_class_cache::PermanentContractClassCache;
-use std::sync::Arc;
 use tracing::info;
 
 use self::output::receipt_from_exec_info;
 use self::state::CachedState;
-use crate::abstraction::{BlockExecutor, ExecutorExt, ExecutorFactory};
-use crate::abstraction::{ExecutionOutput, ExecutorResult, SimulationFlag, StateProviderDb};
+use crate::abstraction::{
+    BlockExecutor, ExecutionOutput, ExecutorExt, ExecutorFactory, ExecutorResult, SimulationFlag,
+    StateProviderDb,
+};
 use crate::{EntryPointCall, ExecutionError, ExecutionResult, ResultAndStates};
 
 /// A factory for creating [StarknetVMProcessor] instances.

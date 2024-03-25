@@ -51,6 +51,8 @@ pub enum AbstractManifestError {
     #[error(transparent)]
     Model(#[from] ModelError),
     #[error(transparent)]
+    TOML(#[from] toml::de::Error),
+    #[error(transparent)]
     IO(#[from] io::Error),
 }
 
@@ -161,6 +163,11 @@ pub struct Contract {
     pub abi: Option<Utf8PathBuf>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
+    #[serde_as(as = "Option<UfeHex>")]
+    pub transaction_hash: Option<FieldElement>,
+    pub block_number: Option<u64>,
+    // used by World contract
+    pub seed: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -174,15 +181,19 @@ pub struct BaseManifest {
 impl From<Manifest<Class>> for Manifest<Contract> {
     fn from(value: Manifest<Class>) -> Self {
         Manifest::new(
-            Contract { class_hash: value.inner.class_hash, abi: value.inner.abi, address: None },
+            Contract {
+                class_hash: value.inner.class_hash,
+                abi: value.inner.abi,
+                ..Default::default()
+            },
             value.name,
         )
     }
 }
 
-impl From<BaseManifest> for DeployedManifest {
+impl From<BaseManifest> for DeploymentManifest {
     fn from(value: BaseManifest) -> Self {
-        DeployedManifest {
+        DeploymentManifest {
             world: value.world.into(),
             base: value.base,
             contracts: value.contracts,
@@ -192,7 +203,7 @@ impl From<BaseManifest> for DeployedManifest {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct DeployedManifest {
+pub struct DeploymentManifest {
     pub world: Manifest<Contract>,
     pub base: Manifest<Class>,
     pub contracts: Vec<Manifest<DojoContract>>,
@@ -242,11 +253,8 @@ impl BaseManifest {
         let contract_dir = path.join("contracts");
         let model_dir = path.join("models");
 
-        let world: Manifest<Class> =
-            toml::from_str(&fs::read_to_string(path.join("world.toml"))?).unwrap();
-        let base: Manifest<Class> =
-            toml::from_str(&fs::read_to_string(path.join("base.toml"))?).unwrap();
-
+        let world: Manifest<Class> = toml::from_str(&fs::read_to_string(path.join("world.toml"))?)?;
+        let base: Manifest<Class> = toml::from_str(&fs::read_to_string(path.join("base.toml"))?)?;
         let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
         let models = elements_from_path::<DojoModel>(&model_dir)?;
 
@@ -279,11 +287,17 @@ impl OverlayManifest {
     }
 }
 
-impl DeployedManifest {
+impl DeploymentManifest {
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
         let manifest: Self = toml::from_str(&fs::read_to_string(path)?).unwrap();
 
         Ok(manifest)
+    }
+
+    pub fn merge_from_previous(&mut self, previous: DeploymentManifest) {
+        self.world.inner.transaction_hash = previous.world.inner.transaction_hash;
+        self.world.inner.block_number = previous.world.inner.block_number;
+        self.world.inner.seed = previous.world.inner.seed;
     }
 
     pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
@@ -324,11 +338,15 @@ impl DeployedManifest {
         let (models, contracts) =
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
 
-        Ok(DeployedManifest {
+        Ok(DeploymentManifest {
             models,
             contracts,
             world: Manifest::new(
-                Contract { address: Some(world_address), class_hash: world_class_hash, abi: None },
+                Contract {
+                    address: Some(world_address),
+                    class_hash: world_class_hash,
+                    ..Default::default()
+                },
                 WORLD_CONTRACT_NAME.into(),
             ),
             base: Manifest::new(
@@ -346,11 +364,11 @@ impl DeployedManifest {
 //     async fn load_from_remote(
 //         provider: P,
 //         world_address: FieldElement,
-//     ) -> Result<DeployedManifest, AbstractManifestError>;
+//     ) -> Result<DeploymentManifest, AbstractManifestError>;
 // }
 
 // #[async_trait]
-// impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeployedManifest {}
+// impl<P: Provider + Sync + Send + 'static> RemoteLoadable<P> for DeploymentManifest {}
 
 async fn get_remote_models_and_contracts<P: Provider>(
     world: FieldElement,
@@ -566,11 +584,18 @@ where
 {
     let mut elements = vec![];
 
-    for entry in path.read_dir()? {
-        let entry = entry?;
-        let path = entry.path();
+    let mut entries = path
+        .read_dir()?
+        .map(|entry| entry.map(|e| e.path()))
+        .collect::<Result<Vec<_>, io::Error>>()?;
+
+    // `read_dir` doesn't guarantee any order, so we sort the entries ourself.
+    // see: https://doc.rust-lang.org/std/fs/fn.read_dir.html#platform-specific-behavior
+    entries.sort();
+
+    for path in entries {
         if path.is_file() {
-            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            let manifest: Manifest<T> = toml::from_str(&fs::read_to_string(path)?)?;
             elements.push(manifest);
         } else {
             continue;
@@ -590,7 +615,7 @@ where
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
-            let manifest: T = toml::from_str(&fs::read_to_string(path)?).unwrap();
+            let manifest: T = toml::from_str(&fs::read_to_string(path)?)?;
             elements.push(manifest);
         } else {
             continue;

@@ -1,14 +1,14 @@
 use anyhow::Result;
 use clap::Args;
-use dojo_world::metadata::dojo_metadata_from_workspace;
 use scarb::core::Config;
+use sozo_ops::execute;
 use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use crate::ops::execute;
+use crate::utils;
 
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
@@ -41,14 +41,20 @@ pub struct ExecuteArgs {
 
 impl ExecuteArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = if config.manifest_path().exists() {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let env_metadata = utils::load_metadata_from_config(config)?;
 
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
-        } else {
-            None
-        };
+        config.tokio_handle().block_on(async {
+            let world = utils::world_from_env_metadata(
+                self.world,
+                self.account,
+                self.starknet,
+                &env_metadata,
+            )
+            .await
+            .unwrap();
+            let tx_config = self.transaction.into();
 
-        config.tokio_handle().block_on(execute::execute(self, env_metadata))
+            execute::execute(self.contract, self.entrypoint, self.calldata, world, tx_config).await
+        })
     }
 }

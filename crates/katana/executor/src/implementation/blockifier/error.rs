@@ -1,15 +1,12 @@
-use blockifier::{
-    execution::{
-        errors::{EntryPointExecutionError, PreExecutionError},
-        execution_utils::format_panic_data,
-    },
-    state::errors::StateError,
-    transaction::errors::{
-        TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
-    },
+use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
+use blockifier::execution::execution_utils::format_panic_data;
+use blockifier::state::errors::StateError;
+use blockifier::transaction::errors::{
+    TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
 };
 
-use crate::{implementation::blockifier::utils::to_address, ExecutionError};
+use crate::implementation::blockifier::utils::to_address;
+use crate::ExecutionError;
 
 impl From<TransactionExecutionError> for ExecutionError {
     fn from(error: TransactionExecutionError) -> Self {

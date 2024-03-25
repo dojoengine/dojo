@@ -8,9 +8,10 @@ use dojo_test_utils::sequencer::{
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::strategy::MigrationStrategy;
 use scarb::ops;
-use sozo::ops::migration::execute_strategy;
+use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
@@ -22,11 +23,11 @@ use crate::sql::Sql;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
-    db: &mut Sql,
+    db: Sql,
     provider: P,
     migration: MigrationStrategy,
     sequencer: TestSequencer,
-) -> Result<Engine<'_, P>, Box<dyn std::error::Error>>
+) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
     P: Provider + Send + Sync,
 {
@@ -72,31 +73,31 @@ async fn test_load_from_remote() {
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
-    let _ = bootstrap_engine(world, &mut db, &provider, migration, sequencer).await;
+    let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 2);
+    assert_eq!(models.len(), 3);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Position'",
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
     )
     .fetch_one(&pool)
     .await
     .unwrap();
 
-    assert_eq!(id, "Position");
+    assert_eq!(id, format!("{:#x}", get_selector_from_name("Position").unwrap()));
     assert_eq!(name, "Position");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Moves'",
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Moves'",
     )
     .fetch_one(&pool)
     .await
     .unwrap();
 
-    assert_eq!(id, "Moves");
+    assert_eq!(id, format!("{:#x}", get_selector_from_name("Moves").unwrap()));
     assert_eq!(name, "Moves");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
