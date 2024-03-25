@@ -161,7 +161,6 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         while let Some(token) = &events_pages.last().unwrap().continuation_token {
             events_pages.push(get_events(Some(token.clone())).await?);
         }
-
         let mut last_block: u64 = 0;
         for events_page in events_pages {
             for event in events_page.events {
@@ -190,7 +189,6 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
 
             for (transaction, receipt) in transactions.transactions {
                 self.process_transaction_and_receipt(
-                    transaction.transaction_hash().clone(),
                     &transaction,
                     Some(receipt),
                     block_number,
@@ -227,7 +225,6 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
 
         let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
         self.process_transaction_and_receipt(
-            event.transaction_hash,
             &transaction,
             None,
             block_number,
@@ -239,11 +236,13 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
 
     async fn process_transaction_and_receipt(
         &mut self,
-        transaction_hash: FieldElement,
         transaction: &Transaction,
         receipt: Option<MaybePendingTransactionReceipt>,
         block_number: u64,
     ) -> Result<()> {
+        let transaction_hash = transaction.transaction_hash();
+        println!("Processing transaction: {:?}", transaction_hash);
+
         let receipt = receipt.unwrap_or(
             match self.provider.get_transaction_receipt(transaction_hash).await {
                 Ok(receipt) => receipt,
@@ -289,7 +288,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                     self,
                     block_number,
                     &receipt,
-                    transaction_hash,
+                    transaction_hash.clone(),
                     transaction,
                 )
                 .await?;
