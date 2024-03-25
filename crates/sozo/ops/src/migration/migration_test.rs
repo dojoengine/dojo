@@ -5,9 +5,10 @@ use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
-use dojo_world::manifest::{BaseManifest, DeployedManifest};
+use dojo_world::manifest::{BaseManifest, DeploymentManifest};
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
+use dojo_world::migration::TxConfig;
 use scarb::ops;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
@@ -17,16 +18,15 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::{LocalWallet, SigningKey};
 
-use crate::commands::options::transaction::TransactionOptions;
-use crate::ops::migration::execute_strategy;
+use crate::migration::execute_strategy;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_auto_mine() {
-    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let base_dir = "../../examples/spawn-and-move";
+    let base_dir = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base_dir);
     let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
 
@@ -43,11 +43,11 @@ async fn migrate_with_auto_mine() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_block_time() {
-    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let base = "../../examples/spawn-and-move";
+    let base = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
     let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
 
@@ -66,11 +66,11 @@ async fn migrate_with_block_time() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn migrate_with_small_fee_multiplier_will_fail() {
-    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    let base = "../../examples/spawn-and-move";
+    let base = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
     let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
 
@@ -95,7 +95,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
             &ws,
             &migration,
             &account,
-            Some(TransactionOptions { fee_estimate_multiplier: Some(0.2f64), wait: false }),
+            Some(TxConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false }),
         )
         .await
         .is_err()
@@ -105,7 +105,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
 #[test]
 fn migrate_world_without_seed_will_fail() {
-    let base = "../../examples/spawn-and-move";
+    let base = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
     let manifest = BaseManifest::load_from_path(
         &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
@@ -119,10 +119,10 @@ fn migrate_world_without_seed_will_fail() {
 #[ignore]
 #[tokio::test]
 async fn migration_from_remote() {
-    let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    let base = "../../examples/spawn-and-move";
+    let base = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
 
     let sequencer =
@@ -158,7 +158,7 @@ async fn migration_from_remote() {
         &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
     )
     .unwrap();
-    let remote_manifest = DeployedManifest::load_from_remote(
+    let remote_manifest = DeploymentManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),
     )

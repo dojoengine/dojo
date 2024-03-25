@@ -28,7 +28,7 @@ fn no_diff_when_local_and_remote_are_equal() {
     let local =
         BaseManifest { models, world: world_contract, base: base_contract, contracts: vec![] };
 
-    let mut remote: DeployedManifest = local.clone().into();
+    let mut remote: DeploymentManifest = local.clone().into();
     remote.models = remote_models;
 
     let diff = WorldDiff::compute(local, Some(remote));
@@ -93,7 +93,7 @@ fn diff_when_local_and_remote_are_different() {
 
     let local = BaseManifest { models, contracts, world: world_contract, base: base_contract };
 
-    let mut remote: DeployedManifest = local.clone().into();
+    let mut remote: DeploymentManifest = local.clone().into();
     remote.models = remote_models;
     remote.world.inner.class_hash = 44_u32.into();
     remote.models[1].inner.class_hash = 33_u32.into();

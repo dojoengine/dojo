@@ -12,7 +12,9 @@ use torii_core::types::Entity;
 
 use super::inputs::keys_input::keys_argument;
 use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
-use crate::constants::{ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN};
+use crate::constants::{
+    DATETIME_FORMAT, ENTITY_NAMES, ENTITY_TABLE, ENTITY_TYPE_NAME, EVENT_ID_COLUMN, ID_COLUMN,
+};
 use crate::mapping::ENTITY_TYPE_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 use crate::query::{type_mapping_query, value_mapping_from_row};
@@ -94,11 +96,11 @@ impl EntityObject {
             (Name::new("eventId"), Value::from(entity.event_id)),
             (
                 Name::new("createdAt"),
-                Value::from(entity.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Value::from(entity.created_at.format(DATETIME_FORMAT).to_string()),
             ),
             (
                 Name::new("updatedAt"),
-                Value::from(entity.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+                Value::from(entity.updated_at.format(DATETIME_FORMAT).to_string()),
             ),
         ])
     }
@@ -112,16 +114,27 @@ fn model_union_field() -> Field {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
                     let entity_id = extract::<String>(indexmap, "id")?;
-                    let model_ids: Vec<(String,)> =
-                        sqlx::query_as("SELECT model_id from entity_model WHERE entity_id = ?")
-                            .bind(&entity_id)
-                            .fetch_all(&mut *conn)
-                            .await?;
+                    // fetch name from the models table
+                    // using the model id (hashed model name)
+                    let model_ids: Vec<(String, String)> = sqlx::query_as(
+                        "SELECT id, name
+                        FROM models
+                        WHERE id = (
+                            SELECT model_id
+                            FROM entity_model
+                            WHERE entity_id = ?
+                        )",
+                    )
+                    .bind(&entity_id)
+                    .fetch_all(&mut *conn)
+                    .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (name,) in model_ids {
-                        let type_mapping = type_mapping_query(&mut conn, &name).await?;
+                    for (id, name) in model_ids {
+                        // the model id in the model mmeebrs table is the hashed model name (id)
+                        let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
+                        // but the table name for the model data is the unhashed model name
                         let data = model_data_recursive_query(
                             &mut conn,
                             vec![name.clone()],

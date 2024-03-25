@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use async_graphql::dynamic::TypeRef;
 use async_graphql::{Name, Value};
+use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
 use dojo_types::primitive::{Primitive, SqlType};
 use sqlx::sqlite::SqliteRow;
@@ -70,12 +71,19 @@ fn member_to_type_data(member: &ModelMember, nested_members: &[&ModelMember]) ->
     match member.type_enum.as_str() {
         "Primitive" => TypeData::Simple(TypeRef::named(&member.ty)),
         "Enum" => TypeData::Simple(TypeRef::named("Enum")),
-        _ => parse_nested_type(&member.model_id, &member.name, &member.ty, nested_members),
+        _ => parse_nested_type(
+            &member.model_id,
+            &member.id,
+            &member.name,
+            &member.ty,
+            nested_members,
+        ),
     }
 }
 
 fn parse_nested_type(
     model_id: &str,
+    member_id: &str,
     member_name: &str,
     member_type: &str,
     nested_members: &[&ModelMember],
@@ -91,7 +99,9 @@ fn parse_nested_type(
             }
         })
         .collect();
-    let namespaced = format!("{}_{}", model_id, member_type);
+
+    let model_name = member_id.split('$').next().unwrap();
+    let namespaced = format!("{}_{}", model_name, member_type);
     TypeData::Nested((TypeRef::named(namespaced), nested_mapping))
 }
 
@@ -163,7 +173,22 @@ fn fetch_value(
                 row.try_get::<String, &str>(&column_name).map(Value::from)?,
             )),
         },
-        // fetch everything else as non-formated string
-        _ => Ok(row.try_get::<String, &str>(&column_name).map(Value::from)?),
+        // fetch everything else
+        _ => {
+            let value = match type_name {
+                "DateTime" => {
+                    let dt = row
+                        .try_get::<DateTime<Utc>, &str>(&column_name)
+                        .expect("Should be a stored as UTC Datetime")
+                        .to_rfc3339();
+                    Value::from(dt)
+                }
+                _ => {
+                    let s = row.try_get::<String, &str>(&column_name)?;
+                    Value::from(s)
+                }
+            };
+            Ok(value)
+        }
     }
 }

@@ -1,10 +1,10 @@
 pub use abigen::model::ModelContractReader;
 use async_trait::async_trait;
-use cainome::cairo_serde::Error as CainomeError;
+use cainome::cairo_serde::{ContractAddress, Error as CainomeError};
 use dojo_types::packing::{parse_ty, unpack, PackingError, ParseError};
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::Ty;
-use starknet::core::types::{FieldElement, StarknetError};
+use starknet::core::types::FieldElement;
 use starknet::core::utils::{
     get_selector_from_name, CairoShortStringToFeltError, NonAsciiNameError,
     ParseCairoShortStringError,
@@ -50,6 +50,7 @@ pub enum ModelError {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
+    fn name(&self) -> String;
     fn class_hash(&self) -> FieldElement;
     fn contract_address(&self) -> FieldElement;
     async fn schema(&self) -> Result<Ty, E>;
@@ -82,12 +83,13 @@ where
         let name = get_selector_from_name(name)?;
 
         let (class_hash, contract_address) =
-            world.model(&name).block_id(world.block_id).call().await.map_err(|err| match err {
-                CainomeError::Provider(ProviderError::StarknetError(
-                    StarknetError::ContractNotFound,
-                )) => ModelError::ModelNotFound,
-                err => err.into(),
-            })?;
+            world.model(&name).block_id(world.block_id).call().await?;
+
+        // World Cairo contract won't raise an error in case of unknown/unregistered
+        // model so raise an error here in case of zero address.
+        if contract_address == ContractAddress(FieldElement::ZERO) {
+            return Err(ModelError::ModelNotFound);
+        }
 
         let model_reader = ModelContractReader::new(contract_address.into(), world.provider());
 
@@ -149,6 +151,10 @@ impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
 where
     P: Provider + Sync + Send,
 {
+    fn name(&self) -> String {
+        self.name.to_string()
+    }
+
     fn class_hash(&self) -> FieldElement {
         self.class_hash
     }

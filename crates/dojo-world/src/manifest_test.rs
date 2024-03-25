@@ -13,7 +13,7 @@ use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
 use super::{parse_contracts_events, BaseManifest, DojoContract, DojoModel};
 use crate::contracts::world::test::deploy_world;
-use crate::manifest::{parse_models_events, AbstractManifestError, DeployedManifest, Manifest};
+use crate::manifest::{parse_models_events, AbstractManifestError, DeploymentManifest, Manifest};
 use crate::migration::world::WorldDiff;
 
 #[tokio::test]
@@ -32,7 +32,7 @@ async fn manifest_from_remote_throw_error_on_not_deployed() {
     );
 
     let rpc = JsonRpcClient::new(mock_transport);
-    let err = DeployedManifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
+    let err = DeploymentManifest::load_from_remote(rpc, FieldElement::ONE).await.unwrap_err();
 
     match err {
         AbstractManifestError::RemoteWorldNotFound => {
@@ -376,12 +376,12 @@ async fn fetch_remote_manifest() {
     let local_manifest =
         BaseManifest::load_from_path(&manifest_path.join(MANIFESTS_DIR).join(BASE_DIR)).unwrap();
     let remote_manifest =
-        DeployedManifest::load_from_remote(provider, world_address).await.unwrap();
+        DeploymentManifest::load_from_remote(provider, world_address).await.unwrap();
 
-    assert_eq!(local_manifest.models.len(), 2);
+    assert_eq!(local_manifest.models.len(), 3);
     assert_eq!(local_manifest.contracts.len(), 1);
 
-    assert_eq!(remote_manifest.models.len(), 2);
+    assert_eq!(remote_manifest.models.len(), 3);
     assert_eq!(remote_manifest.contracts.len(), 1);
 
     // compute diff from local and remote manifest

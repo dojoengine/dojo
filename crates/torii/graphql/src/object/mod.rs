@@ -1,6 +1,7 @@
 pub mod connection;
 pub mod entity;
 pub mod event;
+pub mod event_message;
 pub mod inputs;
 pub mod metadata;
 pub mod model;

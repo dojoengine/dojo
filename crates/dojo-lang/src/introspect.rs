@@ -144,6 +144,26 @@ pub fn handle_introspect_struct(
     handle_introspect_internal(db, name, struct_ast.generic_params(db), vec![], 0, type_ty, members)
 }
 
+/// Generates enum arm type introspect
+pub fn handle_enum_arm_type(ty_name: &String, is_primitive: bool) -> (String, String) {
+    let serialized = if is_primitive {
+        format!(
+            "dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('{}')
+            )",
+            ty_name
+        )
+    } else {
+        format!(
+            "dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<{}>::ty()
+            )",
+            ty_name
+        )
+    };
+    (serialized, ty_name.to_string())
+}
+
 /// A handler for Dojo code derives Introspect for an enum
 /// Parameters:
 /// * db: The semantic database.
@@ -155,6 +175,8 @@ pub fn handle_introspect_enum(
     diagnostics: &mut Vec<PluginDiagnostic>,
     enum_ast: ItemEnum,
 ) -> RewriteNode {
+    let primitive_sizes = primitive_type_introspection();
+
     let name = enum_ast.name(db).text(db).into();
 
     let variant_type = enum_ast.variants(db).elements(db).first().unwrap().type_clause(db);
@@ -167,29 +189,15 @@ pub fn handle_introspect_enum(
             let args = (*paren_list.expressions(db)).elements(db);
             args.iter().for_each(|arg| {
                 let ty_name = arg.as_syntax_node().get_text(db);
-                variant_type_arr.push((
-                    // Not using Ty right now, but still keeping it for later.
-                    format!(
-                        "dojo::database::introspect::serialize_member_type(
-                            @dojo::database::introspect::Ty::Primitive('{}')
-                        )",
-                        ty_name
-                    ),
-                    ty_name,
-                ));
+                let is_primitive = primitive_sizes.get(&ty_name).is_some();
+
+                variant_type_arr.push(handle_enum_arm_type(&ty_name, is_primitive));
             });
         } else if let Expr::Path(type_path) = types_tuple.ty(db) {
             let ty_name = type_path.as_syntax_node().get_text(db);
-            variant_type_arr.push((
-                // Not using Ty right now, but still keeping it for later.
-                format!(
-                    "dojo::database::introspect::serialize_member_type(
-                        @dojo::database::introspect::Introspect::<{}>::ty()
-                    )",
-                    ty_name
-                ),
-                ty_name,
-            ));
+            let is_primitive = primitive_sizes.get(&ty_name).is_some();
+
+            variant_type_arr.push(handle_enum_arm_type(&ty_name, is_primitive));
         } else {
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: types_tuple.stable_ptr().0,

@@ -5,7 +5,7 @@ use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::{select, StreamExt};
-use libp2p::gossipsub::{self, IdentTopic, MessageId, TopicHash};
+use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 use libp2p::{identify, identity, ping, Multiaddr, PeerId};
 #[cfg(not(target_arch = "wasm32"))]
@@ -16,7 +16,7 @@ pub mod events;
 use crate::client::events::ClientEvent;
 use crate::constants;
 use crate::errors::Error;
-use crate::types::{ClientMessage, ServerMessage};
+use crate::types::Message;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClientEvent")]
@@ -27,35 +27,18 @@ struct Behaviour {
 }
 
 pub struct RelayClient {
-    pub message_receiver: Arc<Mutex<UnboundedReceiver<Message>>>,
     pub command_sender: CommandSender,
     pub event_loop: Arc<Mutex<EventLoop>>,
 }
 
 pub struct EventLoop {
     swarm: Swarm<Behaviour>,
-    message_sender: UnboundedSender<Message>,
     command_receiver: UnboundedReceiver<Command>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Message {
-    // PeerId of the relay that propagated the message
-    pub propagation_source: PeerId,
-    // Peer that published the message
-    pub source: PeerId,
-    pub message_id: MessageId,
-    // Hash of the topic message was published to
-    pub topic: TopicHash,
-    // Raw message payload
-    pub data: Vec<u8>,
 }
 
 #[derive(Debug)]
 enum Command {
-    Subscribe(String, oneshot::Sender<Result<bool, Error>>),
-    Unsubscribe(String, oneshot::Sender<Result<bool, Error>>),
-    Publish(String, Vec<u8>, oneshot::Sender<Result<MessageId, Error>>),
+    Publish(Message, oneshot::Sender<Result<MessageId, Error>>),
     WaitForRelay(oneshot::Sender<Result<(), Error>>),
 }
 
@@ -102,12 +85,10 @@ impl RelayClient {
         info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
-        let (message_sender, message_receiver) = futures::channel::mpsc::unbounded();
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
         Ok(Self {
             command_sender: CommandSender::new(command_sender),
-            message_receiver: Arc::new(Mutex::new(message_receiver)),
-            event_loop: Arc::new(Mutex::new(EventLoop { swarm, message_sender, command_receiver })),
+            event_loop: Arc::new(Mutex::new(EventLoop { swarm, command_receiver })),
         })
     }
 
@@ -155,12 +136,10 @@ impl RelayClient {
         info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
-        let (message_sender, message_receiver) = futures::channel::mpsc::unbounded();
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
         Ok(Self {
             command_sender: CommandSender::new(command_sender),
-            message_receiver: Arc::new(Mutex::new(message_receiver)),
-            event_loop: Arc::new(Mutex::new(EventLoop { swarm, message_sender, command_receiver })),
+            event_loop: Arc::new(Mutex::new(EventLoop { swarm, command_receiver })),
         })
     }
 }
@@ -174,28 +153,10 @@ impl CommandSender {
         Self { sender }
     }
 
-    pub async fn subscribe(&mut self, room: String) -> Result<bool, Error> {
+    pub async fn publish(&mut self, data: Message) -> Result<MessageId, Error> {
         let (tx, rx) = oneshot::channel();
 
-        self.sender.unbounded_send(Command::Subscribe(room, tx)).expect("Failed to send command");
-
-        rx.await.expect("Failed to receive response")
-    }
-
-    pub async fn unsubscribe(&mut self, room: String) -> Result<bool, Error> {
-        let (tx, rx) = oneshot::channel();
-
-        self.sender.unbounded_send(Command::Unsubscribe(room, tx)).expect("Failed to send command");
-
-        rx.await.expect("Failed to receive response")
-    }
-
-    pub async fn publish(&mut self, topic: String, data: Vec<u8>) -> Result<MessageId, Error> {
-        let (tx, rx) = oneshot::channel();
-
-        self.sender
-            .unbounded_send(Command::Publish(topic, data, tx))
-            .expect("Failed to send command");
+        self.sender.unbounded_send(Command::Publish(data, tx)).expect("Failed to send command");
 
         rx.await.expect("Failed to receive response")
     }
@@ -219,15 +180,9 @@ impl EventLoop {
             select! {
                 command = self.command_receiver.select_next_some() => {
                     match command {
-                        Command::Subscribe(room, sender) => {
-                            sender.send(self.subscribe(&room)).expect("Failed to send response");
-                        },
-                        Command::Unsubscribe(room, sender) => {
-                            sender.send(self.unsubscribe(&room)).expect("Failed to send response");
-                        },
-                        Command::Publish(topic, data, sender) => {
-                            sender.send(self.publish(topic, data)).expect("Failed to send response");
-                        },
+                        Command::Publish(data, sender) => {
+                            sender.send(self.publish(&data)).expect("Failed to send response");
+                        }
                         Command::WaitForRelay(sender) => {
                             if is_relay_ready {
                                 sender.send(Ok(())).expect("Failed to send response");
@@ -239,37 +194,13 @@ impl EventLoop {
                 },
                 event = self.swarm.select_next_some() => {
                     match event {
-                        SwarmEvent::Behaviour(event) => {
-                            match event {
-                                // Handle behaviour events.
-                                ClientEvent::Gossipsub(gossipsub::Event::Message {
-                                    propagation_source: peer_id,
-                                    message_id,
-                                    message,
-                                }) => {
-                                    // deserialize message payload
-                                    let message_payload: ServerMessage = serde_json::from_slice(&message.data)
-                                        .expect("Failed to deserialize message");
+                        SwarmEvent::Behaviour(ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. })) => {
+                            // Handle behaviour events.
+                            info!(target: "torii::relay::client::gossipsub", topic = ?topic, "Relay ready. Received subscription confirmation");
 
-                                    let message = Message {
-                                        propagation_source: peer_id,
-                                        source: PeerId::from_bytes(&message_payload.peer_id).expect("Failed to parse peer id"),
-                                        message_id,
-                                        topic: message.topic,
-                                        data: message_payload.data,
-                                    };
-
-                                    self.message_sender.unbounded_send(message).expect("Failed to send message");
-                                }
-                                ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. }) => {
-                                    info!(target: "torii::relay::client::gossipsub", topic = ?topic, "Relay ready. Received subscription confirmation");
-
-                                    is_relay_ready = true;
-                                    if let Some(tx) = relay_ready_tx.take() {
-                                        tx.send(Ok(())).expect("Failed to send response");
-                                    }
-                                }
-                                _ => {}
+                            is_relay_ready = true;
+                            if let Some(tx) = relay_ready_tx.take() {
+                                tx.send(Ok(())).expect("Failed to send response");
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
@@ -287,23 +218,13 @@ impl EventLoop {
         }
     }
 
-    fn subscribe(&mut self, room: &str) -> Result<bool, Error> {
-        let topic = IdentTopic::new(room);
-        self.swarm.behaviour_mut().gossipsub.subscribe(&topic).map_err(Error::SubscriptionError)
-    }
-
-    fn unsubscribe(&mut self, room: &str) -> Result<bool, Error> {
-        let topic = IdentTopic::new(room);
-        self.swarm.behaviour_mut().gossipsub.unsubscribe(&topic).map_err(Error::PublishError)
-    }
-
-    fn publish(&mut self, topic: String, data: Vec<u8>) -> Result<MessageId, Error> {
+    fn publish(&mut self, data: &Message) -> Result<MessageId, Error> {
         self.swarm
             .behaviour_mut()
             .gossipsub
             .publish(
                 IdentTopic::new(constants::MESSAGING_TOPIC),
-                serde_json::to_string(&ClientMessage { topic, data }).unwrap(),
+                serde_json::to_string(data).unwrap(),
             )
             .map_err(Error::PublishError)
     }

@@ -10,7 +10,7 @@ use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOw
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass, FunctionCall,
-    InvokeTransactionResult, StarknetError,
+    InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
 };
 use starknet::core::utils::{
     get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
@@ -32,6 +32,7 @@ pub type DeclareOutput = DeclareTransactionResult;
 #[derive(Clone, Debug)]
 pub struct DeployOutput {
     pub transaction_hash: FieldElement,
+    pub block_number: Option<u64>,
     pub contract_address: FieldElement,
     pub declare: Option<DeclareOutput>,
 }
@@ -58,6 +59,8 @@ pub enum MigrationError<S> {
     Provider(#[from] ProviderError),
     #[error(transparent)]
     WaitingError(#[from] TransactionWaitingError),
+    #[error(transparent)]
+    ArtifactError(#[from] anyhow::Error),
 }
 
 /// Represents the type of migration that should be performed.
@@ -82,6 +85,8 @@ pub struct TxConfig {
     /// The multiplier for how much the actual transaction max fee should be relative to the
     /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
     pub fee_estimate_multiplier: Option<f64>,
+    pub wait: bool,
+    pub receipt: bool,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -97,7 +102,7 @@ pub trait Declarable {
         S: Signer + Sync + Send,
     {
         let (flattened_class, casm_class_hash) =
-            prepare_contract_declaration_params(self.artifact_path()).unwrap();
+            prepare_contract_declaration_params(self.artifact_path())?;
 
         match account
             .provider()
@@ -111,7 +116,7 @@ pub trait Declarable {
 
         let mut txn = account.declare(Arc::new(flattened_class), casm_class_hash);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
@@ -145,10 +150,7 @@ pub trait Deployable: Declarable + Sync {
         let declare = match self.declare(account, txn_config).await {
             Ok(res) => Some(res),
             Err(MigrationError::ClassAlreadyDeclared) => None,
-            Err(e) => {
-                println!("{:?}", e);
-                return Err(e);
-            }
+            Err(e) => return Err(e),
         };
 
         let base_class_hash = account
@@ -193,16 +195,17 @@ pub trait Deployable: Declarable + Sync {
 
         let mut txn = account.execute(vec![call]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
     }
 
     async fn deploy<P, S>(
@@ -257,16 +260,17 @@ pub trait Deployable: Declarable + Sync {
             to: felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
         }]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier) } = txn_config {
+        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
         let InvokeTransactionResult { transaction_hash } =
             txn.send().await.map_err(MigrationError::Migrator)?;
 
-        TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
+        let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, contract_address, declare })
+        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
     }
 
     fn salt(&self) -> FieldElement;
@@ -297,4 +301,15 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
+}
+
+fn get_block_number_from_receipt(receipt: MaybePendingTransactionReceipt) -> Option<u64> {
+    match receipt {
+        MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
+            TransactionReceipt::Deploy(r) => Some(r.block_number),
+            TransactionReceipt::Invoke(r) => Some(r.block_number),
+            _ => None,
+        },
+        MaybePendingTransactionReceipt::PendingReceipt(_receipt) => None,
+    }
 }

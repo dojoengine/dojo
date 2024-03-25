@@ -3,7 +3,7 @@ use std::num::ParseIntError;
 use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::EnumError;
 use starknet::core::types::{FromByteSliceError, FromStrError};
-use starknet::core::utils::CairoShortStringToFeltError;
+use starknet::core::utils::{CairoShortStringToFeltError, NonAsciiNameError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -21,6 +21,8 @@ pub enum Error {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
+    #[error(transparent)]
+    NonAsciiName(#[from] NonAsciiNameError),
     #[error(transparent)]
     FromStr(#[from] FromStrError),
     #[error(transparent)]

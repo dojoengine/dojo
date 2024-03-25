@@ -10,6 +10,7 @@ use super::object::event::EventObject;
 use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
 use crate::constants::{QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME};
+use crate::object::event_message::EventMessageObject;
 use crate::object::metadata::content::ContentObject;
 use crate::object::metadata::social::SocialObject;
 use crate::object::metadata::MetadataObject;
@@ -104,6 +105,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Union)>
     // predefined objects
     let mut objects: Vec<ObjectVariant> = vec![
         ObjectVariant::Resolvable(Box::new(EntityObject)),
+        ObjectVariant::Resolvable(Box::new(EventMessageObject)),
         ObjectVariant::Resolvable(Box::new(EventObject)),
         ObjectVariant::Resolvable(Box::new(MetadataObject)),
         ObjectVariant::Resolvable(Box::new(ModelObject)),
