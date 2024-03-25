@@ -25,10 +25,10 @@ use starknet::core::{
 
 use provider::{ProviderImplError, KatanaProvider, ProviderError};
 
-use self::transport::JsonRpcTransport;
+use self::{provider::{TransactionsPage, TransactionsPageCursor}, transport::JsonRpcTransport};
 
 #[derive(Debug)]
-pub struct JsonRpcClient<T> {
+pub struct KatanaClient<T> {
     transport: T,
 }
 
@@ -177,13 +177,13 @@ struct Felt(#[serde_as(as = "UfeHex")] pub FieldElement);
 #[derive(Serialize, Deserialize)]
 struct FeltArray(#[serde_as(as = "Vec<UfeHex>")] pub Vec<FieldElement>);
 
-impl<T> JsonRpcClient<T> {
+impl<T> KatanaClient<T> {
     pub fn new(transport: T) -> Self {
         Self { transport }
     }
 }
 
-impl<T> JsonRpcClient<T>
+impl<T> KatanaClient<T>
 where
     T: 'static + JsonRpcTransport + Send + Sync,
 {
@@ -211,7 +211,7 @@ where
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-impl<T> KatanaProvider for JsonRpcClient<T>
+impl<T> KatanaProvider for KatanaClient<T>
 where
     T: 'static + JsonRpcTransport + Sync + Send,
 {

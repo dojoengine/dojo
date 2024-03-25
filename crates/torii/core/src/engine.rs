@@ -185,8 +185,13 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             self.process_block(block_number).await?;
 
             for (transaction, receipt) in transactions.transactions {
-                self.process_transaction_and_receipt(transaction.hash, &transaction.transaction, block_number)
-                    .await?;
+                self.process_transaction_and_receipt(
+                    transaction.hash,
+                    &transaction.transaction,
+                    Some(receipt),
+                    block_number,
+                )
+                .await?;
             }
         }
 
@@ -218,8 +223,13 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         }
 
         let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
-        self.process_transaction_and_receipt(event.transaction_hash, &transaction, block_number)
-            .await?;
+        self.process_transaction_and_receipt(
+            event.transaction_hash,
+            &transaction,
+            None,
+            block_number,
+        )
+        .await?;
 
         Ok(())
     }
@@ -228,23 +238,27 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         &mut self,
         transaction_hash: FieldElement,
         transaction: &Transaction,
-        receipt: &MaybePendingTransactionReceipt,
+        receipt: Option<MaybePendingTransactionReceipt>,
         block_number: u64,
     ) -> Result<()> {
-        let receipt = match self.provider.get_transaction_receipt(transaction_hash).await {
-            Ok(receipt) => match receipt {
-                MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-                    Some(TransactionReceipt::Invoke(receipt))
+        let receipt = receipt.unwrap_or(
+            match self.provider.get_transaction_receipt(transaction_hash).await {
+                Ok(receipt) => receipt,
+                Err(e) => {
+                    error!("getting transaction receipt: {}", e);
+                    return Err(e.into());
                 }
-                MaybePendingTransactionReceipt::Receipt(TransactionReceipt::L1Handler(receipt)) => {
-                    Some(TransactionReceipt::L1Handler(receipt))
-                }
-                _ => None,
             },
-            Err(e) => {
-                error!("getting transaction receipt: {}", e);
-                return Err(e.into());
+        );
+
+        let receipt = match receipt {
+            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
+                Some(TransactionReceipt::Invoke(receipt.clone()))
             }
+            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::L1Handler(receipt)) => {
+                Some(TransactionReceipt::L1Handler(receipt.clone()))
+            }
+            _ => None,
         };
 
         if let Some(receipt) = receipt {

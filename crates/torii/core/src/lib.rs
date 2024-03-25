@@ -13,7 +13,7 @@ pub mod simple_broker;
 pub mod sql;
 pub mod types;
 
-mod provider;
+pub mod provider;
 
 #[allow(dead_code)]
 #[derive(FromRow, Deserialize)]

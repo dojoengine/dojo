@@ -33,6 +33,8 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
+use torii_core::provider::provider::KatanaProvider;
+use torii_core::provider::KatanaClient;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
 use torii_core::types::Model;
@@ -149,7 +151,8 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
-    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc)).into();
+    let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc.clone())).into();
+    let katana_provider: Arc<_> = KatanaClient::new(torii_core::provider::http::HttpTransport::new(args.rpc.clone())).into();
 
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);
@@ -172,7 +175,7 @@ async fn main() -> anyhow::Result<()> {
     let mut engine = Engine::new(
         world,
         db.clone(),
-        &provider,
+        &katana_provider,
         processors,
         EngineConfig {
             start_block: args.start_block,

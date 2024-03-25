@@ -20,6 +20,7 @@ use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::provider::provider::KatanaProvider;
+use crate::provider::KatanaClient;
 use crate::sql::Sql;
 
 pub async fn bootstrap_engine<P, R>(
@@ -55,7 +56,7 @@ where
         None,
     );
 
-    let _ = engine.sync_to_head(0).await?;
+    let _ = engine.sync_to_head(0, false).await?;
 
     Ok(engine)
 }
@@ -78,7 +79,7 @@ async fn test_load_from_remote() {
     let _ = bootstrap_engine(
         world,
         db.clone(),
-        &crate::provider::JsonRpcClient::new(crate::provider::http::HttpTransport::new(
+        &KatanaClient::new(crate::provider::http::HttpTransport::new(
             sequencer.url(),
         )),
         migration,
