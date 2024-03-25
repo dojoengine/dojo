@@ -1,6 +1,11 @@
 use core::fmt;
 use std::num::ParseIntError;
 
+pub type ChunkSize = u64;
+pub type EventContinuationToken = Option<String>;
+pub type EventFilter = starknet::core::types::EventFilter;
+pub type EventsPage = starknet::core::types::EventsPage;
+
 #[derive(PartialEq, Eq, Debug, Default)]
 pub struct ContinuationToken {
     pub block_n: u64,

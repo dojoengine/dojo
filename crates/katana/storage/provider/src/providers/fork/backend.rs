@@ -9,7 +9,7 @@ use futures::channel::mpsc::{channel, Receiver, SendError, Sender};
 use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::{Future, FutureExt};
-use katana_primitives::block::BlockHashOrNumber;
+use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag};
 use katana_primitives::contract::{
     ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
     GenericContractInfo, Nonce, StorageKey, StorageValue,
@@ -18,6 +18,10 @@ use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_inner_compiled_class,
 };
+use katana_primitives::event::{
+    ChunkSize, EventContinuationToken, EventFilter, EventsPage,
+};
+use katana_primitives::transaction::{Transaction, TxHash, TxNumber};
 use katana_primitives::FieldElement;
 use parking_lot::Mutex;
 use starknet::core::types::{BlockId, ContractClass, StarknetError};
@@ -35,6 +39,14 @@ type GetNonceResult = Result<Nonce, ForkedBackendError>;
 type GetStorageResult = Result<StorageValue, ForkedBackendError>;
 type GetClassHashAtResult = Result<ClassHash, ForkedBackendError>;
 type GetClassAtResult = Result<starknet::core::types::ContractClass, ForkedBackendError>;
+type GetEventResult = Result<EventsPage, ForkedBackendError>;
+type GetBlockWithTxHashesResult =
+    Result<starknet::core::types::MaybePendingBlockWithTxHashes, ForkedBackendError>;
+type GetBlockWithTxsResult =
+    Result<starknet::core::types::MaybePendingBlockWithTxs, ForkedBackendError>;
+type GetTransactionResult = Result<Transaction, ForkedBackendError>;
+type GetTransactionReceiptResult =
+    Result<starknet::core::types::MaybePendingTransactionReceipt, ForkedBackendError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ForkedBackendError {
@@ -60,6 +72,12 @@ pub enum BackendRequest {
     GetNonce(ContractAddress, OneshotSender<GetNonceResult>),
     GetClassHashAt(ContractAddress, OneshotSender<GetClassHashAtResult>),
     GetStorage(ContractAddress, StorageKey, OneshotSender<GetStorageResult>),
+    GetEvents(EventFilter, EventContinuationToken, ChunkSize, OneshotSender<GetEventResult>),
+    GetBlockWithTxHash(BlockIdOrTag, OneshotSender<GetBlockWithTxHashesResult>),
+    GetBlockWithTxs(BlockIdOrTag, OneshotSender<GetBlockWithTxsResult>),
+    GetTransactionByBlockIdAndIndex(BlockIdOrTag, TxNumber, OneshotSender<GetTransactionResult>),
+    GetTransactionByHash(TxHash, OneshotSender<GetTransactionResult>),
+    GetTransactionReceipt(TxHash, OneshotSender<GetTransactionReceiptResult>),
 }
 
 type BackendRequestFuture = BoxFuture<'static, ()>;
@@ -138,6 +156,84 @@ impl Backend {
                         .map_err(ForkedBackendError::StarknetProvider);
 
                     sender.send(res).expect("failed to send class result")
+                });
+
+                self.pending_requests.push(fut);
+            }
+
+            BackendRequest::GetEvents(filter, continuation_token, chunks_size, sender) => {
+                let fut = Box::pin(async move {
+                    let res = provider
+                        .get_events(filter, continuation_token, chunks_size)
+                        .await
+                        .map_err(ForkedBackendError::StarknetProvider);
+
+                    sender.send(res).expect("failed to send events result")
+                });
+
+                self.pending_requests.push(fut);
+            }
+
+            BackendRequest::GetBlockWithTxHash(block_id, sender) => {
+                let fut = Box::pin(async move {
+                    let res = provider
+                        .get_block_with_tx_hashes(block_id)
+                        .await
+                        .map_err(ForkedBackendError::StarknetProvider);
+
+                    sender.send(res).expect("failed to send block result")
+                });
+
+                self.pending_requests.push(fut);
+            }
+
+            BackendRequest::GetBlockWithTxs(block_id, sender) => {
+                let fut = Box::pin(async move {
+                    let res = provider
+                        .get_block_with_txs(block_id)
+                        .await
+                        .map_err(ForkedBackendError::StarknetProvider);
+
+                    sender.send(res).expect("failed to send block result")
+                });
+
+                self.pending_requests.push(fut);
+            }
+
+            BackendRequest::GetTransactionByBlockIdAndIndex(block_id, index, sender) => {
+                let fut = Box::pin(async move {
+                    let res = provider
+                        .get_transaction_by_block_id_and_index(block_id, index)
+                        .await
+                        .map_err(ForkedBackendError::StarknetProvider);
+
+                    sender.send(res).expect("failed to send transaction result")
+                });
+
+                self.pending_requests.push(fut);
+            }
+
+            BackendRequest::GetTransactionByHash(transaction_hash, sender) => {
+                let fut = Box::pin(async move {
+                    let res = provider
+                        .get_transaction_by_hash(transaction_hash)
+                        .await
+                        .map_err(ForkedBackendError::StarknetProvider);
+
+                    sender.send(res).expect("failed to send transaction result")
+                });
+
+                self.pending_requests.push(fut);
+            }
+
+            BackendRequest::GetTransactionReceipt(transaction_hash, sender) => {
+                let fut = Box::pin(async move {
+                    let res = provider
+                        .get_transaction_receipt(transaction_hash)
+                        .await
+                        .map_err(ForkedBackendError::StarknetProvider);
+
+                    sender.send(res).expect("failed to send transaction result")
                 });
 
                 self.pending_requests.push(fut);
@@ -312,6 +408,87 @@ impl ForkedBackend {
                     .map_err(|e| ForkedBackendError::ComputeClassHashError(e.to_string()))
             }
         }
+    }
+
+    pub fn do_get_events(
+        &self,
+        filter: EventFilter,
+        continuation_token: Option<String>,
+        chunks_size: ChunkSize,
+    ) -> Result<EventsPage, ForkedBackendError> {
+        trace!(target: "forked_backend", "requesting evetns at filter{filter:#?}, continuation_token {continuation_token:#?}, and chunks_size {chunks_size:#?} ");
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetEvents(filter, continuation_token, chunks_size, sender))
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
+    }
+
+    pub fn do_get_block_with_tx_hashes(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> Result<starknet::core::types::MaybePendingBlockWithTxHashes, ForkedBackendError> {
+        trace!(target: "forked_backend", "requesting block with tx_hashes at block {block_id:#?} ");
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetBlockWithTxHash(block_id, sender))
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
+    }
+
+    pub fn do_get_block_with_txs(
+        &self,
+        block_id: BlockIdOrTag,
+    ) -> Result<starknet::core::types::MaybePendingBlockWithTxs, ForkedBackendError> {
+        trace!(target: "forked_backend", "requesting block with txs at block {block_id:#?} ");
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetBlockWithTxs(block_id, sender))
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
+    }
+
+    pub fn do_get_transaction_by_block_id_and_index(
+        &self,
+        block_id: BlockIdOrTag,
+        index: TxNumber,
+    ) -> Result<Transaction, ForkedBackendError> {
+        trace!(target: "forked_backend", "requesting transaction at block {block_id:#?}, index {index:#?}");
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetTransactionByBlockIdAndIndex(block_id, index, sender))
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
+    }
+
+    pub fn do_get_transaction_by_hash(
+        &self,
+        transaction_hash: TxHash
+    ) -> Result<Transaction, ForkedBackendError> {
+        trace!(target: "forked_backend", "requesting transaction at trasanction hash {transaction_hash:#?} ");
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetTransactionByHash(transaction_hash, sender))
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
+    }
+
+    pub fn do_get_transaction_receipt(
+        &self,
+        transaction_hash: TxHash
+    ) -> Result<starknet::core::types::MaybePendingTransactionReceipt, ForkedBackendError> {
+        trace!(target: "forked_backend", "requesting transaction receipt at trasanction hash {transaction_hash:#?} ");
+        let (sender, rx) = oneshot();
+        self.0
+            .lock()
+            .try_send(BackendRequest::GetTransactionReceipt(transaction_hash, sender))
+            .map_err(|e| e.into_send_error())?;
+        rx.recv()?
     }
 }
 
