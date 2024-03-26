@@ -46,7 +46,13 @@ where
 #[async_trait]
 pub trait BlockProcessor<P: Provider + Sync> {
     fn get_block_number(&self) -> String;
-    async fn process(&self, db: &mut Sql, provider: &P, block_number: u64, block_timestamp: u64) -> Result<(), Error>;
+    async fn process(
+        &self,
+        db: &mut Sql,
+        provider: &P,
+        block_number: u64,
+        block_timestamp: u64,
+    ) -> Result<(), Error>;
 }
 
 #[async_trait]
