@@ -72,6 +72,7 @@ where
             block.clone(),
             Default::default(),
             receipts.clone(),
+            Default::default(),
         )?;
 
         assert_eq!(provider.latest_number().unwrap(), block.block.header.header.number);

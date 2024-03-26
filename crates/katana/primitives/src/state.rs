@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    Nonce, StorageKey, StorageValue,
-};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 
 /// State updates.
 ///
@@ -29,5 +27,5 @@ pub struct StateUpdatesWithDeclaredClasses {
     /// A mapping of class hashes to their sierra classes definition.
     pub declared_sierra_classes: HashMap<ClassHash, FlattenedSierraClass>,
     /// A mapping of class hashes to their compiled classes definition.
-    pub declared_compiled_classes: HashMap<ClassHash, CompiledContractClass>,
+    pub declared_compiled_classes: HashMap<ClassHash, CompiledClass>,
 }

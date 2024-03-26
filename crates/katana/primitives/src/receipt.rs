@@ -109,11 +109,16 @@ impl Receipt {
     ///
     /// A transaction is reverted if the `revert_error` field in the receipt is not `None`.
     pub fn is_reverted(&self) -> bool {
+        self.revert_reason().is_some()
+    }
+
+    /// Returns the revert reason if the transaction is reverted.
+    pub fn revert_reason(&self) -> Option<&str> {
         match self {
-            Receipt::Invoke(rct) => rct.revert_error.is_some(),
-            Receipt::Declare(rct) => rct.revert_error.is_some(),
-            Receipt::L1Handler(rct) => rct.revert_error.is_some(),
-            Receipt::DeployAccount(rct) => rct.revert_error.is_some(),
+            Receipt::Invoke(rct) => rct.revert_error.as_deref(),
+            Receipt::Declare(rct) => rct.revert_error.as_deref(),
+            Receipt::L1Handler(rct) => rct.revert_error.as_deref(),
+            Receipt::DeployAccount(rct) => rct.revert_error.as_deref(),
         }
     }
 

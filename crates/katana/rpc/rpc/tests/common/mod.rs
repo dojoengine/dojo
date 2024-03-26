@@ -5,8 +5,10 @@ use anyhow::{anyhow, Result};
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use katana_primitives::conversion::rpc::CompiledClass;
+use starknet::accounts::Call;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::{FieldElement, FlattenedSierraClass};
+use starknet::core::utils::get_selector_from_name;
 
 pub fn prepare_contract_declaration_params(
     artifact_path: &PathBuf,
@@ -32,4 +34,32 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<FieldElement> {
     let res = serde_json::to_string_pretty(&casm_contract)?;
     let compiled_class: CompiledClass = serde_json::from_str(&res)?;
     Ok(compiled_class.class_hash()?)
+}
+
+// TODO: not sure why this function is not seen as used
+// as prepare_contract_declaration_params is.
+#[allow(dead_code)]
+pub fn build_deploy_cairo1_contract_call(class_hash: FieldElement, salt: FieldElement) -> Call {
+    let constructor_calldata = vec![FieldElement::from(1_u32), FieldElement::from(2_u32)];
+
+    let calldata = [
+        vec![
+            class_hash,                                     // class hash
+            salt,                                           // salt
+            FieldElement::ZERO,                             // unique
+            FieldElement::from(constructor_calldata.len()), // constructor calldata len
+        ],
+        constructor_calldata.clone(),
+    ]
+    .concat();
+
+    Call {
+        calldata,
+        // devnet UDC address
+        to: FieldElement::from_hex_be(
+            "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+        )
+        .unwrap(),
+        selector: get_selector_from_name("deployContract").unwrap(),
+    }
 }

@@ -3,11 +3,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use derive_more::Deref;
 use katana_primitives::chain::ChainId;
-use katana_primitives::contract::{ClassHash, ContractAddress};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
-    legacy_rpc_to_inner_compiled_class,
+    legacy_rpc_to_compiled_class,
 };
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
     DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash,
@@ -23,9 +25,11 @@ use starknet::core::utils::get_contract_address;
 
 use crate::receipt::MaybePendingTxReceipt;
 
+pub const CHUNK_SIZE_DEFAULT: u64 = 100;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedInvokeTx(BroadcastedInvokeTransaction);
+pub struct BroadcastedInvokeTx(pub BroadcastedInvokeTransaction);
 
 impl BroadcastedInvokeTx {
     pub fn is_query(&self) -> bool {
@@ -65,7 +69,7 @@ impl BroadcastedInvokeTx {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedDeclareTx(BroadcastedDeclareTransaction);
+pub struct BroadcastedDeclareTx(pub BroadcastedDeclareTransaction);
 
 impl BroadcastedDeclareTx {
     /// Validates that the provided compiled class hash is computed correctly from the class
@@ -93,7 +97,7 @@ impl BroadcastedDeclareTx {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
                 let (class_hash, compiled_class) =
-                    legacy_rpc_to_inner_compiled_class(&tx.contract_class)?;
+                    legacy_rpc_to_compiled_class(&tx.contract_class)?;
 
                 Ok(DeclareTxWithClass {
                     compiled_class,
@@ -167,7 +171,7 @@ impl BroadcastedDeclareTx {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
-pub struct BroadcastedDeployAccountTx(BroadcastedDeployAccountTransaction);
+pub struct BroadcastedDeployAccountTx(pub BroadcastedDeployAccountTransaction);
 
 impl BroadcastedDeployAccountTx {
     pub fn is_query(&self) -> bool {
@@ -497,14 +501,27 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct TransactionsPageCursor {
     pub block_number: u64,
     pub transaction_index: u64,
+    pub chunk_size: u64,
+}
+
+impl Default for TransactionsPageCursor {
+    fn default() -> Self {
+        Self { block_number: 0, transaction_index: 0, chunk_size: CHUNK_SIZE_DEFAULT }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPage {
     pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
+    pub cursor: TransactionsPageCursor,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionsExecutionsPage {
+    pub transactions_executions: Vec<TxExecInfo>,
     pub cursor: TransactionsPageCursor,
 }

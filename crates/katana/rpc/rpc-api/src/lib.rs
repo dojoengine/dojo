@@ -1,5 +1,6 @@
 pub mod dev;
 pub mod katana;
+pub mod saya;
 pub mod starknet;
 pub mod torii;
 
@@ -10,4 +11,5 @@ pub enum ApiKind {
     Katana,
     Torii,
     Dev,
+    Saya,
 }

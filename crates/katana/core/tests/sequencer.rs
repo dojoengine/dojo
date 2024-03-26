@@ -1,6 +1,7 @@
 use ethers::types::U256;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
+use katana_executor::implementation::noop::NoopExecutorFactory;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
@@ -26,9 +27,10 @@ fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
     )
 }
 
-async fn create_test_sequencer() -> KatanaSequencer {
+async fn create_test_sequencer() -> KatanaSequencer<NoopExecutorFactory> {
+    let executor_factory = NoopExecutorFactory::new();
     let (sequencer_config, starknet_config) = create_test_sequencer_config();
-    KatanaSequencer::new(sequencer_config, starknet_config).await.unwrap()
+    KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await.unwrap()
 }
 
 #[tokio::test]
