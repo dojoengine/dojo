@@ -13,14 +13,14 @@ mod starknet;
 /// Supported verifiers.
 #[derive(Debug)]
 pub enum VerifierIdentifier {
-    HerodotusStarknetSepoia,
+    HerodotusStarknetSepolia,
     LocalStoneVerify,
     StarkwareEthereum,
 }
 
 pub async fn verify(proof: String, verifier: VerifierIdentifier) -> anyhow::Result<String> {
     match verifier {
-        VerifierIdentifier::HerodotusStarknetSepoia => {
+        VerifierIdentifier::HerodotusStarknetSepolia => {
             let serialized_proof = parse_proof(proof).unwrap();
             starknet::starknet_verify(serialized_proof).await
         }

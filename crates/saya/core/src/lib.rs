@@ -168,7 +168,7 @@ impl Saya {
 
         trace!(block_number, "verifying block");
         let transaction_hash =
-            verifier::verify(proof, verifier::VerifierIdentifier::HerodotusStarknetSepoia).await?;
+            verifier::verify(proof, verifier::VerifierIdentifier::HerodotusStarknetSepolia).await?;
 
         trace!(block_number, transaction_hash, "block verified");
 
@@ -194,7 +194,7 @@ mod tests {
         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
         // std::fs::File::create("proof.json").unwrap().write_all(proof.as_bytes()).unwrap();
 
-        let result = verify(proof, VerifierIdentifier::HerodotusStarknetSepoia).await.unwrap();
+        let result = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
 
         println!("Tx: {:?}", result);
     }
