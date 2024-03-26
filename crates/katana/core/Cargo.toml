@@ -55,5 +55,5 @@ hex = "0.4.3"
 tempfile = "3.8.1"
 
 [features]
-messaging = [ "ethers" ]
+messaging = [ ]
 starknet-messaging = [  ]

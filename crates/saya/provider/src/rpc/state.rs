@@ -12,9 +12,9 @@
 //! arrays to then have O(1) search.
 use std::collections::{HashMap, HashSet};
 
-use alloy_primitives::U256;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
+use alloy_primitives::U256;
 use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
     StateDiff, StateUpdate,

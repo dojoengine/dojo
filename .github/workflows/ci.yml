@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.74.0
+  RUST_VERSION: 1.76.0
 
 jobs:
   test:
@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: |       
+      - run: |
           cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
           cargo llvm-cov nextest --no-report -p katana
           cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir

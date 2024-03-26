@@ -17,10 +17,7 @@ saya-provider.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 convert_case.workspace = true
-<<<<<<< HEAD
-=======
 cairo-vm.workspace = true
->>>>>>> origin/main
 flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"

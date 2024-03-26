@@ -841,8 +841,8 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "tokio",
- "zstd",
- "zstd-safe",
+ "zstd 0.13.0",
+ "zstd-safe 7.0.0",
 ]
 
 [[package]]
@@ -1275,7 +1275,7 @@ dependencies = [
 
 [[package]]
 name = "benches"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -1293,6 +1293,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sozo",
+ "sozo-ops",
  "starknet 0.9.0",
  "tokio",
 ]
@@ -1440,7 +1441,7 @@ dependencies = [
  "cairo-lang-runner",
  "cairo-lang-starknet",
  "cairo-lang-utils",
- "cairo-vm",
+ "cairo-vm 0.9.2",
  "ctor",
  "derive_more",
  "indexmap 2.2.5",
@@ -1583,6 +1584,27 @@ name = "bytesize"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3e368af43e418a04d52505cf3dbc23dda4e3407ae2fa99fd0e4f308ce546acc"
+
+[[package]]
+name = "bzip2"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdb116a6ef3f6c3698828873ad02c3014b3c85cadb88496095628e3ef1e347f8"
+dependencies = [
+ "bzip2-sys",
+ "libc",
+]
+
+[[package]]
+name = "bzip2-sys"
+version = "0.1.11+1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "736a955f3fa7875102d57c82b8cac37ec45224a07fd32d58f9f7a186b6cd4cdc"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+]
 
 [[package]]
 name = "cached"
@@ -2028,7 +2050,7 @@ dependencies = [
  "cairo-lang-sierra-type-size",
  "cairo-lang-starknet",
  "cairo-lang-utils",
- "cairo-vm",
+ "cairo-vm 0.9.2",
  "itertools 0.11.0",
  "keccak",
  "num-bigint",
@@ -2346,6 +2368,40 @@ dependencies = [
  "starknet-crypto 0.6.1",
  "starknet-curve 0.4.1",
  "thiserror-no-std",
+]
+
+[[package]]
+name = "cairo-vm"
+version = "1.0.0-rc1"
+source = "git+https://github.com/lambdaclass/cairo-vm?rev=3547089579dd74f815edbc2d1caa91e00fc8a2f7#3547089579dd74f815edbc2d1caa91e00fc8a2f7"
+dependencies = [
+ "anyhow",
+ "ark-ff 0.4.2",
+ "ark-std 0.4.0",
+ "bincode 2.0.0-rc.3",
+ "bitvec",
+ "cairo-lang-casm",
+ "cairo-lang-starknet",
+ "generic-array",
+ "hashbrown 0.14.3",
+ "hex",
+ "keccak",
+ "lazy_static",
+ "mimalloc",
+ "nom",
+ "num-bigint",
+ "num-integer",
+ "num-prime",
+ "num-traits 0.2.18",
+ "rand",
+ "serde",
+ "serde_json",
+ "sha2 0.10.8",
+ "sha3",
+ "starknet-crypto 0.6.1",
+ "starknet-types-core",
+ "thiserror-no-std",
+ "zip",
 ]
 
 [[package]]
@@ -2740,7 +2796,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "reqwest",
@@ -2839,6 +2895,12 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
+
+[[package]]
+name = "constant_time_eq"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "convert_case"
@@ -3463,7 +3525,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "async-trait",
  "cainome 0.1.5",
@@ -3478,15 +3540,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-core"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 
 [[package]]
 name = "dojo-lang"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3536,7 +3598,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3558,7 +3620,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3572,6 +3634,7 @@ dependencies = [
  "dojo-world",
  "jsonrpsee 0.16.3",
  "katana-core",
+ "katana-executor",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
@@ -3591,7 +3654,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -3606,7 +3669,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3641,7 +3704,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "cairo-lang-starknet",
  "camino",
@@ -4382,6 +4445,18 @@ dependencies = [
  "libc",
  "wasi",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "getset"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e45727250e75cc04ff2846a66397da8ef2b3db8e40e0cef4df67950a07621eb9"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -6499,24 +6574,27 @@ dependencies = [
  "elliptic-curve",
  "once_cell",
  "sha2 0.10.8",
+ "signature",
 ]
 
 [[package]]
 name = "katana"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "alloy-primitives",
  "anyhow",
  "assert_matches",
+ "cfg-if",
  "clap",
  "clap_complete",
  "common",
  "console",
  "katana-core",
+ "katana-executor",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
- "metrics 0.6.0-alpha.7",
+ "metrics 0.6.0-alpha.8",
  "metrics-process",
  "serde_json",
  "shellexpand",
@@ -6529,7 +6607,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -6537,7 +6615,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6547,7 +6625,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6561,11 +6639,11 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "async-trait",
- "blockifier",
  "cairo-lang-casm",
  "cairo-lang-starknet",
- "cairo-vm",
+ "cairo-vm 0.9.2",
  "convert_case 0.6.0",
+ "derive_more",
  "flate2",
  "futures",
  "hex",
@@ -6574,6 +6652,7 @@ dependencies = [
  "katana-executor",
  "katana-primitives",
  "katana-provider",
+ "katana-tasks",
  "lazy_static",
  "parking_lot 0.12.1",
  "primitive-types",
@@ -6593,12 +6672,11 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
- "blockifier",
  "cairo-lang-starknet",
- "cairo-vm",
+ "cairo-vm 0.9.2",
  "criterion",
  "katana-primitives",
  "page_size",
@@ -6615,32 +6693,41 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "blockifier",
- "cairo-vm",
+ "cairo-lang-sierra",
+ "cairo-vm 0.9.2",
  "convert_case 0.6.0",
  "futures",
  "katana-primitives",
  "katana-provider",
+ "katana-rpc-types",
  "parking_lot 0.12.1",
+ "rstest",
+ "rstest_reuse",
+ "serde_json",
+ "similar-asserts",
  "starknet 0.9.0",
+ "starknet-types-core",
  "starknet_api",
+ "starknet_in_rust",
+ "thiserror",
  "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "katana-primitives"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "alloy-primitives",
  "anyhow",
  "base64 0.21.7",
- "blockifier",
+ "cairo-lang-sierra",
  "cairo-lang-starknet",
- "cairo-vm",
+ "cairo-vm 0.9.2",
  "derive_more",
  "flate2",
  "lazy_static",
@@ -6659,7 +6746,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -6684,7 +6771,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -6718,7 +6805,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -6729,7 +6816,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6737,6 +6824,7 @@ dependencies = [
  "futures",
  "jsonrpsee 0.16.3",
  "katana-core",
+ "katana-executor",
  "katana-primitives",
  "katana-provider",
  "serde",
@@ -6748,7 +6836,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -6760,7 +6848,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -6779,7 +6867,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "futures",
  "rayon",
@@ -6874,6 +6962,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f35c735096c0293d313e8f2a641627472b83d01b937177fe76e5e2708d31e0d"
 dependencies = [
  "regex",
+]
+
+[[package]]
+name = "lambdaworks-crypto"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d4c222d5b2fdc0faf702d3ab361d14589b097f40eac9dc550e27083483edc65"
+dependencies = [
+ "lambdaworks-math",
+ "serde",
+ "sha2 0.10.8",
+ "sha3",
+]
+
+[[package]]
+name = "lambdaworks-math"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ee7dcab3968c71896b8ee4dc829147acc918cffe897af6265b1894527fe3add"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -7662,7 +7772,7 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "hyper",
@@ -8580,6 +8690,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "password-hash"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7676374caaee8a325c9e7a2ae557f216c5563a171d6997b0ef8a65af35147700"
+dependencies = [
+ "base64ct",
+ "rand_core",
+ "subtle",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8616,6 +8737,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83a0692ec44e4cf1ef28ca317f14f8f07da2d95ec3fa01f86e4467b725e60917"
 dependencies = [
  "digest 0.10.7",
+ "hmac",
+ "password-hash",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -9849,7 +9973,7 @@ checksum = "e666a5496a0b2186dbcd0ff6106e29e093c15591bde62c20d3842007c6978a09"
 
 [[package]]
 name = "runner-macro"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "quote",
  "syn 2.0.49",
@@ -10076,7 +10200,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "clap",
@@ -10095,11 +10219,12 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "alloy-primitives",
  "anyhow",
  "async-trait",
+ "cairo-vm 0.9.2",
  "celestia-rpc",
  "celestia-types",
  "convert_case 0.6.0",
@@ -10109,9 +10234,42 @@ dependencies = [
  "katana-executor",
  "katana-primitives",
  "katana-provider",
+ "katana-rpc-types",
  "lazy_static",
  "parking_lot 0.12.1",
  "rand",
+ "saya-provider",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet 0.9.0",
+ "starknet-types-core",
+ "starknet_api",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "saya-provider"
+version = "0.6.0-alpha.8"
+dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "async-trait",
+ "auto_impl",
+ "convert_case 0.6.0",
+ "flate2",
+ "futures",
+ "jsonrpsee 0.16.3",
+ "katana-db",
+ "katana-executor",
+ "katana-primitives",
+ "katana-provider",
+ "katana-rpc-api",
+ "katana-rpc-types",
+ "lazy_static",
  "serde",
  "serde_json",
  "serde_with",
@@ -10192,7 +10350,7 @@ dependencies = [
  "windows-sys 0.52.0",
  "xxhash-rust",
  "zip",
- "zstd",
+ "zstd 0.13.0",
 ]
 
 [[package]]
@@ -10858,7 +11016,57 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
+dependencies = [
+ "anyhow",
+ "assert_fs",
+ "async-trait",
+ "cainome 0.1.5",
+ "cairo-lang-compiler",
+ "cairo-lang-defs",
+ "cairo-lang-filesystem",
+ "cairo-lang-plugins",
+ "cairo-lang-project",
+ "cairo-lang-sierra",
+ "cairo-lang-sierra-to-casm",
+ "cairo-lang-starknet",
+ "cairo-lang-test-plugin",
+ "cairo-lang-test-runner",
+ "cairo-lang-utils",
+ "camino",
+ "clap",
+ "clap-verbosity-flag",
+ "clap_complete",
+ "console",
+ "dojo-bindgen",
+ "dojo-lang",
+ "dojo-test-utils",
+ "dojo-types",
+ "dojo-world",
+ "futures",
+ "katana-runner",
+ "notify",
+ "notify-debouncer-mini",
+ "scarb",
+ "scarb-ui",
+ "semver 1.0.22",
+ "serde",
+ "serde_json",
+ "smol_str",
+ "snapbox",
+ "sozo-ops",
+ "starknet 0.9.0",
+ "starknet-crypto 0.6.1",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-log 0.1.4",
+ "url",
+]
+
+[[package]]
+name = "sozo-ops"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -10907,7 +11115,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "starknet 0.9.0",
@@ -11171,6 +11379,22 @@ dependencies = [
 
 [[package]]
 name = "starknet"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "351ffff1bcf6a1dc569a1b330dfd85779e16506e7d4a87baa8be3744cb5415a6"
+dependencies = [
+ "starknet-accounts 0.6.1",
+ "starknet-contract 0.6.0",
+ "starknet-core 0.7.2",
+ "starknet-crypto 0.6.1",
+ "starknet-ff",
+ "starknet-macros",
+ "starknet-providers 0.7.0",
+ "starknet-signers 0.5.0",
+]
+
+[[package]]
+name = "starknet"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5eb139c5e6f6c6da627080e33cc00b3fc1c9733403034ca1ee9c42a95c337c7f"
@@ -11203,6 +11427,20 @@ dependencies = [
 
 [[package]]
 name = "starknet-accounts"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7062b020f65d9da7f9dd9f1d97bfb644e881cda8ddb999799a799e6f2e408dd"
+dependencies = [
+ "async-trait",
+ "auto_impl",
+ "starknet-core 0.7.2",
+ "starknet-providers 0.7.0",
+ "starknet-signers 0.5.0",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-accounts"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3743932c80ad2a5868c2dd4ef729de4e12060c88e73e4bb678a5f8e51b105e53"
@@ -11226,6 +11464,21 @@ dependencies = [
  "starknet-core 0.9.0",
  "starknet-providers 0.9.0",
  "starknet-signers 0.7.0",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-contract"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d858efc93d85de95065a5732cb3e94d0c746674964c0859aab442ffbb9de76b4"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet-accounts 0.6.1",
+ "starknet-core 0.7.2",
+ "starknet-providers 0.7.0",
  "thiserror",
 ]
 
@@ -11257,6 +11510,24 @@ dependencies = [
  "starknet-core 0.9.0",
  "starknet-providers 0.9.0",
  "thiserror",
+]
+
+[[package]]
+name = "starknet-core"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f1683ca7c63f0642310eddedb7d35056d8306084dff323d440711065c63ed87"
+dependencies = [
+ "base64 0.21.7",
+ "flate2",
+ "hex",
+ "serde",
+ "serde_json",
+ "serde_json_pythonic",
+ "serde_with",
+ "sha3",
+ "starknet-crypto 0.6.1",
+ "starknet-ff",
 ]
 
 [[package]]
@@ -11391,6 +11662,26 @@ dependencies = [
 
 [[package]]
 name = "starknet-providers"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52072c2d258bf692affeccd602613d5f6c61a6ffc84da8f191ab4a1b0a5e24d1"
+dependencies = [
+ "async-trait",
+ "auto_impl",
+ "ethereum-types",
+ "flate2",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet-core 0.7.2",
+ "thiserror",
+ "url",
+]
+
+[[package]]
+name = "starknet-providers"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b08084f36ff7f11743ec71f33f0b11d439cbe0524058def299eb47de1ef1c28"
@@ -11431,6 +11722,22 @@ dependencies = [
 
 [[package]]
 name = "starknet-signers"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "347b1bfc09846aafe16d2b3a5bc2d8a2f845e2958602442182d265fbd6011c2e"
+dependencies = [
+ "async-trait",
+ "auto_impl",
+ "crypto-bigint",
+ "eth-keystore",
+ "rand",
+ "starknet-core 0.7.2",
+ "starknet-crypto 0.6.1",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-signers"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91919d8f318f0b5bcc4ff5849fbd3fb46adaaa72e0bf204742bab7c822425ff4"
@@ -11462,6 +11769,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "starknet-types-core"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d53160556d1f23425100f42b3230df747ea05763efee685a2cd939dfb640701"
+dependencies = [
+ "bitvec",
+ "lambdaworks-crypto",
+ "lambdaworks-math",
+ "lazy_static",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.18",
+ "serde",
+]
+
+[[package]]
 name = "starknet_api"
 version = "0.7.0-dev.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11481,6 +11804,45 @@ dependencies = [
  "strum 0.24.1",
  "strum_macros 0.24.3",
  "thiserror",
+]
+
+[[package]]
+name = "starknet_in_rust"
+version = "0.4.0"
+source = "git+https://github.com/dojoengine/starknet_in_rust.git?rev=601a65e#601a65e473592d8d3c5e35a0b46868464cacef2f"
+dependencies = [
+ "anyhow",
+ "auto_impl",
+ "base64 0.21.7",
+ "cairo-felt",
+ "cairo-lang-casm",
+ "cairo-lang-runner",
+ "cairo-lang-sierra",
+ "cairo-lang-starknet",
+ "cairo-lang-utils",
+ "cairo-vm 1.0.0-rc1",
+ "flate2",
+ "getset",
+ "hex",
+ "k256",
+ "keccak",
+ "lazy_static",
+ "mimalloc",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.18",
+ "once_cell",
+ "p256",
+ "sec1",
+ "serde",
+ "serde_json",
+ "serde_json_pythonic",
+ "sha3",
+ "starknet 0.7.0",
+ "starknet-crypto 0.6.1",
+ "starknet_api",
+ "thiserror",
+ "tracing",
 ]
 
 [[package]]
@@ -12193,7 +12555,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12213,7 +12575,7 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.6.0-alpha.7",
+ "metrics 0.6.0-alpha.8",
  "metrics-process",
  "scarb",
  "serde",
@@ -12239,7 +12601,7 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "async-trait",
  "camino",
@@ -12267,7 +12629,7 @@ dependencies = [
 
 [[package]]
 name = "torii-core"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12291,6 +12653,7 @@ dependencies = [
  "serde_json",
  "slab",
  "sozo",
+ "sozo-ops",
  "sqlx",
  "starknet 0.9.0",
  "starknet-crypto 0.6.1",
@@ -12303,7 +12666,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -12325,6 +12688,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "sozo",
+ "sozo-ops",
  "sqlx",
  "starknet 0.9.0",
  "starknet-crypto 0.6.1",
@@ -12343,7 +12707,7 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "bytes",
  "crypto-bigint",
@@ -12382,10 +12746,11 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chrono",
  "crypto-bigint",
  "dojo-types",
  "dojo-world",
@@ -12416,7 +12781,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12435,7 +12800,7 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.6.0-alpha.7",
+ "metrics 0.6.0-alpha.8",
  "metrics-process",
  "scarb",
  "serde",
@@ -12722,7 +13087,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 
 [[package]]
 name = "ucd-trie"
@@ -13910,10 +14275,27 @@ version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "760394e246e4c28189f19d488c058bf16f564016aefac5d32bb1f3b51d5e9261"
 dependencies = [
+ "aes",
  "byteorder",
+ "bzip2",
+ "constant_time_eq",
  "crc32fast",
  "crossbeam-utils",
  "flate2",
+ "hmac",
+ "pbkdf2",
+ "sha1",
+ "time",
+ "zstd 0.11.2+zstd.1.5.2",
+]
+
+[[package]]
+name = "zstd"
+version = "0.11.2+zstd.1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20cc960326ece64f010d2d2107537f26dc589a6573a316bd5b1dba685fa5fde4"
+dependencies = [
+ "zstd-safe 5.0.2+zstd.1.5.2",
 ]
 
 [[package]]
@@ -13922,7 +14304,17 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bffb3309596d527cfcba7dfc6ed6052f1d39dfbd7c867aa2e865e4a449c10110"
 dependencies = [
- "zstd-safe",
+ "zstd-safe 7.0.0",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "5.0.2+zstd.1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d2a5585e04f9eea4b2a3d1eca508c4dee9592a89ef6f450c11719da0726f4db"
+dependencies = [
+ "libc",
+ "zstd-sys",
 ]
 
 [[package]]
@@ -13943,8 +14335,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "alloy-core"
-version = "0.6.4"
-source = "git+https://github.com/alloy-rs/core?rev=ff339696fa9b490698cb3edec3d4647fae0bd332#ff339696fa9b490698cb3edec3d4647fae0bd332"
