@@ -35,9 +35,10 @@ where
     fn validate(&self, event: &Event) -> bool {
         if event.keys.len() > 1 {
             info!(
-                "invalid keys for event {}: {}",
-                <MetadataUpdateProcessor as EventProcessor<P>>::event_key(self),
-                <MetadataUpdateProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                target: "torii_core::processors::metadata_update",
+                "Invalid keys for event",
+                event_key = %<MetadataUpdateProcessor as EventProcessor<P>>::event_key(self),
+                invalid_keys = %<MetadataUpdateProcessor as EventProcessor<P>>::event_keys_as_string(self, event)
             );
             return false;
         }
@@ -67,7 +68,12 @@ where
             "".to_string()
         };
 
-        info!("Resource {:#x} metadata set: {}", resource, uri_str);
+        info!(
+            target: "torii_core::processors::metadata_update",
+            "Resource metadata set",
+            resource = %format!("{:#x}", resource),
+            uri = %uri_str
+        );
         db.set_metadata(resource, &uri_str, block_timestamp);
 
         let db = db.clone();
@@ -86,10 +92,20 @@ async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
             db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
                 .await
                 .unwrap();
-            info!("Updated resource {resource:#x} metadata from ipfs");
+            info!(
+                target: "torii_core::processors::metadata_update",
+                "Updated resource metadata from ipfs",
+                resource = %format!("{:#x}", resource)
+            );
         }
         Err(e) => {
-            error!("Error retrieving resource {resource:#x} uri {uri_str}: {e}")
+            error!(
+                target: "torii_core::processors::metadata_update",
+                "Error retrieving resource uri",
+                resource = %format!("{:#x}", resource),
+                uri = %uri_str,
+                error = %e
+            );
         }
     }
 }
@@ -126,7 +142,11 @@ async fn fetch_content(cid: &str, mut retries: u8) -> Result<Bytes> {
             Err(e) => {
                 retries -= 1;
                 if retries > 0 {
-                    info!("Fetch uri failure: {}", e);
+                    info!(
+                        target: "torii_core::processors::metadata_update",
+                        "Fetch uri failure",
+                        error = %e
+                    );
                     tokio::time::sleep(Duration::from_secs(3)).await;
                 }
             }

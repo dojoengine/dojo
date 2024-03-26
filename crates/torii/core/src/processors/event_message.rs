@@ -50,7 +50,11 @@ where
             Err(_) => return Ok(()),
         };
 
-        info!("store event message: {}", model.name());
+        info!(
+            target: "torii_core::processors::event_message",
+            "store event message",
+            model = %model.name()
+        );
 
         // skip the first key, as its the event selector
         // and dont include last key as its the system key

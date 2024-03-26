@@ -78,6 +78,7 @@ fn print_intro(args: &KatanaArgs, genesis: &Genesis, address: SocketAddr) {
 
     if args.json_log {
         info!(
+            target: "katana::cli",
             "{}",
             serde_json::json!({
                 "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),

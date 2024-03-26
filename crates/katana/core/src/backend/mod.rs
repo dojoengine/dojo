@@ -171,7 +171,11 @@ impl Backend {
             receipts,
         )?;
 
-        info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
+        info!(
+            target: "backend", "⛏️ Block mined with transactions",
+            block_number = %block_number,
+            tx_count = %tx_count,
+        );
 
         Ok(MinedBlockOutcome { block_number })
     }

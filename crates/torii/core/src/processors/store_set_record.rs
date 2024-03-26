@@ -26,9 +26,10 @@ where
     fn validate(&self, event: &Event) -> bool {
         if event.keys.len() > 1 {
             info!(
-                "invalid keys for event {}: {}",
-                <StoreSetRecordProcessor as EventProcessor<P>>::event_key(self),
-                <StoreSetRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                target: "torii_core::processors::store_set_record",
+                "Invalid keys for event",
+                event_key = %<StoreSetRecordProcessor as EventProcessor<P>>::event_key(self),
+                invalid_keys = %<StoreSetRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
             );
             return false;
         }
@@ -46,7 +47,7 @@ where
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
-        info!("store set record: {}", name);
+        info!(target: "torii_core::processors::store_set_record", "Store set record", name = %name);
 
         // this is temporary until the model name hash is precomputed
         let model = db.model(&format!("{:#x}", get_selector_from_name(&name)?)).await?;
