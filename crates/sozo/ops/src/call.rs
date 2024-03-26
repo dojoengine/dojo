@@ -7,6 +7,10 @@ use starknet::providers::Provider;
 
 use super::get_contract_address;
 
+#[cfg(test)]
+#[path = "call_test.rs"]
+mod call_test;
+
 pub async fn call<A>(
     contract: String,
     entrypoint: String,
