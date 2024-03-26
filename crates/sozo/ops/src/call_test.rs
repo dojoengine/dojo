@@ -20,9 +20,7 @@ const ENTRYPOINT: &str = "tile_terrain";
 
 async fn setup(
     sequencer: &TestSequencer,
-) -> Result<
-    WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>,
-> {
+) -> Result<WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>> {
     let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml")?;
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
@@ -152,7 +150,8 @@ async fn call_with_contract_address() {
         let contract_address = get_contract_address::<
             SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
         >(&world, CONTRACT_NAME.to_string())
-        .await.unwrap();
+        .await
+        .unwrap();
 
         assert!(
             call::call(
