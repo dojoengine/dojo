@@ -154,6 +154,10 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                     // get the trace and receipt from the execution info
                     let trace = utils::to_exec_info(&info);
                     let receipt = receipt_from_exec_info(&tx, &trace);
+
+                    crate::utils::log_resources(&trace.actual_resources);
+                    crate::utils::log_events(receipt.events());
+
                     ExecutionResult::new_success(receipt, trace, fee)
                 }
                 Err(e) => {

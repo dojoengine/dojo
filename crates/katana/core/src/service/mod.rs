@@ -10,7 +10,7 @@ use futures::stream::{Fuse, Stream, StreamExt};
 use katana_executor::ExecutorFactory;
 use katana_primitives::transaction::ExecutableTxWithHash;
 use starknet::core::types::FieldElement;
-use tracing::info;
+use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
 use crate::pool::TransactionPool;
@@ -69,7 +69,7 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                     }
 
                     Err(err) => {
-                        info!(target: "node", "failed to mine block: {err}");
+                        error!(target: "node", "failed to mine block: {err}");
                     }
                 }
             }
