@@ -183,20 +183,27 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                 block_tx.send(block_number).await?;
             }
 
-            self.process_block(block_number).await?;
+            let block_timestamp = self.get_block_timestamp(block_number).await?;
+
+            self.process_block(block_number, block_timestamp).await?;
             self.db.set_head(block_number);
 
             for (transaction, receipt) in transactions.transactions {
-                self.process_transaction_and_receipt(&transaction, Some(receipt), block_number)
-                    .await?;
+                self.process_transaction_and_receipt(
+                    &transaction,
+                    Some(receipt),
+                    block_number,
+                    block_timestamp,
+                )
+                .await?;
             }
         }
 
         self.db.execute().await?;
 
         Ok(())
-  }
-  
+    }
+
     async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {
         match self.provider.get_block_with_tx_hashes(BlockId::Number(block_number)).await? {
             MaybePendingBlockWithTxHashes::Block(block) => Ok(block.timestamp),
@@ -227,7 +234,8 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         }
 
         let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
-        self.process_transaction_and_receipt(&transaction, None, block_number, block_timestamp).await?;
+        self.process_transaction_and_receipt(&transaction, None, block_number, block_timestamp)
+            .await?;
 
         Ok(())
     }
@@ -306,20 +314,10 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         Ok(())
     }
 
-    async fn process_block(
-        &mut self,
-        block_number: u64,
-        block_timestamp: u64,
-        block_hash: FieldElement,
-    ) -> Result<()> {
+    async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
         for processor in &self.processors.block {
             processor
-                .process(
-                    &mut self.db,
-                    self.world.provider,
-                    block_number,
-                    block_timestamp,
-                )
+                .process(&mut self.db, &self.world.provider, block_number, block_timestamp)
                 .await?;
         }
 
