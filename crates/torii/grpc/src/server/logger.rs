@@ -42,7 +42,7 @@ where
             let uri = req.uri().path();
             let method = req.method();
 
-            info!(target: "grpc", ?method, ?uri);
+            info!(target: "torii_grpc", "gRPC request", method = ?method, uri = ?uri);
             inner.call(req).await
         })
     }

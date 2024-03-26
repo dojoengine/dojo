@@ -177,7 +177,7 @@ impl MessengerMode {
                     Ok(MessengerMode::Ethereum(m_eth))
                 }
                 Err(e) => {
-                    error!(target: LOG_TARGET, "Ethereum messenger init failed: {e}");
+                    error!(target: LOG_TARGET, "Ethereum messenger init failed.", error = %e);
                     Err(Error::InitError)
                 }
             },
@@ -189,13 +189,13 @@ impl MessengerMode {
                     Ok(MessengerMode::Starknet(m_sn))
                 }
                 Err(e) => {
-                    error!(target: LOG_TARGET, "Starknet messenger init failed: {e}");
+                    error!(target: LOG_TARGET, "Starknet messenger init failed.", error = %e);
                     Err(Error::InitError)
                 }
             },
 
             chain => {
-                error!(target: LOG_TARGET, "Unsupported settlement chain: {}", chain);
+                error!(target: LOG_TARGET, "Unsupported settlement chain.", chain = %chain);
                 Err(Error::UnsupportedChain)
             }
         }

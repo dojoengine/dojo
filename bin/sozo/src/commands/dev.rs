@@ -243,7 +243,7 @@ impl DevArgs {
                 world_address = address;
             }
             Err(error) => {
-                log::error!("Error: {error:?}");
+                log::error!(target: "sozo::cli::commands::dev", "Error", error = ?error);
             }
         }
         loop {
@@ -255,7 +255,7 @@ impl DevArgs {
                     .unwrap_or(DevAction::None),
                 Ok(Err(_)) => DevAction::None,
                 Err(error) => {
-                    log::error!("Error: {error:?}");
+                    log::error!(target: "sozo::cli::commands::dev", "Error", error = ?error);
                     break;
                 }
             };
@@ -273,7 +273,7 @@ impl DevArgs {
                         world_address = address;
                     }
                     Err(error) => {
-                        log::error!("Error: {error:?}");
+                        log::error!(target: "sozo::cli::commands::dev", "Error", error = ?error);
                     }
                 }
             }

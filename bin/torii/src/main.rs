@@ -217,13 +217,13 @@ async fn main() -> anyhow::Result<()> {
         form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
             .collect();
     let explorer_url = format!("https://worlds.dev/torii?url={}", encoded);
-    info!(target: "torii::cli", "Starting torii endpoint: {}", endpoint);
-    info!(target: "torii::cli", "Serving Graphql playground: {}", gql_endpoint);
-    info!(target: "torii::cli", "World Explorer is available on: {}\n", explorer_url);
+    info!(target: "torii::cli", "Starting torii endpoint.", endpoint = %endpoint);
+    info!(target: "torii::cli", "Serving Graphql playground.", endpoint = %gql_endpoint);
+    info!(target: "torii::cli", "World Explorer is available", url = %explorer_url);
 
     if args.explorer {
         if let Err(e) = webbrowser::open(&explorer_url) {
-            error!("Failed to open World Explorer in the browser: {e}");
+            error!(target: "torii::cli", "Failed to open World Explorer in the browser", error = %e);
         }
     }
 

@@ -49,10 +49,10 @@ impl Future for NodeService {
             while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
                 match outcome {
                     MessagingOutcome::Gather { msg_count, .. } => {
-                        trace!(target: "node", "collected {msg_count} messages from settlement chain");
+                        trace!(target: "node", "Collected messages from settlement chain", msg_count = %msg_count);
                     }
                     MessagingOutcome::Send { msg_count, .. } => {
-                        trace!(target: "node", "sent {msg_count} messages to the settlement chain");
+                        trace!(target: "node", "Sent messages to the settlement chain", msg_count = %msg_count);
                     }
                 }
             }
@@ -64,11 +64,11 @@ impl Future for NodeService {
             while let Poll::Ready(Some(res)) = pin.block_producer.poll_next_unpin(cx) {
                 match res {
                     Ok(outcome) => {
-                        trace!(target: "node", "mined block {}", outcome.block_number)
+                        trace!(target: "node", "Mined block", block_number = %outcome.block_number);
                     }
 
                     Err(err) => {
-                        error!(target: "node", "failed to mine block: {err}");
+                        error!(target: "node", "Failed to mine block", error = %err);
                     }
                 }
             }

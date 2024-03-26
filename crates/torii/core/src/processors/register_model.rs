@@ -25,9 +25,10 @@ where
     fn validate(&self, event: &Event) -> bool {
         if event.keys.len() > 1 {
             info!(
-                "invalid keys for event {}: {}",
-                <RegisterModelProcessor as EventProcessor<P>>::event_key(self),
-                <RegisterModelProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                target: "torii_core::processors::register_model",
+                "Invalid keys for event",
+                event_key = %<RegisterModelProcessor as EventProcessor<P>>::event_key(self),
+                invalid_keys = %<RegisterModelProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
             );
             return false;
         }
@@ -56,16 +57,17 @@ where
         let class_hash = event.data[1];
         let contract_address = event.data[3];
 
-        info!(name, "Registered model");
+        info!(target: "torii_core::processors::register_model", "Registered model", name = %name);
         debug!(
-            name,
-            ?schema,
-            ?layout,
-            ?class_hash,
-            ?contract_address,
-            packed_size,
-            unpacked_size,
-            "Registered model content"
+            target: "torii_core::processors::register_model",
+            "Registered model content",
+            name = %name,
+            schema = ?schema,
+            layout = ?layout,
+            class_hash = ?class_hash,
+            contract_address = ?contract_address,
+            packed_size = %packed_size,
+            unpacked_size = %unpacked_size
         );
 
         db.register_model(
