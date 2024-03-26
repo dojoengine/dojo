@@ -12,6 +12,7 @@ pub mod query_queue;
 pub mod simple_broker;
 pub mod sql;
 pub mod types;
+pub mod utils;
 
 #[allow(dead_code)]
 #[derive(FromRow, Deserialize)]

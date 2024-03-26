@@ -40,6 +40,7 @@ where
         _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
+        _block_timestamp: u64,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,

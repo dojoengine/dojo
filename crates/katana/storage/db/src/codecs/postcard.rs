@@ -1,13 +1,14 @@
 use katana_primitives::block::{BlockNumber, Header};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo};
 use katana_primitives::receipt::Receipt;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
+use postcard;
 
 use super::{Compress, Decompress};
 use crate::error::CodecError;
 use crate::models::block::StoredBlockBodyIndices;
-use crate::models::class::StoredContractClass;
 use crate::models::contract::ContractInfoChangeList;
 
 macro_rules! impl_compress_and_decompress_for_table_values {
@@ -32,12 +33,12 @@ macro_rules! impl_compress_and_decompress_for_table_values {
 impl_compress_and_decompress_for_table_values!(
     u64,
     Tx,
+    TxExecInfo,
     Header,
     Receipt,
     FieldElement,
     ContractAddress,
     Vec<BlockNumber>,
-    StoredContractClass,
     GenericContractInfo,
     StoredBlockBodyIndices,
     ContractInfoChangeList

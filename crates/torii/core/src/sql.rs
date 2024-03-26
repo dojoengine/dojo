@@ -17,6 +17,7 @@ use crate::model::ModelSQLReader;
 use crate::query_queue::{Argument, QueryQueue};
 use crate::simple_broker::SimpleBroker;
 use crate::types::{Entity as EntityUpdated, Event as EventEmitted, Model as ModelRegistered};
+use crate::utils::{must_utc_datetime_from_timestamp, utc_dt_string_from_timestamp};
 
 pub const FELT_DELIMITER: &str = "/";
 
@@ -75,6 +76,7 @@ impl Sql {
         Ok(meta)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn register_model(
         &mut self,
         model: Ty,
@@ -83,6 +85,7 @@ impl Sql {
         contract_address: FieldElement,
         packed_size: u32,
         unpacked_size: u32,
+        block_timestamp: u64,
     ) -> Result<()> {
         let layout_blob = layout
             .iter()
@@ -91,10 +94,11 @@ impl Sql {
 
         let insert_models =
             "INSERT INTO models (id, name, class_hash, contract_address, layout, packed_size, \
-             unpacked_size) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
-             contract_address=EXCLUDED.contract_address, class_hash=EXCLUDED.class_hash, \
-             layout=EXCLUDED.layout, packed_size=EXCLUDED.packed_size, \
-             unpacked_size=EXCLUDED.unpacked_size RETURNING *";
+             unpacked_size, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO \
+             UPDATE SET contract_address=EXCLUDED.contract_address, \
+             class_hash=EXCLUDED.class_hash, layout=EXCLUDED.layout, \
+             packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
+             executed_at=EXCLUDED.executed_at RETURNING *";
         let model_registered: ModelRegistered = sqlx::query_as(insert_models)
             // this is temporary until the model hash is precomputed
             .bind(&format!("{:#x}", &get_selector_from_name(&model.name())?))
@@ -104,11 +108,17 @@ impl Sql {
             .bind(hex::encode(&layout_blob))
             .bind(packed_size)
             .bind(unpacked_size)
+            .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
 
         let mut model_idx = 0_i64;
-        self.build_register_queries_recursive(&model, vec![model.name()], &mut model_idx);
+        self.build_register_queries_recursive(
+            &model,
+            vec![model.name()],
+            &mut model_idx,
+            block_timestamp,
+        );
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(model_registered);
@@ -116,7 +126,12 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn set_entity(&mut self, entity: Ty, event_id: &str) -> Result<()> {
+    pub async fn set_entity(
+        &mut self,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
             for m in s.keys() {
@@ -138,18 +153,27 @@ impl Sql {
         );
 
         let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO entities (id, keys, event_id) VALUES (?, ?, ?) ON \
-                               CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
-                               event_id=EXCLUDED.event_id RETURNING *";
+        let insert_entities = "INSERT INTO entities (id, keys, event_id, executed_at) VALUES (?, \
+                               ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+                               executed_at=EXCLUDED.executed_at, event_id=EXCLUDED.event_id \
+                               RETURNING *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
+            .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
 
         let path = vec![entity.name()];
-        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity, false);
+        self.build_set_entity_queries_recursive(
+            path,
+            event_id,
+            &entity_id,
+            &entity,
+            block_timestamp,
+            false,
+        );
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(entity_updated);
@@ -157,7 +181,12 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn set_event_message(&mut self, entity: Ty, event_id: &str) -> Result<()> {
+    pub async fn set_event_message(
+        &mut self,
+        entity: Ty,
+        event_id: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
             for m in s.keys() {
@@ -179,18 +208,27 @@ impl Sql {
         );
 
         let keys_str = felts_sql_string(&keys);
-        let insert_entities = "INSERT INTO event_messages (id, keys, event_id) VALUES (?, ?, ?) \
-                               ON CONFLICT(id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP, \
-                               event_id=EXCLUDED.event_id RETURNING *";
+        let insert_entities = "INSERT INTO event_messages (id, keys, event_id, executed_at) \
+                               VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET \
+                               updated_at=CURRENT_TIMESTAMP, event_id=EXCLUDED.event_id RETURNING \
+                               *";
         let entity_updated: EntityUpdated = sqlx::query_as(insert_entities)
             .bind(&entity_id)
             .bind(&keys_str)
             .bind(event_id)
+            .bind(utc_dt_string_from_timestamp(block_timestamp))
             .fetch_one(&self.pool)
             .await?;
 
         let path = vec![entity.name()];
-        self.build_set_entity_queries_recursive(path, event_id, &entity_id, &entity, true);
+        self.build_set_entity_queries_recursive(
+            path,
+            event_id,
+            &entity_id,
+            &entity,
+            block_timestamp,
+            true,
+        );
         self.query_queue.execute_all().await?;
 
         SimpleBroker::publish(entity_updated);
@@ -206,14 +244,16 @@ impl Sql {
         Ok(())
     }
 
-    pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str) {
+    pub fn set_metadata(&mut self, resource: &FieldElement, uri: &str, block_timestamp: u64) {
         let resource = Argument::FieldElement(*resource);
         let uri = Argument::String(uri.to_string());
+        let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
         self.query_queue.enqueue(
-            "INSERT INTO metadata (id, uri) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET \
-             id=excluded.id, updated_at=CURRENT_TIMESTAMP",
-            vec![resource, uri],
+            "INSERT INTO metadata (id, uri, executed_at) VALUES (?, ?, ?) ON CONFLICT(id) DO \
+             UPDATE SET id=excluded.id, executed_at=excluded.executed_at, \
+             updated_at=CURRENT_TIMESTAMP",
+            vec![resource, uri, executed_at],
         );
     }
 
@@ -227,34 +267,21 @@ impl Sql {
     ) -> Result<()> {
         let json = serde_json::to_string(metadata).unwrap(); // safe unwrap
 
-        let mut columns = vec!["id", "uri", "json"];
-        let mut update =
-            vec!["id=excluded.id", "json=excluded.json", "updated_at=CURRENT_TIMESTAMP"];
-        let mut arguments = vec![
-            Argument::FieldElement(*resource),
-            Argument::String(uri.to_string()),
-            Argument::String(json),
-        ];
+        let mut update = vec!["uri=?", "json=?", "updated_at=CURRENT_TIMESTAMP"];
+        let mut arguments = vec![Argument::String(uri.to_string()), Argument::String(json)];
 
         if let Some(icon) = icon_img {
-            columns.push("icon_img");
+            update.push("icon_img=?");
             arguments.push(Argument::String(icon.clone()));
-            update.push("icon_img=excluded.icon_img");
         }
 
         if let Some(cover) = cover_img {
-            columns.push("cover_img");
+            update.push("cover_img=?");
             arguments.push(Argument::String(cover.clone()));
-            update.push("cover_img=excluded.cover_img");
         }
 
-        let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-        let statement = format!(
-            "INSERT INTO metadata ({}) VALUES ({}) ON CONFLICT(id) DO UPDATE SET {}",
-            columns.join(","),
-            placeholders.join(","),
-            update.join(",")
-        );
+        let statement = format!("UPDATE metadata SET {} WHERE id = ?", update.join(","));
+        arguments.push(Argument::FieldElement(*resource));
 
         self.query_queue.enqueue(statement, arguments);
         self.query_queue.execute_all().await?;
@@ -284,7 +311,12 @@ impl Sql {
         Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
-    pub fn store_transaction(&mut self, transaction: &Transaction, transaction_id: &str) {
+    pub fn store_transaction(
+        &mut self,
+        transaction: &Transaction,
+        transaction_id: &str,
+        block_timestamp: u64,
+    ) {
         let id = Argument::String(transaction_id.to_string());
 
         let transaction_type = match transaction {
@@ -316,7 +348,8 @@ impl Sql {
 
         self.query_queue.enqueue(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
+             ?, ?, ?)",
             vec![
                 id,
                 transaction_hash,
@@ -326,19 +359,28 @@ impl Sql {
                 signature,
                 nonce,
                 Argument::String(transaction_type.to_string()),
+                Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
         );
     }
 
-    pub fn store_event(&mut self, event_id: &str, event: &Event, transaction_hash: FieldElement) {
+    pub fn store_event(
+        &mut self,
+        event_id: &str,
+        event: &Event,
+        transaction_hash: FieldElement,
+        block_timestamp: u64,
+    ) {
         let id = Argument::String(event_id.to_string());
         let keys = Argument::String(felts_sql_string(&event.keys));
         let data = Argument::String(felts_sql_string(&event.data));
         let hash = Argument::FieldElement(transaction_hash);
+        let executed_at = Argument::String(utc_dt_string_from_timestamp(block_timestamp));
 
         self.query_queue.enqueue(
-            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash) VALUES (?, ?, ?, ?)",
-            vec![id, keys, data, hash],
+            "INSERT OR IGNORE INTO events (id, keys, data, transaction_hash, executed_at) VALUES \
+             (?, ?, ?, ?, ?)",
+            vec![id, keys, data, hash, executed_at],
         );
 
         SimpleBroker::publish(EventEmitted {
@@ -347,6 +389,7 @@ impl Sql {
             data: felts_sql_string(&event.data),
             transaction_hash: format!("{:#x}", transaction_hash),
             created_at: Utc::now(),
+            executed_at: must_utc_datetime_from_timestamp(block_timestamp),
         });
     }
 
@@ -355,13 +398,14 @@ impl Sql {
         model: &Ty,
         path: Vec<String>,
         model_idx: &mut i64,
+        block_timestamp: u64,
     ) {
         if let Ty::Enum(_) = model {
             // Complex enum values not supported yet.
             return;
         }
 
-        self.build_model_query(path.clone(), model, *model_idx);
+        self.build_model_query(path.clone(), model, *model_idx, block_timestamp);
 
         if let Ty::Struct(s) = model {
             for member in s.children.iter() {
@@ -376,6 +420,7 @@ impl Sql {
                     &member.ty,
                     path_clone,
                     &mut (*model_idx + 1),
+                    block_timestamp,
                 );
             }
         }
@@ -387,6 +432,7 @@ impl Sql {
         event_id: &str,
         entity_id: &str,
         entity: &Ty,
+        block_timestamp: u64,
         is_event_message: bool,
     ) {
         match entity {
@@ -395,6 +441,7 @@ impl Sql {
                 let mut columns = vec![
                     "id".to_string(),
                     "event_id".to_string(),
+                    "executed_at".to_string(),
                     if is_event_message {
                         "event_message_id".to_string()
                     } else {
@@ -408,6 +455,7 @@ impl Sql {
                         entity_id.to_string()
                     }),
                     Argument::String(event_id.to_string()),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                     Argument::String(entity_id.to_string()),
                 ];
 
@@ -443,6 +491,7 @@ impl Sql {
                             event_id,
                             entity_id,
                             &member.ty,
+                            block_timestamp,
                             is_event_message,
                         );
                     }
@@ -457,6 +506,7 @@ impl Sql {
                         event_id,
                         entity_id,
                         &child.ty,
+                        block_timestamp,
                         is_event_message,
                     );
                 }
@@ -498,7 +548,13 @@ impl Sql {
         }
     }
 
-    fn build_model_query(&mut self, path: Vec<String>, model: &Ty, model_idx: i64) {
+    fn build_model_query(
+        &mut self,
+        path: Vec<String>,
+        model: &Ty,
+        model_idx: i64,
+        block_timestamp: u64,
+    ) {
         let table_id = path.join("$");
         let mut indices = Vec::new();
 
@@ -547,8 +603,8 @@ impl Sql {
                 }
 
                 let statement = "INSERT OR IGNORE INTO model_members (id, model_id, model_idx, \
-                                 member_idx, name, type, type_enum, enum_options, key) VALUES (?, \
-                                 ?, ?, ?, ?, ?, ?, ?, ?)";
+                                 member_idx, name, type, type_enum, enum_options, key, \
+                                 executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 let arguments = vec![
                     Argument::String(table_id.clone()),
                     // TEMP: this is temporary until the model hash is precomputed
@@ -563,12 +619,14 @@ impl Sql {
                     Argument::String(member.ty.as_ref().into()),
                     options.unwrap_or(Argument::Null),
                     Argument::Bool(member.key),
+                    Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 ];
 
                 self.query_queue.enqueue(statement, arguments);
             }
         }
 
+        create_table_query.push_str("executed_at DATETIME NOT NULL, ");
         create_table_query.push_str("created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ");
 
         // If this is not the Model's root table, create a reference to the parent.

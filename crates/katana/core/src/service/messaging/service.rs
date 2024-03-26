@@ -4,6 +4,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::{Future, FutureExt, Stream};
+use katana_executor::ExecutorFactory;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
@@ -20,10 +21,10 @@ type MessagingFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type MessageGatheringFuture = MessagingFuture<MessengerResult<(u64, usize)>>;
 type MessageSettlingFuture = MessagingFuture<MessengerResult<Option<(u64, usize)>>>;
 
-pub struct MessagingService {
+pub struct MessagingService<EF: ExecutorFactory> {
     /// The interval at which the service will perform the messaging operations.
     interval: Interval,
-    backend: Arc<Backend>,
+    backend: Arc<Backend<EF>>,
     pool: Arc<TransactionPool>,
     /// The messenger mode the service is running in.
     messenger: Arc<MessengerMode>,
@@ -37,13 +38,13 @@ pub struct MessagingService {
     msg_send_fut: Option<MessageSettlingFuture>,
 }
 
-impl MessagingService {
+impl<EF: ExecutorFactory> MessagingService<EF> {
     /// Initializes a new instance from a configuration file's path.
     /// Will panic on failure to avoid continuing with invalid configuration.
     pub async fn new(
         config: MessagingConfig,
         pool: Arc<TransactionPool>,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<EF>>,
     ) -> anyhow::Result<Self> {
         let gather_from_block = config.from_block;
         let interval = interval_from_seconds(config.interval);
@@ -72,7 +73,7 @@ impl MessagingService {
     async fn gather_messages(
         messenger: Arc<MessengerMode>,
         pool: Arc<TransactionPool>,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<EF>>,
         from_block: u64,
     ) -> MessengerResult<(u64, usize)> {
         // 200 avoids any possible rejection from RPC with possibly lot's of messages.
@@ -113,7 +114,7 @@ impl MessagingService {
 
     async fn send_messages(
         block_num: u64,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<EF>>,
         messenger: Arc<MessengerMode>,
     ) -> MessengerResult<Option<(u64, usize)>> {
         let Some(messages) = ReceiptProvider::receipts_by_block(
@@ -167,7 +168,7 @@ pub enum MessagingOutcome {
     },
 }
 
-impl Stream for MessagingService {
+impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
     type Item = MessagingOutcome;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {

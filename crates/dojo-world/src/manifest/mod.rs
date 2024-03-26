@@ -6,6 +6,7 @@ use cainome::cairo_serde::Error as CainomeError;
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
 use smol_str::SmolStr;
+use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, FunctionCall, StarknetError,
 };
@@ -29,8 +30,8 @@ mod test;
 mod types;
 
 pub use types::{
-    BaseManifest, Class, ComputedValueEntrypoint, Contract, DeploymentManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
+    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, Contract, DeploymentManifest,
+    DojoContract, DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
     OverlayDojoContract, OverlayDojoModel, OverlayManifest,
 };
 
@@ -138,10 +139,29 @@ impl DeploymentManifest {
         self.world.inner.seed = previous.world.inner.seed;
     }
 
-    pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
+    pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
         let deployed_manifest = toml::to_string_pretty(&self)?;
+        fs::write(path, deployed_manifest)?;
+
+        Ok(())
+    }
+
+    pub fn write_to_path_json(&self, path: &Utf8PathBuf, manifest_dir: &Utf8PathBuf) -> Result<()> {
+        fs::create_dir_all(path.parent().unwrap())?;
+
+        // Embedding ABIs into the manifest.
+        let mut manifest_with_abis = self.clone();
+        for contract in &mut manifest_with_abis.contracts {
+            if let Some(AbiFormat::Path(abi_path)) = &contract.inner.abi {
+                let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
+                let abi_entries: Vec<AbiEntry> = serde_json::from_reader(&mut abi_file)?;
+                contract.inner.abi = Some(AbiFormat::Embed(abi_entries));
+            }
+        }
+
+        let deployed_manifest = serde_json::to_string_pretty(&manifest_with_abis)?;
         fs::write(path, deployed_manifest)?;
 
         Ok(())
@@ -471,11 +491,11 @@ where
 impl ManifestMethods for DojoContract {
     type OverlayType = OverlayDojoContract;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -507,11 +527,11 @@ impl ManifestMethods for DojoContract {
 impl ManifestMethods for DojoModel {
     type OverlayType = OverlayDojoModel;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -537,11 +557,11 @@ impl ManifestMethods for DojoModel {
 impl ManifestMethods for Contract {
     type OverlayType = OverlayContract;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -567,11 +587,11 @@ impl ManifestMethods for Contract {
 impl ManifestMethods for Class {
     type OverlayType = OverlayClass;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 

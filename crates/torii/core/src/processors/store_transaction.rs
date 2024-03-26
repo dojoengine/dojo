@@ -17,13 +17,13 @@ impl<P: Provider + Sync> TransactionProcessor<P> for StoreTransactionProcessor {
         db: &mut Sql,
         _provider: &P,
         block_number: u64,
+        block_timestamp: u64,
         _receipt: &TransactionReceipt,
         transaction_hash: FieldElement,
         transaction: &Transaction,
     ) -> Result<(), Error> {
         let transaction_id = format!("{:#064x}:{:#x}", block_number, transaction_hash);
-        db.store_transaction(transaction, &transaction_id);
-
+        db.store_transaction(transaction, &transaction_id, block_timestamp);
         Ok(())
     }
 }

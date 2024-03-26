@@ -7,7 +7,7 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, Manifest,
+    AbiFormat, AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, Manifest,
     ManifestMethods, OverlayManifest,
 };
 use dojo_world::metadata::dojo_metadata_from_workspace;
@@ -134,6 +134,10 @@ where
     Ok(())
 }
 
+fn build_deployed_path(manifest_dir: &Utf8PathBuf, chain_id: &str, extension: &str) -> Utf8PathBuf {
+    manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).with_extension(extension)
+}
+
 async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
@@ -146,11 +150,8 @@ async fn update_manifests_and_abis(
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifests...");
 
-    let deployed_path = manifest_dir
-        .join(MANIFESTS_DIR)
-        .join(DEPLOYMENTS_DIR)
-        .join(chain_id)
-        .with_extension("toml");
+    let deployed_path = build_deployed_path(manifest_dir, chain_id, "toml");
+    let deployed_path_json = build_deployed_path(manifest_dir, chain_id, "json");
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
 
@@ -186,7 +187,8 @@ async fn update_manifests_and_abis(
     // local_manifest
     update_manifest_abis(&mut local_manifest, manifest_dir, chain_id).await;
 
-    local_manifest.write_to_path(&deployed_path)?;
+    local_manifest.write_to_path_toml(&deployed_path)?;
+    local_manifest.write_to_path_json(&deployed_path_json, manifest_dir)?;
     ui.print("\n✨ Done.");
 
     Ok(())
@@ -205,8 +207,9 @@ async fn update_manifest_abis(
     where
         T: ManifestMethods,
     {
-        // unwraps in call to abi is safe because we always write abis for DojoContracts
-        let base_relative_path = manifest.inner.abi().unwrap();
+        // unwraps in call to abi is safe because we always write abis for DojoContracts as relative
+        // path.
+        let base_relative_path = manifest.inner.abi().unwrap().to_path().unwrap();
         let deployed_relative_path =
             Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).join(
                 base_relative_path
@@ -221,7 +224,7 @@ async fn update_manifest_abis(
             .await
             .expect("Failed to create folder");
         fs::copy(full_base_path, full_deployed_path).await.expect("Failed to copy abi file");
-        manifest.inner.set_abi(Some(deployed_relative_path));
+        manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
     }
 
     for contract in local_manifest.contracts.iter_mut() {

@@ -3,12 +3,11 @@ use std::sync::Arc;
 
 use katana_db::models::block::StoredBlockBodyIndices;
 use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
-use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    GenericContractInfo, StorageKey, StorageValue,
-};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::contract::{ContractAddress, GenericContractInfo, StorageKey, StorageValue};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 use parking_lot::RwLock;
 
@@ -16,7 +15,7 @@ type ContractStorageMap = HashMap<ContractAddress, HashMap<StorageKey, StorageVa
 type ContractStateMap = HashMap<ContractAddress, GenericContractInfo>;
 
 type SierraClassesMap = HashMap<ClassHash, FlattenedSierraClass>;
-type CompiledClassesMap = HashMap<ClassHash, CompiledContractClass>;
+type CompiledClassesMap = HashMap<ClassHash, CompiledClass>;
 type CompiledClassHashesMap = HashMap<ClassHash, CompiledClassHash>;
 
 #[derive(Default)]
@@ -82,6 +81,7 @@ pub struct CacheDb<Db> {
     pub(crate) state_update: HashMap<BlockNumber, StateUpdates>,
     pub(crate) receipts: Vec<Receipt>,
     pub(crate) transactions: Vec<Tx>,
+    pub(crate) transactions_executions: Vec<TxExecInfo>,
     pub(crate) transaction_hashes: HashMap<TxNumber, TxHash>,
     pub(crate) transaction_numbers: HashMap<TxHash, TxNumber>,
     pub(crate) transaction_block: HashMap<TxNumber, BlockNumber>,
@@ -114,6 +114,7 @@ impl<Db> CacheDb<Db> {
             transaction_hashes: HashMap::new(),
             block_body_indices: HashMap::new(),
             transaction_numbers: HashMap::new(),
+            transactions_executions: Vec::new(),
             latest_block_hash: Default::default(),
             latest_block_number: Default::default(),
         }

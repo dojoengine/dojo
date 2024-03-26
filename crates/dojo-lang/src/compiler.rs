@@ -17,7 +17,7 @@ use cairo_lang_utils::UpcastMut;
 use camino::Utf8PathBuf;
 use convert_case::{Case, Casing};
 use dojo_world::manifest::{
-    Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
+    AbiFormat, Class, ComputedValueEntrypoint, DojoContract, DojoModel, Manifest, ManifestMethods,
     BASE_CONTRACT_NAME, WORLD_CONTRACT_NAME,
 };
 use itertools::Itertools;
@@ -459,7 +459,7 @@ where
     let relative_abi_path = relative_abis_dir.join(name.clone()).with_extension("json");
 
     if abi.is_some() {
-        manifest.inner.set_abi(Some(relative_abi_path.clone()));
+        manifest.inner.set_abi(Some(AbiFormat::Path(relative_abi_path.clone())));
     }
 
     let manifest_toml = toml::to_string_pretty(&manifest)?;
