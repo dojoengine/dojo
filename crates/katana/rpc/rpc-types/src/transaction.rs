@@ -10,7 +10,8 @@ use katana_primitives::conversion::rpc::{
 };
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV1, DeclareTxV2, DeclareTxV3, DeclareTxWithClass, DeployAccountTx,
-    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, TxHash, TxWithHash as InternalTxWithHash, Tx as InternalTx
+    DeployAccountTxV1, DeployAccountTxV3, InvokeTx, InvokeTxV1, InvokeTxV3, Tx as InternalTx,
+    TxHash, TxWithHash as InternalTxWithHash,
 };
 use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};
@@ -491,10 +492,9 @@ impl From<InternalTxWithHash> for Tx {
             }
         };
 
-        Tx(tx)        
+        Tx(tx)
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPageCursor {

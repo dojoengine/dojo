@@ -1,6 +1,9 @@
 use derive_more::{AsRef, Deref, From};
 use ethers::types::H256;
-use starknet::core::types::{DataAvailabilityMode, DeployAccountTransactionV1, DeployAccountTransactionV3, ResourceBoundsMapping};
+use starknet::core::types::{
+    DataAvailabilityMode, DeployAccountTransactionV1, DeployAccountTransactionV3,
+    ResourceBoundsMapping,
+};
 
 use crate::chain::ChainId;
 use crate::contract::{

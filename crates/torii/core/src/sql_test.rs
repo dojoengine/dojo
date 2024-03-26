@@ -79,9 +79,7 @@ async fn test_load_from_remote() {
     let _ = bootstrap_engine(
         world,
         db.clone(),
-        &KatanaClient::new(crate::provider::http::HttpTransport::new(
-            sequencer.url(),
-        )),
+        &KatanaClient::new(crate::provider::http::HttpTransport::new(sequencer.url())),
         migration,
         sequencer,
     )

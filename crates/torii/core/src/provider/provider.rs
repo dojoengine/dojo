@@ -1,3 +1,7 @@
+use std::any::Any;
+use std::error::Error;
+use std::fmt::Debug;
+
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use serde::{Deserialize, Serialize};
@@ -12,7 +16,6 @@ use starknet::core::types::{
     SimulationFlagForEstimateFee, StarknetError, SyncStatusType, Transaction, TransactionStatus,
     TransactionTrace, TransactionTraceWithHash,
 };
-use std::{any::Any, error::Error, fmt::Debug};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GetTransactionsRequest {
@@ -117,7 +120,8 @@ pub trait KatanaProvider {
         B: AsRef<BlockId> + Send + Sync,
         H: AsRef<FieldElement> + Send + Sync;
 
-    /// Get the contract class hash in the given block for the contract deployed at the given address
+    /// Get the contract class hash in the given block for the contract deployed at the given
+    /// address
     async fn get_class_hash_at<B, A>(
         &self,
         block_id: B,

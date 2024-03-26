@@ -2,33 +2,31 @@ pub mod http;
 pub mod provider;
 pub mod transport;
 
-use std::{any::Any, error::Error, fmt::Display};
+use std::any::Any;
+use std::error::Error;
+use std::fmt::Display;
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_with::serde_as;
-use starknet::core::{
-    serde::unsigned_field_element::UfeHex,
-    types::{
-        requests::*, BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
-        BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-        ContractClass, ContractErrorData, DeclareTransactionResult, DeployAccountTransactionResult,
-        EventFilter, EventFilterWithPage, EventsPage, FeeEstimate, FieldElement, FunctionCall,
-        InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-        MaybePendingStateUpdate, MaybePendingTransactionReceipt, MsgFromL1,
-        NoTraceAvailableErrorData, ResultPageRequest, SimulatedTransaction, SimulationFlag,
-        SimulationFlagForEstimateFee, StarknetError, SyncStatusType, Transaction,
-        TransactionExecutionErrorData, TransactionStatus, TransactionTrace,
-        TransactionTraceWithHash,
-    },
-};
-
 use provider::{KatanaProvider, ProviderError, ProviderImplError};
-
-use self::{
-    provider::{GetTransactionsRequest, TransactionsPage, TransactionsPageCursor},
-    transport::JsonRpcTransport,
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use starknet::core::serde::unsigned_field_element::UfeHex;
+use starknet::core::types::requests::*;
+use starknet::core::types::{
+    BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
+    BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
+    ContractClass, ContractErrorData, DeclareTransactionResult, DeployAccountTransactionResult,
+    EventFilter, EventFilterWithPage, EventsPage, FeeEstimate, FieldElement, FunctionCall,
+    InvokeTransactionResult, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    MaybePendingStateUpdate, MaybePendingTransactionReceipt, MsgFromL1, NoTraceAvailableErrorData,
+    ResultPageRequest, SimulatedTransaction, SimulationFlag, SimulationFlagForEstimateFee,
+    StarknetError, SyncStatusType, Transaction, TransactionExecutionErrorData, TransactionStatus,
+    TransactionTrace, TransactionTraceWithHash,
 };
+
+use self::provider::{GetTransactionsRequest, TransactionsPage, TransactionsPageCursor};
+use self::transport::JsonRpcTransport;
 
 #[derive(Debug)]
 pub struct KatanaClient<T> {
@@ -375,7 +373,8 @@ where
         .await
     }
 
-    /// Get the contract class hash in the given block for the contract deployed at the given address
+    /// Get the contract class hash in the given block for the contract deployed at the given
+    /// address
     async fn get_class_hash_at<B, A>(
         &self,
         block_id: B,

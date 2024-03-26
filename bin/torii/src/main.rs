@@ -152,7 +152,8 @@ async fn main() -> anyhow::Result<()> {
     sqlx::migrate!("../../crates/torii/migrations").run(&pool).await?;
 
     let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(args.rpc.clone())).into();
-    let katana_provider: Arc<_> = KatanaClient::new(torii_core::provider::http::HttpTransport::new(args.rpc.clone())).into();
+    let katana_provider: Arc<_> =
+        KatanaClient::new(torii_core::provider::http::HttpTransport::new(args.rpc.clone())).into();
 
     // Get world address
     let world = WorldContractReader::new(args.world_address, &provider);

@@ -15,9 +15,8 @@ use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::sql::Sql;
-
 use crate::provider::provider::{KatanaProvider, TransactionsPageCursor};
+use crate::sql::Sql;
 
 pub struct Processors<P: Provider + Sync> {
     pub block: Vec<Box<dyn BlockProcessor<P>>>,
@@ -188,12 +187,8 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             self.db.set_head(block_number);
 
             for (transaction, receipt) in transactions.transactions {
-                self.process_transaction_and_receipt(
-                    &transaction,
-                    Some(receipt),
-                    block_number,
-                )
-                .await?;
+                self.process_transaction_and_receipt(&transaction, Some(receipt), block_number)
+                    .await?;
             }
         }
 
@@ -224,12 +219,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         }
 
         let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
-        self.process_transaction_and_receipt(
-            &transaction,
-            None,
-            block_number,
-        )
-        .await?;
+        self.process_transaction_and_receipt(&transaction, None, block_number).await?;
 
         Ok(())
     }

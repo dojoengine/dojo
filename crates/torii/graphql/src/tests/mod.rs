@@ -326,7 +326,8 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     TransactionWaiter::new(transaction_hash, &provider).await?;
 
-    let katana_provider = KatanaClient::new(torii_core::provider::http::HttpTransport::new(sequencer.url()));
+    let katana_provider =
+        KatanaClient::new(torii_core::provider::http::HttpTransport::new(sequencer.url()));
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,

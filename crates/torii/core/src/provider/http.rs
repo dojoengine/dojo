@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use log::trace;
 use reqwest::{Client, Url};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use super::{JsonRpcMethod, JsonRpcResponse, JsonRpcTransport};
 
@@ -32,10 +33,7 @@ impl HttpTransport {
     }
 
     pub fn new_with_client(url: impl Into<Url>, client: Client) -> Self {
-        Self {
-            client,
-            url: url.into(),
-        }
+        Self { client, url: url.into() }
     }
 }
 
@@ -53,12 +51,7 @@ impl JsonRpcTransport for HttpTransport {
         P: Serialize + Send,
         R: DeserializeOwned,
     {
-        let request_body = JsonRpcRequest {
-            id: 1,
-            jsonrpc: "2.0",
-            method,
-            params,
-        };
+        let request_body = JsonRpcRequest { id: 1, jsonrpc: "2.0", method, params };
 
         let request_body = serde_json::to_string(&request_body).map_err(Self::Error::Json)?;
         trace!("Sending request via JSON-RPC: {}", request_body);
@@ -74,7 +67,6 @@ impl JsonRpcTransport for HttpTransport {
 
         let response_body = response.text().await.map_err(Self::Error::Reqwest)?;
         trace!("Response from JSON-RPC: {}", response_body);
-
 
         let parsed_response = serde_json::from_str(&response_body).map_err(Self::Error::Json)?;
 
