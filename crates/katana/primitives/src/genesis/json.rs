@@ -1,11 +1,10 @@
 //! JSON representation of the genesis configuration. Used to deserialize the genesis configuration
 //! from a JSON file.
 
-use std::collections::{hash_map, BTreeMap, HashMap};
+use std::collections::hash_map::Entry;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
-use std::io::{
-    BufReader, {self},
-};
+use std::io::{self, BufReader};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -99,6 +98,14 @@ pub struct GenesisClassJson {
     /// The class hash of the contract. If not provided, the class hash is computed from the
     /// class at `path`.
     pub class_hash: Option<ClassHash>,
+    name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum NameOrHash {
+    ClassName(String),
+    ClassHash(ClassHash),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -110,7 +117,7 @@ pub struct FeeTokenConfigJson {
     pub decimals: u8,
     /// The class hash of the fee token contract.
     /// If not provided, the default fee token class is used.
-    pub class: Option<ClassHash>,
+    pub class: Option<NameOrHash>,
     /// To initialize the fee token contract storage
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
@@ -122,7 +129,7 @@ pub struct UniversalDeployerConfigJson {
     pub address: Option<ContractAddress>,
     /// The class hash of the universal deployer contract.
     /// If not provided, the default UD class is used.
-    pub class: Option<ClassHash>,
+    pub class: Option<NameOrHash>,
     /// To initialize the UD contract storage
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
 }
@@ -130,7 +137,7 @@ pub struct UniversalDeployerConfigJson {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisContractJson {
-    pub class: Option<ClassHash>,
+    pub class: Option<NameOrHash>,
     pub balance: Option<U256>,
     pub nonce: Option<FieldElement>,
     pub storage: Option<HashMap<StorageKey, StorageValue>>,
@@ -234,6 +241,7 @@ impl GenesisJson {
         path.pop();
 
         let mut genesis: Self = serde_json::from_reader(BufReader::new(file))?;
+
         // resolves the class paths, if any
         genesis.resolve_class_artifacts(path)?;
 
@@ -265,12 +273,12 @@ impl TryFrom<GenesisJson> for Genesis {
     type Error = GenesisJsonError;
 
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
+        let mut name_to_class_hash = HashMap::new();
         let mut classes: HashMap<ClassHash, GenesisClass> = value
             .classes
             .into_par_iter()
             .map(|entry| {
-                let GenesisClassJson { class, class_hash } = entry;
-
+                let GenesisClassJson { class, class_hash, name } = entry;
                 let artifact = match class {
                     PathOrFullArtifact::Artifact(artifact) => artifact,
                     PathOrFullArtifact::Path(path) => {
@@ -312,27 +320,47 @@ impl TryFrom<GenesisJson> for Genesis {
                                 serde_json::from_value(artifact.clone())?;
                             casm.class_hash()?
                         };
-
                         (class_hash, class_hash, None, Arc::new(CompiledContractClass::V0(casm)))
                     }
                 };
+
+                // Add the class name and class hash to the mapping
+                let _ = name.map(|name| {
+                    name_to_class_hash.insert(name, class_hash);
+                });
 
                 Ok((class_hash, GenesisClass { compiled_class_hash, sierra, casm }))
             })
             .collect::<Result<_, GenesisJsonError>>()?;
 
+        // Populate the classes and name_to_class_hash
         let mut fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
             total_supply: U256::zero(),
             decimals: value.fee_token.decimals,
             address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
-            class_hash: value.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
+            class_hash: match value.fee_token.class {
+                Some(NameOrHash::ClassHash(class_hash)) => class_hash,
+                Some(NameOrHash::ClassName(class_name)) => *name_to_class_hash
+                    .get(&class_name)
+                    .ok_or_else(|| value_out_of_range_error::ValueOutOfRangeError)?,
+                None => DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            },
             storage: value.fee_token.storage,
         };
 
         match value.fee_token.class {
-            Some(hash) => {
+            Some(NameOrHash::ClassHash(hash)) => {
+                if !classes.contains_key(&hash) {
+                    return Err(GenesisJsonError::MissingClass(hash));
+                }
+            }
+
+            Some(NameOrHash::ClassName(name)) => {
+                let hash = *name_to_class_hash
+                    .get(&name)
+                    .ok_or_else(|| value_out_of_range_error::ValueOutOfRangeError)?;
                 if !classes.contains_key(&hash) {
                     return Err(GenesisJsonError::MissingClass(hash));
                 }
@@ -340,6 +368,7 @@ impl TryFrom<GenesisJson> for Genesis {
 
             // if no class hash is provided, use the default fee token class
             None => {
+                let name: String = value.fee_token.name.clone();
                 let _ = classes.insert(
                     DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
                     GenesisClass {
@@ -351,9 +380,54 @@ impl TryFrom<GenesisJson> for Genesis {
             }
         };
 
+        // Populate the classes and name_to_class_hash
+        let mut fee_token = FeeTokenConfig {
+            name: value.fee_token.name,
+            symbol: value.fee_token.symbol,
+            total_supply: U256::zero(),
+            decimals: value.fee_token.decimals,
+            address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
+            class_hash: match value.fee_token.class {
+                Some(NameOrHash::ClassHash(class_hash)) => class_hash,
+                Some(NameOrHash::ClassName(class_name)) => *name_to_class_hash
+                    .get(&class_name)
+                    .ok_or_else(|| value_out_of_range_error::ValueOutOfRangeError)?,
+                None => DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+            },
+            storage: value.fee_token.storage,
+        };
+
+        match value.fee_token.class {
+            Some(NameOrHash::ClassHash(hash)) => {
+                if !classes.contains_key(&hash) {
+                    return Err(GenesisJsonError::MissingClass(hash));
+                }
+            }
+            Some(NameOrHash::ClassName(name)) => {
+                let hash = *name_to_class_hash
+                    .get(&name)
+                    .ok_or_else(|| value_out_of_range_error::ValueOutOfRangeError)?;
+                if !classes.contains_key(&hash) {
+                    return Err(GenesisJsonError::MissingClass(hash));
+                }
+            }
+            None => {
+                let name: String = value.fee_token.name.clone();
+                let _ = classes.insert(
+                    DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
+                    GenesisClass {
+                        sierra: None,
+                        casm: Arc::new(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()),
+                        compiled_class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_COMPILED_CLASS_HASH,
+                    },
+                );
+            }
+        };
+
+        // if no class hash is provided, use the default UD contract parameters
         let universal_deployer = if let Some(config) = value.universal_deployer {
             match config.class {
-                Some(hash) => {
+                Some(NameOrHash::ClassHash(hash)) => {
                     if !classes.contains_key(&hash) {
                         return Err(GenesisJsonError::MissingClass(hash));
                     }
@@ -364,9 +438,22 @@ impl TryFrom<GenesisJson> for Genesis {
                         storage: config.storage,
                     })
                 }
+                Some(NameOrHash::ClassName(name)) => {
+                    let hash = *name_to_class_hash
+                        .get(&name)
+                        .ok_or_else(|| value_out_of_range_error::ValueOutOfRangeError)?;
+                    if !classes.contains_key(&hash) {
+                        return Err(GenesisJsonError::MissingClass(hash));
+                    }
 
-                // if no class hash is provided, use the default UD contract parameters
+                    Some(UniversalDeployerConfig {
+                        class_hash: hash,
+                        address: config.address.unwrap_or(DEFAULT_UDC_ADDRESS),
+                        storage: config.storage,
+                    })
+                }
                 None => {
+                    let name = value.fee_token.name.clone();
                     let class_hash = DEFAULT_LEGACY_UDC_CLASS_HASH;
                     let address = config.address.unwrap_or(DEFAULT_UDC_ADDRESS);
                     let storage = config.storage;
@@ -403,8 +490,8 @@ impl TryFrom<GenesisJson> for Genesis {
                 None => {
                     // check that the default account class exists in the classes field before
                     // inserting it
-                    if let hash_map::Entry::Vacant(e) =
-                        classes.entry(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH)
+
+                    if let Entry::Vacant(e) = classes.entry(DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH)
                     {
                         // insert default account class to the classes map
                         e.insert(GenesisClass {
@@ -456,9 +543,20 @@ impl TryFrom<GenesisJson> for Genesis {
 
         for (address, contract) in value.contracts {
             // check that the class hash exists in the classes field
+            let mut class_hash = None;
             if let Some(hash) = contract.class {
-                if !classes.contains_key(&hash) {
-                    return Err(GenesisJsonError::MissingClass(hash));
+                class_hash = Some(match hash {
+                    NameOrHash::ClassHash(hash) => hash,
+                    NameOrHash::ClassName(name) => {
+                        // Handle the case when the class is specified by name.
+                        *name_to_class_hash
+                            .get(&name)
+                            .ok_or_else(|| GenesisJsonError::MissingClass(name.clone()))?
+                    }
+                });
+
+                if !classes.contains_key(&class_hash) {
+                    return Err(GenesisJsonError::MissingClass(class_hash));
                 }
             }
 
@@ -471,7 +569,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 address,
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: contract.balance,
-                    class_hash: contract.class,
+                    class_hash,
                     nonce: contract.nonce,
                     storage: contract.storage,
                 }),
@@ -509,6 +607,7 @@ impl FromStr for GenesisJson {
 pub fn resolve_artifacts_and_to_base64<P: AsRef<Path>>(
     mut genesis: GenesisJson,
     base_path: P,
+    class_name_map: HashMap<String, ClassHash>,
 ) -> Result<Vec<u8>, GenesisJsonError> {
     genesis.resolve_class_artifacts(base_path)?;
     to_base64(genesis)
@@ -530,8 +629,30 @@ pub fn to_base64(genesis: GenesisJson) -> Result<Vec<u8>, GenesisJsonError> {
 
 /// Deserialize the [GenesisJson] from base64 encoded bytes.
 pub fn from_base64(data: &[u8]) -> Result<GenesisJson, GenesisJsonError> {
+    // Decode base64 bytes
     let decoded = BASE64_STANDARD.decode(data)?;
-    Ok(serde_json::from_slice::<GenesisJson>(&decoded)?)
+    // Deserialize JSON
+    let mut genesis_json: GenesisJson = serde_json::from_slice(&decoded)?;
+
+    // Populate name field
+    for class in &mut genesis_json.classes {
+        match &class.class {
+            // If artifact is provided, try to extract name
+            PathOrFullArtifact::Artifact(artifact) => {
+                if let Value::Object(obj) = artifact {
+                    if let Some(name_value) = obj.get("name") {
+                        if let Value::String(name) = name_value {
+                            class.name = Some(name.to_string());
+                        }
+                    }
+                }
+            }
+
+            // Ignore path case
+            PathOrFullArtifact::Path(_path) => {}
+        }
+    }
+    Ok(genesis_json)
 }
 
 fn class_artifact_at_path(
