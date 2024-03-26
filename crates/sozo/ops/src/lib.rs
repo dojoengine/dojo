@@ -5,6 +5,7 @@ use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
 
 pub mod auth;
+pub mod call;
 pub mod events;
 pub mod execute;
 pub mod migration;
