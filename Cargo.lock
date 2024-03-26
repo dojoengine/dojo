@@ -6695,6 +6695,7 @@ dependencies = [
 name = "katana-executor"
 version = "0.6.0-alpha.8"
 dependencies = [
+ "alloy-primitives",
  "anyhow",
  "blockifier",
  "cairo-lang-sierra",
