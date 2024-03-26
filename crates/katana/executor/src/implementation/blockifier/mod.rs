@@ -23,6 +23,8 @@ use crate::{
     ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag, StateProviderDb,
 };
 
+pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
+
 #[derive(Debug)]
 pub struct BlockifierFactory {
     cfg: CfgEnv,
@@ -158,13 +160,13 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                     crate::utils::log_events(receipt.events());
 
                     if let Some(reason) = receipt.revert_reason() {
-                        info!(target: "executor", "transaction reverted: {reason}");
+                        info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
                     }
 
                     ExecutionResult::new_success(receipt, trace, fee)
                 }
                 Err(e) => {
-                    info!(target: "executor", "transaction execution failed: {e}");
+                    info!(target: LOG_TARGET, error = %e, "Executing transaction.");
                     ExecutionResult::new_failed(e)
                 }
             };
@@ -238,14 +240,14 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
             Ok((info, fee)) => {
                 // if the transaction was reverted, return as error
                 if let Some(reason) = info.revert_error {
-                    info!(target: "executor", "fee estimation failed: {reason}");
+                    info!(target: LOG_TARGET, reason = %reason, "Estimating fee.");
                     Err(ExecutionError::TransactionReverted { revert_error: reason })
                 } else {
                     Ok(fee)
                 }
             }
             Err(e) => {
-                info!(target: "executor", "fee estimation failed: {e}");
+                info!(target: LOG_TARGET, error = %e, "Estimating fee.");
                 Err(e)
             }
         })

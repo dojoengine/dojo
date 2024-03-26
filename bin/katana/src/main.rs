@@ -25,6 +25,8 @@ mod utils;
 use args::Commands::Completions;
 use args::KatanaArgs;
 
+pub(crate) const LOG_TARGET: &str = "katana::cli";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = KatanaArgs::parse();
@@ -78,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
-        info!(target: "katana::cli", addr = %listen_addr, "Starting metrics endpoint");
+        info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
         prometheus_exporter::serve(
             listen_addr,
             prometheus_handle,
@@ -116,6 +118,7 @@ fn print_intro(args: &KatanaArgs, genesis: &Genesis, address: SocketAddr) {
 
     if args.json_log {
         info!(
+            target: LOG_TARGET,
             "{}",
             serde_json::json!({
                 "accounts": accounts.map(|a| serde_json::json!(a)).collect::<Vec<_>>(),

@@ -22,6 +22,8 @@ pub mod messaging;
 #[cfg(feature = "messaging")]
 use self::messaging::{MessagingOutcome, MessagingService};
 
+pub(crate) const LOG_TARGET: &str = "node";
+
 /// The type that drives the blockchain's state
 ///
 /// This service is basically an endless future that continuously polls the miner which returns
@@ -50,10 +52,10 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
             while let Poll::Ready(Some(outcome)) = messaging.poll_next_unpin(cx) {
                 match outcome {
                     MessagingOutcome::Gather { msg_count, .. } => {
-                        info!(target: "node", "collected {msg_count} messages from settlement chain");
+                        info!(target: LOG_TARGET, msg_count = %msg_count, "Collected messages from settlement chain.");
                     }
                     MessagingOutcome::Send { msg_count, .. } => {
-                        info!(target: "node", "sent {msg_count} messages to the settlement chain");
+                        info!(target: LOG_TARGET,  msg_count = %msg_count, "Sent messages to the settlement chain.");
                     }
                 }
             }
@@ -65,11 +67,11 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
             while let Poll::Ready(Some(res)) = pin.block_producer.poll_next(cx) {
                 match res {
                     Ok(outcome) => {
-                        info!(target: "node", "mined block {}", outcome.block_number)
+                        info!(target: LOG_TARGET, block_number = %outcome.block_number, "Mined block.");
                     }
 
                     Err(err) => {
-                        error!(target: "node", "failed to mine block: {err}");
+                        error!(target: LOG_TARGET, error = %err, "Mining block.");
                     }
                 }
             }

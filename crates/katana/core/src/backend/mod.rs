@@ -29,6 +29,8 @@ use crate::env::BlockContextGenerator;
 use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome, TxWithOutcome};
 use crate::utils::get_current_timestamp;
 
+pub(crate) const LOG_TARGET: &str = "katana::core::backend";
+
 pub struct Backend<EF: ExecutorFactory> {
     /// The config used to generate the backend.
     pub config: StarknetConfig,
@@ -77,11 +79,11 @@ impl<EF: ExecutorFactory> Backend<EF> {
                 block.l1_gas_price.price_in_fri.try_into().expect("should fit in u128");
 
             trace!(
-                target: "backend",
-                "forking chain `{}` at block {} from {}",
-                parse_cairo_short_string(&forked_chain_id).unwrap(),
-                block.block_number,
-                forked_url
+                target: LOG_TARGET,
+                chain = %parse_cairo_short_string(&forked_chain_id).unwrap(),
+                block_number = %block.block_number,
+                forked_url = %forked_url,
+                "Forking chain.",
             );
 
             let blockchain = Blockchain::new_from_forked(
@@ -159,7 +161,12 @@ impl<EF: ExecutorFactory> Backend<EF> {
             execs,
         )?;
 
-        info!(target: "backend", "⛏️ Block {block_number} mined with {tx_count} transactions");
+        info!(
+            target: LOG_TARGET,
+            block_number = %block_number,
+            tx_count = %tx_count,
+            "Block mined.",
+        );
 
         Ok(MinedBlockOutcome { block_number })
     }

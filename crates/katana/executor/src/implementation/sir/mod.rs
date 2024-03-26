@@ -25,6 +25,8 @@ use crate::abstraction::{
 };
 use crate::{EntryPointCall, ExecutionError, ExecutionResult, ResultAndStates};
 
+pub(crate) const LOG_TARGET: &str = "katana::executor::sir";
+
 /// A factory for creating [StarknetVMProcessor] instances.
 #[derive(Debug)]
 pub struct NativeExecutorFactory {
@@ -159,13 +161,13 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                     crate::utils::log_events(receipt.events());
 
                     if let Some(reason) = receipt.revert_reason() {
-                        info!(target: "executor", "transaction reverted: {reason}");
+                        info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
                     }
 
                     ExecutionResult::new_success(receipt, trace, fee)
                 }
                 Err(e) => {
-                    info!(target: "executor", "transaction execution failed: {e}");
+                    info!(target: LOG_TARGET, error = %e, "Executing transaction.");
                     ExecutionResult::new_failed(e)
                 }
             };
@@ -248,14 +250,14 @@ impl<'a> ExecutorExt for StarknetVMProcessor<'a> {
             Ok((info, fee)) => {
                 // if the transaction was reverted, return as error
                 if let Some(reason) = info.revert_error {
-                    info!(target: "executor", "fee estimation failed: {reason}");
+                    info!(target: LOG_TARGET, reason = %reason, "Fee estimation failed.");
                     Err(ExecutionError::TransactionReverted { revert_error: reason })
                 } else {
                     Ok(fee)
                 }
             }
             Err(e) => {
-                info!(target: "executor", "fee estimation failed: {e}");
+                info!(target: LOG_TARGET, error = %e, "Estimating fee.");
                 Err(e)
             }
         })

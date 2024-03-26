@@ -18,6 +18,8 @@ use crate::constants;
 use crate::errors::Error;
 use crate::types::Message;
 
+pub(crate) const LOG_TARGET: &str = "torii::relay::client";
+
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClientEvent")]
 struct Behaviour {
@@ -48,7 +50,7 @@ impl RelayClient {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
-        info!(target: "torii::relay::client", peer_id = %peer_id, "Local peer id");
+        info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -82,7 +84,7 @@ impl RelayClient {
             })
             .build();
 
-        info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
+        info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
@@ -97,7 +99,7 @@ impl RelayClient {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
-        info!(target: "torii::relay::client", peer_id = %peer_id, "Local peer id");
+        info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_wasm_bindgen()
@@ -133,7 +135,7 @@ impl RelayClient {
             })
             .build();
 
-        info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
+        info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
@@ -196,7 +198,7 @@ impl EventLoop {
                     match event {
                         SwarmEvent::Behaviour(ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. })) => {
                             // Handle behaviour events.
-                            info!(target: "torii::relay::client::gossipsub", topic = ?topic, "Relay ready. Received subscription confirmation");
+                            info!(target: LOG_TARGET, topic = ?topic, "Relay ready. Received subscription confirmation.");
 
                             is_relay_ready = true;
                             if let Some(tx) = relay_ready_tx.take() {
@@ -204,10 +206,10 @@ impl EventLoop {
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
-                            info!(target: "torii::relay::client", cause = ?cause, "Connection closed");
+                            info!(target: LOG_TARGET, cause = ?cause, "Connection closed.");
 
                             if let libp2p::swarm::ConnectionError::KeepAliveTimeout = cause {
-                                info!(target: "torii::relay::client", "Connection closed due to keep alive timeout. Shutting down client.");
+                                info!(target: LOG_TARGET, "Connection closed due to keep alive timeout. Shutting down client.");
                                 return;
                             }
                         }
