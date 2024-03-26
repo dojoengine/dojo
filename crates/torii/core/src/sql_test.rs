@@ -8,9 +8,10 @@ use dojo_test_utils::sequencer::{
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::strategy::MigrationStrategy;
 use scarb::ops;
-use sozo::ops::migration::execute_strategy;
+use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tokio::sync::broadcast;
@@ -19,6 +20,7 @@ use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::sql::Sql;
+use crate::utils::utc_dt_string_from_timestamp;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
@@ -74,29 +76,30 @@ async fn test_load_from_remote() {
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
 
+    let block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
-    assert_eq!(models.len(), 2);
+    assert_eq!(models.len(), 3);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Position'",
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Position'",
     )
     .fetch_one(&pool)
     .await
     .unwrap();
 
-    assert_eq!(id, "Position");
+    assert_eq!(id, format!("{:#x}", get_selector_from_name("Position").unwrap()));
     assert_eq!(name, "Position");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
     let (id, name, packed_size, unpacked_size): (String, String, u8, u8) = sqlx::query_as(
-        "SELECT id, name, packed_size, unpacked_size FROM models WHERE id = 'Moves'",
+        "SELECT id, name, packed_size, unpacked_size FROM models WHERE name = 'Moves'",
     )
     .fetch_one(&pool)
     .await
     .unwrap();
 
-    assert_eq!(id, "Moves");
+    assert_eq!(id, format!("{:#x}", get_selector_from_name("Moves").unwrap()));
     assert_eq!(name, "Moves");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
@@ -110,16 +113,20 @@ async fn test_load_from_remote() {
             data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
         },
         FieldElement::THREE,
+        block_timestamp,
     );
 
     db.execute().await.unwrap();
 
-    let query =
-        format!("SELECT keys, data, transaction_hash FROM events WHERE id = '{}'", event_id);
-    let (keys, data, tx_hash): (String, String, String) =
+    let query = format!(
+        "SELECT keys, data, transaction_hash, executed_at FROM events WHERE id = '{}'",
+        event_id
+    );
+    let (keys, data, tx_hash, executed_at): (String, String, String, String) =
         sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
 
     assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
     assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
-    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE))
+    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE));
+    assert_eq!(executed_at, utc_dt_string_from_timestamp(block_timestamp));
 }

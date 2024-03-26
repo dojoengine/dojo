@@ -1,37 +1,37 @@
-use anyhow::Result;
-use dojo_world::utils::{execution_status_from_maybe_pending_receipt, TransactionWaiter};
-use starknet::core::types::{ExecutionResult, InvokeTransactionResult};
-use starknet::providers::Provider;
+use anyhow::Error;
+use dojo_world::contracts::world::WorldContract;
+use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
+use scarb::core::Config;
+use starknet::accounts::SingleOwnerAccount;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
+use starknet::signers::LocalWallet;
 
-pub async fn handle_transaction_result<P>(
-    provider: P,
-    transaction_result: InvokeTransactionResult,
-    wait_for_tx: bool,
-    show_receipt: bool,
-) -> Result<()>
-where
-    P: Provider + Send,
-{
-    println!("Transaction hash: {:#x}", transaction_result.transaction_hash);
+use crate::commands::options::account::AccountOptions;
+use crate::commands::options::starknet::StarknetOptions;
+use crate::commands::options::world::WorldOptions;
 
-    if wait_for_tx {
-        let receipt =
-            TransactionWaiter::new(transaction_result.transaction_hash, &provider).await?;
+pub fn load_metadata_from_config(config: &Config) -> Result<Option<Environment>, Error> {
+    let env_metadata = if config.manifest_path().exists() {
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        if show_receipt {
-            println!("Receipt:\n{}", serde_json::to_string_pretty(&receipt)?);
-        } else {
-            match execution_status_from_maybe_pending_receipt(&receipt) {
-                ExecutionResult::Succeeded => {
-                    println!("Status: OK");
-                }
-                ExecutionResult::Reverted { reason } => {
-                    println!("Status: REVERTED");
-                    println!("Reason:\n{}", reason);
-                }
-            };
-        }
-    }
+        dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+    } else {
+        None
+    };
 
-    Ok(())
+    Ok(env_metadata)
+}
+
+pub async fn world_from_env_metadata(
+    world: WorldOptions,
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    env_metadata: &Option<Environment>,
+) -> Result<WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>, Error> {
+    let world_address = world.address(env_metadata.as_ref())?;
+    let provider = starknet.provider(env_metadata.as_ref())?;
+
+    let account = account.account(provider, env_metadata.as_ref()).await?;
+    Ok(WorldContract::new(world_address, account))
 }

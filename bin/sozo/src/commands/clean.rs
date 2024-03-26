@@ -3,7 +3,7 @@ use std::fs;
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_lang::compiler::{ABIS_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
 use scarb::core::Config;
 
 #[derive(Debug, Args)]
@@ -21,15 +21,15 @@ pub struct CleanArgs {
 
 impl CleanArgs {
     pub fn clean_manifests_abis(&self, root_dir: &Utf8PathBuf) -> Result<()> {
-        let manifest_dir = root_dir.join(MANIFESTS_DIR);
-        let abis_dir = root_dir.join(ABIS_DIR);
+        let dirs = vec![
+            root_dir.join(MANIFESTS_DIR).join(BASE_DIR),
+            root_dir.join(ABIS_DIR).join(BASE_DIR),
+        ];
 
-        if manifest_dir.exists() {
-            fs::remove_dir_all(manifest_dir)?;
-        }
-
-        if abis_dir.exists() {
-            fs::remove_dir_all(abis_dir)?;
+        for d in dirs {
+            if d.exists() {
+                fs::remove_dir_all(d)?;
+            }
         }
 
         Ok(())

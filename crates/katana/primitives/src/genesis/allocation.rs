@@ -11,7 +11,8 @@ use starknet::core::utils::get_contract_address;
 use starknet::signers::SigningKey;
 
 use super::constant::DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
-use crate::contract::{ClassHash, ContractAddress, StorageKey, StorageValue};
+use crate::class::ClassHash;
+use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::FieldElement;
 
 /// Represents a contract allocation in the genesis block.

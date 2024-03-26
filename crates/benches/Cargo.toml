@@ -26,6 +26,7 @@ clap.workspace = true
 scarb.workspace = true
 dojo-lang.workspace = true
 dojo-world.workspace = true
+sozo-ops.workspace = true
 
 [features]
 default = ["skip-benchmarks"]

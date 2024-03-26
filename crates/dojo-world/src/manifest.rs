@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::serde::unsigned_field_element::UfeHex;
+use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, FunctionCall, StarknetError,
 };
@@ -75,13 +76,14 @@ impl From<dojo_types::schema::Member> for Member {
 
 /// Represents a declaration of a model.
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct DojoModel {
     pub members: Vec<Member>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
 }
 
 /// System input ABI.
@@ -110,23 +112,61 @@ pub struct ComputedValueEntrypoint {
     pub model: Option<String>,
 }
 
+/// Format of the ABI into the manifest.
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AbiFormat {
+    /// Only a relative path to the ABI file is stored.
+    Path(Utf8PathBuf),
+    /// The full ABI is embedded.
+    Embed(Vec<AbiEntry>),
+}
+
+#[cfg(test)]
+impl PartialEq for AbiFormat {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AbiFormat::Path(p1), AbiFormat::Path(p2)) => p1 == p2,
+            (AbiFormat::Embed(e1), AbiFormat::Embed(e2)) => {
+                // Currently, [`AbiEntry`] does not implement [`PartialEq`] so we cannot compare
+                // them directly.
+                let e1_json = serde_json::to_string(e1).expect("valid JSON from ABI");
+                let e2_json = serde_json::to_string(e2).expect("valid JSON from ABI");
+                e1_json == e2_json
+            }
+            _ => false,
+        }
+    }
+}
+
+impl AbiFormat {
+    pub fn to_path(&self) -> Option<&Utf8PathBuf> {
+        match self {
+            AbiFormat::Path(p) => Some(p),
+            AbiFormat::Embed(_) => None,
+        }
+    }
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct DojoContract {
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
     pub reads: Vec<String>,
     pub writes: Vec<String>,
     pub computed: Vec<ComputedValueEntrypoint>,
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoContract {
     pub name: SmolStr,
     pub reads: Option<Vec<String>>,
@@ -134,33 +174,38 @@ pub struct OverlayDojoContract {
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayDojoModel {}
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayContract {}
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayClass {}
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct Class {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
 }
 
 #[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
 pub struct Contract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
-    pub abi: Option<Utf8PathBuf>,
+    pub abi: Option<AbiFormat>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
     #[serde_as(as = "Option<UfeHex>")]
@@ -170,7 +215,8 @@ pub struct Contract {
     pub seed: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct BaseManifest {
     pub world: Manifest<Class>,
     pub base: Manifest<Class>,
@@ -202,7 +248,8 @@ impl From<BaseManifest> for DeploymentManifest {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct DeploymentManifest {
     pub world: Manifest<Contract>,
     pub base: Manifest<Class>,
@@ -210,12 +257,14 @@ pub struct DeploymentManifest {
     pub models: Vec<Manifest<DojoModel>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayManifest {
     pub contracts: Vec<OverlayDojoContract>,
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Manifest<T>
 where
     T: ManifestMethods,
@@ -236,8 +285,8 @@ where
 
 pub trait ManifestMethods {
     type OverlayType;
-    fn abi(&self) -> Option<&Utf8PathBuf>;
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>);
+    fn abi(&self) -> Option<&AbiFormat>;
+    fn set_abi(&mut self, abi: Option<AbiFormat>);
     fn class_hash(&self) -> &FieldElement;
     fn set_class_hash(&mut self, class_hash: FieldElement);
 
@@ -300,10 +349,29 @@ impl DeploymentManifest {
         self.world.inner.seed = previous.world.inner.seed;
     }
 
-    pub fn write_to_path(&self, path: &Utf8PathBuf) -> Result<()> {
+    pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
         let deployed_manifest = toml::to_string_pretty(&self)?;
+        fs::write(path, deployed_manifest)?;
+
+        Ok(())
+    }
+
+    pub fn write_to_path_json(&self, path: &Utf8PathBuf, manifest_dir: &Utf8PathBuf) -> Result<()> {
+        fs::create_dir_all(path.parent().unwrap())?;
+
+        // Embedding ABIs into the manifest.
+        let mut manifest_with_abis = self.clone();
+        for contract in &mut manifest_with_abis.contracts {
+            if let Some(AbiFormat::Path(abi_path)) = &contract.inner.abi {
+                let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
+                let abi_entries: Vec<AbiEntry> = serde_json::from_reader(&mut abi_file)?;
+                contract.inner.abi = Some(AbiFormat::Embed(abi_entries));
+            }
+        }
+
+        let deployed_manifest = serde_json::to_string_pretty(&manifest_with_abis)?;
         fs::write(path, deployed_manifest)?;
 
         Ok(())
@@ -628,11 +696,11 @@ where
 impl ManifestMethods for DojoContract {
     type OverlayType = OverlayDojoContract;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -657,11 +725,11 @@ impl ManifestMethods for DojoContract {
 impl ManifestMethods for DojoModel {
     type OverlayType = OverlayDojoModel;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -679,11 +747,11 @@ impl ManifestMethods for DojoModel {
 impl ManifestMethods for Contract {
     type OverlayType = OverlayContract;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 
@@ -701,11 +769,11 @@ impl ManifestMethods for Contract {
 impl ManifestMethods for Class {
     type OverlayType = OverlayClass;
 
-    fn abi(&self) -> Option<&Utf8PathBuf> {
+    fn abi(&self) -> Option<&AbiFormat> {
         self.abi.as_ref()
     }
 
-    fn set_abi(&mut self, abi: Option<Utf8PathBuf>) {
+    fn set_abi(&mut self, abi: Option<AbiFormat>) {
         self.abi = abi;
     }
 

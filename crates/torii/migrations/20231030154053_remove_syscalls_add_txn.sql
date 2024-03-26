@@ -8,6 +8,7 @@ CREATE TABLE transactions (
     max_fee TEXT NOT NULL,
     signature TEXT NOT NULL,
     nonce TEXT NOT NULL,
+    executed_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (transaction_hash)
 );

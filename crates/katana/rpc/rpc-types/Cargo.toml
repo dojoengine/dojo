@@ -8,6 +8,7 @@ version.workspace = true
 
 [dependencies]
 katana-core = { path = "../../core" }
+katana-executor.workspace = true
 katana-primitives = { path = "../../primitives" }
 katana-provider = { path = "../../storage/provider" }
 

@@ -27,6 +27,7 @@ use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_core::engine::{Engine, EngineConfig, Processors};
+use torii_core::processors::event_message::EventMessageProcessor;
 use torii_core::processors::metadata_update::MetadataUpdateProcessor;
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
@@ -102,6 +103,10 @@ struct Args {
     /// Open World Explorer on the browser.
     #[arg(long)]
     explorer: bool,
+
+    /// Chunk size of the events page when indexing using events
+    #[arg(long, default_value = "1000")]
+    events_chunk_size: u64,
 }
 
 #[tokio::main]
@@ -156,6 +161,7 @@ async fn main() -> anyhow::Result<()> {
             Box::new(StoreSetRecordProcessor),
             Box::new(MetadataUpdateProcessor),
             Box::new(StoreDelRecordProcessor),
+            Box::new(EventMessageProcessor),
         ],
         transaction: vec![Box::new(StoreTransactionProcessor)],
         ..Processors::default()
@@ -168,7 +174,11 @@ async fn main() -> anyhow::Result<()> {
         db.clone(),
         &provider,
         processors,
-        EngineConfig { start_block: args.start_block, ..Default::default() },
+        EngineConfig {
+            start_block: args.start_block,
+            events_chunk_size: args.events_chunk_size,
+            ..Default::default()
+        },
         shutdown_tx.clone(),
         Some(block_tx),
     );

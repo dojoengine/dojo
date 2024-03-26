@@ -12,7 +12,6 @@ use starknet::core::types::FieldElement;
 pub mod celestia;
 
 pub mod error;
-pub mod state_diff;
 use error::DataAvailabilityResult;
 
 /// All possible chains configuration for data availability.

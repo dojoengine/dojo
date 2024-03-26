@@ -5,9 +5,9 @@ use katana_db::models::contract::ContractInfoChangeList;
 use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
 use katana_primitives::block::BlockNumber;
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    GenericContractInfo, Nonce, StorageKey, StorageValue,
+    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::DbProvider;
@@ -69,9 +69,9 @@ impl StateWriter for DbProvider {
 }
 
 impl ContractClassWriter for DbProvider {
-    fn set_class(&self, hash: ClassHash, class: CompiledContractClass) -> ProviderResult<()> {
+    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
-            db_tx.put::<tables::CompiledContractClasses>(hash, class.into())?;
+            db_tx.put::<tables::CompiledClasses>(hash, class)?;
             Ok(())
         })?
     }
@@ -109,9 +109,9 @@ impl LatestStateProvider {
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
-        let class = self.0.get::<tables::CompiledContractClasses>(hash)?;
-        Ok(class.map(CompiledContractClass::from))
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        let class = self.0.get::<tables::CompiledClasses>(hash)?;
+        Ok(class)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -137,7 +137,7 @@ impl StateProvider for LatestStateProvider {
     fn class_hash_of_contract(
         &self,
         address: ContractAddress,
-    ) -> ProviderResult<Option<katana_primitives::contract::ClassHash>> {
+    ) -> ProviderResult<Option<ClassHash>> {
         let info = self.0.get::<tables::ContractInfo>(address)?;
         Ok(info.map(|info| info.class_hash))
     }
@@ -222,10 +222,10 @@ impl ContractClassProvider for HistoricalStateProvider {
         }
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
-            let contract = self.tx.get::<tables::CompiledContractClasses>(hash)?;
-            Ok(contract.map(CompiledContractClass::from))
+            let contract = self.tx.get::<tables::CompiledClasses>(hash)?;
+            Ok(contract)
         } else {
             Ok(None)
         }
