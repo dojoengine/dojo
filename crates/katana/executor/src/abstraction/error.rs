@@ -54,6 +54,9 @@ pub enum ExecutionError {
     #[error("transaction validation error: {0}")]
     TransactionValidationFailed(Box<ExecutionError>),
 
+    #[error("transaction reverted: {revert_error}")]
+    TransactionReverted { revert_error: String },
+
     #[error("{0}")]
     Other(String),
 }
