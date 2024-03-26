@@ -15,7 +15,7 @@ use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::provider::provider::{KatanaProvider, TransactionsPageCursor};
+use crate::provider::provider::{KatanaProvider, TransactionsPage, TransactionsPageCursor};
 use crate::sql::Sql;
 
 pub struct Processors<P: Provider + Sync> {
@@ -72,24 +72,35 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        let is_katana = match self
-            .provider
-            .get_transactions(TransactionsPageCursor { block_number: 0, transaction_index: 0 })
-            .await
-        {
-            Ok(_) => true,
-            Err(err) => {
-                info!("provider does not support katana, fetching events instead: {}", err);
-                false
-            }
-        };
-
         let mut head = self.db.head().await?;
         if head == 0 {
             head = self.config.start_block;
         } else if self.config.start_block != 0 {
             warn!("start block ignored, stored head exists and will be used instead");
         }
+
+        // Fetch the first page of transactions to determine if the provider supports katana.
+        // If yes, we process and store the transactions page.
+        // And use the returned cursor for next pages.
+        let transactions_page = match self
+            .provider
+            .get_transactions(TransactionsPageCursor { block_number: head, transaction_index: 0 })
+            .await
+        {
+            Ok(page) => Some(page),
+            Err(err) => {
+                info!("provider does not support katana, fetching events instead: {}", err);
+                None
+            }
+        };
+
+        if let Some(transactions_page) = transactions_page.clone() {
+            self.process_katana(transactions_page.transactions, head).await?;
+
+            self.db.execute().await?;
+        }
+
+        let mut current_cursor = transactions_page.map(|t| t.cursor);
 
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
@@ -102,8 +113,9 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                     break Ok(());
                 }
                 _ = async {
-                    match self.sync_to_head(head, is_katana).await {
-                        Ok(latest_block_number) => {
+                    match self.sync_to_head(head, current_cursor.clone()).await {
+                        Ok((latest_block_number, cursor)) => {
+                            current_cursor = cursor;
                             head = latest_block_number;
                             backoff_delay = Duration::from_secs(1);
                         }
@@ -121,22 +133,27 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         }
     }
 
-    pub async fn sync_to_head(&mut self, from: u64, is_katana: bool) -> Result<u64> {
+    pub async fn sync_to_head(
+        &mut self,
+        from: u64,
+        cursor: Option<TransactionsPageCursor>,
+    ) -> Result<(u64, Option<TransactionsPageCursor>)> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
+        let mut new_cursor = None;
         if from < latest_block_number {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
 
-            if is_katana {
+            if let Some(cursor) = cursor {
                 // we fetch pending block too
-                self.sync_range_katana(from, latest_block_number + 1).await?;
+                new_cursor = Some(self.sync_range_katana(&cursor).await?);
             } else {
                 self.sync_range(from, latest_block_number).await?;
             }
         };
 
-        Ok(latest_block_number)
+        Ok((latest_block_number, new_cursor))
     }
 
     pub async fn sync_range(&mut self, from: u64, to: u64) -> Result<()> {
@@ -172,36 +189,16 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         Ok(())
     }
 
-    async fn sync_range_katana(&mut self, from: u64, to: u64) -> Result<()> {
-        for block_number in from..to {
-            let transactions = self
-                .provider
-                .get_transactions(TransactionsPageCursor { block_number, transaction_index: 0 })
-                .await?;
+    async fn sync_range_katana(
+        &mut self,
+        cursor: &TransactionsPageCursor,
+    ) -> Result<TransactionsPageCursor> {
+        let transactions = self.provider.get_transactions(cursor.clone()).await?;
 
-            if let Some(ref block_tx) = self.block_tx {
-                block_tx.send(block_number).await?;
-            }
-
-            let block_timestamp = self.get_block_timestamp(block_number).await?;
-
-            self.process_block(block_number, block_timestamp).await?;
-            self.db.set_head(block_number);
-
-            for (transaction, receipt) in transactions.transactions {
-                self.process_transaction_and_receipt(
-                    &transaction,
-                    Some(receipt),
-                    block_number,
-                    block_timestamp,
-                )
-                .await?;
-            }
-        }
-
+        self.process_katana(transactions.transactions, cursor.block_number).await?;
         self.db.execute().await?;
 
-        Ok(())
+        Ok(transactions.cursor)
     }
 
     async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {
@@ -209,6 +206,33 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             MaybePendingBlockWithTxHashes::Block(block) => Ok(block.timestamp),
             MaybePendingBlockWithTxHashes::PendingBlock(block) => Ok(block.timestamp),
         }
+    }
+
+    async fn process_katana(
+        &mut self,
+        transactions: Vec<(Transaction, MaybePendingTransactionReceipt)>,
+        block_number: u64,
+    ) -> Result<()> {
+        if let Some(ref block_tx) = self.block_tx {
+            block_tx.send(block_number).await?;
+        }
+
+        let block_timestamp = self.get_block_timestamp(block_number).await?;
+
+        self.process_block(block_number, block_timestamp).await?;
+        self.db.set_head(block_number);
+
+        for (transaction, receipt) in transactions {
+            self.process_transaction_and_receipt(
+                &transaction,
+                Some(receipt),
+                block_number,
+                block_timestamp,
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 
     async fn process(&mut self, event: EmittedEvent, last_block: &mut u64) -> Result<()> {
