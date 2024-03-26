@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711397437708,
+  "lastUpdate": 1711491022924,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3295,6 +3295,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 966479,
             "range": "± 69770",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a4ccc2ee1619c1dbb8a61749f19812eae545e49e",
+          "message": "fix: add script to teardown tests and updated cargo lock (#1707)",
+          "timestamp": "2024-03-26T16:00:57-06:00",
+          "tree_id": "2f284de5906c4210b2804cb334b3f06150b5d190",
+          "url": "https://github.com/dojoengine/dojo/commit/a4ccc2ee1619c1dbb8a61749f19812eae545e49e"
+        },
+        "date": 1711491021887,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17774843,
+            "range": "± 207659",
             "unit": "ns/iter"
           }
         ]
