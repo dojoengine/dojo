@@ -29,8 +29,10 @@ members = [
   "crates/katana/storage/codecs/derive",
   "crates/katana/storage/db",
   "crates/katana/storage/provider",
+  "crates/katana/tasks",
   "crates/metrics",
   "crates/saya/core",
+  "crates/saya/provider",
   "crates/sozo/signers",
   "crates/torii/client",
   "crates/torii/server",
@@ -43,7 +45,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "0.6.0-alpha.7"
+version = "0.6.0-alpha.8"
 
 [profile.performance]
 codegen-units = 1
@@ -63,14 +65,22 @@ dojo-lang = { path = "crates/dojo-lang" }
 dojo-test-utils = { path = "crates/dojo-test-utils" }
 dojo-types = { path = "crates/dojo-types" }
 dojo-world = { path = "crates/dojo-world" }
-katana-core = { path = "crates/katana/core" }
+
+# katana
+katana-codecs = { path = "crates/katana/storage/codecs" }
+katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
+katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
-katana-executor = { path = "crates/katana/executor" }
+katana-executor = { path = "crates/katana/executor", default-features = false }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider" }
 katana-rpc = { path = "crates/katana/rpc/rpc" }
 katana-rpc-api = { path = "crates/katana/rpc/rpc-api" }
 katana-runner = { path = "crates/katana/runner" }
+katana-tasks = { path = "crates/katana/tasks" }
+
+# torii
+torii-client = { path = "crates/torii/client" }
 torii-core = { path = "crates/torii/core" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
@@ -79,13 +89,16 @@ torii-server = { path = "crates/torii/server" }
 
 # saya
 saya-core = { path = "crates/saya/core" }
+saya-provider = { path = "crates/saya/provider" }
+
+# sozo
+sozo-signers = { path = "crates/sozo/signers" }
 sozo-ops = { path = "crates/sozo/ops" }
 
 anyhow = "1.0.75"
 assert_matches = "1.5.0"
 async-trait = "0.1.68"
 base64 = "0.21.2"
-blockifier = { git = "https://github.com/starkware-libs/blockifier", tag = "v0.4.0-rc9.2" }
 cairo-lang-compiler = "=2.5.4"
 cairo-lang-debug = "=2.5.4"
 cairo-lang-defs = "=2.5.4"
@@ -153,6 +166,9 @@ tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 regex = "1.10.3"
 url = { version = "2.4.0", features = [ "serde" ] }
 
+rstest = "0.18.2"
+rstest_reuse = "0.6.0"
+
 # server
 hyper = "0.14.27"
 warp = "0.3"
@@ -169,9 +185,6 @@ tonic-web-wasm-client = "0.4.0"
 wasm-prost = { version = "0.11.9", package = "prost" }
 wasm-tonic = { version = "0.9.2", default-features = false, features = [ "codegen", "gzip", "prost" ], package = "tonic" }
 wasm-tonic-build = { version = "0.9.2", default-features = false, features = [ "prost" ], package = "tonic-build" }
-
-[patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }

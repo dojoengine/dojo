@@ -22,6 +22,7 @@ use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::provider::provider::KatanaProvider;
 use crate::provider::KatanaClient;
 use crate::sql::Sql;
+use crate::utils::utc_dt_string_from_timestamp;
 
 pub async fn bootstrap_engine<P, R>(
     world: WorldContractReader<P>,
@@ -85,6 +86,7 @@ async fn test_load_from_remote() {
     )
     .await;
 
+    let block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 3);
 
@@ -121,16 +123,20 @@ async fn test_load_from_remote() {
             data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
         },
         FieldElement::THREE,
+        block_timestamp,
     );
 
     db.execute().await.unwrap();
 
-    let query =
-        format!("SELECT keys, data, transaction_hash FROM events WHERE id = '{}'", event_id);
-    let (keys, data, tx_hash): (String, String, String) =
+    let query = format!(
+        "SELECT keys, data, transaction_hash, executed_at FROM events WHERE id = '{}'",
+        event_id
+    );
+    let (keys, data, tx_hash, executed_at): (String, String, String, String) =
         sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
 
     assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
     assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
-    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE))
+    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE));
+    assert_eq!(executed_at, utc_dt_string_from_timestamp(block_timestamp));
 }

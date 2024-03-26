@@ -1,6 +1,16 @@
 use core::fmt;
 use std::num::ParseIntError;
 
+use crate::FieldElement;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct OrderedEvent {
+    pub order: u64,
+    pub keys: Vec<FieldElement>,
+    pub data: Vec<FieldElement>,
+}
+
 #[derive(PartialEq, Eq, Debug, Default)]
 pub struct ContinuationToken {
     pub block_n: u64,

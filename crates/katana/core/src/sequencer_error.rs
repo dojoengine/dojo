@@ -1,5 +1,3 @@
-use blockifier::execution::errors::EntryPointExecutionError;
-use blockifier::transaction::errors::TransactionExecutionError;
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::event::ContinuationTokenError;
@@ -13,10 +11,6 @@ pub enum SequencerError {
     ContractNotFound(ContractAddress),
     #[error("State for block {0:?} not found.")]
     StateNotFound(BlockIdOrTag),
-    #[error(transparent)]
-    TransactionExecution(#[from] TransactionExecutionError),
-    #[error(transparent)]
-    EntryPointExecution(#[from] EntryPointExecutionError),
     #[error("Wait for pending transactions.")]
     PendingTransactions,
     #[error(transparent)]

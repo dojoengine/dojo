@@ -36,6 +36,7 @@ where
         world: &WorldContractReader<P>,
         db: &mut Sql,
         block_number: u64,
+        block_timestamp: u64,
         transaction_receipt: &TransactionReceipt,
         event_id: &str,
         event: &Event,
@@ -45,16 +46,18 @@ where
 #[async_trait]
 pub trait BlockProcessor<P: Provider + Sync> {
     fn get_block_number(&self) -> String;
-    async fn process(&self, db: &mut Sql, provider: &P, block_number: u64) -> Result<(), Error>;
+    async fn process(&self, db: &mut Sql, provider: &P, block_number: u64, block_timestamp: u64) -> Result<(), Error>;
 }
 
 #[async_trait]
 pub trait TransactionProcessor<P: Provider + Sync> {
+    #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,
         db: &mut Sql,
         provider: &P,
         block_number: u64,
+        block_timestamp: u64,
         transaction_receipt: &TransactionReceipt,
         transaction_hash: FieldElement,
         transaction: &Transaction,

@@ -12,7 +12,8 @@ use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::{StateFactoryProvider, StateRootProvider, StateWriter};
 use katana_provider::traits::state_update::StateUpdateProvider;
 use katana_provider::traits::transaction::{
-    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionsProviderExt,
+    ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
+    TransactionsProviderExt,
 };
 use katana_provider::BlockchainProvider;
 
@@ -21,6 +22,7 @@ pub trait Database:
     + BlockWriter
     + TransactionProvider
     + TransactionStatusProvider
+    + TransactionTraceProvider
     + TransactionsProviderExt
     + ReceiptProvider
     + StateUpdateProvider
@@ -40,6 +42,7 @@ impl<T> Database for T where
         + BlockWriter
         + TransactionProvider
         + TransactionStatusProvider
+        + TransactionTraceProvider
         + TransactionsProviderExt
         + ReceiptProvider
         + StateUpdateProvider
@@ -119,7 +122,13 @@ impl Blockchain {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
     ) -> Result<Self> {
-        BlockWriter::insert_block_with_states_and_receipts(&provider, block, states, vec![])?;
+        BlockWriter::insert_block_with_states_and_receipts(
+            &provider,
+            block,
+            states,
+            vec![],
+            vec![],
+        )?;
         Ok(Self::new(provider))
     }
 }
@@ -245,6 +254,7 @@ mod tests {
                     dummy_block.clone(),
                     StateUpdatesWithDeclaredClasses::default(),
                     vec![Receipt::Invoke(InvokeTxReceipt::default())],
+                    vec![],
                 )
                 .unwrap();
 

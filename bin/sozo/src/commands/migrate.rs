@@ -119,7 +119,8 @@ impl MigrateArgs {
             )
             .await?;
 
-            migration::migrate(&ws, world_address, chain_id, &account, self.name).await
+            migration::migrate(&ws, world_address, chain_id, &account, self.name, self.dry_run)
+                .await
         })
     }
 }

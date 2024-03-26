@@ -36,7 +36,7 @@ async fn test_get_transactions() {
     let contract = Arc::new(contract);
 
     // Should return successfully when no transactions have been mined.
-    let cursor = TransactionsPageCursor { block_number: 0, transaction_index: 0 };
+    let cursor = TransactionsPageCursor { block_number: 0, transaction_index: 0, chunk_size: 100 };
 
     let response: TransactionsPage = client.get_transactions(cursor).await.unwrap();
 
@@ -91,7 +91,11 @@ async fn test_get_transactions() {
 
     // Should properly increment to new pending block
     let response: TransactionsPage = client
-        .get_transactions(TransactionsPageCursor { block_number: 2, transaction_index: 1 })
+        .get_transactions(TransactionsPageCursor {
+            block_number: 2,
+            transaction_index: 1,
+            chunk_size: 100,
+        })
         .await
         .unwrap();
 
@@ -121,7 +125,7 @@ async fn test_get_transactions() {
     sleep(Duration::from_millis(5000)).await;
 
     let start_cursor = response.cursor;
-    let response: TransactionsPage = client.get_transactions(start_cursor.clone()).await.unwrap();
+    let response: TransactionsPage = client.get_transactions(start_cursor).await.unwrap();
     assert!(response.transactions.len() == 100);
     assert!(response.cursor.block_number == 4);
     assert!(response.cursor.transaction_index == 100);
@@ -135,7 +139,7 @@ async fn test_get_transactions() {
     // Create block 4.
     let _: () = client.generate_block().await.unwrap();
 
-    let response: TransactionsPage = client.get_transactions(start_cursor.clone()).await.unwrap();
+    let response: TransactionsPage = client.get_transactions(start_cursor).await.unwrap();
     assert!(response.transactions.len() == 100);
     assert!(response.cursor.block_number == 4);
     assert!(response.cursor.transaction_index == 100);
@@ -166,7 +170,7 @@ async fn test_get_transactions_with_instant_mining() {
     let contract = Arc::new(contract);
 
     // Should return successfully when no transactions have been mined.
-    let cursor = TransactionsPageCursor { block_number: 0, transaction_index: 0 };
+    let cursor = TransactionsPageCursor { block_number: 0, transaction_index: 0, chunk_size: 100 };
 
     let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
 
@@ -204,7 +208,11 @@ async fn test_get_transactions_with_instant_mining() {
 
     // Should properly increment to new pending block
     let response: TransactionsPage = client
-        .get_transactions(TransactionsPageCursor { block_number: 2, transaction_index: 1 })
+        .get_transactions(TransactionsPageCursor {
+            block_number: 2,
+            transaction_index: 1,
+            chunk_size: 100,
+        })
         .await
         .unwrap();
 

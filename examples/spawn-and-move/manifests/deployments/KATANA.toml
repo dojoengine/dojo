@@ -15,12 +15,30 @@ name = "dojo::base::base"
 [[contracts]]
 kind = "DojoContract"
 address = "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7"
-class_hash = "0xd43bce39922ec3857da231e3bb5c365c29f837c6dce322e4d61dfae83a4c18"
+class_hash = "0x2a3b1c5473dfb9fd1be08b94fae201b30b4e63ed8caed996476cc4ad44cadb2"
 abi = "abis/deployments/KATANA/contracts/actions.json"
-reads = []
+reads = [
+    "Moves",
+    "Position",
+]
 writes = []
 computed = []
 name = "dojo_examples::actions::actions"
+
+[[models]]
+kind = "DojoModel"
+class_hash = "0x52659850f9939482810d9f6b468b91dc99e0b7fa42c2016cf12833ec06ce911"
+name = "dojo_examples::actions::actions::moved"
+
+[[models.members]]
+name = "player"
+type = "ContractAddress"
+key = true
+
+[[models.members]]
+name = "direction"
+type = "Direction"
+key = false
 
 [[models]]
 kind = "DojoModel"

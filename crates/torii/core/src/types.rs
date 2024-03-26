@@ -34,6 +34,7 @@ pub struct Entity {
     pub id: String,
     pub keys: String,
     pub event_id: String,
+    pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -46,6 +47,7 @@ pub struct Model {
     pub class_hash: String,
     pub contract_address: String,
     pub transaction_hash: String,
+    pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -56,5 +58,6 @@ pub struct Event {
     pub keys: String,
     pub data: String,
     pub transaction_hash: String,
+    pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }

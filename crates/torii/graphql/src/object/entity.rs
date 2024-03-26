@@ -102,6 +102,10 @@ impl EntityObject {
                 Name::new("updatedAt"),
                 Value::from(entity.updated_at.format(DATETIME_FORMAT).to_string()),
             ),
+            (
+                Name::new("executedAt"),
+                Value::from(entity.executed_at.format(DATETIME_FORMAT).to_string()),
+            ),
         ])
     }
 }
