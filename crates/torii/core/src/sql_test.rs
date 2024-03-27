@@ -57,7 +57,7 @@ where
         None,
     );
 
-    let _ = engine.sync_to_head(0, false).await?;
+    let _ = engine.sync_to_head(0, None).await?;
 
     Ok(engine)
 }

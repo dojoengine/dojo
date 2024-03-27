@@ -29,7 +29,6 @@ use torii_core::engine::{Engine, EngineConfig, Processors};
 use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
-use torii_core::provider::provider::KatanaProvider;
 use torii_core::provider::KatanaClient;
 use torii_core::sql::Sql;
 
@@ -350,7 +349,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
         None,
     );
 
-    let _ = engine.sync_to_head(0, false).await?;
+    let _ = engine.sync_to_head(0, None).await?;
 
     Ok(pool)
 }
