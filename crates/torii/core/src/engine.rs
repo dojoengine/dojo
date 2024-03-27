@@ -271,7 +271,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             let block = self.get_block_metadata(block_number).await?;
             self.process_block(&block).await?;
         }
-        
+
         self.db.set_head(to);
 
         for (transaction, receipt) in transactions {
