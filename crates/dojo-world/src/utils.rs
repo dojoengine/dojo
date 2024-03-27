@@ -48,7 +48,7 @@ pub enum TransactionWaitingError {
 /// let provider = JsonRpcClient::new(HttpTransport::new(Url::parse("http://localhost:5000").unwrap()));
 ///
 /// let tx_hash = FieldElement::from(0xbadbeefu64);
-/// let receipt = TransactionWaiter::new(tx_hash, &provider).with_finality(TransactionFinalityStatus::ACCEPTED_ON_L2).await.unwrap();
+/// let receipt = TransactionWaiter::new(tx_hash, &provider).with_tx_status(TransactionFinalityStatus::AcceptedOnL2).await.unwrap();
 /// ```
 #[must_use = "TransactionWaiter does nothing unless polled"]
 pub struct TransactionWaiter<'a, P: Provider> {

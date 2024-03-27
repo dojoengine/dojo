@@ -3,6 +3,7 @@ use scarb::core::Config;
 
 use crate::args::Commands;
 
+pub(crate) mod account;
 pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod clean;
@@ -11,6 +12,7 @@ pub(crate) mod dev;
 pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod init;
+pub(crate) mod keystore;
 pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
@@ -19,6 +21,7 @@ pub(crate) mod test;
 
 pub fn run(command: Commands, config: &Config) -> Result<()> {
     match command {
+        Commands::Account(args) => args.run(config),
         Commands::Init(args) => args.run(config),
         Commands::Clean(args) => args.run(config),
         Commands::Test(args) => args.run(config),
@@ -30,6 +33,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Model(args) => args.run(config),
         Commands::Register(args) => args.run(config),
         Commands::Events(args) => args.run(config),
+        Commands::Keystore(args) => args.run(),
         Commands::Completions(args) => args.run(),
     }
 }
