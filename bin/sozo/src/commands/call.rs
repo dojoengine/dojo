@@ -1,30 +1,31 @@
 use anyhow::Result;
 use clap::Args;
 use scarb::core::Config;
-use sozo_ops::execute;
 use starknet::core::types::FieldElement;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
-use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
 #[derive(Debug, Args)]
-#[command(about = "Execute a system with the given calldata.")]
-pub struct ExecuteArgs {
-    #[arg(help = "The address of the contract to be executed. Or fully qualified contract name \
-                  (ex: dojo_example::actions::actions")]
+#[command(about = "Call a system with the given calldata.")]
+pub struct CallArgs {
+    #[arg(help = "The address or the fully qualified name of the contract to call.")]
     pub contract: String,
 
-    #[arg(help = "The name of the entrypoint to be executed.")]
+    #[arg(help = "The name of the entrypoint to call.")]
     pub entrypoint: String,
 
     #[arg(short, long)]
     #[arg(value_delimiter = ',')]
-    #[arg(help = "The calldata to be passed to the system. Comma separated values e.g., \
+    #[arg(help = "The calldata to be passed to the entrypoint. Comma separated values e.g., \
                   0x12345,0x69420.")]
     pub calldata: Vec<FieldElement>,
+
+    #[arg(short, long)]
+    #[arg(help = "The block ID (could be a hash, a number, 'pending' or 'latest')")]
+    pub block_id: Option<String>,
 
     #[command(flatten)]
     pub starknet: StarknetOptions,
@@ -34,12 +35,9 @@ pub struct ExecuteArgs {
 
     #[command(flatten)]
     pub world: WorldOptions,
-
-    #[command(flatten)]
-    pub transaction: TransactionOptions,
 }
 
-impl ExecuteArgs {
+impl CallArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = utils::load_metadata_from_config(config)?;
 
@@ -52,9 +50,14 @@ impl ExecuteArgs {
             )
             .await
             .unwrap();
-            let tx_config = self.transaction.into();
-
-            execute::execute(self.contract, self.entrypoint, self.calldata, world, tx_config).await
+            sozo_ops::call::call(
+                self.contract,
+                self.entrypoint,
+                self.calldata,
+                world,
+                self.block_id,
+            )
+            .await
         })
     }
 }
