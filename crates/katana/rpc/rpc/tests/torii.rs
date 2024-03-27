@@ -100,9 +100,9 @@ async fn test_get_transactions() {
         .unwrap();
 
     assert!(response.transactions.len() == 1);
-    assert!(response.transactions[0].0.hash == deploy_txn_future.transaction_hash);
     assert!(response.cursor.block_number == 3);
     assert!(response.cursor.transaction_index == 1);
+    assert!(response.transactions[0].0.transaction_hash() == &deploy_txn_future.transaction_hash);
 
     // Create block 3.
     let _: () = client.generate_block().await.unwrap();
@@ -214,9 +214,9 @@ async fn test_get_transactions_with_instant_mining() {
         .unwrap();
 
     assert!(response.transactions.len() == 1);
-    assert!(response.transactions[0].0.hash == deploy_txn_future.transaction_hash);
     assert!(response.cursor.block_number == 3);
     assert!(response.cursor.transaction_index == 1);
+    assert!(response.transactions[0].0.transaction_hash() == &deploy_txn_future.transaction_hash);
 
     sequencer.stop().expect("failed to stop sequencer");
 }

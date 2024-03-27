@@ -238,7 +238,7 @@ pub enum BroadcastedTx {
     DeployAccount(BroadcastedDeployAccountTx),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Deref)]
 #[serde(transparent)]
 pub struct Tx(pub starknet::core::types::Transaction);
 
@@ -516,7 +516,7 @@ impl Default for TransactionsPageCursor {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionsPage {
-    pub transactions: Vec<(TxWithHash, MaybePendingTxReceipt)>,
+    pub transactions: Vec<(Tx, MaybePendingTxReceipt)>,
     pub cursor: TransactionsPageCursor,
 }
 
