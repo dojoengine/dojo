@@ -172,7 +172,7 @@ impl Saya {
         };
 
         trace!(block_number, "proving block");
-        let proof = prover::prove(to_prove.to_string(), prover::ProverIdentifier::Stone).await?;
+        let proof = prover::prove(to_prove.serialize(), prover::ProverIdentifier::Stone).await?;
 
         trace!(block_number, "verifying block");
         let transaction_hash =
