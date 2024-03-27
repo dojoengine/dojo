@@ -10,7 +10,7 @@ use katana_provider::traits::transaction::TransactionProvider;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
 use katana_rpc_types::receipt::{MaybePendingTxReceipt, PendingTxReceipt};
-use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor, Tx};
+use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::TokioTaskSpawner;
 

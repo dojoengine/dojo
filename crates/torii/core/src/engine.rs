@@ -63,7 +63,7 @@ struct UnprocessedEvent {
 #[derive(Debug, Clone)]
 struct Block {
     /// The hash of this block's parent
-    pub parent_hash: FieldElement,
+    pub _parent_hash: FieldElement,
     /// The block number (its height)
     pub block_number: u64,
     /// The time in which the block was created, encoded in Unix time
@@ -246,12 +246,12 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         match self.provider.get_block_with_tx_hashes(BlockId::Number(block_number)).await? {
             MaybePendingBlockWithTxHashes::Block(block) => Ok(Block {
                 block_number: block.block_number,
-                parent_hash: block.parent_hash,
+                _parent_hash: block.parent_hash,
                 timestamp: block.timestamp,
             }),
             MaybePendingBlockWithTxHashes::PendingBlock(block) => Ok(Block {
                 block_number,
-                parent_hash: block.parent_hash,
+                _parent_hash: block.parent_hash,
                 timestamp: block.timestamp,
             }),
         }
