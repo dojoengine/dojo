@@ -100,12 +100,11 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             warn!("start block ignored, stored head exists and will be used instead");
         }
 
-        // Fetch the first page of transactions to determine if the provider supports katana.
+        // Sync the first page of transactions to determine if the provider supports katana.
         // If yes, we process and store the transactions page.
         // And use the returned cursor for next pages.
-        let transactions_page = match self
-            .provider
-            .get_transactions(TransactionsPageCursor {
+        let mut cursor = match self
+            .sync_range_katana(&TransactionsPageCursor {
                 block_number: head,
                 transaction_index: 0,
                 chunk_size: 100,
@@ -119,21 +118,6 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             }
         };
 
-        // Process the first page of transactions.
-        // For katana providers.
-        if let Some(transactions_page) = transactions_page.clone() {
-            self.process_katana(
-                transactions_page.transactions,
-                head,
-                transactions_page.cursor.block_number - 1,
-            )
-            .await?;
-
-            self.db.execute().await?;
-        }
-
-        let mut current_cursor = transactions_page.clone().map(|t| t.cursor);
-
         let mut backoff_delay = Duration::from_secs(1);
         let max_backoff_delay = Duration::from_secs(60);
 
@@ -145,10 +129,10 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                     break Ok(());
                 }
                 _ = async {
-                    match self.sync_to_head(head, current_cursor.clone()).await {
-                        Ok((latest_block_number, cursor)) => {
-                            if let Some(cursor) = cursor {
-                                current_cursor = Some(cursor);
+                    match self.sync_to_head(head, cursor.clone()).await {
+                        Ok((latest_block_number, next_cursor)) => {
+                            if let Some(next_cursor) = next_cursor {
+                                cursor = Some(next_cursor);
                             }
                             head = latest_block_number;
                             backoff_delay = Duration::from_secs(1);
@@ -175,17 +159,19 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         let mut new_cursor = None;
-        if from < latest_block_number {
-            // if `from` == 0, then the block may or may not be processed yet.
-            let from = if from == 0 { from } else { from + 1 };
-
-            if let Some(cursor) = cursor {
+        if let Some(cursor) = cursor {
+            if cursor.block_number <= latest_block_number {
                 // we fetch pending block too
                 new_cursor = Some(self.sync_range_katana(&cursor).await?);
-            } else {
-                self.sync_range(from, latest_block_number).await?;
             }
-        };
+        } else {
+            if from < latest_block_number {
+                // if `from` == 0, then the block may or may not be processed yet.
+                let from = if from == 0 { from } else { from + 1 };
+
+                self.sync_range(from, latest_block_number).await?;
+            };
+        }
 
         Ok((latest_block_number, new_cursor))
     }
@@ -228,8 +214,6 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         cursor: &TransactionsPageCursor,
     ) -> Result<TransactionsPageCursor> {
         let transactions = self.provider.get_transactions(cursor.clone()).await?;
-
-        println!("transactions: {:?}", transactions);
 
         self.process_katana(
             transactions.transactions,
