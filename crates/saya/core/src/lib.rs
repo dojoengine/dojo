@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use futures::future::join_all;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlockWithStatus};
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
@@ -12,6 +13,7 @@ use url::Url;
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
+use crate::prover::state_diff::ProvedStateDiff;
 
 pub mod blockchain;
 pub mod data_availability;
@@ -124,7 +126,19 @@ impl Saya {
     async fn process_block(&mut self, block_number: BlockNumber) -> SayaResult<()> {
         trace!(block_number, "processing block");
 
-        let block = self.provider.fetch_block(block_number).await?;
+        let prev_block_index = if block_number == 0 { 0 } else { block_number - 1 };
+        let relevant_blocks = join_all(
+            vec![block_number, prev_block_index, 0]
+                .into_iter()
+                .map(|block_number| self.provider.fetch_block(block_number)),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
+
+        let (block, prev_block, genesis_block) =
+            (relevant_blocks[0].clone(), relevant_blocks[1].clone(), relevant_blocks[2].clone());
+
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
 
@@ -134,6 +148,7 @@ impl Saya {
 
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 
+        let state_updates_to_prove = state_updates.state_updates.clone();
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
         if block_number == 0 {
@@ -142,6 +157,21 @@ impl Saya {
 
         let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
+        let to_prove = ProvedStateDiff {
+            genesis_state_hash: genesis_block.header.header.state_root,
+            prev_state_hash: prev_block.header.header.state_root,
+            state_updates: state_updates_to_prove,
+        };
+
+        trace!(block_number, "proving block");
+        let proof = prover::prove(to_prove.to_string(), prover::ProverIdentifier::Stone).await?;
+
+        trace!(block_number, "verifying block");
+        let transaction_hash =
+            verifier::verify(proof, verifier::VerifierIdentifier::HerodotusStarknetSepolia).await?;
+
+        trace!(block_number, transaction_hash, "block verified");
+
         Ok(())
     }
 }
@@ -149,5 +179,33 @@ impl Saya {
 impl From<starknet::providers::ProviderError> for error::Error {
     fn from(e: starknet::providers::ProviderError) -> Self {
         Self::KatanaClient(format!("Katana client RPC provider error: {e}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        prover::{prove, state_diff::EXAMPLE_STATE_DIFF, ProverIdentifier},
+        verifier::{verify, VerifierIdentifier},
+    };
+
+    #[tokio::test]
+    async fn test_herodotus_verify() {
+        let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
+        // std::fs::File::create("proof.json").unwrap().write_all(proof.as_bytes()).unwrap();
+
+        let result = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
+
+        println!("Tx: {:?}", result);
+    }
+
+    #[tokio::test]
+    async fn test_local_verify() {
+        let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
+        // std::fs::File::create("proof.json").unwrap().write_all(proof.as_bytes()).unwrap();
+
+        let result = verify(proof, VerifierIdentifier::LocalStoneVerify).await.unwrap();
+
+        println!("Tx: {:?}", result);
     }
 }
