@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = args.try_into()?;
     print_intro(&config);
 
-    let saya = Saya::new(config).await?;
+    let mut saya = Saya::new(config).await?;
     saya.start().await?;
 
     // Wait until Ctrl + C is pressed, then shutdown

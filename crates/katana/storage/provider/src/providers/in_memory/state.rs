@@ -2,9 +2,9 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use katana_primitives::block::BlockNumber;
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    GenericContractInfo, Nonce, StorageKey, StorageValue,
+    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 
 use super::cache::{CacheSnapshotWithoutClasses, CacheStateDb, SharedContractClasses};
@@ -157,7 +157,7 @@ impl ContractClassProvider for InMemorySnapshot {
         }
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
             Ok(self.classes.compiled_classes.read().get(&hash).cloned())
         } else {
@@ -213,7 +213,7 @@ impl ContractClassProvider for LatestStateProvider {
         Ok(class)
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         let class = self.0.shared_contract_classes.compiled_classes.read().get(&hash).cloned();
         Ok(class)
     }
