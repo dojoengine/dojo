@@ -9,12 +9,36 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
 use url::Url;
 
+use crate::manifest::WORLD_CONTRACT_NAME;
+
 #[cfg(test)]
 #[path = "metadata_test.rs"]
 mod test;
 
 pub fn dojo_metadata_from_workspace(ws: &Workspace<'_>) -> Option<Metadata> {
-    Some(ws.current_package().ok()?.manifest.metadata.dojo())
+    let mut metadata = ws.current_package().ok()?.manifest.metadata.dojo();
+
+    // update world metadata with ABI and source files
+    if let Some(world) = metadata.world {
+        let mut new_world_metadata = world.clone();
+
+        let target_dir = ws.target_dir().path_existent().unwrap();
+        let target_dir = target_dir.join(ws.config().profile().as_str());
+        let abi_file = target_dir.join(format!("{WORLD_CONTRACT_NAME}.abi.json"));
+        let source_file = target_dir.join(format!("{WORLD_CONTRACT_NAME}.cairo"));
+
+        new_world_metadata.abi =
+            if abi_file.exists() { Some(Uri::File(abi_file.into_std_path_buf())) } else { None };
+        new_world_metadata.source = if source_file.exists() {
+            Some(Uri::File(source_file.into_std_path_buf()))
+        } else {
+            None
+        };
+
+        metadata.world = Some(new_world_metadata);
+    }
+
+    Some(metadata)
 }
 
 #[derive(Default, Deserialize, Debug, Clone)]
@@ -84,6 +108,8 @@ pub struct WorldMetadata {
     pub icon_uri: Option<Uri>,
     pub website: Option<Url>,
     pub socials: Option<HashMap<String, String>>,
+    pub abi: Option<Uri>,
+    pub source: Option<Uri>,
 }
 
 #[derive(Default, Deserialize, Clone, Debug)]
@@ -150,6 +176,20 @@ impl WorldMetadata {
             let reader = Cursor::new(cover_data);
             let response = client.add(reader).await?;
             meta.cover_uri = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        if let Some(Uri::File(abi)) = &self.abi {
+            let abi_data = std::fs::read(abi)?;
+            let reader = Cursor::new(abi_data);
+            let response = client.add(reader).await?;
+            meta.abi = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
+        };
+
+        if let Some(Uri::File(source)) = &self.source {
+            let source_data = std::fs::read(source)?;
+            let reader = Cursor::new(source_data);
+            let response = client.add(reader).await?;
+            meta.source = Some(Uri::Ipfs(format!("ipfs://{}", response.hash)))
         };
 
         let serialized = json!(meta).to_string();

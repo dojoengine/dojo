@@ -116,6 +116,7 @@ fn metadata_connection_output(
                 extract_str_mapping("website", &serde_value),
                 extract_str_mapping("icon_uri", &serde_value),
                 extract_str_mapping("cover_uri", &serde_value),
+                // TODO RBA
                 extract_socials_mapping("socials", &serde_value),
             ]);
 
