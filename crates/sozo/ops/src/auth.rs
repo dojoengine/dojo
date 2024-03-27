@@ -172,3 +172,88 @@ where
 
     Ok(())
 }
+
+pub async fn revoke_writer<A, P>(
+    world: &WorldContract<A>,
+    models_contracts: Vec<ModelContract>,
+    world_reader: WorldContractReader<P>,
+    transaction: TxConfig,
+) -> Result<()>
+where
+    A: ConnectedAccount + Sync + Send + 'static,
+    P: Provider + Sync + Send,
+{
+    let mut calls = Vec::new();
+
+    for mc in models_contracts {
+        let model_name = parse_cairo_short_string(&mc.model)?;
+        match world_reader.model_reader(&model_name).await {
+            Ok(_) => {
+                let contract = get_contract_address(world, mc.contract).await?;
+                calls.push(world.revoke_writer_getcall(&mc.model, &contract.into()));
+            }
+
+            Err(ModelError::ModelNotFound) => {
+                println!("Unknown model '{}' => IGNORED", model_name);
+            }
+
+            Err(err) => {
+                return Err(err.into());
+            }
+        }
+    }
+
+    if !calls.is_empty() {
+        let res = world
+            .account
+            .execute(calls)
+            .send()
+            .await
+            .with_context(|| "Failed to send transaction")?;
+
+        handle_transaction_result(
+            &world.account.provider(),
+            res,
+            transaction.wait,
+            transaction.receipt,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn revoke_owner<A>(
+    world: WorldContract<A>,
+    owners_resources: Vec<OwnerResource>,
+    transaction: TxConfig,
+) -> Result<()>
+where
+    A: ConnectedAccount + Sync + Send + 'static,
+{
+    let mut calls = Vec::new();
+
+    for or in owners_resources {
+        let resource = match &or.resource {
+            ResourceType::Model(name) => *name,
+            ResourceType::Contract(name_or_address) => {
+                get_contract_address(&world, name_or_address.clone()).await?
+            }
+        };
+
+        calls.push(world.revoke_owner_getcall(&or.owner.into(), &resource));
+    }
+
+    let res =
+        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+
+    handle_transaction_result(
+        &world.account.provider(),
+        res,
+        transaction.wait,
+        transaction.receipt,
+    )
+    .await?;
+
+    Ok(())
+}
