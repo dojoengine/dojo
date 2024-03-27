@@ -3,7 +3,6 @@ use clap::Args;
 use scarb::core::Config;
 use starknet::core::types::FieldElement;
 
-use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
@@ -23,11 +22,12 @@ pub struct CallArgs {
                   0x12345,0x69420.")]
     pub calldata: Vec<FieldElement>,
 
-    #[command(flatten)]
-    pub starknet: StarknetOptions,
+    #[arg(short, long)]
+    #[arg(help = "The block ID (could be a hash, a number, 'pending' or 'latest')")]
+    pub block_id: Option<String>,
 
     #[command(flatten)]
-    pub account: AccountOptions,
+    pub starknet: StarknetOptions,
 
     #[command(flatten)]
     pub world: WorldOptions,
@@ -38,15 +38,19 @@ impl CallArgs {
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         config.tokio_handle().block_on(async {
-            let world = utils::world_from_env_metadata(
-                self.world,
-                self.account,
-                self.starknet,
-                &env_metadata,
+            let world_reader =
+                utils::world_reader_from_env_metadata(self.world, self.starknet, &env_metadata)
+                    .await
+                    .unwrap();
+
+            sozo_ops::call::call(
+                world_reader,
+                self.contract,
+                self.entrypoint,
+                self.calldata,
+                self.block_id,
             )
             .await
-            .unwrap();
-            sozo_ops::call::call(self.contract, self.entrypoint, self.calldata, world).await
         })
     }
 }

@@ -1,28 +1,26 @@
 use anyhow::{Context, Result};
-use dojo_world::contracts::world::WorldContract;
-use starknet::accounts::ConnectedAccount;
+use dojo_world::contracts::WorldContractReader;
 use starknet::core::types::{BlockId, BlockTag, FieldElement, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 
-use super::get_contract_address;
+use crate::utils::{get_contract_address_from_reader, parse_block_id};
 
-#[cfg(test)]
-#[path = "call_test.rs"]
-mod call_test;
-
-pub async fn call<A>(
+pub async fn call<P: Provider + Sync + Send>(
+    world_reader: WorldContractReader<P>,
     contract: String,
     entrypoint: String,
     calldata: Vec<FieldElement>,
-    world: WorldContract<A>,
-) -> Result<()>
-where
-    A: ConnectedAccount + Sync + Send + 'static,
-{
-    let contract_address = get_contract_address(&world, contract).await?;
-    let output = world
-        .account
+    block_id: Option<String>,
+) -> Result<()> {
+    let contract_address = get_contract_address_from_reader(&world_reader, contract).await?;
+    let block_id = if let Some(block_id) = block_id {
+        parse_block_id(block_id)?
+    } else {
+        BlockId::Tag(BlockTag::Pending)
+    };
+
+    let output = world_reader
         .provider()
         .call(
             FunctionCall {
@@ -30,7 +28,7 @@ where
                 entry_point_selector: get_selector_from_name(&entrypoint)?,
                 calldata,
             },
-            BlockId::Tag(BlockTag::Latest),
+            block_id,
         )
         .await
         .with_context(|| format!("Failed to call {entrypoint}"))?;
