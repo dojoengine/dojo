@@ -9,31 +9,17 @@ use tokio::{
     sync::OnceCell,
 };
 
-async fn get_prover() -> StoneProver {
-    static STONE_PROVER: OnceCell<StoneProver> = OnceCell::const_new();
-
-    STONE_PROVER
-        .get_or_init(|| async {
-            let prover = StoneProver("neotheprogramist/state-diff-commitment:latest".to_string());
-            prover
-                .setup("neotheprogramist/state-diff-commitment")
-                .await
-                .expect("Pulling the Stone prover image failed");
-            prover
-        })
-        .await
-        .clone()
-}
-
 #[derive(Clone)]
 pub struct StoneProver(pub String);
 
 pub async fn prove_stone(input: String) -> anyhow::Result<String> {
-    get_prover().await.prove(input).await
+    let prover = StoneProver::new().await?;
+    prover.prove(input).await
 }
 
 pub async fn local_verify(input: String) -> anyhow::Result<String> {
-    get_prover().await.local_verify(input).await?;
+    let prover = StoneProver::new().await?;
+    prover.local_verify(input).await?;
     Ok(String::from("ok"))
 }
 
@@ -41,20 +27,6 @@ pub async fn local_verify(input: String) -> anyhow::Result<String> {
 impl ProverClient for StoneProver {
     fn identifier() -> ProverIdentifier {
         ProverIdentifier::Stone
-    }
-
-    async fn setup(&self, source: &str) -> anyhow::Result<()> {
-        // podman pull neotheprogramist/verifier:latest
-        let mut command = Command::new("podman");
-        command.arg("pull").arg(format!("docker.io/{}", source));
-
-        run(command, None).await.context("Failed to pull prover")?;
-
-        // let mut command = Command::new("podman");
-        // command.arg("pull").arg(format!("docker.io/{}", verifier));
-        // run(command, None).await.context("Failed to pull verifier")?;
-
-        Ok(())
     }
 
     async fn prove(&self, input: String) -> anyhow::Result<String> {
@@ -71,6 +43,39 @@ impl ProverClient for StoneProver {
         run(command, Some(proof)).await?;
 
         Ok(())
+    }
+}
+
+impl StoneProver {
+    async fn new() -> anyhow::Result<StoneProver> {
+        static STONE_PROVER: OnceCell<(anyhow::Result<String>, anyhow::Result<String>)> =
+            OnceCell::const_new();
+
+        let source = "neotheprogramist/state-diff-commitment";
+        let verifier = "neotheprogramist/verifier:latest";
+
+        let result = STONE_PROVER
+            .get_or_init(|| async {
+                let mut command = Command::new("podman");
+                command.arg("pull").arg(format!("docker.io/{}", source));
+
+                let mut verifier_command = Command::new("podman");
+                verifier_command.arg("pull").arg(format!("docker.io/{}", verifier));
+
+                (
+                    run(command, None).await.context("Failed to pull prover"),
+                    run(verifier_command, None).await.context("Failed to pull prover"),
+                )
+            })
+            .await;
+
+        if result.0.is_err() {
+            bail!("Failed to pull prover");
+        } else if result.1.is_err() {
+            bail!("Failed to pull verifier");
+        }
+
+        Ok(StoneProver(source.to_string()))
     }
 }
 
