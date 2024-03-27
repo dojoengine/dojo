@@ -2,8 +2,9 @@
 
 use std::sync::Arc;
 
-use futures::future::join_all;
-use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlockWithStatus};
+use futures::future::join;
+use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
+use katana_primitives::FieldElement;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
@@ -83,6 +84,16 @@ impl Saya {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block;
 
+        let (mut previous_block, genesis_state_hash) = if block == 0 {
+            let block = self.provider.fetch_block(0).await?;
+            let genesis_state_hash = block.header.header.state_root;
+            (block, genesis_state_hash)
+        } else {
+            let (genesis, previous) =
+                join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
+            (previous?, genesis?.header.header.state_root)
+        };
+
         loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
@@ -99,8 +110,11 @@ impl Saya {
                 continue;
             }
 
-            self.process_block(block).await?;
+            let fetched_block = self.provider.fetch_block(block).await?;
 
+            self.process_block(block, (&fetched_block, previous_block, genesis_state_hash)).await?;
+
+            previous_block = fetched_block;
             block += 1;
         }
     }
@@ -123,21 +137,14 @@ impl Saya {
     /// # Arguments
     ///
     /// * `block_number` - The block number.
-    async fn process_block(&mut self, block_number: BlockNumber) -> SayaResult<()> {
+    async fn process_block(
+        &mut self,
+        block_number: BlockNumber,
+        blocks: (&SealedBlock, SealedBlock, FieldElement),
+    ) -> SayaResult<()> {
         trace!(block_number, "processing block");
 
-        let prev_block_index = if block_number == 0 { 0 } else { block_number - 1 };
-        let relevant_blocks = join_all(
-            vec![block_number, prev_block_index, 0]
-                .into_iter()
-                .map(|block_number| self.provider.fetch_block(block_number)),
-        )
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()?;
-
-        let (block, prev_block, genesis_block) =
-            (relevant_blocks[0].clone(), relevant_blocks[1].clone(), relevant_blocks[2].clone());
+        let (block, prev_block, genesis_state_hash) = blocks;
 
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
@@ -146,7 +153,8 @@ impl Saya {
             da.publish_state_diff_felts(&da_state_update).await?;
         }
 
-        let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
+        let block =
+            SealedBlockWithStatus { block: block.clone(), status: FinalityStatus::AcceptedOnL2 };
 
         let state_updates_to_prove = state_updates.state_updates.clone();
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
@@ -158,7 +166,7 @@ impl Saya {
         let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         let to_prove = ProvedStateDiff {
-            genesis_state_hash: genesis_block.header.header.state_root,
+            genesis_state_hash,
             prev_state_hash: prev_block.header.header.state_root,
             state_updates: state_updates_to_prove,
         };
