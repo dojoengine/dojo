@@ -41,6 +41,49 @@ async fn setup(
     Ok(world)
 }
 
+#[test]
+fn parse_block_id_bad_hash() {
+    assert!(call::parse_block_id(Some("0xBadHash".to_string())).is_err());
+}
+
+#[test]
+fn parse_block_id_bad_string() {
+    assert!(call::parse_block_id(Some("BadString".to_string())).is_err());
+}
+
+#[test]
+fn parse_block_id_none() {
+    assert!(call::parse_block_id(None).unwrap() == BlockId::Tag(BlockTag::Pending));
+}
+
+#[test]
+fn parse_block_id_hash() {
+    assert!(
+        call::parse_block_id(Some("0x1234".to_string())).unwrap()
+            == BlockId::Hash(FieldElement::from_hex_be("0x1234").unwrap())
+    );
+}
+
+#[test]
+fn parse_block_id_pending() {
+    assert!(
+        call::parse_block_id(Some("pending".to_string())).unwrap()
+            == BlockId::Tag(BlockTag::Pending)
+    );
+}
+
+#[test]
+fn parse_block_id_latest() {
+    assert!(
+        call::parse_block_id(Some("latest".to_string())).unwrap() == BlockId::Tag(BlockTag::Latest)
+    );
+}
+
+#[test]
+fn parse_block_id_number() {
+    assert!(call::parse_block_id(Some("42".to_string())).unwrap() == BlockId::Number(42));
+}
+
 #[tokio::test]
 async fn call_with_bad_address() {
     let sequencer =
@@ -52,7 +95,8 @@ async fn call_with_bad_address() {
                 "0xBadCoffeeBadCode".to_string(),
                 ENTRYPOINT.to_string(),
                 vec![FieldElement::ZERO, FieldElement::ZERO],
-                world
+                world,
+                None
             )
             .await
             .is_err()
@@ -73,7 +117,8 @@ async fn call_with_bad_name() {
                 "BadName".to_string(),
                 ENTRYPOINT.to_string(),
                 vec![FieldElement::ZERO, FieldElement::ZERO],
-                world
+                world,
+                None
             )
             .await
             .is_err()
@@ -94,7 +139,8 @@ async fn call_with_bad_entrypoint() {
                 CONTRACT_NAME.to_string(),
                 "BadEntryPoint".to_string(),
                 vec![FieldElement::ZERO, FieldElement::ZERO],
-                world
+                world,
+                None
             )
             .await
             .is_err()
@@ -111,7 +157,7 @@ async fn call_with_bad_calldata() {
 
     if let Ok(world) = setup(&sequencer).await {
         assert!(
-            call::call(CONTRACT_NAME.to_string(), ENTRYPOINT.to_string(), vec![], world)
+            call::call(CONTRACT_NAME.to_string(), ENTRYPOINT.to_string(), vec![], world, None)
                 .await
                 .is_err()
         );
@@ -131,7 +177,8 @@ async fn call_with_contract_name() {
                 CONTRACT_NAME.to_string(),
                 ENTRYPOINT.to_string(),
                 vec![FieldElement::ZERO, FieldElement::ZERO],
-                world
+                world,
+                None,
             )
             .await
             .is_ok()
@@ -158,7 +205,8 @@ async fn call_with_contract_address() {
                 format!("{:#x}", contract_address),
                 ENTRYPOINT.to_string(),
                 vec![FieldElement::ZERO, FieldElement::ZERO],
-                world
+                world,
+                None,
             )
             .await
             .is_ok()

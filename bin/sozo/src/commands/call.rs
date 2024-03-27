@@ -23,6 +23,10 @@ pub struct CallArgs {
                   0x12345,0x69420.")]
     pub calldata: Vec<FieldElement>,
 
+    #[arg(short, long)]
+    #[arg(help = "The block ID (could be a hash, a number, 'pending' or 'latest')")]
+    pub block_id: Option<String>,
+
     #[command(flatten)]
     pub starknet: StarknetOptions,
 
@@ -46,7 +50,14 @@ impl CallArgs {
             )
             .await
             .unwrap();
-            sozo_ops::call::call(self.contract, self.entrypoint, self.calldata, world).await
+            sozo_ops::call::call(
+                self.contract,
+                self.entrypoint,
+                self.calldata,
+                world,
+                self.block_id,
+            )
+            .await
         })
     }
 }
