@@ -106,7 +106,11 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
         // And use the returned cursor for next pages.
         let transactions_page = match self
             .provider
-            .get_transactions(TransactionsPageCursor { block_number: head, transaction_index: 0, chunk_size: 100 })
+            .get_transactions(TransactionsPageCursor {
+                block_number: head,
+                transaction_index: 0,
+                chunk_size: 100,
+            })
             .await
         {
             Ok(page) => Some(page),
@@ -123,7 +127,6 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                 transactions_page.cursor.block_number - 1,
             )
             .await?;
-
 
             self.db.execute().await?;
         }
@@ -285,7 +288,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                     return Err(anyhow::anyhow!(
                         "block {} not found in processed blocks",
                         block_number
-                    ))
+                    ));
                 }
             };
 
