@@ -11,7 +11,7 @@ katana-db = { path = "../db", features = [ "test-utils" ] }
 katana-primitives = { path = "../../primitives", features = [ "rpc" ] }
 
 anyhow.workspace = true
-auto_impl = "1.1.0"
+auto_impl = "1.2.0"
 parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

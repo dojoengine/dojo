@@ -1,4 +1,4 @@
-use ethers::types::U256;
+use alloy_primitives::U256;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;

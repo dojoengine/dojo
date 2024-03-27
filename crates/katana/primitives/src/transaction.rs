@@ -1,5 +1,5 @@
+use alloy_primitives::B256;
 use derive_more::{AsRef, Deref, From};
-use ethers::types::H256;
 use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
 
 use crate::chain::ChainId;
@@ -355,7 +355,7 @@ pub struct L1HandlerTx {
     pub chain_id: ChainId,
     pub paid_fee_on_l1: u128,
     pub version: FieldElement,
-    pub message_hash: H256,
+    pub message_hash: B256,
     pub calldata: Vec<FieldElement>,
     pub contract_address: ContractAddress,
     pub entry_point_selector: FieldElement,

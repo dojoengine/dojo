@@ -2,6 +2,7 @@ pub mod transaction;
 
 use std::collections::HashMap;
 
+use alloy_primitives::U256;
 use cairo_vm::vm::runners::builtin_runner::{
     BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
     OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
@@ -59,7 +60,7 @@ pub fn genesis() -> Genesis {
 
     let accounts = DevAllocationsGenerator::new(10)
         .with_seed(seed)
-        .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+        .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
         .generate();
 
     let mut genesis = Genesis::default();

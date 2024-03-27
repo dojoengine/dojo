@@ -86,7 +86,7 @@ impl TxReceipt {
                     transaction_hash,
                     actual_fee: FeePayment { amount: rct.actual_fee.into(), unit: PriceUnit::Wei },
                     execution_resources: ExecutionResources::from(rct.execution_resources).0,
-                    message_hash: Hash256::from_bytes(rct.message_hash.to_fixed_bytes()),
+                    message_hash: Hash256::from_bytes(*rct.message_hash),
                     execution_result: if let Some(reason) = rct.revert_error {
                         ExecutionResult::Reverted { reason }
                     } else {
