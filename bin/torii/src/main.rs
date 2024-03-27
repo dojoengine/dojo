@@ -33,7 +33,6 @@ use torii_core::processors::register_model::RegisterModelProcessor;
 use torii_core::processors::store_del_record::StoreDelRecordProcessor;
 use torii_core::processors::store_set_record::StoreSetRecordProcessor;
 use torii_core::processors::store_transaction::StoreTransactionProcessor;
-use torii_core::provider::provider::KatanaProvider;
 use torii_core::provider::KatanaClient;
 use torii_core::simple_broker::SimpleBroker;
 use torii_core::sql::Sql;
