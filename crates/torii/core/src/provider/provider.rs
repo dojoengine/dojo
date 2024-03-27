@@ -8,9 +8,8 @@ use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-    ContractClass, DeclareTransaction, DeclareTransactionResult, DeployAccountTransaction,
-    DeployAccountTransactionResult, DeployTransaction, EventFilter, EventsPage, FeeEstimate,
-    FieldElement, FunctionCall, InvokeTransaction, InvokeTransactionResult, L1HandlerTransaction,
+    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
+    EventsPage, FeeEstimate, FieldElement, FunctionCall, InvokeTransactionResult,
     MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
     MaybePendingTransactionReceipt, MsgFromL1, SimulatedTransaction, SimulationFlag,
     SimulationFlagForEstimateFee, StarknetError, SyncStatusType, Transaction, TransactionStatus,

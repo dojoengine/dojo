@@ -4,9 +4,8 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockStatus, BlockWithTxHashes, EmittedEvent, Event, EventFilter,
-    MaybePendingBlockWithTxHashes, MaybePendingTransactionReceipt, ResourcePrice, Transaction,
-    TransactionReceipt,
+    BlockId, EmittedEvent, Event, EventFilter, MaybePendingBlockWithTxHashes,
+    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -17,7 +16,7 @@ use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
 use crate::processors::{BlockProcessor, EventProcessor, TransactionProcessor};
-use crate::provider::provider::{KatanaProvider, TransactionsPage, TransactionsPageCursor};
+use crate::provider::provider::{KatanaProvider, TransactionsPageCursor};
 use crate::sql::Sql;
 
 pub struct Processors<P: Provider + Sync> {
@@ -120,6 +119,8 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             }
         };
 
+        // Process the first page of transactions.
+        // For katana providers.
         if let Some(transactions_page) = transactions_page.clone() {
             self.process_katana(
                 transactions_page.transactions,
