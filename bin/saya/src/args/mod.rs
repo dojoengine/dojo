@@ -12,8 +12,10 @@ use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 use crate::args::data_availability::{DataAvailabilityChain, DataAvailabilityOptions};
+use crate::args::prover_verifier::ProverOptions;
 
 mod data_availability;
+mod prover_verifier;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -45,6 +47,10 @@ pub struct SayaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
     pub data_availability: DataAvailabilityOptions,
+
+    #[command(flatten)]
+    #[command(next_help_heading = "Choose prover and verifier")]
+    pub prover_veryfier: ProverOptions,
 }
 
 impl SayaArgs {
@@ -140,6 +146,7 @@ mod tests {
                     celestia_namespace: None,
                 },
             },
+            prover_veryfier: ProverOptions { prover: None, verifier: None },
         };
         let config: SayaConfig = args.try_into().unwrap();
 

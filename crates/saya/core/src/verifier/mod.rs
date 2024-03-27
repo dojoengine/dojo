@@ -11,8 +11,9 @@ use crate::prover::parse_proof;
 mod starknet;
 
 /// Supported verifiers.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum VerifierIdentifier {
+    #[default]
     HerodotusStarknetSepolia,
     LocalStoneVerify,
     StarkwareEthereum,
@@ -27,6 +28,17 @@ pub async fn verify(proof: String, verifier: VerifierIdentifier) -> anyhow::Resu
         VerifierIdentifier::LocalStoneVerify => crate::prover::local_verify(proof).await,
         VerifierIdentifier::StarkwareEthereum => {
             unimplemented!("Herodotus Starknet not yet supported")
+        }
+    }
+}
+
+impl From<&str> for VerifierIdentifier {
+    fn from(verifier: &str) -> Self {
+        match verifier {
+            "herodotus" => VerifierIdentifier::HerodotusStarknetSepolia,
+            "local" => VerifierIdentifier::LocalStoneVerify,
+            "starkware" => VerifierIdentifier::StarkwareEthereum,
+            _ => unreachable!(),
         }
     }
 }

@@ -12,10 +12,11 @@ pub use serializer::parse_proof;
 pub use stone_image::*;
 
 /// The prover used to generate the proof.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ProverIdentifier {
-    Sharp,
+    #[default]
     Stone,
+    Sharp,
     Platinum,
 }
 
@@ -36,4 +37,15 @@ pub trait ProverClient {
     /// At the moment prover os coupled with the program it proves. Because of this input should correspond to the program
     async fn prove(&self, input: String) -> anyhow::Result<String>;
     async fn local_verify(&self, proof: String) -> anyhow::Result<()>;
+}
+
+impl From<&str> for ProverIdentifier {
+    fn from(prover: &str) -> Self {
+        match prover {
+            "stone" => ProverIdentifier::Stone,
+            "sharp" => ProverIdentifier::Sharp,
+            "platinum" => ProverIdentifier::Platinum,
+            _ => unreachable!(),
+        }
+    }
 }
