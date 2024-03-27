@@ -5,10 +5,7 @@ use anyhow::Result;
 use cainome::cairo_serde::Error as CainomeError;
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
 use smol_str::SmolStr;
-use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, FunctionCall, StarknetError,
@@ -29,6 +26,14 @@ use crate::contracts::WorldContractReader;
 #[cfg(test)]
 #[path = "manifest_test.rs"]
 mod test;
+
+mod types;
+
+pub use types::{
+    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, Contract, DeploymentManifest,
+    DojoContract, DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
+    OverlayDojoContract, OverlayDojoModel, OverlayManifest,
+};
 
 pub const WORLD_CONTRACT_NAME: &str = "dojo::world::world";
 pub const BASE_CONTRACT_NAME: &str = "dojo::base::base";
@@ -57,173 +62,6 @@ pub enum AbstractManifestError {
     IO(#[from] io::Error),
 }
 
-/// Represents a model member.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Member {
-    /// Name of the member.
-    pub name: String,
-    /// Type of the member.
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub key: bool,
-}
-
-impl From<dojo_types::schema::Member> for Member {
-    fn from(m: dojo_types::schema::Member) -> Self {
-        Self { name: m.name, ty: m.ty.name(), key: m.key }
-    }
-}
-
-/// Represents a declaration of a model.
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-#[serde(tag = "kind")]
-pub struct DojoModel {
-    pub members: Vec<Member>,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub abi: Option<AbiFormat>,
-}
-
-/// System input ABI.
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Input {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-/// System Output ABI.
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Output {
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct ComputedValueEntrypoint {
-    // Name of the contract containing the entrypoint
-    pub contract: SmolStr,
-    // Name of entrypoint to get computed value
-    pub entrypoint: SmolStr,
-    // Component to compute for
-    pub model: Option<String>,
-}
-
-/// Format of the ABI into the manifest.
-#[serde_as]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum AbiFormat {
-    /// Only a relative path to the ABI file is stored.
-    Path(Utf8PathBuf),
-    /// The full ABI is embedded.
-    Embed(Vec<AbiEntry>),
-}
-
-#[cfg(test)]
-impl PartialEq for AbiFormat {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (AbiFormat::Path(p1), AbiFormat::Path(p2)) => p1 == p2,
-            (AbiFormat::Embed(e1), AbiFormat::Embed(e2)) => {
-                // Currently, [`AbiEntry`] does not implement [`PartialEq`] so we cannot compare
-                // them directly.
-                let e1_json = serde_json::to_string(e1).expect("valid JSON from ABI");
-                let e2_json = serde_json::to_string(e2).expect("valid JSON from ABI");
-                e1_json == e2_json
-            }
-            _ => false,
-        }
-    }
-}
-
-impl AbiFormat {
-    pub fn to_path(&self) -> Option<&Utf8PathBuf> {
-        match self {
-            AbiFormat::Path(p) => Some(p),
-            AbiFormat::Embed(_) => None,
-        }
-    }
-}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-#[serde(tag = "kind")]
-pub struct DojoContract {
-    #[serde_as(as = "Option<UfeHex>")]
-    pub address: Option<FieldElement>,
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub abi: Option<AbiFormat>,
-    pub reads: Vec<String>,
-    pub writes: Vec<String>,
-    pub computed: Vec<ComputedValueEntrypoint>,
-}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct OverlayDojoContract {
-    pub name: SmolStr,
-    pub reads: Option<Vec<String>>,
-    pub writes: Option<Vec<String>>,
-}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct OverlayDojoModel {}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct OverlayContract {}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct OverlayClass {}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-#[serde(tag = "kind")]
-pub struct Class {
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub abi: Option<AbiFormat>,
-}
-
-#[serde_as]
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-#[serde(tag = "kind")]
-pub struct Contract {
-    #[serde_as(as = "UfeHex")]
-    pub class_hash: FieldElement,
-    pub abi: Option<AbiFormat>,
-    #[serde_as(as = "Option<UfeHex>")]
-    pub address: Option<FieldElement>,
-    #[serde_as(as = "Option<UfeHex>")]
-    pub transaction_hash: Option<FieldElement>,
-    pub block_number: Option<u64>,
-    // used by World contract
-    pub seed: Option<String>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct BaseManifest {
-    pub world: Manifest<Class>,
-    pub base: Manifest<Class>,
-    pub contracts: Vec<Manifest<DojoContract>>,
-    pub models: Vec<Manifest<DojoModel>>,
-}
-
 impl From<Manifest<Class>> for Manifest<Contract> {
     fn from(value: Manifest<Class>) -> Self {
         Manifest::new(
@@ -246,54 +84,6 @@ impl From<BaseManifest> for DeploymentManifest {
             models: value.models,
         }
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct DeploymentManifest {
-    pub world: Manifest<Contract>,
-    pub base: Manifest<Class>,
-    pub contracts: Vec<Manifest<DojoContract>>,
-    pub models: Vec<Manifest<DojoModel>>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct OverlayManifest {
-    pub contracts: Vec<OverlayDojoContract>,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct Manifest<T>
-where
-    T: ManifestMethods,
-{
-    #[serde(flatten)]
-    pub inner: T,
-    pub name: SmolStr,
-}
-
-impl<T> Manifest<T>
-where
-    T: ManifestMethods,
-{
-    pub fn new(inner: T, name: SmolStr) -> Self {
-        Self { inner, name }
-    }
-}
-
-pub trait ManifestMethods {
-    type OverlayType;
-    fn abi(&self) -> Option<&AbiFormat>;
-    fn set_abi(&mut self, abi: Option<AbiFormat>);
-    fn class_hash(&self) -> &FieldElement;
-    fn set_class_hash(&mut self, class_hash: FieldElement);
-
-    /// This method is called when during compilation base manifest file already exists.
-    /// Manifest generated during compilation won't contains properties manually updated by users
-    /// (like calldata) so this method should override those fields
-    fn merge(&mut self, old: Self::OverlayType);
 }
 
 impl BaseManifest {
@@ -402,6 +192,7 @@ impl DeploymentManifest {
         let world = WorldContractReader::new(world_address, provider);
 
         let base_class_hash = world.base().block_id(BLOCK_ID).call().await?;
+        let base_class_hash = base_class_hash.into();
 
         let (models, contracts) =
             get_remote_models_and_contracts(world_address, &world.provider()).await?;
@@ -418,7 +209,11 @@ impl DeploymentManifest {
                 WORLD_CONTRACT_NAME.into(),
             ),
             base: Manifest::new(
-                Class { class_hash: base_class_hash.into(), abi: None },
+                Class {
+                    class_hash: base_class_hash,
+                    abi: None,
+                    original_class_hash: base_class_hash,
+                },
                 BASE_CONTRACT_NAME.into(),
             ),
         })
@@ -712,7 +507,14 @@ impl ManifestMethods for DojoContract {
         self.class_hash = class_hash;
     }
 
+    fn original_class_hash(&self) -> &FieldElement {
+        self.original_class_hash.as_ref()
+    }
+
     fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
         if let Some(reads) = old.reads {
             self.reads = reads;
         }
@@ -741,7 +543,15 @@ impl ManifestMethods for DojoModel {
         self.class_hash = class_hash;
     }
 
-    fn merge(&mut self, _: Self::OverlayType) {}
+    fn original_class_hash(&self) -> &FieldElement {
+        self.original_class_hash.as_ref()
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
+    }
 }
 
 impl ManifestMethods for Contract {
@@ -763,7 +573,15 @@ impl ManifestMethods for Contract {
         self.class_hash = class_hash;
     }
 
-    fn merge(&mut self, _: Self::OverlayType) {}
+    fn original_class_hash(&self) -> &FieldElement {
+        self.original_class_hash.as_ref()
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
+    }
 }
 
 impl ManifestMethods for Class {
@@ -785,5 +603,13 @@ impl ManifestMethods for Class {
         self.class_hash = class_hash;
     }
 
-    fn merge(&mut self, _: Self::OverlayType) {}
+    fn original_class_hash(&self) -> &FieldElement {
+        self.original_class_hash.as_ref()
+    }
+
+    fn merge(&mut self, old: Self::OverlayType) {
+        if let Some(class_hash) = old.original_class_hash {
+            self.original_class_hash = class_hash;
+        }
+    }
 }

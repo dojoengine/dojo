@@ -104,8 +104,8 @@ pub fn prepare_for_migration(
         world.salt = salt;
         world.contract_address = get_contract_address(
             salt,
-            diff.world.local,
-            &[base.as_ref().unwrap().diff.local],
+            diff.world.original,
+            &[base.as_ref().unwrap().diff.original],
             FieldElement::ZERO,
         );
     }

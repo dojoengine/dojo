@@ -11,6 +11,7 @@ use super::{Declarable, MigrationType, StateDiff};
 pub struct ClassDiff {
     pub name: String,
     pub local: FieldElement,
+    pub original: FieldElement,
     pub remote: Option<FieldElement>,
 }
 
