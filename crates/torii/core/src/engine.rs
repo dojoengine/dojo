@@ -147,7 +147,9 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
                 _ = async {
                     match self.sync_to_head(head, current_cursor.clone()).await {
                         Ok((latest_block_number, cursor)) => {
-                            current_cursor = cursor;
+                            if let Some(cursor) = cursor {
+                                current_cursor = Some(cursor);
+                            }
                             head = latest_block_number;
                             backoff_delay = Duration::from_secs(1);
                         }
@@ -227,6 +229,8 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
     ) -> Result<TransactionsPageCursor> {
         let transactions = self.provider.get_transactions(cursor.clone()).await?;
 
+        println!("transactions: {:?}", transactions);
+
         self.process_katana(
             transactions.transactions,
             cursor.block_number,
@@ -267,7 +271,7 @@ impl<P: KatanaProvider + Sync, R: Provider + Sync> Engine<P, R> {
             let block = self.get_block_metadata(block_number).await?;
             self.process_block(&block).await?;
         }
-
+        
         self.db.set_head(to);
 
         for (transaction, receipt) in transactions {

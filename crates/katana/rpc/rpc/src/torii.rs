@@ -92,8 +92,8 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         // Add transactions to the total and break if MAX_PAGE_SIZE is reached
                         for transaction in block_transactions {
                             transactions.push((transaction.0.into(), transaction.1.clone()));
-                            next_cursor.transaction_index = transactions.len() as u64;
                             if transactions.len() >= MAX_PAGE_SIZE {
+                                next_cursor.transaction_index = transactions.len() as u64;
                                 return Ok(TransactionsPage { transactions, cursor: next_cursor });
                             }
                         }
