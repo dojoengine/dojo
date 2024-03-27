@@ -31,6 +31,7 @@ members = [
   "crates/katana/storage/provider",
   "crates/katana/tasks",
   "crates/metrics",
+  "crates/metrics/derive",
   "crates/saya/core",
   "crates/saya/provider",
   "crates/sozo/signers",
@@ -58,6 +59,7 @@ common = { path = "crates/common" }
 
 # metrics
 dojo-metrics = { path = "crates/metrics" }
+dojo-metrics-derive = { path = "crates/metrics/derive" }
 
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo-bindgen" }
