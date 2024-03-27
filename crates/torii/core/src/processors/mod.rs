@@ -52,7 +52,6 @@ pub trait BlockProcessor<P: Provider + Sync> {
         provider: &P,
         block_number: u64,
         block_timestamp: u64,
-        block_hash: FieldElement,
     ) -> Result<(), Error>;
 }
 

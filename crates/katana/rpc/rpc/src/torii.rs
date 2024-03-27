@@ -87,12 +87,13 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             })
                             .collect::<Vec<_>>();
 
+                        // Update our next cursor to be at this block
+                        next_cursor.block_number = block_number;
                         // Add transactions to the total and break if MAX_PAGE_SIZE is reached
                         for transaction in block_transactions {
-                            transactions.push(transaction);
+                            transactions.push((transaction.0.into(), transaction.1.clone()));
                             if transactions.len() >= MAX_PAGE_SIZE {
-                                next_cursor.block_number = block_number;
-                                next_cursor.transaction_index = MAX_PAGE_SIZE as u64;
+                                next_cursor.transaction_index = transactions.len() as u64;
                                 return Ok(TransactionsPage { transactions, cursor: next_cursor });
                             }
                         }
@@ -113,7 +114,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             .filter_map(|(tx, res)| {
                                 res.receipt().map(|rct| {
                                     (
-                                        tx.clone(),
+                                        tx.clone().into(),
                                         MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
                                             tx.hash,
                                             rct.clone(),
@@ -151,7 +152,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                             .filter_map(|(tx, res)| {
                                 res.receipt().map(|rct| {
                                     (
-                                        tx.clone(),
+                                        tx.clone().into(),
                                         MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
                                             tx.hash,
                                             rct.clone(),
@@ -200,7 +201,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                         .into_iter()
                         .map(|tx_outcome| {
                             (
-                                tx_outcome.tx.clone(),
+                                tx_outcome.tx.clone().into(),
                                 MaybePendingTxReceipt::Pending(PendingTxReceipt::new(
                                     tx_outcome.tx.hash,
                                     tx_outcome.receipt,

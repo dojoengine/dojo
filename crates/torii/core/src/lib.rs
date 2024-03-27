@@ -14,6 +14,8 @@ pub mod sql;
 pub mod types;
 pub mod utils;
 
+pub mod provider;
+
 #[allow(dead_code)]
 #[derive(FromRow, Deserialize)]
 pub struct World {

@@ -19,18 +19,21 @@ use tokio::sync::broadcast;
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::provider::provider::KatanaProvider;
+use crate::provider::KatanaClient;
 use crate::sql::Sql;
 use crate::utils::utc_dt_string_from_timestamp;
 
-pub async fn bootstrap_engine<P>(
+pub async fn bootstrap_engine<P, R>(
     world: WorldContractReader<P>,
     db: Sql,
-    provider: P,
+    provider: R,
     migration: MigrationStrategy,
     sequencer: TestSequencer,
-) -> Result<Engine<P>, Box<dyn std::error::Error>>
+) -> Result<Engine<R, P>, Box<dyn std::error::Error>>
 where
     P: Provider + Send + Sync,
+    R: KatanaProvider + Send + Sync,
 {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -54,7 +57,7 @@ where
         None,
     );
 
-    let _ = engine.sync_to_head(0).await?;
+    let _ = engine.sync_to_head(0, None).await?;
 
     Ok(engine)
 }
@@ -74,7 +77,14 @@ async fn test_load_from_remote() {
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
-    let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
+    let _ = bootstrap_engine(
+        world,
+        db.clone(),
+        &KatanaClient::new(crate::provider::http::HttpTransport::new(sequencer.url())),
+        migration,
+        sequencer,
+    )
+    .await;
 
     let block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
