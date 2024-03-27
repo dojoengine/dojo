@@ -1,0 +1,21 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "dojo-metrics-derive"
+repository.workspace = true
+version.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+once_cell.workspace = true
+proc-macro2 = "1.0.79"
+quote = "1.0.35"
+regex = "1.6.0"
+syn = { version = "2.0.55", features = [ "extra-traits" ] }
+
+[dev-dependencies]
+metrics.workspace = true
+serial_test = "3.0.0"
+trybuild = "1.0"
