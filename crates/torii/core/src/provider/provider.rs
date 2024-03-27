@@ -25,6 +25,7 @@ pub struct GetTransactionsRequest {
 pub struct TransactionsPageCursor {
     pub block_number: u64,
     pub transaction_index: u64,
+    pub chunk_size: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
