@@ -14,6 +14,9 @@ pub(crate) trait Hook: Fn() + Send + Sync {}
 impl<T: Fn() + Send + Sync> Hook for T {}
 
 /// Installs Prometheus as the metrics recorder.
+///
+/// ## Arguments
+/// * `prefix` - Apply a prefix to all metrics keys.
 pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
     let recorder = PrometheusBuilder::new().build_recorder();
     let handle = recorder.handle();
@@ -22,7 +25,7 @@ pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
     Stack::new(recorder)
         .push(PrefixLayer::new(prefix))
         .install()
-        .map_err(|e| anyhow::anyhow!("Couldn't set metrics recorder: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Couldn't set metrics recorder: {e}"))?;
 
     Ok(handle)
 }
@@ -41,7 +44,7 @@ pub(crate) async fn serve_with_hooks<F: Hook + 'static>(
     // Start endpoint
     start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook| hook())))
         .await
-        .map_err(|e| anyhow::anyhow!("Could not start Prometheus endpoint: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Could not start Prometheus endpoint: {e}"))?;
 
     Ok(())
 }
@@ -64,7 +67,7 @@ async fn start_endpoint<F: Hook + 'static>(
         }
     });
     let server = Server::try_bind(&listen_addr)
-        .map_err(|e| anyhow::anyhow!("Could not bind to address: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Could not bind to address: {e}"))?
         .serve(make_svc);
 
     tokio::spawn(async move { server.await.expect("Metrics endpoint crashed") });
