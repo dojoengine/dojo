@@ -3360,6 +3360,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-metrics"
+version = "0.6.0-alpha.9"
+dependencies = [
+ "anyhow",
+ "hyper 0.14.28",
+ "jemalloc-ctl",
+ "jemallocator",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "metrics-process",
+ "metrics-util",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "dojo-test-utils"
 version = "0.6.0-alpha.9"
 dependencies = [
@@ -6757,12 +6774,12 @@ dependencies = [
  "clap_complete",
  "common",
  "console",
+ "dojo-metrics",
  "katana-core",
  "katana-executor",
  "katana-primitives",
  "katana-rpc",
  "katana-rpc-api",
- "metrics 0.6.0-alpha.9",
  "metrics-process",
  "serde_json",
  "shellexpand",
@@ -7920,23 +7937,6 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.6.0-alpha.9"
-dependencies = [
- "anyhow",
- "hyper 0.14.28",
- "jemalloc-ctl",
- "jemallocator",
- "metrics 0.22.3",
- "metrics-exporter-prometheus",
- "metrics-process",
- "metrics-util",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "metrics"
 version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2be3cbd384d4e955b231c895ce10685e3d8260c5ccffae898c96c723b0772835"
@@ -7958,7 +7958,7 @@ dependencies = [
  "hyper-util",
  "indexmap 2.2.5",
  "ipnet",
- "metrics 0.22.3",
+ "metrics",
  "metrics-util",
  "quanta",
  "thiserror",
@@ -7974,7 +7974,7 @@ checksum = "97ab55aa892047d9fa19d390afc5318492f956de3ec88a098adb4c0e663b4914"
 dependencies = [
  "libproc",
  "mach2",
- "metrics 0.22.3",
+ "metrics",
  "once_cell",
  "procfs",
  "rlimit",
@@ -7992,7 +7992,7 @@ dependencies = [
  "crossbeam-utils",
  "hashbrown 0.14.3",
  "indexmap 2.2.5",
- "metrics 0.22.3",
+ "metrics",
  "num_cpus",
  "ordered-float 4.2.0",
  "quanta",
@@ -12866,6 +12866,7 @@ dependencies = [
  "clap",
  "common",
  "ctrlc",
+ "dojo-metrics",
  "dojo-types",
  "dojo-world",
  "either",
@@ -12876,7 +12877,6 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.6.0-alpha.9",
  "metrics-process",
  "scarb",
  "serde",
@@ -13091,6 +13091,7 @@ dependencies = [
  "chrono",
  "clap",
  "ctrlc",
+ "dojo-metrics",
  "dojo-types",
  "dojo-world",
  "either",
@@ -13101,7 +13102,6 @@ dependencies = [
  "hyper-reverse-proxy",
  "indexmap 1.9.3",
  "lazy_static",
- "metrics 0.6.0-alpha.9",
  "metrics-process",
  "scarb",
  "serde",
