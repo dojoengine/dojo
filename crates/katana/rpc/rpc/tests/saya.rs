@@ -106,7 +106,8 @@ async fn process_sealed_block_only() {
     // Should now return 1 transaction from the mined block.
     cursor.block_number = 1;
 
-    let response: TransactionsExecutionsPage = client.get_transactions_executions(cursor).await.unwrap();
+    let response: TransactionsExecutionsPage =
+        client.get_transactions_executions(cursor).await.unwrap();
 
     assert_eq!(response.transactions_executions.len(), 1);
     assert_eq!(response.cursor.block_number, 2);
