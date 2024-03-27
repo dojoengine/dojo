@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711502543029,
+  "lastUpdate": 1711512877354,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3355,6 +3355,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17582942,
             "range": "± 74096",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "fabrobles92@gmail.com",
+            "name": "Fabricio Robles",
+            "username": "fabrobles92"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3976f31d5f5fa8a957b37a6d2741a456886c904a",
+          "message": "Sozo CLI --version displaying more info  (#1710)\n\n* Creation of fn generate_version that gathers versions of requested tools.\r\n\r\n* fix: ensure saya test always wait tx to be executed\r\n\r\n* fix: fmt\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-26T22:05:00-06:00",
+          "tree_id": "10b37dd5b80f2a4c9517723f781b6c7e566e52d3",
+          "url": "https://github.com/dojoengine/dojo/commit/3976f31d5f5fa8a957b37a6d2741a456886c904a"
+        },
+        "date": 1711512876902,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17509780,
+            "range": "± 53203",
             "unit": "ns/iter"
           }
         ]
