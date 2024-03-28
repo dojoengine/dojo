@@ -34,7 +34,7 @@ pub trait ProverClient {
     fn identifier() -> ProverIdentifier;
 
     /// Generates the proof from the given trace.
-    /// At the moment prover os coupled with the program it proves. Because of this input should correspond to the program
+    /// At the moment prover is coupled with the program it proves. Because of this input should correspond to the program.
     async fn prove(&self, input: String) -> anyhow::Result<String>;
     async fn local_verify(&self, proof: String) -> anyhow::Result<()>;
 }
