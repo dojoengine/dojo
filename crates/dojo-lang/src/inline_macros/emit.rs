@@ -67,7 +67,7 @@ impl InlineMacroExprPlugin for EmitMacro {
                 return InlinePluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
-                        message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
+                        message: "Invalid arguments. Expected \"(world, (events,))\"".to_string(),
                         stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                         severity: Severity::Error,
                     }],
@@ -79,7 +79,7 @@ impl InlineMacroExprPlugin for EmitMacro {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
-                    message: "Invalid arguments: No models provided.".to_string(),
+                    message: "Invalid arguments: No events provided.".to_string(),
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     severity: Severity::Error,
                 }],
@@ -94,11 +94,6 @@ impl InlineMacroExprPlugin for EmitMacro {
                 let mut keys = Default::<core::array::Array>::default();
                 let mut data = Default::<core::array::Array>::default();",
             );
-
-            builder.add_str(&format!(
-                "keys.append(selector!(\"{}\"));",
-                event.split_whitespace().next().unwrap()
-            ));
 
             builder.add_str(&format!(
                 "
