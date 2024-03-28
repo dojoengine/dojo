@@ -1,9 +1,11 @@
 //! Prometheus exporter
 //! Adapted from Paradigm's [`reth`](https://github.com/paradigmxyz/reth/blob/c1d7d2bde398bcf410c7e2df13fd7151fc2a58b9/bin/reth/src/prometheus_exporter.rs)
+
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use metrics::{describe_gauge, gauge};
@@ -17,34 +19,52 @@ impl<T: Fn() + Send + Sync> Hook for T {}
 ///
 /// ## Arguments
 /// * `prefix` - Apply a prefix to all metrics keys.
-pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
+pub fn install_recorder(prefix: &str) -> Result<PrometheusHandle> {
     let recorder = PrometheusBuilder::new().build_recorder();
     let handle = recorder.handle();
 
-    // Build metrics stack
+    // Build metrics stack and install the recorder
     Stack::new(recorder)
         .push(PrefixLayer::new(prefix))
         .install()
-        .map_err(|e| anyhow::anyhow!("Couldn't set metrics recorder: {e}"))?;
+        .context("Couldn't set metrics recorder")?;
 
     Ok(handle)
+}
+
+/// Serves Prometheus metrics over HTTP with database and process metrics.
+pub async fn serve(
+    listen_addr: SocketAddr,
+    handle: PrometheusHandle,
+    process: metrics_process::Collector,
+) -> Result<()> {
+    // Clone `process` to move it into the hook and use the original `process` for describe below.
+    let cloned_process = process.clone();
+    let hooks: Vec<Box<dyn Hook<Output = ()>>> =
+        vec![Box::new(move || cloned_process.collect()), Box::new(collect_memory_stats)];
+    serve_with_hooks(listen_addr, handle, hooks).await?;
+
+    process.describe();
+    describe_memory_stats();
+
+    Ok(())
 }
 
 /// Serves Prometheus metrics over HTTP with hooks.
 ///
 /// The hooks are called every time the metrics are requested at the given endpoint, and can be used
 /// to record values for pull-style metrics, i.e. metrics that are not automatically updated.
-pub(crate) async fn serve_with_hooks<F: Hook + 'static>(
+async fn serve_with_hooks<F: Hook + 'static>(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     hooks: impl IntoIterator<Item = F>,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let hooks: Vec<_> = hooks.into_iter().collect();
 
     // Start endpoint
     start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook| hook())))
         .await
-        .map_err(|e| anyhow::anyhow!("Could not start Prometheus endpoint: {e}"))?;
+        .context("Could not start Prometheus endpoint")?;
 
     Ok(())
 }
@@ -54,7 +74,7 @@ async fn start_endpoint<F: Hook + 'static>(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     hook: Arc<F>,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let make_svc = make_service_fn(move |_| {
         let handle = handle.clone();
         let hook = Arc::clone(&hook);
@@ -67,28 +87,10 @@ async fn start_endpoint<F: Hook + 'static>(
         }
     });
     let server = Server::try_bind(&listen_addr)
-        .map_err(|e| anyhow::anyhow!("Could not bind to address: {e}"))?
+        .context(format!("Could not bind to address: {listen_addr}"))?
         .serve(make_svc);
 
     tokio::spawn(async move { server.await.expect("Metrics endpoint crashed") });
-
-    Ok(())
-}
-
-/// Serves Prometheus metrics over HTTP with database and process metrics.
-pub async fn serve(
-    listen_addr: SocketAddr,
-    handle: PrometheusHandle,
-    process: metrics_process::Collector,
-) -> anyhow::Result<()> {
-    // Clone `process` to move it into the hook and use the original `process` for describe below.
-    let cloned_process = process.clone();
-    let hooks: Vec<Box<dyn Hook<Output = ()>>> =
-        vec![Box::new(move || cloned_process.collect()), Box::new(collect_memory_stats)];
-    serve_with_hooks(listen_addr, handle, hooks).await?;
-
-    process.describe();
-    describe_memory_stats();
 
     Ok(())
 }
