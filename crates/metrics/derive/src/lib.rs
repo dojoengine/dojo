@@ -1,4 +1,6 @@
 //! This crate provides [Metrics] derive macro
+//!
+//! Adapted from Paradigm's [`reth`](https://github.com/paradigmxyz/reth/blob/c1d7d2bde398bcf410c7e2df13fd7151fc2a58b9/crates/metrics/metrics-derive)
 
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/paradigmxyz/reth/main/assets/reth-docs.png",
