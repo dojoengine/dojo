@@ -78,6 +78,7 @@ async fn auth_revoke_writer_ok() {
         model: cairo_short_string_to_felt("Position").unwrap(),
         contract: ACTION_CONTRACT_NAME.to_string(),
     };
+
     // Here we are granting the permission to write
     auth::grant_writer(
         &world,
@@ -86,8 +87,10 @@ async fn auth_revoke_writer_ok() {
     )
     .await
     .unwrap();
+
     // This should be executable now
     assert!(execute_spawn(&world_2).await);
+
     // Here we are revoking the access again.
     auth::revoke_writer(
         &world,
@@ -96,6 +99,7 @@ async fn auth_revoke_writer_ok() {
     )
     .await
     .unwrap();
+
     // Here it shouldn't be executable.
     assert!(!execute_spawn(&world_2).await);
 }
