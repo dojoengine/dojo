@@ -36,7 +36,6 @@ tracing.workspace = true
 url.workspace = true
 
 # TODO: use features for each possible DA.
-cairo-lang-utils = "2"
 celestia-rpc = "0.1.1"
 celestia-types = "0.1.1"
 
