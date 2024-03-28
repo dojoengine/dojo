@@ -1,11 +1,8 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::Environment;
 use scarb::core::Config;
 use sozo_ops::auth;
-use starknet::accounts::ConnectedAccount;
-use starknet::core::types::{BlockId, BlockTag};
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -52,23 +49,38 @@ pub async fn grant(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
-    let world_address = world.world_address.unwrap_or_default();
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
-    let provider = world.account.provider();
-    let world_reader = WorldContractReader::new(world_address, &provider)
-        .with_block(BlockId::Tag(BlockTag::Pending));
 
     match kind {
         AuthKind::Writer { models_contracts } => {
-            auth::grant_writer(&world, models_contracts, world_reader, transaction.into()).await
+            auth::grant_writer(&world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
-            auth::grant_owner(world, owners_resources, transaction.into()).await
+            auth::grant_owner(&world, owners_resources, transaction.into()).await
         }
     }
 }
 
+pub async fn revoke(
+    world: WorldOptions,
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    env_metadata: Option<Environment>,
+    kind: AuthKind,
+    transaction: TransactionOptions,
+) -> Result<()> {
+    let world =
+        utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
+    match kind {
+        AuthKind::Writer { models_contracts } => {
+            auth::revoke_writer(&world, models_contracts, transaction.into()).await
+        }
+        AuthKind::Owner { owners_resources } => {
+            auth::revoke_owner(&world, owners_resources, transaction.into()).await
+        }
+    }
+}
 #[derive(Debug, Subcommand)]
 pub enum AuthCommand {
     #[command(about = "Grant an auth role.")]
@@ -115,7 +127,9 @@ impl AuthArgs {
             AuthCommand::Grant { kind, world, starknet, account, transaction } => config
                 .tokio_handle()
                 .block_on(grant(world, account, starknet, env_metadata, kind, transaction)),
-            _ => todo!(),
+            AuthCommand::Revoke { kind, world, starknet, account, transaction } => config
+                .tokio_handle()
+                .block_on(revoke(world, account, starknet, env_metadata, kind, transaction)),
         }
     }
 }

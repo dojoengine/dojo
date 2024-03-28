@@ -101,6 +101,25 @@ impl TestSequencer {
         )
     }
 
+    pub fn account_at_index(
+        &self,
+        index: usize,
+    ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
+        let accounts: Vec<_> = self.sequencer.backend.config.genesis.accounts().collect::<_>();
+
+        let account = accounts[index];
+        let private_key = account.1.private_key().unwrap();
+        let address: FieldElement = (*(account.0)).into();
+
+        SingleOwnerAccount::new(
+            JsonRpcClient::new(HttpTransport::new(self.url.clone())),
+            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
+            address,
+            chain_id::TESTNET,
+            ExecutionEncoding::New,
+        )
+    }
+
     pub fn raw_account(&self) -> &TestAccount {
         &self.account
     }

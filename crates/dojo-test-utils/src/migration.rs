@@ -12,6 +12,8 @@ pub fn prepare_migration(
 ) -> Result<MigrationStrategy> {
     let manifest =
         BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR)).unwrap();
+
     let world = WorldDiff::compute(manifest, None);
+
     prepare_for_migration(None, Some(felt!("0x12345")), &target_dir, world)
 }

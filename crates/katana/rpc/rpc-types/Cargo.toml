@@ -17,6 +17,7 @@ derive_more.workspace = true
 futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
 serde.workspace = true
+serde_json.workspace = true
 serde_with.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
@@ -24,4 +25,4 @@ thiserror.workspace = true
 alloy-primitives = { version = "0.6.4", default-features = false }
 
 [dev-dependencies]
-serde_json.workspace = true
+rstest.workspace = true
