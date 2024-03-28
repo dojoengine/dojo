@@ -9,11 +9,13 @@ use crate::DojoData;
 
 pub mod typescript;
 pub mod unity;
+pub mod typescript_new;
 
 #[derive(Debug)]
 pub enum BuiltinPlugins {
     Typescript,
     Unity,
+    TypescriptNew,
 }
 
 impl fmt::Display for BuiltinPlugins {
@@ -21,6 +23,7 @@ impl fmt::Display for BuiltinPlugins {
         match self {
             BuiltinPlugins::Typescript => write!(f, "typescript"),
             BuiltinPlugins::Unity => write!(f, "unity"),
+            BuiltinPlugins::TypescriptNew => write!(f, "typescript_new"),
         }
     }
 }

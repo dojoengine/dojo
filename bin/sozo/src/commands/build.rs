@@ -12,6 +12,10 @@ pub struct BuildArgs {
     pub typescript: bool,
 
     #[arg(long)]
+    #[arg(help = "Generate Typescript bindings.")]
+    pub typescript2: bool,
+
+    #[arg(long)]
     #[arg(help = "Generate Unity bindings.")]
     pub unity: bool,
 
@@ -30,6 +34,10 @@ impl BuildArgs {
         let mut builtin_plugins = vec![];
         if self.typescript {
             builtin_plugins.push(BuiltinPlugins::Typescript);
+        }
+
+        if self.typescript2 {
+            builtin_plugins.push(BuiltinPlugins::TypescriptNew);
         }
 
         if self.unity {
@@ -63,8 +71,12 @@ mod tests {
     fn build_example_with_typescript_and_unity_bindings() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
 
-        let build_args =
-            BuildArgs { bindings_output: "generated".to_string(), typescript: true, unity: true };
+        let build_args = BuildArgs {
+            bindings_output: "generated".to_string(),
+            typescript: true,
+            unity: true,
+            typescript2: true,
+        };
         let result = build_args.run(&config);
         assert!(result.is_ok());
     }
