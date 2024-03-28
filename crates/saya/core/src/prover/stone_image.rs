@@ -1,13 +1,12 @@
 use std::process::Stdio;
 
-use super::{ProverClient, ProverIdentifier};
 use anyhow::{bail, Context};
 use async_trait::async_trait;
-use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
-    process::Command,
-    sync::OnceCell,
-};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::process::Command;
+use tokio::sync::OnceCell;
+
+use super::{ProverClient, ProverIdentifier};
 
 #[derive(Clone)]
 pub struct StoneProver(pub String);

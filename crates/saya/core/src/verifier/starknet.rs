@@ -1,12 +1,9 @@
-use starknet::{
-    accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount},
-    core::{
-        types::{BlockId, BlockTag, FieldElement},
-        utils::get_selector_from_name,
-    },
-    providers::{jsonrpc::HttpTransport, JsonRpcClient},
-    signers::{LocalWallet, SigningKey},
-};
+use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::{BlockId, BlockTag, FieldElement};
+use starknet::core::utils::get_selector_from_name;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
+use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
 // will need to be read from the environment for chains other than sepoia

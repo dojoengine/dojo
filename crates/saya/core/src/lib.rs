@@ -191,10 +191,9 @@ impl From<starknet::providers::ProviderError> for error::Error {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        prover::{prove, state_diff::EXAMPLE_STATE_DIFF, ProverIdentifier},
-        verifier::{verify, VerifierIdentifier},
-    };
+    use crate::prover::state_diff::EXAMPLE_STATE_DIFF;
+    use crate::prover::{prove, ProverIdentifier};
+    use crate::verifier::{verify, VerifierIdentifier};
 
     #[tokio::test]
     async fn test_herodotus_verify() {
