@@ -21,13 +21,8 @@ mod actions {
     use dojo_examples::models::{Position, Moves, Direction, Vec2};
     use dojo_examples::utils::next_position;
 
-    #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
-        Moved: Moved,
-    }
-
-    #[derive(starknet::Event, Model, Copy, Drop, Serde)]
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
     struct Moved {
         #[key]
         player: ContractAddress,
@@ -89,7 +84,7 @@ mod actions {
             moves.last_direction = direction;
             let next = next_position(position, direction);
             set!(world, (moves, next));
-            emit!(world, (Moved { player, direction }));
+            emit!(world, Moved { player, direction });
             return ();
         }
     }
