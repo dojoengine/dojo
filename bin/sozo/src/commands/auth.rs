@@ -70,19 +70,14 @@ pub async fn revoke(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
-    let world_address = world.world_address.unwrap_or_default();
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
-    let provider = world.account.provider();
-    let world_reader = WorldContractReader::new(world_address, &provider)
-        .with_block(BlockId::Tag(BlockTag::Pending));
-
     match kind {
         AuthKind::Writer { models_contracts } => {
-            auth::revoke_writer(&world, models_contracts, world_reader, transaction.into()).await
+            auth::revoke_writer(&world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
-            auth::revoke_owner(world, owners_resources, transaction.into()).await
+            auth::revoke_owner(&world, owners_resources, transaction.into()).await
         }
     }
 }
