@@ -146,7 +146,7 @@ mod tests {
                     celestia_namespace: None,
                 },
             },
-            prover_veryfier: ProverOptions { prover: None, verifier: None },
+            prover_verifier: ProverOptions { prover: None, verifier: None },
         };
         let config: SayaConfig = args.try_into().unwrap();
 
