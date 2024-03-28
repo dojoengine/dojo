@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711599312513,
+  "lastUpdate": 1711654748381,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3445,6 +3445,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17392439,
             "range": "± 178037",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f84d207d4ac0ef5ff32fc509105da61bf451cd09",
+          "message": "refactor(katana-rpc-types): include api error data when converting to rpc error (#1717)\n\n* refactor(katana-rpc-types): include data in error if struct variant\r\n\r\n* use method for getting error message",
+          "timestamp": "2024-03-28T13:29:37-06:00",
+          "tree_id": "3aaa59eacb69ad5e83b6401cff733f2879e1b3b6",
+          "url": "https://github.com/dojoengine/dojo/commit/f84d207d4ac0ef5ff32fc509105da61bf451cd09"
+        },
+        "date": 1711654747874,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17001840,
+            "range": "± 115887",
             "unit": "ns/iter"
           }
         ]
