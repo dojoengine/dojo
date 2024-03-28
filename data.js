@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711654748381,
+  "lastUpdate": 1711654874253,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3475,6 +3475,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17001840,
             "range": "± 115887",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "48082542+Mohiiit@users.noreply.github.com",
+            "name": "Mohiiit",
+            "username": "Mohiiit"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0b35400597b40dcfa31db1c7f438d3234b0be3fc",
+          "message": "[sozo][auth]: revoke logic added (#1712)\n\n* [sozo][auth]: revoke logic added\r\n\r\n* test added for auth revoke\r\n\r\n* fix: remove world reader as argument\r\n\r\nWorldContractReader can be initialized from the inside\r\nof the ops. Hence, we avoid passing it as an argument\r\nand it is initialized inside the ops function.\r\n\r\ntests added for the auth revoke\r\n\r\n* test added for auth revoke\r\n\r\n* fix: refacto testing functions\r\n\r\n* fix: add missing spaces\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-28T13:29:50-06:00",
+          "tree_id": "713d76367e3ca95827a68c8a943c06352244fc53",
+          "url": "https://github.com/dojoengine/dojo/commit/0b35400597b40dcfa31db1c7f438d3234b0be3fc"
+        },
+        "date": 1711654753863,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17522015,
+            "range": "± 196872",
             "unit": "ns/iter"
           }
         ]
