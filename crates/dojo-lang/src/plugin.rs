@@ -8,6 +8,7 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::plugin::PluginSuite;
+use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
@@ -60,6 +61,8 @@ pub struct DojoAuxData {
     pub models: Vec<Model>,
     /// A list of systems that were processed by the plugin and their model dependencies.
     pub systems: Vec<SystemAuxData>,
+    /// A list of events that were processed by the plugin.
+    pub events: Vec<StarkNetEventAuxData>,
 }
 
 impl GeneratedFileAuxData for DojoAuxData {

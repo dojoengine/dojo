@@ -49,6 +49,8 @@ pub fn handle_event_struct(
         ));
     }
     let event_data = EventData::Struct { members };
+    aux_data.events.push(StarkNetEventAuxData { event_data });
+
     let append_members = RewriteNode::Modified(ModifiedNode { children: Some(append_members) });
     let deserialize_members =
         RewriteNode::Modified(ModifiedNode { children: Some(deserialize_members) });
