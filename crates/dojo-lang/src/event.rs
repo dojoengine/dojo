@@ -12,6 +12,12 @@ use indoc::formatdoc;
 
 use crate::plugin::DojoAuxData;
 
+// A custom implementation of the starknet::Event derivation path.
+// We append the event selector directly within the append_keys_and_data function.
+// Without the need of the enum for all event variants.
+
+// https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/src/plugin/derive/event.rs
+
 pub fn handle_event_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
@@ -66,6 +72,8 @@ pub fn handle_event_struct(
     // Add an implementation for `Event<StructName>`.
     let struct_name = RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node());
     (
+        // Append the event selector using the struct_name for the selector
+        // and then append the members.
         RewriteNode::interpolate_patched(
             &formatdoc!(
                 "

@@ -34,7 +34,7 @@ impl InlineMacroExprPlugin for EmitMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"emit!(world, models,)\"".to_string(),
+                    message: "Invalid arguments. Expected \"emit!(world, events,)\"".to_string(),
                     severity: Severity::Error,
                 }],
             };
