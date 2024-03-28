@@ -5,7 +5,7 @@
     "abi": null,
     "address": "0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295",
     "transaction_hash": "0x6afefdcc49b3563a4f3657900ba71e9f9356861b15b942a73f2018f046a1048",
-    "block_number": 3,
+    "block_number": 7,
     "seed": "dojo_examples",
     "name": "dojo::world::world"
   },

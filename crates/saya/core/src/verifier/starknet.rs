@@ -45,5 +45,5 @@ pub async fn starknet_verify(serialized_proof: Vec<FieldElement>) -> anyhow::Res
         .send()
         .await?;
 
-    Ok(tx.transaction_hash.to_string())
+    Ok(format!("{:#x}", tx.transaction_hash))
 }

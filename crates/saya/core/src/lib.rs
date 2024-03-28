@@ -9,7 +9,7 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
 
@@ -163,7 +163,12 @@ impl Saya {
             return Ok(());
         }
 
-        let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
+        let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
+
+        if exec_infos.len() == 0 {
+            trace!(target: "saya_core", block_number, "Skipping empty block.");
+            return Ok(());
+        }
 
         let to_prove = ProvedStateDiff {
             genesis_state_hash,
@@ -173,11 +178,11 @@ impl Saya {
 
         trace!(target: "saya_core", "Proving block {block_number}.");
         let proof = prover::prove(to_prove.serialize(), self.config.prover).await?;
+        info!(target: "saya_core", block_number, "Block proven.");
 
         trace!(target: "saya_core", "Verifying block {block_number}.");
         let transaction_hash = verifier::verify(proof, self.config.verifier).await?;
-
-        trace!(target: "saya_core", "Block {block_number} processed and verified with output: {transaction_hash}.");
+        info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
         Ok(())
     }
