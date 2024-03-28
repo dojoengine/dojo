@@ -1,6 +1,13 @@
-use cairo_lang_defs::{patcher::{ModifiedNode, RewriteNode}, plugin::PluginDiagnostic};
-use cairo_lang_starknet::plugin::{aux_data::StarkNetEventAuxData, consts::{KEY_ATTR, NESTED_ATTR, SERDE_ATTR, EVENT_TYPE_NAME, EVENT_TRAIT}, events::{self, EventData, EventFieldKind}};
-use cairo_lang_syntax::node::{ast, db::SyntaxGroup, helpers::QueryAttrs, Terminal, TypedSyntaxNode};
+use cairo_lang_defs::patcher::{ModifiedNode, RewriteNode};
+use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
+use cairo_lang_starknet::plugin::consts::{
+    EVENT_TRAIT, EVENT_TYPE_NAME, KEY_ATTR, NESTED_ATTR, SERDE_ATTR,
+};
+use cairo_lang_starknet::plugin::events::{EventData, EventFieldKind};
+use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::helpers::QueryAttrs;
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use indoc::formatdoc;
 
 use crate::plugin::DojoAuxData;
@@ -58,9 +65,10 @@ pub fn handle_event_struct(
 
     // Add an implementation for `Event<StructName>`.
     let struct_name = RewriteNode::new_trimmed(struct_ast.name(db).as_syntax_node());
-    (RewriteNode::interpolate_patched(
-        &formatdoc!(
-            "
+    (
+        RewriteNode::interpolate_patched(
+            &formatdoc!(
+                "
             impl $struct_name$IsEvent of {EVENT_TRAIT}<$struct_name$> {{
                 fn append_keys_and_data(
                     self: @$struct_name$, ref keys: Array<felt252>, ref data: Array<felt252>
@@ -75,15 +83,17 @@ pub fn handle_event_struct(
                 }}
             }}
             "
+            ),
+            &[
+                ("struct_name".to_string(), struct_name),
+                ("append_members".to_string(), append_members),
+                ("deserialize_members".to_string(), deserialize_members),
+                ("ctor".to_string(), ctor),
+            ]
+            .into(),
         ),
-        &[
-            ("struct_name".to_string(), struct_name),
-            ("append_members".to_string(), append_members),
-            ("deserialize_members".to_string(), deserialize_members),
-            ("ctor".to_string(), ctor),
-        ]
-        .into(),
-    ), diagnostics)
+        diagnostics,
+    )
 }
 
 /// Generates code to emit an event for a field

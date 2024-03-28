@@ -349,7 +349,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
             }
             ast::ModuleItem::Struct(struct_ast) => {
                 let mut aux_data = DojoAuxData::default();
-                let mut rewrite_nodes= vec![];
+                let mut rewrite_nodes = vec![];
                 let mut diagnostics = vec![];
 
                 // Iterate over all the derive attributes of the struct
@@ -393,8 +393,12 @@ impl MacroPlugin for BuiltinDojoPlugin {
 
                         match derived.as_str() {
                             "Model" => {
-                                let (model_rewrite_nodes, model_diagnostics) =
-                                    handle_model_struct(db, &mut aux_data, struct_ast.clone(), false);
+                                let (model_rewrite_nodes, model_diagnostics) = handle_model_struct(
+                                    db,
+                                    &mut aux_data,
+                                    struct_ast.clone(),
+                                    false,
+                                );
                                 rewrite_nodes.push(model_rewrite_nodes);
                                 diagnostics.extend(model_diagnostics);
                             }
@@ -439,7 +443,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     }
                     _ => {}
                 }
-
 
                 if rewrite_nodes.is_empty() {
                     return PluginResult { diagnostics, ..PluginResult::default() };
