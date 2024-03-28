@@ -49,6 +49,8 @@ pub struct MigrationOutput {
     // Represents if full migration got completeled.
     // If false that means migration got partially completed.
     pub full: bool,
+
+    pub contracts: Vec<Option<DeployOutput>>,
 }
 
 pub async fn migrate<P, S>(
@@ -107,7 +109,6 @@ where
                 update_manifests_and_abis(
                     ws,
                     local_manifest,
-                    remote_manifest,
                     &manifest_dir,
                     migration_output,
                     &chain_id,
@@ -119,7 +120,6 @@ where
                 update_manifests_and_abis(
                     ws,
                     local_manifest,
-                    remote_manifest,
                     &manifest_dir,
                     MigrationOutput { world_address, ..Default::default() },
                     &chain_id,
@@ -141,7 +141,6 @@ fn build_deployed_path(manifest_dir: &Utf8PathBuf, chain_id: &str, extension: &s
 async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
-    remote_manifest: Option<DeploymentManifest>,
     manifest_dir: &Utf8PathBuf,
     migration_output: MigrationOutput,
     chain_id: &str,
@@ -172,16 +171,25 @@ async fn update_manifests_and_abis(
         local_manifest.world.inner.block_number = migration_output.world_block_number;
     }
 
-    let base_class_hash = match remote_manifest {
-        Some(manifest) => *manifest.base.inner.class_hash(),
-        None => *local_manifest.base.inner.class_hash(),
-    };
+    let base_class_hash = *local_manifest.base.inner.class_hash();
 
-    local_manifest.contracts.iter_mut().for_each(|c| {
-        let salt = generate_salt(&c.name);
-        c.inner.address =
-            Some(get_contract_address(salt, base_class_hash, &[], migration_output.world_address));
-    });
+    debug_assert!(local_manifest.contracts.len() == migration_output.contracts.len());
+
+    local_manifest.contracts.iter_mut().zip(migration_output.contracts).for_each(
+        |(local_manifest, contract_output)| {
+            let salt = generate_salt(&local_manifest.name);
+            local_manifest.inner.address = Some(get_contract_address(
+                salt,
+                base_class_hash,
+                &[],
+                migration_output.world_address,
+            ));
+
+            if let Some(output) = contract_output {
+                local_manifest.inner.base_class_hash = output.base_class_hash;
+            }
+        },
+    );
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
@@ -410,13 +418,14 @@ where
         Some(world) => {
             ui.print_header("# World");
 
-            if world.diff.local != world.diff.original
-                && world.diff.original == world.diff.remote.unwrap_or_default()
+            if world.diff.local_class_hash != world.diff.original_class_hash
+                && world.diff.original_class_hash
+                    == world.diff.remote_class_hash.unwrap_or_default()
             {
                 let _deploy_result = upgrade_contract(
                     world,
                     "world",
-                    world.diff.original,
+                    world.diff.original_class_hash,
                     strategy.base.as_ref().unwrap().diff.original,
                     migrator,
                     &ui,
@@ -468,6 +477,7 @@ where
         world_tx_hash,
         world_block_number,
         full: false,
+        contracts: vec![],
     };
 
     // Once Torii supports indexing arrays, we should declare and register the
@@ -481,7 +491,9 @@ where
         }
     }
     match deploy_dojo_contracts(strategy, migrator, &ui, txn_config).await {
-        Ok(_) => (),
+        Ok(res) => {
+            migration_output.contracts = res;
+        }
         Err(e) => {
             ui.anyhow(&e);
             return Ok(migration_output);
@@ -562,7 +574,12 @@ where
     S: Signer + Sync + Send + 'static,
 {
     match contract
-        .deploy(contract.diff.local, constructor_calldata, migrator, txn_config.unwrap_or_default())
+        .deploy(
+            contract.diff.local_class_hash,
+            constructor_calldata,
+            migrator,
+            txn_config.unwrap_or_default(),
+        )
         .await
     {
         Ok(val) => {
@@ -605,7 +622,7 @@ where
 {
     match contract
         .upgrade_world(
-            contract.diff.local,
+            contract.diff.local_class_hash,
             original_class_hash,
             original_base_class_hash,
             migrator,
@@ -732,7 +749,8 @@ where
         match contract
             .deploy_dojo_contract(
                 world_address,
-                contract.diff.local,
+                contract.diff.local_class_hash,
+                contract.diff.base_class_hash,
                 migrator,
                 txn_config.unwrap_or_default(),
             )
@@ -805,7 +823,7 @@ where
                 .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
                 .await
             {
-                Ok(current_class_hash) if current_class_hash != contract.diff.local => {
+                Ok(current_class_hash) if current_class_hash != contract.diff.local_class_hash => {
                     return format!("upgrade {}", contract.diff.name);
                 }
                 Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
@@ -832,7 +850,7 @@ where
 
     if let Some(world) = &strategy.world {
         ui.print_header("# World");
-        ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local));
+        ui.print_sub(format!("declare (class hash: {:#x})\n", world.diff.local_class_hash));
     }
 
     if !&strategy.models.is_empty() {
@@ -847,7 +865,7 @@ where
         ui.print_header(format!("# Contracts ({})", &strategy.contracts.len()));
         for c in &strategy.contracts {
             let op_name = get_contract_operation_name(provider, c, strategy.world_address).await;
-            ui.print_sub(format!("{op_name} (class hash: {:#x})", c.diff.local));
+            ui.print_sub(format!("{op_name} (class hash: {:#x})", c.diff.local_class_hash));
         }
         ui.print(" ");
     }

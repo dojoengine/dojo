@@ -2,7 +2,6 @@
 kind = "Contract"
 class_hash = "0x799bc4e9da10bfb3dd88e6f223c9cfbf7745435cd14f5d69675ea448e578cd"
 original_class_hash = "0x799bc4e9da10bfb3dd88e6f223c9cfbf7745435cd14f5d69675ea448e578cd"
-base_class_hash = "0x0"
 address = "0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295"
 transaction_hash = "0x6afefdcc49b3563a4f3657900ba71e9f9356861b15b942a73f2018f046a1048"
 block_number = 3
@@ -20,7 +19,7 @@ kind = "DojoContract"
 address = "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7"
 class_hash = "0x2a3b1c5473dfb9fd1be08b94fae201b30b4e63ed8caed996476cc4ad44cadb2"
 original_class_hash = "0x2a3b1c5473dfb9fd1be08b94fae201b30b4e63ed8caed996476cc4ad44cadb2"
-base_class_hash = "0x0"
+base_class_hash = "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76"
 abi = "abis/deployments/KATANA/contracts/actions.json"
 reads = [
     "Moves",

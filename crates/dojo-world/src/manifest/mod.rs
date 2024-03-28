@@ -156,6 +156,13 @@ impl DeploymentManifest {
         self.world.inner.transaction_hash = previous.world.inner.transaction_hash;
         self.world.inner.block_number = previous.world.inner.block_number;
         self.world.inner.seed = previous.world.inner.seed;
+
+        self.contracts.iter_mut().for_each(|contract| {
+            let previous_contract = previous.contracts.iter().find(|c| c.name == contract.name);
+            if let Some(previous_contract) = previous_contract {
+                contract.inner.base_class_hash = previous_contract.inner.base_class_hash;
+            }
+        });
     }
 
     pub fn write_to_path_toml(&self, path: &Utf8PathBuf) -> Result<()> {

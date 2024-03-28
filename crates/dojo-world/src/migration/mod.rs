@@ -9,12 +9,10 @@ use cairo_lang_starknet::contract_class::ContractClass;
 use starknet::accounts::{Account, AccountError, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::{
-    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass, FunctionCall,
+    BlockId, BlockTag, DeclareTransactionResult, FieldElement, FlattenedSierraClass,
     InvokeTransactionResult, MaybePendingTransactionReceipt, StarknetError, TransactionReceipt,
 };
-use starknet::core::utils::{
-    get_contract_address, get_selector_from_name, CairoShortStringToFeltError,
-};
+use starknet::core::utils::{get_contract_address, CairoShortStringToFeltError};
 use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use starknet::signers::Signer;
@@ -35,6 +33,8 @@ pub struct DeployOutput {
     pub block_number: Option<u64>,
     pub contract_address: FieldElement,
     pub declare: Option<DeclareOutput>,
+    // base class hash at time of deployment
+    pub base_class_hash: FieldElement,
 }
 
 #[derive(Clone, Debug)]
@@ -148,6 +148,7 @@ pub trait Deployable: Declarable + Sync {
         &self,
         world_address: FieldElement,
         class_hash: FieldElement,
+        base_class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
         txn_config: TxConfig,
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
@@ -161,21 +162,8 @@ pub trait Deployable: Declarable + Sync {
             Err(e) => return Err(e),
         };
 
-        let base_class_hash = account
-            .provider()
-            .call(
-                FunctionCall {
-                    contract_address: world_address,
-                    calldata: vec![],
-                    entry_point_selector: get_selector_from_name("base").unwrap(),
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await
-            .map_err(MigrationError::Provider)?;
-
         let contract_address =
-            get_contract_address(self.salt(), base_class_hash[0], &[], world_address);
+            get_contract_address(self.salt(), base_class_hash, &[], world_address);
 
         let call = match account
             .provider()
@@ -213,7 +201,13 @@ pub trait Deployable: Declarable + Sync {
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
+        Ok(DeployOutput {
+            transaction_hash,
+            block_number,
+            contract_address,
+            declare,
+            base_class_hash,
+        })
     }
 
     async fn deploy<P, S>(
@@ -278,7 +272,13 @@ pub trait Deployable: Declarable + Sync {
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
 
-        Ok(DeployOutput { transaction_hash, block_number, contract_address, declare })
+        Ok(DeployOutput {
+            transaction_hash,
+            block_number,
+            contract_address,
+            declare,
+            base_class_hash: FieldElement::default(),
+        })
     }
 
     fn salt(&self) -> FieldElement;
