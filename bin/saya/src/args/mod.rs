@@ -50,7 +50,7 @@ pub struct SayaArgs {
 
     #[command(flatten)]
     #[command(next_help_heading = "Choose prover and verifier")]
-    pub prover_veryfier: ProverOptions,
+    pub prover_verifier: ProverOptions,
 }
 
 impl SayaArgs {
