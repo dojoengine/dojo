@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711512877354,
+  "lastUpdate": 1711594251887,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3385,6 +3385,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17509780,
             "range": "± 53203",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1b884d5377922742abd0b7af17443a10a13664e2",
+          "message": "fix: ensure world contract is used by ref and add tests for auth grant (#1715)\n\n* fix: ensure world contract is used by ref and add tests for auth grant\r\n\r\n* fix: clippy",
+          "timestamp": "2024-03-27T20:41:21-06:00",
+          "tree_id": "962094b51f7d0198a570ecccdf69e14127976a65",
+          "url": "https://github.com/dojoengine/dojo/commit/1b884d5377922742abd0b7af17443a10a13664e2"
+        },
+        "date": 1711594251417,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17551148,
+            "range": "± 381282",
             "unit": "ns/iter"
           }
         ]
