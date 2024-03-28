@@ -140,10 +140,9 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
 
                 #[cfg(feature = "starknet-messaging")]
                 MessengerMode::Starknet(inner) => {
-                    let hashes = inner
-                        .send_messages(&messages)
-                        .await
-                        .map(|hashes| hashes.iter().map(|h| format!("{h:#x}")).collect())?;
+                    let hashes = inner.send_messages(&messages).await.map(|hashes| {
+                        hashes.iter().map(|h| format!("{h:#x}")).collect::<Vec<_>>()
+                    })?;
                     trace_msg_to_l1_sent(&messages, &hashes);
                     Ok(Some((block_num, hashes.len())))
                 }
