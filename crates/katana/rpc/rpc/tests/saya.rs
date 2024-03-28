@@ -68,33 +68,51 @@ async fn process_sealed_block_only() {
         client.get_transactions_executions(cursor).await.unwrap();
 
     assert!(response.transactions_executions.is_empty());
-    assert!(response.cursor.block_number == 1);
-    assert!(response.cursor.transaction_index == 0);
-    assert!(response.cursor.chunk_size == CHUNK_SIZE_DEFAULT);
+    assert_eq!(response.cursor.block_number, 1);
+    assert_eq!(response.cursor.transaction_index, 0);
+    assert_eq!(response.cursor.chunk_size, CHUNK_SIZE_DEFAULT);
 
-    let _declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+    let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
+
+    let max_retry = 10;
+    let mut attempt = 0;
+    loop {
+        match client.transaction_status(declare_res.transaction_hash).await {
+            Ok(s) => {
+                if s != TransactionStatus::Received {
+                    break;
+                }
+            }
+            Err(_) => {
+                assert!(attempt < max_retry);
+                sleep(Duration::from_millis(300)).await;
+                attempt += 1;
+            }
+        }
+    }
 
     // Should still return 0 transactions execution for the block 0.
     let response: TransactionsExecutionsPage =
         client.get_transactions_executions(cursor).await.unwrap();
 
     assert!(response.transactions_executions.is_empty());
-    assert!(response.cursor.block_number == 1);
-    assert!(response.cursor.transaction_index == 0);
-    assert!(response.cursor.chunk_size == CHUNK_SIZE_DEFAULT);
+    assert_eq!(response.cursor.block_number, 1);
+    assert_eq!(response.cursor.transaction_index, 0);
+    assert_eq!(response.cursor.chunk_size, CHUNK_SIZE_DEFAULT);
 
     // Create block 1.
     let _: () = client.generate_block().await.unwrap();
 
     // Should now return 1 transaction from the mined block.
     cursor.block_number = 1;
+
     let response: TransactionsExecutionsPage =
         client.get_transactions_executions(cursor).await.unwrap();
 
-    assert!(response.transactions_executions.len() == 1);
-    assert!(response.cursor.block_number == 2);
-    assert!(response.cursor.transaction_index == 0);
-    assert!(response.cursor.chunk_size == CHUNK_SIZE_DEFAULT);
+    assert_eq!(response.transactions_executions.len(), 1);
+    assert_eq!(response.cursor.block_number, 2);
+    assert_eq!(response.cursor.transaction_index, 0);
+    assert_eq!(response.cursor.chunk_size, CHUNK_SIZE_DEFAULT);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -160,17 +178,17 @@ async fn executions_chunks_logic_ok() {
 
     let response: TransactionsExecutionsPage =
         client.get_transactions_executions(cursor).await.unwrap();
-    assert!(response.transactions_executions.len() == 15);
-    assert!(response.cursor.block_number == 1);
-    assert!(response.cursor.transaction_index == 15);
+    assert_eq!(response.transactions_executions.len(), 15);
+    assert_eq!(response.cursor.block_number, 1);
+    assert_eq!(response.cursor.transaction_index, 15);
 
     // Should get the remaining 15 transactions and cursor to the next block.
     let response: TransactionsExecutionsPage =
         client.get_transactions_executions(response.cursor).await.unwrap();
 
-    assert!(response.transactions_executions.len() == 15);
-    assert!(response.cursor.block_number == 2);
-    assert!(response.cursor.transaction_index == 0);
+    assert_eq!(response.transactions_executions.len(), 15);
+    assert_eq!(response.cursor.block_number, 2);
+    assert_eq!(response.cursor.transaction_index, 0);
 
     // Create block 2.
     let _: () = client.generate_block().await.unwrap();
@@ -179,8 +197,8 @@ async fn executions_chunks_logic_ok() {
         client.get_transactions_executions(response.cursor).await.unwrap();
 
     assert!(response.transactions_executions.is_empty());
-    assert!(response.cursor.block_number == 3);
-    assert!(response.cursor.transaction_index == 0);
+    assert_eq!(response.cursor.block_number, 3);
+    assert_eq!(response.cursor.transaction_index, 0);
 
     sequencer.stop().expect("failed to stop sequencer");
 }

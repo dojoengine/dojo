@@ -12,13 +12,13 @@ pub async fn execute<A>(
     contract: String,
     entrypoint: String,
     calldata: Vec<FieldElement>,
-    world: WorldContract<A>,
+    world: &WorldContract<A>,
     transaction: TxConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
 {
-    let contract_address = get_contract_address(&world, contract).await?;
+    let contract_address = get_contract_address(world, contract).await?;
     let res = world
         .account
         .execute(vec![Call {

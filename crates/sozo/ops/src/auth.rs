@@ -6,8 +6,8 @@ use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::{cairo_utils, WorldContractReader};
 use dojo_world::migration::TxConfig;
 use starknet::accounts::ConnectedAccount;
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
 use super::get_contract_address;
@@ -87,17 +87,18 @@ impl FromStr for OwnerResource {
     }
 }
 
-pub async fn grant_writer<A, P>(
+pub async fn grant_writer<A>(
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
-    world_reader: WorldContractReader<P>,
     transaction: TxConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
-    P: Provider + Sync + Send,
 {
     let mut calls = Vec::new();
+
+    let world_reader = WorldContractReader::new(world.address, world.account.provider())
+        .with_block(BlockId::Tag(BlockTag::Pending));
 
     for mc in models_contracts {
         let model_name = parse_cairo_short_string(&mc.model)?;
@@ -138,7 +139,7 @@ where
 }
 
 pub async fn grant_owner<A>(
-    world: WorldContract<A>,
+    world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
     transaction: TxConfig,
 ) -> Result<()>
@@ -151,7 +152,7 @@ where
         let resource = match &or.resource {
             ResourceType::Model(name) => *name,
             ResourceType::Contract(name_or_address) => {
-                get_contract_address(&world, name_or_address.clone()).await?
+                get_contract_address(world, name_or_address.clone()).await?
             }
         };
 
