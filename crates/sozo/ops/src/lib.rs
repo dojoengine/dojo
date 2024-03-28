@@ -12,6 +12,9 @@ pub mod model;
 pub mod register;
 pub mod utils;
 
+#[cfg(test)]
+pub mod tests;
+
 pub async fn get_contract_address<A: ConnectedAccount + Sync>(
     world: &WorldContract<A>,
     name_or_address: String,
