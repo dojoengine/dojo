@@ -129,7 +129,7 @@ impl StarknetApiError {
 
 impl From<StarknetApiError> for Error {
     fn from(err: StarknetApiError) -> Self {
-        Error::Call(CallError::Custom(ErrorObject::owned(err.code(), err.to_string(), err.data())))
+        Error::Call(CallError::Custom(ErrorObject::owned(err.code(), err.message(), err.data())))
     }
 }
 impl From<ProviderError> for StarknetApiError {
