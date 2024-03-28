@@ -20,7 +20,7 @@ mod starknet;
 pub enum VerifierIdentifier {
     #[default]
     HerodotusStarknetSepolia,
-    LocalStoneVerify,
+    StoneLocal,
     StarkwareEthereum,
 }
 
@@ -30,7 +30,7 @@ pub async fn verify(proof: String, verifier: VerifierIdentifier) -> anyhow::Resu
             let serialized_proof = parse_proof(proof).unwrap();
             starknet::starknet_verify(serialized_proof).await
         }
-        VerifierIdentifier::LocalStoneVerify => crate::prover::local_verify(proof).await,
+        VerifierIdentifier::StoneLocal => crate::prover::local_verify(proof).await,
         VerifierIdentifier::StarkwareEthereum => {
             unimplemented!("Herodotus Starknet not yet supported")
         }
@@ -43,7 +43,7 @@ impl FromStr for VerifierIdentifier {
     fn from_str(verifier: &str) -> anyhow::Result<Self> {
         Ok(match verifier {
             "herodotus" => VerifierIdentifier::HerodotusStarknetSepolia,
-            "local" => VerifierIdentifier::LocalStoneVerify,
+            "local" => VerifierIdentifier::StoneLocal,
             "starkware" => VerifierIdentifier::StarkwareEthereum,
             _ => bail!("Unknown verifier: `{}`.", verifier),
         })

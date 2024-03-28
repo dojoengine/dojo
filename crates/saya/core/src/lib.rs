@@ -203,17 +203,12 @@ mod tests {
     #[tokio::test]
     async fn test_herodotus_verify() {
         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-        // std::fs::File::create("proof.json").unwrap().write_all(proof.as_bytes()).unwrap();
-
-        let result = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
-
-        println!("Tx: {:?}", result);
+        let _tx = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
     }
 
     #[tokio::test]
     async fn test_local_verify() {
         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-
-        let result = verify(proof, VerifierIdentifier::LocalStoneVerify).await.unwrap();
+        let _res = verify(proof, VerifierIdentifier::StoneLocal).await.unwrap();
     }
 }
