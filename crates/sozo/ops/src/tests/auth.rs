@@ -99,7 +99,7 @@ async fn auth_grant_owner_ok() {
 
     // Shouldn't have any permission at this point.
     let account_2 = sequencer.account_at_index(2);
-    let account_2_addr = account_2.address().clone();
+    let account_2_addr = account_2.address();
 
     // Setup new world contract handler with account 2.
     let world_2 = WorldContract::new(world.address, account_2);
