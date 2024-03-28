@@ -7,11 +7,16 @@
 //! an interface to query the on-chain verifier, but also
 //! submitting facts and proofs.
 
+use std::str::FromStr;
+
+use anyhow::bail;
+use serde::{Deserialize, Serialize};
+
 use crate::prover::parse_proof;
 mod starknet;
 
 /// Supported verifiers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum VerifierIdentifier {
     #[default]
     HerodotusStarknetSepolia,
@@ -32,13 +37,15 @@ pub async fn verify(proof: String, verifier: VerifierIdentifier) -> anyhow::Resu
     }
 }
 
-impl From<&str> for VerifierIdentifier {
-    fn from(verifier: &str) -> Self {
-        match verifier {
+impl FromStr for VerifierIdentifier {
+    type Err = anyhow::Error;
+
+    fn from_str(verifier: &str) -> anyhow::Result<Self> {
+        Ok(match verifier {
             "herodotus" => VerifierIdentifier::HerodotusStarknetSepolia,
             "local" => VerifierIdentifier::LocalStoneVerify,
             "starkware" => VerifierIdentifier::StarkwareEthereum,
-            _ => unreachable!(),
-        }
+            _ => bail!("Unknown verifier: `{}`.", verifier),
+        })
     }
 }

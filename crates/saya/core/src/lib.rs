@@ -5,11 +5,13 @@ use std::sync::Arc;
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::FieldElement;
+use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 use url::Url;
+use verifier::VerifierIdentifier;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
@@ -30,6 +32,8 @@ pub struct SayaConfig {
     pub katana_rpc: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
+    pub prover: ProverIdentifier,
+    pub verifier: VerifierIdentifier,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -82,30 +86,26 @@ impl Saya {
     /// Should be refacto in crates as necessary.
     pub async fn start(&mut self) -> SayaResult<()> {
         let poll_interval_secs = 1;
-        let mut block = self.config.start_block;
+        let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
 
-        let (mut previous_block, genesis_state_hash) = if block == 0 {
-            let block = self.provider.fetch_block(0).await?;
-            let genesis_state_hash = block.header.header.state_root;
-            (block, genesis_state_hash)
-        } else {
-            let (genesis, previous) =
-                join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
-            (previous?, genesis?.header.header.state_root)
-        };
+        let (genesis_block, block_before_the_first) =
+            join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
+        let genesis_state_hash = genesis_block?.header.header.state_root;
+        let mut previous_block = block_before_the_first?;
 
         loop {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
-                    error!(?e, "fetch block number");
+                    error!(?e, "Fetch block number:");
                     tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                     continue;
                 }
             };
 
             if block > latest_block {
-                trace!(block_number = block, "waiting block number");
+                trace!(target: "saya_core", "Waiting for block {block}.");
+
                 tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                 continue;
             }
@@ -142,7 +142,7 @@ impl Saya {
         block_number: BlockNumber,
         blocks: (&SealedBlock, SealedBlock, FieldElement),
     ) -> SayaResult<()> {
-        trace!(block_number, "processing block");
+        trace!(target: "saya_core", "Processing block {block_number}.");
 
         let (block, prev_block, genesis_state_hash) = blocks;
 
@@ -171,14 +171,13 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
-        trace!(block_number, "proving block");
-        let proof = prover::prove(to_prove.serialize(), prover::ProverIdentifier::Stone).await?;
+        trace!(target: "saya_core", "Proving block {block_number}.");
+        let proof = prover::prove(to_prove.serialize(), self.config.prover).await?;
 
-        trace!(block_number, "verifying block");
-        let transaction_hash =
-            verifier::verify(proof, verifier::VerifierIdentifier::HerodotusStarknetSepolia).await?;
+        trace!(target: "saya_core", "Verifying block {block_number}.");
+        let transaction_hash = verifier::verify(proof, self.config.verifier).await?;
 
-        trace!(block_number, transaction_hash, "block verified");
+        trace!(target: "saya_core", "Block {block_number} processed and verified with output: {transaction_hash}.");
 
         Ok(())
     }
@@ -210,10 +209,7 @@ mod tests {
     #[tokio::test]
     async fn test_local_verify() {
         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-        // std::fs::File::create("proof.json").unwrap().write_all(proof.as_bytes()).unwrap();
 
         let result = verify(proof, VerifierIdentifier::LocalStoneVerify).await.unwrap();
-
-        println!("Tx: {:?}", result);
     }
 }

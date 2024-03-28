@@ -115,6 +115,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 katana_rpc: args.rpc_url,
                 start_block: args.start_block,
                 data_availability: da_config,
+                prover: args.prover_verifier.prover.unwrap_or_default(),
+                verifier: args.prover_verifier.verifier.unwrap_or_default(),
             })
         }
     }

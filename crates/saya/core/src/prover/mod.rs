@@ -1,6 +1,9 @@
 //! Prover backends.
 //!
 //! The prover is in charge of generating a proof from the cairo execution trace.
+use std::str::FromStr;
+
+use anyhow::bail;
 use async_trait::async_trait;
 
 mod serializer;
@@ -8,11 +11,12 @@ pub mod state_diff;
 mod stone_image;
 mod vec252;
 
+use serde::{Deserialize, Serialize};
 pub use serializer::parse_proof;
 pub use stone_image::*;
 
 /// The prover used to generate the proof.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ProverIdentifier {
     #[default]
     Stone,
@@ -39,13 +43,15 @@ pub trait ProverClient {
     async fn local_verify(&self, proof: String) -> anyhow::Result<()>;
 }
 
-impl From<&str> for ProverIdentifier {
-    fn from(prover: &str) -> Self {
-        match prover {
+impl FromStr for ProverIdentifier {
+    type Err = anyhow::Error;
+
+    fn from_str(prover: &str) -> anyhow::Result<Self> {
+        Ok(match prover {
             "stone" => ProverIdentifier::Stone,
             "sharp" => ProverIdentifier::Sharp,
             "platinum" => ProverIdentifier::Platinum,
-            _ => unreachable!(),
-        }
+            _ => bail!("Unknown prover: `{}`.", prover),
+        })
     }
 }
