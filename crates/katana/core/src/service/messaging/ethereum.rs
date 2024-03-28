@@ -77,8 +77,8 @@ impl EthereumMessaging {
 
         let filters = Filter {
             block_option: FilterBlockOption::Range {
-                from_block: Some(BlockNumberOrTag::Number(from_block.into())),
-                to_block: Some(BlockNumberOrTag::Number(to_block.into())),
+                from_block: Some(BlockNumberOrTag::Number(from_block)),
+                to_block: Some(BlockNumberOrTag::Number(to_block)),
             },
             address: FilterSet::<Address>::from(self.messaging_contract_address),
             topics: [
@@ -129,12 +129,7 @@ impl Messenger for EthereumMessaging {
         max_blocks: u64,
         chain_id: ChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
-        let chain_latest_block: u64 = self
-            .provider
-            .get_block_number()
-            .await?
-            .try_into()
-            .expect("Can't convert latest block number into u64.");
+        let chain_latest_block: u64 = self.provider.get_block_number().await?;
 
         // +1 as the from_block counts as 1 block fetched.
         let to_block = if from_block + max_blocks + 1 < chain_latest_block {

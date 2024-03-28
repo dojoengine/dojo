@@ -131,20 +131,18 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         } else {
             match messenger.as_ref() {
                 MessengerMode::Ethereum(inner) => {
-                    let hashes = inner
-                        .send_messages(&messages)
-                        .await
-                        .map(|hashes| hashes.iter().map(|h| format!("{h:#x}")).collect())?;
+                    let hashes = inner.send_messages(&messages).await.map(|hashes| {
+                        hashes.iter().map(|h| format!("{:x}", h)).collect::<Vec<_>>()
+                    })?;
                     trace_msg_to_l1_sent(&messages, &hashes);
                     Ok(Some((block_num, hashes.len())))
                 }
 
                 #[cfg(feature = "starknet-messaging")]
                 MessengerMode::Starknet(inner) => {
-                    let hashes = inner
-                        .send_messages(&messages)
-                        .await
-                        .map(|hashes| hashes.iter().map(|h| format!("{h:#x}")).collect())?;
+                    let hashes = inner.send_messages(&messages).await.map(|hashes| {
+                        hashes.iter().map(|h| format!("{h:#x}")).collect::<Vec<_>>()
+                    })?;
                     trace_msg_to_l1_sent(&messages, &hashes);
                     Ok(Some((block_num, hashes.len())))
                 }
@@ -251,7 +249,7 @@ fn interval_from_seconds(secs: u64) -> Interval {
     interval
 }
 
-fn trace_msg_to_l1_sent(messages: &Vec<MessageToL1>, hashes: &Vec<String>) {
+fn trace_msg_to_l1_sent(messages: &[MessageToL1], hashes: &[String]) {
     assert_eq!(messages.len(), hashes.len());
 
     #[cfg(feature = "starknet-messaging")]
