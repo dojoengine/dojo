@@ -44,6 +44,7 @@ pub async fn starknet_verify(serialized_proof: Vec<FieldElement>) -> anyhow::Res
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,
         }])
+        .max_fee(starknet::macros::felt!("1000000000000000")) // sometimes failing without this line 
         .send()
         .await?;
 
