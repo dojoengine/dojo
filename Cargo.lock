@@ -6965,6 +6965,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "cairo-lang-starknet",
+ "dojo-metrics",
  "dojo-test-utils",
  "flate2",
  "futures",

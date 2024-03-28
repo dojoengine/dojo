@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+dojo-metrics.workspace = true
 katana-core = { path = "../../core" }
 katana-executor = { path = "../../executor" }
 katana-primitives = { path = "../../primitives" }
