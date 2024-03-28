@@ -22,6 +22,7 @@ pub fn handle_model_struct(
     db: &dyn SyntaxGroup,
     aux_data: &mut DojoAuxData,
     struct_ast: ItemStruct,
+    event: bool,
 ) -> (RewriteNode, Vec<PluginDiagnostic>) {
     let mut diagnostics = vec![];
 
@@ -92,6 +93,7 @@ pub fn handle_model_struct(
                 #[inline(always)]
                 fn keys(self: @$type_name$) -> Span<felt252> {
                     let mut serialized = core::array::ArrayTrait::new();
+                    $event_selector$
                     $serialized_keys$
                     core::array::ArrayTrait::span(@serialized)
                 }
@@ -179,6 +181,17 @@ pub fn handle_model_struct(
                 ),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                (
+                    "event_selector".to_string(),
+                    if event {
+                        RewriteNode::Text(format!(
+                            "core::array::ArrayTrait::append(ref serialized, {});",
+                            name
+                        ))
+                    } else {
+                        RewriteNode::Text("".to_string())
+                    },
+                ),
             ]),
         ),
         diagnostics,

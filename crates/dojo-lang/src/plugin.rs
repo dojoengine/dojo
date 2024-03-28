@@ -394,7 +394,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                         match derived.as_str() {
                             "Model" => {
                                 let (model_rewrite_nodes, model_diagnostics) =
-                                    handle_model_struct(db, &mut aux_data, struct_ast.clone());
+                                    handle_model_struct(db, &mut aux_data, struct_ast.clone(), false);
                                 rewrite_nodes.push(model_rewrite_nodes);
                                 diagnostics.extend(model_diagnostics);
                             }
@@ -419,7 +419,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     Ordering::Equal => {
                         // extend from model
                         let (model_rewrite_nodes, model_diagnostics) =
-                            handle_model_struct(db, &mut aux_data, struct_ast.clone());
+                            handle_model_struct(db, &mut aux_data, struct_ast.clone(), false);
                         rewrite_nodes.push(model_rewrite_nodes);
                         diagnostics.extend(model_diagnostics);
 
