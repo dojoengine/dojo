@@ -410,7 +410,9 @@ where
         Some(world) => {
             ui.print_header("# World");
 
-            if world.diff.remote.is_some() {
+            if world.diff.local != world.diff.original
+                && world.diff.original == world.diff.remote.unwrap_or_default()
+            {
                 let _deploy_result = upgrade_contract(
                     world,
                     "world",

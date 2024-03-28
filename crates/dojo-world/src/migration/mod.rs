@@ -306,20 +306,12 @@ pub trait Upgradable: Deployable + Declarable + Sync {
         };
 
         let original_constructor_calldata = vec![original_base_class_hash];
-        let calldata = [
-            vec![
-                original_class_hash, // class hash
-                self.salt(),         // salt
-                FieldElement::ZERO,  // unique
-                FieldElement::from(original_constructor_calldata.len()), /* constructor calldata
-                                      * len */
-            ],
-            original_constructor_calldata.clone(),
-        ]
-        .concat();
-
-        let contract_address =
-            get_contract_address(self.salt(), original_class_hash, &calldata, FieldElement::ZERO);
+        let contract_address = get_contract_address(
+            self.salt(),
+            original_class_hash,
+            &original_constructor_calldata,
+            FieldElement::ZERO,
+        );
 
         match account
             .provider()

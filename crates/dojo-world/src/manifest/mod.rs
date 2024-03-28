@@ -68,6 +68,7 @@ impl From<Manifest<Class>> for Manifest<Contract> {
             Contract {
                 class_hash: value.inner.class_hash,
                 abi: value.inner.abi,
+                original_class_hash: value.inner.original_class_hash,
                 ..Default::default()
             },
             value.name,
@@ -114,15 +115,33 @@ impl BaseManifest {
                 .inner
                 .merge(contract);
         }
+
+        if let Some(overlay_world) = overlay.world {
+            self.world.inner.merge(overlay_world);
+        }
+        if let Some(overlay_base) = overlay.base {
+            self.base.inner.merge(overlay_base);
+        }
     }
 }
 
 impl OverlayManifest {
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
+        let mut world: Option<OverlayClass> = None;
+        let world_path = path.join("world.toml");
+        if world_path.exists() {
+            world = Some(toml::from_str(&fs::read_to_string(world_path)?)?);
+        }
+        let mut base: Option<OverlayClass> = None;
+        let base_path = path.join("base.toml");
+        if base_path.exists() {
+            base = Some(toml::from_str(&fs::read_to_string(path.join("base.toml"))?)?);
+        }
+
         let contract_dir = path.join("contracts");
         let contracts = overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?;
 
-        Ok(Self { contracts })
+        Ok(Self { world, base, contracts })
     }
 }
 

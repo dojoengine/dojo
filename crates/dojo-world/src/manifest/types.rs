@@ -34,6 +34,8 @@ pub struct DeploymentManifest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct OverlayManifest {
+    pub world: Option<OverlayClass>,
+    pub base: Option<OverlayClass>,
     pub contracts: Vec<OverlayDojoContract>,
 }
 
@@ -115,8 +117,6 @@ pub struct Contract {
     pub class_hash: FieldElement,
     #[serde_as(as = "UfeHex")]
     pub original_class_hash: FieldElement,
-    #[serde_as(as = "UfeHex")]
-    pub base_class_hash: FieldElement,
     pub abi: Option<AbiFormat>,
     #[serde_as(as = "Option<UfeHex>")]
     pub address: Option<FieldElement>,
