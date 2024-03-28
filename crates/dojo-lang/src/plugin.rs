@@ -349,7 +349,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
             }
             ast::ModuleItem::Struct(struct_ast) => {
                 let mut aux_data = DojoAuxData::default();
-                let mut rewrite_nodes = vec![];
+                let mut rewrite_nodes= vec![];
                 let mut diagnostics = vec![];
 
                 // Iterate over all the derive attributes of the struct
@@ -474,6 +474,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
     fn declared_attributes(&self) -> Vec<String> {
         vec![
             "dojo::contract".to_string(),
+            "dojo::event".to_string(),
             "key".to_string(),
             "computed".to_string(),
             // Not adding capacity for now, this will automatically

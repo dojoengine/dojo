@@ -64,7 +64,9 @@ pub fn handle_event_struct(
             impl $struct_name$IsEvent of {EVENT_TRAIT}<$struct_name$> {{
                 fn append_keys_and_data(
                     self: @$struct_name$, ref keys: Array<felt252>, ref data: Array<felt252>
-                ) {{$append_members$
+                ) {{
+                    core::array::ArrayTrait::append(ref keys, selector!(\"$struct_name$\"));
+                    $append_members$
                 }}
                 fn deserialize(
                     ref keys: Span<felt252>, ref data: Span<felt252>,
