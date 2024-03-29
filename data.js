@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711690679935,
+  "lastUpdate": 1711693726057,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3535,6 +3535,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17546118,
             "range": "± 114372",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8d66222e8212585bdeb28fbd0f1b1acf88991043",
+          "message": "Bump rust to `1.76.0` (#1720)\n\n* bump rust to `1.76.0`\r\n\r\n* wip\r\n\r\n* clippy\r\n\r\n* update rust ver in ci\r\n\r\n* upate dockerfile rust ver\r\n\r\n* update ci image",
+          "timestamp": "2024-03-29T14:19:29+08:00",
+          "tree_id": "12e3fc985a1b764c340e1ba4643ea10a912a6ee2",
+          "url": "https://github.com/dojoengine/dojo/commit/8d66222e8212585bdeb28fbd0f1b1acf88991043"
+        },
+        "date": 1711693725518,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17129720,
+            "range": "± 141093",
             "unit": "ns/iter"
           }
         ]
