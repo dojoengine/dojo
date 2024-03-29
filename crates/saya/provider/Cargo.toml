@@ -1,0 +1,34 @@
+[package]
+description = "Saya providers to fetch block data from Katana."
+edition.workspace = true
+license-file.workspace = true
+name = "saya-provider"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+katana-db.workspace = true
+katana-executor.workspace = true
+katana-primitives.workspace = true
+katana-provider.workspace = true
+katana-rpc-types.workspace = true
+katana-rpc-api = { workspace = true, features = ["client"] }
+
+anyhow.workspace = true
+auto_impl = "1.1.0"
+async-trait.workspace = true
+convert_case.workspace = true
+ethers = "2.0.11"
+flate2.workspace = true
+futures.workspace = true
+jsonrpsee = { workspace = true, features = ["client"] }
+lazy_static = "1.4.0"
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+starknet.workspace = true
+starknet_api.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+url.workspace = true

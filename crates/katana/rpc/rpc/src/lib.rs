@@ -1,6 +1,9 @@
+#![allow(clippy::blocks_in_conditions)]
+
 pub mod config;
 pub mod dev;
 pub mod katana;
+pub mod saya;
 pub mod starknet;
 pub mod torii;
 
@@ -18,8 +21,10 @@ use jsonrpsee::tracing::debug;
 use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
 use katana_core::sequencer::KatanaSequencer;
+use katana_executor::ExecutorFactory;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::katana::KatanaApiServer;
+use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
@@ -27,10 +32,14 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::dev::DevApi;
 use crate::katana::KatanaApi;
+use crate::saya::SayaApi;
 use crate::starknet::StarknetApi;
 use crate::torii::ToriiApi;
 
-pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Result<NodeHandle> {
+pub async fn spawn<EF: ExecutorFactory>(
+    sequencer: Arc<KatanaSequencer<EF>>,
+    config: ServerConfig,
+) -> Result<NodeHandle> {
     let mut methods = RpcModule::new(());
     methods.register_method("health", |_, _| Ok(serde_json::json!({ "health": true })))?;
 
@@ -47,6 +56,9 @@ pub async fn spawn(sequencer: Arc<KatanaSequencer>, config: ServerConfig) -> Res
             }
             ApiKind::Torii => {
                 methods.merge(ToriiApi::new(sequencer.clone()).into_rpc())?;
+            }
+            ApiKind::Saya => {
+                methods.merge(SayaApi::new(sequencer.clone()).into_rpc())?;
             }
         }
     }

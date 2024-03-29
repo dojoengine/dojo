@@ -110,6 +110,7 @@ impl DojoContract {
                             name,
                             dependencies: system.dependencies.values().cloned().collect(),
                         }],
+                        events: vec![],
                     })),
                     code_mappings: builder.code_mappings,
                 }),

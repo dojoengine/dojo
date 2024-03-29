@@ -6,6 +6,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use std::{fs, io};
 
+use chrono::Utc;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Member, Struct, Ty};
@@ -235,8 +236,14 @@ impl Relay {
 
                             if entity.is_none() {
                                 // we can set the entity without checking identity
-                                if let Err(e) =
-                                    self.db.set_entity(ty, &message_id.to_string()).await
+                                if let Err(e) = self
+                                    .db
+                                    .set_entity(
+                                        ty,
+                                        &message_id.to_string(),
+                                        Utc::now().timestamp() as u64,
+                                    )
+                                    .await
                                 {
                                     info!(
                                         target: "torii::relay::server",
@@ -320,7 +327,11 @@ impl Relay {
                             if let Err(e) = self
                                 .db
                                 // event id is message id
-                                .set_entity(ty, &message_id.to_string())
+                                .set_entity(
+                                    ty,
+                                    &message_id.to_string(),
+                                    Utc::now().timestamp() as u64,
+                                )
                                 .await
                             {
                                 info!(

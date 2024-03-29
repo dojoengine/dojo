@@ -5,12 +5,17 @@ use std::sync::Arc;
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
+use dojo_metrics::{metrics_process, prometheus_exporter};
+use katana_core::constants::MAX_RECURSION_DEPTH;
+use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
-use katana_primitives::contract::{ClassHash, ContractAddress};
+use katana_executor::SimulationFlag;
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::{spawn, NodeHandle};
-use metrics::prometheus_exporter;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
@@ -38,7 +43,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sequencer_config = args.sequencer_config();
     let starknet_config = args.starknet_config();
 
-    let sequencer = Arc::new(KatanaSequencer::new(sequencer_config, starknet_config).await?);
+    let cfg_env = CfgEnv {
+        chain_id: starknet_config.env.chain_id,
+        vm_resource_fee_cost: get_default_vm_resource_fee_cost(),
+        invoke_tx_max_n_steps: starknet_config.env.invoke_max_steps,
+        validate_max_n_steps: starknet_config.env.validate_max_steps,
+        max_recursion_depth: MAX_RECURSION_DEPTH,
+        fee_token_addresses: FeeTokenAddressses {
+            eth: starknet_config.genesis.fee_token.address,
+            strk: Default::default(),
+        },
+    };
+
+    let simulation_flags = SimulationFlag {
+        skip_validate: starknet_config.disable_validate,
+        skip_fee_transfer: starknet_config.disable_fee,
+        ..Default::default()
+    };
+
+    cfg_if::cfg_if! {
+        if #[cfg(all(feature = "blockifier", feature = "sir"))] {
+            compile_error!("Cannot enable both `blockifier` and `sir` features at the same time");
+        } else if #[cfg(feature = "blockifier")] {
+            use katana_executor::implementation::blockifier::BlockifierFactory;
+            let executor_factory = BlockifierFactory::new(cfg_env, simulation_flags);
+        } else if #[cfg(feature = "sir")] {
+            use katana_executor::implementation::sir::NativeExecutorFactory;
+            let executor_factory = NativeExecutorFactory::new(cfg_env, simulation_flags);
+        } else {
+            compile_error!("At least one of the following features must be enabled: blockifier, sir");
+        }
+    }
+
+    let sequencer =
+        Arc::new(KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await?);
     let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
 
     if !args.silent {

@@ -6,7 +6,7 @@ use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Tok
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
-use dojo_world::manifest::{DeploymentManifest, ManifestMethods};
+use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods};
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -104,14 +104,14 @@ fn extract_events(
     let mut events_map = HashMap::new();
 
     for contract in &manifest.contracts {
-        if let Some(abi_path) = contract.inner.abi() {
+        if let Some(AbiFormat::Path(abi_path)) = contract.inner.abi() {
             let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     for model in &manifest.contracts {
-        if let Some(abi_path) = model.inner.abi() {
+        if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
             let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
@@ -263,7 +263,7 @@ mod tests {
         let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 12);
+        assert_eq!(result.len(), 11);
     }
 
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};

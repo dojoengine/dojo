@@ -4,15 +4,26 @@
 
 ARG VARIANT
 FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
+ARG VARIANT
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev libclang-dev
+    && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev libclang-dev libzstd-dev
 
-RUN apt install -y gh libgmp3-dev
+RUN apt install -y gh libgmp3-dev software-properties-common
+
+# Install Cairo Native dependencies
+RUN curl -s https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+RUN echo "deb http://apt.llvm.org/${VARIANT}/ llvm-toolchain-${VARIANT}-17 main" | tee /etc/apt/sources.list.d/llvm.list && apt-get update
+RUN apt-get -y install -t llvm-toolchain-${VARIANT}-17 llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
+
+# To build Katana with 'native' feature, we need to set the following environment variables
+ENV MLIR_SYS_170_PREFIX=/usr/lib/llvm-17
+ENV LLVM_SYS_170_PREFIX=/usr/lib/llvm-17
+ENV TABLEGEN_170_PREFIX=/usr/lib/llvm-17
 
 # To allow independent workflow of the container, the rust-toolchain is explicitely given.
-RUN echo "1.74.0" > rust_toolchain_version
+RUN echo "1.76.0" > rust_toolchain_version
 
 # Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash

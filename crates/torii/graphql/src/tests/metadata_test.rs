@@ -10,6 +10,7 @@ mod tests {
 
     const RESOURCE: FieldElement = FieldElement::ZERO;
     const URI: &str = "ipfs://QmcDVFdDph5N2AoW7L2vruyhy6A3wiU8Mh5hEyfVY68ynh";
+    const BLOCK_TIMESTAMP: u64 = 1710754478;
     const QUERY: &str = r#"
       {
         metadatas {
@@ -62,6 +63,7 @@ mod tests {
         )
         .unwrap();
         let world_metadata = dojo_metadata.world.unwrap();
+        db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .await
             .unwrap();
@@ -94,7 +96,7 @@ mod tests {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         let schema = build_schema(&pool).await.unwrap();
 
-        db.set_metadata(&RESOURCE, URI);
+        db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
         db.execute().await.unwrap();
 
         let result = run_graphql_query(&schema, QUERY).await;

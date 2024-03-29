@@ -1,7 +1,6 @@
-//! Formats the starknet state diff to be published
-//! on a DA layer.
+//! State update conversion and data availability formatting.
 //!
-//! All the specification is available here:
+//! For data availability format, all the specification is available here:
 //! <https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/on-chain-data>.
 //!
 //! We use `U256` from ethers for easier computation (than working with felts).
@@ -11,16 +10,60 @@
 //! to know if an address has been deployed or declared.
 //! To avoid this overhead, we may want to first generate an hashmap of such
 //! arrays to then have O(1) search.
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use ethers::types::U256;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::state::StateUpdates;
 use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, FieldElement, NonceUpdate,
-    StateDiff,
+    StateDiff, StateUpdate,
 };
+
+use crate::ProviderResult;
 
 // 2 ^ 128
 const CLASS_INFO_FLAG_TRUE: &str = "0x100000000000000000000000000000000";
+
+/// Converts the [`StateUpdate`] RPC type into [`StateUpdate`] Katana primitive.
+///
+/// # Arguments
+///
+/// * `state_update` - The RPC state update to convert.
+pub fn state_updates_from_rpc(state_update: &StateUpdate) -> ProviderResult<StateUpdates> {
+    let mut out = StateUpdates::default();
+
+    let state_diff = &state_update.state_diff;
+
+    for contract_diff in &state_diff.storage_diffs {
+        let ContractStorageDiffItem { address, storage_entries: entries } = contract_diff;
+
+        let address: ContractAddress = (*address).into();
+
+        let contract_entry = out.storage_updates.entry(address).or_insert_with(HashMap::new);
+
+        for e in entries {
+            contract_entry.insert(e.key, e.value);
+        }
+    }
+
+    for nonce_update in &state_diff.nonces {
+        let NonceUpdate { contract_address, nonce: new_nonce } = *nonce_update;
+        out.nonce_updates.insert(contract_address.into(), new_nonce);
+    }
+
+    for deployed in &state_diff.deployed_contracts {
+        let DeployedContractItem { address, class_hash } = *deployed;
+        out.contract_updates.insert(address.into(), class_hash);
+    }
+
+    for decl in &state_diff.declared_classes {
+        let DeclaredClassItem { class_hash, compiled_class_hash } = decl;
+        out.declared_classes.insert(*class_hash, *compiled_class_hash);
+    }
+
+    Ok(out)
+}
 
 /// Converts the [`StateDiff`] from RPC types into a [`Vec<FieldElement>`].
 ///

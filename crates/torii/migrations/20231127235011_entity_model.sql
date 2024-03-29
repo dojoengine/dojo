@@ -5,13 +5,14 @@ CREATE TABLE entities_new (
     id TEXT NOT NULL PRIMARY KEY,
     keys TEXT,
     event_id TEXT NOT NULL,
+    executed_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Copy from old entities
-INSERT INTO entities_new (id, keys, event_id, created_at, updated_at)
-SELECT id, keys, event_id, created_at, updated_at
+INSERT INTO entities_new (id, keys, event_id, executed_at, created_at, updated_at)
+SELECT id, keys, event_id, executed_at, created_at, updated_at
 FROM entities;
 
 -- Disable foreign keys constraint so we can delete entities

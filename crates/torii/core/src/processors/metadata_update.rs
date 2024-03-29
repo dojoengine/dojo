@@ -49,6 +49,7 @@ where
         _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
+        block_timestamp: u64,
         _transaction_receipt: &TransactionReceipt,
         _event_id: &str,
         event: &Event,
@@ -67,7 +68,7 @@ where
         };
 
         info!("Resource {:#x} metadata set: {}", resource, uri_str);
-        db.set_metadata(resource, &uri_str);
+        db.set_metadata(resource, &uri_str, block_timestamp);
 
         let db = db.clone();
         let resource = *resource;

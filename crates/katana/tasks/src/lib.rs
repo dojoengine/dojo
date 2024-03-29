@@ -64,7 +64,7 @@ impl TokioTaskSpawner {
 #[error("Failed to initialize blocking thread pool: {0}")]
 pub struct BlockingTaskPoolInitError(rayon::ThreadPoolBuildError);
 
-type BlockingTaskResult<T> = Result<T, Box<dyn Any + Send>>;
+pub type BlockingTaskResult<T> = Result<T, Box<dyn Any + Send>>;
 
 #[derive(Debug)]
 #[must_use = "BlockingTaskHandle does nothing unless polled"]
@@ -76,7 +76,7 @@ impl<T> Future for BlockingTaskHandle<T> {
     fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
         match Pin::new(&mut self.get_mut().0).poll(cx) {
             Poll::Ready(Ok(res)) => Poll::Ready(res),
-            Poll::Ready(Err(_)) => panic!("blocking task cancelled"),
+            Poll::Ready(Err(cancelled)) => Poll::Ready(Err(Box::new(cancelled))),
             Poll::Pending => Poll::Pending,
         }
     }

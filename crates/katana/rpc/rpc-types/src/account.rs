@@ -1,5 +1,6 @@
 use ethers::types::U256;
-use katana_primitives::contract::{ClassHash, ContractAddress};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::FieldElement;
 use serde::{Deserialize, Serialize};

@@ -21,6 +21,7 @@ mod tests {
                   keys
                   data
                   transactionHash
+                  executedAt
                 }}
               }}
               pageInfo {{
@@ -55,18 +56,21 @@ mod tests {
         let event = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 1);
         assert_eq!(event.node.id, "0x1");
+        assert_eq!(event.node.executed_at, "2024-03-19T16:32:10+00:00");
 
         let result = events_query(&schema, "(keys: [\"0x2\", \"*\", \"0x1\"])").await;
         let connection: Connection<Event> = serde_json::from_value(result.clone())?;
         let event = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 1);
         assert_eq!(event.node.id, "0x2");
+        assert_eq!(event.node.executed_at, "2024-03-19T16:32:10+00:00");
 
         let result = events_query(&schema, "(keys: [\"*\", \"0x1\"])").await;
         let connection: Connection<Event> = serde_json::from_value(result.clone())?;
         let event = connection.edges.first().unwrap();
         assert_eq!(connection.total_count, 1);
         assert_eq!(event.node.id, "0x3");
+        assert_eq!(event.node.executed_at, "2024-03-19T16:32:10+00:00");
 
         Ok(())
     }

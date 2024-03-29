@@ -24,10 +24,8 @@ use self::constant::{
     OZ_ACCOUNT_CONTRACT_PUBKEY_STORAGE_SLOT,
 };
 use crate::block::{Block, BlockHash, BlockNumber, GasPrices, Header};
-use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    StorageKey, StorageValue,
-};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::state::StateUpdatesWithDeclaredClasses;
 use crate::utils::split_u256;
 use crate::version::CURRENT_STARKNET_VERSION;
@@ -61,7 +59,7 @@ pub struct GenesisClass {
     pub compiled_class_hash: CompiledClassHash,
     /// The casm class definition.
     #[serde(skip_serializing)]
-    pub casm: Arc<CompiledContractClass>,
+    pub casm: Arc<CompiledClass>,
     /// The sierra class definition.
     #[serde(skip_serializing)]
     pub sierra: Option<Arc<FlattenedSierraClass>>,

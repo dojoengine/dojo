@@ -1,19 +1,23 @@
 //! Saya core library.
+
 use std::sync::Arc;
 
+use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlockWithStatus};
+use saya_provider::rpc::JsonRpcProvider;
+use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{BlockId, MaybePendingStateUpdate, StateUpdate};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
 use tracing::{error, trace};
 use url::Url;
 
+use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
 
+pub mod blockchain;
 pub mod data_availability;
 pub mod error;
 pub mod prover;
+pub mod starknet_os;
 pub mod verifier;
 
 /// Saya's main configuration.
@@ -39,8 +43,10 @@ pub struct Saya {
     config: SayaConfig,
     /// The data availability client.
     da_client: Option<Box<dyn DataAvailabilityClient>>,
-    /// The katana (for now JSON RPC) client.
-    katana_client: Arc<JsonRpcClient<HttpTransport>>,
+    /// The provider to fetch dojo from Katana.
+    provider: Arc<dyn SayaProvider>,
+    /// The blockchain state.
+    blockchain: Blockchain,
 }
 
 impl Saya {
@@ -50,8 +56,9 @@ impl Saya {
     ///
     /// * `config` - The main Saya configuration.
     pub async fn new(config: SayaConfig) -> SayaResult<Self> {
-        let katana_client =
-            Arc::new(JsonRpcClient::new(HttpTransport::new(config.katana_rpc.clone())));
+        // Currently it's only RPC. But it can be the database
+        // file directly in the future or other transports.
+        let provider = Arc::new(JsonRpcProvider::new(config.katana_rpc.clone()).await?);
 
         let da_client = if let Some(da_conf) = &config.data_availability {
             Some(data_availability::client_from_config(da_conf.clone()).await?)
@@ -59,7 +66,9 @@ impl Saya {
             None
         };
 
-        Ok(Self { config, da_client, katana_client })
+        let blockchain = Blockchain::new();
+
+        Ok(Self { config, da_client, provider, blockchain })
     }
 
     /// Starts the Saya mainloop to fetch and process data.
@@ -68,22 +77,22 @@ impl Saya {
     /// First naive version to have an overview of all the components
     /// and the process.
     /// Should be refacto in crates as necessary.
-    pub async fn start(&self) -> SayaResult<()> {
+    pub async fn start(&mut self) -> SayaResult<()> {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block;
 
         loop {
-            let latest_block = match self.katana_client.block_number().await {
+            let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
-                    error!("Can't retrieve latest block: {}", e);
+                    error!(?e, "fetch block number");
                     tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                     continue;
                 }
             };
 
             if block > latest_block {
-                trace!("Nothing to process yet, waiting for block {block}");
+                trace!(block_number = block, "waiting block number");
                 tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                 continue;
             }
@@ -91,8 +100,6 @@ impl Saya {
             self.process_block(block).await?;
 
             block += 1;
-
-            tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
         }
     }
 
@@ -114,38 +121,28 @@ impl Saya {
     /// # Arguments
     ///
     /// * `block_number` - The block number.
-    async fn process_block(&self, block_number: u64) -> SayaResult<()> {
-        trace!("Processing block {block_number}");
+    async fn process_block(&mut self, block_number: BlockNumber) -> SayaResult<()> {
+        trace!(block_number, "processing block");
 
-        self.fetch_publish_state_update(block_number).await?;
+        let block = self.provider.fetch_block(block_number).await?;
+        let (state_updates, da_state_update) =
+            self.provider.fetch_state_updates(block_number).await?;
+
+        if let Some(da) = &self.da_client {
+            da.publish_state_diff_felts(&da_state_update).await?;
+        }
+
+        let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
+
+        self.blockchain.update_state_with_block(block.clone(), state_updates)?;
+
+        if block_number == 0 {
+            return Ok(());
+        }
+
+        let _exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         Ok(())
-    }
-
-    /// Fetches the state update for the given block and publish it to
-    /// the data availability layer (if any).
-    /// Returns the [`StateUpdate`].
-    ///
-    /// # Arguments
-    ///
-    /// * `block_number` - The block number to get state update for.
-    async fn fetch_publish_state_update(&self, block_number: u64) -> SayaResult<StateUpdate> {
-        let state_update =
-            match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
-                MaybePendingStateUpdate::Update(su) => {
-                    if let Some(da) = &self.da_client {
-                        let sd_felts =
-                            data_availability::state_diff::state_diff_to_felts(&su.state_diff);
-
-                        da.publish_state_diff_felts(&sd_felts).await?;
-                    }
-
-                    su
-                }
-                MaybePendingStateUpdate::PendingUpdate(_) => unreachable!("Should not be used"),
-            };
-
-        Ok(state_update)
     }
 }
 
