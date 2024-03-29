@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711654874253,
+  "lastUpdate": 1711690679935,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3505,6 +3505,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17522015,
             "range": "± 196872",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "defc01a5420e496a857bd3acd60c2d2fc4fca5e3",
+          "message": "Sozo call command (#1704)\n\n* typo\r\n\r\n* sozo: add call command\r\n\r\nadd `sozo call` command to be able to directly call view functions without using\r\n`starkli`.\r\n\r\n* add sozo call tests\r\n\r\n* fix fmt\r\n\r\n* add block-id option to call command",
+          "timestamp": "2024-03-28T23:28:17-06:00",
+          "tree_id": "7e23854200d88f91d0ad90f895b9f048919cf7db",
+          "url": "https://github.com/dojoengine/dojo/commit/defc01a5420e496a857bd3acd60c2d2fc4fca5e3"
+        },
+        "date": 1711690678735,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17546118,
+            "range": "± 114372",
             "unit": "ns/iter"
           }
         ]
