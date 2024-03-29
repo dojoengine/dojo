@@ -235,6 +235,197 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         out
     }
 
+    fn generate_initial_params(contracts: &[&DojoContract]) -> String {
+        let system_addresses = contracts
+            .iter()
+            .map(|contract| {
+                format!(
+                    "{}Address: string;",
+                    TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                        .to_case(convert_case::Case::Camel)
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\n    ");
+
+        format!(
+            "type InitialParams = GeneralParams &
+    (
+        | {{
+                rpcUrl: string;
+                worldAddress: string;
+                {system_addresses}
+            }}
+        | {{
+                manifest: any;
+            }}
+    );"
+        )
+    }
+
+    fn generate_world_class(contracts: &[&DojoContract]) -> String {
+        let mut out = String::new();
+
+        out += "type GeneralParams = {
+    toriiUrl: string;
+    relayUrl: string;
+    account?: Account;
+};";
+
+        out += "\n\n";
+
+        out += TypescriptNewPlugin::generate_initial_params(contracts).as_str();
+
+        out += "\n\n";
+
+        let system_properties = contracts
+            .iter()
+            .map(|contract| {
+                format!(
+                    "{camel_case_name}: {pascal_case_name}Calls;
+    {camel_case_name}Address: string;",
+                    camel_case_name =
+                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                            .to_case(convert_case::Case::Camel),
+                    pascal_case_name =
+                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                            .to_case(convert_case::Case::Pascal)
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\n    ");
+
+        let system_address_initializations = contracts
+            .iter()
+            .map(|contract| {
+                format!(
+                    "const {contract_name}Address = config.contracts.find(
+                (contract) =>
+                    contract.name === \"dojo_starter::systems::{contract_name}::{contract_name}\"
+            )?.address;
+
+            if (!{contract_name}Address) {{
+                throw new Error(\"No {contract_name} contract found in the manifest\");
+            }}
+
+            this.{contract_name}Address = {contract_name}Address;",
+                    contract_name =
+                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                            .to_case(convert_case::Case::Camel)
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\n    ");
+
+        let system_address_initializations_from_params = contracts
+            .iter()
+            .map(|contract| {
+                format!(
+                    "this.{camel_case_name}Address = params.{camel_case_name}Address;",
+                    camel_case_name =
+                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                            .to_case(convert_case::Case::Camel),
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\n    ");
+
+        let system_initializations = contracts
+            .iter()
+            .map(|contract| {
+                format!(
+                    "this.{camel_case_name} = new {pascal_case_name}Calls(this.{camel_case_name}Address, this._account);",
+                    camel_case_name =
+                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                            .to_case(convert_case::Case::Camel),
+                    pascal_case_name =
+                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                            .to_case(convert_case::Case::Pascal)
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\n    ");
+
+        out += &format!(
+            "export class Dojo_Starter {{
+    rpcUrl: string;
+    toriiUrl: string;
+    toriiPromise: Promise<Client>;
+    relayUrl: string;
+    worldAddress: string;
+    private _account?: Account;
+    {system_properties}
+
+    constructor(params: InitialParams) {{
+        this.rpcUrl = LOCAL_KATANA;
+        if (\"manifest\" in params) {{
+            const config = createManifestFromJson(params.manifest);
+            this.worldAddress = config.world.address;
+
+            {system_address_initializations}
+        }} else {{
+            this.rpcUrl = params.rpcUrl;
+            this.worldAddress = params.worldAddress;
+            {system_address_initializations_from_params}
+        }}
+        this.toriiUrl = params.toriiUrl;
+        this.relayUrl = params.relayUrl;
+        this._account = params.account;
+        {system_initializations}
+
+        this.toriiPromise = createClient([], {{
+            rpcUrl: this.rpcUrl,
+            toriiUrl: this.toriiUrl,
+            worldAddress: this.worldAddress,
+            relayUrl: this.relayUrl,
+        }});
+    }}
+
+    get account(): Account | undefined {{
+        return this._account;
+    }}
+
+    set account(account: Account) {{
+        this._account = account;
+        {system_initializations}
+    }}
+
+    async findEntities<T extends Query>(query: T, limit = 10, offset = 0) {{
+        const torii = await this.toriiPromise;
+
+        const clause = convertQueryToToriiClause(query);
+
+        const toriiResult = await torii.getEntities({{
+            limit,
+            offset,
+            clause,
+        }});
+
+        const result = Object.values(toriiResult).map((entity: any) => {{
+            return extractQueryFromResult<Query>(
+                query,
+                entity
+            ) as QueryResult<T>;
+        }});
+
+        return result as QueryResult<T>[];
+    }}
+
+    async findEntity<T extends Query>(query: T) {{
+        const result = await this.findEntities(query, 1);
+
+        if (result.length === 0) {{
+            return undefined;
+        }}
+
+        return result[0] as QueryResult<T>;
+    }}
+}}"
+        );
+
+        out
+    }
+
     // Token should be a struct
     // This will be formatted into a TypeScript interface
     // using TypeScript defined types
@@ -393,6 +584,8 @@ impl BuiltinPlugin for TypescriptNewPlugin {
             TypescriptNewPlugin::generate_contracts(contracts.as_slice(), &handled_tokens).as_str();
         code += "\n";
         code += TypescriptNewPlugin::generate_query_types(models.as_slice()).as_str();
+        code += "\n";
+        code += TypescriptNewPlugin::generate_world_class(contracts.as_slice()).as_str();
 
         out.insert(output_path, code.as_bytes().to_vec());
 
