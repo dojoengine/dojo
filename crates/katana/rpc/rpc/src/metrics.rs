@@ -1,29 +1,36 @@
-use dojo_metrics::{
-    metrics::{Counter, Histogram},
-    Metrics,
-};
-use jsonrpsee::{
-    server::logger::{HttpRequest, Logger, MethodKind, Params, TransportProtocol},
-    RpcModule,
-};
-use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Instant};
+//! This module is responsible for managing and collecting metrics related to the RPC
+//! server. The metrics collected are primarily focused on connections and method calls.
+//!
+//! ## Connections
+//!
+//! Metrics related to connections provide insights into the number of active connections, the
+//! duration of each connection, and whether the connection was successful or failed.
+//!
+//! ## Method Calls
+//!
+//! Metrics related to method calls provide information about the frequency of each method call
+//! exposed by the RPC server, the duration of each call, and whether the method call was successful
+//! or failed.
 
-/// Metrics for the RPC server
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Instant;
+
+use dojo_metrics::metrics::{Counter, Histogram};
+use dojo_metrics::Metrics;
+use jsonrpsee::server::logger::{HttpRequest, Logger, MethodKind, Params, TransportProtocol};
+use jsonrpsee::RpcModule;
+
+/// Metrics for the RPC server.
 #[derive(Default, Clone)]
 pub(crate) struct RpcServerMetrics {
     inner: Arc<RpcServerMetricsInner>,
 }
 
-/// Metrics for the RPC server
-#[derive(Default, Clone)]
-struct RpcServerMetricsInner {
-    /// Connection metrics per transport type
-    connection_metrics: ConnectionMetrics,
-    /// Call metrics per RPC method
-    call_metrics: HashMap<&'static str, RpcServerCallMetrics>,
-}
-
 impl RpcServerMetrics {
+    /// Creates a new instance of `RpcServerMetrics` for the given `RpcModule`.
+    /// This will create metrics for each method in the module.
     pub(crate) fn new(module: &RpcModule<()>) -> Self {
         let call_metrics = HashMap::from_iter(module.method_names().map(|method| {
             let metrics = RpcServerCallMetrics::new_with_labels(&[("method", method)]);
@@ -39,13 +46,24 @@ impl RpcServerMetrics {
     }
 }
 
+#[derive(Default, Clone)]
+struct RpcServerMetricsInner {
+    /// Connection metrics per transport type
+    connection_metrics: ConnectionMetrics,
+    /// Call metrics per RPC method
+    call_metrics: HashMap<&'static str, RpcServerCallMetrics>,
+}
+
 #[derive(Clone)]
 struct ConnectionMetrics {
-    http: RpcServerConnectionMetrics,
+    /// Metrics for WebSocket connections
     ws: RpcServerConnectionMetrics,
+    /// Metrics for HTTP connections
+    http: RpcServerConnectionMetrics,
 }
 
 impl ConnectionMetrics {
+    /// Returns the metrics for the given transport protocol
     fn get_metrics(&self, transport: TransportProtocol) -> &RpcServerConnectionMetrics {
         match transport {
             TransportProtocol::Http => &self.http,
@@ -93,6 +111,7 @@ struct RpcServerCallMetrics {
     time_seconds: Histogram,
 }
 
+/// Implements the [Logger] trait so that we can collect metrics on each server request life-cycle.
 impl Logger for RpcServerMetrics {
     type Instant = Instant;
 
