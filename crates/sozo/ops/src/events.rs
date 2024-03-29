@@ -263,7 +263,7 @@ mod tests {
         let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 12);
+        assert_eq!(result.len(), 11);
     }
 
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};

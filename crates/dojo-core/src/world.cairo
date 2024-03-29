@@ -449,7 +449,6 @@ mod world {
         ///
         /// * `keys` - The keys of the event.
         /// * `values` - The data to be logged by the event.
-        /// * `is_model_event` - Indicates if the event to emit contains a model.
         fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
             let system = get_caller_address();
             system.serialize(ref keys);
