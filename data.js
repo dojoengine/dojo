@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711696027213,
+  "lastUpdate": 1711697952973,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3595,6 +3595,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16924490,
             "range": "± 231936",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "48e72610428b7d0c9340fd21ee363a4638883c56",
+          "message": " Re-export `reth-metrics-derive` crate from `dojo-metrics` (#1719)\n\nref #1369\r\n\r\n- re-export [reth-metrics-derive](https://github.com/paradigmxyz/reth/tree/v0.2.0-beta.4/crates/metrics/metrics-derive) crate from dojo-metrics\r\n- rename metrics -> dojo-metrics crate\r\n- re-export core metrics stuff from dojo-metrics\r\n\r\n---\r\n\r\nthis PR relies on #1720 bcs reth's MSRV is 1.76.0, otherwise can't build reth-metrics-derive.",
+          "timestamp": "2024-03-29T15:29:46+08:00",
+          "tree_id": "cc14e519065b21edae56b3a3010cdf113945a65b",
+          "url": "https://github.com/dojoengine/dojo/commit/48e72610428b7d0c9340fd21ee363a4638883c56"
+        },
+        "date": 1711697951789,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17161969,
+            "range": "± 99763",
             "unit": "ns/iter"
           }
         ]
