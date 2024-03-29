@@ -96,7 +96,29 @@ const nameMap = {{
 
 type QueryResult<T extends Query> = {{
     [K in keyof T]: K extends keyof ResultMapping ? ResultMapping[K] : never;
-}};",
+}};
+
+// Only supports a single model for now, since torii doesn't support multiple models
+// And inside that single model, there's only support for a single query.
+function convertQueryToToriiClause(query: Query): Clause | undefined {{
+    const [model, clause] = Object.entries(query)[0];
+
+    if (Object.keys(clause).length === 0) {{
+        return undefined;
+    }}
+
+    const clauses: Clause[] = Object.entries(clause).map(([key, value]) => {{
+        return {{
+            Member: {{
+                model: nameMap[model as keyof typeof nameMap],
+                member: key,
+                ...valueToToriiValueAndOperator(value),
+            }},
+        }} satisfies Clause;
+    }});
+
+    return clauses[0];
+}}",
             query_fields = query_fields.join("\n    "),
             result_mapping = result_mapping.join("\n    "),
             name_map = name_map.join(",\n    ")
@@ -143,6 +165,71 @@ type QueryResult<T extends Query> = {{
             }
 
             out += "\n";
+        }
+
+        out
+    }
+
+    fn generate_base_calls_class() -> String {
+        "class BaseCalls {
+    contractAddress: string;
+    account?: Account;
+
+    constructor(contractAddress: string, account?: Account) {
+        this.account = account;
+        this.contractAddress = contractAddress;
+    }
+
+    async execute(entrypoint: string, calldata: any[] = []): Promise<void> {
+        if (!this.account) {
+            throw new Error(\"No account set to interact with dojo_starter\");
+        }
+
+        await this.account.execute(
+            {
+                contractAddress: this.contractAddress,
+                entrypoint,
+                calldata,
+            },
+            undefined,
+            {
+                maxFee: 0,
+            }
+        );
+    }
+}"
+        .to_string()
+    }
+
+    fn generate_contracts(contracts: &[&DojoContract], handled_tokens: &[Composite]) -> String {
+        let mut out = String::new();
+
+        for contract in contracts {
+            let systems = contract
+                .systems
+                .iter()
+                .map(|system| {
+                    TypescriptNewPlugin::format_system(
+                        system.to_function().unwrap(),
+                        handled_tokens,
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("\n\n    ");
+
+            out += &format!(
+                "class {}Calls extends BaseCalls {{
+    constructor(contractAddress: string, account?: Account) {{
+        super(contractAddress, account);
+    }}
+    
+    {}
+}}
+",
+                TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                    .to_case(convert_case::Case::Pascal),
+                systems,
+            );
         }
 
         out
@@ -221,7 +308,7 @@ export enum {} {{
                     "{}: {}",
                     arg.0,
                     if TypescriptNewPlugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
-                        format!("models.{}", arg.1.type_name())
+                        arg.1.type_name()
                     } else {
                         TypescriptNewPlugin::map_type(&arg.1.type_name())
                     }
@@ -247,44 +334,28 @@ export enum {} {{
                                 .map(|field| format!("props.{}.{}", type_name, field.name))
                                 .collect::<Vec<String>>()
                                 .join(",\n                    "),
-                            _ => {
-                                format!("props.{}", type_name)
-                            }
+                            _ => type_name.to_string(),
                         }
                     }
-                    None => format!("props.{}", type_name),
+                    None => type_name.to_string(),
                 }
             })
             .collect::<Vec<String>>()
             .join(",\n                ");
 
         format!(
-            "
-        // Call the `{system_name}` system with the specified Account and calldata
-        const {pretty_system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
-            try {{
-                return await provider.execute(
-                    props.account,
-                    contract_name,
-                    \"{system_name}\",
-                    [{calldata}]
-                );
-            }} catch (error) {{
-                console.error(\"Error executing spawn:\", error);
-                throw error;
-            }}
-        }};
-            ",
-            // selector for execute
-            system_name = system.name,
-            // pretty system name
-            // snake case to camel case
-            // move_to -> moveTo
+            "async {pretty_system_name}({args}): Promise<void> {{
+        try {{
+            await this.execute(\"{system_name}\", [{calldata}])
+        }} catch (error) {{
+            console.error(\"Error executing {pretty_system_name}:\", error);
+            throw error;
+        }}
+    }};",
             pretty_system_name = system.name.to_case(convert_case::Case::Camel),
-            // add comma if we have args
-            arg_sep = if !args.is_empty() { ", " } else { "" },
             // formatted args to use our mapped types
             args = args,
+            system_name = system.name,
             // calldata for execute
             calldata = calldata
         )
@@ -401,6 +472,11 @@ impl BuiltinPlugin for TypescriptNewPlugin {
         code += "\n";
         code += TypescriptNewPlugin::generate_model_types(models.as_slice(), &mut handled_tokens)
             .as_str();
+        code += "\n";
+        code += TypescriptNewPlugin::generate_base_calls_class().as_str();
+        code += "\n";
+        code +=
+            TypescriptNewPlugin::generate_contracts(contracts.as_slice(), &handled_tokens).as_str();
         code += "\n";
         code += TypescriptNewPlugin::generate_query_types(models.as_slice()).as_str();
 
