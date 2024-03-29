@@ -3,14 +3,22 @@
 //!
 //! ## Connections
 //!
-//! Metrics related to connections provide insights into the number of active connections, the
-//! duration of each connection, and whether the connection was successful or failed.
+//! Metrics related to connections:
+//!
+//! - Number of connections opened
+//! - Number of connections closed
+//! - Number of requests started
+//! - Number of requests finished
+//! - Response time for each request/response pair
 //!
 //! ## Method Calls
 //!
-//! Metrics related to method calls provide information about the frequency of each method call
-//! exposed by the RPC server, the duration of each call, and whether the method call was successful
-//! or failed.
+//! Metrics are collected for each methods expose by the RPC server. The metrics collected include:
+//!
+//! - Number of calls started for each method
+//! - Number of successful calls for each method
+//! - Number of failed calls for each method
+//! - Response time for each method call
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
