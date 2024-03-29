@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711697952973,
+  "lastUpdate": 1711743292014,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3625,6 +3625,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17161969,
             "range": "± 99763",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "55625538eecc9b8359982a42ccc2b3d50d8da1e9",
+          "message": "feat: add #[dojo::event] attribute  (#1721)\n\n* feat: start working on dojo::event attr\r\n\r\n* feat: events aux data\r\n\r\n* feat: event selector in model keys\r\n\r\n* feat: emit support all events\r\n\r\n* refactor: append selector from event attr\r\n\r\n* feat: update spawn and move\r\n\r\n* fmt\r\n\r\n* refactor: remove model changes\r\n\r\n* chore: comments for credits\r\n\r\n* fix: propose a solution to use only one emit macro\r\n\r\n* fix: regen world bindgen and tests\r\n\r\n* fix: remove extra argument on the world\r\n\r\n* fix: tests and fmt\r\n\r\n* fix: remove unused param doc\r\n\r\n* fix: adjust base test address from gas usage\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-29T14:05:43-06:00",
+          "tree_id": "b52dcc30905db1ca4008cc6491b85272b1d0bcd2",
+          "url": "https://github.com/dojoengine/dojo/commit/55625538eecc9b8359982a42ccc2b3d50d8da1e9"
+        },
+        "date": 1711743291531,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17007488,
+            "range": "± 206804",
             "unit": "ns/iter"
           }
         ]
