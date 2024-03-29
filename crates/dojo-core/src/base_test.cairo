@@ -109,7 +109,7 @@ mod invalid_model {
             // Pre-computed address of a contract deployed through the world.
             // To print this addres, run:
             // sozo test --manifest-path crates/dojo-core/Scarb.toml -f test_deploy_from_world_invalid_model
-            0x365e118dca1de7bcf112ed35a62519b13a85d39b03f6b0338eea9a56b31c6c9
+            0x647d90f9663c37478a5fba689fc7166d957f782ea4a8316e0042929d48cf8be
         }
     }
 }
