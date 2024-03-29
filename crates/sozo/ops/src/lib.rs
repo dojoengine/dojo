@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod call;
 pub mod events;
 pub mod execute;
 pub mod migration;
