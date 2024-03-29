@@ -35,7 +35,7 @@ impl InlineMacroExprPlugin for EmitMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"emit!(world, (models,), [model])\""
+                    message: "Invalid arguments. Expected \"emit!(world, (events,))\""
                         .to_string(),
                     severity: Severity::Error,
                 }],
@@ -43,8 +43,6 @@ impl InlineMacroExprPlugin for EmitMacro {
         }
 
         let world = &args[0];
-        // TOOD: return plugin result with error if it's not "model".
-        let is_model_event = args.len() == 3;
 
         let ast::ArgClause::Unnamed(models) = args[1].arg_clause(db) else {
             return unsupported_arg_diagnostic(db, syntax);
@@ -71,7 +69,7 @@ impl InlineMacroExprPlugin for EmitMacro {
                 return InlinePluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
-                        message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
+                        message: "Invalid arguments. Expected \"(world, (events,))\"".to_string(),
                         stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                         severity: Severity::Error,
                     }],
@@ -107,7 +105,7 @@ impl InlineMacroExprPlugin for EmitMacro {
 
             builder.add_str("\n            ");
             builder.add_node(world.as_syntax_node());
-            builder.add_str(&format!(".emit(keys, data.span(), {is_model_event});"));
+            builder.add_str(&format!(".emit(keys, data.span());"));
 
             builder.add_str("}");
         }

@@ -1,10 +1,10 @@
 {
   "world": {
     "kind": "Contract",
-    "class_hash": "0xfab8f0fbd397ada7cdebd9f6399fb9694a76fa55646c9cfcc41b813a1b8324",
+    "class_hash": "0x799bc4e9da10bfb3dd88e6f223c9cfbf7745435cd14f5d69675ea448e578cd",
     "abi": null,
-    "address": "0x4156b846546b27dc63788beec27b8b5a76b7732fae5f32aa963326a20ee3abf",
-    "transaction_hash": "0x7aac53833c28600ec4d2e87ceaf22ee8152ac0e4f26964a685e36cd7b9b9b49",
+    "address": "0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295",
+    "transaction_hash": "0x6afefdcc49b3563a4f3657900ba71e9f9356861b15b942a73f2018f046a1048",
     "block_number": 3,
     "seed": "dojo_examples",
     "name": "dojo::world::world"
@@ -18,8 +18,8 @@
   "contracts": [
     {
       "kind": "DojoContract",
-      "address": "0x5720cdb134fd7413a3e7335fb29afb9db75ab43b743f2f3511d0aadea9734f2",
-      "class_hash": "0x3eae5e5494ce9058762a4ff585e2c58eabe37dad9a33d8bddd9667e4e54afe5",
+      "address": "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7",
+      "class_hash": "0x2a76f77a828c13813820157716fc9af189ca51a5be6f40e5168392345ad22b7",
       "abi": [
         {
           "type": "impl",

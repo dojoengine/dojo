@@ -95,7 +95,7 @@ mod actions {
             moves.last_direction = direction;
             let next = next_position(position, direction);
             set!(world, (moves, next));
-            emit!(world, (Moved { player, direction }), 'model');
+            emit!(world, (Moved { player, direction }));
             emit!(world, (Event::StoredName(StoredName { name: 'dojo' })));
             return ();
         }
