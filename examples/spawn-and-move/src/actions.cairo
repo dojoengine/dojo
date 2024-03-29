@@ -34,6 +34,10 @@ mod actions {
         direction: Direction,
     }
 
+    fn my_test() -> felt252 {
+        1
+    }
+
     #[abi(embed_v0)]
     impl ActionsComputedImpl of IActionsComputed<ContractState> {
         #[computed]
@@ -68,6 +72,8 @@ mod actions {
             let player = get_caller_address();
             let position = get!(world, player, (Position));
             let moves = get!(world, player, (Moves));
+
+            let test = my_test();
 
             set!(
                 world,
