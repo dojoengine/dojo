@@ -6850,6 +6850,7 @@ dependencies = [
  "katana-rpc-types",
  "katana-rpc-types-builder",
  "katana-tasks",
+ "metrics",
  "serde",
  "serde_json",
  "serde_with",

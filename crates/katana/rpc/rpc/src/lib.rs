@@ -29,6 +29,7 @@ use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_api::ApiKind;
+use metrics::RpcServerMetrics;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::dev::DevApi;
@@ -77,7 +78,7 @@ pub async fn spawn<EF: ExecutorFactory>(
         .timeout(Duration::from_secs(20));
 
     let server = ServerBuilder::new()
-        .set_logger(RpcLogger)
+        .set_logger(RpcServerMetrics::new(&methods))
         .set_host_filtering(AllowHosts::Any)
         .set_middleware(middleware)
         .max_connections(config.max_connections)

@@ -1,5 +1,5 @@
 use dojo_metrics::{
-    metrics::{self, Counter, Histogram},
+    metrics::{Counter, Histogram},
     Metrics,
 };
 use jsonrpsee::{
@@ -25,12 +25,15 @@ struct RpcServerMetricsInner {
 
 impl RpcServerMetrics {
     pub(crate) fn new(module: &RpcModule<()>) -> Self {
+        let call_metrics = HashMap::from_iter(module.method_names().map(|method| {
+            let metrics = RpcServerCallMetrics::new_with_labels(&[("method", method)]);
+            (method, metrics)
+        }));
+
         Self {
             inner: Arc::new(RpcServerMetricsInner {
+                call_metrics,
                 connection_metrics: ConnectionMetrics::default(),
-                call_metrics: HashMap::from_iter(module.method_names().map(|method| {
-                    (method, RpcServerCallMetrics::new_with_labels(&[("method", method)]))
-                })),
             }),
         }
     }
@@ -54,8 +57,8 @@ impl ConnectionMetrics {
 impl Default for ConnectionMetrics {
     fn default() -> Self {
         Self {
-            http: RpcServerConnectionMetrics::new_with_labels(&[("transport", "http")]),
             ws: RpcServerConnectionMetrics::new_with_labels(&[("transport", "ws")]),
+            http: RpcServerConnectionMetrics::new_with_labels(&[("transport", "http")]),
         }
     }
 }
