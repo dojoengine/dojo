@@ -4,9 +4,10 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
+use cairo_lang_starknet::plugin::consts::EVENT_TRAIT;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
-use super::unsupported_arg_diagnostic;
+use crate::inline_macros::unsupported_arg_diagnostic;
 
 #[derive(Debug, Default)]
 pub struct EmitMacro;
@@ -29,12 +30,12 @@ impl InlineMacroExprPlugin for EmitMacro {
 
         let args = arg_list.arguments(db).elements(db);
 
-        if args.len() != 2 {
+        if args.len() < 2 || args.len() > 3 {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"emit!(world, models,)\"".to_string(),
+                    message: "Invalid arguments. Expected \"emit!(world, (events,))\"".to_string(),
                     severity: Severity::Error,
                 }],
             };
@@ -67,7 +68,7 @@ impl InlineMacroExprPlugin for EmitMacro {
                 return InlinePluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
-                        message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
+                        message: "Invalid arguments. Expected \"(world, (events,))\"".to_string(),
                         stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                         severity: Severity::Error,
                     }],
@@ -96,13 +97,8 @@ impl InlineMacroExprPlugin for EmitMacro {
             );
 
             builder.add_str(&format!(
-                "keys.append(selector!(\"{}\"));",
-                event.split_whitespace().next().unwrap()
-            ));
-
-            builder.add_str(&format!(
                 "
-                starknet::Event::append_keys_and_data(@{event}, ref keys, ref data);",
+                {EVENT_TRAIT}::append_keys_and_data(@{event}, ref keys, ref data);",
                 event = event
             ));
 
