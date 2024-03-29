@@ -368,92 +368,6 @@ export enum {} {{
             contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
         contract_name.to_string()
     }
-
-    // Handles a contract definition and its underlying systems
-    // Will format the contract into a C# class and
-    // all systems into C# methods
-    // Handled tokens should be a list of all structs and enums used by the contract
-    fn handle_contracts(
-        &self,
-        contracts: &[&DojoContract],
-        handled_tokens: &[Composite],
-    ) -> String {
-        let mut out = String::new();
-        out += TypescriptNewPlugin::generate_header().as_str();
-        out += "import { Account } from \"starknet\";\n";
-        out += "import { DojoProvider } from \"@dojoengine/core\";\n";
-        out += "import * as models from \"./models.gen\";\n";
-        out += "\n";
-        out += "export type IWorld = Awaited<ReturnType<typeof setupWorld>>;";
-
-        out += "\n\n";
-
-        out += "export async function setupWorld(provider: DojoProvider) {";
-
-        for contract in contracts {
-            let systems = contract
-                .systems
-                .iter()
-                .map(|system| {
-                    TypescriptNewPlugin::format_system(
-                        system.to_function().unwrap(),
-                        handled_tokens,
-                    )
-                })
-                .collect::<Vec<String>>()
-                .join("\n\n    ");
-
-            out += &format!(
-                "
-    // System definitions for `{}` contract
-    function {}() {{
-        const contract_name = \"{}\";
-
-        {}
-
-        return {{
-            {}
-        }};
-    }}
-",
-                contract.contract_file_name,
-                // capitalize contract name
-                TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name),
-                TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name),
-                systems,
-                contract
-                    .systems
-                    .iter()
-                    .map(|system| {
-                        system.to_function().unwrap().name.to_case(convert_case::Case::Camel)
-                    })
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            );
-        }
-
-        out += "
-    return {
-        ";
-
-        out += &contracts
-            .iter()
-            .map(|c| {
-                format!(
-                    "{}: {}()",
-                    TypescriptNewPlugin::formatted_contract_name(&c.contract_file_name),
-                    TypescriptNewPlugin::formatted_contract_name(&c.contract_file_name)
-                )
-            })
-            .collect::<Vec<String>>()
-            .join(",\n        ");
-
-        out += "
-    };
-}\n";
-
-        out
-    }
 }
 
 #[async_trait]
@@ -481,12 +395,6 @@ impl BuiltinPlugin for TypescriptNewPlugin {
         code += TypescriptNewPlugin::generate_query_types(models.as_slice()).as_str();
 
         out.insert(output_path, code.as_bytes().to_vec());
-
-        // Handle codegen for contracts & systems
-        let contracts_path = Path::new("contracts.gen.ts").to_owned();
-        let code = self.handle_contracts(contracts.as_slice(), &handled_tokens);
-
-        out.insert(contracts_path, code.as_bytes().to_vec());
 
         Ok(out)
     }
