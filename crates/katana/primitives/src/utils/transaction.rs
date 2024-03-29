@@ -274,6 +274,40 @@ pub fn compute_l1_message_hash(
     H256::from_slice(msg.hash().as_bytes())
 }
 
+fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {
+    let mut buffer = [0u8; 32];
+    let (remainder, max_price) = buffer.split_at_mut(128 / 8);
+    let (gas_kind, max_amount) = remainder.split_at_mut(64 / 8);
+
+    let padding = gas_kind.len() - name.len();
+    gas_kind[padding..].copy_from_slice(name);
+    max_amount.copy_from_slice(&bound.max_amount.to_be_bytes());
+    max_price.copy_from_slice(&bound.max_price_per_unit.to_be_bytes());
+
+    FieldElement::from_bytes_be(&buffer).expect("Packed resource should fit into felt")
+}
+
+fn hash_fee_fields(
+    tip: u64,
+    l1_gas_bounds: &ResourceBounds,
+    l2_gas_bounds: &ResourceBounds,
+) -> FieldElement {
+    poseidon_hash_many(&[
+        tip.into(),
+        encode_gas_bound(b"L1_GAS", l1_gas_bounds),
+        encode_gas_bound(b"L2_GAS", l2_gas_bounds),
+    ])
+}
+
+fn encode_da_mode(
+    nonce_da_mode: &DataAvailabilityMode,
+    fee_da_mode: &DataAvailabilityMode,
+) -> FieldElement {
+    let nonce = (*nonce_da_mode as u64) << 32;
+    let fee = *fee_da_mode as u64;
+    FieldElement::from(nonce + fee)
+}
+
 #[cfg(test)]
 mod tests {
     use starknet::core::chain_id;
@@ -333,38 +367,4 @@ mod tests {
             .unwrap()
         );
     }
-}
-
-fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {
-    let mut buffer = [0u8; 32];
-    let (remainder, max_price) = buffer.split_at_mut(128 / 8);
-    let (gas_kind, max_amount) = remainder.split_at_mut(64 / 8);
-
-    let padding = gas_kind.len() - name.len();
-    gas_kind[padding..].copy_from_slice(name);
-    max_amount.copy_from_slice(&bound.max_amount.to_be_bytes());
-    max_price.copy_from_slice(&bound.max_price_per_unit.to_be_bytes());
-
-    FieldElement::from_bytes_be(&buffer).expect("Packed resource should fit into felt")
-}
-
-fn hash_fee_fields(
-    tip: u64,
-    l1_gas_bounds: &ResourceBounds,
-    l2_gas_bounds: &ResourceBounds,
-) -> FieldElement {
-    poseidon_hash_many(&[
-        tip.into(),
-        encode_gas_bound(b"L1_GAS", l1_gas_bounds),
-        encode_gas_bound(b"L2_GAS", l2_gas_bounds),
-    ])
-}
-
-fn encode_da_mode(
-    nonce_da_mode: &DataAvailabilityMode,
-    fee_da_mode: &DataAvailabilityMode,
-) -> FieldElement {
-    let nonce = (*nonce_da_mode as u64) << 32;
-    let fee = *fee_da_mode as u64;
-    FieldElement::from(nonce + fee)
 }

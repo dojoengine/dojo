@@ -5,6 +5,7 @@ use std::sync::Arc;
 use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
+use dojo_metrics::{metrics_process, prometheus_exporter};
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
@@ -15,7 +16,6 @@ use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::{spawn, NodeHandle};
-use metrics::prometheus_exporter;
 use tokio::signal::ctrl_c;
 use tracing::info;
 

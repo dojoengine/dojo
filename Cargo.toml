@@ -57,7 +57,7 @@ lto = "fat"
 common = { path = "crates/common" }
 
 # metrics
-metrics = { path = "crates/metrics" }
+dojo-metrics = { path = "crates/metrics" }
 
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo-bindgen" }
@@ -139,12 +139,13 @@ indoc = "1.0.7"
 itertools = "0.10.3"
 jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
-metrics-process = "1.0.9"
+metrics = "0.21.1"
 num-traits = { version = "0.2", default-features = false }
 once_cell = "1.0"
 parking_lot = "0.12.1"
 pretty_assertions = "1.2.1"
 rayon = "1.8.0"
+regex = "1.10.3"
 salsa = "0.16.1"
 scarb = { git = "https://github.com/software-mansion/scarb", tag = "v2.5.4" }
 scarb-ui = { git = "https://github.com/software-mansion/scarb", tag = "v2.5.4" }
@@ -166,7 +167,6 @@ tokio = { version = "1.32.0", features = [ "full" ] }
 toml = "0.7.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
-regex = "1.10.3"
 url = { version = "2.4.0", features = [ "serde" ] }
 
 rstest = "0.18.2"
