@@ -1,9 +1,8 @@
 use dojo_metrics::{
-    metrics::{Counter, Histogram},
+    metrics::{self, Counter, Histogram},
     Metrics,
 };
 use jsonrpsee::{
-    helpers::MethodResponseResult,
     server::logger::{HttpRequest, Logger, MethodKind, Params, TransportProtocol},
     RpcModule,
 };
@@ -94,12 +93,7 @@ struct RpcServerCallMetrics {
 impl Logger for RpcServerMetrics {
     type Instant = Instant;
 
-    fn on_connect(
-        &self,
-        _remote_addr: SocketAddr,
-        _request: &HttpRequest,
-        transport: TransportProtocol,
-    ) {
+    fn on_connect(&self, _: SocketAddr, _: &HttpRequest, transport: TransportProtocol) {
         self.inner.connection_metrics.get_metrics(transport).connections_opened.increment(1)
     }
 
@@ -108,13 +102,7 @@ impl Logger for RpcServerMetrics {
         Instant::now()
     }
 
-    fn on_call(
-        &self,
-        method_name: &str,
-        _params: Params<'_>,
-        _kind: MethodKind,
-        _transport: TransportProtocol,
-    ) {
+    fn on_call(&self, method_name: &str, _: Params<'_>, _: MethodKind, _: TransportProtocol) {
         let Some(call_metrics) = self.inner.call_metrics.get(method_name) else { return };
         call_metrics.started.increment(1);
     }
@@ -122,29 +110,29 @@ impl Logger for RpcServerMetrics {
     fn on_result(
         &self,
         method_name: &str,
-        success: MethodResponseResult,
+        success: bool,
         started_at: Self::Instant,
-        _transport: TransportProtocol,
+        _: TransportProtocol,
     ) {
         let Some(call_metrics) = self.inner.call_metrics.get(method_name) else { return };
 
         // capture call latency
         call_metrics.time_seconds.record(started_at.elapsed().as_secs_f64());
-        if success.is_success() {
+        if success {
             call_metrics.successful.increment(1);
         } else {
             call_metrics.failed.increment(1);
         }
     }
 
-    fn on_response(&self, _result: &str, started_at: Self::Instant, transport: TransportProtocol) {
+    fn on_response(&self, _: &str, started_at: Self::Instant, transport: TransportProtocol) {
         let metrics = self.inner.connection_metrics.get_metrics(transport);
         // capture request latency for this request/response pair
         metrics.request_time_seconds.record(started_at.elapsed().as_secs_f64());
         metrics.requests_finished.increment(1);
     }
 
-    fn on_disconnect(&self, _remote_addr: SocketAddr, transport: TransportProtocol) {
+    fn on_disconnect(&self, _: SocketAddr, transport: TransportProtocol) {
         self.inner.connection_metrics.get_metrics(transport).connections_closed.increment(1)
     }
 }
