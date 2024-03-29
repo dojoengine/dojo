@@ -149,7 +149,9 @@ impl Logger for RpcServerMetrics {
         let Some(call_metrics) = self.inner.call_metrics.get(method_name) else { return };
 
         // capture call latency
-        call_metrics.time_seconds.record(started_at.elapsed().as_secs_f64());
+        let time_taken = started_at.elapsed().as_secs_f64();
+        call_metrics.time_seconds.record(time_taken);
+
         if success {
             call_metrics.successful.increment(1);
         } else {
@@ -160,7 +162,8 @@ impl Logger for RpcServerMetrics {
     fn on_response(&self, _: &str, started_at: Self::Instant, transport: TransportProtocol) {
         let metrics = self.inner.connection_metrics.get_metrics(transport);
         // capture request latency for this request/response pair
-        metrics.request_time_seconds.record(started_at.elapsed().as_secs_f64());
+        let time_taken = started_at.elapsed().as_secs_f64();
+        metrics.request_time_seconds.record(time_taken);
         metrics.requests_finished.increment(1);
     }
 
