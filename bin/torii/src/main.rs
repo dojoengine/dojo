@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use clap::Parser;
 use common::parse::{parse_socket_address, parse_url};
+use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_world::contracts::world::WorldContractReader;
-use metrics::prometheus_exporter;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
