@@ -23,7 +23,9 @@ use tracing::trace;
 use crate::plugin::dojo_plugin_suite;
 
 pub struct CompileInfo {
+    pub manifest_path: Utf8PathBuf,
     pub target_dir: Utf8PathBuf,
+    pub root_package_name: String,
 }
 
 pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesConfig {
@@ -79,10 +81,12 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
         }
     }
 
+    let manifest_path = ws.manifest_path().into();
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
+    let root_package_name = ws.root_package().expect("No root package name").id.name.to_string();
 
-    Ok(CompileInfo { target_dir })
+    Ok(CompileInfo { manifest_path, target_dir, root_package_name })
 }
 
 fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
