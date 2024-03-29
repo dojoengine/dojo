@@ -9,6 +9,7 @@ use tracing_log::AsTrace;
 
 use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
+use crate::commands::call::CallArgs;
 use crate::commands::clean::CleanArgs;
 use crate::commands::completions::CompletionsArgs;
 use crate::commands::dev::DevArgs;
@@ -79,6 +80,8 @@ pub enum Commands {
     Test(TestArgs),
     #[command(about = "Execute a world's system")]
     Execute(ExecuteArgs),
+    #[command(about = "Call a world's system")]
+    Call(CallArgs),
     #[command(about = "Interact with a worlds models")]
     Model(ModelArgs),
     #[command(about = "Register new models")]
