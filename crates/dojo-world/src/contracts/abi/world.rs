@@ -35,16 +35,6 @@ abigen!(
     ]
   },
   {
-    "type": "struct",
-    "name": "core::array::Span::<core::integer::u8>",
-    "members": [
-      {
-        "name": "snapshot",
-        "type": "@core::array::Array::<core::integer::u8>"
-      }
-    ]
-  },
-  {
     "type": "enum",
     "name": "core::bool",
     "variants": [
@@ -55,6 +45,16 @@ abigen!(
       {
         "name": "True",
         "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::integer::u8>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::integer::u8>"
       }
     ]
   },
@@ -180,6 +180,10 @@ abigen!(
           {
             "name": "values",
             "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "is_model_event",
+            "type": "core::bool"
           }
         ],
         "outputs": [],
