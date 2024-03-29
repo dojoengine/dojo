@@ -417,13 +417,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
 
                 match attributes.len().cmp(&1) {
                     Ordering::Equal => {
-                        // extend from model
-                        let (model_rewrite_nodes, model_diagnostics) =
-                            handle_model_struct(db, &mut aux_data, struct_ast.clone());
-                        rewrite_nodes.push(model_rewrite_nodes);
-                        diagnostics.extend(model_diagnostics);
-
-                        // extend from event
                         let (event_rewrite_nodes, event_diagnostics) =
                             handle_event_struct(db, &mut aux_data, struct_ast.clone());
                         rewrite_nodes.push(event_rewrite_nodes);

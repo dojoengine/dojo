@@ -4,9 +4,10 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::inline_macros::unsupported_bracket_diagnostic;
+use cairo_lang_starknet::plugin::consts::EVENT_TRAIT;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
-use super::unsupported_arg_diagnostic;
+use crate::inline_macros::unsupported_arg_diagnostic;
 
 #[derive(Debug, Default)]
 pub struct EmitMacro;
@@ -29,18 +30,21 @@ impl InlineMacroExprPlugin for EmitMacro {
 
         let args = arg_list.arguments(db).elements(db);
 
-        if args.len() != 2 {
+        if args.len() < 2 || args.len() > 3 {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"emit!(world, events,)\"".to_string(),
+                    message: "Invalid arguments. Expected \"emit!(world, (models,), [model])\""
+                        .to_string(),
                     severity: Severity::Error,
                 }],
             };
         }
 
         let world = &args[0];
+        // TOOD: return plugin result with error if it's not "model".
+        let is_model_event = args.len() == 3;
 
         let ast::ArgClause::Unnamed(models) = args[1].arg_clause(db) else {
             return unsupported_arg_diagnostic(db, syntax);
@@ -67,7 +71,7 @@ impl InlineMacroExprPlugin for EmitMacro {
                 return InlinePluginResult {
                     code: None,
                     diagnostics: vec![PluginDiagnostic {
-                        message: "Invalid arguments. Expected \"(world, (events,))\"".to_string(),
+                        message: "Invalid arguments. Expected \"(world, (models,))\"".to_string(),
                         stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                         severity: Severity::Error,
                     }],
@@ -79,7 +83,7 @@ impl InlineMacroExprPlugin for EmitMacro {
             return InlinePluginResult {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
-                    message: "Invalid arguments: No events provided.".to_string(),
+                    message: "Invalid arguments: No models provided.".to_string(),
                     stable_ptr: arg_list.arguments(db).stable_ptr().untyped(),
                     severity: Severity::Error,
                 }],
@@ -97,13 +101,13 @@ impl InlineMacroExprPlugin for EmitMacro {
 
             builder.add_str(&format!(
                 "
-                starknet::Event::append_keys_and_data(@{event}, ref keys, ref data);",
+                {EVENT_TRAIT}::append_keys_and_data(@{event}, ref keys, ref data);",
                 event = event
             ));
 
             builder.add_str("\n            ");
             builder.add_node(world.as_syntax_node());
-            builder.add_str(".emit(keys, data.span());");
+            builder.add_str(&format!(".emit(keys, data.span(), {is_model_event});"));
 
             builder.add_str("}");
         }
