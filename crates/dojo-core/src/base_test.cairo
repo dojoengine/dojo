@@ -107,7 +107,9 @@ mod invalid_model {
     impl InvalidModelName of super::INameOnly<ContractState> {
         fn name(self: @ContractState) -> felt252 {
             // Pre-computed address of a contract deployed through the world.
-            0x7b6cc67bb03efdf091487465df2037cad74111d8b616536b013e70da7491a30
+            // To print this addres, run:
+            // sozo test --manifest-path crates/dojo-core/Scarb.toml -f test_deploy_from_world_invalid_model
+            0x365e118dca1de7bcf112ed35a62519b13a85d39b03f6b0338eea9a56b31c6c9
         }
     }
 }
