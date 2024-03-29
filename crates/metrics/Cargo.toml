@@ -13,10 +13,10 @@ tokio.workspace = true
 tracing.workspace = true
 
 # Metrics
-metrics = "0.21.1"
 metrics-exporter-prometheus = "0.12.1"
 metrics-process = "=1.0.14"
 metrics-util = "0.15.0"
+metrics.workspace = true
 reth-metrics-derive = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.4" }
 
 [target.'cfg(not(windows))'.dependencies]
