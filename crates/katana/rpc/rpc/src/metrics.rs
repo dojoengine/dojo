@@ -21,6 +21,7 @@ use dojo_metrics::metrics::{Counter, Histogram};
 use dojo_metrics::Metrics;
 use jsonrpsee::server::logger::{HttpRequest, Logger, MethodKind, Params, TransportProtocol};
 use jsonrpsee::RpcModule;
+use tracing::debug;
 
 /// Metrics for the RPC server.
 #[derive(Default, Clone)]
@@ -125,6 +126,7 @@ impl Logger for RpcServerMetrics {
     }
 
     fn on_call(&self, method_name: &str, _: Params<'_>, _: MethodKind, _: TransportProtocol) {
+        debug!(target: "server", method = ?method_name);
         let Some(call_metrics) = self.inner.call_metrics.get(method_name) else { return };
         call_metrics.started.increment(1);
     }

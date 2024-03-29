@@ -10,16 +10,13 @@ pub mod torii;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::Result;
 use config::ServerConfig;
 use hyper::Method;
-use jsonrpsee::server::logger::{Logger, MethodKind, TransportProtocol};
 use jsonrpsee::server::middleware::proxy_get_request::ProxyGetRequestLayer;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
-use jsonrpsee::tracing::debug;
-use jsonrpsee::types::Params;
 use jsonrpsee::RpcModule;
 use katana_core::sequencer::KatanaSequencer;
 use katana_executor::ExecutorFactory;
@@ -96,51 +93,4 @@ pub struct NodeHandle {
     pub addr: SocketAddr,
     pub config: ServerConfig,
     pub handle: ServerHandle,
-}
-
-#[derive(Debug, Clone)]
-pub struct RpcLogger;
-
-impl Logger for RpcLogger {
-    type Instant = std::time::Instant;
-
-    fn on_connect(
-        &self,
-        _remote_addr: std::net::SocketAddr,
-        _request: &jsonrpsee::server::logger::HttpRequest,
-        _t: TransportProtocol,
-    ) {
-    }
-
-    fn on_request(&self, _transport: TransportProtocol) -> Self::Instant {
-        Instant::now()
-    }
-
-    fn on_call(
-        &self,
-        method_name: &str,
-        _params: Params<'_>,
-        _kind: MethodKind,
-        _transport: TransportProtocol,
-    ) {
-        debug!(target: "server", method = ?method_name);
-    }
-
-    fn on_result(
-        &self,
-        _method_name: &str,
-        _success: bool,
-        _started_at: Self::Instant,
-        _transport: TransportProtocol,
-    ) {
-    }
-
-    fn on_response(
-        &self,
-        _result: &str,
-        _started_at: Self::Instant,
-        _transport: TransportProtocol,
-    ) {
-    }
-    fn on_disconnect(&self, _remote_addr: std::net::SocketAddr, _transport: TransportProtocol) {}
 }
