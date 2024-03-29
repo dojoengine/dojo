@@ -9,9 +9,9 @@ use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
 use crate::{DojoContract, DojoData, DojoModel};
 
-pub struct TypescriptNewPlugin {}
+pub struct TypeScriptV2Plugin {}
 
-impl TypescriptNewPlugin {
+impl TypeScriptV2Plugin {
     pub fn new() -> Self {
         Self {}
     }
@@ -153,7 +153,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             });
 
             for token in &structs {
-                out += TypescriptNewPlugin::format_struct(
+                out += TypeScriptV2Plugin::format_struct(
                     token.to_composite().unwrap(),
                     handled_tokens,
                 )
@@ -161,7 +161,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             }
 
             for token in &tokens.enums {
-                out += TypescriptNewPlugin::format_enum(token.to_composite().unwrap()).as_str();
+                out += TypeScriptV2Plugin::format_enum(token.to_composite().unwrap()).as_str();
             }
 
             out += "\n";
@@ -209,10 +209,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                 .systems
                 .iter()
                 .map(|system| {
-                    TypescriptNewPlugin::format_system(
-                        system.to_function().unwrap(),
-                        handled_tokens,
-                    )
+                    TypeScriptV2Plugin::format_system(system.to_function().unwrap(), handled_tokens)
                 })
                 .collect::<Vec<String>>()
                 .join("\n\n    ");
@@ -226,7 +223,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     {}
 }}
 ",
-                TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                     .to_case(convert_case::Case::Pascal),
                 systems,
             );
@@ -241,7 +238,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             .map(|contract| {
                 format!(
                     "{}Address: string;",
-                    TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                    TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                         .to_case(convert_case::Case::Camel)
                 )
             })
@@ -274,7 +271,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
 
         out += "\n\n";
 
-        out += TypescriptNewPlugin::generate_initial_params(contracts).as_str();
+        out += TypeScriptV2Plugin::generate_initial_params(contracts).as_str();
 
         out += "\n\n";
 
@@ -285,10 +282,10 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                     "{camel_case_name}: {pascal_case_name}Calls;
     {camel_case_name}Address: string;",
                     camel_case_name =
-                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                             .to_case(convert_case::Case::Camel),
                     pascal_case_name =
-                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                             .to_case(convert_case::Case::Pascal)
                 )
             })
@@ -310,7 +307,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
 
             this.{contract_name}Address = {contract_name}Address;",
                     contract_name =
-                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                             .to_case(convert_case::Case::Camel)
                 )
             })
@@ -323,7 +320,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                 format!(
                     "this.{camel_case_name}Address = params.{camel_case_name}Address;",
                     camel_case_name =
-                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                             .to_case(convert_case::Case::Camel),
                 )
             })
@@ -336,10 +333,10 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                 format!(
                     "this.{camel_case_name} = new {pascal_case_name}Calls(this.{camel_case_name}Address, this._account);",
                     camel_case_name =
-                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                             .to_case(convert_case::Case::Camel),
                     pascal_case_name =
-                        TypescriptNewPlugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
                             .to_case(convert_case::Case::Pascal)
                 )
             })
@@ -433,7 +430,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         let mut native_fields = String::new();
 
         for field in &token.inners {
-            let mapped = TypescriptNewPlugin::map_type(field.token.type_name().as_str());
+            let mapped = TypeScriptV2Plugin::map_type(field.token.type_name().as_str());
             if mapped == field.token.type_name() {
                 let token = handled_tokens
                     .iter()
@@ -498,10 +495,10 @@ export enum {} {{
                 format!(
                     "{}: {}",
                     arg.0,
-                    if TypescriptNewPlugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
+                    if TypeScriptV2Plugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
                         arg.1.type_name()
                     } else {
-                        TypescriptNewPlugin::map_type(&arg.1.type_name())
+                        TypeScriptV2Plugin::map_type(&arg.1.type_name())
                     }
                 )
             })
@@ -562,7 +559,7 @@ export enum {} {{
 }
 
 #[async_trait]
-impl BuiltinPlugin for TypescriptNewPlugin {
+impl BuiltinPlugin for TypeScriptV2Plugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
         let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
         let mut handled_tokens = Vec::<Composite>::new();
@@ -572,20 +569,20 @@ impl BuiltinPlugin for TypescriptNewPlugin {
         let output_path = Path::new("models.gen.ts").to_owned();
 
         let mut code = String::new();
-        code += TypescriptNewPlugin::generate_header().as_str();
-        code += TypescriptNewPlugin::generate_imports().as_str();
+        code += TypeScriptV2Plugin::generate_header().as_str();
+        code += TypeScriptV2Plugin::generate_imports().as_str();
         code += "\n";
-        code += TypescriptNewPlugin::generate_model_types(models.as_slice(), &mut handled_tokens)
+        code += TypeScriptV2Plugin::generate_model_types(models.as_slice(), &mut handled_tokens)
             .as_str();
         code += "\n";
-        code += TypescriptNewPlugin::generate_base_calls_class().as_str();
+        code += TypeScriptV2Plugin::generate_base_calls_class().as_str();
         code += "\n";
         code +=
-            TypescriptNewPlugin::generate_contracts(contracts.as_slice(), &handled_tokens).as_str();
+            TypeScriptV2Plugin::generate_contracts(contracts.as_slice(), &handled_tokens).as_str();
         code += "\n";
-        code += TypescriptNewPlugin::generate_query_types(models.as_slice()).as_str();
+        code += TypeScriptV2Plugin::generate_query_types(models.as_slice()).as_str();
         code += "\n";
-        code += TypescriptNewPlugin::generate_world_class(contracts.as_slice()).as_str();
+        code += TypeScriptV2Plugin::generate_world_class(contracts.as_slice()).as_str();
 
         out.insert(output_path, code.as_bytes().to_vec());
 

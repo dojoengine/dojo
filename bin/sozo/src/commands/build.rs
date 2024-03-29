@@ -37,7 +37,7 @@ impl BuildArgs {
         }
 
         if self.typescript2 {
-            builtin_plugins.push(BuiltinPlugins::TypescriptNew);
+            builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
         }
 
         if self.unity {

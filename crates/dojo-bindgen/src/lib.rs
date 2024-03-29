@@ -12,8 +12,8 @@ use error::{BindgenResult, Error};
 
 mod plugins;
 use plugins::typescript::TypescriptPlugin;
+use plugins::typescript_new::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
-use plugins::typescript_new::TypescriptNewPlugin;
 use plugins::BuiltinPlugin;
 pub use plugins::BuiltinPlugins;
 
@@ -74,7 +74,7 @@ impl PluginManager {
             let builder: Box<dyn BuiltinPlugin> = match plugin {
                 BuiltinPlugins::Typescript => Box::new(TypescriptPlugin::new()),
                 BuiltinPlugins::Unity => Box::new(UnityPlugin::new()),
-                BuiltinPlugins::TypescriptNew => Box::new(TypescriptNewPlugin::new()),
+                BuiltinPlugins::TypeScriptV2 => Box::new(TypeScriptV2Plugin::new()),
             };
 
             let files = builder.generate_code(&data).await?;
