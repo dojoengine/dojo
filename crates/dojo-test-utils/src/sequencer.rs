@@ -101,6 +101,10 @@ impl TestSequencer {
         )
     }
 
+    pub fn provider(&self) -> JsonRpcClient<HttpTransport> {
+        JsonRpcClient::new(HttpTransport::new(self.url.clone()))
+    }
+
     pub fn account_at_index(
         &self,
         index: usize,

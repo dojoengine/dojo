@@ -1,3 +1,5 @@
+#![allow(clippy::blocks_in_conditions)]
+
 pub mod config;
 pub mod dev;
 pub mod katana;

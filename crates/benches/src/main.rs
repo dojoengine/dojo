@@ -36,7 +36,7 @@ fn main() {
         }
     }
 
-    let mut pairs = map.into_iter().map(|(name, runs)| (name, runs)).collect::<Vec<_>>();
+    let mut pairs = map.into_iter().collect::<Vec<_>>();
     pairs.sort_by_key(|(key, _)| key.clone());
 
     for (name, mut runs) in pairs {
