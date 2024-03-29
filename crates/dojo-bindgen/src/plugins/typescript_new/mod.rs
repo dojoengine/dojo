@@ -209,21 +209,6 @@ export enum {} {{
         )
     }
 
-    // Handles a model definition and its referenced tokens
-    // Will map all structs and enums to TS types
-    // Will format the models into a object
-    fn handle_model(&self, models: &[&DojoModel], handled_tokens: &mut Vec<Composite>) -> String {
-        let mut out = String::new();
-        out += TypescriptNewPlugin::generate_header().as_str();
-        out += TypescriptNewPlugin::generate_imports().as_str();
-        out += "\n";
-        out += TypescriptNewPlugin::generate_model_types(models, handled_tokens).as_str();
-        out += "\n";
-        out += TypescriptNewPlugin::generate_query_types(models).as_str();
-
-        out
-    }
-
     // Formats a system into a C# method used by the contract class
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
@@ -405,17 +390,24 @@ impl BuiltinPlugin for TypescriptNewPlugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
         let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
         let mut handled_tokens = Vec::<Composite>::new();
-
-        // Handle codegen for models
-        let models_path = Path::new("models.gen.ts").to_owned();
         let models = data.models.values().collect::<Vec<_>>();
-        let code = self.handle_model(models.as_slice(), &mut handled_tokens);
+        let contracts = data.contracts.values().collect::<Vec<_>>();
 
-        out.insert(models_path, code.as_bytes().to_vec());
+        let output_path = Path::new("models.gen.ts").to_owned();
+
+        let mut code = String::new();
+        code += TypescriptNewPlugin::generate_header().as_str();
+        code += TypescriptNewPlugin::generate_imports().as_str();
+        code += "\n";
+        code += TypescriptNewPlugin::generate_model_types(models.as_slice(), &mut handled_tokens)
+            .as_str();
+        code += "\n";
+        code += TypescriptNewPlugin::generate_query_types(models.as_slice()).as_str();
+
+        out.insert(output_path, code.as_bytes().to_vec());
 
         // Handle codegen for contracts & systems
         let contracts_path = Path::new("contracts.gen.ts").to_owned();
-        let contracts = data.contracts.values().collect::<Vec<_>>();
         let code = self.handle_contracts(contracts.as_slice(), &handled_tokens);
 
         out.insert(contracts_path, code.as_bytes().to_vec());
