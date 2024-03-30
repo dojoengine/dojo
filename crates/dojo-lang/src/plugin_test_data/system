@@ -43,11 +43,6 @@ mod withevent {
     struct TestEvent {
         address: ContractAddress,
     }
-
-    #[abi(embed_v0)]
-    fn test(value: felt252) -> value {
-        value
-    }
 }
 
 #[starknet::component]
@@ -64,7 +59,6 @@ mod testcomponent2 {
 
 #[dojo::contract]
 mod withcomponent {
-   
     component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
     component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
 
@@ -109,45 +103,25 @@ trait INominalTrait {
     fn do_return_value(p1: u8) -> u16;
 }
 
+#[dojo::interface]
+trait IWorldTrait {
+        fn do_with_ref_self(ref self: ContractState) -> felt252;
+        fn do_with_several_world_dispatchers(
+            world: IWorldDispatcher,
+            vec: Vec2,
+            another_world: IWorldDispatcher
+        ) -> felt252;
+        fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252;
+        fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher);
+        fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252;
+        fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252;
+}
+
 #[dojo::contract]
 mod MyFaultyContract {
 
-    #[external(v0)]
-    fn do_with_ref_self(ref self: ContractState) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_several_world_dispatchers(
-        world: IWorldDispatcher,
-        vec: Vec2,
-        another_world: IWorldDispatcher
-    ) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
     #[abi(embed_v0)]
-    impl ActionsImpl of IActions<ContractState> {
+    impl TestWorldImpl of IWorldTrait<ContractState> {
         fn do_with_ref_self(ref self: ContractState) -> felt252 {
             'land'
         }
@@ -187,33 +161,8 @@ mod MyNominalContract {
         damage: u8
     }
 
-    #[external(v0)]
-    #[computed]
-    fn do(vec: Vec2) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    #[computed]
-    fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    #[computed]
-    fn do_with_world_first(world: IWorldDispatcher, vec: Vec2) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    #[computed]
-    fn do_with_self_and_world_first(self: @ContractState, world: IWorldDispatcher, vec: Vec2) -> felt252 {
-        'land'
-    }
-
     #[abi(embed_v0)]
-    impl ActionsImpl of IActions<ContractState> {
-
+    impl TestWorldImpl of IWorldTrait<ContractState> {
         fn do(vec: Vec2) -> felt252 {
             'land'
         }
@@ -343,72 +292,47 @@ mod ctxnamed {
 
 //! > expected_diagnostics
 error: Unsupported attribute.
- --> test_src/lib.cairo:47:1
+ --> test_src/lib.cairo:42:1
 #[starknet::component]
 ^********************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:53:1
+ --> test_src/lib.cairo:48:1
 #[starknet::component]
 ^********************^
 
 error: Anything other than functions is not supported in a dojo::interface
- --> test_src/lib.cairo:89:5
+ --> test_src/lib.cairo:83:5
     const ONE: u8;
     ^************^
 
 error: Functions of dojo::interface cannot have `ref self` parameter.
- --> test_src/lib.cairo:91:5
+ --> test_src/lib.cairo:85:5
     fn do_ref_self(ref self: TContractState);
     ^***************************************^
 
 error: Only one parameter of type IWorldDispatcher is allowed.
- --> test_src/lib.cairo:114:5
-    #[external(v0)]
-    ^*************^
-
-error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:124:38
-    fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
-                                     ^*****************************^
-
-error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:129:69
-    fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
-                                                                    ^*****************************^
-
-error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:134:43
-    fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
-                                          ^*********************^
-
-error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:139:74
-    fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
-                                                                         ^*********************^
-
-error: Only one parameter of type IWorldDispatcher is allowed.
- --> test_src/lib.cairo:149:9
+ --> test_src/lib.cairo:123:9
         fn do_with_several_world_dispatchers(
         ^***********************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:157:42
+ --> test_src/lib.cairo:131:42
         fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
                                          ^*****************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:161:73
+ --> test_src/lib.cairo:135:73
         fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
                                                                         ^*****************************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:165:47
+ --> test_src/lib.cairo:139:47
         fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
                                               ^*********************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:169:78
+ --> test_src/lib.cairo:143:78
         fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
                                                                              ^*********************^
 
@@ -438,7 +362,7 @@ error: Unsupported attribute.
                 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:93:5
+ --> test_src/lib.cairo:87:5
     #[my_attr]
     ^********^
 
@@ -453,12 +377,12 @@ error: Unsupported attribute.
                 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:49:5
+ --> test_src/lib.cairo:44:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:55:5
+ --> test_src/lib.cairo:50:5
     #[storage]
     ^********^
 
@@ -593,17 +517,12 @@ error: Unsupported attribute.
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:41:5
-    #[abi(embed_v0)]
-    ^**************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:47:13
+ --> test_src/lib.cairo[withevent]:42:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withevent]:50:17
+ --> test_src/lib.cairo[withevent]:45:17
                 #[substorage(v0)]
                 ^***************^
 
@@ -628,42 +547,42 @@ error: Unsupported attribute.
                     ^**************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:62:5
+ --> test_src/lib.cairo:56:5
     component!(path: testcomponent1, storage: testcomponent1_storage, event: testcomponent1_event);
     ^*********************************************************************************************^
 
 error: Unknown inline item macro: 'component'.
- --> test_src/lib.cairo:63:5
+ --> test_src/lib.cairo:57:5
     component!(path: testcomponent2, storage: testcomponent2_storage, event: testcomponent2_event);
     ^*********************************************************************************************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:33:13
+ --> test_src/lib.cairo[withcomponent]:32:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:36:17
+ --> test_src/lib.cairo[withcomponent]:35:17
                 #[substorage(v0)]
                 ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:38:25
+ --> test_src/lib.cairo[withcomponent]:37:25
                         #[substorage(v0)]
                         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:40:9
+ --> test_src/lib.cairo[withcomponent]:39:9
         #[substorage(v0)]
         ^***************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:44:13
+ --> test_src/lib.cairo[withcomponent]:43:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[withcomponent]:48:25
+ --> test_src/lib.cairo[withcomponent]:47:25
                         #[flat]
                         ^*****^
 
@@ -688,52 +607,22 @@ error: Unsupported attribute.
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:109:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:114:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:123:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:128:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:133:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:138:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:143:5
+ --> test_src/lib.cairo:117:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:92:13
+ --> test_src/lib.cairo[MyFaultyContract]:60:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:98:13
+ --> test_src/lib.cairo[MyFaultyContract]:66:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyFaultyContract]:101:17
+ --> test_src/lib.cairo[MyFaultyContract]:69:17
                 #[substorage(v0)]
                 ^***************^
 
@@ -758,42 +647,22 @@ error: Unsupported attribute.
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:184:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:190:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:196:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:202:5
-    #[external(v0)]
-    ^*************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:208:5
+ --> test_src/lib.cairo:158:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:83:13
+ --> test_src/lib.cairo[MyNominalContract]:56:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:89:13
+ --> test_src/lib.cairo[MyNominalContract]:62:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:92:17
+ --> test_src/lib.cairo[MyNominalContract]:65:17
                 #[substorage(v0)]
                 ^***************^
 
@@ -839,7 +708,7 @@ mod testcomponent2 {
                         use traits::Into;
     use dojo::world::Context;
 
-    fn execute(self: @ContractState, ctx: Context, name: felt252) {
+    fn execute(ctx: Context, name: felt252) {
         return ();
     }
 
@@ -884,7 +753,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                     #[abi(embed_v0)]
                     impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
-                        fn execute(self: @ContractState, value: felt252) -> felt252 {
+                        fn execute(value: felt252) -> felt252 {
         value
     }
 
@@ -932,7 +801,7 @@ impl EventDrop of core::traits::Drop::<Event>;
                         use traits::Into;
     use dojo::world::Context;
 
-    fn execute(self: @ContractState, ctx2: Context, name: felt252) {
+    fn execute(ctx2: Context, name: felt252) {
         return ();
     }
 
@@ -988,11 +857,6 @@ impl EventDrop of core::traits::Drop::<Event>;
     #[derive(Drop, starknet::Event)]
     struct TestEvent {
         address: ContractAddress,
-    }
-
-    #[abi(embed_v0)]
-    fn test(self: @ContractState, value: felt252) -> value {
-        value
     }
 
             #[storage]
@@ -1077,6 +941,19 @@ impl EventDrop of core::traits::Drop::<Event>;
 
                 }
 
+                #[starknet::interface]
+                trait IWorldTrait<TContractState> {
+                            fn do_with_ref_self(self: @TContractState, ref self: ContractState) -> felt252;
+        fn do_with_several_world_dispatchers(
+self: @TContractState,             world: IWorldDispatcher,             vec: Vec2,             another_world: IWorldDispatcher
+        ) -> felt252;
+        fn do_with_world_not_named_world(self: @TContractState, another_world: IWorldDispatcher) -> felt252;
+        fn do_with_self_and_world_not_named_world(self: @TContractState, self: @ContractState, another_world: IWorldDispatcher);
+        fn do_with_world_not_first(self: @TContractState, vec: Vec2, world: IWorldDispatcher) -> felt252;
+        fn do_with_self_and_world_not_first(self: @TContractState, self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252;
+
+                }
+
                 #[starknet::contract]
                 mod MyFaultyContract {
                     use dojo::world;
@@ -1103,40 +980,8 @@ impl EventDrop of core::traits::Drop::<Event>;
                     impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
 
                     
-    #[external(v0)]
-    fn do_with_ref_self(ref self: ContractState) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_several_world_dispatchers(
-self: @ContractState,         world: IWorldDispatcher,         vec: Vec2,         another_world: IWorldDispatcher
-    ) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
-        'land'
-    }
-
     #[abi(embed_v0)]
-    impl ActionsImpl of IActions<ContractState> {
+    impl TestWorldImpl of IWorldTrait<ContractState> {
         fn do_with_ref_self(ref self: ContractState) -> felt252 {
             'land'
         }
@@ -1212,35 +1057,8 @@ impl EventDrop of core::traits::Drop::<Event>;
         damage: u8
     }
 
-    #[external(v0)]
-    #[computed]
-    fn do(self: @ContractState, vec: Vec2) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    #[computed]
-    fn do_with_self(self: @ContractState, vec: Vec2) -> felt252 {
-        'land'
-    }
-
-    #[external(v0)]
-    #[computed]
-    fn do_with_world_first(self: @ContractState, vec: Vec2) -> felt252 {
-let world = self.world_dispatcher.read();
-        'land'
-    }
-
-    #[external(v0)]
-    #[computed]
-    fn do_with_self_and_world_first(self: @ContractState, vec: Vec2) -> felt252 {
-let world = self.world_dispatcher.read();
-        'land'
-    }
-
     #[abi(embed_v0)]
-    impl ActionsImpl of IActions<ContractState> {
-
+    impl TestWorldImpl of IWorldTrait<ContractState> {
         fn do(self: @ContractState, vec: Vec2) -> felt252 {
             'land'
         }

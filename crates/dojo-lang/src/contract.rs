@@ -41,8 +41,6 @@ impl DojoContract {
                             has_storage = true;
                             return system.merge_storage(db, struct_ast.clone());
                         }
-                    } else if let ast::ModuleItem::FreeFunction(fn_ast) = el {
-                        return system.rewrite_function(db, fn_ast.clone());
                     } else if let ast::ModuleItem::Impl(impl_ast) = el {
                         return system.rewrite_impl(db, impl_ast.clone());
                     }
