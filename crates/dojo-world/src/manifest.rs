@@ -363,6 +363,13 @@ impl DeploymentManifest {
 
         // Embedding ABIs into the manifest.
         let mut manifest_with_abis = self.clone();
+
+        if let Some(AbiFormat::Path(abi_path)) = &manifest_with_abis.world.inner.abi {
+            let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
+            let abi_entries: Vec<AbiEntry> = serde_json::from_reader(&mut abi_file)?;
+            manifest_with_abis.world.inner.abi = Some(AbiFormat::Embed(abi_entries));
+        }
+
         for contract in &mut manifest_with_abis.contracts {
             if let Some(AbiFormat::Path(abi_path)) = &contract.inner.abi {
                 let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
