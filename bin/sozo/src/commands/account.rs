@@ -30,7 +30,7 @@ pub enum AccountCommand {
         force: bool,
 
         #[clap(help = "Path to save the account config file")]
-        output: PathBuf,
+        file: PathBuf,
     },
 
     #[clap(about = "Deploy account contract with a DeployAccount transaction.")]
@@ -84,9 +84,9 @@ impl AccountArgs {
 
         config.tokio_handle().block_on(async {
             match self.command {
-                AccountCommand::New { signer, force, output } => {
+                AccountCommand::New { signer, force, file } => {
                     let signer: LocalWallet = signer.signer(env_metadata.as_ref())?;
-                    account::new(signer, force, output).await
+                    account::new(signer, force, file).await
                 }
                 AccountCommand::Deploy {
                     starknet,

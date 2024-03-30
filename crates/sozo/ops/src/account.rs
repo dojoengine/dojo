@@ -126,8 +126,8 @@ impl FeeSetting {
     }
 }
 
-pub async fn new(signer: LocalWallet, force: bool, output: PathBuf) -> Result<()> {
-    if output.exists() && !force {
+pub async fn new(signer: LocalWallet, force: bool, file: PathBuf) -> Result<()> {
+    if file.exists() && !force {
         anyhow::bail!("account config file already exists");
     }
 
@@ -148,11 +148,12 @@ pub async fn new(signer: LocalWallet, force: bool, output: PathBuf) -> Result<()
 
     let deployed_address = account_config.deploy_account_address()?;
 
-    let mut file = std::fs::File::create(&output)?;
+    let file_path = file;
+    let mut file = std::fs::File::create(&file_path)?;
     serde_json::to_writer_pretty(&mut file, &account_config)?;
     file.write_all(b"\n")?;
 
-    eprintln!("Created new account config file: {}", std::fs::canonicalize(&output)?.display());
+    eprintln!("Created new account config file: {}", std::fs::canonicalize(&file_path)?.display());
     eprintln!();
     eprintln!(
         "Once deployed, this account will be available at:\n    {}",
@@ -161,7 +162,7 @@ pub async fn new(signer: LocalWallet, force: bool, output: PathBuf) -> Result<()
     eprintln!();
     eprintln!(
         "Deploy this account by running:\n    {}",
-        format!("sozo account deploy {}", output.display()).bright_yellow()
+        format!("sozo account deploy {}", file_path.display()).bright_yellow()
     );
 
     Ok(())
