@@ -54,14 +54,13 @@ pub struct DojoData {
     pub models: HashMap<String, DojoModel>,
 }
 
-// TODO: include the manifest to have more metadata when new manifest is available.
 #[derive(Debug)]
 pub struct PluginManager {
     /// Root package name.
     pub root_package_name: String,
     /// Path of generated files.
     pub output_path: PathBuf,
-    /// Path of contracts artifacts.
+    /// Path of Dojo manifest.
     pub manifest_path: Utf8PathBuf,
     /// A list of builtin plugins to invoke.
     pub builtin_plugins: Vec<BuiltinPlugins>,
@@ -98,13 +97,11 @@ impl PluginManager {
     }
 }
 
-/// Gathers dojo data from artifacts.
-/// TODO: this should be modified later to use the new manifest structure.
-///       it's currently done from the artifacts to decouple from the manifest.
+/// Gathers dojo data from the manifests files.
 ///
 /// # Arguments
 ///
-/// * `manifest_path` - Artifacts path where contracts were generated.
+/// * `manifest_path` - Dojo manifest path.
 fn gather_dojo_data(
     manifest_path: &Utf8PathBuf,
     root_package_name: &str,
@@ -129,7 +126,6 @@ fn gather_dojo_data(
 
         // Identify the systems -> for now only take the functions from the
         // interfaces.
-        // TODO: we may expose internal ones, no?
         let mut systems = vec![];
         let interface_blacklist =
             ["dojo::world::IWorldProvider", "dojo::components::upgradeable::IUpgradeable"];
@@ -181,8 +177,6 @@ fn gather_dojo_data(
         }
     }
 
-    // TODO: do we want the world's name from the metadata, or it's the
-    // project name that we are looking for?
     let world = DojoWorld { name: root_package_name.to_string() };
 
     Ok(DojoData { world, models, contracts })
@@ -237,7 +231,8 @@ fn filter_model_tokens(tokens: &TokenizedAbi) -> TokenizedAbi {
 fn model_name_from_fully_qualified_path(file_name: &str) -> Option<String> {
     let parts: Vec<&str> = file_name.split("::").collect();
 
-    // TODO: we may want to have inside the manifest the name of the model struct.
+    // TODO: we may want to have inside the manifest the name of the model struct
+    // instead of extracting it from the file's name.
     parts.last().map(|last_part| last_part.to_string())
 }
 
