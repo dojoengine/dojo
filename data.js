@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711745001175,
+  "lastUpdate": 1711818851170,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3685,6 +3685,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17510604,
             "range": "± 251731",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "45e8d64cde77ec93d7800d8f01eb47019d33d69b",
+          "message": "feat(katana-rpc): rpc server metrics (#1726)\n\nref #1369 \n\nadd metrics for rpc server connections and methods calls",
+          "timestamp": "2024-03-31T01:04:50+08:00",
+          "tree_id": "b1467494e3534d616d8cd7e49aa2a34d9a947c0e",
+          "url": "https://github.com/dojoengine/dojo/commit/45e8d64cde77ec93d7800d8f01eb47019d33d69b"
+        },
+        "date": 1711818850646,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16911980,
+            "range": "± 129637",
             "unit": "ns/iter"
           }
         ]
