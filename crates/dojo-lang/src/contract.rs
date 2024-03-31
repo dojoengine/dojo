@@ -42,7 +42,12 @@ impl DojoContract {
                             return system.merge_storage(db, struct_ast.clone());
                         }
                     } else if let ast::ModuleItem::Impl(impl_ast) = el {
-                        return system.rewrite_impl(db, impl_ast.clone());
+                        // If an implementation is not targetting the ContractState,
+                        // the auto injection of self and world is not applied.
+                        let trait_path = impl_ast.trait_path(db).node.get_text(db);
+                        if trait_path.contains("<ContractState>") {
+                            return system.rewrite_impl(db, impl_ast.clone());
+                        }
                     }
 
                     vec![RewriteNode::Copied(el.as_syntax_node())]

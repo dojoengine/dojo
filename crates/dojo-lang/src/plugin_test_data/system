@@ -179,6 +179,14 @@ mod MyNominalContract {
             'land'
         }
     }
+
+    #[generate_trait]
+    impl ImplInternalNoContractState of InternalNoContractState {
+        fn func1(world: IWorldDispatcher) -> felt252 {
+               let _w = world;
+               42
+        }
+    }
 }
 
 //! > generated_cairo_code
@@ -652,17 +660,17 @@ error: Unsupported attribute.
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:56:13
+ --> test_src/lib.cairo[MyNominalContract]:64:13
             #[event]
             ^******^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:62:13
+ --> test_src/lib.cairo[MyNominalContract]:70:13
             #[storage]
             ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[MyNominalContract]:65:17
+ --> test_src/lib.cairo[MyNominalContract]:73:17
                 #[substorage(v0)]
                 ^***************^
 
@@ -1078,6 +1086,14 @@ let world = self.world_dispatcher.read();
         }
     }
 
+    #[generate_trait]
+    impl ImplInternalNoContractState of InternalNoContractState {
+        fn func1(world: IWorldDispatcher) -> felt252 {
+               let _w = world;
+               42
+        }
+    }
+
             #[event]
             #[derive(Drop, starknet::Event)]
             enum Event {
@@ -1091,6 +1107,9 @@ let world = self.world_dispatcher.read();
                 upgradeable: dojo::components::upgradeable::upgradeable::Storage,
             }
 impl ActionDrop of core::traits::Drop::<Action>;
+    trait InternalNoContractState {
+        fn func1(world: IWorldDispatcher) -> felt252;
+    }
 impl EventDrop of core::traits::Drop::<Event>;
             
                 }
