@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711818851170,
+  "lastUpdate": 1711861651998,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3715,6 +3715,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16911980,
             "range": "± 129637",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c4b15c0315c2337cdf71c7bee0ec0cbfc6d06726",
+          "message": "fix: ensure free function are not impacted by the injection of world and self (#1733)\n\n* fix: ensure free function are not impacted by the injection of world and self\r\n\r\n* fix: rewrite functions only in impl that target ContractState",
+          "timestamp": "2024-03-30T22:58:15-06:00",
+          "tree_id": "160ed217ec2ac2329e4d0dc543f433c25f32b8dd",
+          "url": "https://github.com/dojoengine/dojo/commit/c4b15c0315c2337cdf71c7bee0ec0cbfc6d06726"
+        },
+        "date": 1711861651465,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16808679,
+            "range": "± 37158",
             "unit": "ns/iter"
           }
         ]
