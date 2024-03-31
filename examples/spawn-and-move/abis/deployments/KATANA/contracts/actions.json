@@ -229,17 +229,12 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::actions::actions::Moved",
+    "name": "dojo_examples::actions::actions::StoredName",
     "kind": "struct",
     "members": [
       {
-        "name": "player",
-        "type": "core::starknet::contract_address::ContractAddress",
-        "kind": "key"
-      },
-      {
-        "name": "direction",
-        "type": "dojo_examples::models::Direction",
+        "name": "name",
+        "type": "core::felt252",
         "kind": "data"
       }
     ]
@@ -255,8 +250,8 @@
         "kind": "nested"
       },
       {
-        "name": "Moved",
-        "type": "dojo_examples::actions::actions::Moved",
+        "name": "StoredName",
+        "type": "dojo_examples::actions::actions::StoredName",
         "kind": "nested"
       }
     ]

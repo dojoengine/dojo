@@ -75,15 +75,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let sequencer =
-        Arc::new(KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await?);
-    let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
-
-    if !args.silent {
-        let genesis = &sequencer.backend().config.genesis;
-        print_intro(&args, genesis, addr);
-    }
-
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("katana")?;
 
@@ -94,6 +85,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             metrics_process::Collector::default(),
         )
         .await?;
+    }
+
+    let sequencer =
+        Arc::new(KatanaSequencer::new(executor_factory, sequencer_config, starknet_config).await?);
+    let NodeHandle { addr, handle, .. } = spawn(Arc::clone(&sequencer), server_config).await?;
+
+    if !args.silent {
+        let genesis = &sequencer.backend().config.genesis;
+        print_intro(&args, genesis, addr);
     }
 
     // Wait until Ctrl + C is pressed, then shutdown
