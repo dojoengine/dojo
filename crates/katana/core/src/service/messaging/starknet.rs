@@ -115,7 +115,7 @@ impl StarknetMessaging {
             ExecutionEncoding::New,
         );
 
-        account.set_block_id(BlockId::Tag(BlockTag::Latest));
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         // TODO: we need to have maximum fee configurable.
         let execution = account.execute(calls).fee_estimate_multiplier(10f64);
