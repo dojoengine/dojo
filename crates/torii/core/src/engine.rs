@@ -143,9 +143,10 @@ impl<P: Provider + Sync> Engine<P> {
         }
 
         let mut last_block: u64 = 0;
+        let mut last_transaction_hash: FieldElement = FieldElement::ZERO;
         for events_page in events_pages {
             for event in events_page.events {
-                self.process(event, &mut last_block).await?;
+                self.process(event, &mut last_block, &mut last_transaction_hash).await?;
             }
         }
 
@@ -161,7 +162,12 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    async fn process(&mut self, event: EmittedEvent, last_block: &mut u64) -> Result<()> {
+    async fn process(
+        &mut self,
+        event: EmittedEvent,
+        last_block: &mut u64,
+        last_transaction_hash: &mut FieldElement,
+    ) -> Result<()> {
         let block_number = match event.block_number {
             Some(block_number) => block_number,
             None => {
@@ -185,14 +191,19 @@ impl<P: Provider + Sync> Engine<P> {
             self.db.set_head(block_number);
         }
 
-        let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
-        self.process_transaction_and_receipt(
-            event.transaction_hash,
-            &transaction,
-            block_number,
-            block_timestamp,
-        )
-        .await?;
+        // We index transaction only once for all events in the same transaction
+        // Events are indexed with the transaction processing
+        if event.transaction_hash != *last_transaction_hash {
+            *last_transaction_hash = event.transaction_hash;
+            let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
+            self.process_transaction_and_receipt(
+                event.transaction_hash,
+                &transaction,
+                block_number,
+                block_timestamp,
+            )
+            .await?;
+        }
 
         Ok(())
     }
