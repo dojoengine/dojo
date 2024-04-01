@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711990779699,
+  "lastUpdate": 1712013846480,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3865,6 +3865,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16944190,
             "range": "± 227054",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b952d0fa881283c612f8945ea00b2d26aa456517",
+          "message": "refactor(katana): make genesis and gas price cli args conflicting (#1745)\n\nref #1744 \n\nto limit and simplify how gas prices can be set in katana.\n\ncurrently there are two ways to do this:\n1. using the `--*-gas-price` cli arg\n2. set in the genesis config\n\nthis change only allow the gas price to be set using one way or the other and not through a combination of both (eg pass a genesis config but set gas prices in cli) which makes it counterintuitive imo",
+          "timestamp": "2024-04-02T07:14:47+08:00",
+          "tree_id": "cb24c401c5d1daa61bfae022a9a2d8a596615fcb",
+          "url": "https://github.com/dojoengine/dojo/commit/b952d0fa881283c612f8945ea00b2d26aa456517"
+        },
+        "date": 1712013845997,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16723392,
+            "range": "± 385098",
             "unit": "ns/iter"
           }
         ]
