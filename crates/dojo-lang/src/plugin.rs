@@ -367,7 +367,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     }
 
                     // Iterate over all the arguments of the derive attribute
-                    for arg in attr.args {
+                    for arg in attr.args {  
                         // Check if the argument is a path then set it to arg
                         let AttributeArg {
                             variant:

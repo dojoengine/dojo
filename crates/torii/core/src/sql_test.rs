@@ -57,7 +57,7 @@ async fn test_load_from_remote() {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
     let base_path = "../../../examples/spawn-and-move";
     let target_path = format!("{}/target/dev", base_path);
-    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+    let mut migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
@@ -69,11 +69,12 @@ async fn test_load_from_remote() {
     let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
 
     // spawn
+    println!("migration: {:?}", migration);
     account.execute(vec![Call {
-        to: migration.world_address().unwrap(),
+        to: migration.contracts.first().unwrap().contract_address,
         selector: get_selector_from_name("spawn").unwrap(),
         calldata: vec![] 
     }]).send().await.unwrap();
