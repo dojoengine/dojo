@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711939110288,
+  "lastUpdate": 1711940636431,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3775,6 +3775,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16840974,
             "range": "± 194126",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "128649481+neotheprogramist@users.noreply.github.com",
+            "name": "Neo",
+            "username": "neotheprogramist"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad58e43df7d162736fced6b071d59732183e77fb",
+          "message": "Saya Prove and Verify (#1708)\n\n* proof serialization\r\n\r\n* proof verification on deployed contract\r\n\r\n* calling verifier contract from rust\r\n\r\n* cleaned implementation\r\n\r\n* cleaned dependecies\r\n\r\n* refined custom serialization\r\n\r\n* most of state fetched\r\n\r\n* fetching prev and genesis blocks\r\n\r\n* minimal reproduction\r\n\r\n* final touches\r\n\r\n* typo\r\n\r\n* fetching optimization\r\n\r\n* minor PR fixes\r\n\r\n* removed leftover scsript\r\n\r\n* using cartridge repository for parser\r\n\r\n* moved setup to the new method\r\n\r\n* passing prover and veryfier to cli\r\n\r\n* insuffiecient fee fix\r\n\r\n* typo in cli\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* typo in cli\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* typo in the comment\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* removed unneeded dependency\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* changes after review\r\n\r\n* formatting\r\n\r\n* fix: minor formatting and skip empty blocks\r\n\r\n* fix: ensure correct parsing of enums + fix args test\r\n\r\n* dev: add podman to the dev container\r\n\r\n* ci: test new container image with podman\r\n\r\n* fix: disable DinD which is not supported for now by CI\r\n\r\n* devcontainer: remove podman for now\r\n\r\n---------\r\n\r\nCo-authored-by: Mateusz Zając <matzayonc@gmail.com>\r\nCo-authored-by: Mateusz Zając <60236390+matzayonc@users.noreply.github.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-03-31T20:54:44-06:00",
+          "tree_id": "3ce603045d0e6154d65c04e4538b66a883ea8211",
+          "url": "https://github.com/dojoengine/dojo/commit/ad58e43df7d162736fced6b071d59732183e77fb"
+        },
+        "date": 1711940635906,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17102160,
+            "range": "± 371333",
             "unit": "ns/iter"
           }
         ]
