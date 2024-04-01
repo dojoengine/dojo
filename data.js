@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711861651998,
+  "lastUpdate": 1711939110288,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3745,6 +3745,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16808679,
             "range": "± 37158",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b8ed6dbdf250293b6fa38676a63bf489ecd226f0",
+          "message": "feat: use the manifest for dojo bindgen (#1732)\n\n* feat: add manifest support for the plugin\r\n\r\n* feat: replace the file parsing by using the manifest for bindgen\r\n\r\n* fix: remove old comments",
+          "timestamp": "2024-03-31T20:29:11-06:00",
+          "tree_id": "30ef418e4a9c68365b2ab7a4c37d23da4edbd453",
+          "url": "https://github.com/dojoengine/dojo/commit/b8ed6dbdf250293b6fa38676a63bf489ecd226f0"
+        },
+        "date": 1711939109825,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16840974,
+            "range": "± 194126",
             "unit": "ns/iter"
           }
         ]
