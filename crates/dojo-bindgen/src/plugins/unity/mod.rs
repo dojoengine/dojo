@@ -300,9 +300,9 @@ public class {} : MonoBehaviour {{
     {}
 }}
         ",
-            contract.contract_file_name,
+            contract.qualified_path,
             // capitalize contract name
-            UnityPlugin::formatted_contract_name(&contract.contract_file_name),
+            UnityPlugin::formatted_contract_name(&contract.qualified_path),
             systems
         );
 

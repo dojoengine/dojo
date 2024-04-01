@@ -3267,6 +3267,7 @@ dependencies = [
  "camino",
  "chrono",
  "convert_case 0.6.0",
+ "dojo-world",
  "serde",
  "serde_json",
  "starknet 0.9.0",

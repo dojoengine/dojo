@@ -55,6 +55,10 @@ pub enum AbstractManifestError {
     TOML(#[from] toml::de::Error),
     #[error(transparent)]
     IO(#[from] io::Error),
+    #[error("Abi couldn't be loaded from path: {0}")]
+    AbiError(String),
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
 }
 
 /// Represents a model member.
@@ -141,10 +145,23 @@ impl PartialEq for AbiFormat {
 }
 
 impl AbiFormat {
+    /// Returns the path to the ABI file, or None if embedded.
     pub fn to_path(&self) -> Option<&Utf8PathBuf> {
         match self {
             AbiFormat::Path(p) => Some(p),
             AbiFormat::Embed(_) => None,
+        }
+    }
+
+    /// Loads an ABI from the path or embedded entries.
+    ///
+    /// # Arguments
+    ///
+    /// * `root_dir` - The root directory of the ABI file.
+    pub fn load_abi_string(&self, root_dir: &Utf8PathBuf) -> Result<String, AbstractManifestError> {
+        match self {
+            AbiFormat::Path(abi_path) => Ok(fs::read_to_string(root_dir.join(abi_path))?),
+            AbiFormat::Embed(abi) => Ok(serde_json::to_string(&abi)?),
         }
     }
 }
