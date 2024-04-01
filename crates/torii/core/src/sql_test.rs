@@ -120,7 +120,6 @@ async fn test_load_from_remote() {
     // print all entities
     let entities = sqlx::query("SELECT * FROM entities").fetch_all(&pool).await.unwrap();
     assert_eq!(entities.len(), 1);
-    
 
     let (id, keys): (String, String) = sqlx::query_as(
         format!(
