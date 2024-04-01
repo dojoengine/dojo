@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711940636431,
+  "lastUpdate": 1711975512930,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3805,6 +3805,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17102160,
             "range": "± 371333",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "afbfede93dcbe3169b8186a91b284d1c617caca4",
+          "message": "fix(katana-core): dont use optional dep in non-feature specific code (#1746)\n\nbefore this, running cargo test -p katana-core would result in error bcs we're using ethers crate in non-feature code\r\n\r\nref #1527",
+          "timestamp": "2024-04-01T20:35:55+08:00",
+          "tree_id": "30992a90486e33e1f1097548f6b0edb5ad285502",
+          "url": "https://github.com/dojoengine/dojo/commit/afbfede93dcbe3169b8186a91b284d1c617caca4"
+        },
+        "date": 1711975512401,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16796179,
+            "range": "± 91531",
             "unit": "ns/iter"
           }
         ]
