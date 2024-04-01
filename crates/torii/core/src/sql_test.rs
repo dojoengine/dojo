@@ -7,6 +7,7 @@ use dojo_test_utils::sequencer::{
 };
 use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::migration::strategy::MigrationStrategy;
+use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -15,6 +16,7 @@ use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -72,17 +74,22 @@ async fn test_load_from_remote() {
     execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
 
     // spawn
-    println!("migration: {:?}", migration);
-    account.execute(vec![Call {
-        to: migration.contracts.first().unwrap().contract_address,
-        selector: get_selector_from_name("spawn").unwrap(),
-        calldata: vec![] 
-    }]).send().await.unwrap();
+    let tx = account
+        .execute(vec![Call {
+            to: migration.contracts.first().unwrap().contract_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
     let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
     let _ = bootstrap_engine(world, db.clone(), &provider).await;
 
-    let block_timestamp = 1710754478_u64;
+    let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 3);
 
@@ -109,6 +116,25 @@ async fn test_load_from_remote() {
     assert_eq!(name, "Moves");
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
+
+    // print all entities
+    let entities = sqlx::query("SELECT * FROM entities").fetch_all(&pool).await.unwrap();
+    assert_eq!(entities.len(), 1);
+    
+
+    let (id, keys): (String, String) = sqlx::query_as(
+        format!(
+            "SELECT id, keys FROM entities WHERE id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(id, format!("{:#x}", poseidon_hash_many(&[account.address()])));
+    assert_eq!(keys, format!("{:#x}/", account.address()));
 
     db.execute().await.unwrap();
 }
