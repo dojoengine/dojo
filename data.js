@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711975512930,
+  "lastUpdate": 1711990779699,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3835,6 +3835,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16796179,
             "range": "± 91531",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a23a0c6ebe7474aa20ebfdc9aafcfb0023742e42",
+          "message": "fix(katana): block env wrongly updated with cli value (#1744)\n\nfix #1724\r\n\r\nupdated the test to make sure the gas prices doesn't get modified with the cli value in the [`update_block_env`](https://github.com/dojoengine/dojo/blob/ad58e43df7d162736fced6b071d59732183e77fb/crates/katana/core/src/backend/mod.rs#L182) method.\r\n\r\nnow actual tx execution would result in a similar fee value that you get when doing fee estimation",
+          "timestamp": "2024-04-02T00:49:26+08:00",
+          "tree_id": "4d258d912c35dc459e417fb2b8284b1d75cfb4be",
+          "url": "https://github.com/dojoengine/dojo/commit/a23a0c6ebe7474aa20ebfdc9aafcfb0023742e42"
+        },
+        "date": 1711990779167,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16944190,
+            "range": "± 227054",
             "unit": "ns/iter"
           }
         ]
