@@ -19,7 +19,7 @@ async fn reregister_models() {
 
     let base_dir = "../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base_dir);
-    let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+    let mut migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -27,7 +27,7 @@ async fn reregister_models() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
     let world_address = &format!("0x{:x}", &migration.world_address().unwrap());
     let account_address = &format!("0x{:x}", account.address());
     let private_key = &format!("0x{:x}", sequencer.raw_account().private_key);

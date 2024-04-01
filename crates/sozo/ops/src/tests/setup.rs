@@ -28,14 +28,14 @@ pub async fn setup(
     let base_dir = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base_dir);
 
-    let migration = prepare_migration(base_dir.into(), target_dir.into())?;
+    let mut migration = prepare_migration(base_dir.into(), target_dir.into())?;
 
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let output = migration::execute_strategy(
         &ws,
-        &migration,
+        &mut migration,
         &account,
         Some(TxConfig { wait: true, ..Default::default() }),
     )
