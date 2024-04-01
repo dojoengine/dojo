@@ -1,18 +1,17 @@
 use std::str::FromStr;
 
 use dojo_test_utils::compiler::build_test_config;
-use dojo_test_utils::migration::{self, prepare_migration};
+use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_world::contracts::world::WorldContractReader;
-use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::{Account, Call};
-use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
