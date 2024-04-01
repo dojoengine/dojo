@@ -8,7 +8,7 @@ ARG VARIANT
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev libclang-dev libzstd-dev podman
+    && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev libclang-dev libzstd-dev
 
 RUN apt install -y gh libgmp3-dev software-properties-common
 
