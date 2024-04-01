@@ -181,10 +181,12 @@ pub struct EnvironmentOptions {
     pub invoke_max_steps: Option<u32>,
 
     #[arg(long = "eth-gas-price")]
+    #[arg(conflicts_with = "genesis")]
     #[arg(help = "The L1 ETH gas price.")]
     pub l1_eth_gas_price: Option<u128>,
 
     #[arg(long = "strk-gas-price")]
+    #[arg(conflicts_with = "genesis")]
     #[arg(help = "The L1 STRK gas price.")]
     pub l1_strk_gas_price: Option<u128>,
 }
