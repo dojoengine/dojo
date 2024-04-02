@@ -104,7 +104,7 @@ impl Client {
 
     /// Starts the relay client event loop.
     /// This is a blocking call. Spawn this on a separate task.
-    pub async fn relay_runner(&self) -> Arc<Mutex<EventLoop>> {
+    pub fn relay_runner(&self) -> Arc<Mutex<EventLoop>> {
         self.relay_client.event_loop.clone()
     }
 
