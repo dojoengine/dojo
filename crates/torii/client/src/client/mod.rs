@@ -11,6 +11,7 @@ use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
 use futures::lock::Mutex;
+use futures::Future;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -103,8 +104,8 @@ impl Client {
 
     /// Starts the relay client event loop.
     /// This is a blocking call. Spawn this on a separate task.
-    pub async fn start_relay(&self) {
-        self.relay_client.event_loop.lock().await.run().await;
+    pub async fn relay_runner(&self) -> Arc<Mutex<EventLoop>> {
+        self.relay_client.event_loop.clone()
     }
 
     /// Publishes a message to a topic.
