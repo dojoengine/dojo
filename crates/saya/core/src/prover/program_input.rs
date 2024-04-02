@@ -90,6 +90,50 @@ pub fn extract_messages(
     (message_to_starknet_segment, message_to_appchain_segment)
 }
 
+pub fn extract_messages(
+    exec_infos: &Vec<TxExecInfo>,
+) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
+    let message_to_starknet_segment = exec_infos
+        .iter()
+        .map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter()))
+        .flatten()
+        .map(|c| {
+            let mut to_visit = vec![c];
+            let mut all = vec![c];
+
+            while let Some(c) = to_visit.pop() {
+                to_visit.extend(c.inner_calls.iter().rev());
+                all.extend(c.inner_calls.iter().rev());
+            }
+            all
+        })
+        .flatten()
+        .map(|c| c.l2_to_l1_messages.iter())
+        .flatten()
+        .map(|m| MessageToStarknet {
+            from_address: m.from_address,
+            to_address: ContractAddress::from(m.to_address),
+            payload: m.payload.clone(),
+        })
+        .collect();
+
+    let message_to_appchain_segment = exec_infos
+        .iter()
+        .map(|t| t.execute_call_info.iter())
+        .flatten()
+        .filter(|c| c.entry_point_type == EntryPointType::L1Handler)
+        .map(|c| MessageToAppchain {
+            from_address: c.caller_address,
+            to_address: c.contract_address,
+            nonce: FieldElement::from(0u64), // TODO: extract nonce
+            selector: c.entry_point_selector,
+            payload: c.calldata.clone(),
+        })
+        .collect();
+
+    (message_to_starknet_segment, message_to_appchain_segment)
+}
+
 impl ProgramInput {
     pub fn serialize(&self) -> anyhow::Result<String> {
         let message_to_starknet = self
