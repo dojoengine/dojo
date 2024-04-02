@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712090569553,
+  "lastUpdate": 1712090892296,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4045,6 +4045,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16673363,
             "range": "± 531005",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9b8c02996e841145b18bddcb702af551c3da3b8",
+          "message": "fix(torii): query models (#1752)\n\n* fix: query models\r\n\r\n* fix: model for event message\r\n\r\n* test: handle edge case\r\n\r\n* fix: use correct type\r\n\r\n* fmt",
+          "timestamp": "2024-04-02T16:37:21-04:00",
+          "tree_id": "e93e77b172c8fcec3929575efdb14d61c656b66f",
+          "url": "https://github.com/dojoengine/dojo/commit/f9b8c02996e841145b18bddcb702af551c3da3b8"
+        },
+        "date": 1712090891222,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16746757,
+            "range": "± 51305",
             "unit": "ns/iter"
           }
         ]
