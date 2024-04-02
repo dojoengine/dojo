@@ -62,6 +62,11 @@ mod tests {
                   random_u8
                   random_u128
                 }}
+                ... on RecordSibling {{
+                  __typename
+                  record_id
+                  random_u8
+                }}
                 ... on Subrecord {{
                   __typename
                   record_id
@@ -224,9 +229,15 @@ mod tests {
         let id = poseidon_hash_many(&[FieldElement::ZERO]);
         let entity = entity_model_query(&schema, &id).await;
         let models = entity.get("models").ok_or("no models found").unwrap();
+
+        // models should contain record & recordsibling
         let record: Record = serde_json::from_value(models[0].clone()).unwrap();
         assert_eq!(&record.__typename, "Record");
         assert_eq!(record.record_id, 0);
+
+        let record_sibling: Record = serde_json::from_value(models[1].clone()).unwrap();
+        assert_eq!(&record_sibling.__typename, "RecordSibling");
+        assert_eq!(record_sibling.record_id, 0);
 
         let id = poseidon_hash_many(&[FieldElement::ZERO, FieldElement::ONE]);
         let entity = entity_model_query(&schema, &id).await;
