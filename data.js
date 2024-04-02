@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712038449651,
+  "lastUpdate": 1712087946760,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3985,6 +3985,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17187097,
             "range": "± 369231",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jonathan.chaverri12@gmail.com",
+            "name": "Jonatan Chaverri",
+            "username": "Jonatan-Chaverri"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "55a1479324a28954a0957373840c4fe341723b7c",
+          "message": "Update loggers to be namespaced and use structured logging (#1702)\n\nCo-authored-by: Jonatan Chaverri <jonatan.chaverri@kyndryl.com>",
+          "timestamp": "2024-04-02T15:49:40-04:00",
+          "tree_id": "d31109584b33c93e8986ce0a99e95951905200e5",
+          "url": "https://github.com/dojoengine/dojo/commit/55a1479324a28954a0957373840c4fe341723b7c"
+        },
+        "date": 1712087946060,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17368458,
+            "range": "± 325178",
             "unit": "ns/iter"
           }
         ]
