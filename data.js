@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712032780077,
+  "lastUpdate": 1712038449651,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3955,6 +3955,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16543218,
             "range": "± 236827",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "da60403a92a5a6c6cfe3964f7bde480efa391c65",
+          "message": "Add Grafana dashboard for Katana (#1728)\n\n* add prometheus config\n\n* add grafana example dashboard\n\n* move dir",
+          "timestamp": "2024-04-02T14:04:43+08:00",
+          "tree_id": "8754daa56278ca658dccc39b4e7640bbf20ca6a8",
+          "url": "https://github.com/dojoengine/dojo/commit/da60403a92a5a6c6cfe3964f7bde480efa391c65"
+        },
+        "date": 1712038448608,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17187097,
+            "range": "± 369231",
             "unit": "ns/iter"
           }
         ]
