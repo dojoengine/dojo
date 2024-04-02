@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712013846480,
+  "lastUpdate": 1712032140696,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -3895,6 +3895,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16723392,
             "range": "± 385098",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9cb004b4ad32276692f051c5fff359f6d8f940b",
+          "message": "fix: duplicate indexation of transactions (#1748)",
+          "timestamp": "2024-04-01T22:19:46-06:00",
+          "tree_id": "681558957fc5518671c8040f5cdcef22bb5e2575",
+          "url": "https://github.com/dojoengine/dojo/commit/f9cb004b4ad32276692f051c5fff359f6d8f940b"
+        },
+        "date": 1712032140191,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16765709,
+            "range": "± 61297",
             "unit": "ns/iter"
           }
         ]
