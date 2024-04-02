@@ -95,9 +95,9 @@ pub fn extract_messages(
 ) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
     let message_to_starknet_segment = exec_infos
         .iter()
-        .map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter()))
+        .map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter())) // Take into account both validate and execute calls.
         .flatten()
-        .map(|c| {
+        .map(|c| { // Flatten the recursive call structure.
             let mut to_visit = vec![c];
             let mut all = vec![c];
 
@@ -108,9 +108,9 @@ pub fn extract_messages(
             all
         })
         .flatten()
-        .map(|c| c.l2_to_l1_messages.iter())
+        .map(|c| c.l2_to_l1_messages.iter()) // take all messages
         .flatten()
-        .map(|m| MessageToStarknet {
+        .map(|m| MessageToStarknet { // Parse them to the format understood by the prover.
             from_address: m.from_address,
             to_address: ContractAddress::from(m.to_address),
             payload: m.payload.clone(),
