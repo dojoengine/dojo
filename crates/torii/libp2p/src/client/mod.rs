@@ -155,7 +155,7 @@ impl CommandSender {
         Self { sender }
     }
 
-    pub async fn publish(&mut self, data: Message) -> Result<MessageId, Error> {
+    pub async fn publish(&self, data: Message) -> Result<MessageId, Error> {
         let (tx, rx) = oneshot::channel();
 
         self.sender.unbounded_send(Command::Publish(data, tx)).expect("Failed to send command");
@@ -163,7 +163,7 @@ impl CommandSender {
         rx.await.expect("Failed to receive response")
     }
 
-    pub async fn wait_for_relay(&mut self) -> Result<(), Error> {
+    pub async fn wait_for_relay(&self) -> Result<(), Error> {
         let (tx, rx) = oneshot::channel();
 
         self.sender.unbounded_send(Command::WaitForRelay(tx)).expect("Failed to send command");
