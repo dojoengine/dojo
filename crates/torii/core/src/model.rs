@@ -217,7 +217,6 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
         global_tables.extend(tables);
     }
 
-
     println!("{:?}", global_tables);
     println!("{:?}", global_selections);
 

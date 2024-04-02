@@ -100,8 +100,8 @@ impl DojoWorld {
         .await?;
 
         let models: Vec<(String, String, String, String, u32, u32, String)> = sqlx::query_as(
-            "SELECT id, name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
-             models",
+            "SELECT id, name, class_hash, contract_address, packed_size, unpacked_size, layout \
+             FROM models",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -203,7 +203,6 @@ impl DojoWorld {
 
         let db_entities: Vec<(String, String)> =
             sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-
 
         let mut entities = Vec::with_capacity(db_entities.len());
         for (entity_id, models_str) in db_entities {
