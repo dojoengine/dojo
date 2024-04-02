@@ -44,12 +44,11 @@ mod test {
         });
 
         // Initialize the first client (listener)
-        let mut client = RelayClient::new("/ip4/127.0.0.1/tcp/9900".to_string())?;
+        let client = RelayClient::new("/ip4/127.0.0.1/tcp/9900".to_string())?;
         tokio::spawn(async move {
             client.event_loop.lock().await.run().await;
         });
 
-        client.command_sender.wait_for_relay().await?;
         let mut data = Struct { name: "Message".to_string(), children: vec![] };
 
         data.children.push(Member {
