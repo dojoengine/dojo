@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
+use katana_primitives::contract::ContractAddress;
 use katana_primitives::FieldElement;
 use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
@@ -17,6 +18,7 @@ use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
 use crate::prover::state_diff::ProvedStateDiff;
+use crate::prover::{MessageToStarknet, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -170,6 +172,37 @@ impl Saya {
             trace!(target: "saya_core", block_number, "Skipping empty block.");
             return Ok(());
         }
+
+        let mut call_info = exec_infos
+            .iter()
+            .map(|t| t.validate_call_info.iter().chain(t.execute_call_info.iter()))
+            .flatten()
+            .collect::<Vec<_>>();
+
+        let mut message_to_starknet_segment = Vec::new();
+
+        while let Some(c) = call_info.pop() {
+            call_info.extend(c.inner_calls.iter());
+
+            message_to_starknet_segment.extend(c.l2_to_l1_messages.iter().map(|m| {
+                MessageToStarknet {
+                    from_address: m.from_address,
+                    to_address: ContractAddress::from(m.to_address),
+                    payload: m.payload.clone(),
+                }
+            }));
+        }
+
+        let new_program_input = ProgramInput {
+            prev_state_root: prev_block.header.header.state_root,
+            block_number: FieldElement::from(block_number),
+            block_hash: block.block.header.hash,
+            config_hash: FieldElement::from(0u64),
+            message_to_starknet_segment,
+            message_to_appchain_segment: vec![],
+        };
+
+        println!("Program input: {:?}", new_program_input.serialize());
 
         let to_prove = ProvedStateDiff {
             genesis_state_hash,

@@ -1,17 +1,15 @@
-use std::str::FromStr;
-
 use katana_primitives::contract::ContractAddress;
 use starknet::core::types::FieldElement;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by ten prover.
 pub struct ProgramInput {
-    prev_state_root: FieldElement,
-    block_number: FieldElement,
-    block_hash: FieldElement,
-    config_hash: FieldElement,
-    message_to_starknet_segment: Vec<MessageToStarknet>,
-    message_to_appchain_segment: Vec<MessageToAppchain>,
+    pub prev_state_root: FieldElement,
+    pub block_number: FieldElement,
+    pub block_hash: FieldElement,
+    pub config_hash: FieldElement,
+    pub message_to_starknet_segment: Vec<MessageToStarknet>,
+    pub message_to_appchain_segment: Vec<MessageToAppchain>,
 }
 
 impl ProgramInput {
@@ -41,10 +39,10 @@ impl ProgramInput {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L16
-struct MessageToStarknet {
-    from_address: ContractAddress,
-    to_address: ContractAddress,
-    payload: Vec<FieldElement>,
+pub struct MessageToStarknet {
+    pub from_address: ContractAddress,
+    pub to_address: ContractAddress,
+    pub payload: Vec<FieldElement>,
 }
 
 impl MessageToStarknet {
@@ -57,12 +55,12 @@ impl MessageToStarknet {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L28
-struct MessageToAppchain {
-    from_address: ContractAddress,
-    to_address: ContractAddress,
-    nonce: FieldElement,
-    selector: FieldElement,
-    payload: Vec<FieldElement>,
+pub struct MessageToAppchain {
+    pub from_address: ContractAddress,
+    pub to_address: ContractAddress,
+    pub nonce: FieldElement,
+    pub selector: FieldElement,
+    pub payload: Vec<FieldElement>,
 }
 
 impl MessageToAppchain {
@@ -76,6 +74,8 @@ impl MessageToAppchain {
 
 #[test]
 fn test_program_input() -> anyhow::Result<()> {
+    use std::str::FromStr;
+
     let input = ProgramInput {
         prev_state_root: FieldElement::from_str("101")?,
         block_number: FieldElement::from_str("102")?,
