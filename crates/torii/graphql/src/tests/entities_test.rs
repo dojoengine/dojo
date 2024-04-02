@@ -7,7 +7,7 @@ mod tests {
 
     use crate::schema::build_schema;
     use crate::tests::{
-        run_graphql_query, spinup_types_test, Connection, Entity, Record, RecordSibling, Subrecord
+        run_graphql_query, spinup_types_test, Connection, Entity, Record, RecordSibling, Subrecord,
     };
 
     async fn entities_query(schema: &Schema, arg: &str) -> Value {
