@@ -7,7 +7,7 @@ mod tests {
 
     use crate::schema::build_schema;
     use crate::tests::{
-        run_graphql_query, spinup_types_test, Connection, Entity, Record, Subrecord,
+        run_graphql_query, spinup_types_test, Connection, Entity, Record, RecordSibling, Subrecord
     };
 
     async fn entities_query(schema: &Schema, arg: &str) -> Value {
@@ -235,7 +235,7 @@ mod tests {
         assert_eq!(&record.__typename, "Record");
         assert_eq!(record.record_id, 0);
 
-        let record_sibling: Record = serde_json::from_value(models[1].clone()).unwrap();
+        let record_sibling: RecordSibling = serde_json::from_value(models[1].clone()).unwrap();
         assert_eq!(&record_sibling.__typename, "RecordSibling");
         assert_eq!(record_sibling.record_id, 0);
 
