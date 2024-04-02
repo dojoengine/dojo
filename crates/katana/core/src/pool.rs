@@ -6,6 +6,8 @@ use parking_lot::RwLock;
 use starknet::core::types::FieldElement;
 use tracing::{info, warn};
 
+pub(crate) const LOG_TARGET: &str = "txpool";
+
 #[derive(Debug, Default)]
 pub struct TransactionPool {
     transactions: RwLock<Vec<ExecutableTxWithHash>>,
@@ -23,7 +25,7 @@ impl TransactionPool {
         let hash = transaction.hash;
         self.transactions.write().push(transaction);
 
-        info!(target: "txpool", "Transaction received | Hash: {hash:#x}");
+        info!(target: LOG_TARGET, hash = %hash, "Transaction received.");
 
         // notify listeners of new tx added to the pool
         self.notify_listener(hash)
@@ -55,9 +57,9 @@ impl TransactionPool {
                 Err(e) => {
                     if e.is_full() {
                         warn!(
-                            target: "txpool",
-                            "[{:?}] Failed to send tx notification because channel is full",
-                            hash,
+                            target: LOG_TARGET,
+                            hash = ?hash,
+                            "Unable to send tx notification because channel is full."
                         );
                         true
                     } else {

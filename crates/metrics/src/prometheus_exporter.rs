@@ -1,75 +1,37 @@
 //! Prometheus exporter
 //! Adapted from Paradigm's [`reth`](https://github.com/paradigmxyz/reth/blob/c1d7d2bde398bcf410c7e2df13fd7151fc2a58b9/bin/reth/src/prometheus_exporter.rs)
+
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
 use metrics::{describe_gauge, gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use metrics_util::layers::{PrefixLayer, Stack};
 
+pub(crate) const LOG_TARGET: &str = "metrics::prometheus_exporter";
+
 pub(crate) trait Hook: Fn() + Send + Sync {}
 impl<T: Fn() + Send + Sync> Hook for T {}
 
 /// Installs Prometheus as the metrics recorder.
-pub fn install_recorder(prefix: &str) -> anyhow::Result<PrometheusHandle> {
+///
+/// ## Arguments
+/// * `prefix` - Apply a prefix to all metrics keys.
+pub fn install_recorder(prefix: &str) -> Result<PrometheusHandle> {
     let recorder = PrometheusBuilder::new().build_recorder();
     let handle = recorder.handle();
 
-    // Build metrics stack
+    // Build metrics stack and install the recorder
     Stack::new(recorder)
         .push(PrefixLayer::new(prefix))
         .install()
-        .map_err(|e| anyhow::anyhow!("Couldn't set metrics recorder: {}", e))?;
+        .context("Couldn't set metrics recorder")?;
 
     Ok(handle)
-}
-
-/// Serves Prometheus metrics over HTTP with hooks.
-///
-/// The hooks are called every time the metrics are requested at the given endpoint, and can be used
-/// to record values for pull-style metrics, i.e. metrics that are not automatically updated.
-pub(crate) async fn serve_with_hooks<F: Hook + 'static>(
-    listen_addr: SocketAddr,
-    handle: PrometheusHandle,
-    hooks: impl IntoIterator<Item = F>,
-) -> anyhow::Result<()> {
-    let hooks: Vec<_> = hooks.into_iter().collect();
-
-    // Start endpoint
-    start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook| hook())))
-        .await
-        .map_err(|e| anyhow::anyhow!("Could not start Prometheus endpoint: {}", e))?;
-
-    Ok(())
-}
-
-/// Starts an endpoint at the given address to serve Prometheus metrics.
-async fn start_endpoint<F: Hook + 'static>(
-    listen_addr: SocketAddr,
-    handle: PrometheusHandle,
-    hook: Arc<F>,
-) -> anyhow::Result<()> {
-    let make_svc = make_service_fn(move |_| {
-        let handle = handle.clone();
-        let hook = Arc::clone(&hook);
-        async move {
-            Ok::<_, Infallible>(service_fn(move |_: Request<Body>| {
-                (hook)();
-                let metrics = handle.render();
-                async move { Ok::<_, Infallible>(Response::new(Body::from(metrics))) }
-            }))
-        }
-    });
-    let server = Server::try_bind(&listen_addr)
-        .map_err(|e| anyhow::anyhow!("Could not bind to address: {}", e))?
-        .serve(make_svc);
-
-    tokio::spawn(async move { server.await.expect("Metrics endpoint crashed") });
-
-    Ok(())
 }
 
 /// Serves Prometheus metrics over HTTP with database and process metrics.
@@ -77,7 +39,7 @@ pub async fn serve(
     listen_addr: SocketAddr,
     handle: PrometheusHandle,
     process: metrics_process::Collector,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     // Clone `process` to move it into the hook and use the original `process` for describe below.
     let cloned_process = process.clone();
     let hooks: Vec<Box<dyn Hook<Output = ()>>> =
@@ -90,50 +52,125 @@ pub async fn serve(
     Ok(())
 }
 
+/// Serves Prometheus metrics over HTTP with hooks.
+///
+/// The hooks are called every time the metrics are requested at the given endpoint, and can be used
+/// to record values for pull-style metrics, i.e. metrics that are not automatically updated.
+async fn serve_with_hooks<F: Hook + 'static>(
+    listen_addr: SocketAddr,
+    handle: PrometheusHandle,
+    hooks: impl IntoIterator<Item = F>,
+) -> Result<()> {
+    let hooks: Vec<_> = hooks.into_iter().collect();
+
+    // Start endpoint
+    start_endpoint(listen_addr, handle, Arc::new(move || hooks.iter().for_each(|hook| hook())))
+        .await
+        .context("Could not start Prometheus endpoint")?;
+
+    Ok(())
+}
+
+/// Starts an endpoint at the given address to serve Prometheus metrics.
+async fn start_endpoint<F: Hook + 'static>(
+    listen_addr: SocketAddr,
+    handle: PrometheusHandle,
+    hook: Arc<F>,
+) -> Result<()> {
+    let make_svc = make_service_fn(move |_| {
+        let handle = handle.clone();
+        let hook = Arc::clone(&hook);
+        async move {
+            Ok::<_, Infallible>(service_fn(move |_: Request<Body>| {
+                (hook)();
+                let metrics = handle.render();
+                async move { Ok::<_, Infallible>(Response::new(Body::from(metrics))) }
+            }))
+        }
+    });
+    let server = Server::try_bind(&listen_addr)
+        .context(format!("Could not bind to address: {listen_addr}"))?
+        .serve(make_svc);
+
+    tokio::spawn(async move { server.await.expect("Metrics endpoint crashed") });
+
+    Ok(())
+}
+
 #[cfg(all(feature = "jemalloc", unix))]
 fn collect_memory_stats() {
     use jemalloc_ctl::{epoch, stats};
 
     if epoch::advance()
-        .map_err(|error| tracing::error!(?error, "Failed to advance jemalloc epoch"))
+        .map_err(|error| {
+            tracing::error!(
+                target: LOG_TARGET,
+                error = %error,
+                "Advance jemalloc epoch."
+            )
+        })
         .is_err()
     {
         return;
     }
 
-    if let Ok(value) = stats::active::read()
-        .map_err(|error| tracing::error!(?error, "Failed to read jemalloc.stats.active"))
-    {
+    if let Ok(value) = stats::active::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.active."
+        )
+    }) {
         gauge!("jemalloc.active", value as f64);
     }
 
-    if let Ok(value) = stats::allocated::read()
-        .map_err(|error| tracing::error!(?error, "Failed to read jemalloc.stats.allocated"))
-    {
+    if let Ok(value) = stats::allocated::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.allocated."
+        )
+    }) {
         gauge!("jemalloc.allocated", value as f64);
     }
 
-    if let Ok(value) = stats::mapped::read()
-        .map_err(|error| tracing::error!(?error, "Failed to read jemalloc.stats.mapped"))
-    {
+    if let Ok(value) = stats::mapped::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.mapped."
+        )
+    }) {
         gauge!("jemalloc.mapped", value as f64);
     }
 
-    if let Ok(value) = stats::metadata::read()
-        .map_err(|error| tracing::error!(?error, "Failed to read jemalloc.stats.metadata"))
-    {
+    if let Ok(value) = stats::metadata::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.metadata."
+        )
+    }) {
         gauge!("jemalloc.metadata", value as f64);
     }
 
-    if let Ok(value) = stats::resident::read()
-        .map_err(|error| tracing::error!(?error, "Failed to read jemalloc.stats.resident"))
-    {
+    if let Ok(value) = stats::resident::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.resident."
+        )
+    }) {
         gauge!("jemalloc.resident", value as f64);
     }
 
-    if let Ok(value) = stats::retained::read()
-        .map_err(|error| tracing::error!(?error, "Failed to read jemalloc.stats.retained"))
-    {
+    if let Ok(value) = stats::retained::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.retained."
+        )
+    }) {
         gauge!("jemalloc.retained", value as f64);
     }
 }

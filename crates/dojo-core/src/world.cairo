@@ -452,6 +452,7 @@ mod world {
         fn emit(self: @ContractState, mut keys: Array<felt252>, values: Span<felt252>) {
             let system = get_caller_address();
             system.serialize(ref keys);
+
             emit_event_syscall(keys.span(), values).unwrap_syscall();
         }
 

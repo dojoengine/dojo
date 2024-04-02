@@ -675,7 +675,7 @@
     {
       "kind": "DojoContract",
       "address": "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7",
-      "class_hash": "0x2a3b1c5473dfb9fd1be08b94fae201b30b4e63ed8caed996476cc4ad44cadb2",
+      "class_hash": "0x16b1037beb348c3cf11c7f10733d366c7f29bc9d9172ba663421e2af4dab83c",
       "abi": [
         {
           "type": "impl",
@@ -907,34 +907,12 @@
         },
         {
           "type": "event",
-          "name": "dojo_examples::actions::actions::Moved",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "player",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            },
-            {
-              "name": "direction",
-              "type": "dojo_examples::models::Direction",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
           "name": "dojo_examples::actions::actions::Event",
           "kind": "enum",
           "variants": [
             {
               "name": "UpgradeableEvent",
               "type": "dojo::components::upgradeable::upgradeable::Event",
-              "kind": "nested"
-            },
-            {
-              "name": "Moved",
-              "type": "dojo_examples::actions::actions::Moved",
               "kind": "nested"
             }
           ]

@@ -25,6 +25,8 @@ use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
 
+pub(crate) const LOG_TARGET: &str = "miner";
+
 #[derive(Debug, thiserror::Error)]
 pub enum BlockProductionError {
     #[error(transparent)]
@@ -115,7 +117,7 @@ impl<EF: ExecutorFactory> BlockProducer<EF> {
 
     // Handler for the `katana_generateBlock` RPC method.
     pub fn force_mine(&self) {
-        trace!(target: "miner", "scheduling force block mining");
+        trace!(target: LOG_TARGET, "Scheduling force block mining.");
         let mut mode = self.inner.write();
         match &mut *mode {
             BlockProducerMode::Instant(producer) => producer.force_mine(),
@@ -243,12 +245,12 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
     pub fn force_mine(&mut self) {
         match Self::do_mine(self.executor.clone(), self.backend.clone()) {
             Ok(outcome) => {
-                info!(target: "miner", "force mined block {}", outcome.block_number);
+                info!(target: LOG_TARGET, block_number = %outcome.block_number, "Force mined block.");
                 self.executor =
                     self.create_new_executor_for_next_block().expect("fail to create executor");
             }
             Err(e) => {
-                error!(target: "miner", "failed to force mine: {e}");
+                error!(target: LOG_TARGET, error = %e, "On force mine.");
             }
         }
     }
@@ -259,7 +261,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
         let executor = &mut executor.write();
 
-        trace!(target: "miner", "creating new block");
+        trace!(target: LOG_TARGET, "Creating new block.");
 
         let block_env = executor.block_env();
         let ExecutionOutput { states, transactions } = executor.take_execution_output()?;
@@ -276,7 +278,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
         let outcome = backend.do_mine_block(&block_env, transactions, states)?;
 
-        trace!(target: "miner", "created new block: {}", outcome.block_number);
+        trace!(target: LOG_TARGET, block_number = %outcome.block_number, "Created new block.");
 
         Ok(outcome)
     }
@@ -342,8 +344,8 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
                 Err(e) => {
                     if e.is_full() {
                         warn!(
-                            target: "miner",
-                            "failed to send new txs notification because channel is full",
+                            target: LOG_TARGET,
+                            "Unable to send new txs notification because channel is full.",
                         );
                         true
                     } else {
@@ -478,7 +480,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
             let txs = self.queued.pop_front().unwrap_or_default();
             let _ = Self::do_mine(self.backend.clone(), txs);
         } else {
-            trace!(target: "miner", "unable to force mine while a mining process is running")
+            trace!(target: LOG_TARGET, "Unable to force mine while a mining process is running.")
         }
     }
 
@@ -486,7 +488,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
         backend: Arc<Backend<EF>>,
         transactions: Vec<ExecutableTxWithHash>,
     ) -> Result<(MinedBlockOutcome, Vec<TxWithOutcome>), BlockProductionError> {
-        trace!(target: "miner", "creating new block");
+        trace!(target: LOG_TARGET, "Creating new block.");
 
         let provider = backend.blockchain.provider();
 
@@ -526,7 +528,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         let outcome = backend.do_mine_block(&block_env, txs_outcomes.clone(), states)?;
 
-        trace!(target: "miner", "created new block: {}", outcome.block_number);
+        trace!(target: LOG_TARGET, block_number = %outcome.block_number, "Created new block.");
 
         Ok((outcome, txs_outcomes))
     }
@@ -549,8 +551,8 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
                 Err(e) => {
                     if e.is_full() {
                         warn!(
-                            target: "miner",
-                            "failed to send new txs notification because channel is full",
+                            target: LOG_TARGET,
+                            "Unable to send new txs notification because channel is full.",
                         );
                         true
                     } else {

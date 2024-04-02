@@ -38,6 +38,8 @@ use crate::server::events::ServerEvent;
 use crate::typed_data::PrimitiveType;
 use crate::types::Message;
 
+pub(crate) const LOG_TARGET: &str = "torii::relay::server";
+
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ServerEvent")]
 pub struct Behaviour {
@@ -74,7 +76,7 @@ impl Relay {
             Certificate::generate(&mut thread_rng()).unwrap()
         };
 
-        info!(target: "torii::relay::server", peer_id = %PeerId::from(local_key.public()), "Relay peer id");
+        info!(target: LOG_TARGET, peer_id = %PeerId::from(local_key.public()), "Relay peer id.");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -163,9 +165,9 @@ impl Relay {
                                 Ok(message) => message,
                                 Err(e) => {
                                     info!(
-                                        target: "torii::relay::server::gossipsub",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to deserialize message"
+                                        "Deserializing message."
                                     );
                                     continue;
                                 }
@@ -175,20 +177,20 @@ impl Relay {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
                                     info!(
-                                        target: "torii::relay::server::gossipsub",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to validate message"
+                                        "Validating message."
                                     );
                                     continue;
                                 }
                             };
 
                             info!(
-                                target: "torii::relay::server",
+                                target: LOG_TARGET,
                                 message_id = %message_id,
                                 peer_id = %peer_id,
                                 data = ?data,
-                                "Received message"
+                                "Received message."
                             );
 
                             // retrieve entity identity from db
@@ -196,9 +198,9 @@ impl Relay {
                                 Ok(pool) => pool,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to acquire pool"
+                                        "Acquiring pool."
                                     );
                                     continue;
                                 }
@@ -208,9 +210,9 @@ impl Relay {
                                 Ok(keys) => keys,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to get message model keys"
+                                        "Retrieving message model keys."
                                     );
                                     continue;
                                 }
@@ -226,9 +228,9 @@ impl Relay {
                                 Ok(entity_identity) => entity_identity,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to fetch entity"
+                                        "Fetching entity."
                                     );
                                     continue;
                                 }
@@ -246,17 +248,17 @@ impl Relay {
                                     .await
                                 {
                                     info!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to set message"
+                                        "Setting message."
                                     );
                                     continue;
                                 } else {
                                     info!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         message_id = %message_id,
                                         peer_id = %peer_id,
-                                        "Message set"
+                                        "Message set."
                                     );
                                     continue;
                                 }
@@ -269,9 +271,9 @@ impl Relay {
                                 Ok(identity) => identity,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to get identity from model"
+                                        "Converting model to identity."
                                     );
                                     continue;
                                 }
@@ -279,9 +281,9 @@ impl Relay {
                                 Ok(identity) => identity,
                                 Err(e) => {
                                     warn!(
-                                        target: "torii::relay::server",
+                                        target: LOG_TARGET,
                                         error = %e,
-                                        "Failed to parse identity"
+                                        "Parsing identity."
                                     );
                                     continue;
                                 }
@@ -296,8 +298,8 @@ impl Relay {
                                 message
                             } else {
                                 info!(
-                                    target: "torii::relay::server",
-                                    "Failed to encode message"
+                                    target: LOG_TARGET,
+                                    "Encoding message."
                                 );
                                 continue;
                             };
@@ -311,15 +313,15 @@ impl Relay {
                             ) {
                                 if !valid {
                                     info!(
-                                        target: "torii::relay::server",
-                                        "Invalid signature"
+                                        target: LOG_TARGET,
+                                        "Invalid signature."
                                     );
                                     continue;
                                 }
                             } else {
                                 info!(
-                                    target: "torii::relay::server",
-                                    "Failed to verify signature"
+                                    target: LOG_TARGET,
+                                    "Verifying signature."
                                 );
                                 continue;
                             }
@@ -335,25 +337,25 @@ impl Relay {
                                 .await
                             {
                                 info!(
-                                    target: "torii::relay::server",
+                                    target: LOG_TARGET,
                                     error = %e,
-                                    "Failed to set message"
+                                    "Setting message."
                                 );
                             }
 
                             info!(
-                                target: "torii::relay::server",
+                                target: LOG_TARGET,
                                 message_id = %message_id,
                                 peer_id = %peer_id,
-                                "Message verified and set"
+                                "Message verified and set."
                             );
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(
-                                target: "torii::relay::server::gossipsub",
+                                target: LOG_TARGET,
                                 peer_id = %peer_id,
                                 topic = %topic,
-                                "Subscribed to topic"
+                                "Subscribed to topic."
                             );
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Unsubscribed {
@@ -361,10 +363,10 @@ impl Relay {
                             topic,
                         }) => {
                             info!(
-                                target: "torii::relay::server::gossipsub",
+                                target: LOG_TARGET,
                                 peer_id = %peer_id,
                                 topic = %topic,
-                                "Unsubscribed from topic"
+                                "Unsubscribed from topic."
                             );
                         }
                         ServerEvent::Identify(identify::Event::Received {
@@ -372,26 +374,26 @@ impl Relay {
                             peer_id,
                         }) => {
                             info!(
-                                target: "torii::relay::server::identify",
+                                target: LOG_TARGET,
                                 peer_id = %peer_id,
                                 observed_addr = %observed_addr,
-                                "Received identify event"
+                                "Received identify event."
                             );
                             self.swarm.add_external_address(observed_addr.clone());
                         }
                         ServerEvent::Ping(ping::Event { peer, result, .. }) => {
                             info!(
-                                target: "torii::relay::server::ping",
+                                target: LOG_TARGET,
                                 peer_id = %peer,
                                 result = ?result,
-                                "Received ping event"
+                                "Received ping event."
                             );
                         }
                         _ => {}
                     }
                 }
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    info!(target: "torii::relay::server", address = %address, "New listen address");
+                    info!(target: LOG_TARGET, address = %address, "New listen address.");
                 }
                 _ => {}
             }
@@ -690,7 +692,7 @@ fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
     if path.exists() {
         let bytes = fs::read(path)?;
 
-        info!(target: "torii::relay::server", path = %path.display(), "Using existing identity");
+        info!(target: LOG_TARGET, path = %path.display(), "Using existing identity.");
 
         return Ok(identity::Keypair::from_protobuf_encoding(&bytes)?); // This only works for ed25519 but that is what we are using.
     }
@@ -699,7 +701,7 @@ fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
 
     fs::write(path, identity.to_protobuf_encoding()?)?;
 
-    info!(target: "torii::relay::server", path = %path.display(), "Generated new identity");
+    info!(target: LOG_TARGET, path = %path.display(), "Generated new identity.");
 
     Ok(identity)
 }
@@ -708,7 +710,7 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     if path.exists() {
         let pem = fs::read_to_string(path)?;
 
-        info!(target: "torii::relay::server", path = %path.display(), "Using existing certificate");
+        info!(target: LOG_TARGET, path = %path.display(), "Using existing certificate.");
 
         return Ok(Certificate::from_pem(&pem)?);
     }
@@ -716,7 +718,7 @@ fn read_or_create_certificate(path: &Path) -> anyhow::Result<Certificate> {
     let cert = Certificate::generate(&mut rand::thread_rng())?;
     fs::write(path, cert.serialize_pem().as_bytes())?;
 
-    info!(target: "torii::relay::server", path = %path.display(), "Generated new certificate");
+    info!(target: LOG_TARGET, path = %path.display(), "Generated new certificate.");
 
     Ok(cert)
 }
