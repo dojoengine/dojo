@@ -40,6 +40,10 @@ impl ModelCache {
     }
 
     async fn update_schema(&self, model: &str) -> Result<Ty, Error> {
+        let model_name: String = sqlx::query_scalar("SELECT name FROM models WHERE id = ?")
+            .bind(model)
+            .fetch_one(&self.pool)
+            .await?;
         let model_members: Vec<SqlModelMember> = sqlx::query_as(
             "SELECT id, model_idx, member_idx, name, type, type_enum, enum_options, key FROM \
              model_members WHERE model_id = ? ORDER BY model_idx ASC, member_idx ASC",
@@ -52,7 +56,7 @@ impl ModelCache {
             return Err(QueryError::ModelNotFound(model.into()).into());
         }
 
-        let ty = parse_sql_model_members(model, &model_members);
+        let ty = parse_sql_model_members(&model_name, &model_members);
         let mut cache = self.cache.write().await;
         cache.insert(model.into(), ty.clone());
 

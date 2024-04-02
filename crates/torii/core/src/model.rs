@@ -206,6 +206,8 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
     for ty in model_schemas {
         let schema = ty.as_struct().expect("schema should be struct");
         let model_table = &schema.name;
+        println!("{:?}", model_table);
+        println!("{:?}", schema);
         let mut selections = Vec::new();
         let mut tables = Vec::new();
 
@@ -214,6 +216,10 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
         global_selections.push(selections.join(", "));
         global_tables.extend(tables);
     }
+
+
+    println!("{:?}", global_tables);
+    println!("{:?}", global_selections);
 
     // TODO: Fallback to subqueries, SQLite has a max limit of 64 on 'table 'JOIN'
     if global_tables.len() > 64 {
