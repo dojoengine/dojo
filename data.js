@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712087946760,
+  "lastUpdate": 1712090569553,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4015,6 +4015,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17368458,
             "range": "± 325178",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "df5c3eae996cb57a4a9a98ada6acec2259503be3",
+          "message": "refactor: non mutable self references on libp2p  (#1750)\n\nrefactor: take ref instead of mut",
+          "timestamp": "2024-04-02T16:33:29-04:00",
+          "tree_id": "2782623d0b7bdadbcc3c7355c25fec3556641ac8",
+          "url": "https://github.com/dojoengine/dojo/commit/df5c3eae996cb57a4a9a98ada6acec2259503be3"
+        },
+        "date": 1712090569106,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16673363,
+            "range": "± 531005",
             "unit": "ns/iter"
           }
         ]
