@@ -12,6 +12,8 @@ use metrics::{describe_gauge, gauge};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use metrics_util::layers::{PrefixLayer, Stack};
 
+pub(crate) const LOG_TARGET: &str = "metrics::prometheus_exporter";
+
 pub(crate) trait Hook: Fn() + Send + Sync {}
 impl<T: Fn() + Send + Sync> Hook for T {}
 
@@ -100,45 +102,75 @@ fn collect_memory_stats() {
     use jemalloc_ctl::{epoch, stats};
 
     if epoch::advance()
-        .map_err(|error| tracing::error!(%error, "Failed to advance jemalloc epoch"))
+        .map_err(|error| {
+            tracing::error!(
+                target: LOG_TARGET,
+                error = %error,
+                "Advance jemalloc epoch."
+            )
+        })
         .is_err()
     {
         return;
     }
 
-    if let Ok(value) = stats::active::read()
-        .map_err(|error| tracing::error!(%error, "Failed to read jemalloc.stats.active"))
-    {
+    if let Ok(value) = stats::active::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.active."
+        )
+    }) {
         gauge!("jemalloc.active", value as f64);
     }
 
-    if let Ok(value) = stats::allocated::read()
-        .map_err(|error| tracing::error!(%error, "Failed to read jemalloc.stats.allocated"))
-    {
+    if let Ok(value) = stats::allocated::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.allocated."
+        )
+    }) {
         gauge!("jemalloc.allocated", value as f64);
     }
 
-    if let Ok(value) = stats::mapped::read()
-        .map_err(|error| tracing::error!(%error, "Failed to read jemalloc.stats.mapped"))
-    {
+    if let Ok(value) = stats::mapped::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.mapped."
+        )
+    }) {
         gauge!("jemalloc.mapped", value as f64);
     }
 
-    if let Ok(value) = stats::metadata::read()
-        .map_err(|error| tracing::error!(%error, "Failed to read jemalloc.stats.metadata"))
-    {
+    if let Ok(value) = stats::metadata::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.metadata."
+        )
+    }) {
         gauge!("jemalloc.metadata", value as f64);
     }
 
-    if let Ok(value) = stats::resident::read()
-        .map_err(|error| tracing::error!(%error, "Failed to read jemalloc.stats.resident"))
-    {
+    if let Ok(value) = stats::resident::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.resident."
+        )
+    }) {
         gauge!("jemalloc.resident", value as f64);
     }
 
-    if let Ok(value) = stats::retained::read()
-        .map_err(|error| tracing::error!(%error, "Failed to read jemalloc.stats.retained"))
-    {
+    if let Ok(value) = stats::retained::read().map_err(|error| {
+        tracing::error!(
+            target: LOG_TARGET,
+            error = %error,
+            "Read jemalloc.stats.retained."
+        )
+    }) {
         gauge!("jemalloc.retained", value as f64);
     }
 }

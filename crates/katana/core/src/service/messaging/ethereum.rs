@@ -77,7 +77,7 @@ impl EthereumMessaging {
         from_block: u64,
         to_block: u64,
     ) -> MessengerResult<HashMap<u64, Vec<Log>>> {
-        trace!(target: LOG_TARGET, "Fetching logs for blocks {} - {}.", from_block, to_block);
+        trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
         let mut block_to_logs: HashMap<u64, Vec<Log>> = HashMap::new();
 
@@ -150,8 +150,9 @@ impl Messenger for EthereumMessaging {
             |(block_number, block_logs)| {
                 debug!(
                     target: LOG_TARGET,
-                    "Converting logs of block {block_number} into L1HandlerTx ({} logs)",
-                    block_logs.len(),
+                    block_number = %block_number,
+                    logs_found = %block_logs.len(),
+                    "Converting logs into L1HandlerTx.",
                 );
 
                 block_logs.into_iter().for_each(|log| {
@@ -180,7 +181,7 @@ impl Messenger for EthereumMessaging {
 
         let hashes = parse_messages(messages);
 
-        debug!("Sending transaction on L1 to register messages...");
+        debug!(target: LOG_TARGET, "Sending transaction on L1 to register messages.");
         match starknet_messaging
             .add_message_hashes_from_l2(hashes.clone())
             .send()
@@ -192,9 +193,9 @@ impl Messenger for EthereumMessaging {
             Some(receipt) => {
                 trace!(
                     target: LOG_TARGET,
-                    "Transaction sent on L1 to register {} messages: {:#x}",
-                    hashes.len(),
-                    receipt.transaction_hash,
+                    num_messages = %hashes.len(),
+                    transaction_hash = %format!("{:#x}", receipt.transaction_hash),
+                    "Transaction sent on L1 to register messages."
                 );
 
                 Ok(hashes)
@@ -209,7 +210,7 @@ impl Messenger for EthereumMessaging {
 
 fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
     let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.into()).map_err(|e| {
-        error!(target: LOG_TARGET, "Log parsing failed {e}");
+        error!(target: LOG_TARGET, error = %e, "Log parsing.");
         Error::GatherError
     })?;
 

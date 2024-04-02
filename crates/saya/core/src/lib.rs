@@ -25,6 +25,8 @@ pub mod prover;
 pub mod starknet_os;
 pub mod verifier;
 
+pub(crate) const LOG_TARGET: &str = "saya::core";
+
 /// Saya's main configuration.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SayaConfig {
@@ -97,15 +99,14 @@ impl Saya {
             let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
-                    error!(?e, "Fetch block number:");
+                    error!(target: LOG_TARGET, error = ?e, "Fetching block.");
                     tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                     continue;
                 }
             };
 
             if block > latest_block {
-                trace!(target: "saya_core", "Waiting for block {block}.");
-
+                trace!(target: LOG_TARGET, block_number = block, "Waiting for block.");
                 tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                 continue;
             }
@@ -142,7 +143,7 @@ impl Saya {
         block_number: BlockNumber,
         blocks: (&SealedBlock, SealedBlock, FieldElement),
     ) -> SayaResult<()> {
-        trace!(target: "saya_core", "Processing block {block_number}.");
+        trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
         let (block, prev_block, genesis_state_hash) = blocks;
 

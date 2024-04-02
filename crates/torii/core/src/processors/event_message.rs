@@ -10,6 +10,8 @@ use super::EventProcessor;
 use crate::processors::MODEL_INDEX;
 use crate::sql::Sql;
 
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
+
 #[derive(Default)]
 pub struct EventMessageProcessor;
 
@@ -50,7 +52,11 @@ where
             Err(_) => return Ok(()),
         };
 
-        info!("store event message: {}", model.name());
+        info!(
+            target: LOG_TARGET,
+            model = %model.name(),
+            "Store event message."
+        );
 
         // skip the first key, as its the event selector
         // and dont include last key as its the system key
