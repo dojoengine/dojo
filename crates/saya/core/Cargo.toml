@@ -37,5 +37,3 @@ starknet-types-core = { version = "0.0.9", default-features = false, features = 
 # TODO: use features for each possible DA.
 celestia-rpc = "0.1.1"
 celestia-types = "0.1.1"
-
-alloy-primitives = { version = "0.6.4", default-features = false }

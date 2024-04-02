@@ -22,7 +22,7 @@ serde_with.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
 
-alloy-primitives = { version = "0.6.4", default-features = false }
+alloy-primitives.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

@@ -19,7 +19,7 @@ starknet_api.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-alloy-primitives = { version = "0.6.4", default-features = false }
+alloy-primitives.workspace = true
 
 # blockifier deps
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979", optional = true }

@@ -26,7 +26,6 @@ flate2.workspace = true
 futures.workspace = true
 lazy_static = "1.4.0"
 parking_lot.workspace = true
-primitive-types = "0.12.2"
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
@@ -38,16 +37,17 @@ tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
 
-alloy-primitives = { version = "0.6.4", default-features = false }
-alloy-sol-types = { version = "0.6.4", default-features = false, features = ["json"] }
+alloy-primitives.workspace = true
 
-alloy-transport = { version = "0.1.0", default-features = false }
-alloy-provider = { version = "0.1.0", default-features = false }
-alloy-signer = { version = "0.1.0", default-features = false }
-alloy-network = { version = "0.1.0", default-features = false }
-alloy-rpc-types = { version = "0.1.0", default-features = false }
-alloy-signer-wallet = { version = "0.1.0", default-features = false }
-alloy-contract = { version = "0.1.0", default-features = false }
+alloy-sol-types = { version = "0.6.4", default-features = false, features = ["json"], optional = true }
+
+alloy-transport = { version = "0.1.0", default-features = false, optional = true }
+alloy-provider = { version = "0.1.0", default-features = false, optional = true }
+alloy-signer = { version = "0.1.0", default-features = false, optional = true }
+alloy-network = { version = "0.1.0", default-features = false, optional = true }
+alloy-rpc-types = { version = "0.1.0", default-features = false, optional = true }
+alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
+alloy-contract = { version = "0.1.0", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_matches.workspace = true
@@ -55,5 +55,14 @@ hex = "0.4.3"
 tempfile = "3.8.1"
 
 [features]
-messaging = [ ]
-starknet-messaging = [  ]
+messaging = [
+    "alloy-sol-types",
+    "alloy-transport",
+    "alloy-provider",
+    "alloy-signer",
+    "alloy-network",
+    "alloy-rpc-types",
+    "alloy-signer-wallet",
+    "alloy-contract"
+]
+starknet-messaging = [ ]

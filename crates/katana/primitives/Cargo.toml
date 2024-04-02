@@ -27,7 +27,7 @@ cairo-lang-sierra.workspace = true
 cairo-lang-starknet.workspace = true
 flate2.workspace = true
 starknet_api.workspace = true
-alloy-primitives = { version = "0.6.4", default-features = false }
+alloy-primitives.workspace = true
 
 [features]
 default = [ "serde" ]
