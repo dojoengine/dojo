@@ -378,6 +378,14 @@ impl DeploymentManifest {
             }
         }
 
+        for model in &mut manifest_with_abis.models {
+            if let Some(AbiFormat::Path(abi_path)) = &model.inner.abi {
+                let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
+                let abi_entries: Vec<AbiEntry> = serde_json::from_reader(&mut abi_file)?;
+                model.inner.abi = Some(AbiFormat::Embed(abi_entries));
+            }
+        }
+
         let deployed_manifest = serde_json::to_string_pretty(&manifest_with_abis)?;
         fs::write(path, deployed_manifest)?;
 

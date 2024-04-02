@@ -309,13 +309,13 @@ fn update_manifest(
         )?;
     }
 
-    for (_, (manifest, _)) in models.iter_mut() {
+    for (_, (manifest, abi)) in models.iter_mut() {
         write_manifest_and_abi(
             &relative_manifests_dir.join(MODELS_DIR),
             &relative_abis_dir.join(MODELS_DIR),
             &manifest_dir,
             manifest,
-            &None,
+            abi,
         )?;
     }
 
