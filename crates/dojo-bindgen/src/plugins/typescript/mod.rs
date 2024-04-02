@@ -376,10 +376,10 @@ export function defineContractComponents(world: World) {
         }};
     }}
 ",
-                contract.contract_file_name,
+                contract.qualified_path,
                 // capitalize contract name
-                TypescriptPlugin::formatted_contract_name(&contract.contract_file_name),
-                TypescriptPlugin::formatted_contract_name(&contract.contract_file_name),
+                TypescriptPlugin::formatted_contract_name(&contract.qualified_path),
+                TypescriptPlugin::formatted_contract_name(&contract.qualified_path),
                 systems,
                 contract
                     .systems
@@ -401,8 +401,8 @@ export function defineContractComponents(world: World) {
             .map(|c| {
                 format!(
                     "{}: {}()",
-                    TypescriptPlugin::formatted_contract_name(&c.contract_file_name),
-                    TypescriptPlugin::formatted_contract_name(&c.contract_file_name)
+                    TypescriptPlugin::formatted_contract_name(&c.qualified_path),
+                    TypescriptPlugin::formatted_contract_name(&c.qualified_path)
                 )
             })
             .collect::<Vec<String>>()

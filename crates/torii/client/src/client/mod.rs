@@ -100,13 +100,13 @@ impl Client {
     }
 
     /// Waits for the relay to be ready and listening for messages.
-    pub async fn wait_for_relay(&mut self) -> Result<(), Error> {
+    pub async fn wait_for_relay(&self) -> Result<(), Error> {
         self.relay_client.command_sender.wait_for_relay().await.map_err(Error::RelayClient)
     }
 
     /// Publishes a message to a topic.
     /// Returns the message id.
-    pub async fn publish_message(&mut self, message: Message) -> Result<Vec<u8>, Error> {
+    pub async fn publish_message(&self, message: Message) -> Result<Vec<u8>, Error> {
         self.relay_client
             .command_sender
             .publish(message)

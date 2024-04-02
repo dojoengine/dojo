@@ -21,6 +21,7 @@ use tracing::{error, trace};
 
 use crate::proto;
 
+pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_message";
 pub struct EventMessagesSubscriber {
     /// Entity ids that the subscriber is interested in
     hashed_keys: HashSet<FieldElement>,
@@ -129,7 +130,7 @@ impl Service {
         }
 
         for id in closed_stream {
-            trace!(target = "subscription", "closing entity stream idx: {id}");
+            trace!(target = LOG_TARGET, id = %id, "Closing entity stream.");
             subs.remove_subscriber(id).await
         }
 
@@ -149,7 +150,7 @@ impl Future for Service {
             let pool = pin.pool.clone();
             tokio::spawn(async move {
                 if let Err(e) = Service::publish_updates(subs, cache, pool, &entity.id).await {
-                    error!(target = "subscription", "error when publishing entity update: {e}");
+                    error!(target = LOG_TARGET, error = %e, "Publishing entity update.");
                 }
             });
         }

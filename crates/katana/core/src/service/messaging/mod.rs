@@ -173,11 +173,11 @@ impl MessengerMode {
         match config.chain.as_str() {
             CONFIG_CHAIN_ETHEREUM => match EthereumMessaging::new(config).await {
                 Ok(m_eth) => {
-                    info!(target: LOG_TARGET, "Messaging enabled [Ethereum]");
+                    info!(target: LOG_TARGET, "Messaging enabled [Ethereum].");
                     Ok(MessengerMode::Ethereum(m_eth))
                 }
                 Err(e) => {
-                    error!(target: LOG_TARGET, "Ethereum messenger init failed: {e}");
+                    error!(target: LOG_TARGET,  error = %e, "Ethereum messenger init.");
                     Err(Error::InitError)
                 }
             },
@@ -185,17 +185,17 @@ impl MessengerMode {
             #[cfg(feature = "starknet-messaging")]
             CONFIG_CHAIN_STARKNET => match StarknetMessaging::new(config).await {
                 Ok(m_sn) => {
-                    info!(target: LOG_TARGET, "Messaging enabled [Starknet]");
+                    info!(target: LOG_TARGET, "Messaging enabled [Starknet].");
                     Ok(MessengerMode::Starknet(m_sn))
                 }
                 Err(e) => {
-                    error!(target: LOG_TARGET, "Starknet messenger init failed: {e}");
+                    error!(target: LOG_TARGET, error = %e, "Starknet messenger init.");
                     Err(Error::InitError)
                 }
             },
 
             chain => {
-                error!(target: LOG_TARGET, "Unsupported settlement chain: {}", chain);
+                error!(target: LOG_TARGET, chain = %chain, "Unsupported settlement chain.");
                 Err(Error::UnsupportedChain)
             }
         }

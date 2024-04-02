@@ -22,12 +22,14 @@ use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::Signer;
-use tracing_log::log;
+use tracing::error;
 
 use super::migrate::setup_env;
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
+
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::dev";
 
 #[derive(Args)]
 pub struct DevArgs {
@@ -243,7 +245,12 @@ impl DevArgs {
                 world_address = address;
             }
             Err(error) => {
-                log::error!("Error: {error:?}");
+                error!(
+                    target: LOG_TARGET,
+                    error = ?error,
+                    address = ?world_address,
+                    "Migrating world."
+                );
             }
         }
         loop {
@@ -255,7 +262,7 @@ impl DevArgs {
                     .unwrap_or(DevAction::None),
                 Ok(Err(_)) => DevAction::None,
                 Err(error) => {
-                    log::error!("Error: {error:?}");
+                    error!(target: LOG_TARGET, error = ?error, "Receiving dev action.");
                     break;
                 }
             };
@@ -273,7 +280,12 @@ impl DevArgs {
                         world_address = address;
                     }
                     Err(error) => {
-                        log::error!("Error: {error:?}");
+                        error!(
+                            target: LOG_TARGET,
+                            error = ?error,
+                            address = ?world_address,
+                            "Migrating world.",
+                        );
                     }
                 }
             }
