@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712148385997,
+  "lastUpdate": 1712154728947,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4165,6 +4165,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16799049,
             "range": "± 195636",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9acaaddf01d0b3a83cca5d8eaaa680520585f88",
+          "message": "refactor: grpc use model hash as id & libp2p command queue (#1754)\n\n* refactor: use model hash as ids for grpc\r\n\r\n* fmt\r\n\r\n* remove println\r\n\r\n* refactor: get rid of wait for relay\r\n\r\n* relay runner\r\n\r\n* remove async",
+          "timestamp": "2024-04-03T10:23:51-04:00",
+          "tree_id": "8a6ba05cc32c89170a10538f42aed9fa8deb72ec",
+          "url": "https://github.com/dojoengine/dojo/commit/f9acaaddf01d0b3a83cca5d8eaaa680520585f88"
+        },
+        "date": 1712154728419,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17189619,
+            "range": "± 207768",
             "unit": "ns/iter"
           }
         ]
