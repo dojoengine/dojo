@@ -6,40 +6,31 @@ use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_world::contracts::world::WorldContractReader;
-use dojo_world::migration::strategy::MigrationStrategy;
+use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+use starknet::accounts::{Account, Call};
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use starknet_crypto::poseidon_hash_many;
 use tokio::sync::broadcast;
 
 use crate::engine::{Engine, EngineConfig, Processors};
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
 use crate::sql::Sql;
-use crate::utils::utc_dt_string_from_timestamp;
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
     db: Sql,
     provider: P,
-    migration: MigrationStrategy,
-    sequencer: TestSequencer,
 ) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
     P: Provider + Send + Sync,
 {
-    let mut account = sequencer.account();
-    account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
-    let ws = ops::read_workspace(config.manifest_path(), &config)
-        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
-
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
         world,
@@ -67,16 +58,37 @@ async fn test_load_from_remote() {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
     let base_path = "../../../examples/spawn-and-move";
     let target_path = format!("{}/target/dev", base_path);
-    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+    let mut migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
     let world = WorldContractReader::new(migration.world_address().unwrap(), &provider);
 
-    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
-    let _ = bootstrap_engine(world, db.clone(), &provider, migration, sequencer).await;
+    let mut account = sequencer.account();
+    account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let block_timestamp = 1710754478_u64;
+    let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
+    let ws = ops::read_workspace(config.manifest_path(), &config)
+        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
+    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+
+    // spawn
+    let tx = account
+        .execute(vec![Call {
+            to: migration.contracts.first().unwrap().contract_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+
+    let mut db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+    let _ = bootstrap_engine(world, db.clone(), &provider).await;
+
+    let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
     assert_eq!(models.len(), 3);
 
@@ -104,29 +116,23 @@ async fn test_load_from_remote() {
     assert_eq!(packed_size, 1);
     assert_eq!(unpacked_size, 2);
 
-    let event_id = format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 42, 69);
-    db.store_event(
-        &event_id,
-        &Event {
-            from_address: FieldElement::ONE,
-            keys: Vec::from([FieldElement::TWO]),
-            data: Vec::from([FieldElement::TWO, FieldElement::THREE]),
-        },
-        FieldElement::THREE,
-        block_timestamp,
-    );
+    // print all entities
+    let entities = sqlx::query("SELECT * FROM entities").fetch_all(&pool).await.unwrap();
+    assert_eq!(entities.len(), 1);
+
+    let (id, keys): (String, String) = sqlx::query_as(
+        format!(
+            "SELECT id, keys FROM entities WHERE id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(id, format!("{:#x}", poseidon_hash_many(&[account.address()])));
+    assert_eq!(keys, format!("{:#x}/", account.address()));
 
     db.execute().await.unwrap();
-
-    let query = format!(
-        "SELECT keys, data, transaction_hash, executed_at FROM events WHERE id = '{}'",
-        event_id
-    );
-    let (keys, data, tx_hash, executed_at): (String, String, String, String) =
-        sqlx::query_as(&query).fetch_one(&pool).await.unwrap();
-
-    assert_eq!(keys, format!("{:#x}/", FieldElement::TWO));
-    assert_eq!(data, format!("{:#x}/{:#x}/", FieldElement::TWO, FieldElement::THREE));
-    assert_eq!(tx_hash, format!("{:#x}", FieldElement::THREE));
-    assert_eq!(executed_at, utc_dt_string_from_timestamp(block_timestamp));
 }

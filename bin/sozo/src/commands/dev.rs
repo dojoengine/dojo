@@ -144,9 +144,9 @@ where
     }
 
     let ui = ws.config().ui();
-    let strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
-    match migration::apply_diff(ws, account, None, &strategy).await {
+    match migration::apply_diff(ws, account, None, &mut strategy).await {
         Ok(migration_output) => {
             config.ui().print(format!(
                 "🎉 World at address {} updated!",
