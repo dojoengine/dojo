@@ -1,6 +1,9 @@
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{EntryPointType, TxExecInfo};
 use starknet::core::types::FieldElement;
+
+use super::state_diff::state_updates_to_json_like;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by ten prover.
@@ -11,6 +14,7 @@ pub struct ProgramInput {
     pub config_hash: FieldElement,
     pub message_to_starknet_segment: Vec<MessageToStarknet>,
     pub message_to_appchain_segment: Vec<MessageToAppchain>,
+    pub state_updates: StateUpdates,
 }
 
 pub fn extract_messages(
@@ -58,26 +62,41 @@ pub fn extract_messages(
 }
 
 impl ProgramInput {
-    pub fn serialize(&self) -> anyhow::Result<Vec<FieldElement>> {
-        let mut result =
-            vec![self.prev_state_root, self.block_number, self.block_hash, self.config_hash];
-
+    pub fn serialize(&self) -> anyhow::Result<String> {
         let message_to_starknet = self
             .message_to_starknet_segment
             .iter()
-            .map(|m| m.serialize())
-            .collect::<anyhow::Result<Vec<_>>>()?;
-
-        result.push(FieldElement::try_from(self.message_to_starknet_segment.len())?);
-        result.extend(message_to_starknet.into_iter().flatten());
+            .map(MessageToStarknet::serialize)
+            .collect::<anyhow::Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .map(|e| format!("{}", e))
+            .collect::<Vec<_>>()
+            .join(",");
 
         let message_to_appchain = self
             .message_to_appchain_segment
             .iter()
             .map(|m| m.serialize())
-            .collect::<anyhow::Result<Vec<_>>>()?;
-        result.push(FieldElement::try_from(self.message_to_appchain_segment.len())?);
-        result.extend(message_to_appchain.into_iter().flatten());
+            .collect::<anyhow::Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .map(|e| format!("{}", e))
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let mut result = String::from('{');
+        result.push_str(&format!(r#""prev_state_root":{},"#, self.prev_state_root));
+        result.push_str(&format!(r#""block_number":{},"#, self.block_number));
+        result.push_str(&format!(r#""block_hash":{},"#, self.block_hash));
+        result.push_str(&format!(r#""config_hash":{},"#, self.config_hash));
+
+        result.push_str(&format!(r#""message_to_starknet_segment":[{}],"#, message_to_starknet));
+        result.push_str(&format!(r#""message_to_appchain_segment":[{}],"#, message_to_appchain));
+
+        result.push_str(&state_updates_to_json_like(&self.state_updates));
+
+        result.push_str(&format!("{}", "}"));
 
         Ok(result)
     }
@@ -138,31 +157,36 @@ fn test_program_input() -> anyhow::Result<()> {
             selector: FieldElement::from_str("111")?,
             payload: vec![FieldElement::from_str("112")?],
         }],
+        state_updates: StateUpdates {
+            nonce_updates: std::collections::HashMap::new(),
+            storage_updates: std::collections::HashMap::new(),
+            contract_updates: std::collections::HashMap::new(),
+            declared_classes: std::collections::HashMap::new(),
+        },
     };
 
     let serialized = input.serialize().unwrap();
-    assert_eq!(serialized.len(), 16);
 
-    let expected_serialized = vec![
-        FieldElement::from_str("101")?,
-        FieldElement::from_str("102")?,
-        FieldElement::from_str("103")?,
-        FieldElement::from_str("104")?,
-        FieldElement::from_str("1")?,
-        FieldElement::from_str("105")?,
-        FieldElement::from_str("106")?,
-        FieldElement::from_str("1")?,
-        FieldElement::from_str("107")?,
-        FieldElement::from_str("1")?,
-        FieldElement::from_str("108")?,
-        FieldElement::from_str("109")?,
-        FieldElement::from_str("110")?,
-        FieldElement::from_str("111")?,
-        FieldElement::from_str("1")?,
-        FieldElement::from_str("112")?,
-    ];
+    println!("Serialized: {}", serialized);
 
-    assert_eq!(serialized, expected_serialized);
+    pub const EXPECTED: &str = r#"{
+        "prev_state_root": 101,
+        "block_number": 102,
+        "block_hash": 103,
+        "config_hash": 104,
+        "message_to_starknet_segment": [105,106,1,107],
+        "message_to_appchain_segment": [108,109,110,111,1,112],
+        "nonce_updates": {},
+        "storage_updates": {},
+        "contract_updates": {},
+        "declared_classes": {}
+    }"#;
+
+    let expected = EXPECTED.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+
+    println!("{}", expected);
+
+    assert_eq!(serialized, expected);
 
     Ok(())
 }
