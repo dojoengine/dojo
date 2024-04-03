@@ -420,10 +420,9 @@ where
         Some(world) => {
             ui.print_header("# World");
 
-            if world.diff.local_class_hash != world.diff.original_class_hash
-                && world.diff.original_class_hash
-                    == world.diff.remote_class_hash.unwrap_or_default()
-            {
+            // If a migration is pending for the world, we upgrade only if the remote world
+            // already exists.
+            if world.diff.remote_class_hash.is_some() {
                 let _deploy_result = upgrade_contract(
                     world,
                     "world",
