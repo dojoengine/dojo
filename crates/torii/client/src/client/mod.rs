@@ -10,6 +10,8 @@ use dojo_types::packing::unpack;
 use dojo_types::schema::Ty;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
+use futures::lock::Mutex;
+use futures::Future;
 use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -20,6 +22,7 @@ use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
 use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
+use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
 use crate::client::error::{Error, ParseError};
@@ -99,9 +102,10 @@ impl Client {
         })
     }
 
-    /// Waits for the relay to be ready and listening for messages.
-    pub async fn wait_for_relay(&self) -> Result<(), Error> {
-        self.relay_client.command_sender.wait_for_relay().await.map_err(Error::RelayClient)
+    /// Starts the relay client event loop.
+    /// This is a blocking call. Spawn this on a separate task.
+    pub fn relay_runner(&self) -> Arc<Mutex<EventLoop>> {
+        self.relay_client.event_loop.clone()
     }
 
     /// Publishes a message to a topic.

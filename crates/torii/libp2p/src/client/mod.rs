@@ -41,7 +41,6 @@ pub struct EventLoop {
 #[derive(Debug)]
 enum Command {
     Publish(Message, oneshot::Sender<Result<MessageId, Error>>),
-    WaitForRelay(oneshot::Sender<Result<(), Error>>),
 }
 
 impl RelayClient {
@@ -162,37 +161,36 @@ impl CommandSender {
 
         rx.await.expect("Failed to receive response")
     }
-
-    pub async fn wait_for_relay(&self) -> Result<(), Error> {
-        let (tx, rx) = oneshot::channel();
-
-        self.sender.unbounded_send(Command::WaitForRelay(tx)).expect("Failed to send command");
-
-        rx.await.expect("Failed to receive response")
-    }
 }
 
 impl EventLoop {
+    async fn handle_command(
+        &mut self,
+        command: Command,
+        is_relay_ready: bool,
+        commands_queue: Arc<Mutex<Vec<Command>>>,
+    ) {
+        match command {
+            Command::Publish(data, sender) => {
+                // if the relay is not ready yet, add the message to the queue
+                if !is_relay_ready {
+                    commands_queue.lock().await.push(Command::Publish(data, sender));
+                } else {
+                    sender.send(self.publish(&data)).expect("Failed to send response");
+                }
+            }
+        }
+    }
+
     pub async fn run(&mut self) {
         let mut is_relay_ready = false;
-        let mut relay_ready_tx = None;
+        let commands_queue = Arc::new(Mutex::new(Vec::new()));
 
         loop {
             // Poll the swarm for new events.
             select! {
                 command = self.command_receiver.select_next_some() => {
-                    match command {
-                        Command::Publish(data, sender) => {
-                            sender.send(self.publish(&data)).expect("Failed to send response");
-                        }
-                        Command::WaitForRelay(sender) => {
-                            if is_relay_ready {
-                                sender.send(Ok(())).expect("Failed to send response");
-                            } else {
-                                relay_ready_tx = Some(sender);
-                            }
-                        }
-                    }
+                    self.handle_command(command, is_relay_ready, commands_queue.clone()).await;
                 },
                 event = self.swarm.select_next_some() => {
                     match event {
@@ -200,9 +198,13 @@ impl EventLoop {
                             // Handle behaviour events.
                             info!(target: LOG_TARGET, topic = ?topic, "Relay ready. Received subscription confirmation.");
 
-                            is_relay_ready = true;
-                            if let Some(tx) = relay_ready_tx.take() {
-                                tx.send(Ok(())).expect("Failed to send response");
+                            if !is_relay_ready {
+                                is_relay_ready = true;
+
+                                // Execute all the commands that were queued while the relay was not ready.
+                                for command in commands_queue.lock().await.drain(..) {
+                                    self.handle_command(command, is_relay_ready, commands_queue.clone()).await;
+                                }
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {

@@ -49,7 +49,6 @@ mod test {
             client.event_loop.lock().await.run().await;
         });
 
-        client.command_sender.wait_for_relay().await?;
         let mut data = Struct { name: "Message".to_string(), children: vec![] };
 
         data.children.push(Member {

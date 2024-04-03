@@ -90,16 +90,16 @@ impl Service {
             // publish all updates if ids is empty or only ids that are subscribed to
             if sub.hashed_keys.is_empty() || sub.hashed_keys.contains(&hashed) {
                 let models_query = r#"
-                    SELECT group_concat(event_model.model_id) as model_names
+                    SELECT group_concat(event_model.model_id) as model_ids
                     FROM event_messages
                     JOIN event_model ON event_messages.id = event_model.entity_id
                     WHERE event_messages.id = ?
                     GROUP BY event_messages.id
                 "#;
-                let (model_names,): (String,) =
+                let (model_ids,): (String,) =
                     sqlx::query_as(models_query).bind(hashed_keys).fetch_one(&pool).await?;
-                let model_names: Vec<&str> = model_names.split(',').collect();
-                let schemas = cache.schemas(model_names).await?;
+                let model_ids: Vec<&str> = model_ids.split(',').collect();
+                let schemas = cache.schemas(model_ids).await?;
 
                 let entity_query =
                     format!("{} WHERE event_messages.id = ?", build_sql_query(&schemas)?);
