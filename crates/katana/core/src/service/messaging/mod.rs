@@ -40,10 +40,10 @@ mod starknet;
 use std::path::Path;
 
 use ::starknet::providers::ProviderError as StarknetProviderError;
+use alloy_transport::TransportError;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethereum::EthereumMessaging;
-use ethers::providers::ProviderError as EthereumProviderError;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use serde::Deserialize;
@@ -77,13 +77,13 @@ pub enum Error {
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
     #[error("Ethereum provider error: {0}")]
-    Ethereum(EthereumProviderError),
+    Ethereum(TransportError),
     #[error("Starknet provider error: {0}")]
     Starknet(StarknetProviderError),
 }
 
-impl From<EthereumProviderError> for Error {
-    fn from(e: EthereumProviderError) -> Self {
+impl From<TransportError> for Error {
+    fn from(e: TransportError) -> Self {
         Self::Provider(ProviderError::Ethereum(e))
     }
 }

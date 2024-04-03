@@ -1,3 +1,4 @@
+use alloy_primitives::U256;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_executor::implementation::noop::NoopExecutorFactory;
@@ -6,7 +7,6 @@ use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::env::BlockEnvProvider;
-use primitive_types::U256;
 
 fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
     let accounts = DevAllocationsGenerator::new(2)

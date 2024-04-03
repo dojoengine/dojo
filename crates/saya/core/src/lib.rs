@@ -166,7 +166,7 @@ impl Saya {
 
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
-        if exec_infos.len() == 0 {
+        if exec_infos.is_empty() {
             trace!(target: "saya_core", block_number, "Skipping empty block.");
             return Ok(());
         }

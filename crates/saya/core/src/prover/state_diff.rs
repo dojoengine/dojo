@@ -109,7 +109,7 @@ impl ProvedStateDiff {
             .join(",");
 
         result.push_str(&format!("{}{}", declared_classes, "}"));
-        result.push_str(&format!("{}", "}"));
+        result.push('}');
 
         result
     }

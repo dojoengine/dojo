@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use ::primitive_types::U256;
+use alloy_primitives::U256;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;

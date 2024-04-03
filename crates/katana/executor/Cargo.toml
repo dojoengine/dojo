@@ -19,6 +19,8 @@ starknet_api.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
+alloy-primitives.workspace = true
+
 # blockifier deps
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979", optional = true }
 cairo-vm = { workspace = true, optional = true }

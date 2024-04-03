@@ -1,4 +1,4 @@
-use ethers::types::U256;
+use alloy_primitives::U256;
 
 use crate::FieldElement;
 
@@ -9,7 +9,7 @@ pub mod transaction;
 /// The first element in the returned tuple is the low part, and the second element is the high
 /// part.
 pub fn split_u256(value: U256) -> (FieldElement, FieldElement) {
-    let low_u128: u128 = value.low_u128();
-    let high_u128: u128 = (value >> 128).low_u128();
+    let low_u128: u128 = value.to::<u128>();
+    let high_u128: u128 = U256::from(value >> 128).to::<u128>();
     (FieldElement::from(low_u128), FieldElement::from(high_u128))
 }

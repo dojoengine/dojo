@@ -13,6 +13,7 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use alloy_primitives::U256;
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
 use common::parse::parse_socket_address;
@@ -253,7 +254,7 @@ impl KatanaArgs {
 
                 let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
                     .with_seed(parse_seed(&self.starknet.seed))
-                    .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+                    .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
                     .generate();
 
                 let mut genesis = Genesis {
