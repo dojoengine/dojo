@@ -20,8 +20,8 @@ mod test {
         use tokio::time::sleep;
         use torii_core::sql::Sql;
 
-        use crate::server::{parse_ty_to_object, Relay};
-        use crate::typed_data::{Domain, TypedData};
+        use crate::server::Relay;
+        use crate::typed_data::{Domain, PrimitiveType, TypedData};
         use crate::types::Message;
 
         let _ = tracing_subscriber::fmt()
@@ -81,12 +81,15 @@ mod test {
         );
         typed_data.message.insert(
             "Message".to_string(),
-            crate::typed_data::PrimitiveType::Object(
-                parse_ty_to_object(&Ty::Struct(data.clone())).unwrap(),
+            crate::typed_data::PrimitiveType::Array(
+                Ty::Struct(data.clone())
+                    .serialize()
+                    .unwrap()
+                    .iter()
+                    .map(|f| PrimitiveType::String(format!("{:#x}", f)))
+                    .collect(),
             ),
         );
-
-        println!("object ty: {:?}", parse_ty_to_object(&Ty::Struct(data)).unwrap());
 
         client
             .command_sender
