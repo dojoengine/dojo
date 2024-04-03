@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712154728947,
+  "lastUpdate": 1712155130141,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4195,6 +4195,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17189619,
             "range": "± 207768",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3e3b521698215e8980b82c63085be1b71323b10c",
+          "message": "fix: ensure scarb compilation even when root package is missing (#1759)\n\nScarb can be compiled without having a root package.\r\nTo ensure compatibility for bindgen and library compilation,\r\nbindgen uses now a default NO_ROOT_PACKAGE in case it can't be found.",
+          "timestamp": "2024-04-03T10:30:22-04:00",
+          "tree_id": "cc5b4bc5ee807ccd7cb4ebc1809b726b19755214",
+          "url": "https://github.com/dojoengine/dojo/commit/3e3b521698215e8980b82c63085be1b71323b10c"
+        },
+        "date": 1712155128920,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17180669,
+            "range": "± 714873",
             "unit": "ns/iter"
           }
         ]
