@@ -9,7 +9,7 @@ use std::{fs, io};
 use chrono::Utc;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Member, Struct, Ty};
+use dojo_types::schema::{Enum, Member, Struct, Ty};
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
@@ -21,9 +21,11 @@ use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, 
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use serde_json::Number;
-use starknet_crypto::{poseidon_hash_many, verify};
+use starknet_core::utils::get_selector_from_name;
+use starknet_crypto::{poseidon_hash_many, verify, recover};
 use starknet_ff::FieldElement;
 use torii_core::sql::Sql;
+use tracing::field::Field;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 
@@ -37,6 +39,7 @@ use sqlx::Row;
 use crate::server::events::ServerEvent;
 use crate::typed_data::PrimitiveType;
 use crate::types::Message;
+use dojo_world::contracts::model::ModelReader;
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
@@ -173,7 +176,7 @@ impl Relay {
                                 }
                             };
 
-                            let ty = match validate_message(&data.message.message) {
+                            let ty = match validate_message(&self.db, &data.message.message).await {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
                                     info!(
@@ -219,8 +222,9 @@ impl Relay {
                             };
 
                             // select only identity field, if doesn't exist, empty string
-                            let entity = match sqlx::query("SELECT * FROM ? WHERE id = ?")
-                                .bind(&ty.as_struct().unwrap().name)
+                            let query =
+                                format!("SELECT external_identity FROM {} WHERE id = ?", ty.name());
+                            let entity_identity: Option<String> = match sqlx::query_scalar(&query)
                                 .bind(format!("{:#x}", poseidon_hash_many(&keys)))
                                 .fetch_optional(&mut *pool)
                                 .await
@@ -236,7 +240,7 @@ impl Relay {
                                 }
                             };
 
-                            if entity.is_none() {
+                            if entity_identity.is_none() {
                                 // we can set the entity without checking identity
                                 if let Err(e) = self
                                     .db
@@ -264,49 +268,57 @@ impl Relay {
                                 }
                             }
 
-                            let entity = entity.unwrap();
-                            let identity = match FieldElement::from_str(&match entity
-                                .try_get::<String, _>("identity")
-                            {
-                                Ok(identity) => identity,
-                                Err(e) => {
-                                    warn!(
-                                        target: LOG_TARGET,
-                                        error = %e,
-                                        "Converting model to identity."
-                                    );
-                                    continue;
-                                }
-                            }) {
-                                Ok(identity) => identity,
-                                Err(e) => {
-                                    warn!(
-                                        target: LOG_TARGET,
-                                        error = %e,
-                                        "Parsing identity."
-                                    );
-                                    continue;
-                                }
-                            };
+                            let entity_identity =
+                                match FieldElement::from_str(&entity_identity.unwrap()) {
+                                    Ok(identity) => identity,
+                                    Err(e) => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            error = %e,
+                                            "Parsing identity."
+                                        );
+                                        continue;
+                                    }
+                                };
 
                             // TODO: have a nonce in model to check
                             // against entity nonce and message nonce
                             // to prevent replay attacks.
 
                             // Verify the signature
-                            let message_hash = if let Ok(message) = data.message.encode(identity) {
-                                message
-                            } else {
-                                info!(
-                                    target: LOG_TARGET,
-                                    "Encoding message."
-                                );
-                                continue;
-                            };
+                            let message_hash =
+                                if let Ok(message) = data.message.encode(entity_identity) {
+                                    message
+                                } else {
+                                    info!(
+                                        target: LOG_TARGET,
+                                        "Encoding message."
+                                    );
+                                    continue;
+                                };
+
+                            println!("entity identity: {:#x}", entity_identity);
+                            println!("message hash: {:#x}", message_hash);
+                            println!("r: {:#x}", data.signature_r);
+                            println!("s: {:#x}", data.signature_s);
+
+                            println!("recovered: {:#x}", recover(
+                                &message_hash,
+                                &data.signature_r,
+                                &data.signature_s,
+                                &FieldElement::ZERO
+                            ).unwrap());
+
+                            println!("recovered: {:#x}", recover(
+                                &message_hash,
+                                &data.signature_r,
+                                &data.signature_s,
+                                &FieldElement::ONE
+                            ).unwrap());
 
                             // for the public key used for verification; use identity from model
                             if let Ok(valid) = verify(
-                                &identity,
+                                &entity_identity,
                                 &message_hash,
                                 &data.signature_r,
                                 &data.signature_s,
@@ -445,7 +457,7 @@ pub fn ty_to_string_type(ty: &Ty) -> String {
             Primitive::U64(_) => "u64".to_string(),
             Primitive::U128(_) => "u128".to_string(),
             Primitive::U256(_) => "u256".to_string(),
-            Primitive::Felt252(_) => "felt".to_string(),
+            Primitive::Felt252(_) => "felt252".to_string(),
             Primitive::ClassHash(_) => "class_hash".to_string(),
             Primitive::ContractAddress(_) => "contract_address".to_string(),
             Primitive::Bool(_) => "bool".to_string(),
@@ -496,162 +508,87 @@ pub fn parse_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
 }
 
 pub fn parse_object_to_ty(
-    name: String,
+    model: &mut Struct,
     object: &IndexMap<String, PrimitiveType>,
-) -> Result<Ty, Error> {
-    let mut ty_struct = Struct { name, children: vec![] };
-
+) -> Result<(), Error> {
     for (field_name, value) in object {
-        // value has to be of type object
-        let object = if let PrimitiveType::Object(object) = value {
-            object
-        } else {
-            return Err(Error::InvalidMessageError("Value is not an object".to_string()));
-        };
-
-        let r#type = if let Some(r#type) = object.get("type") {
-            if let PrimitiveType::String(r#type) = r#type {
-                r#type
-            } else {
-                return Err(Error::InvalidMessageError("Type is not a string".to_string()));
-            }
-        } else {
-            return Err(Error::InvalidMessageError("Type is missing".to_string()));
-        };
-
-        let value = if let Some(value) = object.get("value") {
-            value
-        } else {
-            return Err(Error::InvalidMessageError("Value is missing".to_string()));
-        };
-
-        let key = if let Some(key) = object.get("key") {
-            if let PrimitiveType::Bool(key) = key {
-                *key
-            } else {
-                return Err(Error::InvalidMessageError("Key is not a boolean".to_string()));
-            }
-        } else {
-            return Err(Error::InvalidMessageError("Key is missing".to_string()));
-        };
+        let field = model.children.iter_mut().find(|m| m.name == *field_name).ok_or_else(|| {
+            Error::InvalidMessageError(format!("Field {} not found in model", field_name))
+        })?;
 
         match value {
             PrimitiveType::Object(object) => {
-                let ty = parse_object_to_ty(field_name.clone(), object)?;
-                ty_struct.children.push(Member { name: field_name.clone(), ty, key });
+                parse_object_to_ty(model, object)?;
             }
             PrimitiveType::Array(_) => {
                 // tuples not supported yet
                 unimplemented!()
             }
-            PrimitiveType::Number(number) => {
-                ty_struct.children.push(Member {
-                    name: field_name.clone(),
-                    ty: match r#type.as_str() {
-                        "u8" => Ty::Primitive(Primitive::U8(Some(number.as_u64().unwrap() as u8))),
-                        "u16" => {
-                            Ty::Primitive(Primitive::U16(Some(number.as_u64().unwrap() as u16)))
-                        }
-                        "u32" => {
-                            Ty::Primitive(Primitive::U32(Some(number.as_u64().unwrap() as u32)))
-                        }
-                        "usize" => {
-                            Ty::Primitive(Primitive::USize(Some(number.as_u64().unwrap() as u32)))
-                        }
-                        "u64" => Ty::Primitive(Primitive::U64(Some(number.as_u64().unwrap()))),
-                        _ => {
-                            return Err(Error::InvalidMessageError(
-                                "Invalid number type".to_string(),
-                            ));
-                        }
-                    },
-                    key,
-                });
-            }
+            PrimitiveType::Number(number) => match &mut field.ty {
+                Ty::Primitive(primitive) => match *primitive {
+                    Primitive::U8(ref mut u8) => {
+                        *u8 = Some(number.as_u64().unwrap() as u8);
+                    }
+                    Primitive::U16(ref mut u16) => {
+                        *u16 = Some(number.as_u64().unwrap() as u16);
+                    }
+                    Primitive::U32(ref mut u32) => {
+                        *u32 = Some(number.as_u64().unwrap() as u32);
+                    }
+                    Primitive::USize(ref mut usize) => {
+                        *usize = Some(number.as_u64().unwrap() as u32);
+                    }
+                    Primitive::U64(ref mut u64) => {
+                        *u64 = Some(number.as_u64().unwrap());
+                    }
+                    _ => {
+                        return Err(Error::InvalidMessageError("Invalid number type".to_string()));
+                    }
+                },
+                Ty::Enum(enum_) => {
+                    enum_.option = Some(number.as_u64().unwrap() as u8);
+                }
+                _ => return Err(Error::InvalidMessageError("Invalid number type".to_string())),
+            },
             PrimitiveType::Bool(boolean) => {
-                ty_struct.children.push(Member {
-                    name: field_name.clone(),
-                    ty: Ty::Primitive(Primitive::Bool(Some(*boolean))),
-                    key,
-                });
+                field.ty = Ty::Primitive(Primitive::Bool(Some(*boolean)));
             }
-            PrimitiveType::String(string) => match r#type.as_str() {
-                "u8" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U8(Some(u8::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u16" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U16(Some(u16::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u32" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U32(Some(u32::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "usize" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::USize(Some(u32::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u64" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U64(Some(u64::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u128" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U128(Some(u128::from_str(string).unwrap()))),
-                        key,
-                    });
-                }
-                "u256" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::U256(Some(U256::from_be_hex(string)))),
-                        key,
-                    });
-                }
-                "felt" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::Felt252(Some(
-                            FieldElement::from_str(string).unwrap(),
-                        ))),
-                        key,
-                    });
-                }
-                "class_hash" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::ClassHash(Some(
-                            FieldElement::from_str(string).unwrap(),
-                        ))),
-                        key,
-                    });
-                }
-                "contract_address" => {
-                    ty_struct.children.push(Member {
-                        name: field_name.clone(),
-                        ty: Ty::Primitive(Primitive::ContractAddress(Some(
-                            FieldElement::from_str(string).unwrap(),
-                        ))),
-                        key,
-                    });
-                }
+            PrimitiveType::String(string) => match &mut field.ty {
+                Ty::Primitive(primitive) => match primitive {
+                    Primitive::U8(v) => {
+                        *v = Some(u8::from_str(string).unwrap());
+                    }
+                    Primitive::U16(v) => {
+                        *v = Some(u16::from_str(string).unwrap());
+                    }
+                    Primitive::U32(v) => {
+                        *v = Some(u32::from_str(string).unwrap());
+                    }
+                    Primitive::USize(v) => {
+                        *v = Some(u32::from_str(string).unwrap());
+                    }
+                    Primitive::U64(v) => {
+                        *v = Some(u64::from_str(string).unwrap());
+                    }
+                    Primitive::U128(v) => {
+                        *v = Some(u128::from_str(string).unwrap());
+                    }
+                    Primitive::U256(v) => {
+                        *v = Some(U256::from_be_hex(string));
+                    }
+                    Primitive::Felt252(v) => {
+                        *v = Some(FieldElement::from_str(string).unwrap());
+                    }
+                    Primitive::ClassHash(v) => {
+                        *v = Some(FieldElement::from_str(string).unwrap());
+                    }
+                    Primitive::ContractAddress(v) => {
+                        *v = Some(FieldElement::from_str(string).unwrap());
+                    }
+                    Primitive::Bool(v) => {
+                        *v = Some(bool::from_str(string).unwrap());
+                    }
+                },
                 _ => {
                     return Err(Error::InvalidMessageError("Invalid string type".to_string()));
                 }
@@ -659,12 +596,15 @@ pub fn parse_object_to_ty(
         }
     }
 
-    Ok(Ty::Struct(ty_struct))
+    Ok(())
 }
 
 // Validates the message model
 // and returns the identity and signature
-fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<Ty, Error> {
+async fn validate_message(
+    db: &Sql,
+    message: &IndexMap<String, PrimitiveType>,
+) -> Result<Ty, Error> {
     let model_name = if let Some(model_name) = message.get("model") {
         if let PrimitiveType::String(model_name) = model_name {
             model_name
@@ -674,10 +614,32 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<Ty, Err
     } else {
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
+    let model_selector = get_selector_from_name(&model_name).map_err(|e| {
+        Error::InvalidMessageError(format!("Failed to get selector from model name: {}", e))
+    })?;
 
-    let model = if let Some(object) = message.get(model_name) {
+    let mut ty = db
+        .model(&format!("{:#x}", model_selector))
+        .await
+        .map_err(|e| Error::InvalidMessageError(format!("Model {} not found: {}", model_name, e)))?
+        .schema()
+        .await
+        .map_err(|e| {
+            Error::InvalidMessageError(format!(
+                "Failed to get schema for model {}: {}",
+                model_name, e
+            ))
+        })?;
+
+    let ty_struct = if let Ty::Struct(ty_struct) = &mut ty {
+        ty_struct
+    } else {
+        return Err(Error::InvalidMessageError("Model is not a struct".to_string()));
+    };
+
+    if let Some(object) = message.get(model_name) {
         if let PrimitiveType::Object(object) = object {
-            parse_object_to_ty(model_name.clone(), object)?
+            parse_object_to_ty(ty_struct, object)?
         } else {
             return Err(Error::InvalidMessageError("Model is not a struct".to_string()));
         }
@@ -685,7 +647,7 @@ fn validate_message(message: &IndexMap<String, PrimitiveType>) -> Result<Ty, Err
         return Err(Error::InvalidMessageError("Model is missing".to_string()));
     };
 
-    Ok(model)
+    Ok(ty)
 }
 
 fn read_or_create_identity(path: &Path) -> anyhow::Result<identity::Keypair> {
