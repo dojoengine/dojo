@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712156019342,
+  "lastUpdate": 1712158225574,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4255,6 +4255,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16775795,
             "range": "± 901487",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "00e7ae00a0116bd3389d6c299e2de7eb61f69c82",
+          "message": "fix(katana-primitives): enable `alloy-primitives`'s serde on `serde` feature (#1760)\n\n* enable alloy serde in primitives",
+          "timestamp": "2024-04-03T23:22:06+08:00",
+          "tree_id": "8cd09294cebfa6df24282d74fe779b020cb9b715",
+          "url": "https://github.com/dojoengine/dojo/commit/00e7ae00a0116bd3389d6c299e2de7eb61f69c82"
+        },
+        "date": 1712158224873,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16857487,
+            "range": "± 228654",
             "unit": "ns/iter"
           }
         ]
