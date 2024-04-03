@@ -9,7 +9,7 @@ use std::{fs, io};
 use chrono::Utc;
 use crypto_bigint::U256;
 use dojo_types::primitive::Primitive;
-use dojo_types::schema::{Enum, Member, Struct, Ty};
+use dojo_types::schema::{Struct, Ty};
 use futures::StreamExt;
 use indexmap::IndexMap;
 use libp2p::core::multiaddr::Protocol;
@@ -21,11 +21,11 @@ use libp2p::{identify, identity, noise, ping, relay, tcp, yamux, PeerId, Swarm, 
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
 use serde_json::Number;
-use starknet_core::utils::get_selector_from_name;
-use starknet_crypto::{poseidon_hash_many, verify, recover};
-use starknet_ff::FieldElement;
+use starknet::core::types::{BlockId, BlockTag, FunctionCall};
+use starknet::core::utils::get_selector_from_name;
+use starknet::providers::Provider;
+use starknet_crypto::{poseidon_hash_many, verify, FieldElement};
 use torii_core::sql::Sql;
-use tracing::field::Field;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 
@@ -33,8 +33,6 @@ use crate::constants;
 use crate::errors::Error;
 
 mod events;
-
-use sqlx::Row;
 
 use crate::server::events::ServerEvent;
 use crate::typed_data::PrimitiveType;
@@ -52,14 +50,16 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
-pub struct Relay {
+pub struct Relay<P: Provider + Sync> {
     swarm: Swarm<Behaviour>,
     db: Sql,
+    provider: Box<P>,
 }
 
-impl Relay {
+impl<P: Provider + Sync> Relay<P> {
     pub fn new(
         pool: Sql,
+        provider: P,
         port: u16,
         port_webrtc: u16,
         local_key_path: Option<String>,
@@ -149,7 +149,7 @@ impl Relay {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
-        Ok(Self { swarm, db: pool })
+        Ok(Self { swarm, db: pool, provider: Box::new(provider) })
     }
 
     pub async fn run(&mut self) {
@@ -297,43 +297,53 @@ impl Relay {
                                     continue;
                                 };
 
-                            println!("entity identity: {:#x}", entity_identity);
-                            println!("message hash: {:#x}", message_hash);
-                            println!("r: {:#x}", data.signature_r);
-                            println!("s: {:#x}", data.signature_s);
+                            let public_key = match self
+                                .provider
+                                .call(
+                                    FunctionCall {
+                                        contract_address: entity_identity,
+                                        entry_point_selector: get_selector_from_name(
+                                            "getPublicKey",
+                                        )
+                                        .unwrap(),
+                                        calldata: vec![],
+                                    },
+                                    BlockId::Tag(BlockTag::Pending),
+                                )
+                                .await
+                            {
+                                Ok(res) => res[0],
+                                Err(e) => {
+                                    warn!(
+                                        target: LOG_TARGET,
+                                        error = %e,
+                                        "Fetching public key."
+                                    );
+                                    continue;
+                                }
+                            };
 
-                            println!("recovered: {:#x}", recover(
-                                &message_hash,
-                                &data.signature_r,
-                                &data.signature_s,
-                                &FieldElement::ZERO
-                            ).unwrap());
-
-                            println!("recovered: {:#x}", recover(
-                                &message_hash,
-                                &data.signature_r,
-                                &data.signature_s,
-                                &FieldElement::ONE
-                            ).unwrap());
-
-                            // for the public key used for verification; use identity from model
-                            if let Ok(valid) = verify(
-                                &entity_identity,
+                            if !match verify(
+                                &public_key,
                                 &message_hash,
                                 &data.signature_r,
                                 &data.signature_s,
                             ) {
-                                if !valid {
-                                    info!(
+                                Ok(valid) => valid,
+                                Err(e) => {
+                                    warn!(
                                         target: LOG_TARGET,
-                                        "Invalid signature."
+                                        error = %e,
+                                        "Verifying signature."
                                     );
                                     continue;
                                 }
-                            } else {
+                            } {
                                 info!(
                                     target: LOG_TARGET,
-                                    "Verifying signature."
+                                    message_id = %message_id,
+                                    peer_id = %peer_id,
+                                    "Invalid signature."
                                 );
                                 continue;
                             }

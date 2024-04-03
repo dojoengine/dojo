@@ -3,11 +3,10 @@ use std::str::FromStr;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
-use starknet_core::utils::{
+use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
 };
-use starknet_crypto::poseidon_hash_many;
-use starknet_ff::FieldElement;
+use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 use crate::errors::Error;
 
@@ -495,8 +494,8 @@ impl TypedData {
 
 #[cfg(test)]
 mod tests {
-    use starknet_core::utils::starknet_keccak;
-    use starknet_ff::FieldElement;
+    use starknet::core::utils::starknet_keccak;
+    use starknet_crypto::FieldElement;
 
     use super::*;
 
