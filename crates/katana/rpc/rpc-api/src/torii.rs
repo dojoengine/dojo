@@ -7,5 +7,5 @@ use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 pub trait ToriiApi {
     #[method(name = "getTransactions")]
     async fn get_transactions(&self, cursor: TransactionsPageCursor)
-    -> RpcResult<TransactionsPage>;
+        -> RpcResult<TransactionsPage>;
 }

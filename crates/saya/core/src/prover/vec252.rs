@@ -89,7 +89,7 @@ impl VecFelt252 {
 
 impl<'de> Visitor<'de> for VecFelt252 {
     type Value = VecFelt252;
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str("a list of arguments")
     }
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>

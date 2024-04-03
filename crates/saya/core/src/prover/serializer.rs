@@ -14,11 +14,11 @@ pub fn parse_proof(proof: String) -> anyhow::Result<Vec<FieldElement>> {
     let witness: VecFelt252 = serde_json::from_str(&parsed.witness.to_string()).unwrap();
 
     let serialized = config
-        .to_vec()
-        .into_iter()
-        .chain(public_input.to_vec().into_iter())
-        .chain(unsent_commitment.to_vec().into_iter())
-        .chain(witness.to_vec().into_iter())
+        .iter()
+        .cloned()
+        .chain(public_input.to_vec())
+        .chain(unsent_commitment.iter().cloned())
+        .chain(witness.iter().cloned())
         .map(|x| FieldElement::from_dec_str(&x.to_string()))
         .map(Result::unwrap)
         .collect();
