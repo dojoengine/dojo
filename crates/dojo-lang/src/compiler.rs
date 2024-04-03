@@ -227,7 +227,7 @@ fn update_manifest(
 
     let mut crate_ids = crate_ids.to_vec();
 
-    let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
+    let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
     write_manifest_and_abi(
         &relative_manifests_dir,
         &relative_abis_dir,
@@ -237,7 +237,7 @@ fn update_manifest(
             Class { class_hash: *hash, abi: None },
             WORLD_CONTRACT_NAME.into(),
         ),
-        &None,
+        abi,
     )?;
 
     let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;

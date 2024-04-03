@@ -229,29 +229,12 @@
   },
   {
     "type": "event",
-    "name": "dojo_examples::actions::actions::StoredName",
-    "kind": "struct",
-    "members": [
-      {
-        "name": "name",
-        "type": "core::felt252",
-        "kind": "data"
-      }
-    ]
-  },
-  {
-    "type": "event",
     "name": "dojo_examples::actions::actions::Event",
     "kind": "enum",
     "variants": [
       {
         "name": "UpgradeableEvent",
         "type": "dojo::components::upgradeable::upgradeable::Event",
-        "kind": "nested"
-      },
-      {
-        "name": "StoredName",
-        "type": "dojo_examples::actions::actions::StoredName",
         "kind": "nested"
       }
     ]

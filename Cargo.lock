@@ -3462,6 +3462,7 @@ dependencies = [
  "smol_str",
  "starknet 0.9.0",
  "starknet-crypto 0.6.1",
+ "tempfile",
  "thiserror",
  "tokio",
  "toml 0.7.8",

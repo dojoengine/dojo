@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::rpc::MockJsonRpcTransport;
@@ -6,11 +8,12 @@ use dojo_test_utils::sequencer::{
 };
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
+use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{EmittedEvent, FieldElement};
 use starknet::macros::{felt, selector, short_string};
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcMethod};
 
-use super::{parse_contracts_events, BaseManifest, DojoContract, DojoModel};
+use super::{parse_contracts_events, AbiFormat, BaseManifest, DojoContract, DojoModel};
 use crate::contracts::world::test::deploy_world;
 use crate::manifest::{parse_models_events, AbstractManifestError, DeploymentManifest, Manifest};
 use crate::migration::world::WorldDiff;
@@ -391,4 +394,39 @@ async fn fetch_remote_manifest() {
     let diff = WorldDiff::compute(local_manifest, Some(remote_manifest));
 
     assert_eq!(diff.count_diffs(), 0, "there should not be any diff");
+}
+
+#[test]
+fn test_abi_format_to_embed() -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = tempfile::tempdir()?;
+    let temp_path = temp_dir.path().join("abi.json");
+    let mut temp_file = std::fs::File::create(&temp_path)?;
+
+    let temp_dir_utf8 = Utf8PathBuf::from_path_buf(temp_dir.path().into()).unwrap();
+
+    writeln!(
+        temp_file,
+        "[{{\"type\":\"function\",\"name\":\"testFunction\",\"inputs\":[],\"outputs\":[],\"\
+         state_mutability\":\"view\"}}]"
+    )?;
+
+    let abi_format_path = AbiFormat::Path(Utf8PathBuf::from_path_buf(temp_path).unwrap());
+    let embedded_abi = abi_format_path.to_embed(&temp_dir_utf8)?;
+
+    let abi_format_not_changed = embedded_abi.clone();
+
+    match &embedded_abi {
+        AbiFormat::Embed(abi_entries) => {
+            assert_eq!(abi_entries.len(), 1);
+            let entry_0 = &abi_entries[0];
+            if let AbiEntry::Function(function) = entry_0 {
+                assert_eq!(function.name, "testFunction");
+            }
+        }
+        _ => panic!("Expected AbiFormat::Embed variant"),
+    }
+
+    assert_eq!(embedded_abi, abi_format_not_changed.to_embed(&temp_dir_utf8).unwrap());
+
+    Ok(())
 }

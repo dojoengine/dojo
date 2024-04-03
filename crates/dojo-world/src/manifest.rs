@@ -127,25 +127,8 @@ pub enum AbiFormat {
     Embed(Vec<AbiEntry>),
 }
 
-#[cfg(test)]
-impl PartialEq for AbiFormat {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (AbiFormat::Path(p1), AbiFormat::Path(p2)) => p1 == p2,
-            (AbiFormat::Embed(e1), AbiFormat::Embed(e2)) => {
-                // Currently, [`AbiEntry`] does not implement [`PartialEq`] so we cannot compare
-                // them directly.
-                let e1_json = serde_json::to_string(e1).expect("valid JSON from ABI");
-                let e2_json = serde_json::to_string(e2).expect("valid JSON from ABI");
-                e1_json == e2_json
-            }
-            _ => false,
-        }
-    }
-}
-
 impl AbiFormat {
-    /// Returns the path to the ABI file, or None if embedded.
+    /// Get the [`Utf8PathBuf`] if the ABI is stored as a path.
     pub fn to_path(&self) -> Option<&Utf8PathBuf> {
         match self {
             AbiFormat::Path(p) => Some(p),
@@ -162,6 +145,37 @@ impl AbiFormat {
         match self {
             AbiFormat::Path(abi_path) => Ok(fs::read_to_string(root_dir.join(abi_path))?),
             AbiFormat::Embed(abi) => Ok(serde_json::to_string(&abi)?),
+        }
+    }
+
+    /// Convert to embed variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `root_dir` - The root directory for the abi file resolution.
+    pub fn to_embed(&self, root_dir: &Utf8PathBuf) -> Result<AbiFormat, AbstractManifestError> {
+        if let AbiFormat::Path(abi_path) = self {
+            let mut abi_file = std::fs::File::open(root_dir.join(abi_path))?;
+            Ok(serde_json::from_reader(&mut abi_file)?)
+        } else {
+            Ok(self.clone())
+        }
+    }
+}
+
+#[cfg(test)]
+impl PartialEq for AbiFormat {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AbiFormat::Path(p1), AbiFormat::Path(p2)) => p1 == p2,
+            (AbiFormat::Embed(e1), AbiFormat::Embed(e2)) => {
+                // Currently, [`AbiEntry`] does not implement [`PartialEq`] so we cannot compare
+                // them directly.
+                let e1_json = serde_json::to_string(e1).expect("valid JSON from ABI");
+                let e2_json = serde_json::to_string(e2).expect("valid JSON from ABI");
+                e1_json == e2_json
+            }
+            _ => false,
         }
     }
 }
@@ -380,11 +394,20 @@ impl DeploymentManifest {
 
         // Embedding ABIs into the manifest.
         let mut manifest_with_abis = self.clone();
+
+        if let Some(abi_format) = &manifest_with_abis.world.inner.abi {
+            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
+        }
+
         for contract in &mut manifest_with_abis.contracts {
-            if let Some(AbiFormat::Path(abi_path)) = &contract.inner.abi {
-                let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
-                let abi_entries: Vec<AbiEntry> = serde_json::from_reader(&mut abi_file)?;
-                contract.inner.abi = Some(AbiFormat::Embed(abi_entries));
+            if let Some(abi_format) = &contract.inner.abi {
+                contract.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
+            }
+        }
+
+        for model in &mut manifest_with_abis.models {
+            if let Some(abi_format) = &model.inner.abi {
+                model.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
             }
         }
 

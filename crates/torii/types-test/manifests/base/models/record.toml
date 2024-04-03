@@ -1,5 +1,6 @@
 kind = "DojoModel"
 class_hash = "0x134456282bbaf00e0895ff43f286af8d490202baf6279d2b05be9bc0c05f059"
+abi = "abis/base/models/record.json"
 name = "types_test::models::record"
 
 [[members]]
