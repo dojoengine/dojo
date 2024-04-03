@@ -10,8 +10,7 @@ use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet_crypto::FieldElement;
 
-use super::get_contract_address;
-use crate::utils::handle_transaction_result;
+use crate::utils;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResourceType {
@@ -104,7 +103,7 @@ where
         let model_name = parse_cairo_short_string(&mc.model)?;
         match world_reader.model_reader(&model_name).await {
             Ok(_) => {
-                let contract = get_contract_address(world, mc.contract).await?;
+                let contract = utils::get_contract_address(world, mc.contract).await?;
                 calls.push(world.grant_writer_getcall(&mc.model, &contract.into()));
             }
 
@@ -126,7 +125,7 @@ where
             .await
             .with_context(|| "Failed to send transaction")?;
 
-        handle_transaction_result(
+        utils::handle_transaction_result(
             &world.account.provider(),
             res,
             transaction.wait,
@@ -152,7 +151,7 @@ where
         let resource = match &or.resource {
             ResourceType::Model(name) => *name,
             ResourceType::Contract(name_or_address) => {
-                get_contract_address(world, name_or_address.clone()).await?
+                utils::get_contract_address(world, name_or_address.clone()).await?
             }
         };
 
@@ -162,7 +161,93 @@ where
     let res =
         world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
 
-    handle_transaction_result(
+    utils::handle_transaction_result(
+        &world.account.provider(),
+        res,
+        transaction.wait,
+        transaction.receipt,
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn revoke_writer<A>(
+    world: &WorldContract<A>,
+    models_contracts: Vec<ModelContract>,
+    transaction: TxConfig,
+) -> Result<()>
+where
+    A: ConnectedAccount + Sync + Send + 'static,
+{
+    let mut calls = Vec::new();
+
+    let world_reader = WorldContractReader::new(world.address, world.account.provider())
+        .with_block(BlockId::Tag(BlockTag::Pending));
+
+    for mc in models_contracts {
+        let model_name = parse_cairo_short_string(&mc.model)?;
+        match world_reader.model_reader(&model_name).await {
+            Ok(_) => {
+                let contract = utils::get_contract_address(world, mc.contract).await?;
+                calls.push(world.revoke_writer_getcall(&mc.model, &contract.into()));
+            }
+
+            Err(ModelError::ModelNotFound) => {
+                println!("Unknown model '{}' => IGNORED", model_name);
+            }
+
+            Err(err) => {
+                return Err(err.into());
+            }
+        }
+    }
+
+    if !calls.is_empty() {
+        let res = world
+            .account
+            .execute(calls)
+            .send()
+            .await
+            .with_context(|| "Failed to send transaction")?;
+
+        utils::handle_transaction_result(
+            &world.account.provider(),
+            res,
+            transaction.wait,
+            transaction.receipt,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn revoke_owner<A>(
+    world: &WorldContract<A>,
+    owners_resources: Vec<OwnerResource>,
+    transaction: TxConfig,
+) -> Result<()>
+where
+    A: ConnectedAccount + Sync + Send + 'static,
+{
+    let mut calls = Vec::new();
+
+    for or in owners_resources {
+        let resource = match &or.resource {
+            ResourceType::Model(name) => *name,
+            ResourceType::Contract(name_or_address) => {
+                utils::get_contract_address(world, name_or_address.clone()).await?
+            }
+        };
+
+        calls.push(world.revoke_owner_getcall(&or.owner.into(), &resource));
+    }
+
+    let res =
+        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+
+    utils::handle_transaction_result(
         &world.account.provider(),
         res,
         transaction.wait,

@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use clap::Parser;
 use common::parse::{parse_socket_address, parse_url};
+use dojo_metrics::{metrics_process, prometheus_exporter};
 use dojo_world::contracts::world::WorldContractReader;
-use metrics::prometheus_exporter;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use starknet::core::types::FieldElement;
@@ -40,6 +40,8 @@ use torii_server::proxy::Proxy;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::{form_urlencoded, Url};
+
+pub(crate) const LOG_TARGET: &str = "torii::cli";
 
 /// Dojo World Indexer
 #[derive(Parser, Debug)]
@@ -217,20 +219,20 @@ async fn main() -> anyhow::Result<()> {
         form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
             .collect();
     let explorer_url = format!("https://worlds.dev/torii?url={}", encoded);
-    info!(target: "torii::cli", "Starting torii endpoint: {}", endpoint);
-    info!(target: "torii::cli", "Serving Graphql playground: {}", gql_endpoint);
-    info!(target: "torii::cli", "World Explorer is available on: {}\n", explorer_url);
+    info!(target: LOG_TARGET, endpoint = %endpoint, "Starting torii endpoint.");
+    info!(target: LOG_TARGET, endpoint = %gql_endpoint, "Serving Graphql playground.");
+    info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
 
     if args.explorer {
         if let Err(e) = webbrowser::open(&explorer_url) {
-            error!("Failed to open World Explorer in the browser: {e}");
+            error!(target: LOG_TARGET, error = %e, "Opening World Explorer in the browser.");
         }
     }
 
     if let Some(listen_addr) = args.metrics {
         let prometheus_handle = prometheus_exporter::install_recorder("torii")?;
 
-        info!(target: "torii::cli", addr = %listen_addr, "Starting metrics endpoint");
+        info!(target: LOG_TARGET, addr = %listen_addr, "Starting metrics endpoint.");
         prometheus_exporter::serve(
             listen_addr,
             prometheus_handle,

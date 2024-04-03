@@ -123,7 +123,7 @@ fn model_union_field() -> Field {
                     let model_ids: Vec<(String, String)> = sqlx::query_as(
                         "SELECT id, name
                         FROM models
-                        WHERE id = (
+                        WHERE id IN (
                             SELECT model_id
                             FROM event_model
                             WHERE entity_id = ?

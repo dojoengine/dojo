@@ -1,9 +1,13 @@
+use std::fs;
+
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use smol_str::SmolStr;
 use starknet::core::{serde::unsigned_field_element::UfeHex, types::contract::AbiEntry};
 use starknet_crypto::FieldElement;
+
+use crate::manifest::AbstractManifestError;
 
 // Collection of different types of `Manifest`'s which are used by dojo compiler/sozo
 // For example:
@@ -247,10 +251,54 @@ impl PartialEq for AbiFormat {
 }
 
 impl AbiFormat {
+    /// Get the [`Utf8PathBuf`] if the ABI is stored as a path.
     pub fn to_path(&self) -> Option<&Utf8PathBuf> {
         match self {
             AbiFormat::Path(p) => Some(p),
             AbiFormat::Embed(_) => None,
+        }
+    }
+
+    /// Loads an ABI from the path or embedded entries.
+    ///
+    /// # Arguments
+    ///
+    /// * `root_dir` - The root directory of the ABI file.
+    pub fn load_abi_string(&self, root_dir: &Utf8PathBuf) -> Result<String, AbstractManifestError> {
+        match self {
+            AbiFormat::Path(abi_path) => Ok(fs::read_to_string(root_dir.join(abi_path))?),
+            AbiFormat::Embed(abi) => Ok(serde_json::to_string(&abi)?),
+        }
+    }
+
+    /// Convert to embed variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `root_dir` - The root directory for the abi file resolution.
+    pub fn to_embed(&self, root_dir: &Utf8PathBuf) -> Result<AbiFormat, AbstractManifestError> {
+        if let AbiFormat::Path(abi_path) = self {
+            let mut abi_file = std::fs::File::open(root_dir.join(abi_path))?;
+            Ok(serde_json::from_reader(&mut abi_file)?)
+        } else {
+            Ok(self.clone())
+        }
+    }
+}
+
+#[cfg(test)]
+impl PartialEq for AbiFormat {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AbiFormat::Path(p1), AbiFormat::Path(p2)) => p1 == p2,
+            (AbiFormat::Embed(e1), AbiFormat::Embed(e2)) => {
+                // Currently, [`AbiEntry`] does not implement [`PartialEq`] so we cannot compare
+                // them directly.
+                let e1_json = serde_json::to_string(e1).expect("valid JSON from ABI");
+                let e2_json = serde_json::to_string(e2).expect("valid JSON from ABI");
+                e1_json == e2_json
+            }
+            _ => false,
         }
     }
 }

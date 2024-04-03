@@ -18,6 +18,8 @@ use crate::constants;
 use crate::errors::Error;
 use crate::types::Message;
 
+pub(crate) const LOG_TARGET: &str = "torii::relay::client";
+
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClientEvent")]
 struct Behaviour {
@@ -39,7 +41,6 @@ pub struct EventLoop {
 #[derive(Debug)]
 enum Command {
     Publish(Message, oneshot::Sender<Result<MessageId, Error>>),
-    WaitForRelay(oneshot::Sender<Result<(), Error>>),
 }
 
 impl RelayClient {
@@ -48,7 +49,7 @@ impl RelayClient {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
-        info!(target: "torii::relay::client", peer_id = %peer_id, "Local peer id");
+        info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
@@ -82,7 +83,7 @@ impl RelayClient {
             })
             .build();
 
-        info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
+        info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
@@ -97,7 +98,7 @@ impl RelayClient {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
-        info!(target: "torii::relay::client", peer_id = %peer_id, "Local peer id");
+        info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_wasm_bindgen()
@@ -133,7 +134,7 @@ impl RelayClient {
             })
             .build();
 
-        info!(target: "torii::relay::client", addr = %relay_addr, "Dialing relay");
+        info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
@@ -153,61 +154,64 @@ impl CommandSender {
         Self { sender }
     }
 
-    pub async fn publish(&mut self, data: Message) -> Result<MessageId, Error> {
+    pub async fn publish(&self, data: Message) -> Result<MessageId, Error> {
         let (tx, rx) = oneshot::channel();
 
         self.sender.unbounded_send(Command::Publish(data, tx)).expect("Failed to send command");
 
         rx.await.expect("Failed to receive response")
     }
-
-    pub async fn wait_for_relay(&mut self) -> Result<(), Error> {
-        let (tx, rx) = oneshot::channel();
-
-        self.sender.unbounded_send(Command::WaitForRelay(tx)).expect("Failed to send command");
-
-        rx.await.expect("Failed to receive response")
-    }
 }
 
 impl EventLoop {
+    async fn handle_command(
+        &mut self,
+        command: Command,
+        is_relay_ready: bool,
+        commands_queue: Arc<Mutex<Vec<Command>>>,
+    ) {
+        match command {
+            Command::Publish(data, sender) => {
+                // if the relay is not ready yet, add the message to the queue
+                if !is_relay_ready {
+                    commands_queue.lock().await.push(Command::Publish(data, sender));
+                } else {
+                    sender.send(self.publish(&data)).expect("Failed to send response");
+                }
+            }
+        }
+    }
+
     pub async fn run(&mut self) {
         let mut is_relay_ready = false;
-        let mut relay_ready_tx = None;
+        let commands_queue = Arc::new(Mutex::new(Vec::new()));
 
         loop {
             // Poll the swarm for new events.
             select! {
                 command = self.command_receiver.select_next_some() => {
-                    match command {
-                        Command::Publish(data, sender) => {
-                            sender.send(self.publish(&data)).expect("Failed to send response");
-                        }
-                        Command::WaitForRelay(sender) => {
-                            if is_relay_ready {
-                                sender.send(Ok(())).expect("Failed to send response");
-                            } else {
-                                relay_ready_tx = Some(sender);
-                            }
-                        }
-                    }
+                    self.handle_command(command, is_relay_ready, commands_queue.clone()).await;
                 },
                 event = self.swarm.select_next_some() => {
                     match event {
                         SwarmEvent::Behaviour(ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. })) => {
                             // Handle behaviour events.
-                            info!(target: "torii::relay::client::gossipsub", topic = ?topic, "Relay ready. Received subscription confirmation");
+                            info!(target: LOG_TARGET, topic = ?topic, "Relay ready. Received subscription confirmation.");
 
-                            is_relay_ready = true;
-                            if let Some(tx) = relay_ready_tx.take() {
-                                tx.send(Ok(())).expect("Failed to send response");
+                            if !is_relay_ready {
+                                is_relay_ready = true;
+
+                                // Execute all the commands that were queued while the relay was not ready.
+                                for command in commands_queue.lock().await.drain(..) {
+                                    self.handle_command(command, is_relay_ready, commands_queue.clone()).await;
+                                }
                             }
                         }
                         SwarmEvent::ConnectionClosed { cause: Some(cause), .. } => {
-                            info!(target: "torii::relay::client", cause = ?cause, "Connection closed");
+                            info!(target: LOG_TARGET, cause = ?cause, "Connection closed.");
 
                             if let libp2p::swarm::ConnectionError::KeepAliveTimeout = cause {
-                                info!(target: "torii::relay::client", "Connection closed due to keep alive timeout. Shutting down client.");
+                                info!(target: LOG_TARGET, "Connection closed due to keep alive timeout. Shutting down client.");
                                 return;
                             }
                         }

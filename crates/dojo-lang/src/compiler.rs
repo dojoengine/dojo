@@ -46,6 +46,8 @@ pub const ABIS_DIR: &str = "abis";
 pub const CONTRACTS_DIR: &str = "contracts";
 pub const MODELS_DIR: &str = "models";
 
+pub(crate) const LOG_TARGET: &str = "dojo_lang::compiler";
+
 #[cfg(test)]
 #[path = "compiler_test.rs"]
 mod test;
@@ -101,7 +103,7 @@ impl Compiler for DojoCompiler {
             .iter()
             .map(|decl| decl.module_id().full_path(db.upcast_mut()))
             .collect::<Vec<_>>();
-        trace!(contracts = ?contract_paths);
+        trace!(target: LOG_TARGET, contracts = ?contract_paths);
 
         let contracts = contracts.iter().collect::<Vec<_>>();
 
@@ -152,7 +154,7 @@ fn find_project_contracts(
 
     let external_contracts = if let Some(external_contracts) = external_contracts {
         let _ = trace_span!("find_external_contracts").enter();
-        debug!("external contracts selectors: {:?}", external_contracts);
+        debug!(target: LOG_TARGET, external_contracts = ?external_contracts, "External contracts selectors.");
 
         let crate_ids = external_contracts
             .iter()
@@ -172,7 +174,7 @@ fn find_project_contracts(
             })
             .collect::<Vec<ContractDeclaration>>()
     } else {
-        debug!("no external contracts selected");
+        debug!(target: LOG_TARGET, "No external contracts selected.");
         Vec::new()
     };
 
@@ -225,7 +227,7 @@ fn update_manifest(
 
     let mut crate_ids = crate_ids.to_vec();
 
-    let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
+    let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
     write_manifest_and_abi(
         &relative_manifests_dir,
         &relative_abis_dir,
@@ -235,7 +237,7 @@ fn update_manifest(
             Class { class_hash: *hash, abi: None, original_class_hash: *hash },
             WORLD_CONTRACT_NAME.into(),
         ),
-        &None,
+        abi,
     )?;
 
     let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
@@ -312,13 +314,13 @@ fn update_manifest(
         )?;
     }
 
-    for (_, (manifest, _)) in models.iter_mut() {
+    for (_, (manifest, abi)) in models.iter_mut() {
         write_manifest_and_abi(
             &relative_manifests_dir.join(MODELS_DIR),
             &relative_abis_dir.join(MODELS_DIR),
             &manifest_dir,
             manifest,
-            &None,
+            abi,
         )?;
     }
 

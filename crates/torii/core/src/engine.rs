@@ -29,6 +29,8 @@ impl<P: Provider + Sync> Default for Processors<P> {
     }
 }
 
+pub(crate) const LOG_TARGET: &str = "tori_core::engine";
+
 #[derive(Debug)]
 pub struct EngineConfig {
     pub block_time: Duration,
@@ -75,7 +77,7 @@ impl<P: Provider + Sync> Engine<P> {
         if head == 0 {
             head = self.config.start_block;
         } else if self.config.start_block != 0 {
-            warn!("start block ignored, stored head exists and will be used instead");
+            warn!(target: LOG_TARGET, "Start block ignored, stored head exists and will be used instead.");
         }
 
         let mut backoff_delay = Duration::from_secs(1);
@@ -95,7 +97,7 @@ impl<P: Provider + Sync> Engine<P> {
                             backoff_delay = Duration::from_secs(1);
                         }
                         Err(e) => {
-                            error!("getting  block: {}", e);
+                            error!(target: LOG_TARGET, error = %e, "Getting block.");
                             sleep(backoff_delay).await;
                             if backoff_delay < max_backoff_delay {
                                 backoff_delay *= 2;
@@ -143,9 +145,10 @@ impl<P: Provider + Sync> Engine<P> {
         }
 
         let mut last_block: u64 = 0;
+        let mut last_transaction_hash: FieldElement = FieldElement::ZERO;
         for events_page in events_pages {
             for event in events_page.events {
-                self.process(event, &mut last_block).await?;
+                self.process(event, &mut last_block, &mut last_transaction_hash).await?;
             }
         }
 
@@ -161,11 +164,16 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    async fn process(&mut self, event: EmittedEvent, last_block: &mut u64) -> Result<()> {
+    async fn process(
+        &mut self,
+        event: EmittedEvent,
+        last_block: &mut u64,
+        last_transaction_hash: &mut FieldElement,
+    ) -> Result<()> {
         let block_number = match event.block_number {
             Some(block_number) => block_number,
             None => {
-                error!("event without block number");
+                error!(target: LOG_TARGET, "Event without block number.");
                 return Ok(());
             }
         };
@@ -180,19 +188,24 @@ impl<P: Provider + Sync> Engine<P> {
 
             Self::process_block(self, block_number, block_timestamp, event.block_hash.unwrap())
                 .await?;
-            info!(target: "torii_core::engine", block_number = %block_number, "Processed block");
+            info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
 
             self.db.set_head(block_number);
         }
 
-        let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
-        self.process_transaction_and_receipt(
-            event.transaction_hash,
-            &transaction,
-            block_number,
-            block_timestamp,
-        )
-        .await?;
+        // We index transaction only once for all events in the same transaction
+        // Events are indexed with the transaction processing
+        if event.transaction_hash != *last_transaction_hash {
+            *last_transaction_hash = event.transaction_hash;
+            let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
+            self.process_transaction_and_receipt(
+                event.transaction_hash,
+                &transaction,
+                block_number,
+                block_timestamp,
+            )
+            .await?;
+        }
 
         Ok(())
     }
@@ -215,7 +228,7 @@ impl<P: Provider + Sync> Engine<P> {
                 _ => None,
             },
             Err(e) => {
-                error!("getting transaction receipt: {}", e);
+                error!(target: LOG_TARGET, error = %e, "Getting transaction receipt.");
                 return Err(e.into());
             }
         };
@@ -350,9 +363,10 @@ impl<P: Provider + Sync> Engine<P> {
                 };
 
                 trace!(
+                    target: LOG_TARGET,
                     keys = ?unprocessed_event.keys,
                     data = ?unprocessed_event.data,
-                    "unprocessed event",
+                    "Unprocessed event.",
                 );
             }
         }

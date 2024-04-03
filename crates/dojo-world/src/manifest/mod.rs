@@ -6,7 +6,6 @@ use cainome::cairo_serde::Error as CainomeError;
 use camino::Utf8PathBuf;
 use serde::de::DeserializeOwned;
 use smol_str::SmolStr;
-use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
     BlockId, BlockTag, EmittedEvent, EventFilter, FieldElement, FunctionCall, StarknetError,
 };
@@ -60,6 +59,10 @@ pub enum AbstractManifestError {
     TOML(#[from] toml::de::Error),
     #[error(transparent)]
     IO(#[from] io::Error),
+    #[error("Abi couldn't be loaded from path: {0}")]
+    AbiError(String),
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
 }
 
 impl From<Manifest<Class>> for Manifest<Contract> {
@@ -179,11 +182,20 @@ impl DeploymentManifest {
 
         // Embedding ABIs into the manifest.
         let mut manifest_with_abis = self.clone();
+
+        if let Some(abi_format) = &manifest_with_abis.world.inner.abi {
+            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
+        }
+
         for contract in &mut manifest_with_abis.contracts {
-            if let Some(AbiFormat::Path(abi_path)) = &contract.inner.abi {
-                let mut abi_file = std::fs::File::open(manifest_dir.join(abi_path))?;
-                let abi_entries: Vec<AbiEntry> = serde_json::from_reader(&mut abi_file)?;
-                contract.inner.abi = Some(AbiFormat::Embed(abi_entries));
+            if let Some(abi_format) = &contract.inner.abi {
+                contract.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
+            }
+        }
+
+        for model in &mut manifest_with_abis.models {
+            if let Some(abi_format) = &model.inner.abi {
+                model.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
             }
         }
 

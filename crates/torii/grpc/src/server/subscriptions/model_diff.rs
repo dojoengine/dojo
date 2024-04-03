@@ -22,6 +22,8 @@ use super::error::SubscriptionError;
 use crate::proto;
 use crate::types::KeysClause;
 
+pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::model_diff";
+
 pub struct ModelMetadata {
     pub name: FieldElement,
     pub packed_size: usize,
@@ -180,7 +182,7 @@ where
         }
 
         for id in closed_stream {
-            trace!(target = "subscription", "closing stream idx: {id}");
+            trace!(target = LOG_TARGET, id = %id, "Closing stream.");
             subs.remove_subscriber(id).await;
         }
 
@@ -209,7 +211,7 @@ where
 
         if let Some(provider) = pin.idle_provider.take() {
             if let Some(block_num) = pin.state_update_queue.pop_front() {
-                debug!(target = "subscription", "fetching state update for block {block_num}");
+                debug!(target = LOG_TARGET, block_number = %block_num, "Fetching state update.");
                 pin.state_update_req_fut =
                     Some(Box::pin(Self::fetch_state_update(provider, block_num)));
             } else {
@@ -231,13 +233,15 @@ where
                     }
 
                     Ok(MaybePendingStateUpdate::PendingUpdate(_)) => {
-                        debug!(target = "subscription", "ignoring pending state update {block_num}")
+                        debug!(target = LOG_TARGET, block_number = %block_num, "Ignoring pending state update.")
                     }
 
                     Err(e) => {
                         error!(
-                            target = "subscription",
-                            "failed to fetch state update for block {block_num}: {e}"
+                            target = LOG_TARGET,
+                            block_num = %block_num,
+                            error = %e,
+                            "Fetching state update for block."
                         );
                     }
                 }
@@ -253,7 +257,7 @@ where
                         pin.state_update_queue.pop_front();
                     }
                     Err(e) => {
-                        error!(target = "subscription", "error when publishing state update: {e}")
+                        error!(target = LOG_TARGET, error = %e, "Publishing state update.")
                     }
                 }
             } else {

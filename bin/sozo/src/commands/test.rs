@@ -18,6 +18,8 @@ use scarb::core::Config;
 use scarb::ops;
 use tracing::trace;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
+
 /// Execute all unit tests of a local package.
 #[derive(Args, Clone)]
 pub struct TestArgs {
@@ -116,7 +118,7 @@ fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
     let project_config =
         ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
 
-    trace!(?project_config);
+    trace!(target: LOG_TARGET, ?project_config);
 
     Ok(project_config)
 }

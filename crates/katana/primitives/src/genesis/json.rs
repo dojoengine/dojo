@@ -10,10 +10,10 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
+use alloy_primitives::U256;
 use base64::prelude::*;
 use cairo_lang_starknet::casm_contract_class::StarknetSierraCompilationError;
 use cairo_vm::types::errors::program_errors::ProgramError;
-use ethers::types::U256;
 use rayon::prelude::*;
 use serde::de::value::MapAccessDeserializer;
 use serde::de::Visitor;
@@ -318,7 +318,7 @@ impl TryFrom<GenesisJson> for Genesis {
         let mut fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
-            total_supply: U256::zero(),
+            total_supply: U256::ZERO,
             decimals: value.fee_token.decimals,
             address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
             class_hash: value.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
@@ -552,7 +552,7 @@ mod tests {
     use std::path::PathBuf;
     use std::str::FromStr;
 
-    use ethers::types::U256;
+    use alloy_primitives::U256;
     use starknet::macros::felt;
 
     use super::{from_base64, GenesisClassJson, GenesisJson};
@@ -801,7 +801,9 @@ mod tests {
             address: ContractAddress::from(felt!("0x55")),
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
-            total_supply: U256::from_str("0xD3C21BCECCEDA1000000").unwrap() * 5,
+            total_supply: U256::from_str("0xD3C21BCECCEDA1000000")
+                .unwrap()
+                .wrapping_mul(U256::from(5)),
             decimals: 18,
             class_hash: felt!("0x8"),
             storage: Some(HashMap::from([

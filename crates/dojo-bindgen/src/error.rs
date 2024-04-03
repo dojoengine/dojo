@@ -1,4 +1,5 @@
 use cainome::parser::Error as CainomeError;
+use dojo_world::manifest::AbstractManifestError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -11,6 +12,8 @@ pub enum Error {
     Cainome(#[from] CainomeError),
     #[error("Format error: {0}")]
     Format(String),
+    #[error(transparent)]
+    Manifest(#[from] AbstractManifestError),
 }
 
 pub type BindgenResult<T, E = Error> = Result<T, E>;

@@ -10,6 +10,8 @@ use tracing::{debug, info};
 use super::EventProcessor;
 use crate::sql::Sql;
 
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::register_model";
+
 #[derive(Default)]
 pub struct RegisterModelProcessor;
 
@@ -25,9 +27,10 @@ where
     fn validate(&self, event: &Event) -> bool {
         if event.keys.len() > 1 {
             info!(
-                "invalid keys for event {}: {}",
-                <RegisterModelProcessor as EventProcessor<P>>::event_key(self),
-                <RegisterModelProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                target: LOG_TARGET,
+                event_key = %<RegisterModelProcessor as EventProcessor<P>>::event_key(self),
+                invalid_keys = %<RegisterModelProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                "Invalid event keys."
             );
             return false;
         }
@@ -56,16 +59,21 @@ where
         let class_hash = event.data[1];
         let contract_address = event.data[3];
 
-        info!(name, "Registered model");
+        info!(
+            target: LOG_TARGET,
+            name = %name,
+            "Registered model."
+        );
         debug!(
-            name,
-            ?schema,
-            ?layout,
-            ?class_hash,
-            ?contract_address,
-            packed_size,
-            unpacked_size,
-            "Registered model content"
+            target: LOG_TARGET,
+            name = %name,
+            schema = ?schema,
+            layout = ?layout,
+            class_hash = ?class_hash,
+            contract_address = ?contract_address,
+            packed_size = %packed_size,
+            unpacked_size = %unpacked_size,
+            "Registered model content."
         );
 
         db.register_model(

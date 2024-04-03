@@ -7,8 +7,8 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbiFormat, AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, Manifest,
-    ManifestMethods, OverlayManifest,
+    AbiFormat, AbstractManifestError, BaseManifest, Contract, DeploymentManifest, DojoContract,
+    Manifest, ManifestMethods, OverlayManifest,
 };
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -97,14 +97,14 @@ where
         return Ok(());
     }
 
-    let strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
+    let mut strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy).await;
     } else {
         // Migrate according to the diff.
-        match apply_diff(ws, account, None, &strategy).await {
+        match apply_diff(ws, account, None, &mut strategy).await {
             Ok(migration_output) => {
                 update_manifests_and_abis(
                     ws,
@@ -235,6 +235,8 @@ async fn update_manifest_abis(
         manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
     }
 
+    inner_helper::<Contract>(manifest_dir, &mut local_manifest.world, chain_id).await;
+
     for contract in local_manifest.contracts.iter_mut() {
         inner_helper::<DojoContract>(manifest_dir, contract, chain_id).await;
     }
@@ -244,7 +246,7 @@ pub async fn apply_diff<P, S>(
     ws: &Workspace<'_>,
     account: &SingleOwnerAccount<P, S>,
     txn_config: Option<TxConfig>,
-    strategy: &MigrationStrategy,
+    strategy: &mut MigrationStrategy,
 ) -> Result<MigrationOutput>
 where
     P: Provider + Sync + Send + 'static,
@@ -379,7 +381,7 @@ pub fn prepare_migration(
 
 pub async fn execute_strategy<P, S>(
     ws: &Workspace<'_>,
-    strategy: &MigrationStrategy,
+    strategy: &mut MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     txn_config: Option<TxConfig>,
 ) -> Result<MigrationOutput>
@@ -490,6 +492,7 @@ where
             return Ok(migration_output);
         }
     }
+
     match deploy_dojo_contracts(strategy, migrator, &ui, txn_config).await {
         Ok(res) => {
             migration_output.contracts = res;
@@ -722,7 +725,7 @@ where
 }
 
 async fn deploy_dojo_contracts<P, S>(
-    strategy: &MigrationStrategy,
+    strategy: &mut MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
     txn_config: Option<TxConfig>,
@@ -743,7 +746,8 @@ where
 
     let world_address = strategy.world_address()?;
 
-    for contract in strategy.contracts.iter() {
+    let contracts = &mut strategy.contracts;
+    for contract in contracts {
         let name = &contract.diff.name;
         ui.print(italic_message(name).to_string());
         match contract
@@ -764,6 +768,7 @@ where
                     ));
                 }
 
+                contract.contract_address = output.contract_address;
                 ui.print_hidden_sub(format!("Deploy transaction: {:#x}", output.transaction_hash));
                 ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
                 deploy_output.push(Some(output));

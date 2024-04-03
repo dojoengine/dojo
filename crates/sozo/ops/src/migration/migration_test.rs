@@ -28,7 +28,7 @@ async fn migrate_with_auto_mine() {
 
     let base_dir = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base_dir);
-    let migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
+    let mut migration = prepare_migration(base_dir.into(), target_dir.into()).unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -36,7 +36,7 @@ async fn migrate_with_auto_mine() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
 
     sequencer.stop().unwrap();
 }
@@ -49,7 +49,7 @@ async fn migrate_with_block_time() {
 
     let base = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
-    let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
+    let mut migration = prepare_migration(base.into(), target_dir.into()).unwrap();
 
     let sequencer = TestSequencer::start(
         SequencerConfig { block_time: Some(1000), ..Default::default() },
@@ -60,7 +60,7 @@ async fn migrate_with_block_time() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
     sequencer.stop().unwrap();
 }
 
@@ -72,7 +72,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let base = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
-    let migration = prepare_migration(base.into(), target_dir.into()).unwrap();
+    let mut migration = prepare_migration(base.into(), target_dir.into()).unwrap();
 
     let sequencer = TestSequencer::start(
         Default::default(),
@@ -93,7 +93,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     assert!(
         execute_strategy(
             &ws,
-            &migration,
+            &mut migration,
             &account,
             Some(TxConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false }),
         )
@@ -144,7 +144,7 @@ async fn migration_from_remote() {
     .unwrap();
     let world = WorldDiff::compute(manifest, None);
 
-    let migration = prepare_for_migration(
+    let mut migration = prepare_for_migration(
         None,
         Some(felt!("0x12345")),
         &Utf8Path::new(&target_dir).to_path_buf(),
@@ -152,7 +152,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
