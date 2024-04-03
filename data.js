@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712155130141,
+  "lastUpdate": 1712156019342,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4225,6 +4225,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17180669,
             "range": "± 714873",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c2280feaf9567cd0727a6e7d93e67c173a66356b",
+          "message": "feat: start refactor to integrate testing logic for models and entities (#1749)\n\n* feat: start refactor to integrate testing logic for models and entities\r\n\r\n* feat: set contract address of actions after migration\r\n\r\n* feat: test store spawn\r\n\r\n* fmt\r\n\r\n* chore: imports\r\n\r\n* fix: tests",
+          "timestamp": "2024-04-03T10:45:27-04:00",
+          "tree_id": "5a0d44c1873ed70050047292b4ea51490ec94666",
+          "url": "https://github.com/dojoengine/dojo/commit/c2280feaf9567cd0727a6e7d93e67c173a66356b"
+        },
+        "date": 1712156018780,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16775795,
+            "range": "± 901487",
             "unit": "ns/iter"
           }
         ]
