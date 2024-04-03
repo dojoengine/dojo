@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712110414807,
+  "lastUpdate": 1712148385997,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4135,6 +4135,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17316389,
             "range": "± 98422",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "60488569+tcoratger@users.noreply.github.com",
+            "name": "Thomas Coratger",
+            "username": "tcoratger"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "24f40c60d0ad592b0f05f3fb116dfc45d2240148",
+          "message": "Migration from ethers to alloy types (#1693)\n\n* Migration from ethers to alloy types\r\n\r\n* some fixes\r\n\r\n* try snake case rename\r\n\r\n* fix tests\r\n\r\n* fix rust version\r\n\r\n* fix conflicts\r\n\r\n* some fixes\r\n\r\n* modify clippy script\r\n\r\n* fix clippy\r\n\r\n* some fixes\r\n\r\n* some fixes\r\n\r\n* remove unused dep\r\n\r\n* Update scripts/clippy.sh\r\n\r\n* some fixes\r\n\r\n* serde feature\r\n\r\n* fmt\r\n\r\n---------\r\n\r\nCo-authored-by: Tarrence van As <tarrencev@users.noreply.github.com>",
+          "timestamp": "2024-04-03T08:38:18-04:00",
+          "tree_id": "933581f1de0ab1cedb6f53cb76df19cbaf510cb6",
+          "url": "https://github.com/dojoengine/dojo/commit/24f40c60d0ad592b0f05f3fb116dfc45d2240148"
+        },
+        "date": 1712148385463,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16799049,
+            "range": "± 195636",
             "unit": "ns/iter"
           }
         ]
