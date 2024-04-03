@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712090892296,
+  "lastUpdate": 1712109705887,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4075,6 +4075,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16746757,
             "range": "± 51305",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "47a87bc0a8fdbeee5466fea368630dd33935745b",
+          "message": "feat: write world and model Abi and embed in json manifest (#1734)\n\n* feat: write world manifest and embed in json manifest\r\n\r\n* feat: add model ABIs\r\n\r\n* refacto: factorize to_embed function and add tests\r\n\r\n* fix: use assert_eq in tests and fix warning\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-02T21:52:40-04:00",
+          "tree_id": "d4611da85b3435b7984a381fbed3c14aecd406d6",
+          "url": "https://github.com/dojoengine/dojo/commit/47a87bc0a8fdbeee5466fea368630dd33935745b"
+        },
+        "date": 1712109705386,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16901652,
+            "range": "± 210421",
             "unit": "ns/iter"
           }
         ]
