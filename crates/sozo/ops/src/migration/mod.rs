@@ -313,7 +313,7 @@ where
     if overlay_path.exists() {
         let overlay_manifest =
             OverlayManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR))
-                .map_err(|_| anyhow!("Fail to load overlay manifest file."))?;
+                .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
 
         // merge user defined changes to base manifest
         local_manifest.merge(overlay_manifest);

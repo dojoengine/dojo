@@ -142,7 +142,12 @@ impl OverlayManifest {
         }
 
         let contract_dir = path.join("contracts");
-        let contracts = overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?;
+
+        let contracts = if contract_dir.exists() {
+            overlay_elements_from_path::<OverlayDojoContract>(&contract_dir)?
+        } else {
+            vec![]
+        };
 
         Ok(Self { world, base, contracts })
     }
