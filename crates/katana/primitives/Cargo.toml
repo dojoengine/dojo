@@ -30,6 +30,6 @@ flate2.workspace = true
 starknet_api.workspace = true
 
 [features]
-default = [ "alloy-primitives/serde", "serde" ]
+default = [ "serde" ]
 rpc = [  ]
-serde = [  ]
+serde = [ "alloy-primitives/serde" ]
