@@ -94,6 +94,7 @@ pub async fn deploy_world(
             .deploy_dojo_contract(
                 world_address,
                 declare_res.class_hash,
+                base_class_hash,
                 &account,
                 Default::default(),
             )

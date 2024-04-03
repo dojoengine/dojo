@@ -768,8 +768,24 @@ where
                 }
 
                 contract.contract_address = output.contract_address;
-                ui.print_hidden_sub(format!("Deploy transaction: {:#x}", output.transaction_hash));
-                ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
+
+                if output.was_upgraded {
+                    ui.print_hidden_sub(format!(
+                        "Invoke transaction to upgrade: {:#x}",
+                        output.transaction_hash
+                    ));
+                    ui.print_sub(format!(
+                        "Contract address [upgraded]: {:#x}",
+                        output.contract_address
+                    ));
+                } else {
+                    ui.print_hidden_sub(format!(
+                        "Deploy transaction: {:#x}",
+                        output.transaction_hash
+                    ));
+                    ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
+                }
+
                 deploy_output.push(Some(output));
             }
             Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {

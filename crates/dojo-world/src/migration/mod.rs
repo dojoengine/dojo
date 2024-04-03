@@ -35,6 +35,7 @@ pub struct DeployOutput {
     pub declare: Option<DeclareOutput>,
     // base class hash at time of deployment
     pub base_class_hash: FieldElement,
+    pub was_upgraded: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -165,16 +166,22 @@ pub trait Deployable: Declarable + Sync {
         let contract_address =
             get_contract_address(self.salt(), base_class_hash, &[], world_address);
 
+        let mut was_upgraded = false;
+
         let call = match account
             .provider()
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), contract_address)
             .await
         {
-            Ok(current_class_hash) if current_class_hash != class_hash => Call {
-                calldata: vec![contract_address, class_hash],
-                selector: selector!("upgrade_contract"),
-                to: world_address,
-            },
+            Ok(current_class_hash) if current_class_hash != class_hash => {
+                was_upgraded = true;
+
+                Call {
+                    calldata: vec![contract_address, class_hash],
+                    selector: selector!("upgrade_contract"),
+                    to: world_address,
+                }
+            }
 
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Call {
                 calldata: vec![self.salt(), class_hash],
@@ -207,6 +214,7 @@ pub trait Deployable: Declarable + Sync {
             contract_address,
             declare,
             base_class_hash,
+            was_upgraded,
         })
     }
 
@@ -278,6 +286,7 @@ pub trait Deployable: Declarable + Sync {
             contract_address,
             declare,
             base_class_hash: FieldElement::default(),
+            was_upgraded: false,
         })
     }
 

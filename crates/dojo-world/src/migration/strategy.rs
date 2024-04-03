@@ -155,7 +155,7 @@ fn evaluate_contracts_to_migrate(
     for c in contracts {
         match c.remote_class_hash {
             Some(remote) if remote == c.local_class_hash && !world_contract_will_migrate => {
-                continue
+                continue;
             }
             _ => {
                 let path = find_artifact_path(c.name.as_str(), artifact_paths)?;

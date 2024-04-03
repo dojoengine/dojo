@@ -4,7 +4,8 @@ use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use smol_str::SmolStr;
-use starknet::core::{serde::unsigned_field_element::UfeHex, types::contract::AbiEntry};
+use starknet::core::serde::unsigned_field_element::UfeHex;
+use starknet::core::types::contract::AbiEntry;
 use starknet_crypto::FieldElement;
 
 use crate::manifest::AbstractManifestError;
@@ -231,23 +232,6 @@ pub enum AbiFormat {
     Path(Utf8PathBuf),
     /// The full ABI is embedded.
     Embed(Vec<AbiEntry>),
-}
-
-#[cfg(test)]
-impl PartialEq for AbiFormat {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (AbiFormat::Path(p1), AbiFormat::Path(p2)) => p1 == p2,
-            (AbiFormat::Embed(e1), AbiFormat::Embed(e2)) => {
-                // Currently, [`AbiEntry`] does not implement [`PartialEq`] so we cannot compare
-                // them directly.
-                let e1_json = serde_json::to_string(e1).expect("valid JSON from ABI");
-                let e2_json = serde_json::to_string(e2).expect("valid JSON from ABI");
-                e1_json == e2_json
-            }
-            _ => false,
-        }
-    }
 }
 
 impl AbiFormat {
