@@ -277,6 +277,6 @@ mod tests {
 
         let moved = data.models.get("EmoteMessage").unwrap();
         assert_eq!(moved.name, "EmoteMessage");
-        assert_eq!(moved.qualified_path, "dojo_examples::actions::actions::EmoteMessage");
+        assert_eq!(moved.qualified_path, "dojo_examples::models::EmoteMessage");
     }
 }
