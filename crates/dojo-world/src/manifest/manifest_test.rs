@@ -446,7 +446,7 @@ fn test_abi_format_load_abi_string() -> Result<(), Box<dyn std::error::Error>> {
     let temp_path = temp_dir.path().join("abi.json");
     let mut temp_file = std::fs::File::create(&temp_path)?;
 
-    writeln!(temp_file, "[]")?;
+    write!(temp_file, "[]")?;
 
     let path = AbiFormat::Path(Utf8PathBuf::from_path_buf(temp_path.clone()).unwrap());
     assert_eq!(path.load_abi_string(&Utf8PathBuf::new()).unwrap(), "[]");
