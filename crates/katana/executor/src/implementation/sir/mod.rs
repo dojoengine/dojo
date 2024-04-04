@@ -265,7 +265,7 @@ impl<'a> ExecutorExt for StarknetVMProcessor<'a> {
 
     fn call(&self, call: EntryPointCall) -> Result<Vec<FieldElement>, ExecutionError> {
         let block_context = &self.block_context;
-        let retdata = utils::call(call, &self.state, block_context, 100_000_000)?;
+        let retdata = utils::call(call, &self.state, block_context, 1_000_000_000)?;
         Ok(retdata)
     }
 }
