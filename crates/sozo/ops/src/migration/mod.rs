@@ -106,6 +106,16 @@ where
 
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy).await;
+
+        update_manifests_and_abis(
+            ws,
+            local_manifest,
+            &profile_dir,
+            &profile_name,
+            MigrationOutput { world_address, ..Default::default() },
+            name.as_ref(),
+        )
+        .await?;
     } else {
         // Migrate according to the diff.
         match apply_diff(ws, account, None, &mut strategy).await {
