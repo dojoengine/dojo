@@ -1,0 +1,389 @@
+[
+  {
+    "type": "impl",
+    "name": "DojoModelImpl",
+    "interface_name": "dojo::model::IDojoModel"
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::integer::u8>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::integer::u8>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::felt252>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo::database::introspect::Struct",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::felt252"
+      },
+      {
+        "name": "attrs",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "children",
+        "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo::database::introspect::Enum",
+    "members": [
+      {
+        "name": "name",
+        "type": "core::felt252"
+      },
+      {
+        "name": "attrs",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "children",
+        "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "dojo::database::introspect::Ty",
+    "variants": [
+      {
+        "name": "Primitive",
+        "type": "core::felt252"
+      },
+      {
+        "name": "Struct",
+        "type": "dojo::database::introspect::Struct"
+      },
+      {
+        "name": "Enum",
+        "type": "dojo::database::introspect::Enum"
+      },
+      {
+        "name": "Tuple",
+        "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+      },
+      {
+        "name": "Array",
+        "type": "core::integer::u32"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "dojo::model::IDojoModel",
+    "items": [
+      {
+        "type": "function",
+        "name": "name",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "unpacked_size",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u32"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "packed_size",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u32"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "layout",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::array::Span::<core::integer::u8>"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "schema",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "dojo::database::introspect::Ty"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "recordImpl",
+    "interface_name": "types_test::models::Irecord"
+  },
+  {
+    "type": "enum",
+    "name": "types_test::models::Depth",
+    "variants": [
+      {
+        "name": "Zero",
+        "type": "()"
+      },
+      {
+        "name": "One",
+        "type": "()"
+      },
+      {
+        "name": "Two",
+        "type": "()"
+      },
+      {
+        "name": "Three",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::integer::u256",
+    "members": [
+      {
+        "name": "low",
+        "type": "core::integer::u128"
+      },
+      {
+        "name": "high",
+        "type": "core::integer::u128"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "core::bool",
+    "variants": [
+      {
+        "name": "False",
+        "type": "()"
+      },
+      {
+        "name": "True",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "types_test::models::NestedMost",
+    "members": [
+      {
+        "name": "depth",
+        "type": "types_test::models::Depth"
+      },
+      {
+        "name": "type_number",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "type_string",
+        "type": "core::felt252"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "types_test::models::NestedMore",
+    "members": [
+      {
+        "name": "depth",
+        "type": "types_test::models::Depth"
+      },
+      {
+        "name": "type_number",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "type_string",
+        "type": "core::felt252"
+      },
+      {
+        "name": "type_nested_most",
+        "type": "types_test::models::NestedMost"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "types_test::models::Nested",
+    "members": [
+      {
+        "name": "depth",
+        "type": "types_test::models::Depth"
+      },
+      {
+        "name": "type_number",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "type_string",
+        "type": "core::felt252"
+      },
+      {
+        "name": "type_nested_more",
+        "type": "types_test::models::NestedMore"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "types_test::models::Record",
+    "members": [
+      {
+        "name": "record_id",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "depth",
+        "type": "types_test::models::Depth"
+      },
+      {
+        "name": "type_u8",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "type_u16",
+        "type": "core::integer::u16"
+      },
+      {
+        "name": "type_u32",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "type_u64",
+        "type": "core::integer::u64"
+      },
+      {
+        "name": "type_u128",
+        "type": "core::integer::u128"
+      },
+      {
+        "name": "type_u256",
+        "type": "core::integer::u256"
+      },
+      {
+        "name": "type_bool",
+        "type": "core::bool"
+      },
+      {
+        "name": "type_felt",
+        "type": "core::felt252"
+      },
+      {
+        "name": "type_class_hash",
+        "type": "core::starknet::class_hash::ClassHash"
+      },
+      {
+        "name": "type_contract_address",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "type_deeply_nested",
+        "type": "types_test::models::Nested"
+      },
+      {
+        "name": "type_nested_one",
+        "type": "types_test::models::NestedMost"
+      },
+      {
+        "name": "type_nested_two",
+        "type": "types_test::models::NestedMost"
+      },
+      {
+        "name": "random_u8",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "random_u128",
+        "type": "core::integer::u128"
+      },
+      {
+        "name": "composite_u256",
+        "type": "core::integer::u256"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "types_test::models::Irecord",
+    "items": [
+      {
+        "type": "function",
+        "name": "ensure_abi",
+        "inputs": [
+          {
+            "name": "model",
+            "type": "types_test::models::Record"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "types_test::models::record::Event",
+    "kind": "enum",
+    "variants": []
+  }
+]
