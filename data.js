@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712179266723,
+  "lastUpdate": 1712196643957,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4315,6 +4315,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16895998,
             "range": "± 751184",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7578ffbc779caa9741d3722953c710b5b2ae2b0c",
+          "message": "katana: bump gas for contract calls to 1B (#1766)\n\nbump gas for contract calls to 1B",
+          "timestamp": "2024-04-04T10:02:33+08:00",
+          "tree_id": "88bb990c68746646f881e927fca899e008c51467",
+          "url": "https://github.com/dojoengine/dojo/commit/7578ffbc779caa9741d3722953c710b5b2ae2b0c"
+        },
+        "date": 1712196642869,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17032253,
+            "range": "± 292382",
             "unit": "ns/iter"
           }
         ]
