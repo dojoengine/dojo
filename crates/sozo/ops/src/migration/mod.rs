@@ -193,10 +193,10 @@ async fn update_manifests_and_abis(
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
-    update_manifest_abis(&mut local_manifest, &profile_dir, profile_name).await;
+    update_manifest_abis(&mut local_manifest, profile_dir, profile_name).await;
 
     local_manifest.write_to_path_toml(&deployed_path)?;
-    local_manifest.write_to_path_json(&deployed_path_json, &profile_dir)?;
+    local_manifest.write_to_path_json(&deployed_path_json, profile_dir)?;
     ui.print("\n✨ Done.");
 
     Ok(())
@@ -234,7 +234,7 @@ async fn update_manifest_abis(
         // The filename is safe to unwrap as it's always
         // present in the base relative path.
         let deployed_relative_path = Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(
-            &base_relative_path
+            base_relative_path
                 .strip_prefix(Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR))
                 .unwrap(),
         );

@@ -35,8 +35,13 @@ pub async fn deploy_world(
     manifest_dir: &Utf8PathBuf,
     target_dir: &Utf8PathBuf,
 ) -> FieldElement {
-    let manifest =
-        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR)).unwrap();
+    // Dev profile is used by default for testing:
+    let profile_name = "dev";
+
+    let manifest = BaseManifest::load_from_path(
+        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+    )
+    .unwrap();
     let world = WorldDiff::compute(manifest.clone(), None);
     let account = sequencer.account();
 

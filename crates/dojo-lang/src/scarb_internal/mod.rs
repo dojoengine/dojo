@@ -96,11 +96,8 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
         None
     };
 
-    let profile_name = if let Ok(p) = ws.current_profile() {
-        p.to_string()
-    } else {
-        "NO_PROFILE".to_string()
-    };
+    let profile_name =
+        if let Ok(p) = ws.current_profile() { p.to_string() } else { "NO_PROFILE".to_string() };
 
     Ok(CompileInfo { manifest_path, target_dir, root_package_name, profile_name })
 }

@@ -77,7 +77,8 @@ impl PluginManager {
             return Ok(());
         }
 
-        let data = gather_dojo_data(&self.manifest_path, &self.root_package_name, &self.profile_name)?;
+        let data =
+            gather_dojo_data(&self.manifest_path, &self.root_package_name, &self.profile_name)?;
 
         for plugin in &self.builtin_plugins {
             // Get the plugin builder from the plugin enum.

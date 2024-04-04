@@ -54,6 +54,9 @@ impl EventsArgs {
             self.world.world_address,
         );
 
+        let profile_name =
+            if let Ok(p) = ws.current_profile() { p.to_string() } else { "NO_PROFILE".to_string() };
+
         config.tokio_handle().block_on(async {
             events::parse(
                 self.chunk_size,
@@ -62,6 +65,7 @@ impl EventsArgs {
                 event_filter,
                 self.json,
                 &manifest_dir,
+                &profile_name,
             )
             .await
         })
