@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712254122868,
+  "lastUpdate": 1712263321927,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4465,6 +4465,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16978919,
             "range": "± 251703",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "33d28356ea8e9fb51518ee81fa1bb0f4e82d9876",
+          "message": "fix: manifest name without `::` (#1770)\n\n* fix: remove  from manifests name and use\r\n\r\n* fix: generate new manifests\r\n\r\n* ci: re-enable ensure-windows\r\n\r\n* fix: add new generated manifests for tests\r\n\r\n* fix: adjust clean command to new manifests path",
+          "timestamp": "2024-04-04T16:33:46-04:00",
+          "tree_id": "0e86035780cab4ae7ef24792477135cad072990e",
+          "url": "https://github.com/dojoengine/dojo/commit/33d28356ea8e9fb51518ee81fa1bb0f4e82d9876"
+        },
+        "date": 1712263321439,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16681860,
+            "range": "± 175159",
             "unit": "ns/iter"
           }
         ]
