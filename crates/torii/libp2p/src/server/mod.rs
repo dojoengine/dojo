@@ -34,10 +34,11 @@ use crate::errors::Error;
 
 mod events;
 
+use dojo_world::contracts::model::ModelReader;
+
 use crate::server::events::ServerEvent;
 use crate::typed_data::PrimitiveType;
 use crate::types::Message;
-use dojo_world::contracts::model::ModelReader;
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
@@ -91,7 +92,8 @@ impl<P: Provider + Sync> Relay<P> {
             })
             .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {
-                // Hash messages by their content. No two messages of the same content will be propagated.
+                // Hash messages by their content. No two messages of the same content will be
+                // propagated.
                 let _message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
                     message.data.hash(&mut s);

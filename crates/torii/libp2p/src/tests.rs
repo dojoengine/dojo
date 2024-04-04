@@ -13,7 +13,9 @@ mod test {
     #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
-        use dojo_test_utils::sequencer::{get_default_test_starknet_config, SequencerConfig, TestSequencer};
+        use dojo_test_utils::sequencer::{
+            get_default_test_starknet_config, SequencerConfig, TestSequencer,
+        };
         use dojo_types::schema::{Member, Struct, Ty};
         use indexmap::IndexMap;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -39,7 +41,8 @@ mod test {
         sqlx::migrate!("../migrations").run(&pool).await.unwrap();
 
         let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
+            TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config())
+                .await;
         let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
 
         let db = Sql::new(pool.clone(), FieldElement::from_bytes_be(&[0; 32]).unwrap()).await?;
