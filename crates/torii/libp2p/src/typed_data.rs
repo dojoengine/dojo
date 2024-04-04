@@ -287,8 +287,6 @@ impl PrimitiveType {
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
-                println!("r#type: {}", r#type);
-
                 ctx.is_preset = preset_types.contains_key(r#type);
 
                 let mut hashes = Vec::new();
@@ -332,7 +330,6 @@ impl PrimitiveType {
 
                 let type_hash =
                     encode_type(r#type, if ctx.is_preset { preset_types } else { types })?;
-                println!("type_hash: {}", type_hash);
                 hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
                     Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
                 })?);

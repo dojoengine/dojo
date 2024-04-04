@@ -91,7 +91,8 @@ impl<P: Provider + Sync> Relay<P> {
             })
             .expect("Failed to create WebRTC transport")
             .with_behaviour(|key| {
-                let message_id_fn = |message: &gossipsub::Message| {
+                // Hash messages by their content. No two messages of the same content will be propagated.
+                let _message_id_fn = |message: &gossipsub::Message| {
                     let mut s = DefaultHasher::new();
                     message.data.hash(&mut s);
                     gossipsub::MessageId::from(s.finish().to_string())
@@ -99,7 +100,8 @@ impl<P: Provider + Sync> Relay<P> {
                 let gossipsub_config = gossipsub::ConfigBuilder::default()
                         .heartbeat_interval(Duration::from_secs(constants::GOSSIPSUB_HEARTBEAT_INTERVAL_SECS)) // This is set to aid debugging by not cluttering the log space
                         .validation_mode(gossipsub::ValidationMode::Strict) // This sets the kind of message validation. The default is Strict (enforce message signing)
-                        .message_id_fn(message_id_fn) // content-address messages. No two messages of the same content will be propagated.
+                        // TODO: Use this once we incorporate nonces in the message model?
+                        // .message_id_fn(message_id_fn) // content-address messages. No two messages of the same content will be propagated.
                         .build()
                         .map_err(|msg| io::Error::new(io::ErrorKind::Other, msg)).unwrap(); // Temporary hack because `build` does not return a proper `std::error::Error`.
 
@@ -417,7 +419,9 @@ impl<P: Provider + Sync> Relay<P> {
                 SwarmEvent::NewListenAddr { address, .. } => {
                     info!(target: LOG_TARGET, address = %address, "New listen address.");
                 }
-                _ => {}
+                event => {
+                    info!(target: LOG_TARGET, event = ?event, "Unhandled event.");
+                }
             }
         }
     }
