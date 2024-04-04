@@ -37,19 +37,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -r --target wasm32-unknown-unknown -p torii-client
 
-#  ensure-windows:
-#    runs-on: windows-latest
-#    steps:
-#      - uses: actions/checkout@v3
-#      - uses: actions-rs/toolchain@v1
-#        with:
-#          toolchain: ${{ env.rust_version }}
-#          target: x86_64-pc-windows-msvc
-#      - uses: swatinem/rust-cache@v2
-#      - uses: arduino/setup-protoc@v2
-#        with:
-#          repo-token: ${{ secrets.github_token }}
-#      - run: cargo build --target x86_64-pc-windows-msvc --bins
+  ensure-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.rust_version }}
+          target: x86_64-pc-windows-msvc
+      - uses: swatinem/rust-cache@v2
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.github_token }}
+      - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # cairofmt:
   #   runs-on: ubuntu-latest

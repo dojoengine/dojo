@@ -1,7 +1,7 @@
 kind = "DojoModel"
 class_hash = "0x7a47c3a9c8509a1d4a0379e50799eba7b173db6e41961341fe3f856a51d627"
 original_class_hash = "0x7a47c3a9c8509a1d4a0379e50799eba7b173db6e41961341fe3f856a51d627"
-abi = "manifests/dev/abis/base/models/types_test::models::subrecord.json"
+abi = "manifests/dev/abis/base/models/types_test_models_subrecord.json"
 name = "types_test::models::subrecord"
 
 [[members]]
