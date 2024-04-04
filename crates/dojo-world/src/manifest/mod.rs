@@ -182,25 +182,25 @@ impl DeploymentManifest {
         Ok(())
     }
 
-    pub fn write_to_path_json(&self, path: &Utf8PathBuf, manifest_dir: &Utf8PathBuf) -> Result<()> {
+    pub fn write_to_path_json(&self, path: &Utf8PathBuf, profile_dir: &Utf8PathBuf) -> Result<()> {
         fs::create_dir_all(path.parent().unwrap())?;
 
         // Embedding ABIs into the manifest.
         let mut manifest_with_abis = self.clone();
 
         if let Some(abi_format) = &manifest_with_abis.world.inner.abi {
-            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
+            manifest_with_abis.world.inner.abi = Some(abi_format.to_embed(profile_dir)?);
         }
 
         for contract in &mut manifest_with_abis.contracts {
             if let Some(abi_format) = &contract.inner.abi {
-                contract.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
+                contract.inner.abi = Some(abi_format.to_embed(profile_dir)?);
             }
         }
 
         for model in &mut manifest_with_abis.models {
             if let Some(abi_format) = &model.inner.abi {
-                model.inner.abi = Some(abi_format.to_embed(manifest_dir)?);
+                model.inner.abi = Some(abi_format.to_embed(profile_dir)?);
             }
         }
 

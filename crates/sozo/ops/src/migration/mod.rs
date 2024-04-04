@@ -8,7 +8,7 @@ use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
     AbiFormat, AbstractManifestError, BaseManifest, Contract, DeploymentManifest, DojoContract,
-    Manifest, ManifestMethods, OverlayManifest,
+    DojoModel, Manifest, ManifestMethods, OverlayManifest,
 };
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -73,12 +73,16 @@ where
     // its path to a file so `parent` should never return `None`
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
+    let profile_name =
+        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
+    let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(&profile_name);
+
     let target_dir = ws.target_dir().path_existent().unwrap();
     let target_dir = target_dir.join(ws.config().profile().as_str());
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&manifest_dir, account, world_address, &ui).await.map_err(|e| {
+        load_world_manifests(&profile_dir, account, world_address, &ui).await.map_err(|e| {
             ui.error(e.to_string());
             anyhow!(
                 "\n Use `sozo clean` to clean your project, or `sozo clean --manifests-abis` to \
@@ -109,9 +113,9 @@ where
                 update_manifests_and_abis(
                     ws,
                     local_manifest,
-                    &manifest_dir,
+                    &profile_dir,
+                    &profile_name,
                     migration_output,
-                    &chain_id,
                     name.as_ref(),
                 )
                 .await?;
@@ -120,9 +124,9 @@ where
                 update_manifests_and_abis(
                     ws,
                     local_manifest,
-                    &manifest_dir,
+                    &profile_dir,
+                    &profile_name,
                     MigrationOutput { world_address, ..Default::default() },
-                    &chain_id,
                     name.as_ref(),
                 )
                 .await?;
@@ -134,23 +138,19 @@ where
     Ok(())
 }
 
-fn build_deployed_path(manifest_dir: &Utf8PathBuf, chain_id: &str, extension: &str) -> Utf8PathBuf {
-    manifest_dir.join(MANIFESTS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).with_extension(extension)
-}
-
 async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
-    manifest_dir: &Utf8PathBuf,
+    profile_dir: &Utf8PathBuf,
+    profile_name: &str,
     migration_output: MigrationOutput,
-    chain_id: &str,
     salt: Option<&String>,
 ) -> Result<()> {
     let ui = ws.config().ui();
     ui.print("\n✨ Updating manifests...");
 
-    let deployed_path = build_deployed_path(manifest_dir, chain_id, "toml");
-    let deployed_path_json = build_deployed_path(manifest_dir, chain_id, "json");
+    let deployed_path = profile_dir.join("manifest").with_extension("toml");
+    let deployed_path_json = profile_dir.join("manifest").with_extension("json");
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
 
@@ -193,10 +193,10 @@ async fn update_manifests_and_abis(
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
-    update_manifest_abis(&mut local_manifest, manifest_dir, chain_id).await;
+    update_manifest_abis(&mut local_manifest, &profile_dir, profile_name).await;
 
     local_manifest.write_to_path_toml(&deployed_path)?;
-    local_manifest.write_to_path_json(&deployed_path_json, manifest_dir)?;
+    local_manifest.write_to_path_json(&deployed_path_json, &profile_dir)?;
     ui.print("\n✨ Done.");
 
     Ok(())
@@ -204,41 +204,61 @@ async fn update_manifests_and_abis(
 
 async fn update_manifest_abis(
     local_manifest: &mut DeploymentManifest,
-    manifest_dir: &Utf8PathBuf,
-    chain_id: &str,
+    profile_dir: &Utf8PathBuf,
+    profile_name: &str,
 ) {
-    fs::create_dir_all(manifest_dir.join(ABIS_DIR).join(DEPLOYMENTS_DIR))
+    fs::create_dir_all(profile_dir.join(ABIS_DIR).join(DEPLOYMENTS_DIR))
         .await
         .expect("Failed to create folder");
 
-    async fn inner_helper<T>(manifest_dir: &Utf8PathBuf, manifest: &mut Manifest<T>, chain_id: &str)
-    where
+    async fn inner_helper<T>(
+        profile_dir: &Utf8PathBuf,
+        profile_name: &str,
+        manifest: &mut Manifest<T>,
+    ) where
         T: ManifestMethods,
     {
-        // unwraps in call to abi is safe because we always write abis for DojoContracts as relative
+        // Unwraps in call to abi is safe because we always write abis for DojoContracts as relative
         // path.
-        let base_relative_path = manifest.inner.abi().unwrap().to_path().unwrap();
-        let deployed_relative_path =
-            Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(chain_id).join(
-                base_relative_path
-                    .strip_prefix(Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR))
-                    .unwrap(),
-            );
+        // In this relative path, we only what the root from
+        // ABI directory.
+        let base_relative_path = manifest
+            .inner
+            .abi()
+            .unwrap()
+            .to_path()
+            .unwrap()
+            .strip_prefix(Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name))
+            .unwrap();
 
-        let full_base_path = manifest_dir.join(base_relative_path);
-        let full_deployed_path = manifest_dir.join(deployed_relative_path.clone());
+        // The filename is safe to unwrap as it's always
+        // present in the base relative path.
+        let deployed_relative_path = Utf8PathBuf::new().join(ABIS_DIR).join(DEPLOYMENTS_DIR).join(
+            &base_relative_path
+                .strip_prefix(Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR))
+                .unwrap(),
+        );
+
+        let full_base_path = profile_dir.join(base_relative_path);
+        let full_deployed_path = profile_dir.join(deployed_relative_path.clone());
 
         fs::create_dir_all(full_deployed_path.parent().unwrap())
             .await
             .expect("Failed to create folder");
+
         fs::copy(full_base_path, full_deployed_path).await.expect("Failed to copy abi file");
+
         manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
     }
 
-    inner_helper::<Contract>(manifest_dir, &mut local_manifest.world, chain_id).await;
+    inner_helper::<Contract>(profile_dir, profile_name, &mut local_manifest.world).await;
 
     for contract in local_manifest.contracts.iter_mut() {
-        inner_helper::<DojoContract>(manifest_dir, contract, chain_id).await;
+        inner_helper::<DojoContract>(profile_dir, profile_name, contract).await;
+    }
+
+    for model in local_manifest.models.iter_mut() {
+        inner_helper::<DojoModel>(profile_dir, profile_name, model).await;
     }
 }
 
@@ -294,7 +314,7 @@ where
 }
 
 async fn load_world_manifests<P, S>(
-    manifest_dir: &Utf8PathBuf,
+    profile_dir: &Utf8PathBuf,
     account: &SingleOwnerAccount<P, S>,
     world_address: Option<FieldElement>,
     ui: &Ui,
@@ -305,15 +325,13 @@ where
 {
     ui.print_step(1, "🌎", "Building World state...");
 
-    let mut local_manifest =
-        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
-            .map_err(|_| anyhow!("Fail to load local manifest file."))?;
+    let mut local_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))
+        .map_err(|_| anyhow!("Fail to load local manifest file."))?;
 
-    let overlay_path = manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR);
+    let overlay_path = profile_dir.join(OVERLAYS_DIR);
     if overlay_path.exists() {
-        let overlay_manifest =
-            OverlayManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(OVERLAYS_DIR))
-                .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
+        let overlay_manifest = OverlayManifest::load_from_path(&profile_dir.join(OVERLAYS_DIR))
+            .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
 
         // merge user defined changes to base manifest
         local_manifest.merge(overlay_manifest);

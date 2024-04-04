@@ -212,8 +212,12 @@ fn update_manifest(
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
-    let relative_manifests_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(BASE_DIR);
-    let relative_abis_dir = Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR);
+    let profile_name =
+        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
+    let profile_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
+
+    let relative_manifests_dir = Utf8PathBuf::new().join(&profile_dir).join(BASE_DIR);
+    let relative_abis_dir = Utf8PathBuf::new().join(&profile_dir).join(ABIS_DIR).join(BASE_DIR);
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
