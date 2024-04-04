@@ -25,12 +25,11 @@ tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 tracing.workspace = true
 indexmap = "2.2.5"
 chrono.workspace = true
-dojo-world.workspace = true
-dojo-test-utils.workspace = true
+dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 
 [dev-dependencies]
-dojo-world = { path = "../../dojo-world", features = [ "metadata" ] }
 tempfile = "3.9.0"
+dojo-test-utils.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }
