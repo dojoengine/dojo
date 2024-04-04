@@ -56,6 +56,8 @@ pub struct DojoData {
 
 #[derive(Debug)]
 pub struct PluginManager {
+    /// Profile name.
+    pub profile_name: String,
     /// Root package name.
     pub root_package_name: String,
     /// Path of generated files.
@@ -75,7 +77,7 @@ impl PluginManager {
             return Ok(());
         }
 
-        let data = gather_dojo_data(&self.manifest_path, &self.root_package_name)?;
+        let data = gather_dojo_data(&self.manifest_path, &self.root_package_name, &self.profile_name)?;
 
         for plugin in &self.builtin_plugins {
             // Get the plugin builder from the plugin enum.
@@ -105,9 +107,10 @@ impl PluginManager {
 fn gather_dojo_data(
     manifest_path: &Utf8PathBuf,
     root_package_name: &str,
+    profile_name: &str,
 ) -> BindgenResult<DojoData> {
     let root_dir: Utf8PathBuf = manifest_path.parent().unwrap().into();
-    let base_manifest_dir: Utf8PathBuf = root_dir.join("manifests").join("base");
+    let base_manifest_dir: Utf8PathBuf = root_dir.join("manifests").join(profile_name).join("base");
     let base_manifest = BaseManifest::load_from_path(&base_manifest_dir)?;
 
     let mut models = HashMap::new();
@@ -251,6 +254,7 @@ mod tests {
         let data = gather_dojo_data(
             &Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml"),
             "dojo_example",
+            "dev",
         )
         .unwrap();
 

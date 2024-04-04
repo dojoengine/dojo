@@ -25,6 +25,7 @@ use crate::plugin::dojo_plugin_suite;
 pub(crate) const LOG_TARGET: &str = "dojo_lang::scarb_internal";
 
 pub struct CompileInfo {
+    pub profile_name: String,
     pub manifest_path: Utf8PathBuf,
     pub target_dir: Utf8PathBuf,
     pub root_package_name: Option<String>,
@@ -95,7 +96,13 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
         None
     };
 
-    Ok(CompileInfo { manifest_path, target_dir, root_package_name })
+    let profile_name = if let Ok(p) = ws.current_profile() {
+        p.to_string()
+    } else {
+        "NO_PROFILE".to_string()
+    };
+
+    Ok(CompileInfo { manifest_path, target_dir, root_package_name, profile_name })
 }
 
 fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
