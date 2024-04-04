@@ -197,6 +197,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut libp2p_relay_server = torii_relay::server::Relay::new(
         db,
+        provider.clone(),
         args.relay_port,
         args.relay_webrtc_port,
         args.relay_local_key_path,

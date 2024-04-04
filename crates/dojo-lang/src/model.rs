@@ -53,6 +53,18 @@ pub fn handle_model_struct(
         });
     }
 
+    for k in &keys {
+        if k.ty == "u256" {
+            diagnostics.push(PluginDiagnostic {
+                message: "Key is only supported for core types that are 1 felt long once \
+                          serialized. `u256` is a struct of 2 u128, hence not supported."
+                    .into(),
+                stable_ptr: struct_ast.name(db).stable_ptr().untyped(),
+                severity: Severity::Error,
+            });
+        }
+    }
+
     let serialize_member = |m: &Member, include_key: bool| {
         if m.key && !include_key {
             return None;
