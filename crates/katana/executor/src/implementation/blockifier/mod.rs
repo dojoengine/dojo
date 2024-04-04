@@ -257,7 +257,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         let block_context = &self.block_context;
         let mut state = self.state.0.write();
         let state = MutRefState::new(&mut state.inner);
-        let retdata = utils::call(call, state, block_context, 100_000_000)?;
+        let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
         Ok(retdata)
     }
 }
