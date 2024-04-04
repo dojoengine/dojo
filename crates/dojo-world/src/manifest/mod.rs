@@ -96,8 +96,14 @@ impl BaseManifest {
         let contract_dir = path.join("contracts");
         let model_dir = path.join("models");
 
-        let world: Manifest<Class> = toml::from_str(&fs::read_to_string(path.join("world.toml"))?)?;
-        let base: Manifest<Class> = toml::from_str(&fs::read_to_string(path.join("base.toml"))?)?;
+        let world: Manifest<Class> = toml::from_str(&fs::read_to_string(
+            path.join(WORLD_CONTRACT_NAME).with_extension("toml"),
+        )?)?;
+
+        let base: Manifest<Class> = toml::from_str(&fs::read_to_string(
+            path.join(BASE_CONTRACT_NAME).with_extension("toml"),
+        )?)?;
+
         let contracts = elements_from_path::<DojoContract>(&contract_dir)?;
         let models = elements_from_path::<DojoModel>(&model_dir)?;
 
@@ -131,14 +137,18 @@ impl BaseManifest {
 impl OverlayManifest {
     pub fn load_from_path(path: &Utf8PathBuf) -> Result<Self, AbstractManifestError> {
         let mut world: Option<OverlayClass> = None;
-        let world_path = path.join("world.toml");
+
+        let world_path = path.join(WORLD_CONTRACT_NAME).with_extension("toml");
+
         if world_path.exists() {
             world = Some(toml::from_str(&fs::read_to_string(world_path)?)?);
         }
+
         let mut base: Option<OverlayClass> = None;
-        let base_path = path.join("base.toml");
+        let base_path = path.join(BASE_CONTRACT_NAME).with_extension("toml");
+
         if base_path.exists() {
-            base = Some(toml::from_str(&fs::read_to_string(path.join("base.toml"))?)?);
+            base = Some(toml::from_str(&fs::read_to_string(base_path)?)?);
         }
 
         let contract_dir = path.join("contracts");

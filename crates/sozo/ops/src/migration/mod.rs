@@ -326,7 +326,7 @@ where
     ui.print_step(1, "🌎", "Building World state...");
 
     let mut local_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))
-        .map_err(|_| anyhow!("Fail to load local manifest file."))?;
+        .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
 
     let overlay_path = profile_dir.join(OVERLAYS_DIR);
     if overlay_path.exists() {
