@@ -105,10 +105,11 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
 #[test]
 fn migrate_world_without_seed_will_fail() {
+    let profile_name = "dev";
     let base = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base);
     let manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
     )
     .unwrap();
     let world = WorldDiff::compute(manifest, None);

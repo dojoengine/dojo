@@ -81,6 +81,7 @@ pub async fn revoke(
         }
     }
 }
+
 #[derive(Debug, Subcommand)]
 pub enum AuthCommand {
     #[command(about = "Grant an auth role.")]

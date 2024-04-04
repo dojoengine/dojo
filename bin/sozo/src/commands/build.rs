@@ -38,6 +38,7 @@ impl BuildArgs {
 
         // Custom plugins are always empty for now.
         let bindgen = PluginManager {
+            profile_name: compile_info.profile_name,
             output_path: self.bindings_output.into(),
             manifest_path: compile_info.manifest_path,
             root_package_name: compile_info
