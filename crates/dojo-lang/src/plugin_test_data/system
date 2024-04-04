@@ -319,6 +319,11 @@ error: Functions of dojo::interface cannot have `ref self` parameter.
     fn do_ref_self(ref self: TContractState);
     ^***************************************^
 
+error: Functions of dojo::contract cannot have 'ref self' parameter.
+ --> test_src/lib.cairo:119:9
+        fn do_with_ref_self(ref self: ContractState) -> felt252 {
+        ^*******************************************************^
+
 error: Only one parameter of type IWorldDispatcher is allowed.
  --> test_src/lib.cairo:123:9
         fn do_with_several_world_dispatchers(
