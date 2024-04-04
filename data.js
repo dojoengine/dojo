@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712246482472,
+  "lastUpdate": 1712254091027,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4405,6 +4405,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16891336,
             "range": "± 176568",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c2a45c9cb11ca6889a4d8dec490a92ef0c8a6ffe",
+          "message": "refactor: deserializing using typed data model (#1763)\n\n* refactor: deserializing using typed data model\r\n\r\n* fix: verify signature from public key correctly\r\n\r\n* feat: authorize duplicate messagesi n libp2p\r\n\r\n* fmt\r\n\r\n* fix: wasm\r\n\r\n* fix: wasm",
+          "timestamp": "2024-04-04T13:59:56-04:00",
+          "tree_id": "02cad1b44aec472b7d220d12f7e95f5405a872e9",
+          "url": "https://github.com/dojoengine/dojo/commit/c2a45c9cb11ca6889a4d8dec490a92ef0c8a6ffe"
+        },
+        "date": 1712254090349,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16755934,
+            "range": "± 137961",
             "unit": "ns/iter"
           }
         ]
