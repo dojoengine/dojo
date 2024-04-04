@@ -239,7 +239,7 @@ impl DojoContract {
                 if param_modifiers.contains(&"ref".to_string())
                     && param_type.eq(&"ContractState".to_string())
                 {
-                    has_ref_self = false;
+                    has_ref_self = true;
                     add_self = false;
                 }
 
