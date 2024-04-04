@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712254091027,
+  "lastUpdate": 1712254122868,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4435,6 +4435,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16755934,
             "range": "± 137961",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba1b250e18cc783a23736b894462f51ef056c016",
+          "message": "fix: add better message for u256 being used as a key (#1769)",
+          "timestamp": "2024-04-04T14:00:34-04:00",
+          "tree_id": "315e0ef4ffa7da4d9f2a1a3f5c1f0b2c2638382b",
+          "url": "https://github.com/dojoengine/dojo/commit/ba1b250e18cc783a23736b894462f51ef056c016"
+        },
+        "date": 1712254122361,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16978919,
+            "range": "± 251703",
             "unit": "ns/iter"
           }
         ]
