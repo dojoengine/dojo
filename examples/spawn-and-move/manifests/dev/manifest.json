@@ -677,8 +677,8 @@
     {
       "kind": "DojoContract",
       "address": "0x3539c9b89b08095ba914653fb0f20e55d4b172a415beade611bc260b346d0f7",
-      "class_hash": "0x16b1037beb348c3cf11c7f10733d366c7f29bc9d9172ba663421e2af4dab83c",
-      "original_class_hash": "0x16b1037beb348c3cf11c7f10733d366c7f29bc9d9172ba663421e2af4dab83c",
+      "class_hash": "0x471a1a36581d24f68ae6984c714daa75d424c0a6581872a65e645eb11a8e45",
+      "original_class_hash": "0x471a1a36581d24f68ae6984c714daa75d424c0a6581872a65e645eb11a8e45",
       "base_class_hash": "0x679177a2cb757694ac4f326d01052ff0963eac0bc2a17116a2b87badcdf6f76",
       "abi": [
         {
@@ -1185,6 +1185,263 @@
         }
       ],
       "name": "dojo_examples::actions::actions::moved"
+    },
+    {
+      "kind": "DojoModel",
+      "members": [
+        {
+          "name": "identity",
+          "type": "ContractAddress",
+          "key": true
+        },
+        {
+          "name": "emote",
+          "type": "Emote",
+          "key": false
+        }
+      ],
+      "class_hash": "0x6d5aef0819f5267c840c57d37ff774b4e185fc7da4a10e58cb9f575aa2ed1c",
+      "original_class_hash": "0x6d5aef0819f5267c840c57d37ff774b4e185fc7da4a10e58cb9f575aa2ed1c",
+      "abi": [
+        {
+          "type": "impl",
+          "name": "DojoModelImpl",
+          "interface_name": "dojo::model::IDojoModel"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u8>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u8>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Struct",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo::database::introspect::Enum",
+          "members": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "attrs",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "children",
+              "type": "core::array::Span::<(core::felt252, core::array::Span::<core::felt252>)>"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo::database::introspect::Ty",
+          "variants": [
+            {
+              "name": "Primitive",
+              "type": "core::felt252"
+            },
+            {
+              "name": "Struct",
+              "type": "dojo::database::introspect::Struct"
+            },
+            {
+              "name": "Enum",
+              "type": "dojo::database::introspect::Enum"
+            },
+            {
+              "name": "Tuple",
+              "type": "core::array::Span::<core::array::Span::<core::felt252>>"
+            },
+            {
+              "name": "Array",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo::model::IDojoModel",
+          "items": [
+            {
+              "type": "function",
+              "name": "name",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::felt252"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "unpacked_size",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u32"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "packed_size",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u32"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "layout",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::array::Span::<core::integer::u8>"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "schema",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "dojo::database::introspect::Ty"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "emote_messageImpl",
+          "interface_name": "dojo_examples::models::Iemote_message"
+        },
+        {
+          "type": "enum",
+          "name": "dojo_examples::models::Emote",
+          "variants": [
+            {
+              "name": "None",
+              "type": "()"
+            },
+            {
+              "name": "Happy",
+              "type": "()"
+            },
+            {
+              "name": "Sad",
+              "type": "()"
+            },
+            {
+              "name": "Angry",
+              "type": "()"
+            },
+            {
+              "name": "Love",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_examples::models::EmoteMessage",
+          "members": [
+            {
+              "name": "identity",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "emote",
+              "type": "dojo_examples::models::Emote"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::models::Iemote_message",
+          "items": [
+            {
+              "type": "function",
+              "name": "ensure_abi",
+              "inputs": [
+                {
+                  "name": "model",
+                  "type": "dojo_examples::models::EmoteMessage"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::models::emote_message::Event",
+          "kind": "enum",
+          "variants": []
+        }
+      ],
+      "name": "dojo_examples::models::emote_message"
     },
     {
       "kind": "DojoModel",
