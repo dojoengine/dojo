@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712196643957,
+  "lastUpdate": 1712237016142,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4345,6 +4345,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17032253,
             "range": "± 292382",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af7ec6e79f83eea07a315116e50184e0b6e14976",
+          "message": "feat(sozo): add ability to migrate the world (#1698)\n\n* refactor: move manifest.rs into its own module\r\n\r\n* feat: add `original_class_hash` to manifest files\r\n\r\n* feat: add ability to migrate the world\r\n\r\n* fix world migration bug\r\n\r\n* add base_classs_hash in `DojoContract`s\r\n\r\n* fix: ensure overlays contracts can be omitted + re-run tests\r\n\r\n* fix: ensure world is upgraded anytime a diff is observed\r\n\r\n* feat: add upgrade message for dojo contract + fix tests\r\n\r\n* fix: add missing tests for AbiFormat\r\n\r\n* fix: write json without empty line at EOF\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-04T09:15:11-04:00",
+          "tree_id": "6add542a9167de12cb8c25eb93511341041bbd1a",
+          "url": "https://github.com/dojoengine/dojo/commit/af7ec6e79f83eea07a315116e50184e0b6e14976"
+        },
+        "date": 1712237014919,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17061452,
+            "range": "± 282909",
             "unit": "ns/iter"
           }
         ]
