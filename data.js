@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712263321927,
+  "lastUpdate": 1712264850162,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4495,6 +4495,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16681860,
             "range": "± 175159",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "94fbe540de31f0ba7f59685aeffef2c695fb170d",
+          "message": "fix: spawn and move & add offchain model (#1768)\n\n* fix: spawn and move & add offchain model\r\n\r\n* update example\r\n\r\n* update version\r\n\r\n* chore: deployment manifest\r\n\r\n* update test\r\n\r\n* chore: scarb lock\r\n\r\n* fix: test\r\n\r\n* tests\r\n\r\n* fix: generate manifests with latest sozo version\r\n\r\n* fix: add deployement manifest\r\n\r\n* fix: test with correct model name\r\n\r\n* fix: adjust number of models into sql test\r\n\r\n* fix: update default_auth script\r\n\r\n* fix: remove  from manifests name and use\r\n\r\n* fix: generate new manifests\r\n\r\n* ci: re-enable ensure-windows\r\n\r\n* fix: add new generated manifests for tests\r\n\r\n* fix: adjust clean command to new manifests path\r\n\r\n* fix: generate new manifests\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-04T16:59:22-04:00",
+          "tree_id": "99182f79c838a46875bf3bc643ddc2ba55747743",
+          "url": "https://github.com/dojoengine/dojo/commit/94fbe540de31f0ba7f59685aeffef2c695fb170d"
+        },
+        "date": 1712264849637,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16682560,
+            "range": "± 204024",
             "unit": "ns/iter"
           }
         ]
