@@ -458,7 +458,7 @@ fn write_manifest_and_abi<T>(
 where
     T: Serialize + DeserializeOwned + ManifestMethods,
 {
-    let name = manifest.name.to_string();
+    let name = manifest.name.to_string().replace("::", "_");
 
     let relative_manifest_path = relative_manifest_dir.join(name.clone()).with_extension("toml");
     let relative_abi_path = relative_abis_dir.join(name.clone()).with_extension("json");
