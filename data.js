@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712237016142,
+  "lastUpdate": 1712246482472,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4375,6 +4375,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17061452,
             "range": "± 282909",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09762ad2e8b257ce7f300b13cd218f221c4b862d",
+          "message": "[sozo] feat: sozo migrate commands and new manifest tree (#1767)\n\n* refactor: move manifest.rs into its own module\r\n\r\n* feat: add `original_class_hash` to manifest files\r\n\r\n* feat: add ability to migrate the world\r\n\r\n* fix world migration bug\r\n\r\n* add base_classs_hash in `DojoContract`s\r\n\r\n* fix: ensure overlays contracts can be omitted + re-run tests\r\n\r\n* fix: ensure world is upgraded anytime a diff is observed\r\n\r\n* feat: add upgrade message for dojo contract + fix tests\r\n\r\n* fix: add missing tests for AbiFormat\r\n\r\n* fix: write json without empty line at EOF\r\n\r\n* feat: add profile subfolders for manifests\r\n\r\n* fix: adjust bindgen to new manifest paths\r\n\r\n* fix: regenerate manifests\r\n\r\n* fix: fix tests\r\n\r\n* feat: use fully qualified path for manifests files\r\n\r\n* fix: update generated files\r\n\r\n* fix: adjust tests with new manifests\r\n\r\n* feat: separate migrate into two commands\r\n\r\n* ci: remove ensure-windows for now as we only recommend WSL\r\n\r\n* fix: regenerate manifests\r\n\r\n* fix: add test for dry run migration:\r\n\r\n* fix: tests to be reworked\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-04-04T11:53:07-04:00",
+          "tree_id": "cc0b490773d0458157a1a6b6ec1f659c1f7ffb5a",
+          "url": "https://github.com/dojoengine/dojo/commit/09762ad2e8b257ce7f300b13cd218f221c4b862d"
+        },
+        "date": 1712246481751,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16891336,
+            "range": "± 176568",
             "unit": "ns/iter"
           }
         ]
