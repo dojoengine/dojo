@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use starknet::core::types::{DeclareTransactionResult, FieldElement};
 
-use super::{Declarable, Deployable, MigrationType, StateDiff};
+use super::{Declarable, Deployable, MigrationType, StateDiff, Upgradable};
 
 pub type DeclareOutput = DeclareTransactionResult;
 
@@ -12,23 +12,31 @@ pub type DeclareOutput = DeclareTransactionResult;
 #[derive(Debug, Default, Clone)]
 pub struct ContractDiff {
     pub name: String,
-    pub local: FieldElement,
-    pub remote: Option<FieldElement>,
+    pub local_class_hash: FieldElement,
+    pub original_class_hash: FieldElement,
+    pub base_class_hash: FieldElement,
+    pub remote_class_hash: Option<FieldElement>,
 }
 
 impl StateDiff for ContractDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote { self.local == remote } else { false }
+        if let Some(remote) = self.remote_class_hash {
+            self.local_class_hash == remote
+        } else {
+            false
+        }
     }
 }
 
 impl Display for ContractDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.name)?;
-        writeln!(f, "   Local: {:#x}", self.local)?;
+        writeln!(f, "   Local Class Hash: {:#x}", self.local_class_hash)?;
+        writeln!(f, "   Original Class Hash: {:#x}", self.original_class_hash)?;
+        writeln!(f, "   Base Class Hash: {:#x}", self.base_class_hash)?;
 
-        if let Some(remote) = self.remote {
-            writeln!(f, "   Remote: {remote:#x}")?;
+        if let Some(remote) = self.remote_class_hash {
+            writeln!(f, "   Remote Class Hash: {remote:#x}")?;
         }
 
         Ok(())
@@ -46,11 +54,11 @@ pub struct ContractMigration {
 
 impl ContractMigration {
     pub fn migration_type(&self) -> MigrationType {
-        let Some(remote) = self.diff.remote else {
+        let Some(remote) = self.diff.remote_class_hash else {
             return MigrationType::New;
         };
 
-        match self.diff.local == remote {
+        match self.diff.local_class_hash == remote {
             true => MigrationType::New,
             false => MigrationType::Update,
         }
@@ -70,3 +78,6 @@ impl Deployable for ContractMigration {
         self.salt
     }
 }
+
+#[async_trait]
+impl Upgradable for ContractMigration {}

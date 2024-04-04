@@ -430,3 +430,29 @@ fn test_abi_format_to_embed() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+fn test_abi_format_to_path() {
+    let embedded = AbiFormat::Embed(vec![]);
+    assert!(embedded.to_path().is_none());
+
+    let path = AbiFormat::Path(Utf8PathBuf::from("/tmp"));
+    assert!(path.to_path().is_some());
+}
+
+#[test]
+fn test_abi_format_load_abi_string() -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = tempfile::tempdir()?;
+    let temp_path = temp_dir.path().join("abi.json");
+    let mut temp_file = std::fs::File::create(&temp_path)?;
+
+    write!(temp_file, "[]")?;
+
+    let path = AbiFormat::Path(Utf8PathBuf::from_path_buf(temp_path.clone()).unwrap());
+    assert_eq!(path.load_abi_string(&Utf8PathBuf::new()).unwrap(), "[]");
+
+    let embedded = AbiFormat::Embed(vec![]);
+    assert_eq!(embedded.load_abi_string(&Utf8PathBuf::new()).unwrap(), "[]");
+
+    Ok(())
+}

@@ -234,7 +234,7 @@ fn update_manifest(
         &manifest_dir,
         &mut Manifest::new(
             // abi path will be written by `write_manifest`
-            Class { class_hash: *hash, abi: None },
+            Class { class_hash: *hash, abi: None, original_class_hash: *hash },
             WORLD_CONTRACT_NAME.into(),
         ),
         abi,
@@ -245,7 +245,10 @@ fn update_manifest(
         &relative_manifests_dir,
         &relative_abis_dir,
         &manifest_dir,
-        &mut Manifest::new(Class { class_hash: *hash, abi: None }, BASE_CONTRACT_NAME.into()),
+        &mut Manifest::new(
+            Class { class_hash: *hash, abi: None, original_class_hash: *hash },
+            BASE_CONTRACT_NAME.into(),
+        ),
         &None,
     )?;
 
@@ -352,7 +355,12 @@ fn get_dojo_model_artifacts(
                     model_full_name.clone(),
                     (
                         Manifest::new(
-                            DojoModel { class_hash, abi: None, members: model.members.clone() },
+                            DojoModel {
+                                class_hash,
+                                abi: None,
+                                members: model.members.clone(),
+                                original_class_hash: class_hash,
+                            },
                             model_full_name.into(),
                         ),
                         abi,
@@ -423,7 +431,7 @@ fn get_dojo_contract_artifacts(
                     writes,
                     reads,
                     class_hash: *class_hash,
-                    abi: None,
+                    original_class_hash: *class_hash,
                     ..Default::default()
                 },
                 module_name.clone(),
