@@ -8,9 +8,7 @@ use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
-use crate::models::storage::{
-    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
-};
+use crate::models::storage::{BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -221,7 +219,7 @@ tables! {
     ClassChangeHistory: (BlockNumber, ContractAddress) => ContractClassChange,
 
     /// storage change set
-    StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChangeList,
+    StorageChangeSet: (ContractStorageKey) => BlockList,
     /// Account storage change set
     StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
 

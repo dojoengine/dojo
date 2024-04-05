@@ -1,5 +1,6 @@
 use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
+use serde::{Deserialize, Serialize};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::error::CodecError;
@@ -35,30 +36,8 @@ impl Decompress for StorageEntry {
     }
 }
 
-#[derive(Debug)]
-pub struct StorageEntryChangeList {
-    pub key: StorageKey,
-    pub block_list: Vec<BlockNumber>,
-}
-
-impl Compress for StorageEntryChangeList {
-    type Compressed = Vec<u8>;
-    fn compress(self) -> Self::Compressed {
-        let mut buf = Vec::new();
-        buf.extend_from_slice(&self.key.encode());
-        buf.extend_from_slice(&self.block_list.compress());
-        buf
-    }
-}
-
-impl Decompress for StorageEntryChangeList {
-    fn decompress<B: AsRef<[u8]>>(bytes: B) -> Result<Self, CodecError> {
-        let bytes = bytes.as_ref();
-        let key = StorageKey::decode(&bytes[0..32])?;
-        let blocks = Vec::<BlockNumber>::decompress(&bytes[32..])?;
-        Ok(Self { key, block_list: blocks })
-    }
-}
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct BlockList(pub Vec<BlockNumber>);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ContractStorageKey {
