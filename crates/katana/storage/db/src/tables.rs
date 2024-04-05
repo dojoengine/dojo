@@ -165,7 +165,7 @@ define_tables_enum! {[
     (NonceChangeHistory, TableType::DupSort),
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
-    (StorageChangeSet, TableType::DupSort)
+    (StorageChangeSet, TableType::Table)
 ]}
 
 tables! {
