@@ -18,9 +18,7 @@ use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
     legacy_rpc_to_inner_compiled_class,
 };
-use katana_primitives::event::{
-    ChunkSize, EventContinuationToken, EventFilter, EventsPage,
-};
+use katana_primitives::event::{ChunkSize, EventContinuationToken, EventFilter, EventsPage};
 use katana_primitives::transaction::{Transaction, TxHash, TxNumber};
 use katana_primitives::FieldElement;
 use parking_lot::Mutex;
@@ -47,6 +45,8 @@ type GetBlockWithTxsResult =
 type GetTransactionResult = Result<Transaction, ForkedBackendError>;
 type GetTransactionReceiptResult =
     Result<starknet::core::types::MaybePendingTransactionReceipt, ForkedBackendError>;
+
+const FORKED_BACKEND: &str = "forked_backend";
 
 #[derive(Debug, thiserror::Error)]
 pub enum ForkedBackendError {
@@ -314,7 +314,7 @@ impl ForkedBackend {
                 .block_on(backend);
         })?;
 
-        trace!(target: "forked_backend", "fork backend thread spawned");
+        trace!(target: FORKED_BACKEND, "fork backend thread spawned");
 
         Ok(handler)
     }
@@ -344,7 +344,7 @@ impl ForkedBackend {
         &self,
         contract_address: ContractAddress,
     ) -> Result<Nonce, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting nonce for contract address {contract_address}");
+        trace!(target: FORKED_BACKEND, "requesting nonce for contract address {contract_address}");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -358,7 +358,7 @@ impl ForkedBackend {
         contract_address: ContractAddress,
         key: StorageKey,
     ) -> Result<StorageValue, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting storage for address {contract_address} at key {key:#x}" );
+        trace!(target: FORKED_BACKEND, "requesting storage for address {contract_address} at key {key:#x}" );
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -371,7 +371,7 @@ impl ForkedBackend {
         &self,
         contract_address: ContractAddress,
     ) -> Result<ClassHash, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting class hash at address {contract_address}");
+        trace!(target: FORKED_BACKEND, "requesting class hash at address {contract_address}");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -384,7 +384,7 @@ impl ForkedBackend {
         &self,
         class_hash: ClassHash,
     ) -> Result<starknet::core::types::ContractClass, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting class at hash {class_hash:#x}");
+        trace!(target: FORKED_BACKEND, "requesting class at hash {class_hash:#x}");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -397,7 +397,7 @@ impl ForkedBackend {
         &self,
         class_hash: ClassHash,
     ) -> Result<CompiledClassHash, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting compiled class hash at class {class_hash:#x}");
+        trace!(target: FORKED_BACKEND, "requesting compiled class hash at class {class_hash:#x}");
         let class = self.do_get_class_at(class_hash)?;
         // if its a legacy class, then we just return back the class hash
         // else if sierra class, then we have to compile it and compute the compiled class hash.
@@ -416,7 +416,7 @@ impl ForkedBackend {
         continuation_token: Option<String>,
         chunks_size: ChunkSize,
     ) -> Result<EventsPage, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting evetns at filter{filter:#?}, continuation_token {continuation_token:#?}, and chunks_size {chunks_size:#?} ");
+        trace!(target: FORKED_BACKEND, "requesting evetns at filter{filter:#?}, continuation_token {continuation_token:#?}, and chunks_size {chunks_size:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -429,7 +429,7 @@ impl ForkedBackend {
         &self,
         block_id: BlockIdOrTag,
     ) -> Result<starknet::core::types::MaybePendingBlockWithTxHashes, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting block with tx_hashes at block {block_id:#?} ");
+        trace!(target: FORKED_BACKEND, "requesting block with tx_hashes at block {block_id:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -442,7 +442,7 @@ impl ForkedBackend {
         &self,
         block_id: BlockIdOrTag,
     ) -> Result<starknet::core::types::MaybePendingBlockWithTxs, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting block with txs at block {block_id:#?} ");
+        trace!(target: FORKED_BACKEND, "requesting block with txs at block {block_id:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -456,7 +456,7 @@ impl ForkedBackend {
         block_id: BlockIdOrTag,
         index: TxNumber,
     ) -> Result<Transaction, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting transaction at block {block_id:#?}, index {index:#?}");
+        trace!(target: FORKED_BACKEND, "requesting transaction at block {block_id:#?}, index {index:#?}");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -467,9 +467,9 @@ impl ForkedBackend {
 
     pub fn do_get_transaction_by_hash(
         &self,
-        transaction_hash: TxHash
+        transaction_hash: TxHash,
     ) -> Result<Transaction, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting transaction at trasanction hash {transaction_hash:#?} ");
+        trace!(target: FORKED_BACKEND, "requesting transaction at trasanction hash {transaction_hash:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -480,9 +480,9 @@ impl ForkedBackend {
 
     pub fn do_get_transaction_receipt(
         &self,
-        transaction_hash: TxHash
+        transaction_hash: TxHash,
     ) -> Result<starknet::core::types::MaybePendingTransactionReceipt, ForkedBackendError> {
-        trace!(target: "forked_backend", "requesting transaction receipt at trasanction hash {transaction_hash:#?} ");
+        trace!(target: FORKED_BACKEND, "requesting transaction receipt at trasanction hash {transaction_hash:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -520,7 +520,7 @@ impl StateProvider for SharedStateProvider {
         }
 
         if let Some(nonce) = handle_contract_or_class_not_found_err(self.0.do_get_nonce(address)).map_err(|e| {
-            error!(target: "forked_backend", "error while fetching nonce of contract {address}: {e}");
+            error!(target: FORKED_BACKEND, "error while fetching nonce of contract {address}: {e}");
             e
         })? {
             self.0.contract_state.write().entry(address).or_default().nonce = nonce;
@@ -542,7 +542,7 @@ impl StateProvider for SharedStateProvider {
         }
 
         let value = handle_contract_or_class_not_found_err(self.0.do_get_storage(address, storage_key)).map_err(|e| {
-            error!(target: "forked_backend", "error while fetching storage value of contract {address} at key {storage_key:#x}: {e}");
+            error!(target: FORKED_BACKEND, "error while fetching storage value of contract {address} at key {storage_key:#x}: {e}");
             e
         })?;
 
@@ -565,7 +565,7 @@ impl StateProvider for SharedStateProvider {
         }
 
         if let Some(hash) = handle_contract_or_class_not_found_err(self.0.do_get_class_hash_at(address)).map_err(|e| {
-            error!(target: "forked_backend", "error while fetching class hash of contract {address}: {e}");
+            error!(target: FORKED_BACKEND, "error while fetching class hash of contract {address}: {e}");
             e
         })? {
             self.0.contract_state.write().entry(address).or_default().class_hash = hash;
@@ -584,7 +584,7 @@ impl ContractClassProvider for SharedStateProvider {
 
         let Some(class) = handle_contract_or_class_not_found_err(self.0.do_get_class_at(hash))
             .map_err(|e| {
-                error!(target: "forked_backend", "error while fetching sierra class {hash:#x}: {e}");
+                error!(target: FORKED_BACKEND, "error while fetching sierra class {hash:#x}: {e}");
                 e
             })?
         else {
@@ -615,7 +615,7 @@ impl ContractClassProvider for SharedStateProvider {
         if let Some(hash) =
             handle_contract_or_class_not_found_err(self.0.do_get_compiled_class_hash(hash))
                 .map_err(|e| {
-                    error!(target: "forked_backend", "error while fetching compiled class hash for class hash {hash:#x}: {e}");
+                    error!(target: FORKED_BACKEND, "error while fetching compiled class hash for class hash {hash:#x}: {e}");
                     e
                 })?
         {
@@ -633,7 +633,7 @@ impl ContractClassProvider for SharedStateProvider {
 
         let Some(class) = handle_contract_or_class_not_found_err(self.0.do_get_class_at(hash))
             .map_err(|e| {
-                error!(target: "forked_backend", "error while fetching class {hash:#x}: {e}");
+                error!(target: FORKED_BACKEND, "error while fetching class {hash:#x}: {e}");
                 e
             })?
         else {
@@ -643,7 +643,7 @@ impl ContractClassProvider for SharedStateProvider {
         let (class_hash, compiled_class_hash, casm, sierra) = match class {
             ContractClass::Legacy(class) => {
                 let (_, compiled_class) = legacy_rpc_to_inner_compiled_class(&class).map_err(|e| {
-                    error!(target: "forked_backend", "error while parsing legacy class {hash:#x}: {e}");
+                    error!(target: FORKED_BACKEND, "error while parsing legacy class {hash:#x}: {e}");
                     ProviderError::ParsingError(e.to_string())
                 })?;
 
@@ -652,7 +652,7 @@ impl ContractClassProvider for SharedStateProvider {
 
             ContractClass::Sierra(sierra_class) => {
                 let (_, compiled_class_hash, compiled_class) = flattened_sierra_to_compiled_class(&sierra_class).map_err(|e|{
-                    error!(target: "forked_backend", "error while parsing sierra class {hash:#x}: {e}");
+                    error!(target: FORKED_BACKEND, "error while parsing sierra class {hash:#x}: {e}");
                     ProviderError::ParsingError(e.to_string())
                 })?;
 
@@ -816,5 +816,51 @@ mod tests {
         assert_eq!(nonce, nonce_in_cache, "value must be stored in cache");
         assert_eq!(class_hash, class_hash_in_cache, "value must be stored in cache");
         assert_eq!(storage_value, storage_value_in_cache, "value must be stored in cache");
+    }
+
+    #[test]
+    fn fetch_non_state_data_from_fork() {
+        let (backend, _) = create_forked_backend(LOCAL_RPC_URL.into(), 1);
+
+        assert!(backend
+            .do_get_events(
+                EventFilter {
+                    from_block: Some(BlockId::Number(0)),
+                    to_block: Some(BlockId::Number(5)),
+                    address: None,
+                    keys: None,
+                },
+                Some("0,100,0".into()),
+                100,
+            )
+            .is_ok());
+
+        assert!(backend
+            .do_get_block_with_tx_hashes(starknet::core::types::BlockId::Number(0))
+            .is_ok());
+
+        assert!(backend.do_get_block_with_txs(starknet::core::types::BlockId::Number(0)).is_ok());
+
+        assert!(backend
+            .do_get_transaction_by_block_id_and_index(starknet::core::types::BlockId::Number(0), 1)
+            .is_ok());
+
+        assert!(backend
+            .do_get_transaction_by_hash(
+                FieldElement::from_hex_be(
+                    "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+                )
+                .unwrap()
+            )
+            .is_err());
+
+        assert!(backend
+            .do_get_transaction_receipt(
+                FieldElement::from_hex_be(
+                    "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+                )
+                .unwrap()
+            )
+            .is_err());
     }
 }
