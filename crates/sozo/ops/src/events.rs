@@ -51,7 +51,6 @@ pub async fn parse(
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
             manifest_dir,
-            profile_name,
         )?)
     } else {
         None
@@ -76,7 +75,6 @@ fn is_event(token: &Token) -> bool {
 fn extract_events(
     manifest: &DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
-    profile_name: &str,
 ) -> Result<HashMap<String, Vec<Token>>> {
     fn process_abi(
         events: &mut HashMap<String, Vec<Token>>,
@@ -102,18 +100,16 @@ fn extract_events(
 
     let mut events_map = HashMap::new();
 
-    let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
-
     for contract in &manifest.contracts {
         if let Some(AbiFormat::Path(abi_path)) = contract.inner.abi() {
-            let full_abi_path = profile_dir.join(abi_path);
+            let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     for model in &manifest.contracts {
         if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
-            let full_abi_path = profile_dir.join(abi_path);
+            let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
@@ -250,9 +246,13 @@ fn process_inners(
 
 #[cfg(test)]
 mod tests {
+    use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
     use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
     use dojo_world::manifest::BaseManifest;
+    use starknet::core::types::EmittedEvent;
+
+    use super::*;
 
     #[test]
     fn extract_events_work_as_expected() {
@@ -263,16 +263,11 @@ mod tests {
         )
         .unwrap()
         .into();
-        let result = extract_events(&manifest, &manifest_dir, profile_name).unwrap();
+        let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
         assert_eq!(result.len(), 11);
     }
-
-    use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
-    use starknet::core::types::EmittedEvent;
-
-    use super::*;
 
     #[test]
     fn test_core_basic() {
