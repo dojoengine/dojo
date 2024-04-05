@@ -8,7 +8,7 @@ use crate::error::BindgenResult;
 use crate::DojoData;
 
 pub mod typescript;
-pub mod typescript_new;
+pub mod typescript_v2;
 pub mod unity;
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl fmt::Display for BuiltinPlugins {
         match self {
             BuiltinPlugins::Typescript => write!(f, "typescript"),
             BuiltinPlugins::Unity => write!(f, "unity"),
-            BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_new"),
+            BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_v2"),
         }
     }
 }

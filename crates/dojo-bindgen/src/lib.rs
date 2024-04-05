@@ -12,7 +12,7 @@ use error::{BindgenResult, Error};
 
 mod plugins;
 use plugins::typescript::TypescriptPlugin;
-use plugins::typescript_new::TypeScriptV2Plugin;
+use plugins::typescript_v2::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
 use plugins::BuiltinPlugin;
 pub use plugins::BuiltinPlugins;
