@@ -280,23 +280,22 @@ mod tests {
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
     }
 
-    use crate::{
-        codecs::{Compress, Decode, Decompress, Encode},
-        models::{
-            block::StoredBlockBodyIndices,
-            contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange},
-            storage::{BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry},
-        },
-    };
-    use katana_primitives::{
-        block::{BlockHash, BlockNumber, FinalityStatus, Header},
-        class::{ClassHash, CompiledClass, CompiledClassHash},
-        contract::{ContractAddress, GenericContractInfo},
-        receipt::Receipt,
-        trace::TxExecInfo,
-        transaction::{InvokeTx, Tx, TxHash, TxNumber},
-    };
+    use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
+    use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash};
+    use katana_primitives::contract::{ContractAddress, GenericContractInfo};
+    use katana_primitives::receipt::Receipt;
+    use katana_primitives::trace::TxExecInfo;
+    use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxNumber};
     use starknet::macros::felt;
+
+    use crate::codecs::{Compress, Decode, Decompress, Encode};
+    use crate::models::block::StoredBlockBodyIndices;
+    use crate::models::contract::{
+        ContractClassChange, ContractInfoChangeList, ContractNonceChange,
+    };
+    use crate::models::storage::{
+        BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry,
+    };
 
     macro_rules! assert_key_encode_decode {
 	    { $( ($name:ty, $key:expr) ),* } => {
