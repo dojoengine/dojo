@@ -4,6 +4,8 @@ use convert_case::{Case, Casing};
 use katana_primitives::receipt::Event;
 use tracing::trace;
 
+pub(crate) const LOG_TARGET: &str = "executor";
+
 pub fn log_resources(resources: &HashMap<String, u64>) {
     let mut mapped_strings = resources
         .iter()
@@ -27,15 +29,15 @@ pub fn log_resources(resources: &HashMap<String, u64>) {
         mapped_strings.insert(0, format!("Steps: {}", steps));
     }
 
-    trace!(target: "executor", "transaction resource usage: {}", mapped_strings.join(" | "));
+    trace!(target: LOG_TARGET, usage = mapped_strings.join(" | "), "Transaction resource usage.");
 }
 
 pub fn log_events(events: &[Event]) {
     for e in events {
         trace!(
-            target: "executor",
-            "event emitted keys=[{}]",
-             e.keys.iter().map(|key| format!("{key:#x}")).collect::<Vec<_>>().join(", ")
+            target: LOG_TARGET,
+            keys = e.keys.iter().map(|key| format!("{key:#x}")).collect::<Vec<_>>().join(", "),
+            "Event emitted.",
         );
     }
 }

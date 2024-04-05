@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use anyhow::Result;
 use cairo_lang_defs::patcher::PatchBuilder;
 use cairo_lang_defs::plugin::{
@@ -6,6 +8,7 @@ use cairo_lang_defs::plugin::{
 };
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_semantic::plugin::PluginSuite;
+use cairo_lang_starknet::plugin::aux_data::StarkNetEventAuxData;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
@@ -23,6 +26,7 @@ use smol_str::SmolStr;
 use url::Url;
 
 use crate::contract::DojoContract;
+use crate::event::handle_event_struct;
 use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
@@ -33,8 +37,9 @@ use crate::introspect::{handle_introspect_enum, handle_introspect_struct};
 use crate::model::handle_model_struct;
 use crate::print::{handle_print_enum, handle_print_struct};
 
-const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
-const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
+pub const DOJO_CONTRACT_ATTR: &str = "dojo::contract";
+pub const DOJO_INTERFACE_ATTR: &str = "dojo::interface";
+pub const DOJO_EVENT_ATTR: &str = "dojo::event";
 const DOJO_PLUGIN_EXPAND_VAR_ENV: &str = "DOJO_PLUGIN_EXPAND";
 
 #[derive(Clone, Debug, PartialEq)]
@@ -56,6 +61,8 @@ pub struct DojoAuxData {
     pub models: Vec<Model>,
     /// A list of systems that were processed by the plugin and their model dependencies.
     pub systems: Vec<SystemAuxData>,
+    /// A list of events that were processed by the plugin.
+    pub events: Vec<StarkNetEventAuxData>,
 }
 
 impl GeneratedFileAuxData for DojoAuxData {
@@ -406,6 +413,26 @@ impl MacroPlugin for BuiltinDojoPlugin {
                     }
                 }
 
+                let attributes = struct_ast.attributes(db).query_attr(db, DOJO_EVENT_ATTR);
+
+                match attributes.len().cmp(&1) {
+                    Ordering::Equal => {
+                        let (event_rewrite_nodes, event_diagnostics) =
+                            handle_event_struct(db, &mut aux_data, struct_ast.clone());
+                        rewrite_nodes.push(event_rewrite_nodes);
+                        diagnostics.extend(event_diagnostics);
+                    }
+                    Ordering::Greater => {
+                        diagnostics.push(PluginDiagnostic {
+                            message: "A Dojo event must have zero or one dojo::event attribute."
+                                .into(),
+                            stable_ptr: struct_ast.stable_ptr().untyped(),
+                            severity: Severity::Error,
+                        });
+                    }
+                    _ => {}
+                }
+
                 if rewrite_nodes.is_empty() {
                     return PluginResult { diagnostics, ..PluginResult::default() };
                 }
@@ -439,6 +466,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
     fn declared_attributes(&self) -> Vec<String> {
         vec![
             "dojo::contract".to_string(),
+            "dojo::event".to_string(),
             "key".to_string(),
             "computed".to_string(),
             // Not adding capacity for now, this will automatically

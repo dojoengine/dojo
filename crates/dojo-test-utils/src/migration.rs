@@ -10,8 +10,13 @@ pub fn prepare_migration(
     manifest_dir: Utf8PathBuf,
     target_dir: Utf8PathBuf,
 ) -> Result<MigrationStrategy> {
-    let manifest =
-        BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR)).unwrap();
+    // In testing, profile name is always dev.
+    let profile_name = "dev";
+
+    let manifest = BaseManifest::load_from_path(
+        &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+    )
+    .unwrap();
 
     let world = WorldDiff::compute(manifest, None);
 

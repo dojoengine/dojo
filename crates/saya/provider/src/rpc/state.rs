@@ -3,7 +3,7 @@
 //! For data availability format, all the specification is available here:
 //! <https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/on-chain-data>.
 //!
-//! We use `U256` from ethers for easier computation (than working with felts).
+//! We use `U256` from alloy for easier computation (than working with felts).
 //!
 //! Optims:
 //! Currently, the serialize functions are using `iter().find()` on arrays
@@ -12,7 +12,7 @@
 //! arrays to then have O(1) search.
 use std::collections::{HashMap, HashSet};
 
-use ethers::types::U256;
+use alloy_primitives::U256;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use starknet::core::types::{
@@ -23,7 +23,7 @@ use starknet::core::types::{
 use crate::ProviderResult;
 
 // 2 ^ 128
-const CLASS_INFO_FLAG_TRUE: &str = "0x100000000000000000000000000000000";
+const CLASS_INFO_FLAG_TRUE: &str = "100000000000000000000000000000000";
 
 /// Converts the [`StateUpdate`] RPC type into [`StateUpdate`] Katana primitive.
 ///
@@ -230,10 +230,10 @@ fn compute_update_meta_info(
     if let Some(nonce) = new_nonce {
         // At the moment, v0.11 and forward are packing the nonce into 64 bits.
         let nonce_u64: u64 = nonce.try_into().expect("Nonce too large for DA serialization");
-        meta += ((nonce_u64 as u128) << 64).into()
+        meta += U256::from((nonce_u64 as u128) << 64)
     }
 
-    meta += (n_storage_updates as u128).into();
+    meta += U256::from(n_storage_updates);
 
     FieldElement::from_hex_be(format!("0x{:064x}", meta).as_str()).unwrap()
 }

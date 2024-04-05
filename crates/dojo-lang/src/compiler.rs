@@ -46,6 +46,8 @@ pub const ABIS_DIR: &str = "abis";
 pub const CONTRACTS_DIR: &str = "contracts";
 pub const MODELS_DIR: &str = "models";
 
+pub(crate) const LOG_TARGET: &str = "dojo_lang::compiler";
+
 #[cfg(test)]
 #[path = "compiler_test.rs"]
 mod test;
@@ -101,7 +103,7 @@ impl Compiler for DojoCompiler {
             .iter()
             .map(|decl| decl.module_id().full_path(db.upcast_mut()))
             .collect::<Vec<_>>();
-        trace!(contracts = ?contract_paths);
+        trace!(target: LOG_TARGET, contracts = ?contract_paths);
 
         let contracts = contracts.iter().collect::<Vec<_>>();
 
@@ -152,7 +154,7 @@ fn find_project_contracts(
 
     let external_contracts = if let Some(external_contracts) = external_contracts {
         let _ = trace_span!("find_external_contracts").enter();
-        debug!("external contracts selectors: {:?}", external_contracts);
+        debug!(target: LOG_TARGET, external_contracts = ?external_contracts, "External contracts selectors.");
 
         let crate_ids = external_contracts
             .iter()
@@ -172,7 +174,7 @@ fn find_project_contracts(
             })
             .collect::<Vec<ContractDeclaration>>()
     } else {
-        debug!("no external contracts selected");
+        debug!(target: LOG_TARGET, "No external contracts selected.");
         Vec::new()
     };
 
@@ -210,8 +212,12 @@ fn update_manifest(
     compiled_artifacts: HashMap<SmolStr, (FieldElement, Option<abi::Contract>)>,
     external_contracts: Option<Vec<ContractSelector>>,
 ) -> anyhow::Result<()> {
-    let relative_manifests_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(BASE_DIR);
-    let relative_abis_dir = Utf8PathBuf::new().join(ABIS_DIR).join(BASE_DIR);
+    let profile_name =
+        ws.current_profile().expect("Scarb profile expected to be defined.").to_string();
+    let profile_dir = Utf8PathBuf::new().join(MANIFESTS_DIR).join(profile_name);
+
+    let relative_manifests_dir = Utf8PathBuf::new().join(&profile_dir).join(BASE_DIR);
+    let relative_abis_dir = Utf8PathBuf::new().join(&profile_dir).join(ABIS_DIR).join(BASE_DIR);
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
     fn get_compiled_artifact_from_map<'a>(
@@ -225,17 +231,17 @@ fn update_manifest(
 
     let mut crate_ids = crate_ids.to_vec();
 
-    let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
+    let (hash, abi) = get_compiled_artifact_from_map(&compiled_artifacts, WORLD_CONTRACT_NAME)?;
     write_manifest_and_abi(
         &relative_manifests_dir,
         &relative_abis_dir,
         &manifest_dir,
         &mut Manifest::new(
             // abi path will be written by `write_manifest`
-            Class { class_hash: *hash, abi: None },
+            Class { class_hash: *hash, abi: None, original_class_hash: *hash },
             WORLD_CONTRACT_NAME.into(),
         ),
-        &None,
+        abi,
     )?;
 
     let (hash, _) = get_compiled_artifact_from_map(&compiled_artifacts, BASE_CONTRACT_NAME)?;
@@ -243,7 +249,10 @@ fn update_manifest(
         &relative_manifests_dir,
         &relative_abis_dir,
         &manifest_dir,
-        &mut Manifest::new(Class { class_hash: *hash, abi: None }, BASE_CONTRACT_NAME.into()),
+        &mut Manifest::new(
+            Class { class_hash: *hash, abi: None, original_class_hash: *hash },
+            BASE_CONTRACT_NAME.into(),
+        ),
         &None,
     )?;
 
@@ -309,13 +318,13 @@ fn update_manifest(
         )?;
     }
 
-    for (_, (manifest, _)) in models.iter_mut() {
+    for (_, (manifest, abi)) in models.iter_mut() {
         write_manifest_and_abi(
             &relative_manifests_dir.join(MODELS_DIR),
             &relative_abis_dir.join(MODELS_DIR),
             &manifest_dir,
             manifest,
-            &None,
+            abi,
         )?;
     }
 
@@ -350,7 +359,12 @@ fn get_dojo_model_artifacts(
                     model_full_name.clone(),
                     (
                         Manifest::new(
-                            DojoModel { class_hash, abi: None, members: model.members.clone() },
+                            DojoModel {
+                                class_hash,
+                                abi: None,
+                                members: model.members.clone(),
+                                original_class_hash: class_hash,
+                            },
                             model_full_name.into(),
                         ),
                         abi,
@@ -421,7 +435,7 @@ fn get_dojo_contract_artifacts(
                     writes,
                     reads,
                     class_hash: *class_hash,
-                    abi: None,
+                    original_class_hash: *class_hash,
                     ..Default::default()
                 },
                 module_name.clone(),
@@ -444,8 +458,7 @@ fn write_manifest_and_abi<T>(
 where
     T: Serialize + DeserializeOwned + ManifestMethods,
 {
-    let parts: Vec<&str> = manifest.name.split("::").collect();
-    let name: Utf8PathBuf = parts.last().unwrap().into();
+    let name = manifest.name.to_string().replace("::", "_");
 
     let relative_manifest_path = relative_manifest_dir.join(name.clone()).with_extension("toml");
     let relative_abi_path = relative_abis_dir.join(name.clone()).with_extension("json");

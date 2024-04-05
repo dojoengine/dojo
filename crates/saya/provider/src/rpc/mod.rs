@@ -135,13 +135,13 @@ impl Provider for JsonRpcProvider {
                 .await?
             {
                 ContractClass::Legacy(legacy) => {
-                    trace!(target: LOG_TARGET, version = "cairo 0", %class_hash, "set contract class");
+                    trace!(target: LOG_TARGET, version = "cairo 0", %class_hash, "Set contract class.");
 
                     let (hash, class) = rpc_converter::legacy_rpc_to_compiled_class(&legacy)?;
                     state_updates_with_classes.declared_compiled_classes.insert(hash, class);
                 }
                 ContractClass::Sierra(s) => {
-                    trace!(target: LOG_TARGET, version = "cairo 1", %class_hash, "set contract class");
+                    trace!(target: LOG_TARGET, version = "cairo 1", %class_hash, "Set contract class.");
 
                     state_updates_with_classes
                         .declared_sierra_classes
@@ -157,7 +157,7 @@ impl Provider for JsonRpcProvider {
         &self,
         block_number: u64,
     ) -> ProviderResult<Vec<TxExecInfo>> {
-        trace!(target: LOG_TARGET, block_number, "fetch transactions executions");
+        trace!(target: LOG_TARGET, block_number = %block_number, "Fetching transactions executions.");
         let cursor = TransactionsPageCursor { block_number, chunk_size: 50, ..Default::default() };
 
         let client = HttpClientBuilder::default().build(&self.rpc_url).unwrap();

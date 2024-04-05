@@ -23,14 +23,13 @@ strum.workspace = true
 strum_macros.workspace = true
 thiserror.workspace = true
 
+alloy-primitives.workspace = true
 cairo-lang-sierra.workspace = true
 cairo-lang-starknet.workspace = true
 flate2.workspace = true
 starknet_api.workspace = true
 
-ethers = "2.0.11"
-
 [features]
 default = [ "serde" ]
 rpc = [  ]
-serde = [  ]
+serde = [ "alloy-primitives/serde" ]

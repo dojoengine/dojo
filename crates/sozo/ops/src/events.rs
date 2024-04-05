@@ -1,11 +1,11 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
+use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods};
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
@@ -35,16 +35,13 @@ pub async fn parse(
     event_filter: EventFilter,
     json: bool,
     manifest_dir: &Utf8PathBuf,
+    profile_name: &str,
 ) -> Result<()> {
-    let chain_id = provider.chain_id().await?;
-    let chain_id =
-        parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
-
     let events_map = if !json {
         let deployed_manifest = manifest_dir
             .join(MANIFESTS_DIR)
-            .join(DEPLOYMENTS_DIR)
-            .join(chain_id)
+            .join(profile_name)
+            .join("manifest")
             .with_extension("toml");
 
         if !deployed_manifest.exists() {
@@ -255,15 +252,17 @@ mod tests {
 
     #[test]
     fn extract_events_work_as_expected() {
+        let profile_name = "dev";
         let manifest_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
-        let manifest =
-            BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
-                .unwrap()
-                .into();
+        let manifest = BaseManifest::load_from_path(
+            &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+        )
+        .unwrap()
+        .into();
         let result = extract_events(&manifest, &manifest_dir).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 12);
+        assert_eq!(result.len(), 11);
     }
 
     use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};

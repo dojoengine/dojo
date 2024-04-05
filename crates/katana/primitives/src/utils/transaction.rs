@@ -1,4 +1,4 @@
-use ethers::types::H256;
+use alloy_primitives::B256;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{DataAvailabilityMode, MsgToL1, ResourceBounds};
 use starknet_crypto::poseidon_hash_many;
@@ -268,10 +268,10 @@ pub fn compute_l1_message_hash(
     from_address: FieldElement,
     to_address: FieldElement,
     payload: &[FieldElement],
-) -> H256 {
+) -> B256 {
     let msg = MsgToL1 { from_address, to_address, payload: payload.to_vec() };
 
-    H256::from_slice(msg.hash().as_bytes())
+    B256::from_slice(msg.hash().as_bytes())
 }
 
 fn encode_gas_bound(name: &[u8], bound: &ResourceBounds) -> FieldElement {

@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: |       
+      - run: |
           cargo llvm-cov nextest --no-report --all-features --workspace --exclude katana --build-jobs 10
           cargo llvm-cov nextest --no-report -p katana
           cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
@@ -43,12 +43,12 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: ${{ env.rust_version }}
           target: x86_64-pc-windows-msvc
-      - uses: Swatinem/rust-cache@v2
+      - uses: swatinem/rust-cache@v2
       - uses: arduino/setup-protoc@v2
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.github_token }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # cairofmt:

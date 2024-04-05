@@ -20,4 +20,5 @@ chrono.workspace = true
 # https://github.com/dojoengine/dojo/actions/runs/7736050751/job/21092743552?pr=1501#step:6:249
 # dojo-test-utils = { path = "../dojo-test-utils", features = [ "build-examples" ] }
 
+dojo-world = { path = "../dojo-world", features = [ "manifest" ] }
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.2.2" }

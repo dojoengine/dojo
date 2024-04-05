@@ -2,62 +2,56 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use alloy_network::Ethereum;
+use alloy_primitives::{Address, LogData, U256};
+use alloy_provider::{HttpProvider, Provider};
+use alloy_rpc_types::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet, Log, Topic};
+use alloy_sol_types::{sol, SolEvent};
 use anyhow::Result;
 use async_trait::async_trait;
-use ethers::prelude::*;
-use ethers::providers::{Http, Provider};
-use ethers::types::{Address, BlockNumber, Log};
-use k256::ecdsa::SigningKey;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
 use katana_primitives::FieldElement;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, trace, warn};
 
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 
-abigen!(
+sol! {
+    #[sol(rpc, rename_all = "snakecase")]
+    #[derive(serde::Serialize, serde::Deserialize)]
     StarknetMessagingLocal,
-    "../primitives/contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json",
-    event_derives(serde::Serialize, serde::Deserialize)
-);
+    "../primitives/contracts/messaging/solidity/IStarknetMessagingLocal_ABI.json"
+}
 
-#[derive(Debug, PartialEq, Eq, EthEvent)]
-pub struct LogMessageToL2 {
-    #[ethevent(indexed)]
-    from_address: Address,
-    #[ethevent(indexed)]
-    to_address: U256,
-    #[ethevent(indexed)]
-    selector: U256,
-    payload: Vec<U256>,
-    nonce: U256,
-    fee: U256,
+sol! {
+    #[sol(rpc)]
+    contract LogMessageToL2 {
+        #[derive(Debug, PartialEq)]
+        event LogMessageToL2Event(
+            address indexed from_address,
+            uint256 indexed to_address,
+            uint256 indexed selector,
+            uint256[] payload,
+            uint256 nonce,
+            uint256 fee
+        );
+    }
 }
 
 pub struct EthereumMessaging {
-    provider: Arc<Provider<Http>>,
-    provider_signer: Arc<SignerMiddleware<Provider<Http>, Wallet<SigningKey>>>,
+    provider: Arc<HttpProvider<Ethereum>>,
     messaging_contract_address: Address,
 }
 
 impl EthereumMessaging {
     pub async fn new(config: MessagingConfig) -> Result<EthereumMessaging> {
-        let provider = Provider::<Http>::try_from(&config.rpc_url)?;
-
-        let chain_id = provider.get_chainid().await?;
-
-        let wallet: LocalWallet =
-            config.private_key.parse::<LocalWallet>()?.with_chain_id(chain_id.as_u32());
-
-        let provider_signer = SignerMiddleware::new(provider.clone(), wallet);
-        let messaging_contract_address = Address::from_str(&config.contract_address)?;
-
         Ok(EthereumMessaging {
-            provider: Arc::new(provider),
-            provider_signer: Arc::new(provider_signer),
-            messaging_contract_address,
+            provider: Arc::new(HttpProvider::<Ethereum>::new_http(reqwest::Url::parse(
+                &config.rpc_url,
+            )?)),
+            messaging_contract_address: config.contract_address.parse::<Address>()?,
         })
     }
 
@@ -77,21 +71,26 @@ impl EthereumMessaging {
         from_block: u64,
         to_block: u64,
     ) -> MessengerResult<HashMap<u64, Vec<Log>>> {
-        trace!(target: LOG_TARGET, "Fetching logs for blocks {} - {}.", from_block, to_block);
+        trace!(target: LOG_TARGET, from_block = ?from_block, to_block = ?to_block, "Fetching logs.");
 
         let mut block_to_logs: HashMap<u64, Vec<Log>> = HashMap::new();
 
-        let log_msg_to_l2_topic =
-            H256::from_str("0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b")
-                .unwrap();
-
         let filters = Filter {
             block_option: FilterBlockOption::Range {
-                from_block: Some(BlockNumber::Number(from_block.into())),
-                to_block: Some(BlockNumber::Number(to_block.into())),
+                from_block: Some(BlockNumberOrTag::Number(from_block)),
+                to_block: Some(BlockNumberOrTag::Number(to_block)),
             },
-            address: Some(ValueOrArray::Value(self.messaging_contract_address)),
-            topics: [Some(ValueOrArray::Value(Some(log_msg_to_l2_topic))), None, None, None],
+            address: FilterSet::<Address>::from(self.messaging_contract_address),
+            topics: [
+                Topic::from(
+                    "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b"
+                        .parse::<U256>()
+                        .unwrap(),
+                ),
+                Default::default(),
+                Default::default(),
+                Default::default(),
+            ],
         };
 
         self.provider
@@ -130,12 +129,7 @@ impl Messenger for EthereumMessaging {
         max_blocks: u64,
         chain_id: ChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
-        let chain_latest_block: u64 = self
-            .provider
-            .get_block_number()
-            .await?
-            .try_into()
-            .expect("Can't convert latest block number into u64.");
+        let chain_latest_block: u64 = self.provider.get_block_number().await?;
 
         // +1 as the from_block counts as 1 block fetched.
         let to_block = if from_block + max_blocks + 1 < chain_latest_block {
@@ -150,8 +144,9 @@ impl Messenger for EthereumMessaging {
             |(block_number, block_logs)| {
                 debug!(
                     target: LOG_TARGET,
-                    "Converting logs of block {block_number} into L1HandlerTx ({} logs)",
-                    block_logs.len(),
+                    block_number = %block_number,
+                    logs_found = %block_logs.len(),
+                    "Converting logs into L1HandlerTx.",
                 );
 
                 block_logs.into_iter().for_each(|log| {
@@ -173,45 +168,42 @@ impl Messenger for EthereumMessaging {
             return Ok(vec![]);
         }
 
-        let starknet_messaging = StarknetMessagingLocal::new(
-            self.messaging_contract_address,
-            self.provider_signer.clone(),
-        );
+        let starknet_messaging =
+            StarknetMessagingLocal::new(self.messaging_contract_address, self.provider.clone());
 
         let hashes = parse_messages(messages);
 
         debug!("Sending transaction on L1 to register messages...");
-        match starknet_messaging
-            .add_message_hashes_from_l2(hashes.clone())
+
+        let receipt = starknet_messaging
+            .addMessageHashesFromL2(hashes.clone())
             .send()
             .await
             .map_err(|_| Error::SendError)?
-            // wait for the tx to be mined
-            .await?
-        {
-            Some(receipt) => {
-                trace!(
-                    target: LOG_TARGET,
-                    "Transaction sent on L1 to register {} messages: {:#x}",
-                    hashes.len(),
-                    receipt.transaction_hash,
-                );
-
-                Ok(hashes)
-            }
-            None => {
+            .get_receipt()
+            .await
+            .map_err(|_| {
                 warn!(target: LOG_TARGET, "No receipt for L1 transaction.");
-                Err(Error::SendError)
-            }
-        }
+                Error::SendError
+            })?;
+
+        trace!(
+            target: LOG_TARGET,
+            "Transaction sent on L1 to register {} messages: {:#x}",
+            hashes.len(),
+            receipt.transaction_hash,
+        );
+
+        Ok(hashes)
     }
 }
 
 fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
-    let parsed_log = <LogMessageToL2 as EthLogDecode>::decode_log(&log.into()).map_err(|e| {
-        error!(target: LOG_TARGET, "Log parsing failed {e}");
-        Error::GatherError
-    })?;
+    let parsed_log = LogMessageToL2::LogMessageToL2Event::decode_log(
+        &alloy_primitives::Log::<LogData>::new(log.address, log.topics, log.data).unwrap(),
+        false,
+    )
+    .unwrap();
 
     let from_address = felt_from_address(parsed_log.from_address);
     let contract_address = felt_from_u256(parsed_log.to_address);
@@ -220,7 +212,7 @@ fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1Hand
     let paid_fee_on_l1: u128 = parsed_log.fee.try_into().expect("Fee does not fit into u128.");
 
     let mut calldata = vec![from_address];
-    calldata.extend(parsed_log.payload.into_iter().map(felt_from_u256));
+    calldata.extend(parsed_log.payload.clone().into_iter().map(felt_from_u256));
 
     let message_hash = compute_l1_message_hash(from_address, contract_address, &calldata);
 
@@ -241,10 +233,10 @@ fn parse_messages(messages: &[MessageToL1]) -> Vec<U256> {
     messages
         .iter()
         .map(|msg| {
-            let hash =
-                compute_l1_message_hash(msg.from_address.into(), msg.to_address, &msg.payload);
-
-            U256::from_big_endian(hash.as_bytes())
+            U256::from_be_bytes(
+                compute_l1_message_hash(msg.from_address.into(), msg.to_address, &msg.payload)
+                    .into(),
+            )
         })
         .collect()
 }
@@ -260,6 +252,7 @@ fn felt_from_address(v: Address) -> FieldElement {
 #[cfg(test)]
 mod tests {
 
+    use alloy_primitives::{Address, B256, U256};
     use katana_primitives::chain::{ChainId, NamedChainId};
     use starknet::macros::{felt, selector};
 
@@ -286,15 +279,15 @@ mod tests {
             felt!("0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b");
 
         let log = Log {
-            address: H160::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
+            address: Address::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
             topics: vec![
-                H256::from_str(
+                B256::from_str(
                     "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
                 )
                 .unwrap(),
-                H256::from_str(from_address).unwrap(),
-                H256::from_str(to_address).unwrap(),
-                H256::from_str(selector).unwrap(),
+                B256::from_str(from_address).unwrap(),
+                B256::from_str(to_address).unwrap(),
+                B256::from_str(selector).unwrap(),
             ],
             data: payload_buf.into(),
             ..Default::default()
@@ -338,7 +331,7 @@ mod tests {
         assert_eq!(
             hashes[0],
             U256::from_str_radix(
-                "0x5ba1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162",
+                "5ba1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162",
                 16
             )
             .unwrap()

@@ -5,17 +5,13 @@ use anyhow::{anyhow, bail, Context, Ok, Result};
 use clap::Parser;
 use dojo_lang::compiler::{DojoCompiler, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_lang::plugin::CairoPluginRepository;
-use dojo_lang::scarb_internal::compile_workspace;
 use dojo_world::manifest::DeploymentManifest;
 use futures::executor::block_on;
 use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;
-use scarb::core::{Config, TargetKind};
-use scarb::ops::CompileOpts;
+use scarb::core::Config;
 use sozo::args::{Commands, SozoArgs};
 use starknet::core::types::FieldElement;
-use starknet::core::utils::parse_cairo_short_string;
-use starknet::providers::Provider;
 use tokio::process::Command;
 
 use crate::{CONTRACT, CONTRACT_RELATIVE_TO_TESTS, RUNTIME};
@@ -52,6 +48,7 @@ async fn deploy_contract(
     let args = SozoArgs::parse_from([
         "sozo",
         "migrate",
+        "apply",
         "--rpc-url",
         &runner.endpoint(),
         "--manifest-path",
@@ -81,7 +78,7 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
     compilers.add(Box::new(DojoCompiler)).unwrap();
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
 
-    let config = Config::builder(manifest_path)
+    let config = Config::builder(manifest_path.clone())
         .log_filter_directive(env::var_os("SCARB_LOG"))
         .profile(args.profile_spec.determine()?)
         .offline(args.offline)
@@ -92,36 +89,17 @@ async fn prepare_migration_args(args: SozoArgs) -> Result<FieldElement> {
         .context("failed to build config")?;
 
     // Extractiong migration command, as here https://github.com/dojoengine/dojo/blob/25fbb7fc973cff4ce1273625c4664545d9b088e9/bin/sozo/src/commands/mod.rs#L24-L25
-    let mut migrate = match args.command {
+    let migrate = match args.command {
         Commands::Migrate(migrate) => *migrate,
         _ => return Err(anyhow!("failed to parse migrate args")),
     };
 
-    // Preparing workspace, as in https://github.com/dojoengine/dojo/blob/25fbb7fc973cff4ce1273625c4664545d9b088e9/bin/sozo/src/commands/migrate.rs#L40-L41
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
-    if migrate.name.is_none() {
-        if let Some(root_package) = ws.root_package() {
-            migrate.name = Some(root_package.id.name.to_string());
-        }
-    }
-
-    compile_workspace(
-        &config,
-        CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-    )?;
-
-    let manifest_dir = ws.manifest_path().parent().unwrap();
-    let chain_id = migrate.starknet.provider(None).unwrap().chain_id().await.unwrap();
-    let chain_id = parse_cairo_short_string(&chain_id).unwrap();
-
     migrate.run(&config)?;
 
+    let manifest_dir = manifest_path.parent().unwrap();
+
     let manifest = DeploymentManifest::load_from_path(
-        &manifest_dir
-            .join(MANIFESTS_DIR)
-            .join(DEPLOYMENTS_DIR)
-            .join(chain_id)
-            .with_extension("toml"),
+        &manifest_dir.join(MANIFESTS_DIR).join("dev").join(DEPLOYMENTS_DIR).with_extension("toml"),
     )
     .expect("failed to load manifest");
 

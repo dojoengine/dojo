@@ -41,17 +41,17 @@ async fn test_get_transactions() {
     let response: TransactionsPage = client.get_transactions(cursor).await.unwrap();
 
     assert!(response.transactions.is_empty());
-    assert!(response.cursor.block_number == 1);
-    assert!(response.cursor.transaction_index == 0);
+    assert_eq!(response.cursor.block_number, 1);
+    assert_eq!(response.cursor.transaction_index, 0);
 
     let declare_res = account.declare(contract.clone(), compiled_class_hash).send().await.unwrap();
 
     // Should return successfully with single pending txn.
     let response: TransactionsPage = client.get_transactions(response.cursor).await.unwrap();
 
-    assert!(response.transactions.len() == 1);
-    assert!(response.cursor.block_number == 1);
-    assert!(response.cursor.transaction_index == 1);
+    assert_eq!(response.transactions.len(), 1);
+    assert_eq!(response.cursor.block_number, 1);
+    assert_eq!(response.cursor.transaction_index, 1);
 
     // Create block 1.
     let _: () = client.generate_block().await.unwrap();
@@ -60,8 +60,8 @@ async fn test_get_transactions() {
     let response: TransactionsPage = client.get_transactions(response.cursor).await.unwrap();
 
     assert!(response.transactions.is_empty());
-    assert!(response.cursor.block_number == 2);
-    assert!(response.cursor.transaction_index == 0);
+    assert_eq!(response.cursor.block_number, 2);
+    assert_eq!(response.cursor.transaction_index, 0);
 
     // Should block on cursor at end of page and return on new txn
     let long_poll_future = client.get_transactions(response.cursor);
@@ -72,9 +72,9 @@ async fn test_get_transactions() {
     tokio::select! {
         result = long_poll_future => {
             let long_poll_result = result.unwrap();
-            assert!(long_poll_result.transactions.len() == 1);
-            assert!(long_poll_result.cursor.block_number == 2);
-            assert!(long_poll_result.cursor.transaction_index == 1);
+            assert_eq!(long_poll_result.transactions.len(), 1);
+            assert_eq!(long_poll_result.cursor.block_number, 2);
+            assert_eq!(long_poll_result.cursor.transaction_index, 1);
         }
         result = deploy_txn_future => {
             // The declare transaction has completed, but we don't need to do anything with it here.
@@ -99,10 +99,10 @@ async fn test_get_transactions() {
         .await
         .unwrap();
 
-    assert!(response.transactions.len() == 1);
-    assert!(response.transactions[0].0.hash == deploy_txn_future.transaction_hash);
-    assert!(response.cursor.block_number == 3);
-    assert!(response.cursor.transaction_index == 1);
+    assert_eq!(response.transactions.len(), 1);
+    assert_eq!(response.transactions[0].0.hash, deploy_txn_future.transaction_hash);
+    assert_eq!(response.cursor.block_number, 3);
+    assert_eq!(response.cursor.transaction_index, 1);
 
     // Create block 3.
     let _: () = client.generate_block().await.unwrap();
@@ -123,29 +123,29 @@ async fn test_get_transactions() {
 
     let start_cursor = response.cursor;
     let response: TransactionsPage = client.get_transactions(start_cursor).await.unwrap();
-    assert!(response.transactions.len() == 100);
-    assert!(response.cursor.block_number == 4);
-    assert!(response.cursor.transaction_index == 100);
+    assert_eq!(response.transactions.len(), 100);
+    assert_eq!(response.cursor.block_number, 4);
+    assert_eq!(response.cursor.transaction_index, 100);
 
     // Should get one more
     let response: TransactionsPage = client.get_transactions(response.cursor).await.unwrap();
-    assert!(response.transactions.len() == 1);
-    assert!(response.cursor.block_number == 4);
-    assert!(response.cursor.transaction_index == 101);
+    assert_eq!(response.transactions.len(), 1);
+    assert_eq!(response.cursor.block_number, 4);
+    assert_eq!(response.cursor.transaction_index, 101);
 
     // Create block 4.
     let _: () = client.generate_block().await.unwrap();
 
     let response: TransactionsPage = client.get_transactions(start_cursor).await.unwrap();
-    assert!(response.transactions.len() == 100);
-    assert!(response.cursor.block_number == 4);
-    assert!(response.cursor.transaction_index == 100);
+    assert_eq!(response.transactions.len(), 100);
+    assert_eq!(response.cursor.block_number, 4);
+    assert_eq!(response.cursor.transaction_index, 100);
 
     // Should get one more
     let response: TransactionsPage = client.get_transactions(response.cursor).await.unwrap();
-    assert!(response.transactions.len() == 1);
-    assert!(response.cursor.block_number == 5);
-    assert!(response.cursor.transaction_index == 0);
+    assert_eq!(response.transactions.len(), 1);
+    assert_eq!(response.cursor.block_number, 5);
+    assert_eq!(response.cursor.transaction_index, 0);
 
     sequencer.stop().expect("failed to stop sequencer");
 }
@@ -176,9 +176,9 @@ async fn test_get_transactions_with_instant_mining() {
     // Should return successfully with single txn.
     let response: TransactionsPage = client.get_transactions(cursor).await.unwrap();
 
-    assert!(response.transactions.len() == 1);
-    assert!(response.cursor.block_number == 1);
-    assert!(response.cursor.transaction_index == 0);
+    assert_eq!(response.transactions.len(), 1);
+    assert_eq!(response.cursor.block_number, 1);
+    assert_eq!(response.cursor.transaction_index, 0);
 
     // Should block on cursor at end of page and return on new txn
     let long_poll_future = client.get_transactions(response.cursor);
@@ -189,9 +189,9 @@ async fn test_get_transactions_with_instant_mining() {
     tokio::select! {
         result = long_poll_future => {
             let long_poll_result = result.unwrap();
-            assert!(long_poll_result.transactions.len() == 1);
-            assert!(long_poll_result.cursor.block_number == 2);
-            assert!(long_poll_result.cursor.transaction_index == 0);
+            assert_eq!(long_poll_result.transactions.len(), 1);
+            assert_eq!(long_poll_result.cursor.block_number, 2);
+            assert_eq!(long_poll_result.cursor.transaction_index, 0);
         }
         result = deploy_txn_future => {
             // The declare transaction has completed, but we don't need to do anything with it here.
@@ -213,10 +213,10 @@ async fn test_get_transactions_with_instant_mining() {
         .await
         .unwrap();
 
-    assert!(response.transactions.len() == 1);
-    assert!(response.transactions[0].0.hash == deploy_txn_future.transaction_hash);
-    assert!(response.cursor.block_number == 3);
-    assert!(response.cursor.transaction_index == 1);
+    assert_eq!(response.transactions.len(), 1);
+    assert_eq!(response.transactions[0].0.hash, deploy_txn_future.transaction_hash);
+    assert_eq!(response.cursor.block_number, 3);
+    assert_eq!(response.cursor.transaction_index, 1);
 
     sequencer.stop().expect("failed to stop sequencer");
 }

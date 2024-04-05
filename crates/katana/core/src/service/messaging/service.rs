@@ -208,7 +208,9 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
                 Poll::Ready(Err(e)) => {
                     error!(
                         target: LOG_TARGET,
-                        "error gathering messages for block {}: {e}", pin.gather_from_block
+                        block = %pin.gather_from_block,
+                        error = %e,
+                        "Gathering messages for block."
                     );
                     return Poll::Pending;
                 }
@@ -228,7 +230,9 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
                 Poll::Ready(Err(e)) => {
                     error!(
                         target: LOG_TARGET,
-                        "error settling messages for block {}: {e}", pin.send_from_block
+                        block = %pin.send_from_block,
+                        error = %e,
+                        "Settling messages for block."
                     );
                     return Poll::Pending;
                 }
@@ -269,17 +273,11 @@ fn trace_msg_to_l1_sent(messages: &[MessageToL1], hashes: &[String]) {
             #[rustfmt::skip]
             info!(
                 target: LOG_TARGET,
-                r"Message executed on settlement layer:
-| from_address | {}
-|  to_address  | {}
-|   selector   | {}
-|   payload    | [{}]
-
-",
-                m.from_address,
-                to_address,
-                selector,
-                payload_str.join(", ")
+                from_address = %m.from_address,
+                to_address = %to_address,
+                selector = %selector,
+                payload = %payload_str.join(", "),
+                "Message executed on settlement layer.",
             );
 
             continue;
@@ -295,17 +293,11 @@ fn trace_msg_to_l1_sent(messages: &[MessageToL1], hashes: &[String]) {
         #[rustfmt::skip]
             info!(
                 target: LOG_TARGET,
-                r#"Message sent to settlement layer:
-|     hash     | {}
-| from_address | {}
-|  to_address  | {}
-|   payload    | [{}]
-
-"#,
-                hash.as_str(),
-                m.from_address,
-                to_address,
-                payload_str.join(", ")
+                hash = %hash.as_str(),
+                from_address = %m.from_address,
+                to_address = %to_address,
+                payload = %payload_str.join(", "),
+                "Message sent to settlement layer.",
             );
     }
 }
@@ -316,16 +308,10 @@ fn trace_l1_handler_tx_exec(hash: TxHash, tx: &L1HandlerTx) {
     #[rustfmt::skip]
     info!(
         target: LOG_TARGET,
-        r"L1Handler transaction added to the pool:
-|      tx_hash     | {:#x}
-| contract_address | {}
-|     selector     | {:#x}
-|     calldata     | [{}]
-
-",
-hash,
-        tx.contract_address,
-        tx.entry_point_selector,
-        calldata_str.join(", ")
+        tx_hash = %format!("{:#x}", hash),
+        contract_address = %tx.contract_address,
+        selector = %format!("{:#x}", tx.entry_point_selector),
+        calldata = %calldata_str.join(", "),
+        "L1Handler transaction added to the pool.",
     );
 }
