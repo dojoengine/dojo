@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712266173026,
+  "lastUpdate": 1712340940596,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4555,6 +4555,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16680010,
             "range": "± 209224",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9c8b3b0c6f0ac84ddf3dd5deed8d04f095365e2a",
+          "message": "fix: ensure events command picks the correct manifests path for ABIs (#1777)\n\n* fix: ensure events command picks the correct manifests path for ABIs\r\n\r\n* fix: use except for scarb profile\r\n\r\n* fix: modify path parsing for abi files",
+          "timestamp": "2024-04-05T14:07:11-04:00",
+          "tree_id": "f7ac4a0d430b176102ee0bf21d7ba0e8f9edccd5",
+          "url": "https://github.com/dojoengine/dojo/commit/9c8b3b0c6f0ac84ddf3dd5deed8d04f095365e2a"
+        },
+        "date": 1712340939482,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17287292,
+            "range": "± 509049",
             "unit": "ns/iter"
           }
         ]
