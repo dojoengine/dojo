@@ -7,8 +7,9 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbiFormat, AbstractManifestError, BaseManifest, WorldContract as ManifestWorldContract, DeploymentManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, OverlayManifest, WorldMetadata,
+    AbiFormat, AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, DojoModel,
+    Manifest, ManifestMethods, OverlayManifest, WorldContract as ManifestWorldContract,
+    WorldMetadata,
 };
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -261,7 +262,8 @@ async fn update_manifest_abis(
         manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
     }
 
-    inner_helper::<ManifestWorldContract>(profile_dir, profile_name, &mut local_manifest.world).await;
+    inner_helper::<ManifestWorldContract>(profile_dir, profile_name, &mut local_manifest.world)
+        .await;
 
     for contract in local_manifest.contracts.iter_mut() {
         inner_helper::<DojoContract>(profile_dir, profile_name, contract).await;

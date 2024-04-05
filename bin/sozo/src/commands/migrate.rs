@@ -142,7 +142,8 @@ impl MigrateArgs {
                     )
                     .await?;
 
-                    migration::migrate(&ws, world_address, chain_id, rpc_url, &account, name, true).await
+                    migration::migrate(&ws, world_address, chain_id, rpc_url, &account, name, true)
+                        .await
                 })
             }
             MigrateCommand::Apply { mut name, world, starknet, account } => {
@@ -163,7 +164,8 @@ impl MigrateArgs {
                     )
                     .await?;
 
-                    migration::migrate(&ws, world_address, chain_id, rpc_url,&account, name, false).await
+                    migration::migrate(&ws, world_address, chain_id, rpc_url, &account, name, false)
+                        .await
                 })
             }
         }
