@@ -227,6 +227,7 @@ tables! {
 
 #[cfg(test)]
 mod tests {
+
     #[test]
     fn test_tables() {
         use super::*;
@@ -277,5 +278,92 @@ mod tests {
         assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
         assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
+    }
+
+    use crate::{
+        codecs::{Compress, Decode, Decompress, Encode},
+        models::{
+            block::StoredBlockBodyIndices,
+            contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange},
+            storage::{BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry},
+        },
+    };
+    use katana_primitives::{
+        block::{BlockHash, BlockNumber, FinalityStatus, Header},
+        class::{ClassHash, CompiledClass, CompiledClassHash},
+        contract::{ContractAddress, GenericContractInfo},
+        receipt::Receipt,
+        trace::TxExecInfo,
+        transaction::{InvokeTx, Tx, TxHash, TxNumber},
+    };
+    use starknet::macros::felt;
+
+    macro_rules! assert_key_encode_decode {
+	    { $( ($name:ty, $key:expr) ),* } => {
+			$(
+				{
+					let key: $name = $key;
+					let encoded = key.encode();
+					let decoded = <$name as Decode>::decode(encoded.as_slice()).expect("decode failed");
+					assert_eq!($key, decoded);
+				}
+			)*
+		};
+	}
+
+    macro_rules! assert_value_compress_decompress {
+		{ $( ($name:ty, $value:expr) ),* } => {
+			$(
+				{
+					let value: $name = $value;
+					let compressed = value.compress();
+					let decompressed = <$name as Decompress>::decompress(compressed.as_slice()).expect("decode failed");
+					assert_eq!($value, decompressed);
+				}
+			)*
+		};
+	}
+
+    // Test that all key/subkey types can be encoded and decoded
+    // through the Encode and Decode traits
+    #[test]
+    fn test_key_encode_decode() {
+        assert_key_encode_decode! {
+            (BlockNumber, 100),
+            (BlockHash, felt!("0x123456789")),
+            (TxHash, felt!("0x123456789")),
+            (TxNumber, 100),
+            (ClassHash, felt!("0x123456789")),
+            (ContractAddress, ContractAddress(felt!("0x123456789"))),
+            (ContractStorageKey, ContractStorageKey { contract_address : ContractAddress(felt!("0x123456789")), key : felt!("0x123456789")})
+        }
+    }
+
+    // Test that all value types can be compressed and decompressed
+    // through the Compress and Decompress traits
+    #[test]
+    fn test_value_compress_decompress() {
+        assert_value_compress_decompress! {
+            (Header, Header::default()),
+            (BlockHash, BlockHash::default()),
+            (BlockNumber, BlockNumber::default()),
+            (FinalityStatus, FinalityStatus::AcceptedOnL1),
+            (StoredBlockBodyIndices, StoredBlockBodyIndices::default()),
+            (TxNumber, 77),
+            (TxHash, felt!("0x123456789")),
+            (Tx, Tx::Invoke(InvokeTx::V1(Default::default()))),
+            (BlockNumber, 99),
+            (TxExecInfo, TxExecInfo::default()),
+            (Receipt, Receipt::Invoke(Default::default())),
+            (CompiledClassHash, felt!("211")),
+            (CompiledClass, CompiledClass::Deprecated(Default::default())),
+            (GenericContractInfo, GenericContractInfo::default()),
+            (StorageEntry, StorageEntry::default()),
+            (ContractInfoChangeList, ContractInfoChangeList::default()),
+            (ContractNonceChange, ContractNonceChange::default()),
+            (ContractClassChange, ContractClassChange::default()),
+            (BlockList, BlockList::default()),
+            (ContractStorageEntry, ContractStorageEntry::default())
+        }
     }
 }

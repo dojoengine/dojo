@@ -5,13 +5,13 @@ use serde::{Deserialize, Serialize};
 use super::storage::BlockList;
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ContractInfoChangeList {
     pub class_change_list: BlockList,
     pub nonce_change_list: BlockList,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ContractClassChange {
     pub contract_address: ContractAddress,
     /// The updated class hash of `contract_address`.
@@ -37,7 +37,7 @@ impl Decompress for ContractClassChange {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ContractNonceChange {
     pub contract_address: ContractAddress,
     /// The updated nonce value of `contract_address`.

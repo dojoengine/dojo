@@ -36,7 +36,7 @@ impl Decompress for StorageEntry {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BlockList(pub Vec<BlockNumber>);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
