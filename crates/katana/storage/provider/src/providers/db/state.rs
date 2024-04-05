@@ -1,8 +1,7 @@
-use std::cmp::Ordering;
-
 use katana_db::mdbx::{self};
 use katana_db::models::contract::ContractInfoChangeList;
-use katana_db::models::storage::{BlockList, ContractStorageKey, StorageEntry};
+use katana_db::models::list::BlockList;
+use katana_db::models::storage::{ContractStorageKey, StorageEntry};
 use katana_db::tables;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
@@ -168,41 +167,6 @@ impl HistoricalStateProvider {
     pub fn new(tx: mdbx::tx::TxRO, block_number: u64) -> Self {
         Self { tx, block_number }
     }
-
-    // This looks ugly but it works and I will most likely forget how it works
-    // if I don't document it. But im lazy.
-    fn recent_block_change_relative_to_pinned_block_num(
-        block_number: BlockNumber,
-        block_list: &BlockList,
-    ) -> Option<BlockNumber> {
-        if block_list.0.first().is_some_and(|num| block_number < *num) {
-            return None;
-        }
-
-        // if the pinned block number is smaller than the first block number in the list,
-        // then that means there is no change happening before the pinned block number.
-        let pos = {
-            if let Some(pos) = block_list.0.last().and_then(|num| {
-                if block_number >= *num { Some(block_list.0.len() - 1) } else { None }
-            }) {
-                Some(pos)
-            } else {
-                block_list.0.iter().enumerate().find_map(|(i, num)| match block_number.cmp(num) {
-                    Ordering::Equal => Some(i),
-                    Ordering::Greater => None,
-                    Ordering::Less => {
-                        if i == 0 || block_number == 0 {
-                            None
-                        } else {
-                            Some(i - 1)
-                        }
-                    }
-                })
-            }
-        }?;
-
-        block_list.0.get(pos).copied()
-    }
 }
 
 impl ContractClassProvider for HistoricalStateProvider {
@@ -244,12 +208,9 @@ impl StateProvider for HistoricalStateProvider {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
         let change_list = self.tx.get::<tables::ContractInfoChangeSet>(address)?;
 
-        if let Some(num) = change_list.and_then(|entry| {
-            Self::recent_block_change_relative_to_pinned_block_num(
-                self.block_number,
-                &entry.nonce_change_list,
-            )
-        }) {
+        if let Some(num) = change_list
+            .and_then(|entry| recent_change_from_block(self.block_number, &entry.nonce_change_list))
+        {
             let mut cursor = self.tx.cursor::<tables::NonceChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractNonceChangeEntry {
@@ -273,12 +234,9 @@ impl StateProvider for HistoricalStateProvider {
         let change_list: Option<ContractInfoChangeList> =
             self.tx.get::<tables::ContractInfoChangeSet>(address)?;
 
-        if let Some(num) = change_list.and_then(|entry| {
-            Self::recent_block_change_relative_to_pinned_block_num(
-                self.block_number,
-                &entry.class_change_list,
-            )
-        }) {
+        if let Some(num) = change_list
+            .and_then(|entry| recent_change_from_block(self.block_number, &entry.class_change_list))
+        {
             let mut cursor = self.tx.cursor::<tables::ClassChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractClassChangeEntry {
@@ -303,9 +261,9 @@ impl StateProvider for HistoricalStateProvider {
         let key = ContractStorageKey { contract_address: address, key: storage_key };
         let block_list = self.tx.get::<tables::StorageChangeSet>(key.clone())?;
 
-        if let Some(num) = block_list.and_then(|list| {
-            Self::recent_block_change_relative_to_pinned_block_num(self.block_number, &list)
-        }) {
+        if let Some(num) =
+            block_list.and_then(|list| recent_change_from_block(self.block_number, &list))
+        {
             let mut cursor = self.tx.cursor::<tables::StorageChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, key)?.ok_or(
                 ProviderError::MissingStorageChangeEntry {
@@ -324,11 +282,22 @@ impl StateProvider for HistoricalStateProvider {
     }
 }
 
+/// This is a helper function for getting the block number of the most
+/// recent change that occurred relative to the given block number.
+fn recent_change_from_block(
+    block_number: BlockNumber,
+    block_list: &BlockList,
+) -> Option<BlockNumber> {
+    // if the rank is 0, then it's either;
+    // 1. the list is empty
+    // 2. there are no prior changes occured before/at `block_number`
+    let rank = block_list.rank(block_number);
+    if rank == 0 { None } else { block_list.select(rank - 1) }
+}
+
 #[cfg(test)]
 mod tests {
-    use katana_db::models::storage::BlockList;
-
-    use super::HistoricalStateProvider;
+    use katana_db::models::list::BlockList;
 
     #[rstest::rstest]
     #[case(0, None)]
@@ -342,12 +311,8 @@ mod tests {
         #[case] block_num: u64,
         #[case] expected_block_num: Option<u64>,
     ) {
-        assert_eq!(
-            HistoricalStateProvider::recent_block_change_relative_to_pinned_block_num(
-                block_num,
-                &BlockList(vec![1, 2, 5, 6, 10]),
-            ),
-            expected_block_num
-        );
+        let list = BlockList::from([1, 2, 5, 6, 10]);
+        let actual_block_num = super::recent_change_from_block(block_num, &list);
+        assert_eq!(actual_block_num, expected_block_num);
     }
 }

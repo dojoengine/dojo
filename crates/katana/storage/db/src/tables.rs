@@ -8,7 +8,8 @@ use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
-use crate::models::storage::{BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry};
+use crate::models::list::BlockList;
+use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}

@@ -39,3 +39,9 @@ impl IntegerSet {
         self.0.select(n)
     }
 }
+
+impl<const N: usize> From<[u64; N]> for IntegerSet {
+    fn from(arr: [u64; N]) -> Self {
+        Self(RoaringTreemap::from_iter(arr))
+    }
+}

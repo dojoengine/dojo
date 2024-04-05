@@ -1,6 +1,4 @@
-use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{ContractAddress, StorageKey, StorageValue};
-use serde::{Deserialize, Serialize};
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::error::CodecError;
@@ -35,9 +33,6 @@ impl Decompress for StorageEntry {
         Ok(Self { key, value })
     }
 }
-
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub struct BlockList(pub Vec<BlockNumber>);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ContractStorageKey {
