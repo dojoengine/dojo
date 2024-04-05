@@ -51,6 +51,7 @@ pub async fn parse(
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
             manifest_dir,
+            &profile_name,
         )?)
     } else {
         None
@@ -75,6 +76,7 @@ fn is_event(token: &Token) -> bool {
 fn extract_events(
     manifest: &DeploymentManifest,
     manifest_dir: &Utf8PathBuf,
+    profile_name: &str,
 ) -> Result<HashMap<String, Vec<Token>>> {
     fn process_abi(
         events: &mut HashMap<String, Vec<Token>>,
@@ -100,22 +102,24 @@ fn extract_events(
 
     let mut events_map = HashMap::new();
 
+    let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+
     for contract in &manifest.contracts {
         if let Some(AbiFormat::Path(abi_path)) = contract.inner.abi() {
-            let full_abi_path = manifest_dir.join(abi_path);
+            let full_abi_path = profile_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     for model in &manifest.contracts {
         if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
-            let full_abi_path = manifest_dir.join(abi_path);
+            let full_abi_path = profile_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     // Read the world and base ABI from scarb artifacts as the
-    // manifest does not include them.
+    // manifest does not include them (at least base is not included).
     let world_abi_path = manifest_dir.join("target/dev/dojo::world::world.json");
     process_abi(&mut events_map, &world_abi_path)?;
 
@@ -259,7 +263,7 @@ mod tests {
         )
         .unwrap()
         .into();
-        let result = extract_events(&manifest, &manifest_dir).unwrap();
+        let result = extract_events(&manifest, &manifest_dir, profile_name).unwrap();
 
         // we are just collecting all events from manifest file so just verifying count should work
         assert_eq!(result.len(), 11);
