@@ -261,7 +261,10 @@ impl DojoWorld {
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {model_relation_table}.model_id = '{}' and {table}.keys LIKE ?
         "#,
-            format!("{:#x}", get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?),
+            format!(
+                "{:#x}",
+                get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+            ),
         );
 
         println!("count_query: {}", count_query);
@@ -280,7 +283,10 @@ impl DojoWorld {
             HAVING model_ids REGEXP '(^|,){}(,|$)'
             LIMIT 1
         "#,
-            format!("{:#x}", get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?),
+            format!(
+                "{:#x}",
+                get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+            ),
         );
         let (models_str,): (String,) =
             sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
@@ -390,7 +396,10 @@ impl DojoWorld {
             HAVING model_ids REGEXP '(^|,){}(,|$)'
             LIMIT 1
         "#,
-            format!("{:#x}", get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?),
+            format!(
+                "{:#x}",
+                get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?
+            ),
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
@@ -429,7 +438,8 @@ impl DojoWorld {
 
     pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
         // selector
-        let model = format!("{:#x}", get_selector_from_name(model).map_err(ParseError::NonAsciiName)?);
+        let model =
+            format!("{:#x}", get_selector_from_name(model).map_err(ParseError::NonAsciiName)?);
 
         let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
             String,
