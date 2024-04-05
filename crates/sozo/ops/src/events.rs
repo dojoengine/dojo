@@ -51,7 +51,7 @@ pub async fn parse(
         Some(extract_events(
             &DeploymentManifest::load_from_path(&deployed_manifest)?,
             manifest_dir,
-            &profile_name,
+            profile_name,
         )?)
     } else {
         None
