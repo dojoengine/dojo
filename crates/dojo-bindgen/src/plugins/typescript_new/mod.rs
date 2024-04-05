@@ -197,7 +197,8 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             }
         );
     }
-}"
+}
+"
         .to_string()
     }
 
@@ -223,7 +224,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     {}
 }}
 ",
-                TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                     .to_case(convert_case::Case::Pascal),
                 systems,
             );
@@ -238,7 +239,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             .map(|contract| {
                 format!(
                     "{}Address: string;",
-                    TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                    TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                         .to_case(convert_case::Case::Camel)
                 )
             })
@@ -260,7 +261,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         )
     }
 
-    fn generate_world_class(contracts: &[&DojoContract]) -> String {
+    fn generate_world_class(world_name: &String, contracts: &[&DojoContract]) -> String {
         let mut out = String::new();
 
         out += "type GeneralParams = {
@@ -282,10 +283,10 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                     "{camel_case_name}: {pascal_case_name}Calls;
     {camel_case_name}Address: string;",
                     camel_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                             .to_case(convert_case::Case::Camel),
                     pascal_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                             .to_case(convert_case::Case::Pascal)
                 )
             })
@@ -307,7 +308,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
 
             this.{contract_name}Address = {contract_name}Address;",
                     contract_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                             .to_case(convert_case::Case::Camel)
                 )
             })
@@ -320,7 +321,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                 format!(
                     "this.{camel_case_name}Address = params.{camel_case_name}Address;",
                     camel_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                             .to_case(convert_case::Case::Camel),
                 )
             })
@@ -333,18 +334,20 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                 format!(
                     "this.{camel_case_name} = new {pascal_case_name}Calls(this.{camel_case_name}Address, this._account);",
                     camel_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                             .to_case(convert_case::Case::Camel),
                     pascal_case_name =
-                        TypeScriptV2Plugin::formatted_contract_name(&contract.contract_file_name)
+                        TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                             .to_case(convert_case::Case::Pascal)
                 )
             })
             .collect::<Vec<String>>()
             .join("\n    ");
 
+        let formatted_world_name = world_name.to_case(convert_case::Case::Pascal);
+
         out += &format!(
-            "export class Dojo_Starter {{
+            "export class {formatted_world_name} {{
     rpcUrl: string;
     toriiUrl: string;
     toriiPromise: Promise<Client>;
@@ -539,7 +542,7 @@ export enum {} {{
             console.error(\"Error executing {pretty_system_name}:\", error);
             throw error;
         }}
-    }};",
+    }}",
             pretty_system_name = system.name.to_case(convert_case::Case::Camel),
             // formatted args to use our mapped types
             args = args,
@@ -566,7 +569,7 @@ impl BuiltinPlugin for TypeScriptV2Plugin {
         let models = data.models.values().collect::<Vec<_>>();
         let contracts = data.contracts.values().collect::<Vec<_>>();
 
-        let output_path = Path::new("models.gen.ts").to_owned();
+        let output_path = Path::new(&format!("{}.ts", data.world.name)).to_owned();
 
         let mut code = String::new();
         code += TypeScriptV2Plugin::generate_header().as_str();
@@ -582,7 +585,8 @@ impl BuiltinPlugin for TypeScriptV2Plugin {
         code += "\n";
         code += TypeScriptV2Plugin::generate_query_types(models.as_slice()).as_str();
         code += "\n";
-        code += TypeScriptV2Plugin::generate_world_class(contracts.as_slice()).as_str();
+        code += TypeScriptV2Plugin::generate_world_class(&data.world.name, contracts.as_slice())
+            .as_str();
 
         out.insert(output_path, code.as_bytes().to_vec());
 
