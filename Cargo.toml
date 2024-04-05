@@ -194,8 +194,8 @@ alloy-primitives = { version = "0.6.4", default-features = false }
 
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "43d6a358" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "43d6a358" }
 
 alloy-sol-macro = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
 alloy-primitives = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
