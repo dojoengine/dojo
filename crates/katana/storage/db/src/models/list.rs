@@ -8,7 +8,7 @@ pub type BlockList = IntegerList;
 /// A list of integers.
 ///
 /// The list is stored in a Roaring bitmap data structure as it uses less space compared to a normal
-/// bitmap or even a naive array with the same cardinality.
+/// bitmap or even a naive array with similar cardinality.
 ///
 /// See <https://www.roaringbitmap.org/>.
 #[derive(Debug, Default, Serialize, Deserialize)]
