@@ -29,9 +29,9 @@ mod test;
 mod types;
 
 pub use types::{
-    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, Contract, DeploymentManifest,
+    AbiFormat, BaseManifest, Class, ComputedValueEntrypoint, WorldContract, DeploymentManifest,
     DojoContract, DojoModel, Manifest, ManifestMethods, Member, OverlayClass, OverlayContract,
-    OverlayDojoContract, OverlayDojoModel, OverlayManifest,
+    OverlayDojoContract, OverlayDojoModel, OverlayManifest, WorldMetadata,
 };
 
 pub const WORLD_CONTRACT_NAME: &str = "dojo::world::world";
@@ -65,10 +65,10 @@ pub enum AbstractManifestError {
     Json(#[from] serde_json::Error),
 }
 
-impl From<Manifest<Class>> for Manifest<Contract> {
+impl From<Manifest<Class>> for Manifest<WorldContract> {
     fn from(value: Manifest<Class>) -> Self {
         Manifest::new(
-            Contract {
+            WorldContract {
                 class_hash: value.inner.class_hash,
                 abi: value.inner.abi,
                 original_class_hash: value.inner.original_class_hash,
@@ -254,7 +254,7 @@ impl DeploymentManifest {
             models,
             contracts,
             world: Manifest::new(
-                Contract {
+                WorldContract {
                     address: Some(world_address),
                     class_hash: world_class_hash,
                     ..Default::default()
@@ -607,7 +607,7 @@ impl ManifestMethods for DojoModel {
     }
 }
 
-impl ManifestMethods for Contract {
+impl ManifestMethods for WorldContract {
     type OverlayType = OverlayContract;
 
     fn abi(&self) -> Option<&AbiFormat> {
