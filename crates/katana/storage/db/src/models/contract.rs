@@ -2,9 +2,8 @@ use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use serde::{Deserialize, Serialize};
 
-use crate::codecs::{Compress, Decode, Decompress, Encode};
-
 use super::storage::BlockList;
+use crate::codecs::{Compress, Decode, Decompress, Encode};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ContractInfoChangeList {

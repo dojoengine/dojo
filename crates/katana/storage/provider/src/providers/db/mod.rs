@@ -637,7 +637,8 @@ impl BlockWriter for DbProvider {
                                 list.0.sort();
                                 list
                             }
-                            // create a new block list if it doesn't yet exist, and insert the block number
+                            // create a new block list if it doesn't yet exist, and insert the block
+                            // number
                             None => BlockList(vec![block_number]),
                         };
 
