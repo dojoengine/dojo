@@ -261,8 +261,10 @@ impl DojoWorld {
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {model_relation_table}.model_id = '{}' and {table}.keys LIKE ?
         "#,
-            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?,
+            format!("{:#x}", get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?),
         );
+
+        println!("count_query: {}", count_query);
 
         // total count of rows that matches keys_pattern without limit and offset
         let total_count =
@@ -278,13 +280,17 @@ impl DojoWorld {
             HAVING model_ids REGEXP '(^|,){}(,|$)'
             LIMIT 1
         "#,
-            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?,
+            format!("{:#x}", get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?),
         );
         let (models_str,): (String,) =
             sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
+        println!("models_str: {}", models_str);
+
         let model_ids = models_str.split(',').collect::<Vec<&str>>();
         let schemas = self.model_cache.schemas(model_ids).await?;
+
+        println!("schemas: {:?}", schemas);
 
         // query to filter with limit and offset
         let entities_query = format!(
@@ -384,7 +390,7 @@ impl DojoWorld {
             HAVING model_ids REGEXP '(^|,){}(,|$)'
             LIMIT 1
         "#,
-            get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?,
+            format!("{:#x}", get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?),
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
@@ -423,7 +429,7 @@ impl DojoWorld {
 
     pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
         // selector
-        let model = get_selector_from_name(model).map_err(ParseError::NonAsciiName)?;
+        let model = format!("{:#x}", get_selector_from_name(model).map_err(ParseError::NonAsciiName)?);
 
         let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
             String,
@@ -436,11 +442,11 @@ impl DojoWorld {
             "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
              models WHERE id = ?",
         )
-        .bind(format!("{:#x}", model))
+        .bind(&model)
         .fetch_one(&self.pool)
         .await?;
 
-        let schema = self.model_cache.schema(&format!("{:#x}", model)).await?;
+        let schema = self.model_cache.schema(&model).await?;
         let layout = hex::decode(&layout).unwrap();
 
         Ok(proto::types::ModelMetadata {
