@@ -3,18 +3,18 @@ use serde::{Deserialize, Serialize};
 
 /// Stores a list of block numbers.
 /// Mainly used for changeset tables to store the list of block numbers where a change occurred.
-pub type BlockList = IntegerList;
+pub type BlockList = IntegerSet;
 
-/// A list of integers.
+/// A set for storing integer values.
 ///
 /// The list is stored in a Roaring bitmap data structure as it uses less space compared to a normal
 /// bitmap or even a naive array with similar cardinality.
 ///
 /// See <https://www.roaringbitmap.org/>.
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct IntegerList(RoaringTreemap);
+pub struct IntegerSet(RoaringTreemap);
 
-impl IntegerList {
+impl IntegerSet {
     pub fn new() -> Self {
         Self(RoaringTreemap::new())
     }
