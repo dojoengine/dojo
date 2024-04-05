@@ -430,7 +430,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     // This will be formatted into a TypeScript interface
     // using TypeScript defined types
     fn format_struct(token: &Composite, handled_tokens: &[Composite]) -> String {
-        let mut native_fields = String::new();
+        let mut native_fields: Vec<String> = Vec::new();
 
         for field in &token.inners {
             let mapped = TypeScriptV2Plugin::map_type(field.token.type_name().as_str());
@@ -440,13 +440,12 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
                     .find(|t| t.type_name() == field.token.type_name())
                     .unwrap_or_else(|| panic!("Token not found: {}", field.token.type_name()));
                 if token.r#type == CompositeType::Enum {
-                    native_fields += format!("{}: {};\n    ", field.name, mapped).as_str();
+                    native_fields.push(format!("{}: {};", field.name, mapped));
                 } else {
-                    native_fields +=
-                        format!("{}: {};\n    ", field.name, field.token.type_name()).as_str();
+                    native_fields.push(format!("{}: {};", field.name, field.token.type_name()));
                 }
             } else {
-                native_fields += format!("{}: {};\n    ", field.name, mapped).as_str();
+                native_fields.push(format!("{}: {};", field.name, mapped));
             }
         }
 
@@ -459,7 +458,7 @@ export interface {name} {{
 ",
             path = token.type_path,
             name = token.type_name(),
-            native_fields = native_fields
+            native_fields = native_fields.join("\n    ")
         )
     }
 
