@@ -19,6 +19,7 @@ thiserror.workspace = true
 
 cairo-vm.workspace = true
 starknet_api.workspace = true
+roaring = { version = "0.10.3", features = ["serde"] }
 
 # codecs
 [dependencies.postcard]

@@ -10,7 +10,7 @@ use super::{Compress, Decompress};
 use crate::error::CodecError;
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::ContractInfoChangeList;
-use crate::models::storage::BlockList;
+use crate::models::list::BlockList;
 
 macro_rules! impl_compress_and_decompress_for_table_values {
     ($($name:ty),*) => {
