@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712367754057,
+  "lastUpdate": 1712367867336,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4615,6 +4615,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 18041092,
             "range": "± 455532",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2de878eb42c1e1f8f9b7cb96edf9e91656b16810",
+          "message": "refactor(katana-db): convert `StorageChangeSet` into a normal table (#1774)\n\nResolves #1762 \r\n\r\nConvert `StorageChangeSet` into a normal table instead of  dupsort.\r\n\r\nThis change is so to allow the block list of the `StorageChangeSet` to grow without being bounded by the value size of a `DUPSORT` table. \r\n\r\nThe max size for a DUPSORT table value is equal to the max size of the table key. So, when the list cardinality increases too much, the resulting subkey size will become larger than the max size. This will result in a `MDBX_BAD_VALSIZE` error.",
+          "timestamp": "2024-04-06T09:36:43+08:00",
+          "tree_id": "5aa35e75ab163d254540ce3f62b2436f7925eff2",
+          "url": "https://github.com/dojoengine/dojo/commit/2de878eb42c1e1f8f9b7cb96edf9e91656b16810"
+        },
+        "date": 1712367866693,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15915047,
+            "range": "± 373101",
             "unit": "ns/iter"
           }
         ]
