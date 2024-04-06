@@ -4,6 +4,10 @@ use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
+use starknet::core::types::contract::SierraClass;
+use std::fs;
+use std::fs::File;
+use std::path::PathBuf;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
@@ -18,6 +22,10 @@ pub struct BuildArgs {
     #[arg(long)]
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
+
+    #[arg(long)]
+    #[arg(help = "Report of all built contracts statistics")]
+    pub stats: bool,
 }
 
 impl BuildArgs {
@@ -34,6 +42,31 @@ impl BuildArgs {
 
         if self.unity {
             builtin_plugins.push(BuiltinPlugins::Unity);
+        }
+
+        if self.stats {
+            let built_contract_paths: fs::ReadDir =
+                fs::read_dir(compile_info.target_dir.as_str()).unwrap();
+
+            println!("\n");
+            for sierra_json_path in built_contract_paths {
+                let sierra_json_path: PathBuf = sierra_json_path.unwrap().path();
+                let filename = sierra_json_path.file_name().unwrap();
+                println!(
+                    "---------------Contract Stats for {}---------------\n",
+                    filename.to_str().unwrap()
+                );
+                let file = File::open(sierra_json_path)?;
+                let contract_artifact: SierraClass = serde_json::from_reader(&file)?;
+                let contract_artifact = contract_artifact.flatten()?;
+
+                println!(
+                    "- Contract bytecode size (Number of felts in the program): {}",
+                    contract_artifact.sierra_program.iter().count()
+                );
+
+                println!("- Contract Class size: {} bytes \n", file.metadata().unwrap().len());
+            }
         }
 
         // Custom plugins are always empty for now.
