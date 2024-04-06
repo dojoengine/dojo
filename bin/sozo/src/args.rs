@@ -69,7 +69,7 @@ pub enum Commands {
     Build(BuildArgs),
     #[command(about = "Initialize a new project")]
     Init(InitArgs),
-    #[command(about = "Remove generated artifacts, manifests and abis")]
+    #[command(about = "Remove generated artifacts, manifests")]
     Clean(CleanArgs),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
                        update the world")]

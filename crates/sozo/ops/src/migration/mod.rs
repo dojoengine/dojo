@@ -104,6 +104,8 @@ where
     let mut strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
+    let contracts_count = local_manifest.contracts.len();
+
     if dry_run {
         print_strategy(&ui, account.provider(), &strategy).await;
 
@@ -112,7 +114,11 @@ where
             local_manifest,
             &profile_dir,
             &profile_name,
-            MigrationOutput { world_address, ..Default::default() },
+            MigrationOutput {
+                world_address,
+                contracts: vec![None; contracts_count],
+                ..Default::default()
+            },
             name.as_ref(),
         )
         .await?;
