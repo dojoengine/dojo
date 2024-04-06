@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712368006965,
+  "lastUpdate": 1712372236045,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4675,6 +4675,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16920259,
             "range": "± 172684",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1c90f0fe9d078313e0cdb1e426ead9d0788e4314",
+          "message": "feat(katana-db): integer set using roaring bitmap (#1775)\n\n* add roaring bitmap based integer list\r\n\r\n* update doc\r\n\r\n* rename to set\r\n\r\n* use integer list for change sets\r\n\r\n* impl partial eq\r\n\r\n* update docs",
+          "timestamp": "2024-04-06T10:49:01+08:00",
+          "tree_id": "2d2c441479af91cccfa4d21a5048631645419adc",
+          "url": "https://github.com/dojoengine/dojo/commit/1c90f0fe9d078313e0cdb1e426ead9d0788e4314"
+        },
+        "date": 1712372235471,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16963774,
+            "range": "± 263221",
             "unit": "ns/iter"
           }
         ]
