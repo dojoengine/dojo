@@ -8,9 +8,7 @@ use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
-use crate::models::storage::{
-    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
-};
+use crate::models::storage::{BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -167,7 +165,7 @@ define_tables_enum! {[
     (NonceChangeHistory, TableType::DupSort),
     (ClassChangeHistory, TableType::DupSort),
     (StorageChangeHistory, TableType::DupSort),
-    (StorageChangeSet, TableType::DupSort)
+    (StorageChangeSet, TableType::Table)
 ]}
 
 tables! {
@@ -221,7 +219,7 @@ tables! {
     ClassChangeHistory: (BlockNumber, ContractAddress) => ContractClassChange,
 
     /// storage change set
-    StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChangeList,
+    StorageChangeSet: (ContractStorageKey) => BlockList,
     /// Account storage change set
     StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
 
@@ -256,5 +254,28 @@ mod tests {
         assert_eq!(Tables::ALL[19].name(), ClassChangeHistory::NAME);
         assert_eq!(Tables::ALL[20].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeSet::NAME);
+
+        assert_eq!(Tables::Headers.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockNumbers.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockBodyIndices.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockStatusses.table_type(), TableType::Table);
+        assert_eq!(Tables::TxNumbers.table_type(), TableType::Table);
+        assert_eq!(Tables::TxBlocks.table_type(), TableType::Table);
+        assert_eq!(Tables::TxHashes.table_type(), TableType::Table);
+        assert_eq!(Tables::Transactions.table_type(), TableType::Table);
+        assert_eq!(Tables::Receipts.table_type(), TableType::Table);
+        assert_eq!(Tables::CompiledClassHashes.table_type(), TableType::Table);
+        assert_eq!(Tables::CompiledClasses.table_type(), TableType::Table);
+        assert_eq!(Tables::SierraClasses.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractInfo.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractStorage.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ClassDeclarationBlock.table_type(), TableType::Table);
+        assert_eq!(Tables::ClassDeclarations.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ContractInfoChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::NonceChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
     }
 }

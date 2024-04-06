@@ -11,7 +11,7 @@ use katana_db::models::contract::{
     ContractClassChange, ContractInfoChangeList, ContractNonceChange,
 };
 use katana_db::models::storage::{
-    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
+    BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry,
 };
 use katana_db::tables::{self, DupSort, Table};
 use katana_db::utils::KeyValue;
@@ -626,28 +626,23 @@ impl BlockWriter for DbProvider {
                             _ => {}
                         }
 
-                        let mut change_set_cursor = db_tx.cursor::<tables::StorageChangeSet>()?;
-                        let new_block_list =
-                            match change_set_cursor.seek_by_key_subkey(addr, entry.key)? {
-                                Some(StorageEntryChangeList { mut block_list, key })
-                                    if key == entry.key =>
-                                {
-                                    change_set_cursor.delete_current()?;
+                        // update block list in the change set
+                        let changeset_key =
+                            ContractStorageKey { contract_address: addr, key: entry.key };
+                        let list = db_tx.get::<tables::StorageChangeSet>(changeset_key.clone())?;
 
-                                    block_list.push(block_number);
-                                    block_list.sort();
-                                    block_list
-                                }
+                        let updated_list = match list {
+                            Some(mut list) => {
+                                list.0.push(block_number);
+                                list.0.sort();
+                                list
+                            }
+                            // create a new block list if it doesn't yet exist, and insert the block
+                            // number
+                            None => BlockList(vec![block_number]),
+                        };
 
-                                _ => {
-                                    vec![block_number]
-                                }
-                            };
-
-                        change_set_cursor.upsert(
-                            addr,
-                            StorageEntryChangeList { key: entry.key, block_list: new_block_list },
-                        )?;
+                        db_tx.put::<tables::StorageChangeSet>(changeset_key, updated_list)?;
                         storage_cursor.upsert(addr, entry)?;
 
                         let storage_change_sharded_key =
@@ -676,12 +671,12 @@ impl BlockWriter for DbProvider {
                 let new_change_set = if let Some(mut change_set) =
                     db_tx.get::<tables::ContractInfoChangeSet>(addr)?
                 {
-                    change_set.class_change_list.push(block_number);
-                    change_set.class_change_list.sort();
+                    change_set.class_change_list.0.push(block_number);
+                    change_set.class_change_list.0.sort();
                     change_set
                 } else {
                     ContractInfoChangeList {
-                        class_change_list: vec![block_number],
+                        class_change_list: BlockList(vec![block_number]),
                         ..Default::default()
                     }
                 };
@@ -703,12 +698,12 @@ impl BlockWriter for DbProvider {
                 let new_change_set = if let Some(mut change_set) =
                     db_tx.get::<tables::ContractInfoChangeSet>(addr)?
                 {
-                    change_set.nonce_change_list.push(block_number);
-                    change_set.nonce_change_list.sort();
+                    change_set.nonce_change_list.0.push(block_number);
+                    change_set.nonce_change_list.0.sort();
                     change_set
                 } else {
                     ContractInfoChangeList {
-                        nonce_change_list: vec![block_number],
+                        nonce_change_list: BlockList(vec![block_number]),
                         ..Default::default()
                     }
                 };

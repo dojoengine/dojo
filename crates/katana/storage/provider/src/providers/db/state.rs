@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use katana_db::mdbx::{self};
 use katana_db::models::contract::ContractInfoChangeList;
-use katana_db::models::storage::{ContractStorageKey, StorageEntry};
+use katana_db::models::storage::{BlockList, ContractStorageKey, StorageEntry};
 use katana_db::tables;
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
@@ -173,21 +173,21 @@ impl HistoricalStateProvider {
     // if I don't document it. But im lazy.
     fn recent_block_change_relative_to_pinned_block_num(
         block_number: BlockNumber,
-        block_list: &[BlockNumber],
+        block_list: &BlockList,
     ) -> Option<BlockNumber> {
-        if block_list.first().is_some_and(|num| block_number < *num) {
+        if block_list.0.first().is_some_and(|num| block_number < *num) {
             return None;
         }
 
         // if the pinned block number is smaller than the first block number in the list,
         // then that means there is no change happening before the pinned block number.
         let pos = {
-            if let Some(pos) = block_list.last().and_then(|num| {
-                if block_number >= *num { Some(block_list.len() - 1) } else { None }
+            if let Some(pos) = block_list.0.last().and_then(|num| {
+                if block_number >= *num { Some(block_list.0.len() - 1) } else { None }
             }) {
                 Some(pos)
             } else {
-                block_list.iter().enumerate().find_map(|(i, num)| match block_number.cmp(num) {
+                block_list.0.iter().enumerate().find_map(|(i, num)| match block_number.cmp(num) {
                     Ordering::Equal => Some(i),
                     Ordering::Greater => None,
                     Ordering::Less => {
@@ -201,7 +201,7 @@ impl HistoricalStateProvider {
             }
         }?;
 
-        block_list.get(pos).copied()
+        block_list.0.get(pos).copied()
     }
 }
 
@@ -300,18 +300,14 @@ impl StateProvider for HistoricalStateProvider {
         address: ContractAddress,
         storage_key: StorageKey,
     ) -> ProviderResult<Option<StorageValue>> {
-        let mut cursor = self.tx.cursor::<tables::StorageChangeSet>()?;
+        let key = ContractStorageKey { contract_address: address, key: storage_key };
+        let block_list = self.tx.get::<tables::StorageChangeSet>(key.clone())?;
 
-        if let Some(num) = cursor.seek_by_key_subkey(address, storage_key)?.and_then(|entry| {
-            Self::recent_block_change_relative_to_pinned_block_num(
-                self.block_number,
-                &entry.block_list,
-            )
+        if let Some(num) = block_list.and_then(|list| {
+            Self::recent_block_change_relative_to_pinned_block_num(self.block_number, &list)
         }) {
             let mut cursor = self.tx.cursor::<tables::StorageChangeHistory>()?;
-            let sharded_key = ContractStorageKey { contract_address: address, key: storage_key };
-
-            let entry = cursor.seek_by_key_subkey(num, sharded_key)?.ok_or(
+            let entry = cursor.seek_by_key_subkey(num, key)?.ok_or(
                 ProviderError::MissingStorageChangeEntry {
                     block: num,
                     storage_key,
@@ -330,9 +326,9 @@ impl StateProvider for HistoricalStateProvider {
 
 #[cfg(test)]
 mod tests {
-    use super::HistoricalStateProvider;
+    use katana_db::models::storage::BlockList;
 
-    const BLOCK_LIST: [u64; 5] = [1, 2, 5, 6, 10];
+    use super::HistoricalStateProvider;
 
     #[rstest::rstest]
     #[case(0, None)]
@@ -349,7 +345,7 @@ mod tests {
         assert_eq!(
             HistoricalStateProvider::recent_block_change_relative_to_pinned_block_num(
                 block_num,
-                &BLOCK_LIST,
+                &BlockList(vec![1, 2, 5, 6, 10]),
             ),
             expected_block_num
         );
