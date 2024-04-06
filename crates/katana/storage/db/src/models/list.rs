@@ -19,17 +19,17 @@ impl IntegerSet {
         Self(RoaringTreemap::new())
     }
 
-    /// Insert a new number to the list.
+    /// Insert a new number to the set.
     pub fn insert(&mut self, num: u64) {
         self.0.insert(num);
     }
 
-    /// Checks if the list contains the given number.
+    /// Checks if the set contains the given number.
     pub fn contains(&self, num: u64) -> bool {
         self.0.contains(num)
     }
 
-    /// Returns the number of elements in the list that are smaller or equal to the given `value`.
+    /// Returns the number of elements in the set that are smaller or equal to the given `value`.
     pub fn rank(&self, value: u64) -> u64 {
         self.0.rank(value)
     }
