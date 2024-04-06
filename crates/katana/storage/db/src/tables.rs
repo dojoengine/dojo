@@ -294,9 +294,8 @@ mod tests {
     use crate::models::contract::{
         ContractClassChange, ContractInfoChangeList, ContractNonceChange,
     };
-    use crate::models::storage::{
-        BlockList, ContractStorageEntry, ContractStorageKey, StorageEntry,
-    };
+    use crate::models::list::BlockList;
+    use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
 
     macro_rules! assert_key_encode_decode {
 	    { $( ($name:ty, $key:expr) ),* } => {

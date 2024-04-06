@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::list::BlockList;
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct ContractInfoChangeList {
     pub class_change_list: BlockList,
     pub nonce_change_list: BlockList,

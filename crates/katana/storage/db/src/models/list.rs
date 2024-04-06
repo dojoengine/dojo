@@ -11,7 +11,7 @@ pub type BlockList = IntegerSet;
 /// bitmap or even a naive array with similar cardinality.
 ///
 /// See <https://www.roaringbitmap.org/>.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct IntegerSet(RoaringTreemap);
 
 impl IntegerSet {
