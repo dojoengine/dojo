@@ -135,7 +135,7 @@ pub fn extract_messages(
 }
 
 impl ProgramInput {
-    pub fn serialize(&self) -> anyhow::Result<String> {
+    pub fn serialize(&self, world: Option<FieldElement>) -> anyhow::Result<String> {
         let message_to_starknet = self
             .message_to_starknet_segment
             .iter()
@@ -167,7 +167,7 @@ impl ProgramInput {
         result.push_str(&format!(r#""message_to_starknet_segment":[{}],"#, message_to_starknet));
         result.push_str(&format!(r#""message_to_appchain_segment":[{}],"#, message_to_appchain));
 
-        result.push_str(&state_updates_to_json_like(&self.state_updates));
+        result.push_str(&state_updates_to_json_like(&self.state_updates, world));
 
         result.push('}');
 
