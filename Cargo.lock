@@ -11084,6 +11084,7 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "futures",
+ "katana-rpc-api",
  "katana-runner",
  "notify",
  "notify-debouncer-mini",
