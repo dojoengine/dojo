@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712372236045,
+  "lastUpdate": 1712441208274,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4705,6 +4705,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16963774,
             "range": "± 263221",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5015ea1dba0f8aee68c6913181fd1ecda7e06a6a",
+          "message": "feat: add verification of the RPC version (#1782)\n\n* feat: add verification of the RPC version\r\n\r\n* fix: ensure torii test is waiting test txs to be mined",
+          "timestamp": "2024-04-06T17:58:39-04:00",
+          "tree_id": "fd5258c07ccc322a01ab3109787dee43de56c230",
+          "url": "https://github.com/dojoengine/dojo/commit/5015ea1dba0f8aee68c6913181fd1ecda7e06a6a"
+        },
+        "date": 1712441207800,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16845528,
+            "range": "± 145502",
             "unit": "ns/iter"
           }
         ]
