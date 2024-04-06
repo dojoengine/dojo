@@ -164,9 +164,9 @@ define_tables_enum! {[
     (ClassDeclarationBlock, TableType::Table),
     (ClassDeclarations, TableType::DupSort),
     (ContractInfoChangeSet, TableType::Table),
-    (NonceChanges, TableType::DupSort),
-    (ContractClassChanges, TableType::DupSort),
-    (StorageChanges, TableType::DupSort),
+    (NonceChangeHistory, TableType::DupSort),
+    (ClassChangeHistory, TableType::DupSort),
+    (StorageChangeHistory, TableType::DupSort),
     (StorageChangeSet, TableType::DupSort)
 ]}
 
@@ -215,16 +215,15 @@ tables! {
     ///
     /// Stores the list of blocks where the contract info (nonce / class hash) has changed.
     ContractInfoChangeSet: (ContractAddress) => ContractInfoChangeList,
-
     /// Contract nonce changes by block.
-    NonceChanges: (BlockNumber, ContractAddress) => ContractNonceChange,
+    NonceChangeHistory: (BlockNumber, ContractAddress) => ContractNonceChange,
     /// Contract class hash changes by block.
-    ContractClassChanges: (BlockNumber, ContractAddress) => ContractClassChange,
+    ClassChangeHistory: (BlockNumber, ContractAddress) => ContractClassChange,
 
     /// storage change set
     StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChangeList,
     /// Account storage change set
-    StorageChanges: (BlockNumber, ContractStorageKey) => ContractStorageEntry
+    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
 
 }
 
@@ -253,9 +252,9 @@ mod tests {
         assert_eq!(Tables::ALL[15].name(), ClassDeclarationBlock::NAME);
         assert_eq!(Tables::ALL[16].name(), ClassDeclarations::NAME);
         assert_eq!(Tables::ALL[17].name(), ContractInfoChangeSet::NAME);
-        assert_eq!(Tables::ALL[18].name(), NonceChanges::NAME);
-        assert_eq!(Tables::ALL[19].name(), ContractClassChanges::NAME);
-        assert_eq!(Tables::ALL[20].name(), StorageChanges::NAME);
+        assert_eq!(Tables::ALL[18].name(), NonceChangeHistory::NAME);
+        assert_eq!(Tables::ALL[19].name(), ClassChangeHistory::NAME);
+        assert_eq!(Tables::ALL[20].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeSet::NAME);
     }
 }

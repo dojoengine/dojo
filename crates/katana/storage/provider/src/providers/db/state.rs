@@ -250,7 +250,7 @@ impl StateProvider for HistoricalStateProvider {
                 &entry.nonce_change_list,
             )
         }) {
-            let mut cursor = self.tx.cursor::<tables::NonceChanges>()?;
+            let mut cursor = self.tx.cursor::<tables::NonceChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractNonceChangeEntry {
                     block: num,
@@ -279,7 +279,7 @@ impl StateProvider for HistoricalStateProvider {
                 &entry.class_change_list,
             )
         }) {
-            let mut cursor = self.tx.cursor::<tables::ContractClassChanges>()?;
+            let mut cursor = self.tx.cursor::<tables::ClassChangeHistory>()?;
             let entry = cursor.seek_by_key_subkey(num, address)?.ok_or(
                 ProviderError::MissingContractClassChangeEntry {
                     block: num,
@@ -308,7 +308,7 @@ impl StateProvider for HistoricalStateProvider {
                 &entry.block_list,
             )
         }) {
-            let mut cursor = self.tx.cursor::<tables::StorageChanges>()?;
+            let mut cursor = self.tx.cursor::<tables::StorageChangeHistory>()?;
             let sharded_key = ContractStorageKey { contract_address: address, key: storage_key };
 
             let entry = cursor.seek_by_key_subkey(num, sharded_key)?.ok_or(

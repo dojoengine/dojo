@@ -288,7 +288,7 @@ impl StateUpdateProvider for DbProvider {
 
         if let Some(block_num) = block_num {
             let nonce_updates = dup_entries::<
-                tables::NonceChanges,
+                tables::NonceChangeHistory,
                 HashMap<ContractAddress, Nonce>,
                 _,
             >(&db_tx, block_num, |entry| {
@@ -297,7 +297,7 @@ impl StateUpdateProvider for DbProvider {
             })?;
 
             let contract_updates = dup_entries::<
-                tables::ContractClassChanges,
+                tables::ClassChangeHistory,
                 HashMap<ContractAddress, ClassHash>,
                 _,
             >(&db_tx, block_num, |entry| {
@@ -321,7 +321,7 @@ impl StateUpdateProvider for DbProvider {
 
             let storage_updates = {
                 let entries = dup_entries::<
-                    tables::StorageChanges,
+                    tables::StorageChangeHistory,
                     Vec<(ContractAddress, (StorageKey, StorageValue))>,
                     _,
                 >(&db_tx, block_num, |entry| {
@@ -653,7 +653,7 @@ impl BlockWriter for DbProvider {
                         let storage_change_sharded_key =
                             ContractStorageKey { contract_address: addr, key: entry.key };
 
-                        db_tx.put::<tables::StorageChanges>(
+                        db_tx.put::<tables::StorageChangeHistory>(
                             block_number,
                             ContractStorageEntry {
                                 key: storage_change_sharded_key,
@@ -689,7 +689,7 @@ impl BlockWriter for DbProvider {
                 db_tx.put::<tables::ContractInfo>(addr, value)?;
 
                 let class_change_key = ContractClassChange { contract_address: addr, class_hash };
-                db_tx.put::<tables::ContractClassChanges>(block_number, class_change_key)?;
+                db_tx.put::<tables::ClassChangeHistory>(block_number, class_change_key)?;
                 db_tx.put::<tables::ContractInfoChangeSet>(addr, new_change_set)?;
             }
 
@@ -716,7 +716,7 @@ impl BlockWriter for DbProvider {
                 db_tx.put::<tables::ContractInfo>(addr, value)?;
 
                 let nonce_change_key = ContractNonceChange { contract_address: addr, nonce };
-                db_tx.put::<tables::NonceChanges>(block_number, nonce_change_key)?;
+                db_tx.put::<tables::NonceChangeHistory>(block_number, nonce_change_key)?;
                 db_tx.put::<tables::ContractInfoChangeSet>(addr, new_change_set)?;
             }
 
