@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712367867336,
+  "lastUpdate": 1712368006965,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4645,6 +4645,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 15915047,
             "range": "± 373101",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b286efb70bfa80e29e28539da261aa2ab1a9a9df",
+          "message": "test(katana-db): ensure key/value types implement their respective traits (#1776)\n\nAdd simple unit tests for making sure that the types that are used as the key/value types of the tables, implements the `Encode`/`Decode` (key) or `Compress`/`Decompress` (value) code respectively.",
+          "timestamp": "2024-04-06T09:38:29+08:00",
+          "tree_id": "7fb283ad0be1782646970c1a8c3fcf0127f31fd4",
+          "url": "https://github.com/dojoengine/dojo/commit/b286efb70bfa80e29e28539da261aa2ab1a9a9df"
+        },
+        "date": 1712368005729,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16920259,
+            "range": "± 172684",
             "unit": "ns/iter"
           }
         ]
