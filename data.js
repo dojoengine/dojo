@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712340940596,
+  "lastUpdate": 1712367754057,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4585,6 +4585,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17287292,
             "range": "± 509049",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b788ad4782e9636a5c391e44342bf697409e760",
+          "message": "style(katana-db): standardize naming for historical tables (#1773)\n\nStandardize the naming convention of historical-data related tables.\n\n- `*ChangeHistory` \n\ntables that store data changes based on the block number it occured.\n\n- `*ChangeSet` \n\ntables that maintain a **set** of block numbers used for indexing the respective `*ChangeHistory` table. The elements in the set corresponds to the _primary key_ of `*ChangeHistory` table where an entry exist with a _subkey_ that is equal to _primary key_ corresponds to the aforementioned **set**.",
+          "timestamp": "2024-04-06T09:34:29+08:00",
+          "tree_id": "26d591b3ee46280a032d61bb07fe0608a70c9c51",
+          "url": "https://github.com/dojoengine/dojo/commit/9b788ad4782e9636a5c391e44342bf697409e760"
+        },
+        "date": 1712367753477,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 18041092,
+            "range": "± 455532",
             "unit": "ns/iter"
           }
         ]
