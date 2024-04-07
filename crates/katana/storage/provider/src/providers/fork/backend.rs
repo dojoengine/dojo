@@ -9,7 +9,6 @@ use futures::channel::mpsc::{channel, Receiver, SendError, Sender};
 use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::{Future, FutureExt};
-
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag};
 use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{
@@ -46,8 +45,6 @@ type GetBlockWithTxsResult =
 type GetTransactionResult = Result<Transaction, ForkedBackendError>;
 type GetTransactionReceiptResult =
     Result<starknet::core::types::MaybePendingTransactionReceipt, ForkedBackendError>;
-
-const FORKED_BACKEND: &str = "forked_backend";
 
 pub(crate) const LOG_TARGET: &str = "forked_backend";
 
@@ -433,7 +430,7 @@ impl ForkedBackend {
         continuation_token: Option<String>,
         chunks_size: ChunkSize,
     ) -> Result<EventsPage, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting evetns at filter{filter:#?}, continuation_token {continuation_token:#?}, and chunks_size {chunks_size:#?} ");
+        trace!(target: LOG_TARGET, "requesting evetns at filter{filter:#?}, continuation_token {continuation_token:#?}, and chunks_size {chunks_size:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -446,7 +443,7 @@ impl ForkedBackend {
         &self,
         block_id: BlockIdOrTag,
     ) -> Result<starknet::core::types::MaybePendingBlockWithTxHashes, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting block with tx_hashes at block {block_id:#?} ");
+        trace!(target: LOG_TARGET, "requesting block with tx_hashes at block {block_id:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -459,7 +456,7 @@ impl ForkedBackend {
         &self,
         block_id: BlockIdOrTag,
     ) -> Result<starknet::core::types::MaybePendingBlockWithTxs, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting block with txs at block {block_id:#?} ");
+        trace!(target: LOG_TARGET, "requesting block with txs at block {block_id:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -473,7 +470,7 @@ impl ForkedBackend {
         block_id: BlockIdOrTag,
         index: TxNumber,
     ) -> Result<Transaction, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting transaction at block {block_id:#?}, index {index:#?}");
+        trace!(target: LOG_TARGET, "requesting transaction at block {block_id:#?}, index {index:#?}");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -486,7 +483,7 @@ impl ForkedBackend {
         &self,
         transaction_hash: TxHash,
     ) -> Result<Transaction, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting transaction at trasanction hash {transaction_hash:#?} ");
+        trace!(target: LOG_TARGET, "requesting transaction at trasanction hash {transaction_hash:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -499,7 +496,7 @@ impl ForkedBackend {
         &self,
         transaction_hash: TxHash,
     ) -> Result<starknet::core::types::MaybePendingTransactionReceipt, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting transaction receipt at trasanction hash {transaction_hash:#?} ");
+        trace!(target: LOG_TARGET, "requesting transaction receipt at trasanction hash {transaction_hash:#?} ");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -886,45 +883,53 @@ mod tests {
     fn fetch_non_state_data_from_fork() {
         let (backend, _) = create_forked_backend(LOCAL_RPC_URL.into(), 1);
 
-        assert!(backend
-            .do_get_events(
-                EventFilter {
-                    from_block: Some(BlockId::Number(0)),
-                    to_block: Some(BlockId::Number(5)),
-                    address: None,
-                    keys: None,
-                },
-                Some("0,100,0".into()),
-                100,
-            )
-            .is_ok());
+        assert!(
+            backend
+                .do_get_events(
+                    EventFilter {
+                        from_block: Some(BlockId::Number(0)),
+                        to_block: Some(BlockId::Number(0)),
+                        address: None,
+                        keys: None,
+                    },
+                    None,
+                    0,
+                )
+                .is_ok());
 
-        assert!(backend
-            .do_get_block_with_tx_hashes(starknet::core::types::BlockId::Number(0))
-            .is_ok());
+        assert!(
+            backend.do_get_block_with_tx_hashes(starknet::core::types::BlockId::Number(0)).is_ok()
+        );
 
         assert!(backend.do_get_block_with_txs(starknet::core::types::BlockId::Number(0)).is_ok());
 
-        assert!(backend
-            .do_get_transaction_by_block_id_and_index(starknet::core::types::BlockId::Number(0), 1)
-            .is_ok());
-
-        assert!(backend
-            .do_get_transaction_by_hash(
-                FieldElement::from_hex_be(
-                    "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+        assert!(
+            backend
+                .do_get_transaction_by_block_id_and_index(
+                    starknet::core::types::BlockId::Number(0),
+                    1
                 )
-                .unwrap()
-            )
-            .is_err());
+                .is_ok());
 
-        assert!(backend
-            .do_get_transaction_receipt(
-                FieldElement::from_hex_be(
-                    "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
-                )
+        assert!(
+            backend
+                .do_get_transaction_by_hash(
+                    FieldElement::from_hex_be(
+                        "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+                    )
                 .unwrap()
-            )
-            .is_err());
+                )
+                .is_err()
+        );
+
+        assert!(
+            backend
+                .do_get_transaction_receipt(
+                    FieldElement::from_hex_be(
+                        "0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
+                    )
+                    .unwrap()
+                )
+                .is_err());
     }
 }
