@@ -759,7 +759,7 @@ fn handle_contract_or_class_not_found_err<T>(
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::block::BlockNumber;
+    use katana_primitives::block::{BlockNumber, BlockTag};
     use katana_primitives::contract::GenericContractInfo;
     use starknet::macros::felt;
     use url::Url;
@@ -887,15 +887,16 @@ mod tests {
             backend
                 .do_get_events(
                     EventFilter {
-                        from_block: Some(BlockId::Number(0)),
-                        to_block: Some(BlockId::Number(0)),
+                        from_block: Some(starknet::core::types::BlockId::Tag(BlockTag::Latest)),
+                        to_block: Some(starknet::core::types::BlockId::Tag(BlockTag::Latest)),
                         address: None,
                         keys: None,
                     },
                     None,
-                    0,
+                    10,
                 )
-                .is_ok());
+                .is_ok()
+        );
 
         assert!(
             backend.do_get_block_with_tx_hashes(starknet::core::types::BlockId::Number(0)).is_ok()
@@ -909,7 +910,8 @@ mod tests {
                     starknet::core::types::BlockId::Number(0),
                     1
                 )
-                .is_ok());
+                .is_ok()
+        );
 
         assert!(
             backend
@@ -930,6 +932,7 @@ mod tests {
                     )
                     .unwrap()
                 )
-                .is_err());
+                .is_err()
+        );
     }
 }
