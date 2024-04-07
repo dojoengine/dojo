@@ -2,6 +2,7 @@ use std::ops::Range;
 
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber, FinalityStatus};
 use katana_primitives::receipt::Receipt;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
 
 use crate::ProviderResult;
@@ -50,6 +51,18 @@ pub trait TransactionsProviderExt: TransactionProvider + Send + Sync {
 pub trait TransactionStatusProvider: Send + Sync {
     /// Retrieves the finality status of a transaction.
     fn transaction_status(&self, hash: TxHash) -> ProviderResult<Option<FinalityStatus>>;
+}
+
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait TransactionTraceProvider: Send + Sync {
+    /// Returns a transaction execution given its hash.
+    fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>>;
+
+    /// Returns all the transactions executions for a given block.
+    fn transactions_executions_by_block(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<Vec<TxExecInfo>>>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]

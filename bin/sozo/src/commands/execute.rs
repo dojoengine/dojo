@@ -22,7 +22,7 @@ pub struct ExecuteArgs {
 
     #[arg(short, long)]
     #[arg(value_delimiter = ',')]
-    #[arg(help = "The calldata to be passed to the system. Comma seperated values e.g., \
+    #[arg(help = "The calldata to be passed to the system. Comma separated values e.g., \
                   0x12345,0x69420.")]
     pub calldata: Vec<FieldElement>,
 
@@ -54,7 +54,7 @@ impl ExecuteArgs {
             .unwrap();
             let tx_config = self.transaction.into();
 
-            execute::execute(self.contract, self.entrypoint, self.calldata, world, tx_config).await
+            execute::execute(self.contract, self.entrypoint, self.calldata, &world, tx_config).await
         })
     }
 }

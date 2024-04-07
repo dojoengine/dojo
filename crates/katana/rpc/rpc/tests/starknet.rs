@@ -14,8 +14,6 @@ use starknet::core::types::{
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
 
-use crate::common::prepare_contract_declaration_params;
-
 mod common;
 
 const WAIT_TX_DELAY_MILLIS: u64 = 1000;
@@ -27,7 +25,8 @@ async fn test_send_declare_and_deploy_contract() {
     let account = sequencer.account();
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
-    let (contract, compiled_class_hash) = prepare_contract_declaration_params(&path).unwrap();
+    let (contract, compiled_class_hash) =
+        common::prepare_contract_declaration_params(&path).unwrap();
 
     let class_hash = contract.class_hash();
     let res = account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();

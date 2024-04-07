@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use alloy_primitives::U256;
 use derive_more::{Deref, DerefMut};
-use ethers::types::U256;
 use rand::rngs::SmallRng;
 use rand::{RngCore, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,8 @@ use starknet::core::utils::get_contract_address;
 use starknet::signers::SigningKey;
 
 use super::constant::DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH;
-use crate::contract::{ClassHash, ContractAddress, StorageKey, StorageValue};
+use crate::class::ClassHash;
+use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::FieldElement;
 
 /// Represents a contract allocation in the genesis block.
@@ -238,7 +239,7 @@ impl DevAllocationsGenerator {
         Self {
             total,
             seed: [0u8; 32],
-            balance: U256::zero(),
+            balance: U256::ZERO,
             class_hash: DEFAULT_OZ_ACCOUNT_CONTRACT_CLASS_HASH,
         }
     }

@@ -1,4 +1,4 @@
-use ethers::types::H256;
+use alloy_primitives::B256;
 
 use crate::contract::ContractAddress;
 use crate::FieldElement;
@@ -67,7 +67,7 @@ pub struct L1HandlerTxReceipt {
     /// Events emitted by contracts.
     pub events: Vec<Event>,
     /// The hash of the L1 message
-    pub message_hash: H256,
+    pub message_hash: B256,
     /// Messages sent to L1.
     pub messages_sent: Vec<MessageToL1>,
     /// Revert error message if the transaction execution failed.
@@ -109,11 +109,16 @@ impl Receipt {
     ///
     /// A transaction is reverted if the `revert_error` field in the receipt is not `None`.
     pub fn is_reverted(&self) -> bool {
+        self.revert_reason().is_some()
+    }
+
+    /// Returns the revert reason if the transaction is reverted.
+    pub fn revert_reason(&self) -> Option<&str> {
         match self {
-            Receipt::Invoke(rct) => rct.revert_error.is_some(),
-            Receipt::Declare(rct) => rct.revert_error.is_some(),
-            Receipt::L1Handler(rct) => rct.revert_error.is_some(),
-            Receipt::DeployAccount(rct) => rct.revert_error.is_some(),
+            Receipt::Invoke(rct) => rct.revert_error.as_deref(),
+            Receipt::Declare(rct) => rct.revert_error.as_deref(),
+            Receipt::L1Handler(rct) => rct.revert_error.as_deref(),
+            Receipt::DeployAccount(rct) => rct.revert_error.as_deref(),
         }
     }
 

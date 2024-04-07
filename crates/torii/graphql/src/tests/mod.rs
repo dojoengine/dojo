@@ -68,6 +68,7 @@ pub struct Event {
     pub keys: Vec<String>,
     pub data: Vec<String>,
     pub transaction_hash: String,
+    pub executed_at: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -188,6 +189,8 @@ pub struct Metadata {
 pub async fn run_graphql_query(schema: &Schema, query: &str) -> Value {
     let res = schema.execute(query).await;
 
+    println!("Trying to execute query: {}", query);
+
     assert!(res.errors.is_empty(), "GraphQL query returned errors: {:?}", res.errors);
     serde_json::to_value(res.data).expect("Failed to serialize GraphQL response")
 }
@@ -259,6 +262,7 @@ pub async fn model_fixtures(db: &mut Sql) {
         FieldElement::TWO,
         0,
         0,
+        1710754478_u64,
     )
     .await
     .unwrap();
@@ -273,7 +277,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
 
     let base_path = "../types-test";
     let target_path = format!("{}/target/dev", base_path);
-    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+    let mut migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let config = build_test_config("../types-test/Scarb.toml").unwrap();
     let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
 
@@ -288,7 +292,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    execute_strategy(&ws, &migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
 
     let manifest =
         DeploymentManifest::load_from_remote(&provider, migration.world_address().unwrap())

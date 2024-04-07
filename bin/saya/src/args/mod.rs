@@ -12,8 +12,10 @@ use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 use crate::args::data_availability::{DataAvailabilityChain, DataAvailabilityOptions};
+use crate::args::proof::ProofOptions;
 
 mod data_availability;
+mod proof;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -45,11 +47,15 @@ pub struct SayaArgs {
     #[command(flatten)]
     #[command(next_help_heading = "Data availability options")]
     pub data_availability: DataAvailabilityOptions,
+
+    #[command(flatten)]
+    #[command(next_help_heading = "Choose the proof pipeline configuration")]
+    pub proof: ProofOptions,
 }
 
 impl SayaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,saya_core=trace";
+        const DEFAULT_LOG_FILTER: &str = "info,saya_core=trace,blockchain=trace,provider=trace";
 
         let builder = fmt::Subscriber::builder().with_env_filter(
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
@@ -109,6 +115,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 katana_rpc: args.rpc_url,
                 start_block: args.start_block,
                 data_availability: da_config,
+                prover: args.proof.prover.into(),
+                verifier: args.proof.verifier.into(),
             })
         }
     }
@@ -140,7 +148,9 @@ mod tests {
                     celestia_namespace: None,
                 },
             },
+            proof: ProofOptions { prover: Default::default(), verifier: Default::default() },
         };
+
         let config: SayaConfig = args.try_into().unwrap();
 
         assert_eq!(config.katana_rpc.as_str(), "http://localhost:5050/");

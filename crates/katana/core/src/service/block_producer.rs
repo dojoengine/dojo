@@ -8,93 +8,93 @@ use std::time::Duration;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
-use katana_executor::blockifier::outcome::TxReceiptWithExecInfo;
-use katana_executor::blockifier::state::{CachedStateWrapper, StateRefDb};
-use katana_executor::blockifier::utils::{
-    block_context_from_envs, get_state_update_from_cached_state,
-};
-use katana_executor::blockifier::{PendingState, TransactionExecutor};
-use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::env::{BlockEnv, CfgEnv};
+use katana_executor::{BlockExecutor, ExecutionOutput, ExecutionResult, ExecutorFactory};
+use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_provider::error::ProviderError;
-use katana_provider::traits::block::BlockNumberProvider;
+use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::StateFactoryProvider;
+use katana_tasks::{BlockingTaskPool, BlockingTaskResult};
 use parking_lot::RwLock;
 use tokio::time::{interval_at, Instant, Interval};
-use tracing::{trace, warn};
+use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
+
+pub(crate) const LOG_TARGET: &str = "miner";
 
 #[derive(Debug, thiserror::Error)]
 pub enum BlockProductionError {
     #[error(transparent)]
     Provider(#[from] ProviderError),
+
+    #[error("block mining task cancelled")]
+    BlockMiningTaskCancelled,
+
+    #[error("transaction execution task cancelled")]
+    ExecutionTaskCancelled,
+
+    #[error("transaction execution error: {0}")]
+    TransactionExecutionError(#[from] katana_executor::ExecutorError),
 }
 
 pub struct MinedBlockOutcome {
     pub block_number: u64,
 }
 
-type ServiceFuture<T> = Pin<Box<dyn Future<Output = T> + Send + Sync>>;
+#[derive(Debug, Clone)]
+pub struct TxWithOutcome {
+    pub tx: TxWithHash,
+    pub receipt: Receipt,
+    pub exec_info: TxExecInfo,
+}
+
+type ServiceFuture<T> = Pin<Box<dyn Future<Output = BlockingTaskResult<T>> + Send + Sync>>;
 
 type BlockProductionResult = Result<MinedBlockOutcome, BlockProductionError>;
 type BlockProductionFuture = ServiceFuture<BlockProductionResult>;
+
+type TxExecutionResult = Result<Vec<TxWithOutcome>, BlockProductionError>;
+type TxExecutionFuture = ServiceFuture<TxExecutionResult>;
+
 type BlockProductionWithTxnsFuture =
-    ServiceFuture<Result<(Vec<TxWithHashAndReceiptPair>, MinedBlockOutcome), BlockProductionError>>;
-pub type TxWithHashAndReceiptPair = (TxWithHash, Receipt);
+    ServiceFuture<Result<(MinedBlockOutcome, Vec<TxWithOutcome>), BlockProductionError>>;
 
 /// The type which responsible for block production.
 #[must_use = "BlockProducer does nothing unless polled"]
-#[derive(Clone)]
-pub struct BlockProducer {
+pub struct BlockProducer<EF: ExecutorFactory> {
     /// The inner mode of mining.
-    pub inner: Arc<RwLock<BlockProducerMode>>,
+    pub inner: RwLock<BlockProducerMode<EF>>,
 }
 
-impl BlockProducer {
+impl<EF: ExecutorFactory> BlockProducer<EF> {
     /// Creates a block producer that mines a new block every `interval` milliseconds.
-    pub fn interval(
-        backend: Arc<Backend>,
-        initial_state: StateRefDb,
-        interval: u64,
-        block_exec_envs: (BlockEnv, CfgEnv),
-    ) -> Self {
+    pub fn interval(backend: Arc<Backend<EF>>, interval: u64) -> Self {
         Self {
-            inner: Arc::new(RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new(
-                backend,
-                initial_state,
-                interval,
-                block_exec_envs,
-            )))),
+            inner: RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new(
+                backend, interval,
+            ))),
         }
     }
 
     /// Creates a new block producer that will only be possible to mine by calling the
     /// `katana_generateBlock` RPC method.
-    pub fn on_demand(
-        backend: Arc<Backend>,
-        initial_state: StateRefDb,
-        block_exec_envs: (BlockEnv, CfgEnv),
-    ) -> Self {
+    pub fn on_demand(backend: Arc<Backend<EF>>) -> Self {
         Self {
-            inner: Arc::new(RwLock::new(BlockProducerMode::Interval(
-                IntervalBlockProducer::new_no_mining(backend, initial_state, block_exec_envs),
+            inner: RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new_no_mining(
+                backend,
             ))),
         }
     }
 
     /// Creates a block producer that mines a new block as soon as there are ready transactions in
     /// the transactions pool.
-    pub fn instant(backend: Arc<Backend>) -> Self {
-        Self {
-            inner: Arc::new(RwLock::new(BlockProducerMode::Instant(InstantBlockProducer::new(
-                backend,
-            )))),
-        }
+    pub fn instant(backend: Arc<Backend<EF>>) -> Self {
+        Self { inner: RwLock::new(BlockProducerMode::Instant(InstantBlockProducer::new(backend))) }
     }
 
     pub(super) fn queue(&self, transactions: Vec<ExecutableTxWithHash>) {
@@ -117,18 +117,15 @@ impl BlockProducer {
 
     // Handler for the `katana_generateBlock` RPC method.
     pub fn force_mine(&self) {
-        trace!(target: "miner", "force mining");
+        trace!(target: LOG_TARGET, "Scheduling force block mining.");
         let mut mode = self.inner.write();
         match &mut *mode {
             BlockProducerMode::Instant(producer) => producer.force_mine(),
             BlockProducerMode::Interval(producer) => producer.force_mine(),
         }
     }
-}
 
-impl Stream for BlockProducer {
-    type Item = BlockProductionResult;
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    pub(super) fn poll_next(&self, cx: &mut Context<'_>) -> Poll<Option<BlockProductionResult>> {
         let mut mode = self.inner.write();
         match &mut *mode {
             BlockProducerMode::Instant(producer) => producer.poll_next_unpin(cx),
@@ -150,32 +147,37 @@ impl Stream for BlockProducer {
 /// block producer will execute all the transactions in the mempool and mine a new block with the
 /// resulting state. The block context is only updated every time a new block is mined as opposed to
 /// updating it when the block is opened (in _interval_ mode).
-pub enum BlockProducerMode {
-    Interval(IntervalBlockProducer),
-    Instant(InstantBlockProducer),
+pub enum BlockProducerMode<EF: ExecutorFactory> {
+    Interval(IntervalBlockProducer<EF>),
+    Instant(InstantBlockProducer<EF>),
 }
 
-pub struct IntervalBlockProducer {
+#[derive(Clone, derive_more::Deref)]
+pub struct PendingExecutor(#[deref] Arc<RwLock<Box<dyn BlockExecutor<'static>>>>);
+
+impl PendingExecutor {
+    fn new(executor: Box<dyn BlockExecutor<'static>>) -> Self {
+        Self(Arc::new(RwLock::new(executor)))
+    }
+}
+
+pub struct IntervalBlockProducer<EF: ExecutorFactory> {
     /// The interval at which new blocks are mined.
     interval: Option<Interval>,
-    backend: Arc<Backend>,
+    backend: Arc<Backend<EF>>,
     /// Single active future that mines a new block
-    block_mining: Option<BlockProductionFuture>,
+    ongoing_mining: Option<BlockProductionFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
-    /// The state of the pending block after executing all the transactions within the interval.
-    state: Arc<PendingState>,
+    executor: PendingExecutor,
+    blocking_task_spawner: BlockingTaskPool,
+    ongoing_execution: Option<TxExecutionFuture>,
     /// Listeners notified when a new executed tx is added.
-    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithHashAndReceiptPair>>>>,
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithOutcome>>>>,
 }
 
-impl IntervalBlockProducer {
-    pub fn new(
-        backend: Arc<Backend>,
-        db: StateRefDb,
-        interval: u64,
-        block_exec_envs: (BlockEnv, CfgEnv),
-    ) -> Self {
+impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
+    pub fn new(backend: Arc<Backend<EF>>, interval: u64) -> Self {
         let interval = {
             let duration = Duration::from_millis(interval);
             let mut interval = interval_at(Instant::now() + duration, duration);
@@ -183,12 +185,24 @@ impl IntervalBlockProducer {
             interval
         };
 
-        let state = Arc::new(PendingState::new(db, block_exec_envs.0, block_exec_envs.1));
+        let provider = backend.blockchain.provider();
+
+        let latest_num = provider.latest_number().unwrap();
+        let mut block_env = provider.block_env_at(latest_num.into()).unwrap().unwrap();
+        backend.update_block_env(&mut block_env);
+
+        let state = provider.latest().unwrap();
+        let executor = backend.executor_factory.with_state_and_block_env(state, block_env);
+        let executor = PendingExecutor::new(executor);
+
+        let blocking_task_spawner = BlockingTaskPool::new().unwrap();
 
         Self {
             backend,
-            state,
-            block_mining: None,
+            executor,
+            ongoing_mining: None,
+            blocking_task_spawner,
+            ongoing_execution: None,
             interval: Some(interval),
             queued: VecDeque::default(),
             tx_execution_listeners: RwLock::new(vec![]),
@@ -198,94 +212,121 @@ impl IntervalBlockProducer {
     /// Creates a new [IntervalBlockProducer] with no `interval`. This mode will not produce blocks
     /// for every fixed interval, although it will still execute all queued transactions and
     /// keep hold of the pending state.
-    pub fn new_no_mining(
-        backend: Arc<Backend>,
-        db: StateRefDb,
-        block_exec_envs: (BlockEnv, CfgEnv),
-    ) -> Self {
-        let state = Arc::new(PendingState::new(db, block_exec_envs.0, block_exec_envs.1));
+    pub fn new_no_mining(backend: Arc<Backend<EF>>) -> Self {
+        let provider = backend.blockchain.provider();
+
+        let latest_num = provider.latest_number().unwrap();
+        let mut block_env = provider.block_env_at(latest_num.into()).unwrap().unwrap();
+        backend.update_block_env(&mut block_env);
+
+        let state = provider.latest().unwrap();
+        let executor = backend.executor_factory.with_state_and_block_env(state, block_env);
+        let executor = PendingExecutor::new(executor);
+
+        let blocking_task_spawner = BlockingTaskPool::new().unwrap();
 
         Self {
-            state,
             backend,
+            executor,
             interval: None,
-            block_mining: None,
+            ongoing_mining: None,
             queued: VecDeque::default(),
+            blocking_task_spawner,
+            ongoing_execution: None,
             tx_execution_listeners: RwLock::new(vec![]),
         }
     }
 
-    pub fn state(&self) -> Arc<PendingState> {
-        self.state.clone()
+    pub fn executor(&self) -> PendingExecutor {
+        self.executor.clone()
     }
 
     /// Force mine a new block. It will only able to mine if there is no ongoing mining process.
-    pub fn force_mine(&self) {
-        if self.block_mining.is_none() {
-            let outcome = self.outcome();
-            let _ = Self::do_mine(outcome, self.backend.clone(), self.state.clone());
-        } else {
-            trace!(target: "miner", "unable to force mine while a mining process is running")
+    pub fn force_mine(&mut self) {
+        match Self::do_mine(self.executor.clone(), self.backend.clone()) {
+            Ok(outcome) => {
+                info!(target: LOG_TARGET, block_number = %outcome.block_number, "Force mined block.");
+                self.executor =
+                    self.create_new_executor_for_next_block().expect("fail to create executor");
+            }
+            Err(e) => {
+                error!(target: LOG_TARGET, error = %e, "On force mine.");
+            }
         }
     }
 
     fn do_mine(
-        state_updates: StateUpdatesWithDeclaredClasses,
-        backend: Arc<Backend>,
-        pending_state: Arc<PendingState>,
-    ) -> BlockProductionResult {
-        trace!(target: "miner", "creating new block");
+        executor: PendingExecutor,
+        backend: Arc<Backend<EF>>,
+    ) -> Result<MinedBlockOutcome, BlockProductionError> {
+        let executor = &mut executor.write();
 
-        let (txs, _) = pending_state.take_txs_all();
-        let tx_receipt_pairs =
-            txs.into_iter().map(|(tx, rct)| (tx, rct.receipt)).collect::<Vec<_>>();
+        trace!(target: LOG_TARGET, "Creating new block.");
 
-        let (mut block_env, cfg_env) = pending_state.block_execution_envs();
+        let block_env = executor.block_env();
+        let ExecutionOutput { states, transactions } = executor.take_execution_output()?;
 
-        let (outcome, new_state) =
-            backend.mine_pending_block(&block_env, tx_receipt_pairs, state_updates)?;
+        let transactions = transactions
+            .into_iter()
+            .filter_map(|(tx, res)| match res {
+                ExecutionResult::Failed { .. } => None,
+                ExecutionResult::Success { receipt, trace, .. } => {
+                    Some(TxWithOutcome { tx, receipt, exec_info: trace })
+                }
+            })
+            .collect::<Vec<_>>();
 
-        trace!(target: "miner", "created new block: {}", outcome.block_number);
+        let outcome = backend.do_mine_block(&block_env, transactions, states)?;
 
-        backend.update_block_env(&mut block_env);
-        pending_state.reset_state(StateRefDb(new_state), block_env, cfg_env);
+        trace!(target: LOG_TARGET, block_number = %outcome.block_number, "Created new block.");
 
         Ok(outcome)
     }
 
-    fn execute_transactions(&self, transactions: Vec<ExecutableTxWithHash>) {
-        let txs = transactions.iter().map(TxWithHash::from);
+    fn execute_transactions(
+        executor: PendingExecutor,
+        transactions: Vec<ExecutableTxWithHash>,
+    ) -> TxExecutionResult {
+        let executor = &mut executor.write();
 
-        let block_context = block_context_from_envs(
-            &self.state.block_envs.read().0,
-            &self.state.block_envs.read().1,
-        );
+        let new_txs_count = transactions.len();
+        executor.execute_transactions(transactions)?;
 
-        let results = {
-            TransactionExecutor::new(
-                &self.state.state,
-                &block_context,
-                !self.backend.config.disable_fee,
-                !self.backend.config.disable_validate,
-                transactions.clone().into_iter(),
-            )
-            .with_error_log()
-            .with_events_log()
-            .with_resources_log()
-            .zip(txs)
-            .filter_map(|(res, tx)| {
-                let Ok(info) = res else { return None };
-                let receipt = TxReceiptWithExecInfo::new(&tx, info);
-                Some((tx, receipt))
+        let txs = executor.transactions();
+        let total_txs = txs.len();
+
+        // Take only the results of the newly executed transactions
+        let results = txs
+            .iter()
+            .skip(total_txs - new_txs_count)
+            .filter_map(|(tx, res)| match res {
+                ExecutionResult::Failed { .. } => None,
+                ExecutionResult::Success { receipt, trace, .. } => Some(TxWithOutcome {
+                    tx: tx.clone(),
+                    receipt: receipt.clone(),
+                    exec_info: trace.clone(),
+                }),
             })
-            .collect::<Vec<_>>()
-        };
+            .collect::<Vec<TxWithOutcome>>();
 
-        self.state.executed_txs.write().extend(results.clone());
-        self.notify_listener(results.into_iter().map(|(tx, info)| (tx, info.receipt)).collect());
+        Ok(results)
     }
 
-    pub fn add_listener(&self) -> Receiver<Vec<TxWithHashAndReceiptPair>> {
+    fn create_new_executor_for_next_block(&self) -> Result<PendingExecutor, BlockProductionError> {
+        let backend = &self.backend;
+        let provider = backend.blockchain.provider();
+
+        let latest_num = provider.latest_number()?;
+        let updated_state = provider.latest()?;
+
+        let mut block_env = provider.block_env_at(latest_num.into())?.unwrap();
+        backend.update_block_env(&mut block_env);
+
+        let executor = backend.executor_factory.with_state_and_block_env(updated_state, block_env);
+        Ok(PendingExecutor::new(executor))
+    }
+
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithOutcome>> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.tx_execution_listeners.write().push(tx);
@@ -293,7 +334,7 @@ impl IntervalBlockProducer {
     }
 
     /// notifies all listeners about the transaction
-    fn notify_listener(&self, txs: Vec<TxWithHashAndReceiptPair>) {
+    fn notify_listener(&self, txs: Vec<TxWithOutcome>) {
         let mut listener = self.tx_execution_listeners.write();
         // this is basically a retain but with mut reference
         for n in (0..listener.len()).rev() {
@@ -303,8 +344,8 @@ impl IntervalBlockProducer {
                 Err(e) => {
                     if e.is_full() {
                         warn!(
-                            target: "miner",
-                            "failed to send new txs notification because channel is full",
+                            target: LOG_TARGET,
+                            "Unable to send new txs notification because channel is full.",
                         );
                         true
                     } else {
@@ -317,13 +358,9 @@ impl IntervalBlockProducer {
             }
         }
     }
-
-    fn outcome(&self) -> StateUpdatesWithDeclaredClasses {
-        get_state_update_from_cached_state(&self.state.state)
-    }
 }
 
-impl Stream for IntervalBlockProducer {
+impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
     // mined block outcome and the new state
     type Item = BlockProductionResult;
 
@@ -331,32 +368,82 @@ impl Stream for IntervalBlockProducer {
         let pin = self.get_mut();
 
         if let Some(interval) = &mut pin.interval {
-            if interval.poll_tick(cx).is_ready() && pin.block_mining.is_none() {
+            // mine block if the interval is over
+            if interval.poll_tick(cx).is_ready() && pin.ongoing_mining.is_none() {
+                let executor = pin.executor.clone();
                 let backend = pin.backend.clone();
-                let outcome = pin.outcome();
-                let state = pin.state.clone();
-
-                pin.block_mining = Some(Box::pin(async move {
-                    tokio::task::spawn_blocking(|| Self::do_mine(outcome, backend, state))
-                        .await
-                        .unwrap()
-                }));
+                let fut = pin.blocking_task_spawner.spawn(|| Self::do_mine(executor, backend));
+                pin.ongoing_mining = Some(Box::pin(fut));
             }
         }
 
-        // only execute transactions if there is no mining in progress
-        if !pin.queued.is_empty() && pin.block_mining.is_none() {
-            let transactions = pin.queued.pop_front().expect("not empty; qed");
-            pin.execute_transactions(transactions);
+        loop {
+            if !pin.queued.is_empty()
+                && pin.ongoing_execution.is_none()
+                && pin.ongoing_mining.is_none()
+            {
+                let executor = pin.executor.clone();
+                let transactions: Vec<ExecutableTxWithHash> =
+                    std::mem::take(&mut pin.queued).into_iter().flatten().collect();
+
+                let fut = pin
+                    .blocking_task_spawner
+                    .spawn(|| Self::execute_transactions(executor, transactions));
+
+                pin.ongoing_execution = Some(Box::pin(fut));
+            }
+
+            // poll the ongoing execution if any
+            if let Some(mut execution) = pin.ongoing_execution.take() {
+                if let Poll::Ready(executor) = execution.poll_unpin(cx) {
+                    match executor {
+                        Ok(Ok(txs)) => {
+                            pin.notify_listener(txs);
+                            continue;
+                        }
+
+                        Ok(Err(e)) => {
+                            return Poll::Ready(Some(Err(e)));
+                        }
+
+                        Err(_) => {
+                            return Poll::Ready(Some(Err(
+                                BlockProductionError::ExecutionTaskCancelled,
+                            )));
+                        }
+                    }
+                } else {
+                    pin.ongoing_execution = Some(execution);
+                }
+            }
+
+            break;
         }
 
-        // poll the mining future
-        if let Some(mut mining) = pin.block_mining.take() {
-            // reset the executor for the next block
-            if let Poll::Ready(outcome) = mining.poll_unpin(cx) {
-                return Poll::Ready(Some(outcome));
+        // poll the mining future if any
+        if let Some(mut mining) = pin.ongoing_mining.take() {
+            if let Poll::Ready(res) = mining.poll_unpin(cx) {
+                match res {
+                    Ok(outcome) => {
+                        match pin.create_new_executor_for_next_block() {
+                            Ok(executor) => {
+                                pin.executor = executor;
+                            }
+
+                            Err(e) => return Poll::Ready(Some(Err(e))),
+                        }
+
+                        return Poll::Ready(Some(outcome));
+                    }
+
+                    Err(_) => {
+                        return Poll::Ready(Some(Err(
+                            BlockProductionError::BlockMiningTaskCancelled,
+                        )));
+                    }
+                }
             } else {
-                pin.block_mining = Some(mining)
+                pin.ongoing_mining = Some(mining);
             }
         }
 
@@ -364,23 +451,26 @@ impl Stream for IntervalBlockProducer {
     }
 }
 
-pub struct InstantBlockProducer {
+pub struct InstantBlockProducer<EF: ExecutorFactory> {
     /// Holds the backend if no block is being mined
-    backend: Arc<Backend>,
+    backend: Arc<Backend<EF>>,
     /// Single active future that mines a new block
     block_mining: Option<BlockProductionWithTxnsFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
+
+    blocking_task_pool: BlockingTaskPool,
     /// Listeners notified when a new executed tx is added.
-    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithHashAndReceiptPair>>>>,
+    tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithOutcome>>>>,
 }
 
-impl InstantBlockProducer {
-    pub fn new(backend: Arc<Backend>) -> Self {
+impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
+    pub fn new(backend: Arc<Backend<EF>>) -> Self {
         Self {
             backend,
             block_mining: None,
             queued: VecDeque::default(),
+            blocking_task_pool: BlockingTaskPool::new().unwrap(),
             tx_execution_listeners: RwLock::new(vec![]),
         }
     }
@@ -390,63 +480,60 @@ impl InstantBlockProducer {
             let txs = self.queued.pop_front().unwrap_or_default();
             let _ = Self::do_mine(self.backend.clone(), txs);
         } else {
-            trace!(target: "miner", "unable to force mine while a mining process is running")
+            trace!(target: LOG_TARGET, "Unable to force mine while a mining process is running.")
         }
     }
 
     fn do_mine(
-        backend: Arc<Backend>,
+        backend: Arc<Backend<EF>>,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> Result<(Vec<TxWithHashAndReceiptPair>, MinedBlockOutcome), BlockProductionError> {
-        trace!(target: "miner", "creating new block");
+    ) -> Result<(MinedBlockOutcome, Vec<TxWithOutcome>), BlockProductionError> {
+        trace!(target: LOG_TARGET, "Creating new block.");
 
         let provider = backend.blockchain.provider();
 
-        let cfg_env = backend.chain_cfg_env();
         let latest_num = provider.latest_number()?;
         let mut block_env = provider.block_env_at(BlockHashOrNumber::Num(latest_num))?.unwrap();
         backend.update_block_env(&mut block_env);
 
-        let block_context = block_context_from_envs(&block_env, &cfg_env);
+        let parent_hash = provider.latest_hash()?;
+        let latest_state = provider.latest()?;
 
-        let latest_state = StateFactoryProvider::latest(backend.blockchain.provider())?;
-        let state = CachedStateWrapper::new(StateRefDb(latest_state));
+        let mut executor = backend.executor_factory.with_state(latest_state);
 
-        let txs = transactions.iter().map(TxWithHash::from);
+        let block = ExecutableBlock {
+            body: transactions,
+            header: PartialHeader {
+                parent_hash,
+                number: block_env.number,
+                timestamp: block_env.timestamp,
+                gas_prices: block_env.l1_gas_prices.clone(),
+                sequencer_address: block_env.sequencer_address,
+                version: CURRENT_STARKNET_VERSION,
+            },
+        };
 
-        let tx_receipt_pairs: Vec<TxWithHashAndReceiptPair> = TransactionExecutor::new(
-            &state,
-            &block_context,
-            !backend.config.disable_fee,
-            !backend.config.disable_validate,
-            transactions.clone().into_iter(),
-        )
-        .with_error_log()
-        .with_events_log()
-        .with_resources_log()
-        .zip(txs)
-        .filter_map(|(res, tx)| {
-            if let Ok(info) = res {
-                let info = TxReceiptWithExecInfo::new(&tx, info);
-                Some((tx, info.receipt))
-            } else {
-                None
-            }
-        })
-        .collect();
+        executor.execute_block(block)?;
 
-        let outcome = backend.do_mine_block(
-            &block_env,
-            tx_receipt_pairs.clone(),
-            get_state_update_from_cached_state(&state),
-        )?;
+        let ExecutionOutput { states, transactions } = executor.take_execution_output()?;
+        let txs_outcomes = transactions
+            .into_iter()
+            .filter_map(|(tx, res)| match res {
+                ExecutionResult::Success { receipt, trace, .. } => {
+                    Some(TxWithOutcome { tx, receipt, exec_info: trace })
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
 
-        trace!(target: "miner", "created new block: {}", outcome.block_number);
+        let outcome = backend.do_mine_block(&block_env, txs_outcomes.clone(), states)?;
 
-        Ok((tx_receipt_pairs, outcome))
+        trace!(target: LOG_TARGET, block_number = %outcome.block_number, "Created new block.");
+
+        Ok((outcome, txs_outcomes))
     }
 
-    pub fn add_listener(&self) -> Receiver<Vec<TxWithHashAndReceiptPair>> {
+    pub fn add_listener(&self) -> Receiver<Vec<TxWithOutcome>> {
         const TX_LISTENER_BUFFER_SIZE: usize = 2048;
         let (tx, rx) = channel(TX_LISTENER_BUFFER_SIZE);
         self.tx_execution_listeners.write().push(tx);
@@ -454,7 +541,7 @@ impl InstantBlockProducer {
     }
 
     /// notifies all listeners about the transaction
-    fn notify_listener(&self, txs: Vec<TxWithHashAndReceiptPair>) {
+    fn notify_listener(&self, txs: Vec<TxWithOutcome>) {
         let mut listener = self.tx_execution_listeners.write();
         // this is basically a retain but with mut reference
         for n in (0..listener.len()).rev() {
@@ -464,8 +551,8 @@ impl InstantBlockProducer {
                 Err(e) => {
                     if e.is_full() {
                         warn!(
-                            target: "miner",
-                            "failed to send new txs notification because channel is full",
+                            target: LOG_TARGET,
+                            "Unable to send new txs notification because channel is full.",
                         );
                         true
                     } else {
@@ -480,7 +567,7 @@ impl InstantBlockProducer {
     }
 }
 
-impl Stream for InstantBlockProducer {
+impl<EF: ExecutorFactory> Stream for InstantBlockProducer<EF> {
     // mined block outcome and the new state
     type Item = Result<MinedBlockOutcome, BlockProductionError>;
 
@@ -491,26 +578,32 @@ impl Stream for InstantBlockProducer {
             let transactions = pin.queued.pop_front().expect("not empty; qed");
             let backend = pin.backend.clone();
 
-            pin.block_mining = Some(Box::pin(async move {
-                tokio::task::spawn_blocking(|| Self::do_mine(backend, transactions)).await.unwrap()
-            }));
+            pin.block_mining = Some(Box::pin(
+                pin.blocking_task_pool.spawn(|| Self::do_mine(backend, transactions)),
+            ));
         }
 
         // poll the mining future
         if let Some(mut mining) = pin.block_mining.take() {
-            match mining.poll_unpin(cx) {
-                Poll::Ready(Ok((txs, outcome))) => {
-                    pin.notify_listener(txs);
-                    return Poll::Ready(Some(Ok(outcome)));
-                }
+            if let Poll::Ready(outcome) = mining.poll_unpin(cx) {
+                match outcome {
+                    Ok(Ok((outcome, txs))) => {
+                        pin.notify_listener(txs);
+                        return Poll::Ready(Some(Ok(outcome)));
+                    }
 
-                Poll::Ready(Err(e)) => {
-                    return Poll::Ready(Some(Err(e)));
-                }
+                    Ok(Err(e)) => {
+                        return Poll::Ready(Some(Err(e)));
+                    }
 
-                Poll::Pending => {
-                    pin.block_mining = Some(mining);
+                    Err(_) => {
+                        return Poll::Ready(Some(Err(
+                            BlockProductionError::ExecutionTaskCancelled,
+                        )));
+                    }
                 }
+            } else {
+                pin.block_mining = Some(mining)
             }
         }
 

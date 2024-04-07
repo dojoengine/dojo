@@ -15,7 +15,7 @@ lazy_static = "1.4.0"
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 rayon.workspace = true
 serde.workspace = true
-serde_json.workspace = true
+serde_json = { workspace = true, features = [ "arbitrary_precision" ] }
 serde_with.workspace = true
 starknet-crypto = "0.6.1"
 starknet.workspace = true
@@ -23,16 +23,13 @@ strum.workspace = true
 strum_macros.workspace = true
 thiserror.workspace = true
 
-blockifier.workspace = true
+alloy-primitives.workspace = true
+cairo-lang-sierra.workspace = true
 cairo-lang-starknet.workspace = true
 flate2.workspace = true
 starknet_api.workspace = true
 
-ethers = "2.0.11"
-
 [features]
-default = [ "blockifier", "serde" ]
-
-blockifier = [  ]
+default = [ "serde" ]
 rpc = [  ]
-serde = [  ]
+serde = [ "alloy-primitives/serde" ]

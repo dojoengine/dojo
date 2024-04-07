@@ -9,6 +9,7 @@ mod tests {
     use serial_test::serial;
     use sqlx::SqlitePool;
     use starknet::core::types::Event;
+    use starknet::core::utils::get_selector_from_name;
     use starknet_crypto::{poseidon_hash_many, FieldElement};
     use tokio::sync::mpsc;
     use torii_core::sql::Sql;
@@ -26,6 +27,7 @@ mod tests {
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
+        let block_timestamp = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
                 "id": entity_id,
@@ -100,6 +102,7 @@ mod tests {
                     ],
                 }),
                 &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
+                block_timestamp,
             )
             .await
             .unwrap();
@@ -146,6 +149,7 @@ mod tests {
         let model_name = "Record".to_string();
         let key = vec![FieldElement::ONE];
         let entity_id = format!("{:#x}", poseidon_hash_many(&key));
+        let block_timestamp = 1710754478_u64;
         let keys_str = key.iter().map(|k| format!("{:#x}", k)).collect::<Vec<String>>().join(",");
         let expected_value: async_graphql::Value = value!({
             "entityUpdated": {
@@ -203,6 +207,7 @@ mod tests {
                     ],
                 }),
                 &format!("0x{:064x}:0x{:04x}:0x{:04x}", 0, 0, 0),
+                block_timestamp,
             )
             .await
             .unwrap();
@@ -242,9 +247,10 @@ mod tests {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let model_name = "Subrecord".to_string();
-        let model_id = model_name.clone();
+        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
+        let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":model_name }
         });
@@ -262,7 +268,9 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U32(None)),
                 }],
             });
-            db.register_model(model, vec![], class_hash, contract_address, 0, 0).await.unwrap();
+            db.register_model(model, vec![], class_hash, contract_address, 0, 0, block_timestamp)
+                .await
+                .unwrap();
 
             // 3. fn publish() is called from state.set_entity()
 
@@ -292,9 +300,10 @@ mod tests {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
         // 0. Preprocess model value
         let model_name = "Subrecord".to_string();
-        let model_id = model_name.clone();
+        let model_id = format!("{:#x}", get_selector_from_name(&model_name).unwrap());
         let class_hash = FieldElement::TWO;
         let contract_address = FieldElement::THREE;
+        let block_timestamp: u64 = 1710754478_u64;
         let expected_value: async_graphql::Value = value!({
          "modelRegistered": { "id": model_id, "name":model_name }
         });
@@ -312,7 +321,9 @@ mod tests {
                     ty: Ty::Primitive(Primitive::U8(None)),
                 }],
             });
-            db.register_model(model, vec![], class_hash, contract_address, 0, 0).await.unwrap();
+            db.register_model(model, vec![], class_hash, contract_address, 0, 0, block_timestamp)
+                .await
+                .unwrap();
             // 3. fn publish() is called from state.set_entity()
 
             tx.send(()).await.unwrap();
@@ -321,12 +332,15 @@ mod tests {
         // 2. The subscription is executed and it is listeing, waiting for publish() to be executed
         let response_value = run_graphql_subscription(
             &pool,
-            r#"
-                subscription {
-                    modelRegistered(id: "Subrecord") {
-                            id, name
-                        }
-                }"#,
+            &format!(
+                r#"
+            subscription {{
+                modelRegistered(id: "{}") {{
+                        id, name
+                    }}
+            }}"#,
+                model_id
+            ),
         )
         .await;
         // 4. The subcription has received the message from publish()
@@ -339,7 +353,7 @@ mod tests {
     #[serial]
     async fn test_event_emitted(pool: SqlitePool) {
         let mut db = Sql::new(pool.clone(), FieldElement::ZERO).await.unwrap();
-
+        let block_timestamp: u64 = 1710754478_u64;
         let (tx, mut rx) = mpsc::channel(7);
         tokio::spawn(async move {
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -358,6 +372,7 @@ mod tests {
                     ],
                 },
                 FieldElement::ZERO,
+                block_timestamp,
             );
 
             tx.send(()).await.unwrap();

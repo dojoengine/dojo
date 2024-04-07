@@ -11,19 +11,23 @@ katana-db.workspace = true
 katana-executor.workspace = true
 katana-primitives.workspace = true
 katana-provider.workspace = true
+katana-rpc-types.workspace = true
+saya-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
+cairo-proof-parser.workspace = true
+cairo-vm.workspace = true
 convert_case.workspace = true
-ethers = "2.0.11"
 flate2.workspace = true
 futures.workspace = true
-lazy_static = "1.4.0"
+lazy_static.workspace = true
 parking_lot.workspace = true
 rand = { version = "0.8.5", features = [ "small_rng" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
+starknet-types-core = { version = "0.0.9", default-features = false, features = [ "curve", "num-traits", "serde" ] }
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
@@ -34,3 +38,6 @@ url.workspace = true
 # TODO: use features for each possible DA.
 celestia-rpc = "0.1.1"
 celestia-types = "0.1.1"
+
+cairo-felt = "0.9.1"
+num-bigint = "0.4.4"

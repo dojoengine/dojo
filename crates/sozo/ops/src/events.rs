@@ -1,12 +1,12 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use cainome::parser::tokens::{CompositeInner, CompositeInnerKind, CoreBasic, Token};
 use cainome::parser::AbiParser;
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{DEPLOYMENTS_DIR, MANIFESTS_DIR};
-use dojo_world::manifest::{DeploymentManifest, ManifestMethods};
+use dojo_lang::compiler::MANIFESTS_DIR;
+use dojo_world::manifest::{AbiFormat, DeploymentManifest, ManifestMethods};
 use starknet::core::types::{BlockId, EventFilter, FieldElement};
 use starknet::core::utils::{parse_cairo_short_string, starknet_keccak};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -35,16 +35,13 @@ pub async fn parse(
     event_filter: EventFilter,
     json: bool,
     manifest_dir: &Utf8PathBuf,
+    profile_name: &str,
 ) -> Result<()> {
-    let chain_id = provider.chain_id().await?;
-    let chain_id =
-        parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
-
     let events_map = if !json {
         let deployed_manifest = manifest_dir
             .join(MANIFESTS_DIR)
-            .join(DEPLOYMENTS_DIR)
-            .join(chain_id)
+            .join(profile_name)
+            .join("manifest")
             .with_extension("toml");
 
         if !deployed_manifest.exists() {
@@ -104,21 +101,21 @@ fn extract_events(
     let mut events_map = HashMap::new();
 
     for contract in &manifest.contracts {
-        if let Some(abi_path) = contract.inner.abi() {
+        if let Some(AbiFormat::Path(abi_path)) = contract.inner.abi() {
             let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     for model in &manifest.contracts {
-        if let Some(abi_path) = model.inner.abi() {
+        if let Some(AbiFormat::Path(abi_path)) = model.inner.abi() {
             let full_abi_path = manifest_dir.join(abi_path);
             process_abi(&mut events_map, &full_abi_path)?;
         }
     }
 
     // Read the world and base ABI from scarb artifacts as the
-    // manifest does not include them.
+    // manifest does not include them (at least base is not included).
     let world_abi_path = manifest_dir.join("target/dev/dojo::world::world.json");
     process_abi(&mut events_map, &world_abi_path)?;
 
@@ -249,27 +246,28 @@ fn process_inners(
 
 #[cfg(test)]
 mod tests {
+    use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
     use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
     use dojo_world::manifest::BaseManifest;
-
-    #[test]
-    fn extract_events_work_as_expected() {
-        let manifest_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
-        let manifest =
-            BaseManifest::load_from_path(&manifest_dir.join(MANIFESTS_DIR).join(BASE_DIR))
-                .unwrap()
-                .into();
-        let result = extract_events(&manifest, &manifest_dir).unwrap();
-
-        // we are just collecting all events from manifest file so just verifying count should work
-        assert_eq!(result.len(), 12);
-    }
-
-    use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use starknet::core::types::EmittedEvent;
 
     use super::*;
+
+    #[test]
+    fn extract_events_work_as_expected() {
+        let profile_name = "dev";
+        let manifest_dir = Utf8Path::new("../../../examples/spawn-and-move").to_path_buf();
+        let manifest = BaseManifest::load_from_path(
+            &manifest_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+        )
+        .unwrap()
+        .into();
+        let result = extract_events(&manifest, &manifest_dir).unwrap();
+
+        // we are just collecting all events from manifest file so just verifying count should work
+        assert_eq!(result.len(), 11);
+    }
 
     #[test]
     fn test_core_basic() {

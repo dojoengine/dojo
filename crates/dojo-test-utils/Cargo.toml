@@ -18,6 +18,7 @@ dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world", features = [ "manifest", "migration" ] }
 jsonrpsee = { version = "0.16.2", features = [ "server" ] }
 katana-core = { path = "../katana/core" }
+katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-primitives = { path = "../katana/primitives" }
 katana-rpc = { path = "../katana/rpc/rpc" }
 katana-rpc-api = { path = "../katana/rpc/rpc-api" }

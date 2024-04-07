@@ -2,22 +2,23 @@ use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, Error};
 use katana_core::sequencer::KatanaSequencer;
+use katana_executor::ExecutorFactory;
 use katana_primitives::FieldElement;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_types::error::katana::KatanaApiError;
 
-pub struct DevApi {
-    sequencer: Arc<KatanaSequencer>,
+pub struct DevApi<EF: ExecutorFactory> {
+    sequencer: Arc<KatanaSequencer<EF>>,
 }
 
-impl DevApi {
-    pub fn new(sequencer: Arc<KatanaSequencer>) -> Self {
+impl<EF: ExecutorFactory> DevApi<EF> {
+    pub fn new(sequencer: Arc<KatanaSequencer<EF>>) -> Self {
         Self { sequencer }
     }
 }
 
 #[async_trait]
-impl DevApiServer for DevApi {
+impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     async fn generate_block(&self) -> Result<(), Error> {
         self.sequencer.block_producer().force_mine();
         Ok(())

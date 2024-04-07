@@ -3,11 +3,10 @@ use std::str::FromStr;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
-use starknet_core::utils::{
+use starknet::core::utils::{
     cairo_short_string_to_felt, get_selector_from_name, CairoShortStringToFeltError,
 };
-use starknet_crypto::poseidon_hash_many;
-use starknet_ff::FieldElement;
+use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 use crate::errors::Error;
 
@@ -288,8 +287,6 @@ impl PrimitiveType {
     ) -> Result<FieldElement, Error> {
         match self {
             PrimitiveType::Object(obj) => {
-                println!("r#type: {}", r#type);
-
                 ctx.is_preset = preset_types.contains_key(r#type);
 
                 let mut hashes = Vec::new();
@@ -333,7 +330,6 @@ impl PrimitiveType {
 
                 let type_hash =
                     encode_type(r#type, if ctx.is_preset { preset_types } else { types })?;
-                println!("type_hash: {}", type_hash);
                 hashes.push(get_selector_from_name(&type_hash).map_err(|_| {
                     Error::InvalidMessageError(format!("Invalid type {} for selector", r#type))
                 })?);
@@ -495,8 +491,8 @@ impl TypedData {
 
 #[cfg(test)]
 mod tests {
-    use starknet_core::utils::starknet_keccak;
-    use starknet_ff::FieldElement;
+    use starknet::core::utils::starknet_keccak;
+    use starknet_crypto::FieldElement;
 
     use super::*;
 

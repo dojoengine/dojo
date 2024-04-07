@@ -69,6 +69,10 @@ impl EventObject {
                 Name::new("createdAt"),
                 Value::from(event.created_at.format(DATETIME_FORMAT).to_string()),
             ),
+            (
+                Name::new("executedAt"),
+                Value::from(event.executed_at.format(DATETIME_FORMAT).to_string()),
+            ),
         ])
     }
 

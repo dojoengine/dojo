@@ -5,6 +5,15 @@ pub type ChunkSize = u64;
 pub type EventContinuationToken = Option<String>;
 pub type EventFilter = starknet::core::types::EventFilter;
 pub type EventsPage = starknet::core::types::EventsPage;
+use crate::FieldElement;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct OrderedEvent {
+    pub order: u64,
+    pub keys: Vec<FieldElement>,
+    pub data: Vec<FieldElement>,
+}
 
 #[derive(PartialEq, Eq, Debug, Default)]
 pub struct ContinuationToken {

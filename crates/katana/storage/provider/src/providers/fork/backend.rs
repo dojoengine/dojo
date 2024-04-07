@@ -9,14 +9,15 @@ use futures::channel::mpsc::{channel, Receiver, SendError, Sender};
 use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::{Future, FutureExt};
+
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
 use katana_primitives::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    GenericContractInfo, Nonce, StorageKey, StorageValue,
+    ContractAddress, GenericContractInfo, Nonce, StorageKey, StorageValue,
 };
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, flattened_sierra_to_compiled_class,
-    legacy_rpc_to_inner_compiled_class,
+    legacy_rpc_to_compiled_class,
 };
 use katana_primitives::event::{ChunkSize, EventContinuationToken, EventFilter, EventsPage};
 use katana_primitives::transaction::{Transaction, TxHash, TxNumber};
@@ -47,6 +48,8 @@ type GetTransactionReceiptResult =
     Result<starknet::core::types::MaybePendingTransactionReceipt, ForkedBackendError>;
 
 const FORKED_BACKEND: &str = "forked_backend";
+
+pub(crate) const LOG_TARGET: &str = "forked_backend";
 
 #[derive(Debug, thiserror::Error)]
 pub enum ForkedBackendError {
@@ -314,7 +317,7 @@ impl ForkedBackend {
                 .block_on(backend);
         })?;
 
-        trace!(target: FORKED_BACKEND, "fork backend thread spawned");
+        trace!(target: LOG_TARGET, "Fork backend thread spawned.");
 
         Ok(handler)
     }
@@ -344,7 +347,7 @@ impl ForkedBackend {
         &self,
         contract_address: ContractAddress,
     ) -> Result<Nonce, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting nonce for contract address {contract_address}");
+        trace!(target: LOG_TARGET, contract_address = %contract_address, "Requesting nonce for contract address.");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -358,7 +361,13 @@ impl ForkedBackend {
         contract_address: ContractAddress,
         key: StorageKey,
     ) -> Result<StorageValue, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting storage for address {contract_address} at key {key:#x}" );
+        trace!(
+            target: LOG_TARGET,
+            contract_address = %contract_address,
+            key = %format!("{:#x}", key),
+            "Requesting storage."
+        );
+
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -371,7 +380,7 @@ impl ForkedBackend {
         &self,
         contract_address: ContractAddress,
     ) -> Result<ClassHash, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting class hash at address {contract_address}");
+        trace!(target: LOG_TARGET, contract_address = %contract_address, "Requesting class hash at address.");
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -384,7 +393,11 @@ impl ForkedBackend {
         &self,
         class_hash: ClassHash,
     ) -> Result<starknet::core::types::ContractClass, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting class at hash {class_hash:#x}");
+        trace!(
+            target: LOG_TARGET,
+            class_hash = %format!("{:#x}", class_hash),
+            "Requesting class."
+        );
         let (sender, rx) = oneshot();
         self.0
             .lock()
@@ -397,7 +410,11 @@ impl ForkedBackend {
         &self,
         class_hash: ClassHash,
     ) -> Result<CompiledClassHash, ForkedBackendError> {
-        trace!(target: FORKED_BACKEND, "requesting compiled class hash at class {class_hash:#x}");
+        trace!(
+            target: LOG_TARGET,
+            class_hash = %format!("{:#x}", class_hash),
+            "Requesting compiled class hash."
+        );
         let class = self.do_get_class_at(class_hash)?;
         // if its a legacy class, then we just return back the class hash
         // else if sierra class, then we have to compile it and compute the compiled class hash.
@@ -518,11 +535,17 @@ impl StateProvider for SharedStateProvider {
         if let nonce @ Some(_) = self.contract(address)?.map(|i| i.nonce) {
             return Ok(nonce);
         }
-
-        if let Some(nonce) = handle_contract_or_class_not_found_err(self.0.do_get_nonce(address)).map_err(|e| {
-            error!(target: FORKED_BACKEND, "error while fetching nonce of contract {address}: {e}");
-            e
-        })? {
+        if let Some(nonce) = handle_contract_or_class_not_found_err(self.0.do_get_nonce(address))
+            .map_err(|e| {
+                error!(
+                    target: LOG_TARGET,
+                    contract_address = %address,
+                    error = %e,
+                    "Fetching nonce."
+                );
+                e
+            })?
+        {
             self.0.contract_state.write().entry(address).or_default().nonce = nonce;
             Ok(Some(nonce))
         } else {
@@ -540,11 +563,18 @@ impl StateProvider for SharedStateProvider {
         {
             return Ok(value.copied());
         }
-
-        let value = handle_contract_or_class_not_found_err(self.0.do_get_storage(address, storage_key)).map_err(|e| {
-            error!(target: FORKED_BACKEND, "error while fetching storage value of contract {address} at key {storage_key:#x}: {e}");
-            e
-        })?;
+        let value =
+            handle_contract_or_class_not_found_err(self.0.do_get_storage(address, storage_key))
+                .map_err(|e| {
+                    error!(
+                        target: LOG_TARGET,
+                        address = %address,
+                        storage_key = %format!("{:#x}", storage_key),
+                        error = %e,
+                        "Fetching storage value."
+                    );
+                    e
+                })?;
 
         self.0
             .storage
@@ -564,8 +594,16 @@ impl StateProvider for SharedStateProvider {
             return Ok(hash);
         }
 
-        if let Some(hash) = handle_contract_or_class_not_found_err(self.0.do_get_class_hash_at(address)).map_err(|e| {
-            error!(target: FORKED_BACKEND, "error while fetching class hash of contract {address}: {e}");
+        if let Some(hash) = handle_contract_or_class_not_found_err(
+            self.0.do_get_class_hash_at(address),
+        )
+        .map_err(|e| {
+            error!(
+                target: LOG_TARGET,
+                contract_address = %address,
+                error = %e,
+                "Fetching class hash."
+            );
             e
         })? {
             self.0.contract_state.write().entry(address).or_default().class_hash = hash;
@@ -584,7 +622,12 @@ impl ContractClassProvider for SharedStateProvider {
 
         let Some(class) = handle_contract_or_class_not_found_err(self.0.do_get_class_at(hash))
             .map_err(|e| {
-                error!(target: FORKED_BACKEND, "error while fetching sierra class {hash:#x}: {e}");
+                error!(
+                    target: LOG_TARGET,
+                    hash = %format!("{:#x}", hash),
+                    error = %e,
+                    "Fetching sierra class."
+                );
                 e
             })?
         else {
@@ -615,7 +658,12 @@ impl ContractClassProvider for SharedStateProvider {
         if let Some(hash) =
             handle_contract_or_class_not_found_err(self.0.do_get_compiled_class_hash(hash))
                 .map_err(|e| {
-                    error!(target: FORKED_BACKEND, "error while fetching compiled class hash for class hash {hash:#x}: {e}");
+                    error!(
+                        target: LOG_TARGET,
+                        hash = %format!("{:#x}", hash),
+                        error = %e,
+                        "Fetching compiled class hash."
+                    );
                     e
                 })?
         {
@@ -626,14 +674,19 @@ impl ContractClassProvider for SharedStateProvider {
         }
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledContractClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         if let Some(class) = self.0.shared_contract_classes.compiled_classes.read().get(&hash) {
             return Ok(Some(class.clone()));
         }
 
         let Some(class) = handle_contract_or_class_not_found_err(self.0.do_get_class_at(hash))
             .map_err(|e| {
-                error!(target: FORKED_BACKEND, "error while fetching class {hash:#x}: {e}");
+                error!(
+                    target: LOG_TARGET,
+                    hash = %format!("{:#x}", hash),
+                    error = %e,
+                    "Fetching class."
+                );
                 e
             })?
         else {
@@ -642,8 +695,13 @@ impl ContractClassProvider for SharedStateProvider {
 
         let (class_hash, compiled_class_hash, casm, sierra) = match class {
             ContractClass::Legacy(class) => {
-                let (_, compiled_class) = legacy_rpc_to_inner_compiled_class(&class).map_err(|e| {
-                    error!(target: FORKED_BACKEND, "error while parsing legacy class {hash:#x}: {e}");
+                let (_, compiled_class) = legacy_rpc_to_compiled_class(&class).map_err(|e| {
+                    error!(
+                        target: LOG_TARGET,
+                        hash = %format!("{:#x}", hash),
+                        error = %e,
+                        "Parsing legacy class."
+                    );
                     ProviderError::ParsingError(e.to_string())
                 })?;
 
@@ -651,10 +709,16 @@ impl ContractClassProvider for SharedStateProvider {
             }
 
             ContractClass::Sierra(sierra_class) => {
-                let (_, compiled_class_hash, compiled_class) = flattened_sierra_to_compiled_class(&sierra_class).map_err(|e|{
-                    error!(target: FORKED_BACKEND, "error while parsing sierra class {hash:#x}: {e}");
-                    ProviderError::ParsingError(e.to_string())
-                })?;
+                let (_, compiled_class_hash, compiled_class) =
+                    flattened_sierra_to_compiled_class(&sierra_class).map_err(|e| {
+                        error!(
+                            target: LOG_TARGET,
+                            hash = %format!("{:#x}", hash),
+                            error = %e,
+                            "Parsing sierra class."
+                        );
+                        ProviderError::ParsingError(e.to_string())
+                    })?;
 
                 (hash, compiled_class_hash, compiled_class, Some(sierra_class))
             }

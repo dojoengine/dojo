@@ -11,7 +11,7 @@ katana-db = { path = "../db", features = [ "test-utils" ] }
 katana-primitives = { path = "../../primitives", features = [ "rpc" ] }
 
 anyhow.workspace = true
-auto_impl = "1.1.0"
+auto_impl = "1.2.0"
 parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
@@ -31,8 +31,8 @@ katana-core = { path = "../../core" }
 katana-runner.workspace = true
 lazy_static.workspace = true
 rand = "0.8.5"
-rstest = "0.18.2"
-rstest_reuse = "0.6.0"
+rstest.workspace = true
+rstest_reuse.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
 tempfile = "3.8.1"

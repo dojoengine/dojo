@@ -17,9 +17,9 @@ serde_json.workspace = true
 tempfile = { version = "3.8.1", optional = true }
 thiserror.workspace = true
 
-blockifier.workspace = true
 cairo-vm.workspace = true
 starknet_api.workspace = true
+roaring = { version = "0.10.3", features = ["serde"] }
 
 # codecs
 [dependencies.postcard]

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use starknet_ff::FieldElement;
+use starknet_crypto::FieldElement;
 
 use crate::typed_data::TypedData;
 

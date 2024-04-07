@@ -1,20 +1,31 @@
 //! Saya core library.
+
 use std::sync::Arc;
 
+use futures::future::join;
+use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
+use katana_primitives::FieldElement;
+use prover::ProverIdentifier;
+use saya_provider::rpc::JsonRpcProvider;
+use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{BlockId, MaybePendingStateUpdate, StateUpdate};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 use url::Url;
+use verifier::VerifierIdentifier;
 
+use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
+use crate::prover::state_diff::ProvedStateDiff;
 
+pub mod blockchain;
 pub mod data_availability;
 pub mod error;
 pub mod prover;
+pub mod starknet_os;
 pub mod verifier;
+
+pub(crate) const LOG_TARGET: &str = "saya::core";
 
 /// Saya's main configuration.
 #[derive(Debug, Deserialize, Serialize)]
@@ -23,6 +34,8 @@ pub struct SayaConfig {
     pub katana_rpc: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
+    pub prover: ProverIdentifier,
+    pub verifier: VerifierIdentifier,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -39,8 +52,10 @@ pub struct Saya {
     config: SayaConfig,
     /// The data availability client.
     da_client: Option<Box<dyn DataAvailabilityClient>>,
-    /// The katana (for now JSON RPC) client.
-    katana_client: Arc<JsonRpcClient<HttpTransport>>,
+    /// The provider to fetch dojo from Katana.
+    provider: Arc<dyn SayaProvider>,
+    /// The blockchain state.
+    blockchain: Blockchain,
 }
 
 impl Saya {
@@ -50,8 +65,9 @@ impl Saya {
     ///
     /// * `config` - The main Saya configuration.
     pub async fn new(config: SayaConfig) -> SayaResult<Self> {
-        let katana_client =
-            Arc::new(JsonRpcClient::new(HttpTransport::new(config.katana_rpc.clone())));
+        // Currently it's only RPC. But it can be the database
+        // file directly in the future or other transports.
+        let provider = Arc::new(JsonRpcProvider::new(config.katana_rpc.clone()).await?);
 
         let da_client = if let Some(da_conf) = &config.data_availability {
             Some(data_availability::client_from_config(da_conf.clone()).await?)
@@ -59,7 +75,9 @@ impl Saya {
             None
         };
 
-        Ok(Self { config, da_client, katana_client })
+        let blockchain = Blockchain::new();
+
+        Ok(Self { config, da_client, provider, blockchain })
     }
 
     /// Starts the Saya mainloop to fetch and process data.
@@ -68,31 +86,37 @@ impl Saya {
     /// First naive version to have an overview of all the components
     /// and the process.
     /// Should be refacto in crates as necessary.
-    pub async fn start(&self) -> SayaResult<()> {
+    pub async fn start(&mut self) -> SayaResult<()> {
         let poll_interval_secs = 1;
-        let mut block = self.config.start_block;
+        let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
+
+        let (genesis_block, block_before_the_first) =
+            join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
+        let genesis_state_hash = genesis_block?.header.header.state_root;
+        let mut previous_block = block_before_the_first?;
 
         loop {
-            let latest_block = match self.katana_client.block_number().await {
+            let latest_block = match self.provider.block_number().await {
                 Ok(block_number) => block_number,
                 Err(e) => {
-                    error!("Can't retrieve latest block: {}", e);
+                    error!(target: LOG_TARGET, error = ?e, "Fetching block.");
                     tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                     continue;
                 }
             };
 
             if block > latest_block {
-                trace!("Nothing to process yet, waiting for block {block}");
+                trace!(target: LOG_TARGET, block_number = block, "Waiting for block.");
                 tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
                 continue;
             }
 
-            self.process_block(block).await?;
+            let fetched_block = self.provider.fetch_block(block).await?;
 
+            self.process_block(block, (&fetched_block, previous_block, genesis_state_hash)).await?;
+
+            previous_block = fetched_block;
             block += 1;
-
-            tokio::time::sleep(tokio::time::Duration::from_secs(poll_interval_secs)).await;
         }
     }
 
@@ -114,38 +138,54 @@ impl Saya {
     /// # Arguments
     ///
     /// * `block_number` - The block number.
-    async fn process_block(&self, block_number: u64) -> SayaResult<()> {
-        trace!("Processing block {block_number}");
+    async fn process_block(
+        &mut self,
+        block_number: BlockNumber,
+        blocks: (&SealedBlock, SealedBlock, FieldElement),
+    ) -> SayaResult<()> {
+        trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        self.fetch_publish_state_update(block_number).await?;
+        let (block, prev_block, genesis_state_hash) = blocks;
+
+        let (state_updates, da_state_update) =
+            self.provider.fetch_state_updates(block_number).await?;
+
+        if let Some(da) = &self.da_client {
+            da.publish_state_diff_felts(&da_state_update).await?;
+        }
+
+        let block =
+            SealedBlockWithStatus { block: block.clone(), status: FinalityStatus::AcceptedOnL2 };
+
+        let state_updates_to_prove = state_updates.state_updates.clone();
+        self.blockchain.update_state_with_block(block.clone(), state_updates)?;
+
+        if block_number == 0 {
+            return Ok(());
+        }
+
+        let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
+
+        if exec_infos.is_empty() {
+            trace!(target: "saya_core", block_number, "Skipping empty block.");
+            return Ok(());
+        }
+
+        let to_prove = ProvedStateDiff {
+            genesis_state_hash,
+            prev_state_hash: prev_block.header.header.state_root,
+            state_updates: state_updates_to_prove,
+        };
+
+        trace!(target: "saya_core", "Proving block {block_number}.");
+        let proof = prover::prove(to_prove.serialize(), self.config.prover).await?;
+        info!(target: "saya_core", block_number, "Block proven.");
+
+        trace!(target: "saya_core", "Verifying block {block_number}.");
+        let transaction_hash = verifier::verify(proof, self.config.verifier).await?;
+        info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
         Ok(())
-    }
-
-    /// Fetches the state update for the given block and publish it to
-    /// the data availability layer (if any).
-    /// Returns the [`StateUpdate`].
-    ///
-    /// # Arguments
-    ///
-    /// * `block_number` - The block number to get state update for.
-    async fn fetch_publish_state_update(&self, block_number: u64) -> SayaResult<StateUpdate> {
-        let state_update =
-            match self.katana_client.get_state_update(BlockId::Number(block_number)).await? {
-                MaybePendingStateUpdate::Update(su) => {
-                    if let Some(da) = &self.da_client {
-                        let sd_felts =
-                            data_availability::state_diff::state_diff_to_felts(&su.state_diff);
-
-                        da.publish_state_diff_felts(&sd_felts).await?;
-                    }
-
-                    su
-                }
-                MaybePendingStateUpdate::PendingUpdate(_) => unreachable!("Should not be used"),
-            };
-
-        Ok(state_update)
     }
 }
 
@@ -154,3 +194,25 @@ impl From<starknet::providers::ProviderError> for error::Error {
         Self::KatanaClient(format!("Katana client RPC provider error: {e}"))
     }
 }
+
+// CI is not allowing to fetch images from inside the docker itself.
+// Need to be addressed, so tests by pulling prover and verifier are for now
+// disabled here, but can be uncommented to test locally.
+// #[cfg(test)]
+// mod tests {
+//     use crate::prover::state_diff::EXAMPLE_STATE_DIFF;
+//     use crate::prover::{prove, ProverIdentifier};
+//     use crate::verifier::{verify, VerifierIdentifier};
+
+//     #[tokio::test]
+//     async fn test_herodotus_verify() {
+//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
+//         let _tx = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
+//     }
+
+//     #[tokio::test]
+//     async fn test_local_verify() {
+//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
+//         let _res = verify(proof, VerifierIdentifier::StoneLocal).await.unwrap();
+//     }
+// }

@@ -1,18 +1,17 @@
-use katana_primitives::block::BlockNumber;
-use katana_primitives::contract::{ClassHash, ContractAddress, Nonce};
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::{ContractAddress, Nonce};
 use serde::{Deserialize, Serialize};
 
+use super::list::BlockList;
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 
-pub type BlockList = Vec<BlockNumber>;
-
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct ContractInfoChangeList {
     pub class_change_list: BlockList,
     pub nonce_change_list: BlockList,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ContractClassChange {
     pub contract_address: ContractAddress,
     /// The updated class hash of `contract_address`.
@@ -38,7 +37,7 @@ impl Decompress for ContractClassChange {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ContractNonceChange {
     pub contract_address: ContractAddress,
     /// The updated nonce value of `contract_address`.

@@ -1,12 +1,10 @@
+use alloy_primitives::B256;
 use derive_more::{AsRef, Deref, From};
-use ethers::types::H256;
 use starknet::core::types::{DataAvailabilityMode, ResourceBoundsMapping};
 
 use crate::chain::ChainId;
-use crate::contract::{
-    ClassHash, CompiledClassHash, CompiledContractClass, ContractAddress, FlattenedSierraClass,
-    Nonce,
-};
+use crate::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use crate::contract::{ContractAddress, Nonce};
 use crate::utils::transaction::{
     compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_declare_v3_tx_hash,
     compute_deploy_account_v1_tx_hash, compute_deploy_account_v3_tx_hash,
@@ -16,7 +14,7 @@ use crate::{utils, FieldElement};
 
 /// The hash of a transaction.
 pub type TxHash = FieldElement;
-/// The sequential number for all the transactions..
+/// The sequential number for all the transactions.
 pub type TxNumber = u64;
 pub type Transaction = starknet::core::types::Transaction;
 
@@ -104,7 +102,7 @@ pub struct DeclareTxWithClass {
     /// The Sierra class, if any.
     pub sierra_class: Option<FlattenedSierraClass>,
     /// The compiled contract class.
-    pub compiled_class: CompiledContractClass,
+    pub compiled_class: CompiledClass,
     /// The raw transaction.
     #[deref]
     #[as_ref]
@@ -115,7 +113,7 @@ impl DeclareTxWithClass {
     pub fn new_with_classes(
         transaction: DeclareTx,
         sierra_class: FlattenedSierraClass,
-        compiled_class: CompiledContractClass,
+        compiled_class: CompiledClass,
     ) -> Self {
         Self { sierra_class: Some(sierra_class), compiled_class, transaction }
     }
@@ -351,14 +349,14 @@ impl DeclareTx {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct L1HandlerTx {
     pub nonce: Nonce,
     pub chain_id: ChainId,
     pub paid_fee_on_l1: u128,
     pub version: FieldElement,
-    pub message_hash: H256,
+    pub message_hash: B256,
     pub calldata: Vec<FieldElement>,
     pub contract_address: ContractAddress,
     pub entry_point_selector: FieldElement,

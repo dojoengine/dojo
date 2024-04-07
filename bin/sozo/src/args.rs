@@ -9,6 +9,7 @@ use tracing_log::AsTrace;
 
 use crate::commands::auth::AuthArgs;
 use crate::commands::build::BuildArgs;
+use crate::commands::call::CallArgs;
 use crate::commands::clean::CleanArgs;
 use crate::commands::completions::CompletionsArgs;
 use crate::commands::dev::DevArgs;
@@ -20,8 +21,21 @@ use crate::commands::model::ModelArgs;
 use crate::commands::register::RegisterArgs;
 use crate::commands::test::TestArgs;
 
+fn generate_version() -> String {
+    const DOJO_VERSION: &str = env!("CARGO_PKG_VERSION");
+    let scarb_version = scarb::version::get().version;
+    let scarb_sierra_version = scarb::version::get().sierra.version;
+    let scarb_cairo_version = scarb::version::get().cairo.version;
+
+    let version_string = format!(
+        "{}\nscarb: {}\ncairo: {}\nsierra: {}",
+        DOJO_VERSION, scarb_version, scarb_cairo_version, scarb_sierra_version,
+    );
+    version_string
+}
+
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version=generate_version(), about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct SozoArgs {
     #[arg(long)]
@@ -66,6 +80,8 @@ pub enum Commands {
     Test(TestArgs),
     #[command(about = "Execute a world's system")]
     Execute(ExecuteArgs),
+    #[command(about = "Call a world's system")]
+    Call(CallArgs),
     #[command(about = "Interact with a worlds models")]
     Model(ModelArgs),
     #[command(about = "Register new models")]

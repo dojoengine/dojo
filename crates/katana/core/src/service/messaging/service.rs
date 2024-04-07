@@ -4,6 +4,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::{Future, FutureExt, Stream};
+use katana_executor::ExecutorFactory;
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
@@ -20,10 +21,10 @@ type MessagingFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type MessageGatheringFuture = MessagingFuture<MessengerResult<(u64, usize)>>;
 type MessageSettlingFuture = MessagingFuture<MessengerResult<Option<(u64, usize)>>>;
 
-pub struct MessagingService {
+pub struct MessagingService<EF: ExecutorFactory> {
     /// The interval at which the service will perform the messaging operations.
     interval: Interval,
-    backend: Arc<Backend>,
+    backend: Arc<Backend<EF>>,
     pool: Arc<TransactionPool>,
     /// The messenger mode the service is running in.
     messenger: Arc<MessengerMode>,
@@ -37,13 +38,13 @@ pub struct MessagingService {
     msg_send_fut: Option<MessageSettlingFuture>,
 }
 
-impl MessagingService {
+impl<EF: ExecutorFactory> MessagingService<EF> {
     /// Initializes a new instance from a configuration file's path.
     /// Will panic on failure to avoid continuing with invalid configuration.
     pub async fn new(
         config: MessagingConfig,
         pool: Arc<TransactionPool>,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<EF>>,
     ) -> anyhow::Result<Self> {
         let gather_from_block = config.from_block;
         let interval = interval_from_seconds(config.interval);
@@ -72,7 +73,7 @@ impl MessagingService {
     async fn gather_messages(
         messenger: Arc<MessengerMode>,
         pool: Arc<TransactionPool>,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<EF>>,
         from_block: u64,
     ) -> MessengerResult<(u64, usize)> {
         // 200 avoids any possible rejection from RPC with possibly lot's of messages.
@@ -113,7 +114,7 @@ impl MessagingService {
 
     async fn send_messages(
         block_num: u64,
-        backend: Arc<Backend>,
+        backend: Arc<Backend<EF>>,
         messenger: Arc<MessengerMode>,
     ) -> MessengerResult<Option<(u64, usize)>> {
         let Some(messages) = ReceiptProvider::receipts_by_block(
@@ -130,20 +131,18 @@ impl MessagingService {
         } else {
             match messenger.as_ref() {
                 MessengerMode::Ethereum(inner) => {
-                    let hashes = inner
-                        .send_messages(&messages)
-                        .await
-                        .map(|hashes| hashes.iter().map(|h| format!("{h:#x}")).collect())?;
+                    let hashes = inner.send_messages(&messages).await.map(|hashes| {
+                        hashes.iter().map(|h| format!("{h:#x}")).collect::<Vec<_>>()
+                    })?;
                     trace_msg_to_l1_sent(&messages, &hashes);
                     Ok(Some((block_num, hashes.len())))
                 }
 
                 #[cfg(feature = "starknet-messaging")]
                 MessengerMode::Starknet(inner) => {
-                    let hashes = inner
-                        .send_messages(&messages)
-                        .await
-                        .map(|hashes| hashes.iter().map(|h| format!("{h:#x}")).collect())?;
+                    let hashes = inner.send_messages(&messages).await.map(|hashes| {
+                        hashes.iter().map(|h| format!("{h:#x}")).collect::<Vec<_>>()
+                    })?;
                     trace_msg_to_l1_sent(&messages, &hashes);
                     Ok(Some((block_num, hashes.len())))
                 }
@@ -167,7 +166,7 @@ pub enum MessagingOutcome {
     },
 }
 
-impl Stream for MessagingService {
+impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
     type Item = MessagingOutcome;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -209,7 +208,9 @@ impl Stream for MessagingService {
                 Poll::Ready(Err(e)) => {
                     error!(
                         target: LOG_TARGET,
-                        "error gathering messages for block {}: {e}", pin.gather_from_block
+                        block = %pin.gather_from_block,
+                        error = %e,
+                        "Gathering messages for block."
                     );
                     return Poll::Pending;
                 }
@@ -229,7 +230,9 @@ impl Stream for MessagingService {
                 Poll::Ready(Err(e)) => {
                     error!(
                         target: LOG_TARGET,
-                        "error settling messages for block {}: {e}", pin.send_from_block
+                        block = %pin.send_from_block,
+                        error = %e,
+                        "Settling messages for block."
                     );
                     return Poll::Pending;
                 }
@@ -250,7 +253,7 @@ fn interval_from_seconds(secs: u64) -> Interval {
     interval
 }
 
-fn trace_msg_to_l1_sent(messages: &Vec<MessageToL1>, hashes: &Vec<String>) {
+fn trace_msg_to_l1_sent(messages: &[MessageToL1], hashes: &[String]) {
     assert_eq!(messages.len(), hashes.len());
 
     #[cfg(feature = "starknet-messaging")]
@@ -270,17 +273,11 @@ fn trace_msg_to_l1_sent(messages: &Vec<MessageToL1>, hashes: &Vec<String>) {
             #[rustfmt::skip]
             info!(
                 target: LOG_TARGET,
-                r"Message executed on settlement layer:
-| from_address | {}
-|  to_address  | {}
-|   selector   | {}
-|   payload    | [{}]
-
-",
-                m.from_address,
-                to_address,
-                selector,
-                payload_str.join(", ")
+                from_address = %m.from_address,
+                to_address = %to_address,
+                selector = %selector,
+                payload = %payload_str.join(", "),
+                "Message executed on settlement layer.",
             );
 
             continue;
@@ -296,17 +293,11 @@ fn trace_msg_to_l1_sent(messages: &Vec<MessageToL1>, hashes: &Vec<String>) {
         #[rustfmt::skip]
             info!(
                 target: LOG_TARGET,
-                r#"Message sent to settlement layer:
-|     hash     | {}
-| from_address | {}
-|  to_address  | {}
-|   payload    | [{}]
-
-"#,
-                hash.as_str(),
-                m.from_address,
-                to_address,
-                payload_str.join(", ")
+                hash = %hash.as_str(),
+                from_address = %m.from_address,
+                to_address = %to_address,
+                payload = %payload_str.join(", "),
+                "Message sent to settlement layer.",
             );
     }
 }
@@ -317,16 +308,10 @@ fn trace_l1_handler_tx_exec(hash: TxHash, tx: &L1HandlerTx) {
     #[rustfmt::skip]
     info!(
         target: LOG_TARGET,
-        r"L1Handler transaction added to the pool:
-|      tx_hash     | {:#x}
-| contract_address | {}
-|     selector     | {:#x}
-|     calldata     | [{}]
-
-",
-hash,
-        tx.contract_address,
-        tx.entry_point_selector,
-        calldata_str.join(", ")
+        tx_hash = %format!("{:#x}", hash),
+        contract_address = %tx.contract_address,
+        selector = %format!("{:#x}", tx.entry_point_selector),
+        calldata = %calldata_str.join(", "),
+        "L1Handler transaction added to the pool.",
     );
 }

@@ -102,6 +102,10 @@ impl EntityObject {
                 Name::new("updatedAt"),
                 Value::from(entity.updated_at.format(DATETIME_FORMAT).to_string()),
             ),
+            (
+                Name::new("executedAt"),
+                Value::from(entity.executed_at.format(DATETIME_FORMAT).to_string()),
+            ),
         ])
     }
 }
@@ -114,16 +118,27 @@ fn model_union_field() -> Field {
                     let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
 
                     let entity_id = extract::<String>(indexmap, "id")?;
-                    let model_ids: Vec<(String,)> =
-                        sqlx::query_as("SELECT model_id from entity_model WHERE entity_id = ?")
-                            .bind(&entity_id)
-                            .fetch_all(&mut *conn)
-                            .await?;
+                    // fetch name from the models table
+                    // using the model id (hashed model name)
+                    let model_ids: Vec<(String, String)> = sqlx::query_as(
+                        "SELECT id, name
+                        FROM models
+                        WHERE id IN (    
+                            SELECT model_id
+                            FROM entity_model
+                            WHERE entity_id = ?
+                        )",
+                    )
+                    .bind(&entity_id)
+                    .fetch_all(&mut *conn)
+                    .await?;
 
                     let mut results: Vec<FieldValue<'_>> = Vec::new();
-                    for (name,) in model_ids {
-                        let type_mapping = type_mapping_query(&mut conn, &name).await?;
+                    for (id, name) in model_ids {
+                        // the model id in the model mmeebrs table is the hashed model name (id)
+                        let type_mapping = type_mapping_query(&mut conn, &id).await?;
 
+                        // but the table name for the model data is the unhashed model name
                         let data = model_data_recursive_query(
                             &mut conn,
                             vec![name.clone()],
