@@ -11,20 +11,20 @@ impl ToVersion for Version {
     }
 }
 
-impl<'a> ToVersion for &'a str {
+impl ToVersion for &str {
     fn to_version(self) -> Result<Version> {
         Version::parse(self.trim())
             .map_err(|_| anyhow::format_err!("cannot parse '{}' as a semver", self))
     }
 }
 
-impl<'a> ToVersion for &'a String {
+impl ToVersion for &String {
     fn to_version(self) -> Result<Version> {
         (**self).to_version()
     }
 }
 
-impl<'a> ToVersion for &'a Version {
+impl ToVersion for &Version {
     fn to_version(self) -> Result<Version> {
         Ok(self.clone())
     }
