@@ -1,14 +1,22 @@
 use anyhow::Result;
-
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
+use std::fs::File;
 
-use crate::commands::options::statistics::get_contract_statistics_for_dir;
+use crate::commands::options::statistics::{
+    compare_against_limit, get_contract_statistics_for_dir,
+};
 
-use super::options::statistics::Stats;
+use super::options::statistics::{ContractStatistics, Stats};
+
+#[derive(Debug, serde::Deserialize)]
+pub struct StarknetConstants {
+    max_contract_bytecode_size: u64,
+    max_contract_class_size: u64,
+}
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
@@ -45,20 +53,18 @@ impl BuildArgs {
         }
 
         if self.stats.stats || !self.stats.stats_limits.is_none() {
-            let contract_statistics = get_contract_statistics_for_dir(&compile_info.target_dir);
+            const STARKNET_CONSTANTS_JSON: &str = "resources/starknet_constants.json";
+            let json_consts_path = match &self.stats.stats_limits {
+                Some(path) => path.clone(),
+                None => String::from(STARKNET_CONSTANTS_JSON),
+            };
 
-            for contract_stats in contract_statistics {
-                println!(
-                    "---------------Contract Stats for {}---------------\n",
-                    contract_stats.contract_name
-                );
+            let file = File::open(&json_consts_path)?;
+            let limits: StarknetConstants = serde_json::from_reader(&file)?;
+            let contracts_statistics = get_contract_statistics_for_dir(&compile_info.target_dir);
 
-                println!(
-                    "- Contract bytecode size (Number of felts in the program): {}",
-                    contract_stats.number_felts
-                );
-
-                println!("- Contract Class size: {} bytes \n", contract_stats.file_size);
+            for contract_stats in contracts_statistics {
+                print_stats(contract_stats, &limits);
             }
         }
 
@@ -81,6 +87,30 @@ impl BuildArgs {
 
         Ok(())
     }
+}
+
+pub fn print_stats(contract_statistic: ContractStatistics, limits: &StarknetConstants) {
+    println!(
+        "---------------Contract Stats for {}---------------",
+        contract_statistic.contract_name
+    );
+
+    print!(
+        "- Contract bytecode size (Number of felts in the program): {}  ",
+        contract_statistic.number_felts,
+    );
+    println!(
+        "{}",
+        compare_against_limit(contract_statistic.number_felts, limits.max_contract_bytecode_size)
+    );
+    println!("");
+
+    print!("- Contract Class size: {} bytes  ", contract_statistic.file_size);
+    println!(
+        "{}",
+        compare_against_limit(contract_statistic.file_size, limits.max_contract_class_size)
+    );
+    println!("");
 }
 
 #[cfg(test)]

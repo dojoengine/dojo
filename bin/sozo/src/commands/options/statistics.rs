@@ -10,7 +10,7 @@ use std::{
 
 pub struct ContractStatistics {
     pub contract_name: String,
-    pub number_felts: usize,
+    pub number_felts: u64,
     pub file_size: u64,
 }
 
@@ -50,7 +50,7 @@ pub fn get_contract_statistics_for_file(
 ) -> ContractStatistics {
     ContractStatistics {
         contract_name: file_name,
-        number_felts: compute_contract_byte_code_size(contract_artifact),
+        number_felts: compute_contract_byte_code_size(contract_artifact) as u64,
         file_size: get_file_size_in_bytes(sierra_json_file),
     }
 }
@@ -86,4 +86,22 @@ pub fn get_contract_statistics_for_dir(target_directory: &Utf8PathBuf) -> Vec<Co
         ));
     }
     contract_statistics
+}
+
+pub fn compare_against_limit(num1: u64, limit: u64) -> String {
+    let warning_threshold = (limit as f64 * 0.8) as u64;
+    let mut buffer = String::new();
+
+    if num1 > limit {
+        buffer.push_str("\x1b[0;31mDANGER\x1b[0m"); // Red color
+        buffer.push_str(&format!("! You have passed the starknet limit of {}", limit));
+    } else if num1 > warning_threshold {
+        buffer.push_str("\x1b[0;33mWARNING\x1b[0m"); // Yellow color
+        buffer.push_str(&format!("! You have reached 80% of the starknet limit of {}", limit));
+    } else {
+        buffer.push_str("\x1b[0;32mOK\x1b[0m"); // Green color
+        buffer.push_str(" No warnings.");
+    }
+
+    buffer
 }
