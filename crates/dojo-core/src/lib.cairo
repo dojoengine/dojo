@@ -2,6 +2,7 @@ mod base;
 #[cfg(test)]
 mod base_test;
 mod database;
+mod interfaces;
 #[cfg(test)]
 mod database_test;
 mod model;
