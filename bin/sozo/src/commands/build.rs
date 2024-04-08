@@ -4,10 +4,13 @@ use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
-use starknet::core::types::contract::SierraClass;
-use std::fs;
-use std::fs::File;
+use std::fs::{self, File};
 use std::path::PathBuf;
+
+use super::options::statistics::compute_contract_byte_code_size;
+use super::options::statistics::get_file_size_in_bytes;
+use super::options::statistics::read_sierra_json_program;
+use super::options::statistics::Stats;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
@@ -23,9 +26,8 @@ pub struct BuildArgs {
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
 
-    #[arg(long)]
-    #[arg(help = "Report of all built contracts statistics")]
-    pub stats: bool,
+    #[command(flatten)]
+    pub stats: Stats,
 }
 
 impl BuildArgs {
@@ -44,11 +46,9 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
-        if self.stats {
+        if self.stats.stats {
             let built_contract_paths: fs::ReadDir =
                 fs::read_dir(compile_info.target_dir.as_str()).unwrap();
-
-            println!("\n");
             for sierra_json_path in built_contract_paths {
                 let sierra_json_path: PathBuf = sierra_json_path.unwrap().path();
                 let filename = sierra_json_path.file_name().unwrap();
@@ -56,17 +56,20 @@ impl BuildArgs {
                     "---------------Contract Stats for {}---------------\n",
                     filename.to_str().unwrap()
                 );
-                let file = File::open(sierra_json_path)?;
-                let contract_artifact: SierraClass = serde_json::from_reader(&file)?;
-                let contract_artifact = contract_artifact.flatten()?;
+                let sierra_json_file = File::open(sierra_json_path)?;
+                let contract_artifact = read_sierra_json_program(&sierra_json_file)?;
+                let number_of_felts = compute_contract_byte_code_size(contract_artifact);
+                let file_size = get_file_size_in_bytes(sierra_json_file);
 
                 println!(
                     "- Contract bytecode size (Number of felts in the program): {}",
-                    contract_artifact.sierra_program.iter().count()
+                    number_of_felts
                 );
 
-                println!("- Contract Class size: {} bytes \n", file.metadata().unwrap().len());
+                println!("- Contract Class size: {} bytes \n", file_size);
             }
+        } else if !self.stats.stats_limits.is_none() {
+            println!("When using custom limits")
         }
 
         // Custom plugins are always empty for now.
