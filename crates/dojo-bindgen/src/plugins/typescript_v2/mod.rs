@@ -486,7 +486,7 @@ export enum {} {{
         )
     }
 
-    // Formats a system into a C# method used by the contract class
+    // Formats a system into a JS method used by the contract class
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
