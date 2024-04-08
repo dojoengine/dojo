@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712584062687,
+  "lastUpdate": 1712584498101,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4795,6 +4795,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16824351,
             "range": "± 197525",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f0637f928470217fccd60fe15b1b9c6fefd5c984",
+          "message": "chore(katana): use deps from workspace (#1795)\n\n* chore: use `jsonrpsee` from workspace\r\n\r\n* chore clean up more deps",
+          "timestamp": "2024-04-08T21:46:43+08:00",
+          "tree_id": "e4a9c4d63900ba0508e10c7b1a31fef8eeb20ef0",
+          "url": "https://github.com/dojoengine/dojo/commit/f0637f928470217fccd60fe15b1b9c6fefd5c984"
+        },
+        "date": 1712584497602,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17150350,
+            "range": "± 242131",
             "unit": "ns/iter"
           }
         ]
