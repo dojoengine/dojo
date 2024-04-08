@@ -49,7 +49,6 @@ import {
     Client,
     ModelClause,
     createClient,
-    extractQueryFromResult,
     valueToToriiValueAndOperator,
 } from \"@dojoengine/torii-client\";
 import { LOCAL_KATANA, createManifestFromJson } from \"@dojoengine/core\";"
@@ -59,26 +58,12 @@ import { LOCAL_KATANA, createManifestFromJson } from \"@dojoengine/core\";"
     fn generate_query_types(models: &[&DojoModel]) -> String {
         let mut query_fields = Vec::new();
         let mut result_mapping = Vec::new();
-        let mut name_map = Vec::new();
 
         for model in models {
-            query_fields.push(format!(
-                "{}: ModelClause<{}>;",
-                model.name.to_case(convert_case::Case::Camel),
-                model.name
-            ));
+            query_fields
+                .push(format!("{model_name}: ModelClause<{model_name}>;", model_name = model.name));
 
-            result_mapping.push(format!(
-                "{}: {};",
-                model.name.to_case(convert_case::Case::Camel),
-                model.name
-            ));
-
-            name_map.push(format!(
-                "{}: \"{}\"",
-                model.name.to_case(convert_case::Case::Camel),
-                model.name
-            ));
+            result_mapping.push(format!("{model_name}: {model_name};", model_name = model.name));
         }
 
         format!(
@@ -88,10 +73,6 @@ import { LOCAL_KATANA, createManifestFromJson } from \"@dojoengine/core\";"
 
 type ResultMapping = {{
     {result_mapping}
-}};
-
-const nameMap = {{
-    {name_map}
 }};
 
 type QueryResult<T extends Query> = {{
@@ -110,7 +91,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     const clauses: Clause[] = Object.entries(clause).map(([key, value]) => {{
         return {{
             Member: {{
-                model: nameMap[model as keyof typeof nameMap],
+                model,
                 member: key,
                 ...valueToToriiValueAndOperator(value),
             }},
@@ -121,7 +102,6 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
 }}",
             query_fields = query_fields.join("\n    "),
             result_mapping = result_mapping.join("\n    "),
-            name_map = name_map.join(",\n    ")
         )
     }
 
@@ -402,24 +382,17 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             clause,
         }});
 
-        const result = Object.values(toriiResult).map((entity: any) => {{
-            return extractQueryFromResult<Query>(
-                query,
-                entity
-            ) as QueryResult<T>;
-        }});
-
-        return result as QueryResult<T>[];
+        return toriiResult as Record<string, QueryResult<T>>;
     }}
 
     async findEntity<T extends Query>(query: T) {{
         const result = await this.findEntities(query, 1);
 
-        if (result.length === 0) {{
+        if (Object.values(result).length === 0) {{
             return undefined;
         }}
 
-        return result[0] as QueryResult<T>;
+        return Object.values(result)[0] as QueryResult<T>;
     }}
 }}"
         );
