@@ -6,10 +6,11 @@ use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_core::sequencer::SequencerConfig;
 use katana_rpc_api::dev::DevApiClient;
+use katana_rpc_api::starknet::StarknetApiClient;
 use katana_rpc_api::torii::ToriiApiClient;
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};
 use starknet::accounts::{Account, Call};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{FieldElement, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
 use tokio::time::sleep;
 
@@ -109,17 +110,39 @@ async fn test_get_transactions() {
 
     let max_fee = FieldElement::from_hex_be(ENOUGH_GAS).unwrap();
     let mut nonce = FieldElement::THREE;
+    let mut last_tx_hash = FieldElement::ZERO;
+
     // Test only returns first 100 txns from pending block
     for i in 0..101 {
         let deploy_call = build_deploy_contract_call(declare_res.class_hash, (i + 2_u32).into());
         let deploy_txn = account.execute(vec![deploy_call]).nonce(nonce).max_fee(max_fee);
-        deploy_txn.send().await.unwrap();
+        let res = deploy_txn.send().await.unwrap();
         nonce += FieldElement::ONE;
+
+        if i == 100 {
+            last_tx_hash = res.transaction_hash;
+        }
     }
 
-    // Wait until all pending txs have been mined.
-    // @kairy is there a more deterministic approach here?
-    sleep(Duration::from_millis(5000)).await;
+    assert!(last_tx_hash != FieldElement::ZERO);
+
+    // Poll the statux of the last tx sent.
+    let max_retry = 10;
+    let mut attempt = 0;
+    loop {
+        match client.transaction_status(last_tx_hash).await {
+            Ok(s) => {
+                if s != TransactionStatus::Received {
+                    break;
+                }
+            }
+            Err(_) => {
+                assert!(attempt < max_retry);
+                sleep(Duration::from_millis(300)).await;
+                attempt += 1;
+            }
+        }
+    }
 
     let start_cursor = response.cursor;
     let response: TransactionsPage = client.get_transactions(start_cursor).await.unwrap();
