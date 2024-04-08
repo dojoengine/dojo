@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712559860518,
+  "lastUpdate": 1712584062687,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4765,6 +4765,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16799552,
             "range": "± 311809",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "297a44ce56542cdc91b3a25ad99b1872b1ce0e9d",
+          "message": "fix(katana-primitives): split_u256 (#1793)\n\nfix split_u256",
+          "timestamp": "2024-04-08T21:39:26+08:00",
+          "tree_id": "39ea772a4a703f4dda839aed6be4ed5ffc82e4b5",
+          "url": "https://github.com/dojoengine/dojo/commit/297a44ce56542cdc91b3a25ad99b1872b1ce0e9d"
+        },
+        "date": 1712584062193,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16824351,
+            "range": "± 197525",
             "unit": "ns/iter"
           }
         ]
