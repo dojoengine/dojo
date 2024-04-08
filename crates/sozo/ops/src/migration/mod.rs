@@ -3,6 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use dojo_lang::model;
 use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
@@ -181,25 +182,27 @@ async fn update_manifests_and_abis(
         local_manifest.world.inner.block_number = migration_output.world_block_number;
     }
 
-    let base_class_hash = *local_manifest.base.inner.class_hash();
+    migration_output.contracts.iter().for_each(|contract_output| {
+        // ignore failed migration which are represented by None
+        if let Some(output) = contract_output {
+            // find the contract in local manifest and update its address and base class hash
+            let local = local_manifest
+                .contracts
+                .iter_mut()
+                .find(|c| c.name == output.name.as_ref().unwrap())
+                .expect("contract got migrated, means it should be present here");
 
-    debug_assert!(local_manifest.contracts.len() == migration_output.contracts.len());
-
-    local_manifest.contracts.iter_mut().zip(migration_output.contracts).for_each(
-        |(local_manifest, contract_output)| {
-            let salt = generate_salt(&local_manifest.name);
-            local_manifest.inner.address = Some(get_contract_address(
+            let salt = generate_salt(&local.name);
+            local.inner.address = Some(get_contract_address(
                 salt,
-                base_class_hash,
+                output.base_class_hash,
                 &[],
                 migration_output.world_address,
             ));
 
-            if let Some(output) = contract_output {
-                local_manifest.inner.base_class_hash = output.base_class_hash;
-            }
-        },
-    );
+            local.inner.base_class_hash = output.base_class_hash;
+        }
+    });
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
@@ -612,7 +615,7 @@ where
         )
         .await
     {
-        Ok(val) => {
+        Ok(mut val) => {
             if let Some(declare) = val.clone().declare {
                 ui.print_hidden_sub(format!(
                     "Declare transaction: {:#x}",
@@ -622,6 +625,7 @@ where
 
             ui.print_hidden_sub(format!("Deploy transaction: {:#x}", val.transaction_hash));
 
+            val.name = Some(contract.diff.name.clone());
             Ok(ContractDeploymentOutput::Output(val))
         }
         Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
@@ -787,7 +791,7 @@ where
             )
             .await
         {
-            Ok(output) => {
+            Ok(mut output) => {
                 if let Some(ref declare) = output.declare {
                     ui.print_hidden_sub(format!(
                         "Declare transaction: {:#x}",
@@ -813,7 +817,9 @@ where
                     ));
                     ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
                 }
+                let name = contract.diff.name.clone();
 
+                output.name = Some(name);
                 deploy_output.push(Some(output));
             }
             Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
