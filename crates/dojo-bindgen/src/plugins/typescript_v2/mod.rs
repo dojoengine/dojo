@@ -332,7 +332,8 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             .iter()
             .map(|contract| {
                 format!(
-                    "this.{camel_case_name} = new {pascal_case_name}Calls(this.{camel_case_name}Address, this._account);",
+                    "this.{camel_case_name} = new \
+                     {pascal_case_name}Calls(this.{camel_case_name}Address, this._account);",
                     camel_case_name =
                         TypeScriptV2Plugin::formatted_contract_name(&contract.qualified_path)
                             .to_case(convert_case::Case::Camel),
