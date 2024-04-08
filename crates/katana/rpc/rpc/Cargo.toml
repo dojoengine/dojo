@@ -8,14 +8,14 @@ version.workspace = true
 
 [dependencies]
 dojo-metrics.workspace = true
-katana-core = { path = "../../core" }
-katana-executor = { path = "../../executor" }
-katana-primitives = { path = "../../primitives" }
-katana-provider = { path = "../../storage/provider" }
-katana-rpc-api = { path = "../rpc-api" }
-katana-rpc-types = { path = "../rpc-types" }
-katana-rpc-types-builder = { path = "../rpc-types-builder" }
-katana-tasks = { path = "../../tasks" }
+katana-core.workspace = true
+katana-executor.workspace = true
+katana-primitives.workspace = true
+katana-provider.workspace = true
+katana-rpc-api.workspace = true
+katana-rpc-types-builder.workspace = true
+katana-rpc-types.workspace = true
+katana-tasks.workspace = true
 
 anyhow.workspace = true
 flate2.workspace = true
@@ -38,7 +38,7 @@ tracing.workspace = true
 [dev-dependencies]
 assert_matches = "1.5.0"
 cairo-lang-starknet.workspace = true
-dojo-test-utils = { path = "../../../dojo-test-utils" }
+dojo-test-utils.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }
 url.workspace = true

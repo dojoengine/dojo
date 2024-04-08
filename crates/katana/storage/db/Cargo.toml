@@ -7,7 +7,7 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-katana-primitives = { path = "../../primitives" }
+katana-primitives = { workspace = true }
 
 anyhow.workspace = true
 page_size = "0.6.0"
@@ -18,8 +18,8 @@ tempfile = { version = "3.8.1", optional = true }
 thiserror.workspace = true
 
 cairo-vm.workspace = true
+roaring = { version = "0.10.3", features = [ "serde" ] }
 starknet_api.workspace = true
-roaring = { version = "0.10.3", features = ["serde"] }
 
 # codecs
 [dependencies.postcard]
