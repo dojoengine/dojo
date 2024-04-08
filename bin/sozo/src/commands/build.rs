@@ -1,15 +1,13 @@
 use anyhow::Result;
+
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
-use std::fs::{self, File};
-use std::path::PathBuf;
 
-use super::options::statistics::compute_contract_byte_code_size;
-use super::options::statistics::get_file_size_in_bytes;
-use super::options::statistics::read_sierra_json_program;
+use crate::commands::options::statistics::get_contract_statistics_for_dir;
+
 use super::options::statistics::Stats;
 
 #[derive(Args, Debug)]
@@ -32,7 +30,7 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let compile_info = compile_workspace(
+        let compile_info: dojo_lang::scarb_internal::CompileInfo = compile_workspace(
             config,
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
         )?;
@@ -46,30 +44,22 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
-        if self.stats.stats {
-            let built_contract_paths: fs::ReadDir =
-                fs::read_dir(compile_info.target_dir.as_str()).unwrap();
-            for sierra_json_path in built_contract_paths {
-                let sierra_json_path: PathBuf = sierra_json_path.unwrap().path();
-                let filename = sierra_json_path.file_name().unwrap();
+        if self.stats.stats || !self.stats.stats_limits.is_none() {
+            let contract_statistics = get_contract_statistics_for_dir(&compile_info.target_dir);
+
+            for contract_stats in contract_statistics {
                 println!(
                     "---------------Contract Stats for {}---------------\n",
-                    filename.to_str().unwrap()
+                    contract_stats.contract_name
                 );
-                let sierra_json_file = File::open(sierra_json_path)?;
-                let contract_artifact = read_sierra_json_program(&sierra_json_file)?;
-                let number_of_felts = compute_contract_byte_code_size(contract_artifact);
-                let file_size = get_file_size_in_bytes(sierra_json_file);
 
                 println!(
                     "- Contract bytecode size (Number of felts in the program): {}",
-                    number_of_felts
+                    contract_stats.number_felts
                 );
 
-                println!("- Contract Class size: {} bytes \n", file_size);
+                println!("- Contract Class size: {} bytes \n", contract_stats.file_size);
             }
-        } else if !self.stats.stats_limits.is_none() {
-            println!("When using custom limits")
         }
 
         // Custom plugins are always empty for now.
@@ -97,14 +87,20 @@ impl BuildArgs {
 mod tests {
     use dojo_test_utils::compiler::build_test_config;
 
+    use crate::commands::options::statistics::Stats;
+
     use super::BuildArgs;
 
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
 
-        let build_args =
-            BuildArgs { bindings_output: "generated".to_string(), typescript: true, unity: true };
+        let build_args = BuildArgs {
+            bindings_output: "generated".to_string(),
+            typescript: true,
+            unity: true,
+            stats: Stats { stats: false, stats_limits: None },
+        };
         let result = build_args.run(&config);
         assert!(result.is_ok());
     }
