@@ -15,7 +15,7 @@ katana-provider = { path = "../../storage/provider" }
 anyhow.workspace = true
 derive_more.workspace = true
 futures.workspace = true
-jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
+jsonrpsee = { workspace = true, features = [ "server" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
