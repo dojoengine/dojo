@@ -70,7 +70,7 @@ mod world {
     use core::hash::{HashStateExTrait, HashStateTrait};
     use pedersen::{PedersenTrait, HashStateImpl, PedersenImpl};
     use starknet::{
-        get_caller_address, get_contract_address, get_tx_info,
+        contract_address_const, get_caller_address, get_contract_address, get_tx_info,
         contract_address::ContractAddressIntoFelt252, ClassHash, Zeroable, ContractAddress,
         syscalls::{deploy_syscall, emit_event_syscall, replace_class_syscall}, SyscallResult,
         SyscallResultTrait, SyscallResultTraitImpl
@@ -80,6 +80,7 @@ mod world {
     use dojo::database::introspect::Introspect;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::model::Model;
+    use dojo::interfaces::{IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl};
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
     use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
@@ -561,6 +562,32 @@ mod world {
 
             // emit Upgrade Event
             EventEmitter::emit(ref self, WorldUpgraded { class_hash: new_class_hash });
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableState of IUpgradeableState<ContractState> {
+        fn upgrade_state(ref self: ContractState, new_state: Span<felt252>, program_output: Span<felt252>) {
+            let program_hash = 660383619500924691464496863815360321630156384984809921645828626149555048863;
+            assert(poseidon::poseidon_hash_span(new_state) == *program_output.at(5), 'wrong output hash');
+            let program_output_hash = poseidon::poseidon_hash_span(program_output);
+            let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
+            assert(
+                IFactRegistryDispatcher { contract_address: contract_address_const::<0xf6246d599bfaa1dfd074f5ab17665cd12603ee9dfc137254ef077c796ced6f>() }.is_valid(fact),
+                'no state transition proof'
+            );
+
+            let mut i = 0;
+            loop {
+                if i >= new_state.len() {
+                    break;
+                }
+                let base = starknet::storage_base_address_from_felt252(*new_state[i]);
+                starknet::storage_write_syscall(
+                    0, starknet::storage_address_from_base(base), *new_state[i + 1]
+                ).unwrap_syscall();
+                i += 2;
+            }
         }
     }
 
