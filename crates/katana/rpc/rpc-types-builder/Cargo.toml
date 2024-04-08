@@ -7,10 +7,10 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-katana-executor = { path = "../../executor" }
-katana-primitives = { path = "../../primitives" }
-katana-provider = { path = "../../storage/provider" }
-katana-rpc-types = { path = "../rpc-types" }
+katana-executor.workspace = true
+katana-primitives.workspace = true
+katana-provider.workspace = true
+katana-rpc-types.workspace = true
 
 anyhow.workspace = true
 starknet.workspace = true

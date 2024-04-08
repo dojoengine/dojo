@@ -16,7 +16,7 @@ cairo-lang-starknet.workspace = true
 camino.workspace = true
 dojo-lang = { path = "../dojo-lang" }
 dojo-world = { path = "../dojo-world", features = [ "manifest", "migration" ] }
-jsonrpsee = { version = "0.16.2", features = [ "server" ] }
+jsonrpsee = { workspace = true, features = [ "server" ] }
 katana-core = { path = "../katana/core" }
 katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-primitives = { path = "../katana/primitives" }
