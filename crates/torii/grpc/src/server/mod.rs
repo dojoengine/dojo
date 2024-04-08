@@ -38,6 +38,8 @@ use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
 use crate::types::ComparisonOperator;
 
+mod tests;
+
 #[derive(Clone)]
 pub struct DojoWorld {
     pool: Pool<Sqlite>,
@@ -151,7 +153,7 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
-    async fn query_by_hashed_keys(
+    pub(crate) async fn query_by_hashed_keys(
         &self,
         table: &str,
         model_relation_table: &str,
@@ -232,7 +234,7 @@ impl DojoWorld {
         Ok((entities, total_count))
     }
 
-    async fn query_by_keys(
+    pub(crate) async fn query_by_keys(
         &self,
         table: &str,
         model_relation_table: &str,
@@ -319,7 +321,7 @@ impl DojoWorld {
         ))
     }
 
-    async fn events_by_keys(
+    pub(crate) async fn events_by_keys(
         &self,
         keys_clause: proto::types::EventKeysClause,
         limit: u32,
@@ -356,7 +358,7 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
-    async fn query_by_member(
+    pub(crate) async fn query_by_member(
         &self,
         table: &str,
         model_relation_table: &str,
