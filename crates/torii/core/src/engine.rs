@@ -3,8 +3,8 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, EmittedEvent, Event, EventFilter, MaybePendingBlockWithTxHashes,
-    MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, BlockTag, EmittedEvent, Event, EventFilter, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -117,9 +117,43 @@ impl<P: Provider + Sync> Engine<P> {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
             self.sync_range(from, latest_block_number).await?;
-        };
+        } else {
+            self.sync_pending(latest_block_number + 1).await?;
+        }
 
         Ok(latest_block_number)
+    }
+
+    pub async fn sync_pending(&mut self, block_number: u64) -> Result<()> {
+        let block = if let MaybePendingBlockWithTxs::PendingBlock(pending) =
+            self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Pending)).await?
+        {
+            pending
+        } else {
+            return Ok(());
+        };
+
+        if let Some(ref block_tx) = self.block_tx {
+            block_tx.send(block_number).await?;
+        }
+
+        Self::process_block(self, block_number, block.timestamp).await?;
+        info!(target: LOG_TARGET, block_number = %block_number, "Processed pending block.");
+
+        self.db.set_head(block_number);
+
+        for transaction in block.transactions {
+            self.process_transaction_and_receipt(
+                *transaction.transaction_hash(),
+                &transaction,
+                block_number,
+                block.timestamp,
+            )
+            .await?;
+        }
+
+        self.db.execute().await?;
+        Ok(())
     }
 
     pub async fn sync_range(&mut self, from: u64, to: u64) -> Result<()> {
@@ -148,7 +182,8 @@ impl<P: Provider + Sync> Engine<P> {
         let mut last_transaction_hash: FieldElement = FieldElement::ZERO;
         for events_page in events_pages {
             for event in events_page.events {
-                self.process(event, &mut last_block, &mut last_transaction_hash).await?;
+                self.process_emitted_event(event, &mut last_block, &mut last_transaction_hash)
+                    .await?;
             }
         }
 
@@ -164,7 +199,7 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    async fn process(
+    async fn process_emitted_event(
         &mut self,
         event: EmittedEvent,
         last_block: &mut u64,
@@ -186,8 +221,7 @@ impl<P: Provider + Sync> Engine<P> {
                 block_tx.send(block_number).await?;
             }
 
-            Self::process_block(self, block_number, block_timestamp, event.block_hash.unwrap())
-                .await?;
+            Self::process_block(self, block_number, block_timestamp).await?;
             info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
 
             self.db.set_head(block_number);
@@ -277,21 +311,10 @@ impl<P: Provider + Sync> Engine<P> {
         Ok(())
     }
 
-    async fn process_block(
-        &mut self,
-        block_number: u64,
-        block_timestamp: u64,
-        block_hash: FieldElement,
-    ) -> Result<()> {
+    async fn process_block(&mut self, block_number: u64, block_timestamp: u64) -> Result<()> {
         for processor in &self.processors.block {
             processor
-                .process(
-                    &mut self.db,
-                    self.provider.as_ref(),
-                    block_number,
-                    block_timestamp,
-                    block_hash,
-                )
+                .process(&mut self.db, self.provider.as_ref(), block_number, block_timestamp)
                 .await?;
         }
         Ok(())
