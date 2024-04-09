@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712677108918,
+  "lastUpdate": 1712682827515,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4945,6 +4945,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17854071,
             "range": "± 179886",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "364fe019a56d1e817fa80db2417bd09b768f7838",
+          "message": "ci: bump codecov to latest version and CI fail on upload fail (#1805)\n\n* ci: bump codecov to latest version and CI fail on upload fail\r\n\r\n* ci: remove flag as API may be flaky on codecov side",
+          "timestamp": "2024-04-09T13:05:23-04:00",
+          "tree_id": "2fd56205b2e1fcd30727e598c85aeb48259fdb2d",
+          "url": "https://github.com/dojoengine/dojo/commit/364fe019a56d1e817fa80db2417bd09b768f7838"
+        },
+        "date": 1712682826219,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17231640,
+            "range": "± 225899",
             "unit": "ns/iter"
           }
         ]
