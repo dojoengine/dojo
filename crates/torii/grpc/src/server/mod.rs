@@ -1,8 +1,8 @@
 pub mod logger;
 pub mod subscriptions;
 
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;
 
 use std::future::Future;
 use std::net::SocketAddr;
@@ -270,8 +270,6 @@ impl DojoWorld {
             ),
         );
 
-        println!("count_query: {}", count_query);
-
         // total count of rows that matches keys_pattern without limit and offset
         let total_count =
             sqlx::query_scalar(&count_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
@@ -283,7 +281,7 @@ impl DojoWorld {
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys LIKE ?
             GROUP BY {table}.id
-            HAVING model_ids REGEXP '(^|,){}(,|$)'
+            HAVING INSTR(model_ids, '{}') > 0
             LIMIT 1
         "#,
             format!(
@@ -396,7 +394,7 @@ impl DojoWorld {
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             GROUP BY {table}.id
-            HAVING model_ids REGEXP '(^|,){}(,|$)'
+            HAVING INSTR(model_ids, '{}') > 0
             LIMIT 1
         "#,
             format!(
