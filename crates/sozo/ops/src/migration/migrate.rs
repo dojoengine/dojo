@@ -281,14 +281,8 @@ fn create_resource_metadata(
     resource_id: FieldElement,
     hash: String,
 ) -> Result<world::ResourceMetadata> {
-    let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
-
-    // Metadata is expecting an array of capacity 3.
-    if encoded_uri.len() < 3 {
-        encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
-    }
-
-    Ok(world::ResourceMetadata { resource_id, metadata_uri: encoded_uri })
+    let metadata_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+    Ok(world::ResourceMetadata { resource_id, metadata_uri })
 }
 
 /// Upload metadata of the world/models/contracts as IPFS artifacts and then

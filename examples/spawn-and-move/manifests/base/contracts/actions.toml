@@ -1,7 +1,0 @@
-kind = "DojoContract"
-class_hash = "0x3daa4c1e90a3f816240ee39c4dfdb7e1f3c090d36f2e85f6d0e590de94714ef"
-abi = "abis/base/contracts/actions.json"
-reads = []
-writes = []
-computed = []
-name = "dojo_examples::actions::actions"

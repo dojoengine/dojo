@@ -108,12 +108,10 @@ impl InlineMacroExprPlugin for GetMacro {
             lookup_err_msg.truncate(CAIRO_ERR_MSG_LEN);
 
             builder.add_str(&format!(
-                "\n            let mut __{model}_layout__ = core::array::ArrayTrait::new();
-                 dojo::database::introspect::Introspect::<{model}>::layout(ref __{model}_layout__);
-                 let mut __{model}_layout_span__ = \
-                 core::array::ArrayTrait::span(@__{model}_layout__);
-                 let __{model}: {model} = dojo::model::Model::entity({}, __get_macro_keys__, \
-                 __{model}_layout_span__);\n",
+                "\n
+                let __{model}_layout__ = dojo::model::Model::<{model}>::layout();
+                let __{model}: {model} = dojo::model::Model::entity({}, __get_macro_keys__, \
+                 __{model}_layout__);\n",
                 world.as_syntax_node().get_text(db),
             ));
         }

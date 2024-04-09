@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0xac011b068c4a746688a7aaf7c23d3eb89c9e6d27c4b587fab514013bdc3ee4"
-original_class_hash = "0xac011b068c4a746688a7aaf7c23d3eb89c9e6d27c4b587fab514013bdc3ee4"
+class_hash = "0x654f21bbd1ab4cf1bd4b15182230823efe45d6dcf7599697de1ecea63b1eb5d"
+original_class_hash = "0x654f21bbd1ab4cf1bd4b15182230823efe45d6dcf7599697de1ecea63b1eb5d"
 abi = "manifests/dev/abis/base/models/dojo_examples_models_emote_message.json"
 name = "dojo_examples::models::emote_message"
 

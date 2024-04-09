@@ -19,15 +19,45 @@ enum PlainEnum {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTupleOnePrimitive {
-    Left: (u16,),
-    Right: (u16,),
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTupleSeveralPrimitive {
-    Left: (u8, u8),
-    Right: (u8, u8),
+enum EnumWithStruct {
+    Left: Vec2,
+    Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleArray {
+    Left: Array<u32>,
+    Right: Array<u32>,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithByteArray {
+    Left: ByteArray,
+    Right: ByteArray,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleTuple {
+    Left: (u8, u256),
+    Right: (u8, u256),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithComplexTuple {
+    Left: (u8, Vec2),
+    Right: (u8, Vec2),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTupleOnePrimitive {
+    Left: (u16,),
+    Right: (u16,),
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
@@ -37,47 +67,70 @@ enum EnumCustom {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumPrimitive{
-    Left: u64,
-    Right: u64
-}
-
-#[derive(Serde, Copy, Drop, Introspect)]
 enum EnumTupleMix{
     Left: (Vec2, u64, EnumCustom),
     Right: (Vec2, u64, EnumCustom),
 }
 
 #[derive(Copy, Drop, Introspect)]
-struct Position {
+struct StructWithPrimitives {
     #[key]
     player: ContractAddress,
     before: u8,
-    vec: Vec2,
     after: u16,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithStruct {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Vec2,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<u32>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ByteArray,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Vec2>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, u256),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, Vec2, EnumCustom),
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct GenericStruct<T> {
     t: T,
-}
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct FeltsArray<T> {
-    #[capacity(10)]
-    felts: Array<felt252>,
-}
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct CapacityInvalidType<T> {
-    #[capacity(10)]
-    value: Position,
-}
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct FeltsArrayBadCapacity<T> {
-    #[capacity(0)]
-    felts: Array<felt252>,
 }
 
 //! > expanded_cairo_code
@@ -96,15 +149,45 @@ enum PlainEnum {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTupleOnePrimitive {
-    Left: (u16,),
-    Right: (u16,),
+enum EnumWithPrimitive {
+    Left: u32,
+    Right: u32,
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumTupleSeveralPrimitive {
-    Left: (u8, u8),
-    Right: (u8, u8),
+enum EnumWithStruct {
+    Left: Vec2,
+    Right: Vec2,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleArray {
+    Left: Array<u32>,
+    Right: Array<u32>,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithByteArray {
+    Left: ByteArray,
+    Right: ByteArray,
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithSimpleTuple {
+    Left: (u8, u256),
+    Right: (u8, u256),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumWithComplexTuple {
+    Left: (u8, Vec2),
+    Right: (u8, Vec2),
+}
+
+#[derive(Serde, Copy, Drop, Introspect)]
+enum EnumTupleOnePrimitive {
+    Left: (u16,),
+    Right: (u16,),
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
@@ -114,47 +197,70 @@ enum EnumCustom {
 }
 
 #[derive(Serde, Copy, Drop, Introspect)]
-enum EnumPrimitive{
-    Left: u64,
-    Right: u64
-}
-
-#[derive(Serde, Copy, Drop, Introspect)]
 enum EnumTupleMix{
     Left: (Vec2, u64, EnumCustom),
     Right: (Vec2, u64, EnumCustom),
 }
 
 #[derive(Copy, Drop, Introspect)]
-struct Position {
+struct StructWithPrimitives {
     #[key]
     player: ContractAddress,
     before: u8,
-    vec: Vec2,
     after: u16,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithStruct {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Vec2,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<u32>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithByteArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: ByteArray,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexArray {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: Array<Vec2>,
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithSimpleTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, u256),
+}
+
+#[derive(Copy, Drop, Introspect)]
+struct StructWithComplexTuple {
+    #[key]
+    player: ContractAddress,
+    before: u8,
+    after: (u8, Vec2, EnumCustom),
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct GenericStruct<T> {
     t: T,
-}
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct FeltsArray<T> {
-    #[capacity(10)]
-    felts: Array<felt252>,
-}
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct CapacityInvalidType<T> {
-    #[capacity(10)]
-    value: Position,
-}
-
-#[derive(Copy, Drop, Serde, Introspect)]
-struct FeltsArrayBadCapacity<T> {
-    #[capacity(0)]
-    felts: Array<felt252>,
 }
 impl Vec2Copy of core::traits::Copy::<Vec2>;
 impl Vec2Drop of core::traits::Drop::<Vec2>;
@@ -173,15 +279,26 @@ impl Vec2Serde of core::serde::Serde::<Vec2> {
 
 impl Vec2Introspect<> of dojo::database::introspect::Introspect<Vec2<>> {
     #[inline(always)]
-    fn size() -> usize {
-        2
+    fn size() -> Option<usize> {
+        Option::Some(2)
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(32);
-layout.append(32);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("x"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![32].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                                selector: selector!("y"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![32].span())
+                            }
 
+                ].span()
+            )
+            
     }
 
     #[inline(always)]
@@ -189,15 +306,21 @@ layout.append(32);
         dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
             name: 'Vec2',
             attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
                 name: 'x',
                 ty: dojo::database::introspect::Ty::Primitive('u32'),
                 attrs: array![].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
                 name: 'y',
                 ty: dojo::database::introspect::Ty::Primitive('u32'),
                 attrs: array![].span()
-            })].span()
+            })
+
+            ].span()
         })
     }
 }
@@ -224,14 +347,22 @@ impl PlainEnumDrop of core::traits::Drop::<PlainEnum>;
 
 impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>> {
     #[inline(always)]
-    fn size() -> usize {
-        1
+    fn size() -> Option<usize> {
+        Option::Some(1)
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                }
 
+                ].span()
+            )
+            
     }
 
     #[inline(always)]
@@ -240,7 +371,8 @@ impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>
             dojo::database::introspect::Enum {
                 name: 'PlainEnum',
                 attrs: array![].span(),
-                children: array![(
+                children: array![
+                (
                     'Left',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![].span()))
@@ -249,7 +381,491 @@ impl PlainEnumIntrospect<> of dojo::database::introspect::Introspect<PlainEnum<>
                     'Right',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![].span()))
-                )].span()
+                )
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithPrimitiveSerde of core::serde::Serde::<EnumWithPrimitive> {
+    fn serialize(self: @EnumWithPrimitive, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithPrimitive> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithPrimitiveCopy of core::traits::Copy::<EnumWithPrimitive>;
+impl EnumWithPrimitiveDrop of core::traits::Drop::<EnumWithPrimitive>;
+
+impl EnumWithPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumWithPrimitive<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(2)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u32>::layout()
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithPrimitive',
+                attrs: array![].span(),
+                children: array![
+                (
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u32')
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u32')
+            )].span()))
+                )
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithStructSerde of core::serde::Serde::<EnumWithStruct> {
+    fn serialize(self: @EnumWithStruct, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithStruct::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithStruct::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithStruct> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithStruct::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithStruct::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithStructCopy of core::traits::Copy::<EnumWithStruct>;
+impl EnumWithStructDrop of core::traits::Drop::<EnumWithStruct>;
+
+impl EnumWithStructIntrospect<> of dojo::database::introspect::Introspect<EnumWithStruct<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+
+                            dojo::database::introspect::FieldLayout {
+                                selector: '',
+                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                            }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithStruct',
+                attrs: array![].span(),
+                children: array![
+                (
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            )].span()))
+                )
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithSimpleArraySerde of core::serde::Serde::<EnumWithSimpleArray> {
+    fn serialize(self: @EnumWithSimpleArray, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithSimpleArray::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithSimpleArray::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithSimpleArray> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithSimpleArray::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithSimpleArray::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithSimpleArrayCopy of core::traits::Copy::<EnumWithSimpleArray>;
+impl EnumWithSimpleArrayDrop of core::traits::Drop::<EnumWithSimpleArray>;
+
+impl EnumWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<EnumWithSimpleArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Array<u32>>::size(),
+Option::Some(1)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+
+                            dojo::database::introspect::FieldLayout {
+                                selector: '',
+                                layout: dojo::database::introspect::Introspect::<Array<u32>>::layout()
+                            }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithSimpleArray',
+                attrs: array![].span(),
+                children: array![
+                (
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Array<u32>>::ty()
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Array<u32>>::ty()
+            )].span()))
+                )
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithByteArraySerde of core::serde::Serde::<EnumWithByteArray> {
+    fn serialize(self: @EnumWithByteArray, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithByteArray::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithByteArray::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithByteArray> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithByteArray::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithByteArray::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithByteArrayCopy of core::traits::Copy::<EnumWithByteArray>;
+impl EnumWithByteArrayDrop of core::traits::Drop::<EnumWithByteArray>;
+
+impl EnumWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<EnumWithByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Layout::ByteArray
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithByteArray',
+                attrs: array![].span(),
+                children: array![
+                (
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<ByteArray>::ty()
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<ByteArray>::ty()
+            )].span()))
+                )
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithSimpleTupleSerde of core::serde::Serde::<EnumWithSimpleTuple> {
+    fn serialize(self: @EnumWithSimpleTuple, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithSimpleTuple::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithSimpleTuple::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithSimpleTuple> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithSimpleTuple::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithSimpleTuple::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithSimpleTupleCopy of core::traits::Copy::<EnumWithSimpleTuple>;
+impl EnumWithSimpleTupleDrop of core::traits::Drop::<EnumWithSimpleTuple>;
+
+impl EnumWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithSimpleTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u8>::layout()
+                        },
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u256>::layout()
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithSimpleTuple',
+                attrs: array![].span(),
+                children: array![
+                (
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u8')
+            ),
+dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u256')
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u8')
+            ),
+dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u256')
+            )].span()))
+                )
+
+                ].span()
+            }
+        )
+    }
+}
+impl EnumWithComplexTupleSerde of core::serde::Serde::<EnumWithComplexTuple> {
+    fn serialize(self: @EnumWithComplexTuple, ref output: core::array::Array<felt252>) {
+        match self {
+            EnumWithComplexTuple::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
+            EnumWithComplexTuple::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
+        }
+    }
+    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumWithComplexTuple> {
+        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
+        core::option::Option::Some(
+            match idx {
+                0 => EnumWithComplexTuple::Left(core::serde::Serde::deserialize(ref serialized)?),
+                1 => EnumWithComplexTuple::Right(core::serde::Serde::deserialize(ref serialized)?),
+                _ => { return core::option::Option::None; }
+            }
+        )
+    }
+}
+impl EnumWithComplexTupleCopy of core::traits::Copy::<EnumWithComplexTuple>;
+impl EnumWithComplexTupleDrop of core::traits::Drop::<EnumWithComplexTuple>;
+
+impl EnumWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<EnumWithComplexTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(2)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u8>::layout()
+                        },
+
+                            dojo::database::introspect::FieldLayout {
+                                selector: '',
+                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                            }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Enum(
+            dojo::database::introspect::Enum {
+                name: 'EnumWithComplexTuple',
+                attrs: array![].span(),
+                children: array![
+                (
+                    'Left',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u8')
+            ),
+dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            )].span()))
+                ),
+(
+                    'Right',
+                    dojo::database::introspect::serialize_member_type(
+                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Ty::Primitive('u8')
+            ),
+dojo::database::introspect::serialize_member_type(
+                @dojo::database::introspect::Introspect::<Vec2>::ty()
+            )].span()))
+                )
+
+                ].span()
             }
         )
     }
@@ -277,15 +893,26 @@ impl EnumTupleOnePrimitiveDrop of core::traits::Drop::<EnumTupleOnePrimitive>;
 
 impl EnumTupleOnePrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumTupleOnePrimitive<>> {
     #[inline(always)]
-    fn size() -> usize {
-        2
+    fn size() -> Option<usize> {
+        Option::Some(2)
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
-layout.append(16);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u16>::layout()
+                        }
 
+                ].span()
+            )
+            
     }
 
     #[inline(always)]
@@ -294,7 +921,8 @@ layout.append(16);
             dojo::database::introspect::Enum {
                 name: 'EnumTupleOnePrimitive',
                 attrs: array![].span(),
-                children: array![(
+                children: array![
+                (
                     'Left',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
@@ -307,70 +935,9 @@ layout.append(16);
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Ty::Primitive('u16')
             )].span()))
-                )].span()
-            }
-        )
-    }
-}
-impl EnumTupleSeveralPrimitiveSerde of core::serde::Serde::<EnumTupleSeveralPrimitive> {
-    fn serialize(self: @EnumTupleSeveralPrimitive, ref output: core::array::Array<felt252>) {
-        match self {
-            EnumTupleSeveralPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
-            EnumTupleSeveralPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
-        }
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumTupleSeveralPrimitive> {
-        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
-        core::option::Option::Some(
-            match idx {
-                0 => EnumTupleSeveralPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
-                1 => EnumTupleSeveralPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
-                _ => { return core::option::Option::None; }
-            }
-        )
-    }
-}
-impl EnumTupleSeveralPrimitiveCopy of core::traits::Copy::<EnumTupleSeveralPrimitive>;
-impl EnumTupleSeveralPrimitiveDrop of core::traits::Drop::<EnumTupleSeveralPrimitive>;
+                )
 
-impl EnumTupleSeveralPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumTupleSeveralPrimitive<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        3
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
-layout.append(8);
-layout.append(8);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumTupleSeveralPrimitive',
-                attrs: array![].span(),
-                children: array![(
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            ), dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            ), dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u8')
-            )].span()))
-                )].span()
+                ].span()
             }
         )
     }
@@ -398,15 +965,36 @@ impl EnumCustomDrop of core::traits::Drop::<EnumCustom>;
 
 impl EnumCustomIntrospect<> of dojo::database::introspect::Introspect<EnumCustom<>> {
     #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<Vec2>::size() + 1
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
-dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
 
+                            dojo::database::introspect::FieldLayout {
+                                selector: '',
+                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                            }
+
+                ].span()
+            )
+            
     }
 
     #[inline(always)]
@@ -415,7 +1003,8 @@ dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
             dojo::database::introspect::Enum {
                 name: 'EnumCustom',
                 attrs: array![].span(),
-                children: array![(
+                children: array![
+                (
                     'Left',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
@@ -428,65 +1017,9 @@ dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Introspect::<Vec2>::ty()
             )].span()))
-                )].span()
-            }
-        )
-    }
-}
-impl EnumPrimitiveSerde of core::serde::Serde::<EnumPrimitive> {
-    fn serialize(self: @EnumPrimitive, ref output: core::array::Array<felt252>) {
-        match self {
-            EnumPrimitive::Left(x) => { core::serde::Serde::serialize(@0, ref output); core::serde::Serde::serialize(x, ref output); },
-            EnumPrimitive::Right(x) => { core::serde::Serde::serialize(@1, ref output); core::serde::Serde::serialize(x, ref output); },
-        }
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<EnumPrimitive> {
-        let idx: felt252 = core::serde::Serde::deserialize(ref serialized)?;
-        core::option::Option::Some(
-            match idx {
-                0 => EnumPrimitive::Left(core::serde::Serde::deserialize(ref serialized)?),
-                1 => EnumPrimitive::Right(core::serde::Serde::deserialize(ref serialized)?),
-                _ => { return core::option::Option::None; }
-            }
-        )
-    }
-}
-impl EnumPrimitiveCopy of core::traits::Copy::<EnumPrimitive>;
-impl EnumPrimitiveDrop of core::traits::Drop::<EnumPrimitive>;
+                )
 
-impl EnumPrimitiveIntrospect<> of dojo::database::introspect::Introspect<EnumPrimitive<>> {
-    #[inline(always)]
-    fn size() -> usize {
-        2
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
-layout.append(64);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Enum(
-            dojo::database::introspect::Enum {
-                name: 'EnumPrimitive',
-                attrs: array![].span(),
-                children: array![(
-                    'Left',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u64')
-            )].span()))
-                ),
-(
-                    'Right',
-                    dojo::database::introspect::serialize_member_type(
-                    @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
-                @dojo::database::introspect::Ty::Primitive('u64')
-            )].span()))
-                )].span()
+                ].span()
             }
         )
     }
@@ -514,17 +1047,46 @@ impl EnumTupleMixDrop of core::traits::Drop::<EnumTupleMix>;
 
 impl EnumTupleMixIntrospect<> of dojo::database::introspect::Introspect<EnumTupleMix<>> {
     #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<Vec2>::size() + dojo::database::introspect::Introspect::<EnumCustom>::size() + 2
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+dojo::database::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(2)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
-dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
-layout.append(64);
-dojo::database::introspect::Introspect::<EnumCustom>::layout(ref layout);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Tuple(
+                array![
+                dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                },
 
+                            dojo::database::introspect::FieldLayout {
+                                selector: '',
+                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u64>::layout()
+                        },
+
+                            dojo::database::introspect::FieldLayout {
+                                selector: '',
+                                layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                            }
+
+                ].span()
+            )
+            
     }
 
     #[inline(always)]
@@ -533,14 +1095,17 @@ dojo::database::introspect::Introspect::<EnumCustom>::layout(ref layout);
             dojo::database::introspect::Enum {
                 name: 'EnumTupleMix',
                 attrs: array![].span(),
-                children: array![(
+                children: array![
+                (
                     'Left',
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Introspect::<Vec2>::ty()
-            ), dojo::database::introspect::serialize_member_type(
+            ),
+dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Ty::Primitive('u64')
-            ), dojo::database::introspect::serialize_member_type(
+            ),
+dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Introspect::<EnumCustom>::ty()
             )].span()))
                 ),
@@ -549,55 +1114,482 @@ dojo::database::introspect::Introspect::<EnumCustom>::layout(ref layout);
                     dojo::database::introspect::serialize_member_type(
                     @dojo::database::introspect::Ty::Tuple(array![dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Introspect::<Vec2>::ty()
-            ), dojo::database::introspect::serialize_member_type(
+            ),
+dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Ty::Primitive('u64')
-            ), dojo::database::introspect::serialize_member_type(
+            ),
+dojo::database::introspect::serialize_member_type(
                 @dojo::database::introspect::Introspect::<EnumCustom>::ty()
             )].span()))
-                )].span()
+                )
+
+                ].span()
             }
         )
     }
 }
-impl PositionCopy of core::traits::Copy::<Position>;
-impl PositionDrop of core::traits::Drop::<Position>;
+impl StructWithPrimitivesCopy of core::traits::Copy::<StructWithPrimitives>;
+impl StructWithPrimitivesDrop of core::traits::Drop::<StructWithPrimitives>;
 
-impl PositionIntrospect<> of dojo::database::introspect::Introspect<Position<>> {
+impl StructWithPrimitivesIntrospect<> of dojo::database::introspect::Introspect<StructWithPrimitives<>> {
     #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<Vec2>::size() + 2
+    fn size() -> Option<usize> {
+        Option::Some(2)
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(8);
-dojo::database::introspect::Introspect::<Vec2>::layout(ref layout);
-layout.append(16);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                                selector: selector!("after"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![16].span())
+                            }
 
+                ].span()
+            )
+            
     }
 
     #[inline(always)]
     fn ty() -> dojo::database::introspect::Ty {
         dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'Position',
+            name: 'StructWithPrimitives',
             attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
                 name: 'player',
                 ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
                 attrs: array!['key'].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
                 name: 'before',
                 ty: dojo::database::introspect::Ty::Primitive('u8'),
                 attrs: array![].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'vec',
-                ty: dojo::database::introspect::Introspect::<Vec2>::ty(),
-                attrs: array![].span()
-            }), dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
                 name: 'after',
                 ty: dojo::database::introspect::Ty::Primitive('u16'),
                 attrs: array![].span()
-            })].span()
+            })
+
+            ].span()
+        })
+    }
+}
+impl StructWithStructCopy of core::traits::Copy::<StructWithStruct>;
+impl StructWithStructDrop of core::traits::Drop::<StructWithStruct>;
+
+impl StructWithStructIntrospect<> of dojo::database::introspect::Introspect<StructWithStruct<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+Option::Some(1)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                                selector: selector!("after"),
+                                layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                            }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithStruct',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Introspect::<Vec2>::ty(),
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithSimpleArrayCopy of core::traits::Copy::<StructWithSimpleArray>;
+impl StructWithSimpleArrayDrop of core::traits::Drop::<StructWithSimpleArray>;
+
+impl StructWithSimpleArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithSimpleArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Array(
+                                array![
+                                    dojo::database::introspect::FieldLayout {
+                                        selector: '',
+                                        layout: dojo::database::introspect::Introspect::<u32>::layout()
+                                    }
+                                ].span()
+                            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithSimpleArray',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithByteArrayCopy of core::traits::Copy::<StructWithByteArray>;
+impl StructWithByteArrayDrop of core::traits::Drop::<StructWithByteArray>;
+
+impl StructWithByteArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithByteArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::ByteArray
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithByteArray',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            })
+
+            ].span()
+        })
+    }
+}
+impl StructWithComplexArrayCopy of core::traits::Copy::<StructWithComplexArray>;
+impl StructWithComplexArrayDrop of core::traits::Drop::<StructWithComplexArray>;
+
+impl StructWithComplexArrayIntrospect<> of dojo::database::introspect::Introspect<StructWithComplexArray<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::None
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Array(
+                                array![
+                                    dojo::database::introspect::FieldLayout {
+                                        selector: '',
+                                        layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                                    }
+                                ].span()
+                            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithComplexArray',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithSimpleTupleCopy of core::traits::Copy::<StructWithSimpleTuple>;
+impl StructWithSimpleTupleDrop of core::traits::Drop::<StructWithSimpleTuple>;
+
+impl StructWithSimpleTupleIntrospect<> of dojo::database::introspect::Introspect<StructWithSimpleTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(4)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Tuple(
+                                array![
+                                dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u8>::layout()
+                        }
+                        ,
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u256>::layout()
+                        }
+                        
+                                ].span()
+                            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithSimpleTuple',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::Tuple(
+                            array![
+                                dojo::database::introspect::serialize_member_type(
+                                    @dojo::database::introspect::Ty::Primitive('u8')
+                                ),
+dojo::database::introspect::serialize_member_type(
+                                    @dojo::database::introspect::Ty::Primitive('u256')
+                                )
+                            ].span()
+                        ),
+                        attrs: array![].span()
+                    })
+
+            ].span()
+        })
+    }
+}
+impl StructWithComplexTupleCopy of core::traits::Copy::<StructWithComplexTuple>;
+impl StructWithComplexTupleDrop of core::traits::Drop::<StructWithComplexTuple>;
+
+impl StructWithComplexTupleIntrospect<> of dojo::database::introspect::Introspect<StructWithComplexTuple<>> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        let sizes : Array<Option<usize>> = array![
+                        dojo::database::introspect::Introspect::<Vec2>::size(),
+dojo::database::introspect::Introspect::<EnumCustom>::size(),
+Option::Some(2)
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {
+                        return Option::None;
+                    }
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("before"),
+                                layout: dojo::database::introspect::Layout::Fixed(array![8].span())
+                            },
+dojo::database::introspect::FieldLayout {
+                            selector: selector!("after"),
+                            layout: dojo::database::introspect::Layout::Tuple(
+                                array![
+                                dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<u8>::layout()
+                        }
+                        ,
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<Vec2>::layout()
+                        }
+                        ,
+dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<EnumCustom>::layout()
+                        }
+                        
+                                ].span()
+                            )
+                        }
+
+                ].span()
+            )
+            
+    }
+
+    #[inline(always)]
+    fn ty() -> dojo::database::introspect::Ty {
+        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
+            name: 'StructWithComplexTuple',
+            attrs: array![].span(),
+            children: array![
+                dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'player',
+                ty: dojo::database::introspect::Ty::Primitive('ContractAddress'),
+                attrs: array!['key'].span()
+            }),
+dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {
+                name: 'before',
+                ty: dojo::database::introspect::Ty::Primitive('u8'),
+                attrs: array![].span()
+            }),
+dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 'after',
+                        ty: dojo::database::introspect::Ty::Tuple(
+                            array![
+                                dojo::database::introspect::serialize_member_type(
+                                    @dojo::database::introspect::Ty::Primitive('u8')
+                                )
+                            ].span()
+                        ),
+                        attrs: array![].span()
+                    })
+
+            ].span()
         })
     }
 }
@@ -616,14 +1608,22 @@ impl GenericStructSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> o
 
 impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<GenericStruct<T>> {
     #[inline(always)]
-    fn size() -> usize {
-        dojo::database::introspect::Introspect::<T>::size() + 0
+    fn size() -> Option<usize> {
+        dojo::database::introspect::Introspect::<T>::size()
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        dojo::database::introspect::Introspect::<T>::layout(ref layout);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+                array![
+                dojo::database::introspect::FieldLayout {
+                                selector: selector!("t"),
+                                layout: dojo::database::introspect::Introspect::<T>::layout()
+                            }
 
+                ].span()
+            )
+            
     }
 
     #[inline(always)]
@@ -631,171 +1631,31 @@ impl GenericStructIntrospect<T, impl TIntrospect: dojo::database::introspect::In
         dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
             name: 'GenericStruct',
             attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 't',
-                ty: dojo::database::introspect::Introspect::<T>::ty(),
-                attrs: array![].span()
-            })].span()
-        })
-    }
-}
-impl FeltsArrayCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<FeltsArray<T>>;
-impl FeltsArrayDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<FeltsArray<T>>;
-impl FeltsArraySerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<FeltsArray<T>> {
-    fn serialize(self: @FeltsArray<T>, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.felts, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<FeltsArray<T>> {
-        core::option::Option::Some(FeltsArray {
-            felts: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
+            children: array![
+                dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {
+                        name: 't',
+                        ty: dojo::database::introspect::Introspect::<T>::ty(),
+                        attrs: array![].span()
+                    })
 
-impl FeltsArrayIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<FeltsArray<T>> {
-    #[inline(always)]
-    fn size() -> usize {
-        1 + 10 + 0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'FeltsArray',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'felts',
-                ty: dojo::database::introspect::Ty::Array(10),
-                attrs: array![].span()
-            })].span()
-        })
-    }
-}
-impl CapacityInvalidTypeCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<CapacityInvalidType<T>>;
-impl CapacityInvalidTypeDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<CapacityInvalidType<T>>;
-impl CapacityInvalidTypeSerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<CapacityInvalidType<T>> {
-    fn serialize(self: @CapacityInvalidType<T>, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.value, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<CapacityInvalidType<T>> {
-        core::option::Option::Some(CapacityInvalidType {
-            value: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-impl CapacityInvalidTypeIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<CapacityInvalidType<T>> {
-    #[inline(always)]
-    fn size() -> usize {
-        1 + 10 + 0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-layout.append(251);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'CapacityInvalidType',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'value',
-                ty: dojo::database::introspect::Ty::Array(10),
-                attrs: array![].span()
-            })].span()
-        })
-    }
-}
-impl FeltsArrayBadCapacityCopy<T, +core::traits::Copy<T>> of core::traits::Copy::<FeltsArrayBadCapacity<T>>;
-impl FeltsArrayBadCapacityDrop<T, +core::traits::Drop<T>> of core::traits::Drop::<FeltsArrayBadCapacity<T>>;
-impl FeltsArrayBadCapacitySerde<T, +core::serde::Serde<T>, +core::traits::Destruct<T>> of core::serde::Serde::<FeltsArrayBadCapacity<T>> {
-    fn serialize(self: @FeltsArrayBadCapacity<T>, ref output: core::array::Array<felt252>) {
-        core::serde::Serde::serialize(self.felts, ref output)
-    }
-    fn deserialize(ref serialized: core::array::Span<felt252>) -> core::option::Option<FeltsArrayBadCapacity<T>> {
-        core::option::Option::Some(FeltsArrayBadCapacity {
-            felts: core::serde::Serde::deserialize(ref serialized)?,
-        })
-    }
-}
-
-impl FeltsArrayBadCapacityIntrospect<T, impl TIntrospect: dojo::database::introspect::Introspect<T>> of dojo::database::introspect::Introspect<FeltsArrayBadCapacity<T>> {
-    #[inline(always)]
-    fn size() -> usize {
-        1 + 0 + 0
-    }
-
-    #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        layout.append(251);
-
-    }
-
-    #[inline(always)]
-    fn ty() -> dojo::database::introspect::Ty {
-        dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {
-            name: 'FeltsArrayBadCapacity',
-            attrs: array![].span(),
-            children: array![dojo::database::introspect::serialize_member(@dojo::database::introspect::Member {
-                name: 'felts',
-                ty: dojo::database::introspect::Ty::Array(0),
-                attrs: array![].span()
-            })].span()
+            ].span()
         })
     }
 }
 
 //! > expected_diagnostics
-error: Unsupported attribute.
- --> test_src/lib.cairo:61:5
-    #[capacity(10)]
-    ^*************^
+error: Dynamic arrays are not supported.
+ --> test_src/lib.cairo:29:9
+    Left: Array<u32>,
+        ^**********^
 
-error: Capacity is only supported for Array<felt252> or Span<felt252>.
- --> test_src/lib.cairo:67:5
-    #[capacity(10)]
-    ^*************^
+error: Only primitive types are supported inside tuples.
+ --> test_src/lib.cairo:122:5
+    after: (u8, Vec2, EnumCustom),
+    ^***************************^
 
-error: Unsupported attribute.
- --> test_src/lib.cairo:67:5
-    #[capacity(10)]
-    ^*************^
-
-error: Capacity must be greater than 0.
- --> test_src/lib.cairo:73:5
-    #[capacity(0)]
-    ^************^
-
-error: Unsupported attribute.
- --> test_src/lib.cairo:73:5
-    #[capacity(0)]
-    ^************^
+error: Only primitive types are supported inside tuples.
+ --> test_src/lib.cairo:122:5
+    after: (u8, Vec2, EnumCustom),
+    ^***************************^

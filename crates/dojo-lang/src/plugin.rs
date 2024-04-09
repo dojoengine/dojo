@@ -27,7 +27,6 @@ use url::Url;
 
 use crate::contract::DojoContract;
 use crate::event::handle_event_struct;
-use crate::inline_macros::array_cap::ArrayCapMacro;
 use crate::inline_macros::delete::DeleteMacro;
 use crate::inline_macros::emit::EmitMacro;
 use crate::inline_macros::get::GetMacro;
@@ -243,7 +242,6 @@ pub fn dojo_plugin_suite() -> PluginSuite {
         .add_inline_macro_plugin::<DeleteMacro>()
         .add_inline_macro_plugin::<GetMacro>()
         .add_inline_macro_plugin::<SetMacro>()
-        .add_inline_macro_plugin::<ArrayCapMacro>()
         .add_inline_macro_plugin::<EmitMacro>();
 
     suite
@@ -474,9 +472,6 @@ impl MacroPlugin for BuiltinDojoPlugin {
             "key".to_string(),
             "computed".to_string(),
             DOJO_MODEL_ATTR.to_string(),
-            // Not adding capacity for now, this will automatically
-            // makes Scarb emitting a diagnostic saying this attribute is not supported.
-            // "capacity".to_string(),
         ]
     }
 }

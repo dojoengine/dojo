@@ -12,9 +12,23 @@ use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
     IUpgradeableWorldDispatcherTrait, ResourceMetadata
 };
-use dojo::database::introspect::Introspect;
-use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
+use dojo::database::introspect::{Introspect, Layout, FieldLayout};
+use dojo::database::MAX_ARRAY_LENGTH;
+use dojo::test_utils::{spawn_test_world, deploy_with_world_address, assert_array};
 use dojo::benchmarks::{Character, end};
+use dojo::model::Model;
+
+#[derive(Introspect, Copy, Drop, Serde)]
+enum OneEnum {
+    FirstArm: (u8, felt252),
+    SecondArm: (u8, felt252),
+}
+
+#[derive(Introspect, Drop, Serde)]
+enum AnotherEnum {
+    FirstArm: (u8, OneEnum, ByteArray),
+    SecondArm: (u8, OneEnum, ByteArray),
+}
 
 #[derive(Introspect, Copy, Drop, Serde)]
 #[dojo::model]
@@ -25,12 +39,93 @@ struct Foo {
     b: u128,
 }
 
+fn create_foo() -> Span<felt252> {
+    array![1, 2].span()
+}
+
 #[derive(Introspect, Copy, Drop, Serde)]
 #[dojo::model]
 struct Fizz {
     #[key]
     caller: ContractAddress,
     a: felt252
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct StructSimpleModel {
+    #[key]
+    caller: ContractAddress,
+    a: felt252,
+    b: u128,
+}
+
+fn create_struct_simple_model() -> Span<felt252> {
+    array![1, 2].span()
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct StructWithTuple {
+    #[key]
+    caller: ContractAddress,
+    a: (u8, u64),
+}
+
+fn create_struct_with_tuple() -> Span<felt252> {
+    array![12, 58].span()
+}
+
+#[derive(Introspect, Drop, Serde)]
+#[dojo::model]
+struct StructSimpleArrayModel {
+    #[key]
+    caller: ContractAddress,
+    a: felt252,
+    b: Array<u64>,
+    c: u128,
+}
+
+fn create_struct_simple_array_model() -> Span<felt252> {
+    array![1, 4, 10, 20, 30, 40, 2].span()
+}
+
+#[derive(Introspect, Drop, Serde)]
+#[dojo::model]
+struct StructByteArrayModel {
+    #[key]
+    caller: ContractAddress,
+    a: felt252,
+    b: ByteArray,
+}
+
+fn create_struct_byte_array_model() -> Span<felt252> {
+    array![1, 3, 'first', 'second', 'third', 'pending', 7].span()
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+struct ModelData {
+    x: u256,
+    y: u32,
+    z: felt252
+}
+
+#[derive(Introspect, Drop, Serde)]
+#[dojo::model]
+struct StructComplexArrayModel {
+    #[key]
+    caller: ContractAddress,
+    a: felt252,
+    b: Array<ModelData>,
+    c: AnotherEnum,
+}
+
+fn create_struct_complex_array_model() -> Span<felt252> {
+    array![1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 1, 1, 0, 0, 123, 1, 'first', 'pending', 7].span()
+}
+
+fn get_key_test() -> Span<felt252> {
+    array![0x01234].span()
 }
 
 #[starknet::interface]
@@ -87,13 +182,13 @@ mod bar {
         }
 
         fn delete_foo(self: @ContractState) {
-            let mut layout = array![];
-            Introspect::<Foo>::layout(ref layout);
             self
                 .world
                 .read()
                 .delete_entity(
-                    selector!("Foo"), array![get_caller_address().into()].span(), layout.span()
+                    selector!("Foo"),
+                    array![get_caller_address().into()].span(),
+                    dojo::model::Model::<Foo>::layout()
                 );
         }
 
@@ -174,7 +269,6 @@ fn test_system() {
 }
 
 #[test]
-#[available_gas(6000000)]
 fn test_delete() {
     let (world, bar_contract) = deploy_world_and_bar();
 
@@ -262,24 +356,6 @@ fn test_set_entity_unauthorized() {
     bar_contract.set_foo(420, 1337);
 }
 
-// This test is probably irrelevant now because we have no systems,
-// so all `set_entity` call are from arbitrary contracts.
-// Owners can still update via unregistered contracts/call from account
-// #[test]
-// #[available_gas(8000000)]
-// #[should_panic]
-// fn test_set_entity_directly() {
-//     // Spawn world
-//     let world = deploy_world();
-//     world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
-
-//     let bar_contract = IbarDispatcher {
-//         contract_address: deploy_with_world_address(bar::TEST_CLASS_HASH, world)
-//     };
-
-//     set!(world, Foo { caller: starknet::contract_address_const::<0x1337>(), a: 420, b: 1337 });
-// }
-
 // Utils
 fn deploy_world() -> IWorldDispatcher {
     spawn_test_world(array![])
@@ -292,8 +368,7 @@ fn test_set_metadata_world() {
 
     let metadata = ResourceMetadata {
         resource_id: 0,
-        metadata_uri: array_cap!(3, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json'))
-            .span()
+        metadata_uri: format!("ipfs:world_with_a_long_uri_that")
     };
 
     world.set_metadata(metadata.clone());
@@ -319,7 +394,8 @@ fn test_set_metadata_model_writer() {
     bar_contract.set_foo(1337, 1337);
 
     let metadata = ResourceMetadata {
-        resource_id: selector!("Foo"), metadata_uri: array_cap!(3, ('ipfs:bob',)).span(),
+        resource_id: selector!("Foo"),
+        metadata_uri: format!("ipfs:bob")
     };
 
     // A system that has write access on a model should be able to update the metadata.
@@ -335,7 +411,8 @@ fn test_set_metadata_same_model_rules() {
     let world = deploy_world();
 
     let metadata = ResourceMetadata { // World metadata.
-        resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:bob',)).span(),
+        resource_id: 0, 
+        metadata_uri: format!("ipfs:bob"),
     };
 
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -611,4 +688,392 @@ fn test_upgradeable_world_from_non_owner() {
         contract_address: world.contract_address
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+fn test_set_entity_with_fixed_layout() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("foo");
+    let keys = get_key_test();
+    let values = create_foo();
+    let layout = dojo::model::Model::<Foo>::layout();
+
+    world.set_entity(selector, get_key_test(), values, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+    assert_array(read_values, values);
+}
+
+#[test]
+fn test_set_entity_with_struct_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_simple_model");
+    let keys = get_key_test();
+    let values = create_struct_simple_model();
+    let layout = dojo::model::Model::<StructSimpleModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+    assert_array(read_values, values);
+}
+
+#[test]
+fn test_set_entity_with_struct_tuple_layout() {
+    let world = deploy_world();
+    world.register_model(struct_with_tuple::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_with_tuple");
+    let keys = get_key_test();
+    let values = create_struct_with_tuple();
+    let layout = dojo::model::Model::<StructWithTuple>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+ 
+    let read_values = world.entity(selector, keys, layout);
+    assert_array(read_values, values);
+}
+
+#[test]
+fn test_set_entity_with_struct_simple_array_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_simple_array_model");
+    let keys = get_key_test();
+    let values = create_struct_simple_array_model();
+    let layout = dojo::model::Model::<StructSimpleArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+    assert_array(read_values, values);
+}
+
+#[test]
+fn test_set_entity_with_struct_complex_array_layout() {
+    let world = deploy_world();
+    world.register_model(struct_complex_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_complex_array_model");
+    let keys = get_key_test();
+    let values = create_struct_complex_array_model();
+    let layout = dojo::model::Model::<StructComplexArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+    assert_array(read_values, values);
+}
+
+#[test]
+fn test_set_entity_with_struct_layout_and_byte_array() {
+    let world = deploy_world();
+    world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_byte_array_model");
+    let keys = get_key_test();
+    let values = create_struct_byte_array_model();
+    let layout = dojo::model::Model::<StructByteArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+    assert_array(read_values, values);
+}
+
+fn assert_empty_array(values: Span<felt252>) {
+    let mut i = 0;
+    loop {
+        if i >= values.len() { break; }
+        assert!(*values.at(i) == 0);
+        i += 1;
+    };
+}
+
+#[test]
+fn test_delete_entity_with_fixed_layout() {
+    let world = deploy_world();
+    world.register_model(foo::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("foo");
+    let keys = get_key_test();
+    let values = create_foo();
+    let layout = dojo::model::Model::<Foo>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    world.delete_entity(selector, keys, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+
+    assert!(read_values.len() == values.len());
+    assert_empty_array(read_values);
+}
+
+#[test]
+fn test_delete_entity_with_simple_struct_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_simple_model");
+    let keys = get_key_test();
+    let values = create_struct_simple_model();
+    let layout = dojo::model::Model::<StructSimpleModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    world.delete_entity(selector, keys, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+
+    assert!(read_values.len() == values.len());
+    assert_empty_array(read_values);
+
+}
+
+#[test]
+fn test_delete_entity_with_struct_simple_array_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_simple_array_model");
+    let keys = get_key_test();
+    let values = create_struct_simple_array_model();
+    let layout = dojo::model::Model::<StructSimpleArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    world.delete_entity(selector, keys, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+
+    // array length set to 0, so the expected value span is shorter than the initial values
+    let expected_values = array![0, 0, 0].span();
+
+    assert!(read_values.len() == expected_values.len());
+    assert_empty_array(read_values);
+
+}
+
+#[test]
+fn test_delete_entity_with_complex_array_struct_layout() {
+    let world = deploy_world();
+    world.register_model(struct_complex_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_complex_array_model");
+    let keys = get_key_test();
+    let values = create_struct_complex_array_model();
+
+    let layout = dojo::model::Model::<StructComplexArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+
+    world.delete_entity(selector, keys, layout);
+
+    let read_values = world.entity(selector, keys, layout);
+
+    // array length set to 0, so the expected value span is shorter than the initial values
+    let expected_values =  array![0, 0, 0, 0, 0, 0, 0, 0, 0, 0].span();
+
+    assert!(read_values.len() == expected_values.len());
+    assert_empty_array(read_values);
+}
+
+#[test]
+#[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
+fn test_set_entity_with_unexpected_array_model_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let layout = Layout::Array(
+        array![
+            FieldLayout {
+                selector:'',
+                layout: dojo::database::introspect::Introspect::<felt252>::layout()
+            },
+        ].span()
+    );
+
+    world.set_entity(
+        selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
+    );
+}
+
+#[test]
+#[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
+fn test_set_entity_with_unexpected_tuple_model_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let layout = Layout::Tuple(
+        array![
+            FieldLayout {
+                selector:'',
+                layout: dojo::database::introspect::Introspect::<felt252>::layout()
+            },
+        ].span()
+    );
+
+    world.set_entity(
+        selector!("struct_simple_array_model"), array![].span(), array![].span(), layout
+    );
+}
+
+#[test]
+#[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
+fn test_delete_entity_with_unexpected_array_model_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let layout = Layout::Array(
+        array![
+            FieldLayout {
+                selector:'',
+                layout: dojo::database::introspect::Introspect::<felt252>::layout()
+            },
+        ].span()
+    );
+
+    world.delete_entity(
+        selector!("struct_simple_array_model"), array![].span(), layout
+    );
+}
+
+#[test]
+#[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
+fn test_delete_entity_with_unexpected_tuple_model_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let layout = Layout::Tuple(
+        array![
+            FieldLayout {
+                selector:'',
+                layout: dojo::database::introspect::Introspect::<felt252>::layout()
+            },
+        ].span()
+    );
+
+    world.delete_entity(
+        selector!("struct_simple_array_model"), array![].span(), layout
+    );
+}
+
+#[test]
+#[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
+fn test_get_entity_with_unexpected_array_model_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let layout = Layout::Array(
+        array![
+            FieldLayout {
+                selector:'',
+                layout: dojo::database::introspect::Introspect::<felt252>::layout()
+            },
+        ].span()
+    );
+
+    world.entity(
+        selector!("struct_simple_array_model"), array![].span(), layout
+    );
+}
+
+#[test]
+#[should_panic(expected: ("Unexpected layout type for a model.", 'ENTRYPOINT_FAILED'))]
+fn test_get_entity_with_unexpected_tuple_model_layout() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let layout = Layout::Tuple(
+        array![
+            FieldLayout {
+                selector:'',
+                layout: dojo::database::introspect::Introspect::<felt252>::layout()
+            },
+        ].span()
+    );
+
+    world.entity(
+        selector!("struct_simple_array_model"), array![].span(), layout
+    );
+}
+
+
+#[test]
+#[should_panic(expected: ('Invalid values length', 'ENTRYPOINT_FAILED',))]
+fn test_set_entity_with_bad_values_length_error_for_array_layout() {
+    let world = deploy_world();
+
+    let selector = selector!("a_selector");
+    let keys = get_key_test();
+    let layout = Layout::Struct(
+        array![
+            FieldLayout {
+                selector: selector!("a"),
+                layout: Layout::Array(
+                    array![
+                        FieldLayout {
+                            selector:'',
+                            layout: dojo::database::introspect::Introspect::<felt252>::layout()
+                        }
+                    ].span()
+                )
+            },
+        ].span()
+    );
+
+    world.set_entity(selector, keys, array![].span(), layout);
+}
+
+#[test]
+#[should_panic(expected: ('invalid array length', 'ENTRYPOINT_FAILED',))]
+fn test_set_entity_with_too_big_array_length() {
+    let world = deploy_world();
+    world.register_model(struct_simple_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_simple_array_model");
+    let keys = get_key_test();
+    let values: Span<felt252> = array![1, MAX_ARRAY_LENGTH.try_into().unwrap() + 1, 10, 20, 30, 40, 2].span();
+    let layout = dojo::model::Model::<StructSimpleArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+}
+
+#[test]
+#[should_panic(expected: ('invalid array length', 'ENTRYPOINT_FAILED',))]
+fn test_set_entity_with_struct_layout_and_bad_byte_array_length() {
+    let world = deploy_world();
+    world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_byte_array_model");
+    let keys = get_key_test();
+    let values : Span<felt252> = array![
+        1, MAX_ARRAY_LENGTH.try_into().unwrap(), 'first', 'second', 'third', 'pending', 7
+    ].span();
+    let layout = dojo::model::Model::<StructByteArrayModel>::layout();
+
+    world.set_entity(selector, keys, values, layout);
+}
+
+#[test]
+#[should_panic(expected: ('Invalid values length', 'ENTRYPOINT_FAILED',))]
+fn test_set_entity_with_struct_layout_and_bad_value_length_for_byte_array() {
+    let world = deploy_world();
+    world.register_model(struct_byte_array_model::TEST_CLASS_HASH.try_into().unwrap());
+
+    let selector = selector!("struct_byte_array_model");
+    let keys = get_key_test();
+    let values: Span<felt252> = array![
+        1, 3, 'first', 'second', 'third', 'pending'
+    ].span();
+    let layout = dojo::model::Model::<StructByteArrayModel>::layout();
+
+
+    world.set_entity(selector, keys, values, layout);
 }

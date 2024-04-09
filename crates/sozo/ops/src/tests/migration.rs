@@ -21,7 +21,7 @@ use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
 use starknet::core::types::{BlockId, BlockTag};
-use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
+use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -198,7 +198,7 @@ async fn migrate_with_metadata() {
     let resource = world_reader.metadata(&FieldElement::ZERO).call().await.unwrap();
     let element_name = WORLD_CONTRACT_NAME.to_string();
 
-    let full_uri = get_and_check_metadata_uri(&element_name, &resource.metadata_uri);
+    let full_uri = resource.metadata_uri.to_string().unwrap();
     let resource_bytes = get_ipfs_resource_data(&client, &element_name, &full_uri).await;
 
     let metadata = resource_bytes_to_world_metadata(&resource_bytes, &element_name);
@@ -431,47 +431,6 @@ async fn check_ipfs_metadata(
     check_artifact_fields(client, &metadata, expected_metadata, element_name).await;
 }
 
-/// Rebuild the full metadata URI from an array of 3 FieldElement.
-///
-/// # Arguments
-///
-/// * `element_name` - name of the element (model or contract) linked to the metadata URI.
-/// * `uri` - uri as an array of 3 FieldElement.
-///
-/// # Returns
-///
-/// A [`String`] containing the full metadata URI.
-fn get_and_check_metadata_uri(element_name: &String, uri: &Vec<FieldElement>) -> String {
-    assert!(uri.len() == 3, "bad metadata URI length for {} ({:#?})", element_name, uri);
-
-    let mut i = 0;
-    let mut full_uri = "".to_string();
-
-    while i < uri.len() && uri[i] != FieldElement::ZERO {
-        let uri_str = parse_cairo_short_string(&uri[i]);
-        assert!(
-            uri_str.is_ok(),
-            "unable to parse the part {} of the metadata URI for {}",
-            i + 1,
-            element_name
-        );
-
-        full_uri = format!("{}{}", full_uri, uri_str.unwrap());
-
-        i += 1;
-    }
-
-    assert!(!full_uri.is_empty(), "metadata URI is empty for {}", element_name);
-
-    assert!(
-        full_uri.starts_with("ipfs://"),
-        "metadata URI for {} is not an IPFS artifact",
-        element_name
-    );
-
-    full_uri
-}
-
 /// Check an artifact metadata read from the resource registry against its value
 /// in the local Dojo metadata.
 ///
@@ -499,6 +458,11 @@ async fn check_artifact_metadata<P: starknet::providers::Provider + Sync>(
     );
     let expected_artifact = expected_artifact.unwrap();
 
-    let full_uri = get_and_check_metadata_uri(element_name, &resource.metadata_uri);
-    check_ipfs_metadata(client, element_name, &full_uri, expected_artifact).await;
+    check_ipfs_metadata(
+        client,
+        element_name,
+        &resource.metadata_uri.to_string().unwrap(),
+        expected_artifact,
+    )
+    .await;
 }

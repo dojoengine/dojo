@@ -39,6 +39,52 @@
     ]
   },
   {
+    "type": "struct",
+    "name": "dojo::database::introspect::FieldLayout",
+    "members": [
+      {
+        "name": "selector",
+        "type": "core::felt252"
+      },
+      {
+        "name": "layout",
+        "type": "dojo::database::introspect::Layout"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::FieldLayout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::FieldLayout>"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "dojo::database::introspect::Layout",
+    "variants": [
+      {
+        "name": "Fixed",
+        "type": "core::array::Span::<core::integer::u8>"
+      },
+      {
+        "name": "Struct",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "Tuple",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "Array",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      }
+    ]
+  },
+  {
     "type": "enum",
     "name": "core::bool",
     "variants": [
@@ -193,7 +239,7 @@
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [
@@ -221,22 +267,11 @@
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "base",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "core::starknet::class_hash::ClassHash"
-          }
-        ],
-        "state_mutability": "view"
       },
       {
         "type": "function",
@@ -252,11 +287,22 @@
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [],
         "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "base",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::class_hash::ClassHash"
+          }
+        ],
+        "state_mutability": "view"
       },
       {
         "type": "function",

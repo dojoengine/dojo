@@ -98,6 +98,51 @@ struct Player {
 #[dojo::model]
 type OtherPlayer = Player;
 
+#[dojo::model]
+struct ModelWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: Array<u8>    
+}
+
+#[dojo::model]
+struct ModelWithByteArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: ByteArray
+}
+
+#[dojo::model]
+struct ModelWithComplexArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: Array<Vec3>
+}
+
+#[dojo::model]
+struct ModelWithTuple {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, u16, u32)
+}
+
+#[dojo::model]
+struct ModelWithTupleNoPrimitives {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, Vec3, u32)
+}
+
 //! > expanded_cairo_code
 #[dojo::model(version: 0)]
 #[dojo::model(version: 0)]
@@ -193,8 +238,53 @@ struct Player {
 #[dojo::model]
 type OtherPlayer = Player;
 
+#[dojo::model]
+struct ModelWithSimpleArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: Array<u8>    
+}
+
+#[dojo::model]
+struct ModelWithByteArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: ByteArray
+}
+
+#[dojo::model]
+struct ModelWithComplexArray {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: Array<Vec3>
+}
+
+#[dojo::model]
+struct ModelWithTuple {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, u16, u32)
+}
+
+#[dojo::model]
+struct ModelWithTupleNoPrimitives {
+    #[key]
+    player: ContractAddress,
+
+    x: u16,
+    y: (u8, Vec3, u32)
+}
+
 impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersions> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> BadModelMultipleVersions {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelMultipleVersions {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelMultipleVersions"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -216,18 +306,23 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
     }
 
     #[inline(always)]
-    fn name(self: @BadModelMultipleVersions) -> ByteArray {
+    fn name() -> ByteArray {
         "BadModelMultipleVersions"
     }
 
     #[inline(always)]
-    fn version(self: @BadModelMultipleVersions) -> u8 {
-        1
+    fn version() -> u8 {
+        0
     }
 
     #[inline(always)]
-    fn selector(self: @BadModelMultipleVersions) -> felt252 {
-        selector!("BadModelMultipleVersions")
+    fn selector() -> felt252 {
+        "BadModelMultipleVersions"
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelMultipleVersions) -> felt252 {
+        dojo::model::Model::<BadModelMultipleVersions>::selector()
     }
 
     #[inline(always)]
@@ -245,16 +340,29 @@ impl BadModelMultipleVersionsModel of dojo::model::Model<BadModelMultipleVersion
     }
 
     #[inline(always)]
-    fn layout(self: @BadModelMultipleVersions) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<BadModelMultipleVersions>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelMultipleVersions>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @BadModelMultipleVersions) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @BadModelMultipleVersions) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelMultipleVersions>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelMultipleVersions>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -274,32 +382,27 @@ mod bad_model_multiple_versions {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("BadModelMultipleVersions")
+           dojo::model::Model::<BadModelMultipleVersions>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "BadModelMultipleVersions"
+           dojo::model::Model::<BadModelMultipleVersions>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<BadModelMultipleVersions>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<BadModelMultipleVersions>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelMultipleVersions>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelMultipleVersions>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelMultipleVersions>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelMultipleVersions>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -315,7 +418,7 @@ mod bad_model_multiple_versions {
 }
 
 impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> BadModelBadVersionType {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelBadVersionType {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelBadVersionType"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -337,18 +440,23 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
     }
 
     #[inline(always)]
-    fn name(self: @BadModelBadVersionType) -> ByteArray {
+    fn name() -> ByteArray {
         "BadModelBadVersionType"
     }
 
     #[inline(always)]
-    fn version(self: @BadModelBadVersionType) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @BadModelBadVersionType) -> felt252 {
+    fn selector() -> felt252 {
         selector!("BadModelBadVersionType")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelBadVersionType) -> felt252 {
+        dojo::model::Model::<BadModelBadVersionType>::selector()
     }
 
     #[inline(always)]
@@ -366,16 +474,29 @@ impl BadModelBadVersionTypeModel of dojo::model::Model<BadModelBadVersionType> {
     }
 
     #[inline(always)]
-    fn layout(self: @BadModelBadVersionType) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<BadModelBadVersionType>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelBadVersionType>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @BadModelBadVersionType) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @BadModelBadVersionType) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelBadVersionType>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelBadVersionType>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -395,32 +516,27 @@ mod bad_model_bad_version_type {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("BadModelBadVersionType")
+           dojo::model::Model::<BadModelBadVersionType>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "BadModelBadVersionType"
+           dojo::model::Model::<BadModelBadVersionType>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<BadModelBadVersionType>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<BadModelBadVersionType>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelBadVersionType>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelBadVersionType>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelBadVersionType>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelBadVersionType>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -436,7 +552,7 @@ mod bad_model_bad_version_type {
 }
 
 impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> BadModelNoVersionValue {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNoVersionValue {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelNoVersionValue"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -458,18 +574,23 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
     }
 
     #[inline(always)]
-    fn name(self: @BadModelNoVersionValue) -> ByteArray {
+    fn name() -> ByteArray {
         "BadModelNoVersionValue"
     }
 
     #[inline(always)]
-    fn version(self: @BadModelNoVersionValue) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @BadModelNoVersionValue) -> felt252 {
+    fn selector() -> felt252 {
         selector!("BadModelNoVersionValue")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelNoVersionValue) -> felt252 {
+        dojo::model::Model::<BadModelNoVersionValue>::selector()
     }
 
     #[inline(always)]
@@ -487,16 +608,29 @@ impl BadModelNoVersionValueModel of dojo::model::Model<BadModelNoVersionValue> {
     }
 
     #[inline(always)]
-    fn layout(self: @BadModelNoVersionValue) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<BadModelNoVersionValue>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelNoVersionValue>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @BadModelNoVersionValue) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @BadModelNoVersionValue) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelNoVersionValue>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelNoVersionValue>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -516,32 +650,27 @@ mod bad_model_no_version_value {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("BadModelNoVersionValue")
+           dojo::model::Model::<BadModelNoVersionValue>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "BadModelNoVersionValue"
+           dojo::model::Model::<BadModelNoVersionValue>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<BadModelNoVersionValue>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<BadModelNoVersionValue>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelNoVersionValue>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelNoVersionValue>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelNoVersionValue>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelNoVersionValue>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -557,7 +686,7 @@ mod bad_model_no_version_value {
 }
 
 impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpectedArgWithValue> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> BadModelUnexpectedArgWithValue {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArgWithValue {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelUnexpectedArgWithValue"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -579,18 +708,23 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
     }
 
     #[inline(always)]
-    fn name(self: @BadModelUnexpectedArgWithValue) -> ByteArray {
+    fn name() -> ByteArray {
         "BadModelUnexpectedArgWithValue"
     }
 
     #[inline(always)]
-    fn version(self: @BadModelUnexpectedArgWithValue) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @BadModelUnexpectedArgWithValue) -> felt252 {
+    fn selector() -> felt252 {
         selector!("BadModelUnexpectedArgWithValue")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelUnexpectedArgWithValue) -> felt252 {
+        dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector()
     }
 
     #[inline(always)]
@@ -608,16 +742,29 @@ impl BadModelUnexpectedArgWithValueModel of dojo::model::Model<BadModelUnexpecte
     }
 
     #[inline(always)]
-    fn layout(self: @BadModelUnexpectedArgWithValue) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @BadModelUnexpectedArgWithValue) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @BadModelUnexpectedArgWithValue) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -637,32 +784,27 @@ mod bad_model_unexpected_arg_with_value {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("BadModelUnexpectedArgWithValue")
+           dojo::model::Model::<BadModelUnexpectedArgWithValue>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "BadModelUnexpectedArgWithValue"
+           dojo::model::Model::<BadModelUnexpectedArgWithValue>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<BadModelUnexpectedArgWithValue>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelUnexpectedArgWithValue>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelUnexpectedArgWithValue>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -678,7 +820,7 @@ mod bad_model_unexpected_arg_with_value {
 }
 
 impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> BadModelUnexpectedArg {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelUnexpectedArg {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelUnexpectedArg"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -700,18 +842,23 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
     }
 
     #[inline(always)]
-    fn name(self: @BadModelUnexpectedArg) -> ByteArray {
+    fn name() -> ByteArray {
         "BadModelUnexpectedArg"
     }
 
     #[inline(always)]
-    fn version(self: @BadModelUnexpectedArg) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @BadModelUnexpectedArg) -> felt252 {
+    fn selector() -> felt252 {
         selector!("BadModelUnexpectedArg")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelUnexpectedArg) -> felt252 {
+        dojo::model::Model::<BadModelUnexpectedArg>::selector()
     }
 
     #[inline(always)]
@@ -729,16 +876,29 @@ impl BadModelUnexpectedArgModel of dojo::model::Model<BadModelUnexpectedArg> {
     }
 
     #[inline(always)]
-    fn layout(self: @BadModelUnexpectedArg) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @BadModelUnexpectedArg) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @BadModelUnexpectedArg) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelUnexpectedArg>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelUnexpectedArg>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -758,32 +918,27 @@ mod bad_model_unexpected_arg {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("BadModelUnexpectedArg")
+           dojo::model::Model::<BadModelUnexpectedArg>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "BadModelUnexpectedArg"
+           dojo::model::Model::<BadModelUnexpectedArg>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<BadModelUnexpectedArg>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelUnexpectedArg>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelUnexpectedArg>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelUnexpectedArg>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -799,7 +954,7 @@ mod bad_model_unexpected_arg {
 }
 
 impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupportedVersion> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> BadModelNotSupportedVersion {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> BadModelNotSupportedVersion {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("BadModelNotSupportedVersion"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -821,18 +976,23 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
     }
 
     #[inline(always)]
-    fn name(self: @BadModelNotSupportedVersion) -> ByteArray {
+    fn name() -> ByteArray {
         "BadModelNotSupportedVersion"
     }
 
     #[inline(always)]
-    fn version(self: @BadModelNotSupportedVersion) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @BadModelNotSupportedVersion) -> felt252 {
+    fn selector() -> felt252 {
         selector!("BadModelNotSupportedVersion")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @BadModelNotSupportedVersion) -> felt252 {
+        dojo::model::Model::<BadModelNotSupportedVersion>::selector()
     }
 
     #[inline(always)]
@@ -850,16 +1010,29 @@ impl BadModelNotSupportedVersionModel of dojo::model::Model<BadModelNotSupported
     }
 
     #[inline(always)]
-    fn layout(self: @BadModelNotSupportedVersion) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @BadModelNotSupportedVersion) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @BadModelNotSupportedVersion) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<BadModelNotSupportedVersion>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<BadModelNotSupportedVersion>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -879,32 +1052,27 @@ mod bad_model_not_supported_version {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("BadModelNotSupportedVersion")
+           dojo::model::Model::<BadModelNotSupportedVersion>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "BadModelNotSupportedVersion"
+           dojo::model::Model::<BadModelNotSupportedVersion>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<BadModelNotSupportedVersion>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<BadModelNotSupportedVersion>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<BadModelNotSupportedVersion>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<BadModelNotSupportedVersion>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -920,7 +1088,7 @@ mod bad_model_not_supported_version {
 }
 
 impl Modelv0Model of dojo::model::Model<Modelv0> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> Modelv0 {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Modelv0 {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Modelv0"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -942,18 +1110,23 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
     }
 
     #[inline(always)]
-    fn name(self: @Modelv0) -> ByteArray {
+    fn name() -> ByteArray {
         "Modelv0"
     }
 
     #[inline(always)]
-    fn version(self: @Modelv0) -> u8 {
+    fn version() -> u8 {
         0
     }
 
     #[inline(always)]
-    fn selector(self: @Modelv0) -> felt252 {
+    fn selector() -> felt252 {
         "Modelv0"
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Modelv0) -> felt252 {
+        dojo::model::Model::<Modelv0>::selector()
     }
 
     #[inline(always)]
@@ -971,16 +1144,29 @@ impl Modelv0Model of dojo::model::Model<Modelv0> {
     }
 
     #[inline(always)]
-    fn layout(self: @Modelv0) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Modelv0>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Modelv0>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @Modelv0) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @Modelv0) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Modelv0>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Modelv0>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -1000,32 +1186,27 @@ mod modelv_0 {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            "Modelv0"
+           dojo::model::Model::<Modelv0>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "Modelv0"
+           dojo::model::Model::<Modelv0>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            0
+           dojo::model::Model::<Modelv0>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<Modelv0>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Modelv0>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Modelv0>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Modelv0>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Modelv0>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -1041,7 +1222,7 @@ mod modelv_0 {
 }
 
 impl PositionModel of dojo::model::Model<Position> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> Position {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Position {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Position"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -1063,18 +1244,23 @@ impl PositionModel of dojo::model::Model<Position> {
     }
 
     #[inline(always)]
-    fn name(self: @Position) -> ByteArray {
+    fn name() -> ByteArray {
         "Position"
     }
 
     #[inline(always)]
-    fn version(self: @Position) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @Position) -> felt252 {
+    fn selector() -> felt252 {
         selector!("Position")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Position) -> felt252 {
+        dojo::model::Model::<Position>::selector()
     }
 
     #[inline(always)]
@@ -1092,16 +1278,29 @@ impl PositionModel of dojo::model::Model<Position> {
     }
 
     #[inline(always)]
-    fn layout(self: @Position) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Position>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @Position) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @Position) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Position>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Position>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -1121,32 +1320,27 @@ mod position {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("Position")
+           dojo::model::Model::<Position>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "Position"
+           dojo::model::Model::<Position>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<Position>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<Position>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Position>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Position>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Position>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -1162,7 +1356,7 @@ mod position {
 }
 
 impl RolesModel of dojo::model::Model<Roles> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> Roles {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Roles {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Roles"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -1184,18 +1378,23 @@ impl RolesModel of dojo::model::Model<Roles> {
     }
 
     #[inline(always)]
-    fn name(self: @Roles) -> ByteArray {
+    fn name() -> ByteArray {
         "Roles"
     }
 
     #[inline(always)]
-    fn version(self: @Roles) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @Roles) -> felt252 {
+    fn selector() -> felt252 {
         selector!("Roles")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Roles) -> felt252 {
+        dojo::model::Model::<Roles>::selector()
     }
 
     #[inline(always)]
@@ -1213,16 +1412,29 @@ impl RolesModel of dojo::model::Model<Roles> {
     }
 
     #[inline(always)]
-    fn layout(self: @Roles) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Roles>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @Roles) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @Roles) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Roles>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Roles>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -1242,32 +1454,27 @@ mod roles {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("Roles")
+           dojo::model::Model::<Roles>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "Roles"
+           dojo::model::Model::<Roles>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<Roles>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<Roles>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Roles>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Roles>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Roles>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -1283,7 +1490,7 @@ mod roles {
 }
 
 impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> OnlyKeyModel {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> OnlyKeyModel {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("OnlyKeyModel"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -1305,18 +1512,23 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
     }
 
     #[inline(always)]
-    fn name(self: @OnlyKeyModel) -> ByteArray {
+    fn name() -> ByteArray {
         "OnlyKeyModel"
     }
 
     #[inline(always)]
-    fn version(self: @OnlyKeyModel) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @OnlyKeyModel) -> felt252 {
+    fn selector() -> felt252 {
         selector!("OnlyKeyModel")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @OnlyKeyModel) -> felt252 {
+        dojo::model::Model::<OnlyKeyModel>::selector()
     }
 
     #[inline(always)]
@@ -1334,16 +1546,29 @@ impl OnlyKeyModelModel of dojo::model::Model<OnlyKeyModel> {
     }
 
     #[inline(always)]
-    fn layout(self: @OnlyKeyModel) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<OnlyKeyModel>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @OnlyKeyModel) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @OnlyKeyModel) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<OnlyKeyModel>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<OnlyKeyModel>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -1363,32 +1588,27 @@ mod only_key_model {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("OnlyKeyModel")
+           dojo::model::Model::<OnlyKeyModel>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "OnlyKeyModel"
+           dojo::model::Model::<OnlyKeyModel>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<OnlyKeyModel>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<OnlyKeyModel>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<OnlyKeyModel>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<OnlyKeyModel>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<OnlyKeyModel>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -1404,7 +1624,7 @@ mod only_key_model {
 }
 
 impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> U256KeyModel {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> U256KeyModel {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("U256KeyModel"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -1426,18 +1646,23 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
     }
 
     #[inline(always)]
-    fn name(self: @U256KeyModel) -> ByteArray {
+    fn name() -> ByteArray {
         "U256KeyModel"
     }
 
     #[inline(always)]
-    fn version(self: @U256KeyModel) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @U256KeyModel) -> felt252 {
+    fn selector() -> felt252 {
         selector!("U256KeyModel")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @U256KeyModel) -> felt252 {
+        dojo::model::Model::<U256KeyModel>::selector()
     }
 
     #[inline(always)]
@@ -1455,16 +1680,29 @@ impl U256KeyModelModel of dojo::model::Model<U256KeyModel> {
     }
 
     #[inline(always)]
-    fn layout(self: @U256KeyModel) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<U256KeyModel>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @U256KeyModel) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @U256KeyModel) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<U256KeyModel>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<U256KeyModel>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -1484,32 +1722,27 @@ mod u_256_key_model {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("U256KeyModel")
+           dojo::model::Model::<U256KeyModel>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "U256KeyModel"
+           dojo::model::Model::<U256KeyModel>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<U256KeyModel>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<U256KeyModel>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<U256KeyModel>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<U256KeyModel>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<U256KeyModel>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -1525,7 +1758,7 @@ mod u_256_key_model {
 }
 
 impl PlayerModel of dojo::model::Model<Player> {
-    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>) -> Player {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> Player {
         let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("Player"), keys, layout);
 
         // TODO: Generate method to deserialize from keys / values directly to avoid
@@ -1547,18 +1780,23 @@ impl PlayerModel of dojo::model::Model<Player> {
     }
 
     #[inline(always)]
-    fn name(self: @Player) -> ByteArray {
+    fn name() -> ByteArray {
         "Player"
     }
 
     #[inline(always)]
-    fn version(self: @Player) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @Player) -> felt252 {
+    fn selector() -> felt252 {
         selector!("Player")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @Player) -> felt252 {
+        dojo::model::Model::<Player>::selector()
     }
 
     #[inline(always)]
@@ -1576,16 +1814,29 @@ impl PlayerModel of dojo::model::Model<Player> {
     }
 
     #[inline(always)]
-    fn layout(self: @Player) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<Player>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @Player) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @Player) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<Player>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<Player>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
     }
 }
 
@@ -1605,32 +1856,27 @@ mod player {
     #[abi(embed_v0)]
     impl DojoModelImpl of dojo::model::IModel<ContractState>{
         fn selector(self: @ContractState) -> felt252 {
-            selector!("Player")
+           dojo::model::Model::<Player>::selector()
         }
 
         fn name(self: @ContractState) -> ByteArray {
-            "Player"
+           dojo::model::Model::<Player>::name()
         }
 
         fn version(self: @ContractState) -> u8 {
-            1
+           dojo::model::Model::<Player>::version()
         }
 
-        fn unpacked_size(self: @ContractState) -> usize {
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
             dojo::database::introspect::Introspect::<Player>::size()
         }
 
-        fn packed_size(self: @ContractState) -> usize {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-            let mut layout_span = layout.span();
-            dojo::packing::calculate_packed_size(ref layout_span)
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<Player>::packed_size()
         }
 
-        fn layout(self: @ContractState) -> Span<u8> {
-            let mut layout = core::array::ArrayTrait::new();
-            dojo::database::introspect::Introspect::<Player>::layout(ref layout);
-            core::array::ArrayTrait::span(@layout)
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<Player>::layout()
         }
 
         fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
@@ -1641,6 +1887,676 @@ mod player {
     #[abi(embed_v0)]
     impl playerImpl of Iplayer<ContractState>{
         fn ensure_abi(self: @ContractState, model: Player) {
+        }
+    }
+}
+
+impl ModelWithSimpleArrayModel of dojo::model::Model<ModelWithSimpleArray> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithSimpleArray {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithSimpleArray"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithSimpleArray>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithSimpleArray>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithSimpleArray`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithSimpleArray>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithSimpleArray"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithSimpleArray")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithSimpleArray) -> felt252 {
+        dojo::model::Model::<ModelWithSimpleArray>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithSimpleArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithSimpleArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithSimpleArray>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithSimpleArray) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithSimpleArray>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithSimpleArray>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_simple_array<T> {
+    fn ensure_abi(self: @T, model: ModelWithSimpleArray);
+}
+
+#[starknet::contract]
+mod model_with_simple_array {
+    use super::ModelWithSimpleArray;
+    use super::Imodel_with_simple_array;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithSimpleArray>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithSimpleArray>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithSimpleArray>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithSimpleArray>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithSimpleArray>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithSimpleArray>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithSimpleArray>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_simple_arrayImpl of Imodel_with_simple_array<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithSimpleArray) {
+        }
+    }
+}
+
+impl ModelWithByteArrayModel of dojo::model::Model<ModelWithByteArray> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithByteArray {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithByteArray"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithByteArray>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithByteArray>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithByteArray`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithByteArray>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithByteArray"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithByteArray")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithByteArray) -> felt252 {
+        dojo::model::Model::<ModelWithByteArray>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithByteArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithByteArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithByteArray>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithByteArray) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithByteArray>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithByteArray>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_byte_array<T> {
+    fn ensure_abi(self: @T, model: ModelWithByteArray);
+}
+
+#[starknet::contract]
+mod model_with_byte_array {
+    use super::ModelWithByteArray;
+    use super::Imodel_with_byte_array;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithByteArray>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithByteArray>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithByteArray>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithByteArray>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithByteArray>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithByteArray>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithByteArray>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_byte_arrayImpl of Imodel_with_byte_array<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithByteArray) {
+        }
+    }
+}
+
+impl ModelWithComplexArrayModel of dojo::model::Model<ModelWithComplexArray> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithComplexArray {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithComplexArray"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithComplexArray>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithComplexArray>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithComplexArray`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithComplexArray>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithComplexArray"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithComplexArray")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithComplexArray) -> felt252 {
+        dojo::model::Model::<ModelWithComplexArray>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithComplexArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithComplexArray) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithComplexArray>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithComplexArray) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithComplexArray>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithComplexArray>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_complex_array<T> {
+    fn ensure_abi(self: @T, model: ModelWithComplexArray);
+}
+
+#[starknet::contract]
+mod model_with_complex_array {
+    use super::ModelWithComplexArray;
+    use super::Imodel_with_complex_array;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithComplexArray>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithComplexArray>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithComplexArray>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithComplexArray>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithComplexArray>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithComplexArray>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithComplexArray>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_complex_arrayImpl of Imodel_with_complex_array<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithComplexArray) {
+        }
+    }
+}
+
+impl ModelWithTupleModel of dojo::model::Model<ModelWithTuple> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTuple {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithTuple"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithTuple>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithTuple>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithTuple`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithTuple>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithTuple"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithTuple")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithTuple) -> felt252 {
+        dojo::model::Model::<ModelWithTuple>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithTuple) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithTuple) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithTuple>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithTuple) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithTuple>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithTuple>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_tuple<T> {
+    fn ensure_abi(self: @T, model: ModelWithTuple);
+}
+
+#[starknet::contract]
+mod model_with_tuple {
+    use super::ModelWithTuple;
+    use super::Imodel_with_tuple;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithTuple>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithTuple>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithTuple>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithTuple>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithTuple>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithTuple>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithTuple>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_tupleImpl of Imodel_with_tuple<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithTuple) {
+        }
+    }
+}
+
+impl ModelWithTupleNoPrimitivesModel of dojo::model::Model<ModelWithTupleNoPrimitives> {
+    fn entity(world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: dojo::database::introspect::Layout) -> ModelWithTupleNoPrimitives {
+        let values = dojo::world::IWorldDispatcherTrait::entity(world, selector!("ModelWithTupleNoPrimitives"), keys, layout);
+
+        // TODO: Generate method to deserialize from keys / values directly to avoid
+        // serializing to intermediate array.
+        let mut serialized = core::array::ArrayTrait::new();
+        core::array::serialize_array_helper(keys, ref serialized);
+        core::array::serialize_array_helper(values, ref serialized);
+        let mut serialized = core::array::ArrayTrait::span(@serialized);
+
+        let entity = core::serde::Serde::<ModelWithTupleNoPrimitives>::deserialize(ref serialized);
+
+        if core::option::OptionTrait::<ModelWithTupleNoPrimitives>::is_none(@entity) {
+            panic!(
+                "Model `ModelWithTupleNoPrimitives`: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+            );
+        }
+
+        core::option::OptionTrait::<ModelWithTupleNoPrimitives>::unwrap(entity)
+    }
+
+    #[inline(always)]
+    fn name() -> ByteArray {
+        "ModelWithTupleNoPrimitives"
+    }
+
+    #[inline(always)]
+    fn version() -> u8 {
+        1
+    }
+
+    #[inline(always)]
+    fn selector() -> felt252 {
+        selector!("ModelWithTupleNoPrimitives")
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ModelWithTupleNoPrimitives) -> felt252 {
+        dojo::model::Model::<ModelWithTupleNoPrimitives>::selector()
+    }
+
+    #[inline(always)]
+    fn keys(self: @ModelWithTupleNoPrimitives) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.player, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn values(self: @ModelWithTupleNoPrimitives) -> Span<felt252> {
+        let mut serialized = core::array::ArrayTrait::new();
+        core::serde::Serde::serialize(self.x, ref serialized);core::serde::Serde::serialize(self.y, ref serialized);
+        core::array::ArrayTrait::span(@serialized)
+    }
+
+    #[inline(always)]
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ModelWithTupleNoPrimitives>::layout()
+    }
+
+    #[inline(always)]
+    fn instance_layout(self: @ModelWithTupleNoPrimitives) -> dojo::database::introspect::Layout {
+        dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        let layout = dojo::model::Model::<ModelWithTupleNoPrimitives>::layout();
+
+        match layout {
+            dojo::database::introspect::Layout::Fixed(layout) => {
+                let mut span_layout = layout;
+                Option::Some(dojo::packing::calculate_packed_size(ref span_layout))
+            },
+            dojo::database::introspect::Layout::Struct(_) => Option::None,
+            dojo::database::introspect::Layout::Array(_) => Option::None,
+            dojo::database::introspect::Layout::Tuple(_) => Option::None,
+            dojo::database::introspect::Layout::ByteArray => Option::None,
+        }
+    }
+}
+
+#[starknet::interface]
+trait Imodel_with_tuple_no_primitives<T> {
+    fn ensure_abi(self: @T, model: ModelWithTupleNoPrimitives);
+}
+
+#[starknet::contract]
+mod model_with_tuple_no_primitives {
+    use super::ModelWithTupleNoPrimitives;
+    use super::Imodel_with_tuple_no_primitives;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DojoModelImpl of dojo::model::IModel<ContractState>{
+        fn selector(self: @ContractState) -> felt252 {
+           dojo::model::Model::<ModelWithTupleNoPrimitives>::selector()
+        }
+
+        fn name(self: @ContractState) -> ByteArray {
+           dojo::model::Model::<ModelWithTupleNoPrimitives>::name()
+        }
+
+        fn version(self: @ContractState) -> u8 {
+           dojo::model::Model::<ModelWithTupleNoPrimitives>::version()
+        }
+
+        fn unpacked_size(self: @ContractState) -> Option<usize> {
+            dojo::database::introspect::Introspect::<ModelWithTupleNoPrimitives>::size()
+        }
+
+        fn packed_size(self: @ContractState) -> Option<usize> {
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::packed_size()
+        }
+
+        fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+            dojo::model::Model::<ModelWithTupleNoPrimitives>::layout()
+        }
+
+        fn schema(self: @ContractState) -> dojo::database::introspect::Ty {
+            dojo::database::introspect::Introspect::<ModelWithTupleNoPrimitives>::ty()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl model_with_tuple_no_primitivesImpl of Imodel_with_tuple_no_primitives<ContractState>{
+        fn ensure_abi(self: @ContractState, model: ModelWithTupleNoPrimitives) {
         }
     }
 }
@@ -1657,9 +2573,9 @@ error: Too many 'version' attributes for dojo::model
 ^************************************^
 
 error: The argument 'version' of dojo::model must be an integer
- --> test_src/lib.cairo:16:1
+ --> test_src/lib.cairo:16:24
 #[dojo::model(version: hello)]
-^****************************^
+                       ^***^
 
 error: Unexpected argument 'version' for dojo::model
  --> test_src/lib.cairo:23:15
@@ -1702,241 +2618,341 @@ struct U256KeyModel {
        ^**********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:72:1
+ --> test_src/lib.cairo[BadModelMultipleVersions]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:72:1
+ --> test_src/lib.cairo[BadModelBadVersionType]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:72:1
+ --> test_src/lib.cairo[BadModelNoVersionValue]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:72:1
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:72:1
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:72:1
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:72:1
+ --> test_src/lib.cairo[Modelv0]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:72:1
+ --> test_src/lib.cairo[Position]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:72:1
+ --> test_src/lib.cairo[Roles]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:72:1
+ --> test_src/lib.cairo[OnlyKeyModel]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:72:1
+ --> test_src/lib.cairo[U256KeyModel]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:72:1
+ --> test_src/lib.cairo[Player]:90:1
 #[starknet::contract]
 ^*******************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:77:5
+ --> test_src/lib.cairo[ModelWithSimpleArray]:90:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:90:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:90:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:90:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:90:1
+#[starknet::contract]
+^*******************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[BadModelMultipleVersions]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:80:5
+ --> test_src/lib.cairo[BadModelMultipleVersions]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelMultipleVersions]:116:5
+ --> test_src/lib.cairo[BadModelMultipleVersions]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:77:5
+ --> test_src/lib.cairo[BadModelBadVersionType]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:80:5
+ --> test_src/lib.cairo[BadModelBadVersionType]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelBadVersionType]:116:5
+ --> test_src/lib.cairo[BadModelBadVersionType]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:77:5
+ --> test_src/lib.cairo[BadModelNoVersionValue]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:80:5
+ --> test_src/lib.cairo[BadModelNoVersionValue]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNoVersionValue]:116:5
+ --> test_src/lib.cairo[BadModelNoVersionValue]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:77:5
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:80:5
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:116:5
+ --> test_src/lib.cairo[BadModelUnexpectedArgWithValue]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:77:5
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:80:5
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelUnexpectedArg]:116:5
+ --> test_src/lib.cairo[BadModelUnexpectedArg]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:77:5
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:80:5
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[BadModelNotSupportedVersion]:116:5
+ --> test_src/lib.cairo[BadModelNotSupportedVersion]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:77:5
+ --> test_src/lib.cairo[Modelv0]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:80:5
+ --> test_src/lib.cairo[Modelv0]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Modelv0]:116:5
+ --> test_src/lib.cairo[Modelv0]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:77:5
+ --> test_src/lib.cairo[Position]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:80:5
+ --> test_src/lib.cairo[Position]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Position]:116:5
+ --> test_src/lib.cairo[Position]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:77:5
+ --> test_src/lib.cairo[Roles]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:80:5
+ --> test_src/lib.cairo[Roles]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Roles]:116:5
+ --> test_src/lib.cairo[Roles]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:77:5
+ --> test_src/lib.cairo[OnlyKeyModel]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:80:5
+ --> test_src/lib.cairo[OnlyKeyModel]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[OnlyKeyModel]:116:5
+ --> test_src/lib.cairo[OnlyKeyModel]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:77:5
+ --> test_src/lib.cairo[U256KeyModel]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:80:5
+ --> test_src/lib.cairo[U256KeyModel]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[U256KeyModel]:116:5
+ --> test_src/lib.cairo[U256KeyModel]:129:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:77:5
+ --> test_src/lib.cairo[Player]:95:5
     #[storage]
     ^********^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:80:5
+ --> test_src/lib.cairo[Player]:98:5
     #[abi(embed_v0)]
     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo[Player]:116:5
+ --> test_src/lib.cairo[Player]:129:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithSimpleArray]:95:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithSimpleArray]:98:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithSimpleArray]:129:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:95:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:98:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithByteArray]:129:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:95:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:98:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithComplexArray]:129:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:95:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:98:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTuple]:129:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:95:5
+    #[storage]
+    ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:98:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ModelWithTupleNoPrimitives]:129:5
     #[abi(embed_v0)]
     ^**************^

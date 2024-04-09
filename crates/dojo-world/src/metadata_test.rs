@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 
 use camino::Utf8PathBuf;
 use dojo_test_utils::compiler::build_full_test_config;
@@ -147,7 +148,7 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(
         env.world_address
             .unwrap()
-            .eq("0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295")
+            .eq("0x51305b7cd49dfe50b72261d07cfc7b6869933b42b8b7c9bb53dd7cb4bc9ef62")
     );
 
     assert!(env.keystore_path.is_none());
@@ -172,18 +173,11 @@ async fn get_full_dojo_metadata_from_workspace() {
         &sources_dir,
     );
 
-    // artifacts
-    let artifacts = vec![
-        ("models", "dojo_examples::actions::actions::moved"),
-        ("models", "dojo_examples::models::emote_message"),
-        ("models", "dojo_examples::models::moves"),
-        ("models", "dojo_examples::models::position"),
-        ("contracts", "dojo_examples::actions::actions"),
-    ];
+    let artifacts = get_artifacts_from_manifest(&manifest_dir);
 
     for (abi_subdir, name) in artifacts {
-        let artifact = dojo_metadata.artifacts.get(name);
-        assert!(artifact.is_some());
+        let artifact = dojo_metadata.artifacts.get(&name);
+        assert!(artifact.is_some(), "bad artifact for {}", name);
         let artifact = artifact.unwrap();
 
         let sanitized_name = name.replace("::", "_");
@@ -200,9 +194,42 @@ fn check_artifact(
 ) {
     assert!(artifact.abi.is_some());
     let abi = artifact.abi.unwrap();
-    assert_eq!(abi, Uri::File(abis_dir.join(format!("{name}.json")).into()));
+    assert_eq!(
+        abi,
+        Uri::File(abis_dir.join(format!("{name}.json")).into()),
+        "Bad abi for {}",
+        name
+    );
 
     assert!(artifact.source.is_some());
     let source = artifact.source.unwrap();
-    assert_eq!(source, Uri::File(sources_dir.join(format!("{name}.cairo")).into()));
+    assert_eq!(
+        source,
+        Uri::File(sources_dir.join(format!("{name}.cairo")).into()),
+        "Bad source for {}",
+        name
+    );
+}
+
+fn get_artifacts_from_manifest(manifest_dir: &Utf8PathBuf) -> Vec<(String, String)> {
+    let contracts_dir = manifest_dir.join(BASE_DIR).join("contracts");
+    let models_dir = manifest_dir.join(BASE_DIR).join("models");
+
+    let mut artifacts = vec![];
+
+    // models
+    for entry in fs::read_dir(models_dir).unwrap().flatten() {
+        let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
+        let name = name.replace("_models_", "::models::");
+        artifacts.push(("models".to_string(), name));
+    }
+
+    // contracts
+    for entry in fs::read_dir(contracts_dir).unwrap().flatten() {
+        let name = entry.path().file_stem().unwrap().to_string_lossy().to_string();
+        let name = name.replace("_actions_", "::actions::");
+        artifacts.push(("contracts".to_string(), name));
+    }
+
+    artifacts
 }

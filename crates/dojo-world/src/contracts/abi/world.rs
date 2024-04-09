@@ -12,11 +12,19 @@ abigen!(
   },
   {
     "type": "struct",
-    "name": "core::array::Span::<core::felt252>",
+    "name": "core::byte_array::ByteArray",
     "members": [
       {
-        "name": "snapshot",
-        "type": "@core::array::Array::<core::felt252>"
+        "name": "data",
+        "type": "core::array::Array::<core::bytes_31::bytes31>"
+      },
+      {
+        "name": "pending_word",
+        "type": "core::felt252"
+      },
+      {
+        "name": "pending_word_len",
+        "type": "core::integer::u32"
       }
     ]
   },
@@ -30,7 +38,17 @@ abigen!(
       },
       {
         "name": "metadata_uri",
-        "type": "core::array::Span::<core::felt252>"
+        "type": "core::byte_array::ByteArray"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::felt252>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::felt252>"
       }
     ]
   },
@@ -41,6 +59,56 @@ abigen!(
       {
         "name": "snapshot",
         "type": "@core::array::Array::<core::integer::u8>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo::database::introspect::FieldLayout",
+    "members": [
+      {
+        "name": "selector",
+        "type": "core::felt252"
+      },
+      {
+        "name": "layout",
+        "type": "dojo::database::introspect::Layout"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<dojo::database::introspect::FieldLayout>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<dojo::database::introspect::FieldLayout>"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "dojo::database::introspect::Layout",
+    "variants": [
+      {
+        "name": "Fixed",
+        "type": "core::array::Span::<core::integer::u8>"
+      },
+      {
+        "name": "Struct",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "Tuple",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "Array",
+        "type": "core::array::Span::<dojo::database::introspect::FieldLayout>"
+      },
+      {
+        "name": "ByteArray",
+        "type": "()"
       }
     ]
   },
@@ -199,7 +267,7 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [
@@ -227,22 +295,11 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [],
         "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "base",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "core::starknet::class_hash::ClassHash"
-          }
-        ],
-        "state_mutability": "view"
       },
       {
         "type": "function",
@@ -258,11 +315,22 @@ abigen!(
           },
           {
             "name": "layout",
-            "type": "core::array::Span::<core::integer::u8>"
+            "type": "dojo::database::introspect::Layout"
           }
         ],
         "outputs": [],
         "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "base",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::class_hash::ClassHash"
+          }
+        ],
+        "state_mutability": "view"
       },
       {
         "type": "function",
@@ -483,26 +551,8 @@ abigen!(
       },
       {
         "name": "uri",
-        "type": "core::array::Span::<core::felt252>",
+        "type": "core::byte_array::ByteArray",
         "kind": "data"
-      }
-    ]
-  },
-  {
-    "type": "struct",
-    "name": "core::byte_array::ByteArray",
-    "members": [
-      {
-        "name": "data",
-        "type": "core::array::Array::<core::bytes_31::bytes31>"
-      },
-      {
-        "name": "pending_word",
-        "type": "core::felt252"
-      },
-      {
-        "name": "pending_word_len",
-        "type": "core::integer::u32"
       }
     ]
   },

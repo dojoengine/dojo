@@ -198,49 +198,9 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?7::new,
+                            function: ?7::layout,
                             args: [],
-                            ty: core::array::Array::<?8>,
-                        },
-                    ),
-                },
-            ),
-            Expr(
-                StatementExpr {
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: ?8::layout,
-                            args: [
-                                Reference(
-                                    LocalVarId(test::__Health_layout__),
-                                ),
-                            ],
-                            ty: (),
-                        },
-                    ),
-                },
-            ),
-            Let(
-                StatementLet {
-                    pattern: Variable(
-                        __Health_layout_span__,
-                    ),
-                    expr: FunctionCall(
-                        ExprFunctionCall {
-                            function: ?9::span,
-                            args: [
-                                Value(
-                                    Snapshot(
-                                        ExprSnapshot {
-                                            inner: Var(
-                                                LocalVarId(test::__Health_layout__),
-                                            ),
-                                            ty: @core::array::Array::<core::integer::u8>,
-                                        },
-                                    ),
-                                ),
-                            ],
-                            ty: core::array::Span::<?9>,
+                            ty: dojo::database::introspect::Layout,
                         },
                     ),
                 },
@@ -252,7 +212,7 @@ Block(
                     ),
                     expr: FunctionCall(
                         ExprFunctionCall {
-                            function: ?10::entity,
+                            function: ?8::entity,
                             args: [
                                 Value(
                                     Var(
@@ -266,11 +226,11 @@ Block(
                                 ),
                                 Value(
                                     Var(
-                                        LocalVarId(test::__Health_layout_span__),
+                                        LocalVarId(test::__Health_layout__),
                                     ),
                                 ),
                             ],
-                            ty: ?10,
+                            ty: ?8,
                         },
                     ),
                 },
@@ -287,6 +247,6 @@ Block(
 
 //! > semantic_diagnostics
 error: Trait has no implementation in context: dojo::model::Model::<test::Health>
- --> lib.cairo[get_inline_macro]:9:61
-                 let __Health: Health = dojo::model::Model::entity(world, __get_macro_keys__, __Health_layout_span__);
-                                                            ^****^
+ --> lib.cairo[get_inline_macro]:7:71
+                let __Health_layout__ = dojo::model::Model::<Health>::layout();
+                                                                      ^****^

@@ -5,6 +5,8 @@
 //!
 use dojo::world::IWorldDispatcherTrait;
 
+use dojo::model::Model;
+
 const RESOURCE_METADATA_SELECTOR: felt252 = selector!("ResourceMetadata");
 
 fn initial_address() -> starknet::ContractAddress {
@@ -21,13 +23,15 @@ fn initial_class_hash() -> starknet::ClassHash {
 struct ResourceMetadata {
     // #[key]
     resource_id: felt252,
-    // #[capacity(3)].
-    metadata_uri: Span<felt252>,
+    metadata_uri: ByteArray,
 }
 
 impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
+
     fn entity(
-        world: dojo::world::IWorldDispatcher, keys: Span<felt252>, layout: Span<u8>
+        world: dojo::world::IWorldDispatcher,
+        keys: Span<felt252>,
+        layout: dojo::database::introspect::Layout
     ) -> ResourceMetadata {
         let values = world.entity(RESOURCE_METADATA_SELECTOR, keys, layout);
         let mut serialized = core::array::ArrayTrait::new();
@@ -46,18 +50,23 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
     }
 
     #[inline(always)]
-    fn name(self: @ResourceMetadata) -> ByteArray {
+    fn name() -> ByteArray {
         "ResourceMetadata"
     }
 
     #[inline(always)]
-    fn version(self: @ResourceMetadata) -> u8 {
+    fn version() -> u8 {
         1
     }
 
     #[inline(always)]
-    fn selector(self: @ResourceMetadata) -> felt252 {
+    fn selector() -> felt252 {
         RESOURCE_METADATA_SELECTOR
+    }
+
+    #[inline(always)]
+    fn instance_selector(self: @ResourceMetadata) -> felt252 {
+        ResourceMetadataModel::selector()
     }
 
     #[inline(always)]
@@ -75,34 +84,37 @@ impl ResourceMetadataModel of dojo::model::Model<ResourceMetadata> {
     }
 
     #[inline(always)]
-    fn layout(self: @ResourceMetadata) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<ResourceMetadata>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Introspect::<ResourceMetadata>::layout()
     }
 
     #[inline(always)]
-    fn packed_size(self: @ResourceMetadata) -> usize {
-        let mut layout = self.layout();
-        dojo::packing::calculate_packed_size(ref layout)
+    fn instance_layout(self: @ResourceMetadata) -> dojo::database::introspect::Layout {
+        ResourceMetadataModel::layout()
+    }
+
+    #[inline(always)]
+    fn packed_size() -> Option<usize> {
+        Option::None
     }
 }
 
 impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<ResourceMetadata<>> {
     #[inline(always)]
-    fn size() -> usize {
-        // Length of array first + capacity.
-        1 + 3
+    fn size() -> Option<usize> {
+        Option::None
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
-        // Len of array first.
-        layout.append(251);
-        // Capacity.
-        layout.append(251);
-        layout.append(251);
-        layout.append(251);
+    fn layout() -> dojo::database::introspect::Layout {
+        dojo::database::introspect::Layout::Struct(
+            array![
+                dojo::database::introspect::FieldLayout {
+                    selector: selector!("metadata_uri"),
+                    layout: dojo::database::introspect::Layout::ByteArray
+                }
+            ].span()
+        )
     }
 
     #[inline(always)]
@@ -121,13 +133,12 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
                     ),
                     dojo::database::introspect::serialize_member(
                         @dojo::database::introspect::Member {
-                            name: 'metadata_uri',
-                            ty: dojo::database::introspect::Ty::Array(3),
-                            attrs: array![].span()
+                        name: 'metadata_uri',
+                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        attrs: array![].span()
                         }
                     )
-                ]
-                    .span()
+                ].span()
             }
         )
     }
@@ -136,6 +147,7 @@ impl ResourceMetadataIntrospect<> of dojo::database::introspect::Introspect<Reso
 #[starknet::contract]
 mod resource_metadata {
     use super::ResourceMetadata;
+    use super::ResourceMetadataModel;
     use super::RESOURCE_METADATA_SELECTOR;
 
     #[storage]
@@ -143,35 +155,30 @@ mod resource_metadata {
 
     #[external(v0)]
     fn selector(self: @ContractState) -> felt252 {
-        RESOURCE_METADATA_SELECTOR
+        ResourceMetadataModel::selector()
     }
 
     fn name(self: @ContractState) -> ByteArray {
-        "ResourceMetadata"
+        ResourceMetadataModel::name()
     }
 
     fn version(self: @ContractState) -> u8 {
-        1
+        ResourceMetadataModel::version()
     }
 
     #[external(v0)]
-    fn unpacked_size(self: @ContractState) -> usize {
+    fn unpacked_size(self: @ContractState) -> Option<usize> {
         dojo::database::introspect::Introspect::<ResourceMetadata>::size()
     }
 
     #[external(v0)]
-    fn packed_size(self: @ContractState) -> usize {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<ResourceMetadata>::layout(ref layout);
-        let mut layout_span = layout.span();
-        dojo::packing::calculate_packed_size(ref layout_span)
+    fn packed_size(self: @ContractState) -> Option<usize> {
+        ResourceMetadataModel::packed_size()
     }
 
     #[external(v0)]
-    fn layout(self: @ContractState) -> Span<u8> {
-        let mut layout = core::array::ArrayTrait::new();
-        dojo::database::introspect::Introspect::<ResourceMetadata>::layout(ref layout);
-        core::array::ArrayTrait::span(@layout)
+    fn layout(self: @ContractState) -> dojo::database::introspect::Layout {
+        ResourceMetadataModel::layout()
     }
 
     #[external(v0)]

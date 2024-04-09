@@ -47,6 +47,7 @@ pub enum ModelError {
     Cainome(#[from] CainomeError),
 }
 
+// TODO: to update to match with new model interface
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait ModelReader<E> {
@@ -106,6 +107,7 @@ where
         &self,
         keys: &[FieldElement],
     ) -> Result<Vec<FieldElement>, ModelError> {
+        // TODO RBA: to update
         let packed_size: u8 =
             self.packed_size().await?.try_into().map_err(ParseError::ValueOutOfRange)?;
 

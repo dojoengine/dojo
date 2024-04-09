@@ -3,22 +3,21 @@ use std::collections::HashMap;
 use cairo_lang_defs::patcher::RewriteNode;
 use cairo_lang_defs::plugin::PluginDiagnostic;
 use cairo_lang_diagnostics::Severity;
-use cairo_lang_syntax::attribute::structured::{
-    Attribute, AttributeArg, AttributeArgVariant, AttributeListStructurize,
-};
 use cairo_lang_syntax::node::ast::{
-    self, Expr, GenericParam, ItemEnum, ItemStruct, OptionTypeClause, OptionWrappedGenericParamList,
+    Expr, GenericParam, ItemEnum, ItemStruct, OptionTypeClause, OptionWrappedGenericParamList,
 };
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use cairo_lang_utils::OptionHelper;
 use dojo_world::manifest::Member;
 use itertools::Itertools;
-use num_traits::ToPrimitive;
 
-const ARRAY_CAPACITY_ATTR: &str = "capacity";
+#[derive(PartialEq)]
+enum CompositeType {
+    Enum,
+    Struct,
+}
 
 #[derive(Clone, Default)]
 struct TypeIntrospection(usize, Vec<usize>);
@@ -37,6 +36,23 @@ fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
         ("ContractAddress".into(), TypeIntrospection(1, vec![251])),
         ("ClassHash".into(), TypeIntrospection(1, vec![251])),
     ])
+}
+
+fn is_byte_array(ty: String) -> bool {
+    ty.eq("ByteArray")
+}
+
+fn is_array_type(ty: String) -> bool {
+    ty.starts_with("Array<") || ty.starts_with("Span<")
+}
+
+fn get_array_item_type(ty: String) -> String {
+    // ByteArray case is handled separately.
+    if ty.starts_with("Array<") {
+        ty.replace("Array<", "").strip_suffix('>').unwrap().to_string()
+    } else {
+        ty.replace("Span<", "").strip_suffix('>').unwrap().to_string()
+    }
 }
 
 /// A handler for Dojo code derives Introspect for a struct
@@ -60,75 +76,93 @@ pub fn handle_introspect_struct(
         .elements(db)
         .iter()
         .map(|member| {
-            let key = member.has_attr(db, "key");
-
-            let attrs = member.attributes(db).structurize(db);
-            let array_capacity_attr =
-                attrs.iter().find(|attr| attr.id.as_str() == ARRAY_CAPACITY_ATTR);
-            let capacity = extract_array_capacity(array_capacity_attr, db, diagnostics);
+            let is_key = member.has_attr(db, "key");
 
             let mut ty =
                 member.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string();
-            let name = member.name(db).text(db).to_string();
-            let mut attrs = vec![];
-            if key {
-                attrs.push("'key'");
-            }
+            let member_name = member.name(db).text(db).to_string();
+            let attrs = if is_key { vec!["'key'"] } else { vec![] };
 
             if primitive_sizes.get(&ty).is_some() {
                 // It's a primitive type
                 member_types.push(format!(
-                    "dojo::database::introspect::serialize_member(@\
-                     dojo::database::introspect::Member {{
-                name: '{name}',
+                    "dojo::database::introspect::serialize_member(
+                     @dojo::database::introspect::Member {{
+                name: '{member_name}',
                 ty: dojo::database::introspect::Ty::Primitive('{ty}'),
                 attrs: array![{}].span()
             }})",
                     attrs.join(","),
                 ));
-            } else if let Some(c) = capacity {
-                if c == 0 {
-                    diagnostics.push(PluginDiagnostic {
-                        stable_ptr: member.stable_ptr().0,
-                        message: "Capacity must be greater than 0.".to_string(),
-                        severity: Severity::Error,
-                    });
-                }
-
-                if &ty != "Array<felt252>" && &ty != "Span<felt252>" {
-                    diagnostics.push(PluginDiagnostic {
-                        stable_ptr: member.stable_ptr().0,
-                        message: "Capacity is only supported for Array<felt252> or Span<felt252>."
-                            .to_string(),
-                        severity: Severity::Error,
-                    });
-                }
+            } else if is_byte_array(ty.clone()) {
+                // TODO for Ty
+            } else if is_array_type(ty.clone()) {
+                let item_type = get_array_item_type(ty);
 
                 member_types.push(format!(
-                    "dojo::database::introspect::serialize_member(@\
-                     dojo::database::introspect::Member {{
-                name: '{name}',
-                ty: dojo::database::introspect::Ty::Array({c}),
-                attrs: array![{}].span()
-            }})",
+                    "dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {{
+                        name: '{member_name}',
+                        ty: dojo::database::introspect::Ty::DynamicSizeArray,
+                        attrs: array![{}].span()
+                    }})",
                     attrs.join(","),
                 ));
 
-                ty = format!("array_felts__{c}");
+                ty = format!("dyn_array__{}", item_type);
+            } else if let Expr::Tuple(tuple) = member.type_clause(db).ty(db) {
+                let tuple_items = (*tuple.expressions(db))
+                    .elements(db)
+                    .iter()
+                    .filter_map(|e| {
+                        let e_ty = e.as_syntax_node().get_text(db).trim().to_string();
+                        if primitive_sizes.get(&e_ty).is_some() {
+                            Some(format!(
+                                "dojo::database::introspect::serialize_member_type(
+                                    @dojo::database::introspect::Ty::Primitive('{e_ty}')
+                                )"
+                            ))
+                        } else {
+                            diagnostics.push(PluginDiagnostic {
+                                stable_ptr: member.stable_ptr().0,
+                                message: "Only primitive types are supported inside tuples."
+                                    .to_string(),
+                                severity: Severity::Error,
+                            });
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                // Tuple
+                member_types.push(format!(
+                    "dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {{
+                        name: '{member_name}',
+                        ty: dojo::database::introspect::Ty::Tuple(
+                            array![
+                                {}
+                            ].span()
+                        ),
+                        attrs: array![{}].span()
+                    }})",
+                    tuple_items.join(",\n"),
+                    attrs.join(","),
+                ));
             } else {
                 // It's a custom struct/enum
                 member_types.push(format!(
-                    "dojo::database::introspect::serialize_member(@\
-                     dojo::database::introspect::Member {{
-                name: '{name}',
-                ty: dojo::database::introspect::Introspect::<{ty}>::ty(),
-                attrs: array![{}].span()
-            }})",
+                    "dojo::database::introspect::serialize_member(
+                        @dojo::database::introspect::Member {{
+                        name: '{member_name}',
+                        ty: dojo::database::introspect::Introspect::<{ty}>::ty(),
+                        attrs: array![{}].span()
+                    }})",
                     attrs.join(","),
                 ));
             }
 
-            Member { name, ty, key }
+            Member { name: member_name, ty, key: is_key }
         })
         .collect::<_>();
 
@@ -136,12 +170,22 @@ pub fn handle_introspect_struct(
         "dojo::database::introspect::Ty::Struct(dojo::database::introspect::Struct {{
             name: '{name}',
             attrs: array![].span(),
-            children: array![{}].span()
+            children: array![
+                {}\n
+            ].span()
         }})",
-        member_types.join(", ")
+        member_types.join(",\n")
     );
 
-    handle_introspect_internal(db, name, struct_ast.generic_params(db), vec![], 0, type_ty, members)
+    handle_introspect_internal(
+        db,
+        name,
+        struct_ast.generic_params(db),
+        CompositeType::Struct,
+        0,
+        type_ty,
+        members,
+    )
 }
 
 /// Generates enum arm type introspect
@@ -197,6 +241,14 @@ pub fn handle_introspect_enum(
             let ty_name = type_path.as_syntax_node().get_text(db);
             let is_primitive = primitive_sizes.get(&ty_name).is_some();
 
+            if is_array_type(ty_name.clone()) {
+                diagnostics.push(PluginDiagnostic {
+                    stable_ptr: types_tuple.stable_ptr().0,
+                    message: "Dynamic arrays are not supported.".to_string(),
+                    severity: Severity::Error,
+                });
+            }
+
             variant_type_arr.push(handle_enum_arm_type(&ty_name, is_primitive));
         } else {
             diagnostics.push(PluginDiagnostic {
@@ -237,7 +289,7 @@ pub fn handle_introspect_enum(
             if !variant_type_arr.is_empty() {
                 let ty_cairo: Vec<_> =
                     variant_type_arr.iter().map(|(ty_cairo, _)| ty_cairo.to_string()).collect();
-                ty_cairo.join(", ")
+                ty_cairo.join(",\n")
             } else {
                 "".to_string()
             }
@@ -249,20 +301,21 @@ pub fn handle_introspect_enum(
             dojo::database::introspect::Enum {{
                 name: '{name}',
                 attrs: array![].span(),
-                children: array![{}].span()
+                children: array![
+                {}\n
+                ].span()
             }}
         )",
         arms_ty.join(",\n")
     );
 
     // Enums have 1 size and 8 bit layout by default
-    let layout = vec![RewriteNode::Text("layout.append(8);\n".into())];
     let size_precompute = 1;
     handle_introspect_internal(
         db,
         name,
         enum_ast.generic_params(db),
-        layout,
+        CompositeType::Enum,
         size_precompute,
         type_ty,
         members,
@@ -273,13 +326,26 @@ fn handle_introspect_internal(
     db: &dyn SyntaxGroup,
     name: String,
     generics: OptionWrappedGenericParamList,
-    mut layout: Vec<RewriteNode>,
+    composite_type: CompositeType,
     mut size_precompute: usize,
     type_ty: String,
     members: Vec<Member>,
 ) -> RewriteNode {
     let mut size = vec![];
+    let mut dynamic_size = false;
     let primitive_sizes = primitive_type_introspection();
+    let mut layout = match composite_type {
+        CompositeType::Enum => {
+            vec![
+                "dojo::database::introspect::FieldLayout {
+                    selector: '',
+                    layout: dojo::database::introspect::Introspect::<u8>::layout()
+                }"
+                .to_string(),
+            ]
+        }
+        CompositeType::Struct => vec![],
+    };
 
     let generics = if let OptionWrappedGenericParamList::WrappedGenericParamList(params) = generics
     {
@@ -315,25 +381,146 @@ fn handle_introspect_internal(
                 attrs.push("'key'");
             } else {
                 size_precompute += p_ty.0;
-                p_ty.1.iter().for_each(|l| {
-                    layout.push(RewriteNode::Text(format!("layout.append({});\n", l)))
-                });
+
+                match composite_type {
+                    CompositeType::Enum => layout.push(format!(
+                        "dojo::database::introspect::FieldLayout {{
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<{}>::layout()
+                        }}",
+                        m.ty
+                    )),
+                    CompositeType::Struct => {
+                        let values =
+                            p_ty.1.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ");
+
+                        layout.push(format!(
+                            "dojo::database::introspect::FieldLayout {{
+                                selector: selector!(\"{}\"),
+                                layout: \
+                             dojo::database::introspect::Layout::Fixed(array![{}].span())
+                            }}",
+                            m.name, values
+                        ))
+                    }
+                };
             }
-        } else if m.ty.starts_with("array_felts__") {
-            let capacity =
-                m.ty.strip_prefix("array_felts__")
+        } else if m.ty.starts_with("ByteArray") {
+            dynamic_size = true;
+
+            match composite_type {
+                CompositeType::Enum => {
+                    layout.push(
+                        "dojo::database::introspect::FieldLayout {
+                            selector: '',
+                            layout: dojo::database::introspect::Layout::ByteArray
+                        }"
+                        .to_string(),
+                    );
+                }
+                CompositeType::Struct => {
+                    layout.push(format!(
+                        "dojo::database::introspect::FieldLayout {{
+                            selector: selector!(\"{}\"),
+                            layout: dojo::database::introspect::Layout::ByteArray
+                        }}",
+                        m.name
+                    ));
+                }
+            }
+        } else if m.ty.starts_with("dyn_array__") {
+            let item_type = m.ty.strip_prefix("dyn_array__").unwrap();
+            dynamic_size = true;
+
+            match composite_type {
+                CompositeType::Enum => {
+                    layout.push(format!(
+                        "dojo::database::introspect::Layout::Array(
+                            array![
+                                dojo::database::introspect::FieldLayout {{
+                                    selector: '',
+                                    layout: dojo::database::introspect::Introspect::<{}>::layout()
+                                }}
+                            ].span()
+                        )",
+                        item_type
+                    ));
+                }
+                CompositeType::Struct => {
+                    layout.push(format!(
+                        "dojo::database::introspect::FieldLayout {{
+                            selector: selector!(\"{}\"),
+                            layout: dojo::database::introspect::Layout::Array(
+                                array![
+                                    dojo::database::introspect::FieldLayout {{
+                                        selector: '',
+                                        layout: \
+                         dojo::database::introspect::Introspect::<{}>::layout()
+                                    }}
+                                ].span()
+                            )
+                        }}",
+                        m.name, item_type
+                    ));
+                }
+            }
+        } else if m.ty.starts_with('(') {
+            // this tuple contains primitive types only (checked before)
+            // so we can just split the tuple using the coma separator
+            let tuple_types =
+                m.ty.strip_prefix('(')
                     .unwrap()
-                    .parse::<u32>()
-                    .expect("u32 expected for array capacity");
+                    .strip_suffix(')')
+                    .unwrap()
+                    .split(',')
+                    .collect::<Vec<_>>();
 
-            if m.key {
-                attrs.push("'key'");
-            } else {
-                // Serialized array always have their length first.
-                size.push(format!("1 + {capacity}"));
+            let tuple_types = tuple_types
+                .iter()
+                .map(|t| {
+                    let type_name = t.trim().to_string();
 
-                for _i in 0..=capacity {
-                    layout.push(RewriteNode::Text("layout.append(251);\n".to_string()))
+                    if let Some(p_ty) = primitive_sizes.get(&type_name) {
+                        size_precompute += p_ty.0;
+                    } else {
+                        size.push(format!(
+                            "dojo::database::introspect::Introspect::<{}>::size()",
+                            type_name
+                        ));
+                    }
+
+                    format!(
+                        "dojo::database::introspect::FieldLayout {{
+                            selector: '',
+                            layout: dojo::database::introspect::Introspect::<{type_name}>::layout()
+                        }}
+                        "
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            match composite_type {
+                CompositeType::Enum => layout.push(format!(
+                    "dojo::database::introspect::Layout::Tuple(
+                            array![
+                            {}
+                            ].span()
+                        )",
+                    tuple_types.join(",\n")
+                )),
+                CompositeType::Struct => {
+                    layout.push(format!(
+                        "dojo::database::introspect::FieldLayout {{
+                            selector: selector!(\"{}\"),
+                            layout: dojo::database::introspect::Layout::Tuple(
+                                array![
+                                {}
+                                ].span()
+                            )
+                        }}",
+                        m.name,
+                        tuple_types.join(",\n")
+                    ));
                 }
             }
         } else {
@@ -342,27 +529,94 @@ fn handle_introspect_internal(
                 attrs.push("'key'");
             } else {
                 size.push(format!("dojo::database::introspect::Introspect::<{}>::size()", m.ty,));
-                layout.push(RewriteNode::Text(format!(
-                    "dojo::database::introspect::Introspect::<{}>::layout(ref layout);\n",
-                    m.ty
-                )));
+
+                match composite_type {
+                    CompositeType::Enum => {
+                        layout.push(format!(
+                            "
+                            dojo::database::introspect::FieldLayout {{
+                                selector: '',
+                                layout: dojo::database::introspect::Introspect::<{}>::layout()
+                            }}",
+                            m.ty
+                        ));
+                    }
+                    CompositeType::Struct => {
+                        layout.push(format!(
+                            "dojo::database::introspect::FieldLayout {{
+                                selector: selector!(\"{}\"),
+                                layout: dojo::database::introspect::Introspect::<{}>::layout()
+                            }}",
+                            m.name, m.ty
+                        ));
+                    }
+                }
             }
         }
     });
 
-    size.push(format!("{}", size_precompute));
+    let size = if dynamic_size {
+        "Option::None".to_string()
+    } else {
+        if size_precompute > 0 {
+            size.push(format!("Option::Some({})", size_precompute));
+        }
+
+        match size.len() {
+            0 => {
+                // TODO: to verify
+                "Option::None".to_string()
+            }
+            1 => size[0].clone(),
+            _ => {
+                format!(
+                    "let sizes : Array<Option<usize>> = array![
+                        {}
+                    ];
+
+                    if dojo::database::utils::any_none(@sizes) {{
+                        return Option::None;
+                    }}
+                    Option::Some(dojo::database::utils::sum(sizes))
+                    ",
+                    size.join(",\n")
+                )
+            }
+        }
+    };
+
+    let layout = match composite_type {
+        CompositeType::Enum => format!(
+            "dojo::database::introspect::Layout::Tuple(
+                array![
+                {}\n
+                ].span()
+            )
+            ",
+            layout.join(",\n")
+        ),
+        CompositeType::Struct => format!(
+            "dojo::database::introspect::Layout::Struct(
+                array![
+                {}\n
+                ].span()
+            )
+            ",
+            layout.join(",\n")
+        ),
+    };
 
     RewriteNode::interpolate_patched(
         "
 impl $name$Introspect<$generics$> of \
          dojo::database::introspect::Introspect<$name$<$generics_types$>> {
     #[inline(always)]
-    fn size() -> usize {
+    fn size() -> Option<usize> {
         $size$
     }
 
     #[inline(always)]
-    fn layout(ref layout: Array<u8>) {
+    fn layout() -> dojo::database::introspect::Layout {
         $layout$
     }
 
@@ -376,40 +630,9 @@ impl $name$Introspect<$generics$> of \
             ("name".to_string(), RewriteNode::Text(name)),
             ("generics".to_string(), RewriteNode::Text(generic_impls)),
             ("generics_types".to_string(), RewriteNode::Text(generics.join(", "))),
-            ("size".to_string(), RewriteNode::Text(size.join(" + "))),
-            ("layout".to_string(), RewriteNode::new_modified(layout)),
+            ("size".to_string(), RewriteNode::Text(size)),
+            ("layout".to_string(), RewriteNode::Text(layout)),
             ("ty".to_string(), RewriteNode::Text(type_ty)),
         ]),
     )
-}
-
-/// Extract the array capacity from the attribute.
-/// Adds a diagnostic if the attribute is malformed.
-fn extract_array_capacity(
-    capacity_attr: Option<&Attribute>,
-    db: &dyn SyntaxGroup,
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> Option<usize> {
-    let Some(attr) = capacity_attr else {
-        return None;
-    };
-
-    #[allow(clippy::collapsible_match)]
-    match &attr.args[..] {
-        [AttributeArg { variant: AttributeArgVariant::Unnamed { value, .. }, .. }] => match value {
-            ast::Expr::Literal(literal) => {
-                literal.numeric_value(db).and_then(|v| v.to_u32()).and_then(|v| v.to_usize())
-            }
-            _ => None,
-        },
-        _ => None,
-    }
-    .on_none(|| {
-        diagnostics.push(PluginDiagnostic {
-            stable_ptr: attr.args_stable_ptr.untyped(),
-            message: "Attribute should have a single non-negative literal in `u32` range."
-                .to_string(),
-            severity: Severity::Error,
-        })
-    })
 }

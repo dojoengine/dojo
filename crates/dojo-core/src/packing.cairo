@@ -6,19 +6,22 @@ use option::OptionTrait;
 
 const PACKING_MAX_BITS: u8 = 251;
 
-fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, ref layout: Span<u8>) {
-    assert(unpacked.len() == layout.len(), 'mismatched input lens');
+fn pack(ref packed: Array<felt252>, ref unpacked: Span<felt252>, offset: u32, ref layout: Span<u8>) {
+    assert((unpacked.len() - offset) >= layout.len(), 'mismatched input lens');
     let mut packing: felt252 = 0x0;
-    let mut offset: u8 = 0x0;
+    let mut internal_offset: u8 = 0x0;
+    let mut index = offset;
     loop {
-        match unpacked.pop_front() {
-            Option::Some(item) => {
-                pack_inner(item, *layout.pop_front().unwrap(), ref packing, ref offset, ref packed);
+        match layout.pop_front() {
+            Option::Some(layout) => {
+                pack_inner(unpacked.at(index), *layout, ref packing, ref internal_offset, ref packed);
             },
             Option::None(_) => {
                 break;
             }
         };
+
+        index += 1;
     };
     packed.append(packing);
 }
