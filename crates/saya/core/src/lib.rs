@@ -208,7 +208,7 @@ impl Saya {
         let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
         info!(target: "saya_core", block_number, "Block proven.");
 
-        //save proof to file1
+        // save proof to file1
         tokio::fs::File::create(format!("proof_{}.json", block_number))
             .await
             .unwrap()
