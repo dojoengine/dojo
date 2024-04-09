@@ -17,11 +17,8 @@ pub struct CleanArgs {
 }
 
 impl CleanArgs {
-    pub fn clean_manifests(&self, root_dir: &Utf8PathBuf, profile_name: &str) -> Result<()> {
-        let dirs = vec![
-            root_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
-            root_dir.join(MANIFESTS_DIR).join(profile_name).join(ABIS_DIR).join(BASE_DIR),
-        ];
+    pub fn clean_manifests(&self, profile_dir: &Utf8PathBuf) -> Result<()> {
+        let dirs = vec![profile_dir.join(BASE_DIR), profile_dir.join(ABIS_DIR).join(BASE_DIR)];
 
         for d in dirs {
             if d.exists() {
@@ -40,14 +37,14 @@ impl CleanArgs {
 
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
+        let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
+
         // By default, clean build manifests and scarb artifacts.
         scarb::ops::clean(config)?;
-        self.clean_manifests(&manifest_dir, &profile_name)?;
+        self.clean_manifests(&profile_dir)?;
 
-        if self.all {
-            if manifest_dir.exists() {
-                fs::remove_dir_all(manifest_dir)?;
-            }
+        if self.all && profile_dir.exists() {
+            fs::remove_dir_all(profile_dir)?;
         }
 
         Ok(())
