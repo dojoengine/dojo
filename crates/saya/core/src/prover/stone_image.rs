@@ -51,8 +51,8 @@ impl StoneProver {
         static STONE_PROVER: OnceCell<(anyhow::Result<String>, anyhow::Result<String>)> =
             OnceCell::const_new();
 
-        let source = "piniom/state-diff-commitment";
-        let verifier = "piniom/verifier:latest";
+        let source = "neotheprogramist/state-diff-commitment:latest";
+        let verifier = "neotheprogramist/verifier:latest";
 
         let result = STONE_PROVER
             .get_or_init(|| async {
