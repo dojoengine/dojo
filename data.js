@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712662609087,
+  "lastUpdate": 1712676979979,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4885,6 +4885,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17054915,
             "range": "± 190241",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1fe14ea5aae135d2994a4ad57043e0544a03c9fb",
+          "message": "fix(grpc): queries (#1779)\n\n* fix(grpc): queries\r\n\r\n* fmt\r\n\r\n* feat: entities test\r\n\r\n* refactor: disable tests until test rework\r\n\r\n* fmt\r\n\r\n* fix: tests",
+          "timestamp": "2024-04-09T11:28:12-04:00",
+          "tree_id": "2669dd6e61b5754661cf0e8a197988385d9934e4",
+          "url": "https://github.com/dojoengine/dojo/commit/1fe14ea5aae135d2994a4ad57043e0544a03c9fb"
+        },
+        "date": 1712676979272,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16846082,
+            "range": "± 272211",
             "unit": "ns/iter"
           }
         ]
