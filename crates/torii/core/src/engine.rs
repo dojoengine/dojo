@@ -151,20 +151,16 @@ impl<P: Provider + Sync> Engine<P> {
 
         // Skip transactions that have been processed already
         // Our cursor is the last processed transaction
-        let transactions = block
-            .transactions
-            .iter()
-            .skip_while(|tx| {
-                if let Some(pending_block_tx) = pending_block_tx {
-                    *tx.transaction_hash() != pending_block_tx
-                } else {
-                    false
+        for transaction in block.transactions {
+            if let Some(tx) = pending_block_tx {
+                if transaction.transaction_hash() != &tx {
+                    continue;
                 }
-            })
-            .skip(1)
-            .collect::<Vec<_>>();
 
-        for transaction in transactions {
+                pending_block_tx = None;
+                continue;
+            }
+
             self.process_transaction_and_receipt(
                 *transaction.transaction_hash(),
                 &transaction,
@@ -189,7 +185,7 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         from: u64,
         to: u64,
-        pending_block_tx: Option<FieldElement>,
+        mut pending_block_tx: Option<FieldElement>,
     ) -> Result<Option<FieldElement>> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
@@ -233,13 +229,15 @@ impl<P: Provider + Sync> Engine<P> {
                     last_block = block_number;
                 }
 
-                if let Some(pending_block_tx) = pending_block_tx {
-                    // Then we skip all transactions until we reach the last pending processed
-                    // transaction (if any)
-                    if event.transaction_hash != pending_block_tx {
+                // Then we skip all transactions until we reach the last pending processed
+                // transaction (if any)
+                if let Some(tx) = pending_block_tx {
+                    if event.transaction_hash != tx {
                         continue;
                     }
+
                     // Then we skip that processed transaction
+                    pending_block_tx = None;
                     continue;
                 }
 
@@ -276,11 +274,11 @@ impl<P: Provider + Sync> Engine<P> {
             .await?;
         }
 
-        self.db.set_head(to, None);
+        self.db.set_head(to, pending_block_tx);
 
         self.db.execute().await?;
 
-        Ok(None)
+        Ok(pending_block_tx)
     }
 
     async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {
