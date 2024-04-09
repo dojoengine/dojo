@@ -35,6 +35,8 @@ impl CleanArgs {
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
 
+        // Manifest path is always a file, we can unwrap safely to get the
+        // parent folder.
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
 
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
