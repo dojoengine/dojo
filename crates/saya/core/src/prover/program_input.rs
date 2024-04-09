@@ -9,7 +9,7 @@ use starknet::core::types::FieldElement;
 use super::state_diff::state_updates_to_json_like;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
-/// With the new state root computed by ten prover.
+/// With the new state root computed by the prover.
 pub struct ProgramInput {
     pub prev_state_root: FieldElement,
     pub block_number: FieldElement,
