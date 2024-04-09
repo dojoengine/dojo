@@ -1,16 +1,16 @@
+use std::fs::File;
+
 use anyhow::Result;
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
-use std::fs::File;
 
+use super::options::statistics::{ContractStatistics, Stats};
 use crate::commands::options::statistics::{
     compare_against_limit, get_contract_statistics_for_dir,
 };
-
-use super::options::statistics::{ContractStatistics, Stats};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct StarknetConstants {
@@ -52,14 +52,14 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
-        if self.stats.stats || !self.stats.stats_limits.is_none() {
+        if self.stats.stats || self.stats.stats_limits.is_some() {
             const STARKNET_CONSTANTS_JSON: &str = "resources/starknet_constants.json";
             let json_consts_path = match &self.stats.stats_limits {
                 Some(path) => path.clone(),
                 None => String::from(STARKNET_CONSTANTS_JSON),
             };
 
-            let file = File::open(&json_consts_path)?;
+            let file = File::open(json_consts_path)?;
             let limits: StarknetConstants = serde_json::from_reader(&file)?;
             let contracts_statistics = get_contract_statistics_for_dir(&compile_info.target_dir);
 
@@ -103,23 +103,20 @@ pub fn print_stats(contract_statistic: ContractStatistics, limits: &StarknetCons
         "{}",
         compare_against_limit(contract_statistic.number_felts, limits.max_contract_bytecode_size)
     );
-    println!("");
 
     print!("- Contract Class size: {} bytes  ", contract_statistic.file_size);
     println!(
         "{}",
         compare_against_limit(contract_statistic.file_size, limits.max_contract_class_size)
     );
-    println!("");
 }
 
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler::build_test_config;
 
-    use crate::commands::options::statistics::Stats;
-
     use super::BuildArgs;
+    use crate::commands::options::statistics::Stats;
 
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {

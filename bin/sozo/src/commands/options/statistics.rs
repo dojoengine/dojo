@@ -1,12 +1,11 @@
+use std::fs::{self, File};
+use std::path::PathBuf;
+
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FlattenedSierraClass;
-use std::{
-    fs::{self, File},
-    path::PathBuf,
-};
 
 pub struct ContractStatistics {
     pub contract_name: String,
@@ -36,7 +35,7 @@ pub fn read_sierra_json_program(file: &File) -> Result<FlattenedSierraClass> {
 }
 
 pub fn compute_contract_byte_code_size(contract_artifact: FlattenedSierraClass) -> usize {
-    contract_artifact.sierra_program.iter().count()
+    contract_artifact.sierra_program.len()
 }
 
 pub fn get_file_size_in_bytes(file: File) -> u64 {
