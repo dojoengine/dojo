@@ -1,6 +1,9 @@
+use anyhow::bail;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{EntryPointType, TxExecInfo};
+use katana_primitives::transaction::L1HandlerTx;
+use katana_primitives::utils::transaction::compute_l1_message_hash;
 use starknet::core::types::FieldElement;
 
 use super::state_diff::state_updates_to_json_like;
@@ -19,6 +22,7 @@ pub struct ProgramInput {
 
 pub fn extract_messages(
     exec_infos: &Vec<TxExecInfo>,
+    mut transactions: Vec<&L1HandlerTx>,
 ) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
     let message_to_starknet_segment = exec_infos
         .iter()
@@ -49,10 +53,34 @@ pub fn extract_messages(
         .map(|t| t.execute_call_info.iter())
         .flatten()
         .filter(|c| c.entry_point_type == EntryPointType::L1Handler)
-        .map(|c| MessageToAppchain {
+        .map(|c| {
+            let message_hash =
+                compute_l1_message_hash(*c.caller_address, *c.contract_address, &c.calldata[..]);
+
+            // Matching execution to an transaction to extract nonce
+            let matching = transactions
+                .iter()
+                .enumerate()
+                .find(|(_, &t)| {
+                    t.message_hash == message_hash
+                        && c.contract_address == t.contract_address
+                        && c.calldata == t.calldata
+                })
+                .expect(&format!(
+                    "No matching transaction found for message hash: {}",
+                    message_hash
+                ))
+                .0;
+
+            // Removing, to have different nonces, even for the same massages
+            let removed = transactions.remove(matching);
+
+            (c, removed)
+        })
+        .map(|(c, t)| MessageToAppchain {
             from_address: c.caller_address,
             to_address: c.contract_address,
-            nonce: FieldElement::from(0u64), // TODO: extract nonce
+            nonce: t.nonce,
             selector: c.entry_point_selector,
             payload: c.calldata.clone(),
         })

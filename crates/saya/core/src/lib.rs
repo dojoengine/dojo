@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
+use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
@@ -172,8 +173,18 @@ impl Saya {
             return Ok(());
         }
 
+        let transactions = block
+            .block
+            .body
+            .iter()
+            .filter_map(|t| match &t.transaction {
+                Tx::L1Handler(tx) => Some(tx),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
         let (message_to_starknet_segment, message_to_appchain_segment) =
-            extract_messages(&exec_infos);
+            extract_messages(&exec_infos, transactions);
 
         let new_program_input = ProgramInput {
             prev_state_root: prev_block.header.header.state_root,
