@@ -1,5 +1,3 @@
-use std::fs::File;
-
 use anyhow::Result;
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
@@ -8,16 +6,7 @@ use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 
 use super::options::statistics::{ContractStatistics, Stats};
-use crate::commands::options::statistics::{
-    compare_against_limit, get_contract_statistics_for_dir,
-};
-
-#[derive(Debug, serde::Deserialize)]
-pub struct StarknetConstants {
-    max_contract_bytecode_size: u64,
-    max_contract_class_size: u64,
-}
-
+use crate::commands::options::statistics::get_contract_statistics_for_dir;
 #[derive(Args, Debug)]
 pub struct BuildArgs {
     #[arg(long)]
@@ -52,19 +41,11 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
-        if self.stats.stats || self.stats.stats_limits.is_some() {
-            const STARKNET_CONSTANTS_JSON: &str = "resources/starknet_constants.json";
-            let json_consts_path = match &self.stats.stats_limits {
-                Some(path) => path.clone(),
-                None => String::from(STARKNET_CONSTANTS_JSON),
-            };
-
-            let file = File::open(json_consts_path)?;
-            let limits: StarknetConstants = serde_json::from_reader(&file)?;
+        if self.stats.stats {
             let contracts_statistics = get_contract_statistics_for_dir(&compile_info.target_dir);
 
             for contract_stats in contracts_statistics {
-                print_stats(contract_stats, &limits);
+                print_stats(contract_stats);
             }
         }
 
@@ -89,26 +70,18 @@ impl BuildArgs {
     }
 }
 
-pub fn print_stats(contract_statistic: ContractStatistics, limits: &StarknetConstants) {
+pub fn print_stats(contract_statistic: ContractStatistics) {
     println!(
         "---------------Contract Stats for {}---------------",
         contract_statistic.contract_name
     );
 
-    print!(
-        "- Contract bytecode size (Number of felts in the program): {}  ",
+    println!(
+        "- Contract bytecode size (Number of felts in the program): {}\n",
         contract_statistic.number_felts,
     );
-    println!(
-        "{}",
-        compare_against_limit(contract_statistic.number_felts, limits.max_contract_bytecode_size)
-    );
 
-    print!("- Contract Class size: {} bytes  ", contract_statistic.file_size);
-    println!(
-        "{}",
-        compare_against_limit(contract_statistic.file_size, limits.max_contract_class_size)
-    );
+    println!("- Contract Class size: {} bytes\n", contract_statistic.file_size);
 }
 
 #[cfg(test)]
@@ -126,7 +99,7 @@ mod tests {
             bindings_output: "generated".to_string(),
             typescript: true,
             unity: true,
-            stats: Stats { stats: false, stats_limits: None },
+            stats: Stats { stats: false },
         };
         let result = build_args.run(&config);
         assert!(result.is_ok());
