@@ -39,7 +39,7 @@ pub fn extract_messages(
             all
         })
         .flatten()
-        .map(|c| c.l2_to_l1_messages.iter()) // take all messages
+        .map(|c| c.l2_to_l1_messages.iter())
         .flatten()
         .map(|m| MessageToStarknet { // Parse them to the format understood by the prover.
             from_address: m.from_address,
