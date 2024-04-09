@@ -9,7 +9,6 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use starknet::macros::felt;
 use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
 use url::Url;
@@ -38,6 +37,7 @@ pub struct SayaConfig {
     pub data_availability: Option<DataAvailabilityConfig>,
     pub prover: ProverIdentifier,
     pub verifier: VerifierIdentifier,
+    pub world_address: Option<FieldElement>,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -186,11 +186,7 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
-        let world_address = Some(felt!(
-            "2087021424722619777119509474943472645767659996348769578120564519014510906823"
-        ));
-
-        println!("Program input: {}", new_program_input.serialize(world_address)?);
+        println!("Program input: {}", new_program_input.serialize(self.config.world_address)?);
 
         // let to_prove = ProvedStateDiff {
         //     genesis_state_hash,
@@ -199,8 +195,11 @@ impl Saya {
         // };
 
         trace!(target: "saya_core", "Proving block {block_number}.");
-        let proof =
-            prover::prove(new_program_input.serialize(world_address)?, self.config.prover).await?;
+        let proof = prover::prove(
+            new_program_input.serialize(self.config.world_address)?,
+            self.config.prover,
+        )
+        .await?;
         info!(target: "saya_core", block_number, "Block proven.");
 
         //save proof to file1
