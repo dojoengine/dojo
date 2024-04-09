@@ -1,6 +1,9 @@
 pub mod logger;
 pub mod subscriptions;
 
+// #[cfg(test)]
+// mod tests;
+
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -37,8 +40,6 @@ use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{SubscribeEntitiesRequest, SubscribeEntityResponse};
 use crate::proto::{self};
 use crate::types::ComparisonOperator;
-
-mod tests;
 
 #[derive(Clone)]
 pub struct DojoWorld {
