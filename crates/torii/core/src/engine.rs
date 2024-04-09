@@ -130,7 +130,7 @@ impl<P: Provider + Sync> Engine<P> {
         {
             pending
         } else {
-            return Ok(());
+            return Err(anyhow::anyhow!("No pending block."));
         };
 
         if let Some(ref block_tx) = self.block_tx {
