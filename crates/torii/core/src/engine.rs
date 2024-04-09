@@ -73,7 +73,7 @@ impl<P: Provider + Sync> Engine<P> {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        let (mut head, mut pending_block_tx_idx) = self.db.head().await?;
+        let (mut head, mut pending_block_tx) = self.db.head().await?;
         if head == 0 {
             head = self.config.start_block;
         } else if self.config.start_block != 0 {
@@ -91,9 +91,9 @@ impl<P: Provider + Sync> Engine<P> {
                     break Ok(());
                 }
                 _ = async {
-                    match self.sync_to_head(head, pending_block_tx_idx).await {
-                        Ok((latest_block_number, pending_tx_id)) => {
-                            pending_block_tx_idx = pending_tx_id;
+                    match self.sync_to_head(head, pending_block_tx).await {
+                        Ok((latest_block_number, latest_pending_tx)) => {
+                            pending_block_tx = latest_pending_tx;
                             head = latest_block_number;
                             backoff_delay = Duration::from_secs(1);
                         }
@@ -111,21 +111,21 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    pub async fn sync_to_head(&mut self, from: u64, mut pending_block_tx_idx: u64) -> Result<(u64, u64)> {
+    pub async fn sync_to_head(&mut self, from: u64, mut pending_block_tx: Option<FieldElement>) -> Result<(u64, Option<FieldElement>)> {
         let latest_block_number = self.provider.block_hash_and_number().await?.block_number;
 
         if from < latest_block_number {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
-            self.sync_range(from, latest_block_number).await?;
+            self.sync_range(from, latest_block_number, pending_block_tx).await?;
         } else {
-            pending_block_tx_idx = self.sync_pending(latest_block_number + 1, pending_block_tx_idx).await?;
+            pending_block_tx = self.sync_pending(latest_block_number + 1, pending_block_tx).await?;
         }
 
-        Ok((latest_block_number,  pending_block_tx_idx))
+        Ok((latest_block_number,  pending_block_tx))
     }
 
-    pub async fn sync_pending(&mut self, block_number: u64, mut pending_block_tx_idx: u64) -> Result<u64> {
+    pub async fn sync_pending(&mut self, block_number: u64, mut pending_block_tx: Option<FieldElement>) -> Result<Option<FieldElement>> {
         let block = if let MaybePendingBlockWithTxs::PendingBlock(pending) =
             self.provider.get_block_with_txs(BlockId::Tag(BlockTag::Pending)).await?
         {
@@ -141,11 +141,17 @@ impl<P: Provider + Sync> Engine<P> {
         //     block_tx.send(block_number).await?;
         // }
 
-        for (idx, transaction) in block.transactions.iter().enumerate() {
-            if idx < pending_block_tx_idx as usize {
-                continue;
+        // Skip transactions that have been processed already
+        // Our cursor is the last processed transaction
+        let transactions = block.transactions.iter().skip_while(|tx| {
+            if let Some(pending_block_tx) = pending_block_tx {
+                *tx.transaction_hash() != pending_block_tx
+            } else {
+                false
             }
+        }).skip(1).collect::<Vec<_>>();
 
+        for transaction in transactions {
             self.process_transaction_and_receipt(
                 *transaction.transaction_hash(),
                 &transaction,
@@ -154,16 +160,18 @@ impl<P: Provider + Sync> Engine<P> {
             )
             .await?;
 
-            // Block number should be the latets block number
-            pending_block_tx_idx = idx as u64;
-            self.db.set_head(block_number - 1, pending_block_tx_idx);
+            pending_block_tx = Some(*transaction.transaction_hash());
         }
-
+        
+        // Set the head to the last processed pending transaction
+        // Head block number number should still be latest block number 
+        self.db.set_head(block_number - 1, pending_block_tx);
+        
         self.db.execute().await?;
-        Ok(pending_block_tx_idx)
+        Ok(pending_block_tx)
     }
 
-    pub async fn sync_range(&mut self, from: u64, to: u64) -> Result<()> {
+    pub async fn sync_range(&mut self, from: u64, to: u64, pending_block_tx: Option<FieldElement>) -> Result<()> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
             self.provider.get_events(
@@ -186,7 +194,7 @@ impl<P: Provider + Sync> Engine<P> {
         }
 
         let mut last_block: u64 = 0;
-        let mut last_transaction_hash: FieldElement = FieldElement::ZERO;
+        let mut last_transaction_hash: FieldElement = pending_block_tx.unwrap_or(FieldElement::ZERO);
         for events_page in events_pages {
             for event in events_page.events {
                 self.process_emitted_event(event, &mut last_block, &mut last_transaction_hash)
@@ -231,7 +239,7 @@ impl<P: Provider + Sync> Engine<P> {
             Self::process_block(self, block_number, block_timestamp).await?;
             info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
 
-            self.db.set_head(block_number, 0);
+            self.db.set_head(block_number, None);
         }
 
         // We index transaction only once for all events in the same transaction
