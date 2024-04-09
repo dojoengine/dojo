@@ -1,4 +1,3 @@
-use anyhow::bail;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{EntryPointType, TxExecInfo};
