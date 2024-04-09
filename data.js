@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712676979979,
+  "lastUpdate": 1712677108918,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4915,6 +4915,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16846082,
             "range": "± 272211",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "128649481+neotheprogramist@users.noreply.github.com",
+            "name": "Neo",
+            "username": "neotheprogramist"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5164e588c74fc3b9132d100752f6cb30be00e0a3",
+          "message": "Saya New Inputs (#1757)\n\n* new inputs and serialization\r\n\r\n* L2 -> L1 messages\r\n\r\n* L1 -> L2 messages\r\n\r\n* leftover\r\n\r\n* format\r\n\r\n* saya to new input\r\n\r\n* extracting nonce from transaction\r\n\r\n* typo for rust fmt\r\n\r\n* Update crates/saya/core/src/prover/program_input.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Update crates/saya/core/src/prover/program_input.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Update crates/saya/core/src/prover/program_input.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Update crates/saya/core/src/prover/program_input.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* unused import\r\n\r\n* extracted recursive messages to function\r\n\r\n---------\r\n\r\nCo-authored-by: Mateusz Zając <matzayonc@gmail.com>\r\nCo-authored-by: Mateusz Zając <60236390+matzayonc@users.noreply.github.com>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-09T11:30:11-04:00",
+          "tree_id": "bf0ba4995a8436f2683b1b1ea39a80ce75a00e22",
+          "url": "https://github.com/dojoengine/dojo/commit/5164e588c74fc3b9132d100752f6cb30be00e0a3"
+        },
+        "date": 1712677108129,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17854071,
+            "range": "± 179886",
             "unit": "ns/iter"
           }
         ]
