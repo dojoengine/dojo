@@ -1,6 +1,6 @@
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::trace::{EntryPointType, TxExecInfo};
+use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
 use starknet::core::types::FieldElement;
@@ -19,32 +19,38 @@ pub struct ProgramInput {
     pub state_updates: StateUpdates,
 }
 
+fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
+    let mut messages = vec![];
+
+    // By default, `from_address` must correspond to the contract address that
+    // is sending the message. In the case of library calls, `code_address` is `None`,
+    // we then use the `caller_address` instead (which can also be an account).
+    let from_address =
+        if let Some(code_address) = info.code_address { code_address } else { info.caller_address };
+
+    messages.extend(info.l2_to_l1_messages.iter().map(|m| MessageToStarknet {
+        from_address,
+        to_address: ContractAddress::from(m.to_address),
+        payload: m.payload.clone(),
+    }));
+
+    info.inner_calls.iter().for_each(|call| {
+        messages.extend(get_messages_recursively(call));
+    });
+
+    messages
+}
+
 pub fn extract_messages(
     exec_infos: &Vec<TxExecInfo>,
     mut transactions: Vec<&L1HandlerTx>,
 ) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
     let message_to_starknet_segment = exec_infos
         .iter()
-        .map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter())) // Take into account both validate and execute calls.
+        .map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter()).chain(t.fee_transfer_call_info.iter())) // Take into account both validate and execute calls.
         .flatten()
-        .map(|c| { // Flatten the recursive call structure.
-            let mut to_visit = vec![c];
-            let mut all = vec![c];
-
-            while let Some(c) = to_visit.pop() {
-                to_visit.extend(c.inner_calls.iter().rev());
-                all.extend(c.inner_calls.iter().rev());
-            }
-            all
-        })
+        .map(get_messages_recursively)
         .flatten()
-        .map(|c| c.l2_to_l1_messages.iter())
-        .flatten()
-        .map(|m| MessageToStarknet { // Parse them to the format understood by the prover.
-            from_address: m.from_address,
-            to_address: ContractAddress::from(m.to_address),
-            payload: m.payload.clone(),
-        })
         .collect();
 
     let message_to_appchain_segment = exec_infos
