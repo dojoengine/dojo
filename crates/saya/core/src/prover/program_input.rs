@@ -72,7 +72,7 @@ pub fn extract_messages(
                 ))
                 .0;
 
-            // Removing, to have different nonces, even for the same massages
+            // Removing, to have different nonces, even for the same message content.
             let removed = transactions.remove(matching);
 
             (c, removed)
