@@ -57,7 +57,7 @@ pub fn extract_messages(
             let message_hash =
                 compute_l1_message_hash(*c.caller_address, *c.contract_address, &c.calldata[..]);
 
-            // Matching execution to an transaction to extract nonce
+            // Matching execution to a transaction to extract nonce.
             let matching = transactions
                 .iter()
                 .enumerate()
