@@ -371,6 +371,15 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         {system_initializations}
     }}
 
+    async query<T extends Query>(query: T, limit = 10, offset = 0) {{
+        const torii = await this.toriiPromise;
+
+        return {{
+            torii,
+            findEntities: async () => this.findEntities(query, limit, offset),
+        }};
+    }}
+
     async findEntities<T extends Query>(query: T, limit = 10, offset = 0) {{
         const torii = await this.toriiPromise;
 
