@@ -6,11 +6,13 @@ use std::str::FromStr;
 use anyhow::bail;
 use async_trait::async_trait;
 
+mod program_input;
 mod serializer;
 pub mod state_diff;
 mod stone_image;
 mod vec252;
 
+pub use program_input::*;
 use serde::{Deserialize, Serialize};
 pub use serializer::parse_proof;
 pub use stone_image::*;

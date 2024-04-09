@@ -60,6 +60,7 @@ pub async fn migrate<P, S>(
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
     dry_run: bool,
+    txn_config: Option<TxConfig>,
 ) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
@@ -124,7 +125,7 @@ where
         .await?;
     } else {
         // Migrate according to the diff.
-        match apply_diff(ws, account, None, &mut strategy).await {
+        match apply_diff(ws, account, txn_config, &mut strategy).await {
             Ok(migration_output) => {
                 update_manifests_and_abis(
                     ws,

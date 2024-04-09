@@ -8,9 +8,8 @@ use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
-use crate::models::storage::{
-    ContractStorageEntry, ContractStorageKey, StorageEntry, StorageEntryChangeList,
-};
+use crate::models::list::BlockList;
+use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
 pub trait Value: Compress + Decompress + std::fmt::Debug {}
@@ -164,10 +163,10 @@ define_tables_enum! {[
     (ClassDeclarationBlock, TableType::Table),
     (ClassDeclarations, TableType::DupSort),
     (ContractInfoChangeSet, TableType::Table),
-    (NonceChanges, TableType::DupSort),
-    (ContractClassChanges, TableType::DupSort),
-    (StorageChanges, TableType::DupSort),
-    (StorageChangeSet, TableType::DupSort)
+    (NonceChangeHistory, TableType::DupSort),
+    (ClassChangeHistory, TableType::DupSort),
+    (StorageChangeHistory, TableType::DupSort),
+    (StorageChangeSet, TableType::Table)
 ]}
 
 tables! {
@@ -215,21 +214,21 @@ tables! {
     ///
     /// Stores the list of blocks where the contract info (nonce / class hash) has changed.
     ContractInfoChangeSet: (ContractAddress) => ContractInfoChangeList,
-
     /// Contract nonce changes by block.
-    NonceChanges: (BlockNumber, ContractAddress) => ContractNonceChange,
+    NonceChangeHistory: (BlockNumber, ContractAddress) => ContractNonceChange,
     /// Contract class hash changes by block.
-    ContractClassChanges: (BlockNumber, ContractAddress) => ContractClassChange,
+    ClassChangeHistory: (BlockNumber, ContractAddress) => ContractClassChange,
 
     /// storage change set
-    StorageChangeSet: (ContractAddress, StorageKey) => StorageEntryChangeList,
+    StorageChangeSet: (ContractStorageKey) => BlockList,
     /// Account storage change set
-    StorageChanges: (BlockNumber, ContractStorageKey) => ContractStorageEntry
+    StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
 
 }
 
 #[cfg(test)]
 mod tests {
+
     #[test]
     fn test_tables() {
         use super::*;
@@ -253,9 +252,117 @@ mod tests {
         assert_eq!(Tables::ALL[15].name(), ClassDeclarationBlock::NAME);
         assert_eq!(Tables::ALL[16].name(), ClassDeclarations::NAME);
         assert_eq!(Tables::ALL[17].name(), ContractInfoChangeSet::NAME);
-        assert_eq!(Tables::ALL[18].name(), NonceChanges::NAME);
-        assert_eq!(Tables::ALL[19].name(), ContractClassChanges::NAME);
-        assert_eq!(Tables::ALL[20].name(), StorageChanges::NAME);
+        assert_eq!(Tables::ALL[18].name(), NonceChangeHistory::NAME);
+        assert_eq!(Tables::ALL[19].name(), ClassChangeHistory::NAME);
+        assert_eq!(Tables::ALL[20].name(), StorageChangeHistory::NAME);
         assert_eq!(Tables::ALL[21].name(), StorageChangeSet::NAME);
+
+        assert_eq!(Tables::Headers.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockNumbers.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockBodyIndices.table_type(), TableType::Table);
+        assert_eq!(Tables::BlockStatusses.table_type(), TableType::Table);
+        assert_eq!(Tables::TxNumbers.table_type(), TableType::Table);
+        assert_eq!(Tables::TxBlocks.table_type(), TableType::Table);
+        assert_eq!(Tables::TxHashes.table_type(), TableType::Table);
+        assert_eq!(Tables::Transactions.table_type(), TableType::Table);
+        assert_eq!(Tables::Receipts.table_type(), TableType::Table);
+        assert_eq!(Tables::CompiledClassHashes.table_type(), TableType::Table);
+        assert_eq!(Tables::CompiledClasses.table_type(), TableType::Table);
+        assert_eq!(Tables::SierraClasses.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractInfo.table_type(), TableType::Table);
+        assert_eq!(Tables::ContractStorage.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ClassDeclarationBlock.table_type(), TableType::Table);
+        assert_eq!(Tables::ClassDeclarations.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ContractInfoChangeSet.table_type(), TableType::Table);
+        assert_eq!(Tables::NonceChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
+    }
+
+    use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
+    use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash};
+    use katana_primitives::contract::{ContractAddress, GenericContractInfo};
+    use katana_primitives::receipt::Receipt;
+    use katana_primitives::trace::TxExecInfo;
+    use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxNumber};
+    use starknet::macros::felt;
+
+    use crate::codecs::{Compress, Decode, Decompress, Encode};
+    use crate::models::block::StoredBlockBodyIndices;
+    use crate::models::contract::{
+        ContractClassChange, ContractInfoChangeList, ContractNonceChange,
+    };
+    use crate::models::list::BlockList;
+    use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
+
+    macro_rules! assert_key_encode_decode {
+	    { $( ($name:ty, $key:expr) ),* } => {
+			$(
+				{
+					let key: $name = $key;
+					let encoded = key.encode();
+					let decoded = <$name as Decode>::decode(encoded.as_slice()).expect("decode failed");
+					assert_eq!($key, decoded);
+				}
+			)*
+		};
+	}
+
+    macro_rules! assert_value_compress_decompress {
+		{ $( ($name:ty, $value:expr) ),* } => {
+			$(
+				{
+					let value: $name = $value;
+					let compressed = value.compress();
+					let decompressed = <$name as Decompress>::decompress(compressed.as_slice()).expect("decode failed");
+					assert_eq!($value, decompressed);
+				}
+			)*
+		};
+	}
+
+    // Test that all key/subkey types can be encoded and decoded
+    // through the Encode and Decode traits
+    #[test]
+    fn test_key_encode_decode() {
+        assert_key_encode_decode! {
+            (BlockNumber, 100),
+            (BlockHash, felt!("0x123456789")),
+            (TxHash, felt!("0x123456789")),
+            (TxNumber, 100),
+            (ClassHash, felt!("0x123456789")),
+            (ContractAddress, ContractAddress(felt!("0x123456789"))),
+            (ContractStorageKey, ContractStorageKey { contract_address : ContractAddress(felt!("0x123456789")), key : felt!("0x123456789")})
+        }
+    }
+
+    // Test that all value types can be compressed and decompressed
+    // through the Compress and Decompress traits
+    #[test]
+    fn test_value_compress_decompress() {
+        assert_value_compress_decompress! {
+            (Header, Header::default()),
+            (BlockHash, BlockHash::default()),
+            (BlockNumber, BlockNumber::default()),
+            (FinalityStatus, FinalityStatus::AcceptedOnL1),
+            (StoredBlockBodyIndices, StoredBlockBodyIndices::default()),
+            (TxNumber, 77),
+            (TxHash, felt!("0x123456789")),
+            (Tx, Tx::Invoke(InvokeTx::V1(Default::default()))),
+            (BlockNumber, 99),
+            (TxExecInfo, TxExecInfo::default()),
+            (Receipt, Receipt::Invoke(Default::default())),
+            (CompiledClassHash, felt!("211")),
+            (CompiledClass, CompiledClass::Deprecated(Default::default())),
+            (GenericContractInfo, GenericContractInfo::default()),
+            (StorageEntry, StorageEntry::default()),
+            (ContractInfoChangeList, ContractInfoChangeList::default()),
+            (ContractNonceChange, ContractNonceChange::default()),
+            (ContractClassChange, ContractClassChange::default()),
+            (BlockList, BlockList::default()),
+            (ContractStorageEntry, ContractStorageEntry::default())
+        }
     }
 }

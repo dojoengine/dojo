@@ -2,6 +2,8 @@ use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
 use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
+use dojo_world::migration::TxConfig;
+use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
@@ -13,6 +15,7 @@ use starknet::signers::LocalWallet;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
+use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 
 #[derive(Debug, Args)]
@@ -56,6 +59,9 @@ pub enum MigrateCommand {
 
         #[command(flatten)]
         account: AccountOptions,
+
+        #[command(flatten)]
+        transaction: TransactionOptions,
     },
 }
 
@@ -77,6 +83,17 @@ pub async fn setup_env<'a>(
 
     let (account, chain_id) = {
         let provider = starknet.provider(env)?;
+
+        let spec_version = provider.spec_version().await?;
+
+        if spec_version != RPC_SPEC_VERSION {
+            return Err(anyhow!(
+                "Unsupported Starknet RPC version: {}, expected {}.",
+                spec_version,
+                RPC_SPEC_VERSION
+            ));
+        }
+
         let chain_id = provider.chain_id().await?;
         let chain_id = parse_cairo_short_string(&chain_id)
             .with_context(|| "Cannot parse chain_id as string")?;
@@ -138,10 +155,13 @@ impl MigrateArgs {
                     )
                     .await?;
 
-                    migration::migrate(&ws, world_address, chain_id, &account, name, true).await
+                    migration::migrate(&ws, world_address, chain_id, &account, name, true, None)
+                        .await
                 })
             }
-            MigrateCommand::Apply { mut name, world, starknet, account } => {
+            MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
+                let txn_config: Option<TxConfig> = Some(transaction.into());
+
                 if name.is_none() {
                     if let Some(root_package) = ws.root_package() {
                         name = Some(root_package.id.name.to_string())
@@ -159,7 +179,16 @@ impl MigrateArgs {
                     )
                     .await?;
 
-                    migration::migrate(&ws, world_address, chain_id, &account, name, false).await
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        chain_id,
+                        &account,
+                        name,
+                        false,
+                        txn_config,
+                    )
+                    .await
                 })
             }
         }
