@@ -117,6 +117,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 data_availability: da_config,
                 prover: args.proof.prover.into(),
                 verifier: args.proof.verifier.into(),
+                world_address: args.proof.world_address,
             })
         }
     }
@@ -148,7 +149,11 @@ mod tests {
                     celestia_namespace: None,
                 },
             },
-            proof: ProofOptions { prover: Default::default(), verifier: Default::default() },
+            proof: ProofOptions {
+                prover: Default::default(),
+                verifier: Default::default(),
+                world_address: None,
+            },
         };
 
         let config: SayaConfig = args.try_into().unwrap();
