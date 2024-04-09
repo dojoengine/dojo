@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712584498101,
+  "lastUpdate": 1712633937570,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4825,6 +4825,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17150350,
             "range": "± 242131",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64fa43c6551bc5fe4eff2676723f066ccb4e12cd",
+          "message": "fix: add the transaction options to sozo migrate apply (#1802)\n\n* fix: add the transaction options to sozo migrate apply\r\n\r\n* Delete crates/sozo/ops/src/account.rs",
+          "timestamp": "2024-04-08T23:30:56-04:00",
+          "tree_id": "5f8ec2adf1f931cc43c5236fe7db08141a457a68",
+          "url": "https://github.com/dojoengine/dojo/commit/64fa43c6551bc5fe4eff2676723f066ccb4e12cd"
+        },
+        "date": 1712633936891,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16987243,
+            "range": "± 166973",
             "unit": "ns/iter"
           }
         ]
