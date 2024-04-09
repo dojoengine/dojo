@@ -55,11 +55,16 @@ impl Sql {
 
     pub async fn head(&self) -> Result<(u64, Option<FieldElement>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>("SELECT head, pending_block_tx FROM indexers WHERE id = ?")
-            .bind(format!("{:#x}", self.world_address));
+        let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>(
+            "SELECT head, pending_block_tx FROM indexers WHERE id = ?",
+        )
+        .bind(format!("{:#x}", self.world_address));
 
         let indexer: (i64, Option<String>) = indexer_query.fetch_one(&mut *conn).await?;
-        Ok((indexer.0.try_into().expect("doesn't fit in u64"), indexer.1.map(|f| FieldElement::from_str(&f)).transpose()?))
+        Ok((
+            indexer.0.try_into().expect("doesn't fit in u64"),
+            indexer.1.map(|f| FieldElement::from_str(&f)).transpose()?,
+        ))
     }
 
     pub fn set_head(&mut self, head: u64, pending_block_tx: Option<FieldElement>) {
