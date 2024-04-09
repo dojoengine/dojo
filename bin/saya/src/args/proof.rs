@@ -5,6 +5,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use clap::builder::PossibleValue;
 use clap::{Args, ValueEnum};
+use katana_primitives::FieldElement;
 use saya_core::prover::ProverIdentifier;
 use saya_core::verifier::VerifierIdentifier;
 
@@ -45,6 +46,10 @@ pub struct ProofOptions {
     #[arg(long)]
     #[arg(help = "Verifier on which the proof should be sent to.")]
     pub verifier: Verifier,
+
+    #[arg(help = "The address of the World contract.")]
+    #[arg(long = "world")]
+    pub world_address: Option<FieldElement>,
 }
 
 // -- Prover.
