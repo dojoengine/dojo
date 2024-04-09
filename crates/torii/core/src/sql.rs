@@ -55,7 +55,7 @@ impl Sql {
 
     pub async fn head(&self) -> Result<(u64, Option<FieldElement>)> {
         let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>("SELECT head, pending_block_tx_idx FROM indexers WHERE id = ?")
+        let indexer_query = sqlx::query_as::<_, (i64, Option<String>)>("SELECT head, pending_block_tx FROM indexers WHERE id = ?")
             .bind(format!("{:#x}", self.world_address));
 
         let indexer: (i64, Option<String>) = indexer_query.fetch_one(&mut *conn).await?;
@@ -65,7 +65,7 @@ impl Sql {
     pub fn set_head(&mut self, head: u64, pending_block_tx: Option<FieldElement>) {
         let head = Argument::Int(head.try_into().expect("doesn't fit in u64"));
         let id = Argument::FieldElement(self.world_address);
-        let pending_block_tx_idx = if let Some(f) = pending_block_tx {
+        let pending_block_tx = if let Some(f) = pending_block_tx {
             Argument::String(format!("{:#x}", f))
         } else {
             Argument::Null
@@ -73,7 +73,7 @@ impl Sql {
 
         self.query_queue.enqueue(
             "UPDATE indexers SET head = ?, pending_block_tx = ? WHERE id = ?",
-            vec![head, pending_block_tx_idx, id],
+            vec![head, pending_block_tx, id],
         );
     }
 

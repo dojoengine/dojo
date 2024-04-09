@@ -3,8 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{
-    BlockId, BlockTag, EmittedEvent, Event, EventFilter, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, Transaction, TransactionReceipt,
+    BlockId, BlockTag, EmittedEvent, Event, EventFilter, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, PendingTransactionReceipt, Transaction, TransactionReceipt
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -117,7 +116,7 @@ impl<P: Provider + Sync> Engine<P> {
         if from < latest_block_number {
             // if `from` == 0, then the block may or may not be processed yet.
             let from = if from == 0 { from } else { from + 1 };
-            self.sync_range(from, latest_block_number, pending_block_tx).await?;
+            pending_block_tx = self.sync_range(from, latest_block_number, pending_block_tx).await?;
         } else {
             pending_block_tx = self.sync_pending(latest_block_number + 1, pending_block_tx).await?;
         }
@@ -159,6 +158,7 @@ impl<P: Provider + Sync> Engine<P> {
                 block.timestamp,
             )
             .await?;
+            info!(target: LOG_TARGET, block_number = %block_number, transaction_hash = %transaction.transaction_hash(), "Processed pending transaction.");
 
             pending_block_tx = Some(*transaction.transaction_hash());
         }
@@ -171,7 +171,7 @@ impl<P: Provider + Sync> Engine<P> {
         Ok(pending_block_tx)
     }
 
-    pub async fn sync_range(&mut self, from: u64, to: u64, pending_block_tx: Option<FieldElement>) -> Result<()> {
+    pub async fn sync_range(&mut self, from: u64, to: u64, pending_block_tx: Option<FieldElement>) -> Result<Option<FieldElement>> {
         // Process all blocks from current to latest.
         let get_events = |token: Option<String>| {
             self.provider.get_events(
@@ -193,18 +193,59 @@ impl<P: Provider + Sync> Engine<P> {
             events_pages.push(get_events(Some(token.clone())).await?);
         }
 
-        let mut last_block: u64 = 0;
-        let mut last_transaction_hash: FieldElement = pending_block_tx.unwrap_or(FieldElement::ZERO);
-        for events_page in events_pages {
-            for event in events_page.events {
-                self.process_emitted_event(event, &mut last_block, &mut last_transaction_hash)
-                    .await?;
+        // Transactions to index
+        // We first flatten the events pages & events into a list of (block_number, transaction_hash)
+        // Then we skip all transactions until we reach the last pending processed transaction (if any)
+        // Then we skip that processed transaction, and dedup the list
+        let mut transactions = events_pages.iter().flat_map(|events_page| {
+            events_page.events.iter().map(|event| (event.block_number, event.transaction_hash))
+        }).skip_while(|(_, transaction_hash)| {
+            if let Some(pending_block_tx) = pending_block_tx {
+                *transaction_hash != pending_block_tx
+            } else {
+                false
             }
-        }
+        }).skip(1).collect::<Vec<_>>();
+        transactions.dedup();
+
+        // Process all transactions
+        // We might have transactions that have the same block number, so we process the block only once
+        let mut last_block = 0_u64;
+        for (block_number, transaction_hash) in transactions {
+            let (block_number, block_timestamp) = match block_number {
+                Some(block_number) => (block_number, self.get_block_timestamp(block_number).await?),
+                None => {
+                    return Err(anyhow::anyhow!("Event without block number."));
+                }
+            };
+
+            // Process block
+            if block_number > last_block {
+                last_block = block_number;
+
+                if let Some(ref block_tx) = self.block_tx {
+                    block_tx.send(block_number).await?;
+                }
+
+                Self::process_block(self, block_number, block_timestamp).await?;
+                info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
+            }
+
+            // Process transaction
+            let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
+            self.process_transaction_and_receipt(
+                transaction_hash,
+                &transaction,
+                block_number,
+                block_timestamp,
+            ).await?;
+        } 
+
+        self.db.set_head(to, None);
 
         self.db.execute().await?;
 
-        Ok(())
+        Ok(None)
     }
 
     async fn get_block_timestamp(&self, block_number: u64) -> Result<u64> {
@@ -214,51 +255,6 @@ impl<P: Provider + Sync> Engine<P> {
         }
     }
 
-    async fn process_emitted_event(
-        &mut self,
-        event: EmittedEvent,
-        last_block: &mut u64,
-        last_transaction_hash: &mut FieldElement,
-    ) -> Result<()> {
-        let block_number = match event.block_number {
-            Some(block_number) => block_number,
-            None => {
-                error!(target: LOG_TARGET, "Event without block number.");
-                return Ok(());
-            }
-        };
-        let block_timestamp = self.get_block_timestamp(block_number).await?;
-
-        if block_number > *last_block {
-            *last_block = block_number;
-
-            if let Some(ref block_tx) = self.block_tx {
-                block_tx.send(block_number).await?;
-            }
-
-            Self::process_block(self, block_number, block_timestamp).await?;
-            info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
-
-            self.db.set_head(block_number, None);
-        }
-
-        // We index transaction only once for all events in the same transaction
-        // Events are indexed with the transaction processing
-        if event.transaction_hash != *last_transaction_hash {
-            *last_transaction_hash = event.transaction_hash;
-            let transaction = self.provider.get_transaction_by_hash(event.transaction_hash).await?;
-            self.process_transaction_and_receipt(
-                event.transaction_hash,
-                &transaction,
-                block_number,
-                block_timestamp,
-            )
-            .await?;
-        }
-
-        Ok(())
-    }
-
     async fn process_transaction_and_receipt(
         &mut self,
         transaction_hash: FieldElement,
@@ -266,29 +262,24 @@ impl<P: Provider + Sync> Engine<P> {
         block_number: u64,
         block_timestamp: u64,
     ) -> Result<()> {
-        let receipt = match self.provider.get_transaction_receipt(transaction_hash).await {
-            Ok(receipt) => match receipt {
+        let receipt = self.provider.get_transaction_receipt(transaction_hash).await?;
+        let events = match &receipt {
                 MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-                    Some(TransactionReceipt::Invoke(receipt))
+                    Some(&receipt.events)
                 }
                 MaybePendingTransactionReceipt::Receipt(TransactionReceipt::L1Handler(receipt)) => {
-                    Some(TransactionReceipt::L1Handler(receipt))
+                    Some(&receipt.events)
+                }
+                MaybePendingTransactionReceipt::PendingReceipt(PendingTransactionReceipt::Invoke(receipt)) => {
+                    Some(&receipt.events)
+                }
+                MaybePendingTransactionReceipt::PendingReceipt(PendingTransactionReceipt::L1Handler(receipt)) => {
+                    Some(&receipt.events)
                 }
                 _ => None,
-            },
-            Err(e) => {
-                error!(target: LOG_TARGET, error = %e, "Getting transaction receipt.");
-                return Err(e.into());
-            }
         };
 
-        if let Some(receipt) = receipt {
-            let events = match &receipt {
-                TransactionReceipt::Invoke(invoke_receipt) => &invoke_receipt.events,
-                TransactionReceipt::L1Handler(l1_handler_receipt) => &l1_handler_receipt.events,
-                _ => return Ok(()),
-            };
-
+        if let Some(events) = events {
             let mut world_event = false;
             for (event_idx, event) in events.iter().enumerate() {
                 if event.from_address != self.world.address {
@@ -339,7 +330,7 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &TransactionReceipt,
+        transaction_receipt: &MaybePendingTransactionReceipt,
         transaction_hash: FieldElement,
         transaction: &Transaction,
     ) -> Result<()> {
@@ -364,18 +355,11 @@ impl<P: Provider + Sync> Engine<P> {
         &mut self,
         block_number: u64,
         block_timestamp: u64,
-        transaction_receipt: &TransactionReceipt,
+        transaction_receipt: &MaybePendingTransactionReceipt,
         event_id: &str,
         event: &Event,
     ) -> Result<()> {
-        let transaction_hash = match transaction_receipt {
-            TransactionReceipt::Invoke(invoke_receipt) => invoke_receipt.transaction_hash,
-            TransactionReceipt::L1Handler(l1_handler_receipt) => {
-                l1_handler_receipt.transaction_hash
-            }
-            _ => return Ok(()),
-        };
-        self.db.store_event(event_id, event, transaction_hash, block_timestamp);
+        self.db.store_event(event_id, event, *transaction_receipt.transaction_hash(), block_timestamp);
         for processor in &self.processors.event {
             // If the processor has no event_key, means it's a catch-all processor.
             // We also validate the event
