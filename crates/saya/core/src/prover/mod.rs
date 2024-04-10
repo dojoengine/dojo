@@ -16,6 +16,7 @@ pub use program_input::*;
 use serde::{Deserialize, Serialize};
 pub use serializer::parse_proof;
 pub use stone_image::*;
+pub mod scheduler;
 
 /// The prover used to generate the proof.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
