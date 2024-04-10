@@ -88,8 +88,8 @@ pub fn print_stats(contract_statistic: ContractStatistics) {
 mod tests {
     use dojo_test_utils::compiler::build_test_config;
 
-    use super::BuildArgs;
-    use crate::commands::options::statistics::Stats;
+    use super::{print_stats, BuildArgs};
+    use crate::commands::options::statistics::{ContractStatistics, Stats};
 
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
@@ -103,5 +103,17 @@ mod tests {
         };
         let result = build_args.run(&config);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_print_stats() {
+        // Arrange
+        let contract_statistic = ContractStatistics {
+            contract_name: String::from("SampleContract"),
+            number_felts: 100,
+            file_size: 1024,
+        };
+        // Act
+        print_stats(contract_statistic);
     }
 }
