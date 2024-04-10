@@ -4,11 +4,13 @@ use std::sync::Arc;
 
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
+use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
 use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
+use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -16,7 +18,7 @@ use verifier::VerifierIdentifier;
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::state_diff::ProvedStateDiff;
+use crate::prover::{extract_messages, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -145,7 +147,7 @@ impl Saya {
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_block, genesis_state_hash) = blocks;
+        let (block, prev_block, _genesis_state_hash) = blocks;
 
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
@@ -171,15 +173,48 @@ impl Saya {
             return Ok(());
         }
 
-        let to_prove = ProvedStateDiff {
-            genesis_state_hash,
-            prev_state_hash: prev_block.header.header.state_root,
+        let transactions = block
+            .block
+            .body
+            .iter()
+            .filter_map(|t| match &t.transaction {
+                Tx::L1Handler(tx) => Some(tx),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        let (message_to_starknet_segment, message_to_appchain_segment) =
+            extract_messages(&exec_infos, transactions);
+
+        let new_program_input = ProgramInput {
+            prev_state_root: prev_block.header.header.state_root,
+            block_number: FieldElement::from(block_number),
+            block_hash: block.block.header.hash,
+            config_hash: FieldElement::from(0u64),
+            message_to_starknet_segment,
+            message_to_appchain_segment,
             state_updates: state_updates_to_prove,
         };
 
+        println!("Program input: {}", new_program_input.serialize()?);
+
+        // let to_prove = ProvedStateDiff {
+        //     genesis_state_hash,
+        //     prev_state_hash: prev_block.header.header.state_root,
+        //     state_updates: state_updates_to_prove,
+        // };
+
         trace!(target: "saya_core", "Proving block {block_number}.");
-        let proof = prover::prove(to_prove.serialize(), self.config.prover).await?;
+        let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
         info!(target: "saya_core", block_number, "Block proven.");
+
+        // save proof to file
+        tokio::fs::File::create(format!("proof_{}.json", block_number))
+            .await
+            .unwrap()
+            .write_all(proof.as_bytes())
+            .await
+            .unwrap();
 
         trace!(target: "saya_core", "Verifying block {block_number}.");
         let transaction_hash = verifier::verify(proof, self.config.verifier).await?;

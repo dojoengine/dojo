@@ -115,7 +115,7 @@ fn extract_events(
     }
 
     // Read the world and base ABI from scarb artifacts as the
-    // manifest does not include them.
+    // manifest does not include them (at least base is not included).
     let world_abi_path = manifest_dir.join("target/dev/dojo::world::world.json");
     process_abi(&mut events_map, &world_abi_path)?;
 
@@ -246,9 +246,13 @@ fn process_inners(
 
 #[cfg(test)]
 mod tests {
+    use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
     use camino::Utf8Path;
     use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
     use dojo_world::manifest::BaseManifest;
+    use starknet::core::types::EmittedEvent;
+
+    use super::*;
 
     #[test]
     fn extract_events_work_as_expected() {
@@ -264,11 +268,6 @@ mod tests {
         // we are just collecting all events from manifest file so just verifying count should work
         assert_eq!(result.len(), 11);
     }
-
-    use cainome::parser::tokens::{Array, Composite, CompositeInner, CompositeType};
-    use starknet::core::types::EmittedEvent;
-
-    use super::*;
 
     #[test]
     fn test_core_basic() {

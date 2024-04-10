@@ -55,7 +55,7 @@ impl EventsArgs {
         );
 
         let profile_name =
-            if let Ok(p) = ws.current_profile() { p.to_string() } else { "NO_PROFILE".to_string() };
+            ws.current_profile().expect("Scarb profile expected at this point.").to_string();
 
         config.tokio_handle().block_on(async {
             events::parse(

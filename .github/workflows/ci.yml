@@ -23,7 +23,7 @@ jobs:
           cargo llvm-cov nextest --no-report -p katana
           cargo llvm-cov nextest --no-report -p katana --no-default-features --features sir
           cargo llvm-cov report --lcov --output-path lcov.info
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info

@@ -25,7 +25,7 @@ impl TransactionPool {
         let hash = transaction.hash;
         self.transactions.write().push(transaction);
 
-        info!(target: LOG_TARGET, hash = %hash, "Transaction received.");
+        info!(target: LOG_TARGET, hash = %format!("\"{hash:#x}\""), "Transaction received.");
 
         // notify listeners of new tx added to the pool
         self.notify_listener(hash)
@@ -58,7 +58,7 @@ impl TransactionPool {
                     if e.is_full() {
                         warn!(
                             target: LOG_TARGET,
-                            hash = ?hash,
+                            hash = ?format!("\"{hash:#x}\""),
                             "Unable to send tx notification because channel is full."
                         );
                         true
