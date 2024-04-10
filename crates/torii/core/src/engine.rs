@@ -212,8 +212,8 @@ impl<P: Provider + Sync> Engine<P> {
         let mut last_block = 0_u64;
         let mut blocks = HashMap::new();
 
-        // We first flatten the events pages & events into a list of (block_number,
-        // transaction_hash)
+        // Flatten events pages and events according to the pending block cursor
+        // to array of (block_number, transaction_hash)
         let mut transactions = vec![];
         for events_page in &events_pages {
             for event in &events_page.events {
@@ -222,6 +222,7 @@ impl<P: Provider + Sync> Engine<P> {
                     None => return Err(anyhow::anyhow!("Event without block number.")),
                 };
 
+                // Keep track of last block number and fetch block timestamp
                 if block_number > last_block {
                     let block_timestamp = self.get_block_timestamp(block_number).await?;
                     blocks.insert(block_number, block_timestamp);
@@ -241,12 +242,16 @@ impl<P: Provider + Sync> Engine<P> {
                     continue;
                 }
 
+                if let Some((_, last_tx_hash)) = transactions.last() {
+                    // Dedup transactions
+                    // As me might have multiple events for the same transaction
+                    if *last_tx_hash == event.transaction_hash {
+                        continue;
+                    }
+                }
                 transactions.push((block_number, event.transaction_hash));
             }
         }
-
-        // Dedup transactions (as we may have multiple events for the same transaction)
-        transactions.dedup();
 
         // Process blocks
         for (block_number, block_timestamp) in blocks.iter() {
@@ -259,8 +264,6 @@ impl<P: Provider + Sync> Engine<P> {
         }
 
         // Process all transactions
-        // We might have transactions that have the same block number, so we process the block only
-        // once
         for (block_number, transaction_hash) in transactions {
             // Process transaction
             let transaction = self.provider.get_transaction_by_hash(transaction_hash).await?;
