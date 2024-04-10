@@ -36,9 +36,7 @@ pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<St
         ProverIdentifier::Platinum => todo!(),
         #[cfg(test)]
         ProverIdentifier::Dummy => {
-            for i in 0..10000 {
-                let _ = i;
-            }
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
             Ok(String::from("dummy ok"))
         }

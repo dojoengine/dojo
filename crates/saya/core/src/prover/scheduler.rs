@@ -10,6 +10,8 @@ async fn combine_proofs(first: Proof, second: Proof) -> anyhow::Result<Proof> {
     // TODO: Insert the real `merge program` here
     let proof = first + " & " + &second;
 
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
     Ok(proof)
 }
 
@@ -45,6 +47,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_one() {
+        let start_instant = std::time::Instant::now();
         let inputs = (0..1u64)
             .map(|i| ProvedStateDiff {
                 genesis_state_hash: FieldElement::from(0u64),
@@ -56,11 +59,12 @@ mod tests {
         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
 
         assert_eq!(proof, "dummy ok".to_string());
+        assert_eq!(start_instant.elapsed().as_secs(), 1);
     }
 
     #[tokio::test]
     async fn test_combined() {
-        let time_before = std::time::Instant::now();
+        let start_instant = std::time::Instant::now();
         let inputs = (0..2u64)
             .map(|i| ProvedStateDiff {
                 genesis_state_hash: FieldElement::from(0u64),
@@ -71,12 +75,12 @@ mod tests {
 
         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
         assert_eq!(proof, "dummy ok & dummy ok");
-        assert_eq!(time_before.elapsed().as_secs(), 0);
+        assert_eq!(start_instant.elapsed().as_secs(), 2);
     }
 
     #[tokio::test]
     async fn test_many() {
-        let time_before = std::time::Instant::now();
+        let start_instant = std::time::Instant::now();
         let inputs = (0..8u64)
             .map(|i| ProvedStateDiff {
                 genesis_state_hash: FieldElement::from(0u64),
@@ -91,6 +95,6 @@ mod tests {
             "dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok"
                 .to_string();
         assert_eq!(proof, expected);
-        assert_eq!(time_before.elapsed().as_secs(), 0);
+        assert_eq!(start_instant.elapsed().as_secs(), 4);
     }
 }
