@@ -8,7 +8,7 @@ type Proof = String;
 
 async fn combine_proofs(first: Proof, second: Proof) -> anyhow::Result<Proof> {
     // TODO: Insert the real `merge program` here
-    let proof = first + &second;
+    let proof = first + " & " + &second;
 
     Ok(proof)
 }
@@ -37,26 +37,60 @@ pub fn prove_recursively(
 
 #[cfg(test)]
 mod tests {
-    async fn test_mine() {
-        for i in 0..1000000000 {
-            let _ = i;
-        }
+    use katana_primitives::FieldElement;
+
+    use crate::prover::{state_diff::ProvedStateDiff, ProverIdentifier};
+
+    use super::prove_recursively;
+
+    #[tokio::test]
+    async fn test_one() {
+        let inputs = (0..1u64)
+            .map(|i| ProvedStateDiff {
+                genesis_state_hash: FieldElement::from(0u64),
+                prev_state_hash: FieldElement::from(i),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
+
+        let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
+
+        assert_eq!(proof, "dummy ok".to_string());
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn test_parallelism() {
-        let now = tokio::time::Instant::now();
+    #[tokio::test]
+    async fn test_combined() {
+        let time_before = std::time::Instant::now();
+        let inputs = (0..2u64)
+            .map(|i| ProvedStateDiff {
+                genesis_state_hash: FieldElement::from(0u64),
+                prev_state_hash: FieldElement::from(i),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
-        let a = tokio::spawn(async {
-            test_mine().await;
-        });
+        let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
+        assert_eq!(proof, "dummy ok & dummy ok");
+        assert_eq!(time_before.elapsed().as_secs(), 0);
+    }
 
-        let b = tokio::spawn(async {
-            test_mine().await;
-        });
+    #[tokio::test]
+    async fn test_many() {
+        let time_before = std::time::Instant::now();
+        let inputs = (0..8u64)
+            .map(|i| ProvedStateDiff {
+                genesis_state_hash: FieldElement::from(0u64),
+                prev_state_hash: FieldElement::from(i),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
-        tokio::try_join!(a, b).unwrap();
+        let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
 
-        print!("{}", now.elapsed().as_secs())
+        let expected =
+            "dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok"
+                .to_string();
+        assert_eq!(proof, expected);
+        assert_eq!(time_before.elapsed().as_secs(), 0);
     }
 }
