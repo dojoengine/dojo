@@ -499,7 +499,7 @@ where
                 if offline {
                     ui.print_sub("Skipping metadata upload because of offline mode");
                 } else {
-                    upload_metadata(ws, world, migrator, &ui).await?;
+                    upload_metadata(ws, world, migrator, &ui, &txn_config).await?;
                 }
             }
         }
@@ -545,6 +545,7 @@ async fn upload_metadata<P, S>(
     world: &ContractMigration,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
+    txn_config: &Option<TxConfig>,
 ) -> Result<(), anyhow::Error>
 where
     P: Provider + Sync + Send + 'static,
@@ -567,6 +568,9 @@ where
                 let InvokeTransactionResult { transaction_hash } =
                     WorldContract::new(world.contract_address, migrator)
                         .set_metadata(&world_metadata)
+                        .fee_estimate_multiplier(
+                            txn_config.unwrap_or_default().fee_estimate_multiplier.unwrap_or(1.1),
+                        )
                         .send()
                         .await
                         .map_err(|e| {
@@ -744,8 +748,14 @@ where
         .map(|c| world.register_model_getcall(&c.diff.local.into()))
         .collect::<Vec<_>>();
 
-    let InvokeTransactionResult { transaction_hash } =
-        migrator.execute(calls).send().await.map_err(|e| {
+    let InvokeTransactionResult { transaction_hash } = migrator
+        .execute(calls)
+        .fee_estimate_multiplier(
+            txn_config.unwrap_or_default().fee_estimate_multiplier.unwrap_or(1.1),
+        )
+        .send()
+        .await
+        .map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register models to World: {e}")
         })?;
