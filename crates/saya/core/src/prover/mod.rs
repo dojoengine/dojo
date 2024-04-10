@@ -25,6 +25,8 @@ pub enum ProverIdentifier {
     Stone,
     Sharp,
     Platinum,
+    #[cfg(test)]
+    Dummy,
 }
 
 pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
@@ -32,6 +34,14 @@ pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<St
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Stone => prove_stone(input).await,
         ProverIdentifier::Platinum => todo!(),
+        #[cfg(test)]
+        ProverIdentifier::Dummy => {
+            for i in 0..10000 {
+                let _ = i;
+            }
+
+            Ok(String::from("dummy ok"))
+        }
     }
 }
 
