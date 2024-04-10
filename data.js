@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712682827515,
+  "lastUpdate": 1712721974063,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -4975,6 +4975,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17231640,
             "range": "± 225899",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "11e08817d699ecdf8500c275a152bcf77f5e2a72",
+          "message": "Display transaction hash in log as hex str  (#1809)",
+          "timestamp": "2024-04-10T11:58:13+08:00",
+          "tree_id": "5138f47162be650517494de16915b9f04bc47bc0",
+          "url": "https://github.com/dojoengine/dojo/commit/11e08817d699ecdf8500c275a152bcf77f5e2a72"
+        },
+        "date": 1712721973365,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17455412,
+            "range": "± 736316",
             "unit": "ns/iter"
           }
         ]
