@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
@@ -222,13 +223,14 @@ impl Saya {
             .unwrap();
 
         trace!(target: "saya_core", "Verifying block {block_number}.");
-        let transaction_hash = verifier::verify(proof, self.config.verifier).await?;
+        let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?;
         info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
-        // trace!(target: "saya_core", "Applying diffs {block_number}.");
-        // cairo_proof_parser::
-        // let transaction_hash = starknet_os::starknet_apply_diffs(proof).await?;
-        // info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
+        trace!(target: "saya_core", "Applying diffs {block_number}.");
+        let ExtractOutputResult { program_output, program_output_hash: _ } =
+            extract_output(proof.clone()).unwrap();
+        let transaction_hash = starknet_os::starknet_apply_diffs(vec![], program_output).await?;
+        info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
 
         Ok(())
     }
