@@ -96,8 +96,8 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                         let metrics = &pin.metrics.block_producer;
                         let gas_used = outcome.stats.l1_gas_used;
                         let steps_used = outcome.stats.cairo_steps_used;
-                        metrics.total_l1_gas_processed.increment(gas_used as u64);
-                        metrics.total_cairo_steps_processed.increment(steps_used as u64);
+                        metrics.l1_gas_processed_total.increment(gas_used as u64);
+                        metrics.cairo_steps_processed_total.increment(steps_used as u64);
                     }
 
                     Err(err) => {

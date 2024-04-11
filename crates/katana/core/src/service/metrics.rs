@@ -9,7 +9,7 @@ pub(crate) struct ServiceMetrics {
 #[metrics(scope = "block_producer")]
 pub(crate) struct BlockProducerMetrics {
     /// The amount of L1 gas processed in a block.
-    pub(crate) total_l1_gas_processed: Counter,
+    pub(crate) l1_gas_processed_total: Counter,
     /// The amount of Cairo steps processed in a block.
-    pub(crate) total_cairo_steps_processed: Counter,
+    pub(crate) cairo_steps_processed_total: Counter,
 }
