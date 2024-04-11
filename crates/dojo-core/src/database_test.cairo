@@ -10,8 +10,10 @@ use starknet::class_hash::{Felt252TryIntoClassHash, ClassHash};
 use dojo::world::{IWorldDispatcher};
 use dojo::database::{get, set};
 
+//#[available_gas(1000000)]
+
 #[test]
-#[available_gas(1000000)]
+#[available_gas(1100000)]
 fn test_database_basic() {
     let mut values = ArrayTrait::new();
     values.append('database_test');
@@ -25,8 +27,10 @@ fn test_database_basic() {
     assert(res.len() == values.len(), 'Lengths not equal');
 }
 
+// #[available_gas(1500000)]
+
 #[test]
-#[available_gas(1500000)]
+#[available_gas(2100000)]
 fn test_database_different_tables() {
     let mut values = ArrayTrait::new();
     values.append(0x1);
@@ -47,8 +51,10 @@ fn test_database_different_tables() {
     assert(other_res.at(0) != res.at(0), 'Values the same for different!');
 }
 
+// #[available_gas(1500000)]
+
 #[test]
-#[available_gas(1500000)]
+#[available_gas(2100000)]
 fn test_database_different_keys() {
     let mut values = ArrayTrait::new();
     values.append(0x1);

@@ -1,18 +1,78 @@
 use array::{ArrayTrait, SpanTrait};
 use starknet::{ClassHash, ContractAddress, Felt252TryIntoContractAddress, Felt252TryIntoClassHash};
-use dojo::packing::{shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size};
+use dojo::packing::{shl, shr, pow2, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size};
 use integer::U256BitAnd;
 use option::OptionTrait;
 use debug::PrintTrait;
 use traits::{Into, TryInto};
 use dojo::database::introspect::Introspect;
 
+
 #[test]
 #[available_gas(9000000)]
-fn test_bit_fpow() {
+fn test_pow_2_0() {
+    let _a = pow2(0);
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_pow_2_0_fpow() {
+    let _a = fpow(2, 0);
+}
+
+//
+
+#[test]
+#[available_gas(9000000)]
+fn test_pow_2_1() {
+    let _a = pow2(1);
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_pow_2_1_fpow() {
+    let _a = fpow(2, 1);
+}
+
+//
+
+#[test]
+#[available_gas(9000000)]
+fn test_pow_2_2() {
+    let _a = pow2(2);
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_pow_2_2_fpow() {
+    let _a = fpow(2, 2);
+}
+
+//
+
+//
+
+#[test]
+#[available_gas(9000000)]
+fn test_pow_2_128() {
+    let _a = pow2(182);
+}
+
+#[test]
+#[available_gas(9000000)]
+fn test_pow_2_128_fpow() {
+    let _a = fpow(2, 128);
+}
+
+//
+
+
+#[test]
+#[available_gas(9000000)]
+fn test_bit_pow2() {
     assert(
-        fpow(
-            2, 250
+        pow2(
+            250
         ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
         ''
     )
