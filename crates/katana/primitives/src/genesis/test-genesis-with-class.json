@@ -57,11 +57,11 @@
 	},
 	"classes": [
 		{
-			"class": "../../contracts/compiled/erc20.json",
+			"class": "../../../contracts/compiled/erc20.json",
 			"classHash": "0x8"
 		},
 		{
-			"class": "../../contracts/compiled/universal_deployer.json",
+			"class": "../../../contracts/compiled/universal_deployer.json",
 			"classHash": "0x80085"
 		},
 		{
