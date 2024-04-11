@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712852598312,
+  "lastUpdate": 1712853632508,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5095,6 +5095,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 15865923,
             "range": "± 241317",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39ee46b82f1deb08cefab201ff663297a2114f8e",
+          "message": "feat: add metadata section to the world contract manifest (#1781)\n\n* feat: add metadata section to the world contract manifest\r\n\r\n* fix: fmt\r\n\r\n* fix: remove ignore on a manifest test\r\n\r\n* fix formatting\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-04-11T22:02:33+05:30",
+          "tree_id": "045876dcf3fd21e23833ee5ae1b65635fad0395a",
+          "url": "https://github.com/dojoengine/dojo/commit/39ee46b82f1deb08cefab201ff663297a2114f8e"
+        },
+        "date": 1712853631721,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17087590,
+            "range": "± 529828",
             "unit": "ns/iter"
           }
         ]
