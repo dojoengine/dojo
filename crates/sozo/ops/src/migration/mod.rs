@@ -7,8 +7,9 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbiFormat, AbstractManifestError, BaseManifest, Contract, DeploymentManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, OverlayManifest,
+    AbiFormat, AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, DojoModel,
+    Manifest, ManifestMethods, OverlayManifest, WorldContract as ManifestWorldContract,
+    WorldMetadata,
 };
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -57,6 +58,7 @@ pub async fn migrate<P, S>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
     chain_id: String,
+    rpc_url: String,
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
     dry_run: bool,
@@ -105,38 +107,20 @@ where
     let mut strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
-    if dry_run {
+    let migration_output = if dry_run {
         print_strategy(&ui, account.provider(), &strategy).await;
-
-        update_manifests_and_abis(
-            ws,
-            local_manifest,
-            &profile_dir,
-            &profile_name,
-            MigrationOutput { world_address, ..Default::default() },
-            name.as_ref(),
-        )
-        .await?;
+        MigrationOutput { world_address, ..Default::default() }
     } else {
         // Migrate according to the diff.
         match apply_diff(ws, account, txn_config, &mut strategy).await {
-            Ok(migration_output) => {
-                update_manifests_and_abis(
-                    ws,
-                    local_manifest,
-                    &profile_dir,
-                    &profile_name,
-                    migration_output,
-                    name.as_ref(),
-                )
-                .await?;
-            }
+            Ok(migration_output) => migration_output,
             Err(e) => {
                 update_manifests_and_abis(
                     ws,
                     local_manifest,
                     &profile_dir,
                     &profile_name,
+                    &rpc_url,
                     MigrationOutput { world_address, ..Default::default() },
                     name.as_ref(),
                 )
@@ -146,6 +130,17 @@ where
         }
     };
 
+    update_manifests_and_abis(
+        ws,
+        local_manifest,
+        &profile_dir,
+        &profile_name,
+        &rpc_url,
+        migration_output,
+        name.as_ref(),
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -154,6 +149,7 @@ async fn update_manifests_and_abis(
     local_manifest: BaseManifest,
     profile_dir: &Utf8PathBuf,
     profile_name: &str,
+    rpc_url: &str,
     migration_output: MigrationOutput,
     salt: Option<&String>,
 ) -> Result<()> {
@@ -164,6 +160,11 @@ async fn update_manifests_and_abis(
     let deployed_path_json = profile_dir.join("manifest").with_extension("json");
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
+
+    local_manifest.world.inner.metadata = Some(WorldMetadata {
+        profile_name: profile_name.to_string(),
+        rpc_url: rpc_url.to_string(),
+    });
 
     if deployed_path.exists() {
         let previous_manifest = DeploymentManifest::load_from_path(&deployed_path)?;
@@ -264,7 +265,8 @@ async fn update_manifest_abis(
         manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
     }
 
-    inner_helper::<Contract>(profile_dir, profile_name, &mut local_manifest.world).await;
+    inner_helper::<ManifestWorldContract>(profile_dir, profile_name, &mut local_manifest.world)
+        .await;
 
     for contract in local_manifest.contracts.iter_mut() {
         inner_helper::<DojoContract>(profile_dir, profile_name, contract).await;

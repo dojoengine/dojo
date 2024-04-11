@@ -117,7 +117,6 @@ fn migrate_world_without_seed_will_fail() {
     assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
 }
 
-#[ignore]
 #[tokio::test]
 async fn migration_from_remote() {
     let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
@@ -139,10 +138,13 @@ async fn migration_from_remote() {
         ExecutionEncoding::New,
     );
 
+    let profile_name = ws.current_profile().unwrap().to_string();
+
     let manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
+
     let world = WorldDiff::compute(manifest, None);
 
     let mut migration = prepare_for_migration(
@@ -156,9 +158,10 @@ async fn migration_from_remote() {
     execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
+
     let remote_manifest = DeploymentManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),

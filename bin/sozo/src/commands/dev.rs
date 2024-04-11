@@ -216,7 +216,7 @@ impl DevArgs {
         let mut previous_manifest: Option<DeploymentManifest> = Option::None;
         let result = build(&mut context);
 
-        let Some((mut world_address, account, _)) = context
+        let Some((mut world_address, account, _, _)) = context
             .ws
             .config()
             .tokio_handle()
