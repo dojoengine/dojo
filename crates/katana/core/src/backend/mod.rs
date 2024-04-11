@@ -25,7 +25,7 @@ pub mod storage;
 use self::config::StarknetConfig;
 use self::storage::Blockchain;
 use crate::env::BlockContextGenerator;
-use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome, TxWithOutcome};
+use crate::service::block_producer::{BlockProductionError, MinedBlockOutcome};
 use crate::utils::get_current_timestamp;
 
 pub(crate) const LOG_TARGET: &str = "katana::core::backend";

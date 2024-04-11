@@ -249,13 +249,28 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     );
 
     // assert the state updates after all the blocks are executed
-    //
+    let mut actual_total_gas: u128 = 0;
+    let mut actual_total_steps: u128 = 0;
 
     // assert the state updates
     let ExecutionOutput { states, transactions, stats } = executor.take_execution_output().unwrap();
-    // asserts that the executed transactions are stored
-    let actual_txs: Vec<TxWithHash> = transactions.iter().map(|(tx, _)| tx.clone()).collect();
 
+    // asserts that the executed transactions are stored
+    let actual_txs: Vec<TxWithHash> = transactions
+        .iter()
+        .map(|(tx, res)| {
+            if let Some(fee) = res.fee() {
+                actual_total_gas += fee.gas_consumed;
+            }
+            if let Some(rec) = res.receipt() {
+                actual_total_steps += rec.resources_used().steps as u128;
+            }
+            tx.clone()
+        })
+        .collect();
+
+    assert_eq!(actual_total_gas, stats.l1_gas_used);
+    assert_eq!(actual_total_steps, stats.cairo_steps_used);
     assert_eq!(actual_txs, expected_txs);
 
     let actual_nonce_updates = states.state_updates.nonce_updates;

@@ -23,7 +23,6 @@ use parking_lot::RwLock;
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info, trace, warn};
 
-use super::metrics::BlockProducerMetrics;
 use crate::backend::Backend;
 
 pub(crate) const LOG_TARGET: &str = "miner";
