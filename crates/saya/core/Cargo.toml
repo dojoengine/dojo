@@ -21,6 +21,7 @@ cairo-vm.workspace = true
 convert_case.workspace = true
 flate2.workspace = true
 futures.workspace = true
+itertools.workspace = true
 lazy_static.workspace = true
 parking_lot.workspace = true
 rand = { version = "0.8.5", features = [ "small_rng" ] }
