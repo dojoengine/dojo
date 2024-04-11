@@ -5,7 +5,7 @@ use starknet::core::types::FieldElement;
 use super::vec252::VecFelt252;
 
 pub fn parse_proof(proof: String) -> anyhow::Result<Vec<FieldElement>> {
-    let parsed = parse(proof)?;
+    let parsed = parse(&proof)?;
 
     let config: VecFelt252 = serde_json::from_str(&parsed.config.to_string()).unwrap();
     let public_input: VecFelt252 = serde_json::from_str(&parsed.public_input.to_string()).unwrap();
