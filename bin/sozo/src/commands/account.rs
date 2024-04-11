@@ -60,6 +60,9 @@ pub enum AccountCommand {
 
         #[clap(help = "Path to the account config file")]
         file: PathBuf,
+
+        #[clap(long, help = "Don't wait for user confirmation")]
+        no_confirmation: bool,
     },
 
     #[clap(about = "Fetch account config from an already deployed account contract.")]
@@ -96,6 +99,7 @@ impl AccountArgs {
                     nonce,
                     poll_interval,
                     file,
+                    no_confirmation,
                 } => {
                     let provider = starknet.provider(env_metadata.as_ref())?;
                     let signer = signer.signer(env_metadata.as_ref())?;
@@ -108,6 +112,7 @@ impl AccountArgs {
                         nonce,
                         poll_interval,
                         file,
+                        no_confirmation,
                     )
                     .await
                 }
