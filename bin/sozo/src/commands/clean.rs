@@ -41,7 +41,7 @@ impl CleanArgs {
 
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
 
-        // By default, clean build manifests and scarb artifacts.
+        // By default, this command cleans the build manifests and scarb artifacts.
         scarb::ops::clean(config)?;
         self.clean_manifests(&profile_dir)?;
 
