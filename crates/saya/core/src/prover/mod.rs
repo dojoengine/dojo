@@ -7,16 +7,17 @@ use anyhow::bail;
 use async_trait::async_trait;
 
 mod program_input;
+mod scheduler;
 mod serializer;
 pub mod state_diff;
 mod stone_image;
 mod vec252;
 
 pub use program_input::*;
+pub use scheduler::*;
 use serde::{Deserialize, Serialize};
 pub use serializer::parse_proof;
 pub use stone_image::*;
-pub mod scheduler;
 
 /// The prover used to generate the proof.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -25,8 +26,6 @@ pub enum ProverIdentifier {
     Stone,
     Sharp,
     Platinum,
-    #[cfg(test)]
-    Dummy,
 }
 
 pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
@@ -34,12 +33,6 @@ pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<St
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Stone => prove_stone(input).await,
         ProverIdentifier::Platinum => todo!(),
-        #[cfg(test)]
-        ProverIdentifier::Dummy => {
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-
-            Ok(String::from("dummy ok"))
-        }
     }
 }
 

@@ -1,8 +1,8 @@
 use futures::future::BoxFuture;
 use futures::FutureExt;
+use tracing::{info, trace};
 
-use super::state_diff::ProvedStateDiff;
-use super::{prove, ProverIdentifier};
+use super::{prove, ProgramInput, ProverIdentifier};
 
 type Proof = String;
 
@@ -17,12 +17,17 @@ async fn combine_proofs(first: Proof, second: Proof) -> anyhow::Result<Proof> {
 
 // Return type based on: https://rust-lang.github.io/async-book/07_workarounds/04_recursion.html.
 pub fn prove_recursively(
-    mut inputs: Vec<ProvedStateDiff>,
+    mut inputs: Vec<ProgramInput>,
     prover: ProverIdentifier,
 ) -> BoxFuture<'static, anyhow::Result<Proof>> {
     async move {
         if inputs.len() <= 1 {
-            prove(inputs[0].serialize(), prover).await
+            let block_number = inputs[0].block_number;
+            trace!(target: "saya_core", "Proving block {block_number}.");
+            let proof = prove(inputs[0].serialize()?, prover).await;
+            info!(target: "saya_core", block_number, "Block proven.");
+
+            proof
         } else {
             let last = inputs.split_off(inputs.len() / 2);
 
