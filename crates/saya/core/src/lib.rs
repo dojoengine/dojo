@@ -6,7 +6,7 @@ use futures::future::{self, join};
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
-use prover::ProverIdentifier;
+use prover::{prove_recursively, ProverIdentifier};
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
@@ -96,6 +96,7 @@ impl Saya {
             join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
         let genesis_state_hash = genesis_block?.header.header.state_root;
         let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
+        println!("here");
 
         loop {
             let latest_block = match self.provider.block_number().await {
@@ -131,10 +132,17 @@ impl Saya {
                 .map(|(b, s)| (b, s, genesis_state_hash))
                 .collect::<Vec<_>>();
 
-            for p in params {
-                self.process_block(block, p).await?;
+            let mut processed = Vec::with_capacity(params.len());
+            for p in params.clone() {
+                let prover_input = self.process_block(block, p).await?;
+                if let Some(input) = prover_input {
+                    processed.push(input);
+                }
                 block += 1;
             }
+
+            let proof = prove_recursively(processed, self.config.prover).await?;
+            println!("Proof: {}", proof);
         }
     }
 
@@ -148,19 +156,17 @@ impl Saya {
     ///
     /// 3. Computes facts for this state transition. We may optimistically register the facts.
     ///
-    /// 4. Computes the proof from the trace with a prover.
-    ///
-    /// 5. Registers the facts + the send the proof to verifier. Not all provers require this step
-    ///    (a.k.a. SHARP).
+    /// 4. Prepares an input to compute the proof from the trace with a given prover.
     ///
     /// # Arguments
     ///
     /// * `block_number` - The block number.
+    /// * `blocks` - The block to process, along with the state roots of the previous block and the genesis block.
     async fn process_block(
         &mut self,
         block_number: BlockNumber,
         blocks: (SealedBlock, FieldElement, FieldElement),
-    ) -> SayaResult<Option<(ProgramInput, String)>> {
+    ) -> SayaResult<Option<ProgramInput>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
         let (block, prev_state_root, _genesis_state_hash) = blocks;
@@ -185,7 +191,7 @@ impl Saya {
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         if exec_infos.is_empty() {
-            trace!(target: "saya_core", block_number, "Skipping empty block.");
+            trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
             return Ok(None);
         }
 
@@ -204,7 +210,7 @@ impl Saya {
 
         let new_program_input = ProgramInput {
             prev_state_root,
-            block_number: FieldElement::from(block_number),
+            block_number,
             block_hash: block.block.header.hash,
             config_hash: FieldElement::from(0u64),
             message_to_starknet_segment,
@@ -212,31 +218,17 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
+        trace!(target: LOG_TARGET, "Processed block {block_number}.");
+
         println!("Program input: {}", new_program_input.serialize()?);
 
-        // let to_prove = ProvedStateDiff {
-        //     genesis_state_hash,
-        //     prev_state_hash: prev_block.header.header.state_root,
-        //     state_updates: state_updates_to_prove,
-        // };
+        // let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
 
-        trace!(target: "saya_core", "Proving block {block_number}.");
-        let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
-        info!(target: "saya_core", block_number, "Block proven.");
+        // trace!(target: "saya_core", "Verifying block {block_number}.");
+        // let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?; // TODO: If we use scheduler this part is only needed at the end of proving
+        // info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
-        // save proof to file
-        tokio::fs::File::create(format!("proof_{}.json", block_number))
-            .await
-            .unwrap()
-            .write_all(proof.as_bytes())
-            .await
-            .unwrap();
-
-        trace!(target: "saya_core", "Verifying block {block_number}.");
-        let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?; // TODO: If we use scheduler this part is only needed at the end of proving
-        info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
-
-        Ok(Some((new_program_input, proof)))
+        Ok(Some(new_program_input))
     }
 }
 

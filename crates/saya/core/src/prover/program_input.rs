@@ -11,7 +11,7 @@ use super::state_diff::state_updates_to_json_like;
 /// With the new state root computed by the prover.
 pub struct ProgramInput {
     pub prev_state_root: FieldElement,
-    pub block_number: FieldElement,
+    pub block_number: u64,
     pub block_hash: FieldElement,
     pub config_hash: FieldElement,
     pub message_to_starknet_segment: Vec<MessageToStarknet>,
@@ -175,7 +175,7 @@ fn test_program_input() -> anyhow::Result<()> {
 
     let input = ProgramInput {
         prev_state_root: FieldElement::from_str("101")?,
-        block_number: FieldElement::from_str("102")?,
+        block_number: 102,
         block_hash: FieldElement::from_str("103")?,
         config_hash: FieldElement::from_str("104")?,
         message_to_starknet_segment: vec![MessageToStarknet {
