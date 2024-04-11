@@ -109,6 +109,10 @@ struct Args {
     /// Chunk size of the events page when indexing using events
     #[arg(long, default_value = "1000")]
     events_chunk_size: u64,
+
+    /// Index all blocks and transactions 
+    #[arg(long, default_value = "false")]
+    all: bool,
 }
 
 #[tokio::main]
@@ -179,6 +183,7 @@ async fn main() -> anyhow::Result<()> {
         EngineConfig {
             start_block: args.start_block,
             events_chunk_size: args.events_chunk_size,
+            index_all: args.all,
             ..Default::default()
         },
         shutdown_tx.clone(),

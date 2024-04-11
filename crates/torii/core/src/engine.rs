@@ -36,11 +36,12 @@ pub struct EngineConfig {
     pub block_time: Duration,
     pub start_block: u64,
     pub events_chunk_size: u64,
+    pub index_all: bool,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self { block_time: Duration::from_secs(1), start_block: 0, events_chunk_size: 1000 }
+        Self { block_time: Duration::from_secs(1), start_block: 0, events_chunk_size: 1000, index_all: false }
     }
 }
 
