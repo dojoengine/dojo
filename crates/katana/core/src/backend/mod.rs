@@ -6,7 +6,6 @@ use katana_primitives::block::{
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;
-
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
