@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712815491636,
+  "lastUpdate": 1712815597064,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5035,6 +5035,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16958519,
             "range": "± 565076",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ab1fa3fbbf936402e0a2c1d0cb36a1f664c33284",
+          "message": "Add account class with dummy validate for testing (#1814)\n\nthis would be useful for when you're hardcoding txs in tests/benchmarks without having to deal with the signatures.",
+          "timestamp": "2024-04-11T13:58:30+08:00",
+          "tree_id": "9d208218ad069b6b7e80c5edabce69739268812b",
+          "url": "https://github.com/dojoengine/dojo/commit/ab1fa3fbbf936402e0a2c1d0cb36a1f664c33284"
+        },
+        "date": 1712815596544,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17335526,
+            "range": "± 97599",
             "unit": "ns/iter"
           }
         ]
