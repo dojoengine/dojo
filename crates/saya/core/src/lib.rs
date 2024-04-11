@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
+use futures::future::{self, join};
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
@@ -93,8 +94,10 @@ impl Saya {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
 
-        let block_before_the_first = self.provider.fetch_block(block - 1).await;
-        let mut previous_block = block_before_the_first?;
+        let (genesis_block, block_before_the_first) =
+            join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
+        let genesis_state_hash = genesis_block?.header.header.state_root;
+        let mut previous_block_state_root = block_before_the_first?.header.header.state_root;
 
         loop {
             let latest_block = match self.provider.block_number().await {
@@ -112,12 +115,28 @@ impl Saya {
                 continue;
             }
 
-            let fetched_block = self.provider.fetch_block(block).await?;
+            // Fetch all blocks from the current block to the latest block
+            let fetched_blocks = future::try_join_all(
+                (block..latest_block).map(|block_number| self.provider.fetch_block(block_number)),
+            )
+            .await?;
 
-            self.process_block(block, (&fetched_block, previous_block)).await?;
+            // shift the state roots to the right by one, as proof of each block is based on the previous state root
+            let mut state_roots =
+                fetched_blocks.iter().map(|b| b.header.header.state_root).collect::<Vec<_>>();
+            state_roots.insert(0, previous_block_state_root);
+            previous_block_state_root = state_roots.pop().unwrap();
 
-            previous_block = fetched_block;
-            block += 1;
+            let params = fetched_blocks
+                .into_iter()
+                .zip(state_roots)
+                .map(|(b, s)| (b, s, genesis_state_hash))
+                .collect::<Vec<_>>();
+
+            for p in params {
+                self.process_block(block, p).await?;
+                block += 1;
+            }
         }
     }
 
@@ -142,11 +161,11 @@ impl Saya {
     async fn process_block(
         &mut self,
         block_number: BlockNumber,
-        blocks: (&SealedBlock, SealedBlock),
-    ) -> SayaResult<()> {
+        blocks: (SealedBlock, FieldElement, FieldElement),
+    ) -> SayaResult<Option<(ProgramInput, String)>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_block) = blocks;
+        let (block, prev_state_root, _genesis_state_hash) = blocks;
 
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
@@ -162,14 +181,14 @@ impl Saya {
         self.blockchain.update_state_with_block(block.clone(), state_updates)?;
 
         if block_number == 0 {
-            return Ok(());
+            return Ok(None);
         }
 
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         if exec_infos.is_empty() {
-            trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
-            return Ok(());
+            trace!(target: "saya_core", block_number, "Skipping empty block.");
+            return Ok(None);
         }
 
         let transactions = block
@@ -186,7 +205,7 @@ impl Saya {
             extract_messages(&exec_infos, transactions);
 
         let new_program_input = ProgramInput {
-            prev_state_root: prev_block.header.header.state_root,
+            prev_state_root,
             block_number: FieldElement::from(block_number),
             block_hash: block.block.header.hash,
             config_hash: FieldElement::from(0u64),
@@ -224,7 +243,12 @@ impl Saya {
             starknet_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
                 .await?;
         info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
-        Ok(())
+
+        trace!(target: "saya_core", "Verifying block {block_number}.");
+        let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?; // TODO: If we use scheduler this part is only needed at the end of proving
+        info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
+
+        Ok(Some((new_program_input, proof)))
     }
 }
 
