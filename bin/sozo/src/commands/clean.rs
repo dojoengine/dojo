@@ -83,6 +83,7 @@ mod tests {
                 &sequencer.account(),
                 Some("dojo_examples".to_string()),
                 true,
+                None,
             )
             .await
             .unwrap()
