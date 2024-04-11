@@ -18,18 +18,18 @@ crypto-bigint.workspace = true
 dojo-types.workspace = true
 regex = "1.10.3"
 serde_json = { version = "1.0.114", features = [ "preserve_order" ] }
-starknet-core = "0.9.0"
+starknet.workspace = true
 starknet-crypto.workspace = true
-starknet-ff = "0.3.6"
 thiserror.workspace = true
 tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 tracing.workspace = true
 indexmap = "2.2.5"
 chrono.workspace = true
+dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
 
 [dev-dependencies]
-dojo-world = { path = "../../dojo-world", features = [ "metadata" ] }
 tempfile = "3.9.0"
+dojo-test-utils.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "yamux" ] }

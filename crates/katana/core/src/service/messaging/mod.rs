@@ -40,10 +40,10 @@ mod starknet;
 use std::path::Path;
 
 use ::starknet::providers::ProviderError as StarknetProviderError;
+use alloy_transport::TransportError;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethereum::EthereumMessaging;
-use ethers::providers::ProviderError as EthereumProviderError;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use serde::Deserialize;
@@ -77,13 +77,13 @@ pub enum Error {
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
     #[error("Ethereum provider error: {0}")]
-    Ethereum(EthereumProviderError),
+    Ethereum(TransportError),
     #[error("Starknet provider error: {0}")]
     Starknet(StarknetProviderError),
 }
 
-impl From<EthereumProviderError> for Error {
-    fn from(e: EthereumProviderError) -> Self {
+impl From<TransportError> for Error {
+    fn from(e: TransportError) -> Self {
         Self::Provider(ProviderError::Ethereum(e))
     }
 }
@@ -173,11 +173,11 @@ impl MessengerMode {
         match config.chain.as_str() {
             CONFIG_CHAIN_ETHEREUM => match EthereumMessaging::new(config).await {
                 Ok(m_eth) => {
-                    info!(target: LOG_TARGET, "Messaging enabled [Ethereum]");
+                    info!(target: LOG_TARGET, "Messaging enabled [Ethereum].");
                     Ok(MessengerMode::Ethereum(m_eth))
                 }
                 Err(e) => {
-                    error!(target: LOG_TARGET, "Ethereum messenger init failed: {e}");
+                    error!(target: LOG_TARGET,  error = %e, "Ethereum messenger init.");
                     Err(Error::InitError)
                 }
             },
@@ -185,17 +185,17 @@ impl MessengerMode {
             #[cfg(feature = "starknet-messaging")]
             CONFIG_CHAIN_STARKNET => match StarknetMessaging::new(config).await {
                 Ok(m_sn) => {
-                    info!(target: LOG_TARGET, "Messaging enabled [Starknet]");
+                    info!(target: LOG_TARGET, "Messaging enabled [Starknet].");
                     Ok(MessengerMode::Starknet(m_sn))
                 }
                 Err(e) => {
-                    error!(target: LOG_TARGET, "Starknet messenger init failed: {e}");
+                    error!(target: LOG_TARGET, error = %e, "Starknet messenger init.");
                     Err(Error::InitError)
                 }
             },
 
             chain => {
-                error!(target: LOG_TARGET, "Unsupported settlement chain: {}", chain);
+                error!(target: LOG_TARGET, chain = %chain, "Unsupported settlement chain.");
                 Err(Error::UnsupportedChain)
             }
         }

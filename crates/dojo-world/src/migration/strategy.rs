@@ -104,8 +104,8 @@ pub fn prepare_for_migration(
         world.salt = salt;
         world.contract_address = get_contract_address(
             salt,
-            diff.world.local,
-            &[base.as_ref().unwrap().diff.local],
+            diff.world.original_class_hash,
+            &[base.as_ref().unwrap().diff.original],
             FieldElement::ZERO,
         );
     }
@@ -153,8 +153,10 @@ fn evaluate_contracts_to_migrate(
     let mut comps_to_migrate = vec![];
 
     for c in contracts {
-        match c.remote {
-            Some(remote) if remote == c.local && !world_contract_will_migrate => continue,
+        match c.remote_class_hash {
+            Some(remote) if remote == c.local_class_hash && !world_contract_will_migrate => {
+                continue;
+            }
             _ => {
                 let path = find_artifact_path(c.name.as_str(), artifact_paths)?;
                 comps_to_migrate.push(ContractMigration {
@@ -176,8 +178,8 @@ fn evaluate_contract_to_migrate(
     world_contract_will_migrate: bool,
 ) -> Result<Option<ContractMigration>> {
     if world_contract_will_migrate
-        || contract.remote.is_none()
-        || matches!(contract.remote, Some(remote_hash) if remote_hash != contract.local)
+        || contract.remote_class_hash.is_none()
+        || matches!(contract.remote_class_hash, Some(remote_hash) if remote_hash != contract.local_class_hash)
     {
         let path = find_artifact_path(&contract.name, artifact_paths)?;
 

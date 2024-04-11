@@ -20,6 +20,8 @@ use crate::sql::Sql;
 const IPFS_URL: &str = "https://cartridge.infura-ipfs.io/ipfs/";
 const MAX_RETRY: u8 = 3;
 
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
+
 #[derive(Default)]
 pub struct MetadataUpdateProcessor;
 
@@ -35,9 +37,10 @@ where
     fn validate(&self, event: &Event) -> bool {
         if event.keys.len() > 1 {
             info!(
-                "invalid keys for event {}: {}",
-                <MetadataUpdateProcessor as EventProcessor<P>>::event_key(self),
-                <MetadataUpdateProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                target: LOG_TARGET,
+                event_key = %<MetadataUpdateProcessor as EventProcessor<P>>::event_key(self),
+                invalid_keys = %<MetadataUpdateProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                "Invalid event keys."
             );
             return false;
         }
@@ -67,7 +70,12 @@ where
             "".to_string()
         };
 
-        info!("Resource {:#x} metadata set: {}", resource, uri_str);
+        info!(
+            target: LOG_TARGET,
+            resource = %format!("{:#x}", resource),
+            uri = %uri_str,
+            "Resource metadata set."
+        );
         db.set_metadata(resource, &uri_str, block_timestamp);
 
         let db = db.clone();
@@ -86,10 +94,20 @@ async fn try_retrieve(mut db: Sql, resource: FieldElement, uri_str: String) {
             db.update_metadata(&resource, &uri_str, &metadata, &icon_img, &cover_img)
                 .await
                 .unwrap();
-            info!("Updated resource {resource:#x} metadata from ipfs");
+            info!(
+                target: LOG_TARGET,
+                resource = %format!("{:#x}", resource),
+                "Updated resource metadata from ipfs."
+            );
         }
         Err(e) => {
-            error!("Error retrieving resource {resource:#x} uri {uri_str}: {e}")
+            error!(
+                target: LOG_TARGET,
+                resource = %format!("{:#x}", resource),
+                uri = %uri_str,
+                error = %e,
+                "Retrieving resource uri."
+            );
         }
     }
 }
@@ -126,7 +144,11 @@ async fn fetch_content(cid: &str, mut retries: u8) -> Result<Bytes> {
             Err(e) => {
                 retries -= 1;
                 if retries > 0 {
-                    info!("Fetch uri failure: {}", e);
+                    info!(
+                        target: LOG_TARGET,
+                        error = %e,
+                        "Fetch uri."
+                    );
                     tokio::time::sleep(Duration::from_secs(3)).await;
                 }
             }

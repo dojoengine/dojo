@@ -62,13 +62,12 @@ mod actions {
         fn spawn(world: IWorldDispatcher) {
             let player = get_caller_address();
             let position = get!(world, player, (Position));
-            let moves = get!(world, player, (Moves));
-
+            
             set!(
                 world,
                 (
                     Moves {
-                        player, remaining: moves.remaining + 1, last_direction: Direction::None(())
+                        player, remaining: 99, last_direction: Direction::None(())
                     },
                     Position {
                         player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 }
@@ -118,12 +117,13 @@ mod tests {
 
         // System calls
         actions_system.spawn();
+        let initial_moves = get!(world, caller, Moves);
         actions_system.move(Direction::Right(()));
 
         let moves = get!(world, caller, Moves);
         let right_dir_felt: felt252 = Direction::Right(()).into();
 
-        assert(moves.remaining == 0, 'moves is wrong');
+        assert(moves.remaining == initial_moves.remaining - 1, 'moves is wrong');
         assert(moves.last_direction.into() == right_dir_felt, 'last direction is wrong');
 
         let new_position = get!(world, caller, Position);

@@ -1,4 +1,4 @@
-use ethers::types::U256;
+use alloy_primitives::U256;
 use katana_core::backend::config::{Environment, StarknetConfig};
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_executor::implementation::noop::NoopExecutorFactory;

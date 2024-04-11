@@ -318,16 +318,16 @@ async fn do_account_deploy(
     match max_fee {
         MaxFeeType::Manual { max_fee } => {
             eprintln!(
-                "You've manually specified the account deployment fee to be {}. Therefore, \
-                     fund at least:\n    {}",
+                "You've manually specified the account deployment fee to be {}. Therefore, fund \
+                 at least:\n    {}",
                 format!("{} ETH", max_fee.to_big_decimal(18)).bright_yellow(),
                 format!("{} ETH", max_fee.to_big_decimal(18)).bright_yellow(),
             );
         }
         MaxFeeType::Estimated { estimate, estimate_with_buffer } => {
             eprintln!(
-                "The estimated account deployment fee is {}. However, to avoid failure, fund \
-                     at least:\n    {}",
+                "The estimated account deployment fee is {}. However, to avoid failure, fund at \
+                 least:\n    {}",
                 format!("{} ETH", estimate.to_big_decimal(18)).bright_yellow(),
                 format!("{} ETH", estimate_with_buffer.to_big_decimal(18)).bright_yellow()
             );
@@ -347,8 +347,8 @@ async fn do_account_deploy(
         format!("{:#064x}", account_deployment_tx).bright_yellow()
     );
     eprintln!(
-        "Waiting for transaction {} to confirm. If this process is interrupted, you will need \
-             to run `{}` to update the account file.",
+        "Waiting for transaction {} to confirm. If this process is interrupted, you will need to \
+         run `{}` to update the account file.",
         format!("{:#064x}", account_deployment_tx).bright_yellow(),
         "sozo account fetch".bright_yellow(),
     );

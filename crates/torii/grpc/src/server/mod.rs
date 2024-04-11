@@ -1,6 +1,9 @@
 pub mod logger;
 pub mod subscriptions;
 
+#[cfg(test)]
+mod tests;
+
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -16,7 +19,7 @@ use proto::world::{
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
-use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
@@ -99,9 +102,9 @@ impl DojoWorld {
         .fetch_one(&self.pool)
         .await?;
 
-        let models: Vec<(String, String, String, u32, u32, String)> = sqlx::query_as(
-            "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
-             models",
+        let models: Vec<(String, String, String, String, u32, u32, String)> = sqlx::query_as(
+            "SELECT id, name, class_hash, contract_address, packed_size, unpacked_size, layout \
+             FROM models",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -110,12 +113,12 @@ impl DojoWorld {
         for model in models {
             let schema = self.model_cache.schema(&model.0).await?;
             models_metadata.push(proto::types::ModelMetadata {
-                name: model.0,
-                class_hash: model.1,
-                contract_address: model.2,
-                packed_size: model.3,
-                unpacked_size: model.4,
-                layout: hex::decode(&model.5).unwrap(),
+                name: model.1,
+                class_hash: model.2,
+                contract_address: model.3,
+                packed_size: model.4,
+                unpacked_size: model.5,
+                layout: hex::decode(&model.6).unwrap(),
                 schema: serde_json::to_vec(&schema).unwrap(),
             });
         }
@@ -151,7 +154,7 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
-    async fn query_by_hashed_keys(
+    pub(crate) async fn query_by_hashed_keys(
         &self,
         table: &str,
         model_relation_table: &str,
@@ -191,7 +194,7 @@ impl DojoWorld {
         // query to filter with limit and offset
         let query = format!(
             r#"
-            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_names
+            SELECT {table}.id, group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             {filter_ids}
@@ -206,8 +209,8 @@ impl DojoWorld {
 
         let mut entities = Vec::with_capacity(db_entities.len());
         for (entity_id, models_str) in db_entities {
-            let model_names: Vec<&str> = models_str.split(',').collect();
-            let schemas = self.model_cache.schemas(model_names).await?;
+            let model_ids: Vec<&str> = models_str.split(',').collect();
+            let schemas = self.model_cache.schemas(model_ids).await?;
 
             let entity_query = format!("{} WHERE {table}.id = ?", build_sql_query(&schemas)?);
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
@@ -232,7 +235,7 @@ impl DojoWorld {
         Ok((entities, total_count))
     }
 
-    async fn query_by_keys(
+    pub(crate) async fn query_by_keys(
         &self,
         table: &str,
         model_relation_table: &str,
@@ -261,7 +264,10 @@ impl DojoWorld {
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {model_relation_table}.model_id = '{}' and {table}.keys LIKE ?
         "#,
-            keys_clause.model
+            format!(
+                "{:#x}",
+                get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+            ),
         );
 
         // total count of rows that matches keys_pattern without limit and offset
@@ -270,21 +276,28 @@ impl DojoWorld {
 
         let models_query = format!(
             r#"
-            SELECT group_concat({model_relation_table}.model_id) as model_names
+            SELECT group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys LIKE ?
             GROUP BY {table}.id
-            HAVING model_names REGEXP '(^|,){}(,|$)'
+            HAVING INSTR(model_ids, '{}') > 0
             LIMIT 1
         "#,
-            keys_clause.model
+            format!(
+                "{:#x}",
+                get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
+            ),
         );
         let (models_str,): (String,) =
             sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
 
-        let model_names = models_str.split(',').collect::<Vec<&str>>();
-        let schemas = self.model_cache.schemas(model_names).await?;
+        println!("models_str: {}", models_str);
+
+        let model_ids = models_str.split(',').collect::<Vec<&str>>();
+        let schemas = self.model_cache.schemas(model_ids).await?;
+
+        println!("schemas: {:?}", schemas);
 
         // query to filter with limit and offset
         let entities_query = format!(
@@ -307,7 +320,7 @@ impl DojoWorld {
         ))
     }
 
-    async fn events_by_keys(
+    pub(crate) async fn events_by_keys(
         &self,
         keys_clause: proto::types::EventKeysClause,
         limit: u32,
@@ -344,7 +357,7 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
-    async fn query_by_member(
+    pub(crate) async fn query_by_member(
         &self,
         table: &str,
         model_relation_table: &str,
@@ -377,19 +390,22 @@ impl DojoWorld {
 
         let models_query = format!(
             r#"
-            SELECT group_concat({model_relation_table}.model_id) as model_names
+            SELECT group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             GROUP BY {table}.id
-            HAVING model_names REGEXP '(^|,){}(,|$)'
+            HAVING INSTR(model_ids, '{}') > 0
             LIMIT 1
         "#,
-            member_clause.model
+            format!(
+                "{:#x}",
+                get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?
+            ),
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 
-        let model_names = models_str.split(',').collect::<Vec<&str>>();
-        let schemas = self.model_cache.schemas(model_names).await?;
+        let model_ids = models_str.split(',').collect::<Vec<&str>>();
+        let schemas = self.model_cache.schemas(model_ids).await?;
 
         let table_name = member_clause.model;
         let column_name = format!("external_{}", member_clause.member);
@@ -422,6 +438,10 @@ impl DojoWorld {
     }
 
     pub async fn model_metadata(&self, model: &str) -> Result<proto::types::ModelMetadata, Error> {
+        // selector
+        let model =
+            format!("{:#x}", get_selector_from_name(model).map_err(ParseError::NonAsciiName)?);
+
         let (name, class_hash, contract_address, packed_size, unpacked_size, layout): (
             String,
             String,
@@ -433,11 +453,11 @@ impl DojoWorld {
             "SELECT name, class_hash, contract_address, packed_size, unpacked_size, layout FROM \
              models WHERE id = ?",
         )
-        .bind(model)
+        .bind(&model)
         .fetch_one(&self.pool)
         .await?;
 
-        let schema = self.model_cache.schema(model).await?;
+        let schema = self.model_cache.schema(&model).await?;
         let layout = hex::decode(&layout).unwrap();
 
         Ok(proto::types::ModelMetadata {

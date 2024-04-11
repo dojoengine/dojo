@@ -7,21 +7,22 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-katana-core = { path = "../../core" }
+katana-core.workspace = true
 katana-executor.workspace = true
-katana-primitives = { path = "../../primitives" }
-katana-provider = { path = "../../storage/provider" }
+katana-primitives.workspace = true
+katana-provider.workspace = true
 
 anyhow.workspace = true
 derive_more.workspace = true
-ethers = "2.0.11"
 futures.workspace = true
-jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
+jsonrpsee = { workspace = true, features = [ "server" ] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
+
+alloy-primitives.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

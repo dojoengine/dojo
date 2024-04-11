@@ -11,6 +11,8 @@ use super::EventProcessor;
 use crate::processors::{MODEL_INDEX, NUM_KEYS_INDEX};
 use crate::sql::Sql;
 
+pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_del_record";
+
 #[derive(Default)]
 pub struct StoreDelRecordProcessor;
 
@@ -26,9 +28,10 @@ where
     fn validate(&self, event: &Event) -> bool {
         if event.keys.len() > 1 {
             info!(
-                "invalid keys for event {}: {}",
-                <StoreDelRecordProcessor as EventProcessor<P>>::event_key(self),
-                <StoreDelRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                target: LOG_TARGET,
+                event_key = %<StoreDelRecordProcessor as EventProcessor<P>>::event_key(self),
+                invalid_keys = %<StoreDelRecordProcessor as EventProcessor<P>>::event_keys_as_string(self, event),
+                "Invalid event keys."
             );
             return false;
         }
@@ -46,7 +49,11 @@ where
         event: &Event,
     ) -> Result<(), Error> {
         let name = parse_cairo_short_string(&event.data[MODEL_INDEX])?;
-        info!("store delete record: {}", name);
+        info!(
+            target: LOG_TARGET,
+            name = %name,
+            "Store delete record."
+        );
 
         // this is temporary until the model name hash is precomputed
         let model = db.model(&format!("{:#x}", get_selector_from_name(&name)?)).await?;

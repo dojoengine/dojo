@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Context, Result};
-use clap::Args;
+use clap::{Args, Subcommand};
 use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
+use dojo_world::migration::TxConfig;
+use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
@@ -16,29 +18,51 @@ use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 
-#[derive(Args)]
+#[derive(Debug, Args)]
 pub struct MigrateArgs {
-    #[arg(short, long)]
-    #[arg(help = "Perform a dry run and outputs the plan to be executed.")]
-    pub dry_run: bool,
+    #[command(subcommand)]
+    pub command: MigrateCommand,
+}
 
-    #[arg(long)]
-    #[arg(help = "Name of the World.")]
-    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
-                       contract to avoid address conflicts.")]
-    pub name: Option<String>,
+#[derive(Debug, Subcommand)]
+pub enum MigrateCommand {
+    #[command(about = "Plan the migration and output the manifests.")]
+    Plan {
+        #[arg(long)]
+        #[arg(help = "Name of the World.")]
+        #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
+                           the contract to avoid address conflicts.")]
+        name: Option<String>,
 
-    #[command(flatten)]
-    pub world: WorldOptions,
+        #[command(flatten)]
+        world: WorldOptions,
 
-    #[command(flatten)]
-    pub starknet: StarknetOptions,
+        #[command(flatten)]
+        starknet: StarknetOptions,
 
-    #[command(flatten)]
-    pub account: AccountOptions,
+        #[command(flatten)]
+        account: AccountOptions,
+    },
+    #[command(about = "Apply the migration on-chain.")]
+    Apply {
+        #[arg(long)]
+        #[arg(help = "Name of the World.")]
+        #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
+                           the contract to avoid address conflicts.")]
+        name: Option<String>,
 
-    #[command(flatten)]
-    pub transaction: TransactionOptions,
+        #[command(flatten)]
+        world: WorldOptions,
+
+        #[command(flatten)]
+        starknet: StarknetOptions,
+
+        #[command(flatten)]
+        account: AccountOptions,
+
+        #[command(flatten)]
+        transaction: TransactionOptions,
+    },
 }
 
 pub async fn setup_env<'a>(
@@ -59,6 +83,17 @@ pub async fn setup_env<'a>(
 
     let (account, chain_id) = {
         let provider = starknet.provider(env)?;
+
+        let spec_version = provider.spec_version().await?;
+
+        if spec_version != RPC_SPEC_VERSION {
+            return Err(anyhow!(
+                "Unsupported Starknet RPC version: {}, expected {}.",
+                spec_version,
+                RPC_SPEC_VERSION
+            ));
+        }
+
         let chain_id = provider.chain_id().await?;
         let chain_id = parse_cairo_short_string(&chain_id)
             .with_context(|| "Cannot parse chain_id as string")?;
@@ -87,15 +122,8 @@ pub async fn setup_env<'a>(
 }
 
 impl MigrateArgs {
-    pub fn run(mut self, config: &Config) -> Result<()> {
+    pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
-        // If `name` was not specified use package name from `Scarb.toml` file if it exists
-        if self.name.is_none() {
-            if let Some(root_package) = ws.root_package() {
-                self.name = Some(root_package.id.name.to_string());
-            }
-        }
 
         let env_metadata = if config.manifest_path().exists() {
             dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
@@ -108,19 +136,61 @@ impl MigrateArgs {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 
-        config.tokio_handle().block_on(async {
-            let (world_address, account, chain_id) = setup_env(
-                &ws,
-                self.account,
-                self.starknet,
-                self.world,
-                self.name.as_ref(),
-                env_metadata.as_ref(),
-            )
-            .await?;
+        match self.command {
+            MigrateCommand::Plan { mut name, world, starknet, account } => {
+                if name.is_none() {
+                    if let Some(root_package) = ws.root_package() {
+                        name = Some(root_package.id.name.to_string())
+                    }
+                };
 
-            migration::migrate(&ws, world_address, chain_id, &account, self.name, self.dry_run)
-                .await
-        })
+                config.tokio_handle().block_on(async {
+                    let (world_address, account, chain_id) = setup_env(
+                        &ws,
+                        account,
+                        starknet,
+                        world,
+                        name.as_ref(),
+                        env_metadata.as_ref(),
+                    )
+                    .await?;
+
+                    migration::migrate(&ws, world_address, chain_id, &account, name, true, None)
+                        .await
+                })
+            }
+            MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
+                let txn_config: Option<TxConfig> = Some(transaction.into());
+
+                if name.is_none() {
+                    if let Some(root_package) = ws.root_package() {
+                        name = Some(root_package.id.name.to_string())
+                    }
+                };
+
+                config.tokio_handle().block_on(async {
+                    let (world_address, account, chain_id) = setup_env(
+                        &ws,
+                        account,
+                        starknet,
+                        world,
+                        name.as_ref(),
+                        env_metadata.as_ref(),
+                    )
+                    .await?;
+
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        chain_id,
+                        &account,
+                        name,
+                        false,
+                        txn_config,
+                    )
+                    .await
+                })
+            }
+        }
     }
 }

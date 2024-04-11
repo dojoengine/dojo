@@ -7,22 +7,23 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-katana-core = { path = "../../core" }
-katana-executor = { path = "../../executor" }
-katana-primitives = { path = "../../primitives" }
-katana-provider = { path = "../../storage/provider" }
-katana-rpc-api = { path = "../rpc-api" }
-katana-rpc-types = { path = "../rpc-types" }
-katana-rpc-types-builder = { path = "../rpc-types-builder" }
-katana-tasks = { path = "../../tasks" }
+dojo-metrics.workspace = true
+katana-core.workspace = true
+katana-executor.workspace = true
+katana-primitives.workspace = true
+katana-provider.workspace = true
+katana-rpc-api.workspace = true
+katana-rpc-types-builder.workspace = true
+katana-rpc-types.workspace = true
+katana-tasks.workspace = true
 
 anyhow.workspace = true
-cairo-lang-starknet = "2.3.1"
 flate2.workspace = true
 futures.workspace = true
 hex = { version = "0.4.3", default-features = false }
 hyper = "0.14.20"
-jsonrpsee = { version = "0.16.2", features = [ "macros", "server" ] }
+jsonrpsee = { workspace = true, features = [ "server" ] }
+metrics.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -36,7 +37,8 @@ tracing.workspace = true
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-dojo-test-utils = { path = "../../../dojo-test-utils" }
-jsonrpsee = { version = "0.16.2", features = [ "client" ] }
+cairo-lang-starknet.workspace = true
+dojo-test-utils.workspace = true
+jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }
 url.workspace = true
