@@ -286,7 +286,7 @@ pub async fn deploy(
         simulate_account_deploy(&account_deployment).await?;
         return Ok(());
     } else {
-        do_accoun_deploy(
+        do_account_deploy(
             max_fee,
             target_deployment_address,
             no_confirmation,
