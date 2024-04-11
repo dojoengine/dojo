@@ -2,8 +2,6 @@ use anyhow::Ok;
 use cairo_proof_parser::parse;
 use starknet::core::types::FieldElement;
 
-use super::vec252::VecFelt252;
-
 pub fn parse_proof(proof: String) -> anyhow::Result<Vec<FieldElement>> {
     let parsed = parse(&proof)?;
 
