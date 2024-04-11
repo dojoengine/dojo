@@ -7,8 +7,9 @@ use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbiFormat, AbstractManifestError, BaseManifest, Contract, DeploymentManifest, DojoContract,
-    DojoModel, Manifest, ManifestMethods, OverlayManifest,
+    AbiFormat, AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, DojoModel,
+    Manifest, ManifestMethods, OverlayManifest, WorldContract as ManifestWorldContract,
+    WorldMetadata,
 };
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::contract::ContractMigration;
@@ -53,10 +54,12 @@ pub struct MigrationOutput {
     pub contracts: Vec<Option<DeployOutput>>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn migrate<P, S>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
     chain_id: String,
+    rpc_url: String,
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
     dry_run: bool,
@@ -105,44 +108,20 @@ where
     let mut strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
-    let contracts_count = local_manifest.contracts.len();
-
-    if dry_run {
+    let migration_output = if dry_run {
         print_strategy(&ui, account.provider(), &strategy).await;
-
-        update_manifests_and_abis(
-            ws,
-            local_manifest,
-            &profile_dir,
-            &profile_name,
-            MigrationOutput {
-                world_address,
-                contracts: vec![None; contracts_count],
-                ..Default::default()
-            },
-            name.as_ref(),
-        )
-        .await?;
+        MigrationOutput { world_address, ..Default::default() }
     } else {
         // Migrate according to the diff.
         match apply_diff(ws, account, txn_config, &mut strategy).await {
-            Ok(migration_output) => {
-                update_manifests_and_abis(
-                    ws,
-                    local_manifest,
-                    &profile_dir,
-                    &profile_name,
-                    migration_output,
-                    name.as_ref(),
-                )
-                .await?;
-            }
+            Ok(migration_output) => migration_output,
             Err(e) => {
                 update_manifests_and_abis(
                     ws,
                     local_manifest,
                     &profile_dir,
                     &profile_name,
+                    &rpc_url,
                     MigrationOutput { world_address, ..Default::default() },
                     name.as_ref(),
                 )
@@ -152,6 +131,17 @@ where
         }
     };
 
+    update_manifests_and_abis(
+        ws,
+        local_manifest,
+        &profile_dir,
+        &profile_name,
+        &rpc_url,
+        migration_output,
+        name.as_ref(),
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -160,6 +150,7 @@ async fn update_manifests_and_abis(
     local_manifest: BaseManifest,
     profile_dir: &Utf8PathBuf,
     profile_name: &str,
+    rpc_url: &str,
     migration_output: MigrationOutput,
     salt: Option<&String>,
 ) -> Result<()> {
@@ -170,6 +161,11 @@ async fn update_manifests_and_abis(
     let deployed_path_json = profile_dir.join("manifest").with_extension("json");
 
     let mut local_manifest: DeploymentManifest = local_manifest.into();
+
+    local_manifest.world.inner.metadata = Some(WorldMetadata {
+        profile_name: profile_name.to_string(),
+        rpc_url: rpc_url.to_string(),
+    });
 
     if deployed_path.exists() {
         let previous_manifest = DeploymentManifest::load_from_path(&deployed_path)?;
@@ -188,25 +184,27 @@ async fn update_manifests_and_abis(
         local_manifest.world.inner.block_number = migration_output.world_block_number;
     }
 
-    let base_class_hash = *local_manifest.base.inner.class_hash();
+    migration_output.contracts.iter().for_each(|contract_output| {
+        // ignore failed migration which are represented by None
+        if let Some(output) = contract_output {
+            // find the contract in local manifest and update its address and base class hash
+            let local = local_manifest
+                .contracts
+                .iter_mut()
+                .find(|c| c.name == output.name.as_ref().unwrap())
+                .expect("contract got migrated, means it should be present here");
 
-    debug_assert!(local_manifest.contracts.len() == migration_output.contracts.len());
-
-    local_manifest.contracts.iter_mut().zip(migration_output.contracts).for_each(
-        |(local_manifest, contract_output)| {
-            let salt = generate_salt(&local_manifest.name);
-            local_manifest.inner.address = Some(get_contract_address(
+            let salt = generate_salt(&local.name);
+            local.inner.address = Some(get_contract_address(
                 salt,
-                base_class_hash,
+                output.base_class_hash,
                 &[],
                 migration_output.world_address,
             ));
 
-            if let Some(output) = contract_output {
-                local_manifest.inner.base_class_hash = output.base_class_hash;
-            }
-        },
-    );
+            local.inner.base_class_hash = output.base_class_hash;
+        }
+    });
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
@@ -268,7 +266,8 @@ async fn update_manifest_abis(
         manifest.inner.set_abi(Some(AbiFormat::Path(deployed_relative_path)));
     }
 
-    inner_helper::<Contract>(profile_dir, profile_name, &mut local_manifest.world).await;
+    inner_helper::<ManifestWorldContract>(profile_dir, profile_name, &mut local_manifest.world)
+        .await;
 
     for contract in local_manifest.contracts.iter_mut() {
         inner_helper::<DojoContract>(profile_dir, profile_name, contract).await;
@@ -619,7 +618,7 @@ where
         )
         .await
     {
-        Ok(val) => {
+        Ok(mut val) => {
             if let Some(declare) = val.clone().declare {
                 ui.print_hidden_sub(format!(
                     "Declare transaction: {:#x}",
@@ -629,6 +628,7 @@ where
 
             ui.print_hidden_sub(format!("Deploy transaction: {:#x}", val.transaction_hash));
 
+            val.name = Some(contract.diff.name.clone());
             Ok(ContractDeploymentOutput::Output(val))
         }
         Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
@@ -794,7 +794,7 @@ where
             )
             .await
         {
-            Ok(output) => {
+            Ok(mut output) => {
                 if let Some(ref declare) = output.declare {
                     ui.print_hidden_sub(format!(
                         "Declare transaction: {:#x}",
@@ -820,7 +820,9 @@ where
                     ));
                     ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
                 }
+                let name = contract.diff.name.clone();
 
+                output.name = Some(name);
                 deploy_output.push(Some(output));
             }
             Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {

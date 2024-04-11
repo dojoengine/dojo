@@ -36,6 +36,7 @@ pub struct DeployOutput {
     // base class hash at time of deployment
     pub base_class_hash: FieldElement,
     pub was_upgraded: bool,
+    pub name: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -215,6 +216,7 @@ pub trait Deployable: Declarable + Sync {
             declare,
             base_class_hash,
             was_upgraded,
+            name: None,
         })
     }
 
@@ -287,6 +289,7 @@ pub trait Deployable: Declarable + Sync {
             declare,
             base_class_hash: FieldElement::default(),
             was_upgraded: false,
+            name: None,
         })
     }
 

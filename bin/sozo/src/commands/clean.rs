@@ -80,6 +80,7 @@ mod tests {
                 &ws,
                 None,
                 "chain_id".to_string(),
+                sequencer.url().to_string(),
                 &sequencer.account(),
                 Some("dojo_examples".to_string()),
                 true,

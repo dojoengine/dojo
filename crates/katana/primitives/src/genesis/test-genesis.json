@@ -69,15 +69,15 @@
 	},
 	"classes": [
 		{
-			"class": "../../contracts/compiled/erc20.json",
+			"class": "../../../contracts/compiled/erc20.json",
 			"classHash": "0x8"
 		},
 		{
-			"class": "../../contracts/compiled/universal_deployer.json",
+			"class": "../../../contracts/compiled/universal_deployer.json",
 			"classHash": "0x80085"
 		},
 		{
-			"class": "../../contracts/compiled/oz_account_080.json",
+			"class": "../../../contracts/compiled/oz_account_080.json",
 			"classHash": "0xa55"
 		}
 	]
