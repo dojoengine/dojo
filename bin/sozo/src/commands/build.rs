@@ -4,9 +4,8 @@ use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
+use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 
-use super::options::statistics::{ContractStatistics, Stats};
-use crate::commands::options::statistics::get_contract_statistics_for_dir;
 #[derive(Args, Debug)]
 pub struct BuildArgs {
     #[arg(long)]
@@ -21,8 +20,8 @@ pub struct BuildArgs {
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
 
-    #[command(flatten)]
-    pub stats: Stats,
+    #[arg(long, help = "Display statistics")]
+    pub stats: bool,
 }
 
 impl BuildArgs {
@@ -41,11 +40,11 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
-        if self.stats.stats {
+        if self.stats {
             let contracts_statistics = get_contract_statistics_for_dir(&compile_info.target_dir);
 
             for contract_stats in contracts_statistics {
-                print_stats(contract_stats);
+                print_stats(contract_stats, config);
             }
         }
 
@@ -70,26 +69,23 @@ impl BuildArgs {
     }
 }
 
-pub fn print_stats(contract_statistic: ContractStatistics) {
-    println!(
-        "---------------Contract Stats for {}---------------",
-        contract_statistic.contract_name
-    );
-
-    println!(
-        "- Contract bytecode size (Number of felts in the program): {}\n",
-        contract_statistic.number_felts,
-    );
-
-    println!("- Contract Class size: {} bytes\n", contract_statistic.file_size);
+pub fn print_stats(contract_statistic: ContractStatistics, config: &Config) {
+    let contract_name = contract_statistic.contract_name;
+    let number_felts = contract_statistic.number_felts;
+    let file_size = contract_statistic.file_size;
+    config.ui().print(format!("---------------Contract Stats for {contract_name}---------------"));
+    config.ui().print(format!(
+        "- Contract bytecode size (Number of felts in the program): {number_felts}\n"
+    ));
+    config.ui().print(format!("- Contract Class size: {file_size} bytes\n"));
 }
 
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler::build_test_config;
+    use sozo_ops::statistics::ContractStatistics;
 
     use super::{print_stats, BuildArgs};
-    use crate::commands::options::statistics::{ContractStatistics, Stats};
 
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
@@ -99,7 +95,7 @@ mod tests {
             bindings_output: "generated".to_string(),
             typescript: true,
             unity: true,
-            stats: Stats { stats: false },
+            stats: false,
         };
         let result = build_args.run(&config);
         assert!(result.is_ok());
@@ -108,12 +104,15 @@ mod tests {
     #[test]
     fn test_print_stats() {
         // Arrange
+        let config: scarb::core::Config =
+            build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+
         let contract_statistic = ContractStatistics {
             contract_name: String::from("SampleContract"),
             number_felts: 100,
             file_size: 1024,
         };
         // Act
-        print_stats(contract_statistic);
+        print_stats(contract_statistic, &config);
     }
 }

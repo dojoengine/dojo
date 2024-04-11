@@ -3,7 +3,6 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use clap::Args;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FlattenedSierraClass;
 
@@ -12,12 +11,6 @@ pub struct ContractStatistics {
     pub contract_name: String,
     pub number_felts: u64,
     pub file_size: u64,
-}
-
-#[derive(Debug, Args)]
-pub struct Stats {
-    #[arg(long, help = "Display statistics")]
-    pub stats: bool,
 }
 
 pub fn read_sierra_json_program(file: &File) -> Result<FlattenedSierraClass> {
@@ -93,9 +86,11 @@ mod tests {
         ContractStatistics,
     };
 
-    const TEST_SIERRA_JSON_CONTRACT: &str =
-        "tests/test_data/sierra_compiled_contracts/contracts_test.contract_class.json";
-    const TEST_SIERRA_FOLDER_CONTRACTS: &str = "tests/test_data/sierra_compiled_contracts/";
+    const TEST_SIERRA_JSON_CONTRACT: &str = "../../../bin/sozo/tests/test_data/\
+                                             sierra_compiled_contracts/contracts_test.\
+                                             contract_class.json";
+    const TEST_SIERRA_FOLDER_CONTRACTS: &str =
+        "../../../bin/sozo/tests/test_data/sierra_compiled_contracts/";
 
     #[test]
     fn compute_contract_byte_code_size_returns_correct_size() {

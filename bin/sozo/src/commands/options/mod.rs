@@ -1,6 +1,5 @@
 pub mod account;
 pub mod starknet;
-pub mod statistics;
 pub mod transaction;
 pub mod world;
 
