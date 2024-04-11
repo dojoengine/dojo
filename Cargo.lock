@@ -2362,8 +2362,7 @@ dependencies = [
 [[package]]
 name = "cairo-proof-parser"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e453b4f5548816666ad56a05e0e0dc57a55116570a74093fc6b5856fea3069b"
+source = "git+https://github.com/cartridge-gg/cairo-proof-parser?branch=feat/program-output-and-hash#730e78f9dba05f4b12e5d986b0bdf6049a36e89b"
 dependencies = [
  "anyhow",
  "itertools 0.12.1",
