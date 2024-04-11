@@ -62,7 +62,7 @@ fn test_simulate_tx_impl<EF: ExecutorFactory>(
     }),);
 
     // check that the underlying state is not modified
-    let ExecutionOutput { states, transactions } =
+    let ExecutionOutput { states, transactions, stats } =
         executor.take_execution_output().expect("must take output");
 
     assert!(transactions.is_empty(), "simulated tx should not be stored");

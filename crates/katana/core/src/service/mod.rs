@@ -13,7 +13,7 @@ use starknet::core::types::FieldElement;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
-use self::metrics::ServiceMetrics;
+use self::metrics::{BlockProducerMetrics, ServiceMetrics};
 use crate::pool::TransactionPool;
 
 pub mod block_producer;
@@ -45,6 +45,26 @@ pub struct NodeService<EF: ExecutorFactory> {
     metrics: ServiceMetrics,
 }
 
+impl<EF: ExecutorFactory> NodeService<EF> {
+    pub fn new(
+        pool: Arc<TransactionPool>,
+        miner: TransactionMiner,
+        block_producer: Arc<BlockProducer<EF>>,
+        #[cfg(feature = "messaging")] messaging: Option<MessagingService<EF>>,
+    ) -> Self {
+        let metrics = ServiceMetrics { block_producer: BlockProducerMetrics::default() };
+
+        Self {
+            pool,
+            miner,
+            block_producer,
+            metrics,
+            #[cfg(feature = "messaging")]
+            messaging,
+        }
+    }
+}
+
 impl<EF: ExecutorFactory> Future for NodeService<EF> {
     type Output = ();
 
@@ -73,9 +93,11 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                     Ok(outcome) => {
                         info!(target: LOG_TARGET, block_number = %outcome.block_number, "Mined block.");
 
-                        let metrics = &self.metrics.block_producer;
-                        metrics.total_l1_gas_processed.increment(outcome.l1_gas_used);
-                        metrics.total_cairo_steps_processed.increment(outcome.cairo_steps_used);
+                        let metrics = &pin.metrics.block_producer;
+                        let gas_used = outcome.stats.l1_gas_used;
+                        let steps_used = outcome.stats.cairo_steps_used;
+                        metrics.total_l1_gas_processed.increment(gas_used as u64);
+                        metrics.total_cairo_steps_processed.increment(steps_used as u64);
                     }
 
                     Err(err) => {

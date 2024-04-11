@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use katana_executor::ExecutorFactory;
+use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
     Block, FinalityStatus, GasPrices, Header, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::FieldElement;
 use katana_provider::providers::fork::ForkedProvider;
@@ -120,17 +120,18 @@ impl<EF: ExecutorFactory> Backend<EF> {
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
-        txs_outcomes: Vec<TxWithOutcome>,
-        state_updates: StateUpdatesWithDeclaredClasses,
+        execution_output: ExecutionOutput,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        let mut txs = vec![];
-        let mut receipts = vec![];
-        let mut execs = vec![];
+        let mut txs = Vec::new();
+        let mut traces = Vec::new();
+        let mut receipts = Vec::new();
 
-        for t in txs_outcomes {
-            txs.push(t.tx);
-            receipts.push(t.receipt);
-            execs.push(t.exec_info);
+        for (tx, res) in execution_output.transactions {
+            if let ExecutionResult::Success { receipt, trace, .. } = res {
+                txs.push(tx);
+                traces.push(trace);
+                receipts.push(receipt);
+            }
         }
 
         let prev_hash = BlockHashProvider::latest_hash(self.blockchain.provider())?;
@@ -156,9 +157,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
         BlockWriter::insert_block_with_states_and_receipts(
             self.blockchain.provider(),
             block,
-            state_updates,
+            execution_output.states,
             receipts,
-            execs,
+            traces,
         )?;
 
         info!(
@@ -168,7 +169,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
             "Block mined.",
         );
 
-        Ok(MinedBlockOutcome { block_number })
+        Ok(MinedBlockOutcome { block_number, stats: execution_output.stats })
     }
 
     pub fn update_block_env(&self, block_env: &mut BlockEnv) {
@@ -192,7 +193,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         &self,
         block_env: &BlockEnv,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        self.do_mine_block(block_env, Default::default(), Default::default())
+        self.do_mine_block(block_env, Default::default())
     }
 }
 

@@ -252,7 +252,7 @@ fn test_executor_with_valid_blocks_impl<EF: ExecutorFactory>(
     //
 
     // assert the state updates
-    let ExecutionOutput { states, transactions } = executor.take_execution_output().unwrap();
+    let ExecutionOutput { states, transactions, stats } = executor.take_execution_output().unwrap();
     // asserts that the executed transactions are stored
     let actual_txs: Vec<TxWithHash> = transactions.iter().map(|(tx, _)| tx.clone()).collect();
 
