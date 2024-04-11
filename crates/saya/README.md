@@ -27,15 +27,17 @@ The hash function depends on which verifier will be used (keccak, perdersen, pos
 The prover is the service responsible of generating a proof for the given `Starknet OS` output.
 
 Saya will be able to use several provers:
-* **SHARP**: a StarkWare shared proving service. This service generates the proof AND send the proof and the facts on Ethereum directly.
-* **Stone**: [Stone](https://github.com/starkware-libs/stone-prover) is being used to generate the proof associated with the [cairo verifier written by Herodotus](https://github.com/HerodotusDev/cairo-verifier).
-* **Platinum**: The [Platinum](https://github.com/lambdaclass/lambdaworks) prover from LambdaClass.
+
+- **SHARP**: a StarkWare shared proving service. This service generates the proof AND send the proof and the facts on Ethereum directly.
+- **Stone**: [Stone](https://github.com/starkware-libs/stone-prover) is being used to generate the proof associated with the [cairo verifier written by Herodotus](https://github.com/HerodotusDev/cairo-verifier).
+- **Platinum**: The [Platinum](https://github.com/lambdaclass/lambdaworks) prover from LambdaClass.
 
 ## Verifier and facts registry
 
 The on-chain verifier options so far are:
-* **Ethereum**: StarkWare contracts on Ethereum which are tailored to receive the SHARP proofs and facts.
-* **Starknet**: Soon, the cairo verifier from Herodotus will enable verification on Starknet.
+
+- **Ethereum**: StarkWare contracts on Ethereum which are tailored to receive the SHARP proofs and facts.
+- **Starknet**: Soon, the cairo verifier from Herodotus will enable verification on Starknet.
 
 A verifier comes along a fact registry. A fact registry keep track of which fact (the hash of the program class hash of `Starknet OS` in our case and the hash of it's output) has been proven.
 
@@ -61,11 +63,11 @@ To ensure we've the exact same result, Saya must run the same version (or at lea
 In new Cairo VM version, there are breaking changes as mentioned in the release not, which implies a bump of Cairo VM for Katana and at the same time we could bump to cairo `2.5.0`.
 However, papyrus and blockifier which we depend on are still in `-dev` version, where also some breaking changes must be addressed.
 
-* Cairo VM (currently dojo is using 0.8, and others are in 0.9)
-* Blockifier (uses Cairo VM and cairo-lang `-dev`)
-* Papyrus (used by blockifier and use blockifier and cairo-lang `-dev`)
-* cairo-lang (we should support `2.5` now)
-* scarb (breaking changes between 2.4 and 2.5 to be addresses, not required to only build saya and SNOS)
+- Cairo VM (currently dojo is using 0.8, and others are in 0.9)
+- Blockifier (uses Cairo VM and cairo-lang `-dev`)
+- Papyrus (used by blockifier and use blockifier and cairo-lang `-dev`)
+- cairo-lang (we should support `2.5` now)
+- scarb (breaking changes between 2.4 and 2.5 to be addresses, not required to only build saya and SNOS)
 
 ## Local Testing
 
@@ -73,8 +75,9 @@ However, papyrus and blockifier which we depend on are still in `-dev` version, 
 cargo run -r -p katana # Start an appchain
 cargo run -r -p sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml
 cargo run -r -p sozo -- migrate --manifest-path examples/spawn-and-move/Scarb.toml # Make some transactions
-cargo run -r --bin saya -- --rpc-url http://localhost:5050 # Run Saya
+cargo run -r --bin saya -- --rpc-url http://localhost:5050 --prover stone --verifier herodotus_starknet_sepolia # Run Saya
 ```
+
 ## Additional documentation
 
 [Hackmd note](https://hackmd.io/@glihm/saya)
