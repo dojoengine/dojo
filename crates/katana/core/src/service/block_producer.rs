@@ -25,6 +25,8 @@ use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
 
+use super::metrics::BlockProducerMetrics;
+
 pub(crate) const LOG_TARGET: &str = "miner";
 
 #[derive(Debug, thiserror::Error)]
@@ -42,8 +44,11 @@ pub enum BlockProductionError {
     TransactionExecutionError(#[from] katana_executor::ExecutorError),
 }
 
+#[derive(Debug, Clone)]
 pub struct MinedBlockOutcome {
     pub block_number: u64,
+    pub l1_gas_used: u64,
+    pub cairo_steps_used: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -69,32 +74,31 @@ type BlockProductionWithTxnsFuture =
 pub struct BlockProducer<EF: ExecutorFactory> {
     /// The inner mode of mining.
     pub inner: RwLock<BlockProducerMode<EF>>,
+    /// Metrics for recording block production stats.
+    metrics: BlockProducerMetrics,
 }
 
 impl<EF: ExecutorFactory> BlockProducer<EF> {
     /// Creates a block producer that mines a new block every `interval` milliseconds.
     pub fn interval(backend: Arc<Backend<EF>>, interval: u64) -> Self {
-        Self {
-            inner: RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new(
-                backend, interval,
-            ))),
-        }
+        Self::new_inner(BlockProducerMode::Interval(IntervalBlockProducer::new(backend, interval)))
     }
 
     /// Creates a new block producer that will only be possible to mine by calling the
     /// `katana_generateBlock` RPC method.
     pub fn on_demand(backend: Arc<Backend<EF>>) -> Self {
-        Self {
-            inner: RwLock::new(BlockProducerMode::Interval(IntervalBlockProducer::new_no_mining(
-                backend,
-            ))),
-        }
+        Self::new_inner(BlockProducerMode::Interval(IntervalBlockProducer::new_no_mining(backend)))
     }
 
     /// Creates a block producer that mines a new block as soon as there are ready transactions in
     /// the transactions pool.
     pub fn instant(backend: Arc<Backend<EF>>) -> Self {
-        Self { inner: RwLock::new(BlockProducerMode::Instant(InstantBlockProducer::new(backend))) }
+        Self::new_inner(BlockProducerMode::Instant(InstantBlockProducer::new(backend)))
+    }
+
+    fn new_inner(mode: BlockProducerMode<EF>) -> Self {
+        let metrics = BlockProducerMetrics::default();
+        Self { inner: RwLock::new(mode), metrics }
     }
 
     pub(super) fn queue(&self, transactions: Vec<ExecutableTxWithHash>) {

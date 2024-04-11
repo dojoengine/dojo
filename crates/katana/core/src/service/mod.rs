@@ -13,11 +13,13 @@ use starknet::core::types::FieldElement;
 use tracing::{error, info};
 
 use self::block_producer::BlockProducer;
+use self::metrics::ServiceMetrics;
 use crate::pool::TransactionPool;
 
 pub mod block_producer;
 #[cfg(feature = "messaging")]
 pub mod messaging;
+mod metrics;
 
 #[cfg(feature = "messaging")]
 use self::messaging::{MessagingOutcome, MessagingService};
@@ -39,6 +41,8 @@ pub struct NodeService<EF: ExecutorFactory> {
     /// The messaging service
     #[cfg(feature = "messaging")]
     pub(crate) messaging: Option<MessagingService<EF>>,
+    /// Metrics for recording the service operations
+    metrics: ServiceMetrics,
 }
 
 impl<EF: ExecutorFactory> Future for NodeService<EF> {
@@ -68,6 +72,10 @@ impl<EF: ExecutorFactory> Future for NodeService<EF> {
                 match res {
                     Ok(outcome) => {
                         info!(target: LOG_TARGET, block_number = %outcome.block_number, "Mined block.");
+
+                        let metrics = &self.metrics.block_producer;
+                        metrics.total_l1_gas_processed.increment(outcome.l1_gas_used);
+                        metrics.total_cairo_steps_processed.increment(outcome.cairo_steps_used);
                     }
 
                     Err(err) => {
