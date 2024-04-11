@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712721974063,
+  "lastUpdate": 1712815491636,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5005,6 +5005,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17455412,
             "range": "± 736316",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "72578062d93ac12ff5f57c24c158b0a4b13bc6fd",
+          "message": "Move class artifacts out of `katana-primitives` (#1813)\n\nbcs the classes are used throughout other crates in `/katana` and not just in `/primitives`, so make sense to move it to the top dir",
+          "timestamp": "2024-04-11T13:56:36+08:00",
+          "tree_id": "e4bf3c54619ae2b9dd8963c3b712c8a21ac13857",
+          "url": "https://github.com/dojoengine/dojo/commit/72578062d93ac12ff5f57c24c158b0a4b13bc6fd"
+        },
+        "date": 1712815490959,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16958519,
+            "range": "± 565076",
             "unit": "ns/iter"
           }
         ]
