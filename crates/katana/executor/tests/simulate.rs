@@ -65,6 +65,8 @@ fn test_simulate_tx_impl<EF: ExecutorFactory>(
     let ExecutionOutput { states, transactions, stats } =
         executor.take_execution_output().expect("must take output");
 
+    assert_eq!(stats.l1_gas_used, 0, "no gas usage should be recorded");
+    assert_eq!(stats.cairo_steps_used, 0, "no steps usage should be recorded");
     assert!(transactions.is_empty(), "simulated tx should not be stored");
 
     assert!(states.state_updates.nonce_updates.is_empty(), "no state updates");
