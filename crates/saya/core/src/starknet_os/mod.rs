@@ -57,8 +57,8 @@ pub async fn starknet_apply_diffs(
             to: FieldElement::from_hex_be(
                 "0x4c4e3d09d5db141773381a11dff7259b99283cc9c6558705cb955f919b2af36",
             )
-            .expect("invalid verifier address"),
-            selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
+            .expect("invalid world address"),
+            selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
             calldata: calldata,
         }])
         .max_fee(starknet::macros::felt!("1000000000000000")) // sometimes failing without this line 
