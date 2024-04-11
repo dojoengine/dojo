@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712815597064,
+  "lastUpdate": 1712852598312,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5065,6 +5065,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17335526,
             "range": "± 97599",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f1cf59759e1a2c1a67bca47a4cc489ede76f6ffe",
+          "message": "fix: incorrect assumption about migration output (#1790)\n\n* fix: incorrect assumption about migration output\r\n\r\n* remove unnecessary import",
+          "timestamp": "2024-04-11T21:45:41+05:30",
+          "tree_id": "c0a3c781a812ceadf11e850e27dd8f67db0a44e2",
+          "url": "https://github.com/dojoengine/dojo/commit/f1cf59759e1a2c1a67bca47a4cc489ede76f6ffe"
+        },
+        "date": 1712852597779,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15865923,
+            "range": "± 241317",
             "unit": "ns/iter"
           }
         ]
