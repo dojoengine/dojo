@@ -225,6 +225,11 @@ impl Saya {
         let transaction_hash = verifier::verify(proof, self.config.verifier).await?;
         info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
+        // trace!(target: "saya_core", "Applying diffs {block_number}.");
+        // cairo_proof_parser::
+        // let transaction_hash = starknet_os::starknet_apply_diffs(proof).await?;
+        // info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
+
         Ok(())
     }
 }
