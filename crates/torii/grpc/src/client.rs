@@ -7,7 +7,9 @@ use starknet::core::types::{FromByteSliceError, FromStrError, StateUpdate};
 use starknet_crypto::FieldElement;
 
 use crate::proto::world::{
-    world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventMessagesRequest, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeModelsRequest, SubscribeModelsResponse
+    world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
+    RetrieveEventMessagesRequest, SubscribeEntitiesRequest, SubscribeEntityResponse,
+    SubscribeEventMessagesRequest, SubscribeModelsRequest, SubscribeModelsResponse,
 };
 use crate::types::schema::Entity;
 use crate::types::{KeysClause, Query};
@@ -86,7 +88,11 @@ impl WorldClient {
         query: Query,
     ) -> Result<RetrieveEntitiesResponse, Error> {
         let request = RetrieveEventMessagesRequest { query: Some(query.into()) };
-        self.inner.retrieve_event_messages(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
+        self.inner
+            .retrieve_event_messages(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
     }
 
     /// Subscribe to entities updates of a World.
