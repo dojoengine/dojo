@@ -121,10 +121,12 @@ impl<EF: ExecutorFactory> Backend<EF> {
         block_env: &BlockEnv,
         execution_output: ExecutionOutput,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        let mut txs = Vec::new();
-        let mut traces = Vec::new();
-        let mut receipts = Vec::new();
+        // we optimistically allocate the maximum amount possible
+        let mut txs = Vec::with_capacity(execution_output.transactions.len());
+        let mut traces = Vec::with_capacity(execution_output.transactions.len());
+        let mut receipts = Vec::with_capacity(execution_output.transactions.len());
 
+        // only include successful transactions in the block
         for (tx, res) in execution_output.transactions {
             if let ExecutionResult::Success { receipt, trace, .. } = res {
                 txs.push(tx);
