@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712853632508,
+  "lastUpdate": 1712913182148,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5125,6 +5125,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17087590,
             "range": "± 529828",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4ec33212177648aa2ccafccfe38bfd9331db393d",
+          "message": "feat(katana): add executor metrics (#1791)\n\nref #1369 \r\n\r\nAdd metrics on katana executor; tracking the total L1 **gas** and Cairo **steps** used.\r\n\r\nThere were two approaches that i thought of; \r\n1. record the metrics on every tx execution, or\r\n2. on every block\r\n\r\n~Decided to go with (1) as it would allow to measure it in realtime (as the tx is being executed), instead of having to wait until the block is finished being processed.~\r\n\r\nThought im not exactly sure which one is the ideal one.\r\n\r\nDoing (1) might be less performant bcs we have to acquire the lock to the metrics recorder more frequently (ie every tx), as opposed to only updating the metrics once every block.\r\n\r\nanother thing to note, currently doing (1) would require all executor implementations to define the metrics in their own implmentations, meaning have to duplicate code. If do (2) can just define it under `block_producer` scope and be executor agnostic.\r\n\r\nEDIT: doing (2). metrics are collected upon completion of block production\r\n\r\n---\r\n\r\nsome changes are made to gather the value after block production:\r\n- simplify params on `backend::do_mine_block`, now only accept two args; `BlockEnv` and `ExecutionOutput`\r\n- add a new type `ExecutionStats` under `katana-executor`, this is where executor would store the gas and steps value",
+          "timestamp": "2024-04-12T17:04:47+08:00",
+          "tree_id": "a0156d1bd454a6f468b9286a70fc7438f4208ce6",
+          "url": "https://github.com/dojoengine/dojo/commit/4ec33212177648aa2ccafccfe38bfd9331db393d"
+        },
+        "date": 1712913181478,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17357620,
+            "range": "± 214524",
             "unit": "ns/iter"
           }
         ]
