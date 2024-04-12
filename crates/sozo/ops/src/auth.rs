@@ -5,6 +5,7 @@ use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::{cairo_utils, WorldContractReader};
 use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
@@ -118,13 +119,12 @@ where
     }
 
     if !calls.is_empty() {
-        let mut txn = world.account.execute(calls);
-
-        if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
-            txn = txn.fee_estimate_multiplier(est_fee_mul);
-        }
-
-        let res = txn.send().await.with_context(|| "Failed to send transaction")?;
+        let res = world
+            .account
+            .execute(calls)
+            .send_with_cfg(&txn_config)
+            .await
+            .with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
             &world.account.provider(),
@@ -159,13 +159,12 @@ where
         calls.push(world.grant_owner_getcall(&or.owner.into(), &resource));
     }
 
-    let mut txn = world.account.execute(calls);
-
-    if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
-        txn = txn.fee_estimate_multiplier(est_fee_mul);
-    }
-
-    let res = txn.send().await.with_context(|| "Failed to send transaction")?;
+    let res = world
+        .account
+        .execute(calls)
+        .send_with_cfg(&txn_config)
+        .await
+        .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
         &world.account.provider(),
@@ -210,13 +209,12 @@ where
     }
 
     if !calls.is_empty() {
-        let mut txn = world.account.execute(calls);
-
-        if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
-            txn = txn.fee_estimate_multiplier(est_fee_mul);
-        }
-
-        let res = txn.send().await.with_context(|| "Failed to send transaction")?;
+        let res = world
+            .account
+            .execute(calls)
+            .send_with_cfg(&txn_config)
+            .await
+            .with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
             &world.account.provider(),
@@ -251,13 +249,12 @@ where
         calls.push(world.revoke_owner_getcall(&or.owner.into(), &resource));
     }
 
-    let mut txn = world.account.execute(calls);
-
-    if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
-        txn = txn.fee_estimate_multiplier(est_fee_mul);
-    }
-
-    let res = txn.send().await.with_context(|| "Failed to send transaction")?;
+    let res = world
+        .account
+        .execute(calls)
+        .send_with_cfg(&txn_config)
+        .await
+        .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
         &world.account.provider(),

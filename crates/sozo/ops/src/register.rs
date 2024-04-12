@@ -5,6 +5,7 @@ use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeploymentManifest;
 use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::providers::Provider;
@@ -63,13 +64,12 @@ where
         .map(|c| world.register_model_getcall(&(*c).into()))
         .collect::<Vec<_>>();
 
-    let mut txn = world.account.execute(calls);
-
-    if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
-        txn = txn.fee_estimate_multiplier(est_fee_mul);
-    }
-
-    let res = txn.send().await.with_context(|| "Failed to send transaction")?;
+    let res = world
+        .account
+        .execute(calls)
+        .send_with_cfg(&txn_config)
+        .await
+        .with_context(|| "Failed to send transaction")?;
 
     handle_transaction_result(&world.account.provider(), res, txn_config.wait, txn_config.receipt)
         .await?;

@@ -166,13 +166,13 @@ impl MigrateArgs {
                         &account,
                         name,
                         true,
-                        None,
+                        TxnConfig::default(),
                     )
                     .await
                 })
             }
             MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
-                let txn_config: Option<TxnConfig> = Some(transaction.into());
+                let txn_config: TxnConfig = transaction.into();
 
                 if name.is_none() {
                     if let Some(root_package) = ws.root_package() {

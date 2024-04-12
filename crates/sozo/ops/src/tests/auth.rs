@@ -206,7 +206,7 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
         system_spawn,
         vec![],
         world,
-        TxnConfig { wait: true, ..Default::default() },
+        &TxnConfig { wait: true, ..Default::default() },
     )
     .await
     .is_ok()
