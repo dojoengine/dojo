@@ -651,7 +651,7 @@ mod tests {
         assert_eq!(fee_token_storage.get(&felt!("0x111")), Some(&felt!("0x1")));
         assert_eq!(fee_token_storage.get(&felt!("0x222")), Some(&felt!("0x2")));
 
-        let mut actual_total_supply = U256::ZERO;
+        let mut allocs_total_supply = U256::ZERO;
 
         // check for balance
         for (address, alloc) in &allocations {
@@ -669,9 +669,25 @@ mod tests {
                 assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
                 assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
 
-                actual_total_supply += balance;
+                allocs_total_supply += balance;
             }
         }
+
+        // Check that the total supply is the sum of all balances in the allocations.
+        // Technically this is not necessary bcs we already checked the total supply in
+        // the fee token storage but it's a good sanity check.
+
+        let (actual_total_supply_low, actual_total_supply_high) = split_u256(allocs_total_supply);
+        assert_eq!(
+            fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
+            Some(&actual_total_supply_low),
+            "total supply must be calculated from allocations balances correctly"
+        );
+        assert_eq!(
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into())),
+            Some(&actual_total_supply_high),
+            "total supply must be calculated from allocations balances correctly"
+        );
 
         let udc_storage =
             actual_state_updates.state_updates.storage_updates.get(&ud.address).unwrap();
