@@ -165,7 +165,7 @@ fn test_program_input() -> anyhow::Result<()> {
         },
     };
 
-    let serialized = input.serialize().unwrap();
+    let serialized = input.serialize(None).unwrap();
 
     println!("Serialized: {}", serialized);
 
@@ -179,7 +179,8 @@ fn test_program_input() -> anyhow::Result<()> {
         "nonce_updates": {},
         "storage_updates": {},
         "contract_updates": {},
-        "declared_classes": {}
+        "declared_classes": {},
+        "world_da": []
     }"#;
 
     let expected = EXPECTED.chars().filter(|c| !c.is_whitespace()).collect::<String>();
