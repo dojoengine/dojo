@@ -565,18 +565,20 @@ where
                 let world_metadata =
                     ResourceMetadata { resource_id: FieldElement::ZERO, metadata_uri: encoded_uri };
 
+                let world_contract = WorldContract::new(world.contract_address, migrator);
+                let mut txn = world_contract.set_metadata(&world_metadata);
+
+                if let Some(TxConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
+                    txn_config
+                {
+                    txn = txn.fee_estimate_multiplier(*fee_est_mul);
+                }
+
                 let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(world.contract_address, migrator)
-                        .set_metadata(&world_metadata)
-                        .fee_estimate_multiplier(
-                            txn_config.unwrap_or_default().fee_estimate_multiplier.unwrap_or(1.1),
-                        )
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            ui.verbose(format!("{e:?}"));
-                            anyhow!("Failed to set World metadata: {e}")
-                        })?;
+                    txn.send().await.map_err(|e| {
+                        ui.verbose(format!("{e:?}"));
+                        anyhow!("Failed to set World metadata: {e}")
+                    })?;
 
                 TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 
@@ -748,17 +750,16 @@ where
         .map(|c| world.register_model_getcall(&c.diff.local.into()))
         .collect::<Vec<_>>();
 
-    let InvokeTransactionResult { transaction_hash } = migrator
-        .execute(calls)
-        .fee_estimate_multiplier(
-            txn_config.unwrap_or_default().fee_estimate_multiplier.unwrap_or(1.1),
-        )
-        .send()
-        .await
-        .map_err(|e| {
-            ui.verbose(format!("{e:?}"));
-            anyhow!("Failed to register models to World: {e}")
-        })?;
+    let mut txn = world.account.execute(calls);
+
+    if let Some(TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. }) = txn_config {
+        txn = txn.fee_estimate_multiplier(est_fee_mul);
+    }
+
+    let InvokeTransactionResult { transaction_hash } = txn.send().await.map_err(|e| {
+        ui.verbose(format!("{e:?}"));
+        anyhow!("Failed to register models to World: {e}")
+    })?;
 
     TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
 

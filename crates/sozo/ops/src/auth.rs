@@ -89,7 +89,7 @@ impl FromStr for OwnerResource {
 pub async fn grant_writer<A>(
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
-    transaction: TxConfig,
+    txn_config: TxConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -118,18 +118,19 @@ where
     }
 
     if !calls.is_empty() {
-        let res = world
-            .account
-            .execute(calls)
-            .send()
-            .await
-            .with_context(|| "Failed to send transaction")?;
+        let mut txn = world.account.execute(calls);
+
+        if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+            txn = txn.fee_estimate_multiplier(est_fee_mul);
+        }
+
+        let res = txn.send().await.with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
             &world.account.provider(),
             res,
-            transaction.wait,
-            transaction.receipt,
+            txn_config.wait,
+            txn_config.receipt,
         )
         .await?;
     }
@@ -140,7 +141,7 @@ where
 pub async fn grant_owner<A>(
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
-    transaction: TxConfig,
+    txn_config: TxConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -158,14 +159,19 @@ where
         calls.push(world.grant_owner_getcall(&or.owner.into(), &resource));
     }
 
-    let res =
-        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+    let mut txn = world.account.execute(calls);
+
+    if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+        txn = txn.fee_estimate_multiplier(est_fee_mul);
+    }
+
+    let res = txn.send().await.with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
         &world.account.provider(),
         res,
-        transaction.wait,
-        transaction.receipt,
+        txn_config.wait,
+        txn_config.receipt,
     )
     .await?;
 
@@ -175,7 +181,7 @@ where
 pub async fn revoke_writer<A>(
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
-    transaction: TxConfig,
+    txn_config: TxConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -204,18 +210,19 @@ where
     }
 
     if !calls.is_empty() {
-        let res = world
-            .account
-            .execute(calls)
-            .send()
-            .await
-            .with_context(|| "Failed to send transaction")?;
+        let mut txn = world.account.execute(calls);
+
+        if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+            txn = txn.fee_estimate_multiplier(est_fee_mul);
+        }
+
+        let res = txn.send().await.with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
             &world.account.provider(),
             res,
-            transaction.wait,
-            transaction.receipt,
+            txn_config.wait,
+            txn_config.receipt,
         )
         .await?;
     }
@@ -226,7 +233,7 @@ where
 pub async fn revoke_owner<A>(
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
-    transaction: TxConfig,
+    txn_config: TxConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -244,14 +251,19 @@ where
         calls.push(world.revoke_owner_getcall(&or.owner.into(), &resource));
     }
 
-    let res =
-        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+    let mut txn = world.account.execute(calls);
+
+    if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+        txn = txn.fee_estimate_multiplier(est_fee_mul);
+    }
+
+    let res = txn.send().await.with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
         &world.account.provider(),
         res,
-        transaction.wait,
-        transaction.receipt,
+        txn_config.wait,
+        txn_config.receipt,
     )
     .await?;
 

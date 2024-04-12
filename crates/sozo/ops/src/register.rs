@@ -15,7 +15,7 @@ use crate::utils::handle_transaction_result;
 pub async fn model_register<A, P>(
     models: Vec<FieldElement>,
     world: &WorldContract<A>,
-    transaction: TxConfig,
+    txn_config: TxConfig,
     world_reader: WorldContractReader<P>,
     world_address: FieldElement,
     config: &Config,
@@ -63,16 +63,16 @@ where
         .map(|c| world.register_model_getcall(&(*c).into()))
         .collect::<Vec<_>>();
 
-    let res =
-        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+    let mut txn = world.account.execute(calls);
 
-    handle_transaction_result(
-        &world.account.provider(),
-        res,
-        transaction.wait,
-        transaction.receipt,
-    )
-    .await?;
+    if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+        txn = txn.fee_estimate_multiplier(est_fee_mul);
+    }
+
+    let res = txn.send().await.with_context(|| "Failed to send transaction")?;
+
+    handle_transaction_result(&world.account.provider(), res, txn_config.wait, txn_config.receipt)
+        .await?;
 
     Ok(())
 }
