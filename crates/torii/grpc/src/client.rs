@@ -87,7 +87,7 @@ impl WorldClient {
         &mut self,
         query: Query,
     ) -> Result<RetrieveEntitiesResponse, Error> {
-        let request = RetrieveEventMessagesRequest { query: Some(query.into()) };
+        let request = RetrieveEntitiesRequest { query: Some(query.into()) };
         self.inner
             .retrieve_event_messages(request)
             .await
