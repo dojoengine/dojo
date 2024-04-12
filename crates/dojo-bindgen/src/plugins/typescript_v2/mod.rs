@@ -541,17 +541,11 @@ export enum {} {{
             contract_file_name.split("::").last().unwrap().trim_end_matches(".json");
         contract_name.to_string()
     }
-}
 
-#[async_trait]
-impl BuiltinPlugin for TypeScriptV2Plugin {
-    async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
-        let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
+    fn generate_code_content(data: &DojoData) -> String {
         let mut handled_tokens = Vec::<Composite>::new();
         let models = data.models.values().collect::<Vec<_>>();
         let contracts = data.contracts.values().collect::<Vec<_>>();
-
-        let output_path = Path::new(&format!("{}.ts", data.world.name)).to_owned();
 
         let mut code = String::new();
         code += TypeScriptV2Plugin::generate_header().as_str();
@@ -570,8 +564,58 @@ impl BuiltinPlugin for TypeScriptV2Plugin {
         code += TypeScriptV2Plugin::generate_world_class(&data.world.name, contracts.as_slice())
             .as_str();
 
+        code
+    }
+}
+
+#[async_trait]
+impl BuiltinPlugin for TypeScriptV2Plugin {
+    async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
+        let code: String = TypeScriptV2Plugin::generate_code_content(data);
+
+        let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
+        let output_path = Path::new(&format!("{}.ts", data.world.name)).to_owned();
+
         out.insert(output_path, code.as_bytes().to_vec());
 
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::Read;
+
+    use camino::Utf8PathBuf;
+
+    use super::*;
+    use crate::gather_dojo_data;
+
+    #[test]
+    fn test_output() {
+        let mut expected_output = String::new();
+        let mut file = fs::File::open("src/__mocks__/dojo_examples.ts").expect("file not found");
+        file.read_to_string(&mut expected_output).expect("error reading file");
+
+        let expected_output_without_header =
+            expected_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
+
+        let data = gather_dojo_data(
+            &Utf8PathBuf::from("src/test_data/spawn-and-move/Scarb.toml"),
+            "dojo_examples",
+            "dev",
+        )
+        .unwrap();
+
+        let actual_output = TypeScriptV2Plugin::generate_code_content(&data);
+        let actual_output_without_header =
+            actual_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
+        assert_eq!(actual_output_without_header.len(), 7479);
+
+        assert_eq!(
+            actual_output_without_header, expected_output_without_header,
+            "The generated output does not match the expected output."
+        );
     }
 }
