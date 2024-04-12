@@ -122,7 +122,7 @@ impl WorldClient {
         let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
         let stream = self
             .inner
-            .subscribe_event_messages(SubscribeEventMessagesRequest { hashed_keys })
+            .subscribe_event_messages(SubscribeEntitiesRequest { hashed_keys })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
