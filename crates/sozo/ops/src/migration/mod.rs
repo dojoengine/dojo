@@ -11,7 +11,7 @@ use dojo_world::manifest::{
     Manifest, ManifestMethods, OverlayManifest, WorldContract as ManifestWorldContract,
     WorldMetadata,
 };
-use dojo_world::metadata::dojo_metadata_from_workspace;
+use dojo_world::metadata::{dojo_metadata_from_workspace, ArtifactMetadata};
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
@@ -20,6 +20,7 @@ use dojo_world::migration::{
     Upgradable, UpgradeOutput,
 };
 use dojo_world::utils::TransactionWaiter;
+use futures::future;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
@@ -32,9 +33,6 @@ use starknet::core::utils::{
 use starknet::providers::{Provider, ProviderError};
 use tokio::fs;
 
-#[cfg(test)]
-#[path = "migration_test.rs"]
-mod migration_test;
 mod ui;
 
 use starknet::signers::Signer;
@@ -51,7 +49,15 @@ pub struct MigrationOutput {
     // If false that means migration got partially completed.
     pub full: bool,
 
-    pub contracts: Vec<Option<DeployOutput>>,
+    pub models: Vec<String>,
+    pub contracts: Vec<Option<ContractMigrationOutput>>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ContractMigrationOutput {
+    name: String,
+    contract_address: FieldElement,
+    base_class_hash: FieldElement,
 }
 
 pub async fn migrate<P, S>(
@@ -107,13 +113,40 @@ where
     let mut strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
-    let migration_output = if dry_run {
+    if dry_run {
         print_strategy(&ui, account.provider(), &strategy).await;
-        MigrationOutput { world_address, ..Default::default() }
+
+        update_manifests_and_abis(
+            ws,
+            local_manifest,
+            &profile_dir,
+            &profile_name,
+            &rpc_url,
+            world_address,
+            None,
+            name.as_ref(),
+        )
+        .await?;
     } else {
         // Migrate according to the diff.
         match apply_diff(ws, account, txn_config, &mut strategy).await {
-            Ok(migration_output) => migration_output,
+            Ok(migration_output) => {
+                update_manifests_and_abis(
+                    ws,
+                    local_manifest.clone(),
+                    &profile_dir,
+                    &profile_name,
+                    &rpc_url,
+                    world_address,
+                    Some(migration_output.clone()),
+                    name.as_ref(),
+                )
+                .await?;
+
+                if !ws.config().offline() {
+                    upload_metadata(ws, account, migration_output).await?;
+                }
+            }
             Err(e) => {
                 update_manifests_and_abis(
                     ws,
@@ -121,7 +154,8 @@ where
                     &profile_dir,
                     &profile_name,
                     &rpc_url,
-                    MigrationOutput { world_address, ..Default::default() },
+                    world_address,
+                    None,
                     name.as_ref(),
                 )
                 .await?;
@@ -129,17 +163,6 @@ where
             }
         }
     };
-
-    update_manifests_and_abis(
-        ws,
-        local_manifest,
-        &profile_dir,
-        &profile_name,
-        &rpc_url,
-        migration_output,
-        name.as_ref(),
-    )
-    .await?;
 
     Ok(())
 }
@@ -150,11 +173,12 @@ async fn update_manifests_and_abis(
     profile_dir: &Utf8PathBuf,
     profile_name: &str,
     rpc_url: &str,
-    migration_output: MigrationOutput,
+    world_address: FieldElement,
+    migration_output: Option<MigrationOutput>,
     salt: Option<&String>,
 ) -> Result<()> {
     let ui = ws.config().ui();
-    ui.print("\n✨ Updating manifests...");
+    ui.print_step(5, "✨", "Updating manifests...");
 
     let deployed_path = profile_dir.join("manifest").with_extension("toml");
     let deployed_path_json = profile_dir.join("manifest").with_extension("json");
@@ -171,39 +195,43 @@ async fn update_manifests_and_abis(
         local_manifest.merge_from_previous(previous_manifest);
     };
 
-    local_manifest.world.inner.address = Some(migration_output.world_address);
+    local_manifest.world.inner.address = Some(world_address);
     if let Some(salt) = salt {
         local_manifest.world.inner.seed = Some(salt.to_owned());
     }
 
-    if migration_output.world_tx_hash.is_some() {
-        local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
-    }
-    if migration_output.world_block_number.is_some() {
-        local_manifest.world.inner.block_number = migration_output.world_block_number;
-    }
-
-    migration_output.contracts.iter().for_each(|contract_output| {
-        // ignore failed migration which are represented by None
-        if let Some(output) = contract_output {
-            // find the contract in local manifest and update its address and base class hash
-            let local = local_manifest
-                .contracts
-                .iter_mut()
-                .find(|c| c.name == output.name.as_ref().unwrap())
-                .expect("contract got migrated, means it should be present here");
-
-            let salt = generate_salt(&local.name);
-            local.inner.address = Some(get_contract_address(
-                salt,
-                output.base_class_hash,
-                &[],
-                migration_output.world_address,
-            ));
-
-            local.inner.base_class_hash = output.base_class_hash;
+    // when the migration has not been applied because in `plan` mode or because of an error,
+    // the `migration_output` is empty.
+    if let Some(migration_output) = migration_output {
+        if migration_output.world_tx_hash.is_some() {
+            local_manifest.world.inner.transaction_hash = migration_output.world_tx_hash;
         }
-    });
+        if migration_output.world_block_number.is_some() {
+            local_manifest.world.inner.block_number = migration_output.world_block_number;
+        }
+
+        migration_output.contracts.iter().for_each(|contract_output| {
+            // ignore failed migration which are represented by None
+            if let Some(output) = contract_output {
+                // find the contract in local manifest and update its address and base class hash
+                let local = local_manifest
+                    .contracts
+                    .iter_mut()
+                    .find(|c| c.name == output.name)
+                    .expect("contract got migrated, means it should be present here");
+
+                let salt = generate_salt(&local.name);
+                local.inner.address = Some(get_contract_address(
+                    salt,
+                    output.base_class_hash,
+                    &[],
+                    migration_output.world_address,
+                ));
+
+                local.inner.base_class_hash = output.base_class_hash;
+            }
+        });
+    }
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
@@ -289,7 +317,8 @@ where
 {
     let ui = ws.config().ui();
 
-    println!("  ");
+    ui.print_step(4, "🛠", "Migrating...");
+    ui.print(" ");
 
     let migration_output = execute_strategy(ws, strategy, account, txn_config)
         .await
@@ -299,7 +328,7 @@ where
     if migration_output.full {
         if let Some(block_number) = migration_output.world_block_number {
             ui.print(format!(
-                "\n🎉 Successfully migrated World on block #{} at address {}",
+                "\n🎉 Successfully migrated World on block #{} at address {}\n",
                 block_number,
                 bold_message(format!(
                     "{:#x}",
@@ -308,7 +337,7 @@ where
             ));
         } else {
             ui.print(format!(
-                "\n🎉 Successfully migrated World at address {}",
+                "\n🎉 Successfully migrated World at address {}\n",
                 bold_message(format!(
                     "{:#x}",
                     strategy.world_address().expect("world address must exist")
@@ -493,14 +522,6 @@ where
                     };
 
                 ui.print_sub(format!("Contract address: {:#x}", world.contract_address));
-
-                let offline = ws.config().offline();
-
-                if offline {
-                    ui.print_sub("Skipping metadata upload because of offline mode");
-                } else {
-                    upload_metadata(ws, world, migrator, &ui).await?;
-                }
             }
         }
         None => {}
@@ -511,23 +532,25 @@ where
         world_tx_hash,
         world_block_number,
         full: false,
+        models: vec![],
         contracts: vec![],
     };
 
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
-
     match register_models(strategy, migrator, &ui, txn_config).await {
-        Ok(_) => (),
+        Ok(output) => {
+            migration_output.models = output.registered_model_names;
+        }
         Err(e) => {
             ui.anyhow(&e);
             return Ok(migration_output);
         }
-    }
+    };
 
     match deploy_dojo_contracts(strategy, migrator, &ui, txn_config).await {
-        Ok(res) => {
-            migration_output.contracts = res;
+        Ok(output) => {
+            migration_output.contracts = output;
         }
         Err(e) => {
             ui.anyhow(&e);
@@ -538,53 +561,6 @@ where
     migration_output.full = true;
 
     Ok(migration_output)
-}
-
-async fn upload_metadata<P, S>(
-    ws: &Workspace<'_>,
-    world: &ContractMigration,
-    migrator: &SingleOwnerAccount<P, S>,
-    ui: &Ui,
-) -> Result<(), anyhow::Error>
-where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
-{
-    let metadata = dojo_metadata_from_workspace(ws);
-    if let Some(meta) = metadata.as_ref().and_then(|inner| inner.world()) {
-        match meta.upload().await {
-            Ok(hash) => {
-                let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
-
-                // Metadata is expecting an array of capacity 3.
-                if encoded_uri.len() < 3 {
-                    encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
-                }
-
-                let world_metadata =
-                    ResourceMetadata { resource_id: FieldElement::ZERO, metadata_uri: encoded_uri };
-
-                let InvokeTransactionResult { transaction_hash } =
-                    WorldContract::new(world.contract_address, migrator)
-                        .set_metadata(&world_metadata)
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            ui.verbose(format!("{e:?}"));
-                            anyhow!("Failed to set World metadata: {e}")
-                        })?;
-
-                TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
-
-                ui.print_sub(format!("Set Metadata transaction: {:#x}", transaction_hash));
-                ui.print_sub(format!("Metadata uri: ipfs://{hash}"));
-            }
-            Err(err) => {
-                ui.print_sub(format!("Failed to set World metadata:\n{err}"));
-            }
-        }
-    }
-    Ok(())
 }
 
 enum ContractDeploymentOutput {
@@ -693,7 +669,7 @@ async fn register_models<P, S>(
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
     txn_config: Option<TxConfig>,
-) -> Result<Option<RegisterOutput>>
+) -> Result<RegisterOutput>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -701,12 +677,17 @@ where
     let models = &strategy.models;
 
     if models.is_empty() {
-        return Ok(None);
+        return Ok(RegisterOutput {
+            transaction_hash: FieldElement::ZERO,
+            declare_output: vec![],
+            registered_model_names: vec![],
+        });
     }
 
     ui.print_header(format!("# Models ({})", models.len()));
 
     let mut declare_output = vec![];
+    let mut registered_model_names = vec![];
 
     for c in models.iter() {
         ui.print(italic_message(&c.diff.name).to_string());
@@ -741,7 +722,10 @@ where
 
     let calls = models
         .iter()
-        .map(|c| world.register_model_getcall(&c.diff.local.into()))
+        .map(|c| {
+            registered_model_names.push(c.diff.name.clone());
+            world.register_model_getcall(&c.diff.local.into())
+        })
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
@@ -754,7 +738,7 @@ where
 
     ui.print(format!("All models are registered at: {transaction_hash:#x}"));
 
-    Ok(Some(RegisterOutput { transaction_hash, declare_output }))
+    Ok(RegisterOutput { transaction_hash, declare_output, registered_model_names })
 }
 
 async fn deploy_dojo_contracts<P, S>(
@@ -762,7 +746,7 @@ async fn deploy_dojo_contracts<P, S>(
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
     txn_config: Option<TxConfig>,
-) -> Result<Vec<Option<DeployOutput>>>
+) -> Result<Vec<Option<ContractMigrationOutput>>>
 where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
@@ -793,7 +777,7 @@ where
             )
             .await
         {
-            Ok(mut output) => {
+            Ok(output) => {
                 if let Some(ref declare) = output.declare {
                     ui.print_hidden_sub(format!(
                         "Declare transaction: {:#x}",
@@ -819,10 +803,11 @@ where
                     ));
                     ui.print_sub(format!("Contract address: {:#x}", output.contract_address));
                 }
-                let name = contract.diff.name.clone();
-
-                output.name = Some(name);
-                deploy_output.push(Some(output));
+                deploy_output.push(Some(ContractMigrationOutput {
+                    name: name.to_string(),
+                    contract_address: output.contract_address,
+                    base_class_hash: output.base_class_hash,
+                }));
             }
             Err(MigrationError::ContractAlreadyDeployed(contract_address)) => {
                 ui.print_sub(format!("Already deployed: {:#x}", contract_address));
@@ -925,4 +910,155 @@ where
         }
         ui.print(" ");
     }
+}
+
+/// Upload a metadata as a IPFS artifact and then create a resource to register
+/// into the Dojo resource registry.
+///
+/// # Arguments
+/// * `element_name` - fully qualified name of the element linked to the metadata
+/// * `resource_id` - the id of the resource to create.
+/// * `artifact` - the artifact to upload on IPFS.
+///
+/// # Returns
+/// A [`ResourceData`] object to register in the Dojo resource register
+/// on success.
+///  
+async fn upload_on_ipfs_and_create_resource(
+    ui: &Ui,
+    element_name: String,
+    resource_id: FieldElement,
+    artifact: ArtifactMetadata,
+) -> Result<ResourceMetadata> {
+    match artifact.upload().await {
+        Ok(hash) => {
+            ui.print_sub(format!("{}: ipfs://{}", element_name, hash));
+            create_resource_metadata(resource_id, hash)
+        }
+        Err(_) => Err(anyhow!("Failed to upload IPFS resource.")),
+    }
+}
+
+/// Create a resource to register in the Dojo resource registry.
+///
+/// # Arguments
+/// * `resource_id` - the ID of the resource
+/// * `hash` - the IPFS hash
+///
+/// # Returns
+/// A [`ResourceData`] object to register in the Dojo resource register
+/// on success.
+fn create_resource_metadata(resource_id: FieldElement, hash: String) -> Result<ResourceMetadata> {
+    let mut encoded_uri = cairo_utils::encode_uri(&format!("ipfs://{hash}"))?;
+
+    // Metadata is expecting an array of capacity 3.
+    if encoded_uri.len() < 3 {
+        encoded_uri.extend(vec![FieldElement::ZERO; 3 - encoded_uri.len()]);
+    }
+
+    Ok(ResourceMetadata { resource_id, metadata_uri: encoded_uri })
+}
+
+/// Upload metadata of the world/models/contracts as IPFS artifacts and then
+/// register them in the Dojo resource registry.
+///
+/// # Arguments
+///
+/// * `ws` - the workspace
+/// * `migrator` - the account used to migrate
+/// * `migration_output` - the output after having applied the migration plan.
+pub async fn upload_metadata<P, S>(
+    ws: &Workspace<'_>,
+    migrator: &SingleOwnerAccount<P, S>,
+    migration_output: MigrationOutput,
+) -> Result<()>
+where
+    P: Provider + Sync + Send + 'static,
+    S: Signer + Sync + Send + 'static,
+{
+    let ui = ws.config().ui();
+
+    ui.print(" ");
+    ui.print_step(6, "🌐", "Uploading metadata...");
+    ui.print(" ");
+
+    let dojo_metadata = dojo_metadata_from_workspace(ws);
+    let mut ipfs = vec![];
+    let mut resources = vec![];
+
+    // world
+    if migration_output.world_tx_hash.is_some() {
+        match dojo_metadata.world.upload().await {
+            Ok(hash) => {
+                let resource = create_resource_metadata(FieldElement::ZERO, hash.clone())?;
+                ui.print_sub(format!("world: ipfs://{}", hash));
+                resources.push(resource);
+            }
+            Err(err) => {
+                ui.print_sub(format!("Failed to upload World metadata:\n{err}"));
+            }
+        }
+    }
+
+    // models
+    if !migration_output.models.is_empty() {
+        for model_name in migration_output.models {
+            if let Some(m) = dojo_metadata.artifacts.get(&model_name) {
+                ipfs.push(upload_on_ipfs_and_create_resource(
+                    &ui,
+                    model_name.clone(),
+                    get_selector_from_name(&model_name).expect("ASCII model name"),
+                    m.clone(),
+                ));
+            }
+        }
+    }
+
+    // contracts
+    let migrated_contracts = migration_output.contracts.into_iter().flatten().collect::<Vec<_>>();
+
+    if !migrated_contracts.is_empty() {
+        for contract in migrated_contracts {
+            if let Some(m) = dojo_metadata.artifacts.get(&contract.name) {
+                ipfs.push(upload_on_ipfs_and_create_resource(
+                    &ui,
+                    contract.name.clone(),
+                    contract.contract_address,
+                    m.clone(),
+                ));
+            }
+        }
+    }
+
+    // upload IPFS
+    resources.extend(
+        future::try_join_all(ipfs)
+            .await
+            .map_err(|_| anyhow!("Unable to upload IPFS artifacts."))?,
+    );
+
+    ui.print("> All IPFS artifacts have been successfully uploaded.".to_string());
+
+    // update the resource registry
+    let world = WorldContract::new(migration_output.world_address, migrator);
+
+    let calls = resources.iter().map(|r| world.set_metadata_getcall(r)).collect::<Vec<_>>();
+
+    let InvokeTransactionResult { transaction_hash } =
+        migrator.execute(calls).send().await.map_err(|e| {
+            ui.verbose(format!("{e:?}"));
+            anyhow!("Failed to register metadata into the resource registry: {e}")
+        })?;
+
+    TransactionWaiter::new(transaction_hash, migrator.provider()).await?;
+
+    ui.print(format!(
+        "> All metadata have been registered in the resource registry (tx hash: \
+         {transaction_hash:#x})"
+    ));
+
+    ui.print("");
+    ui.print("\n✨ Done.");
+
+    Ok(())
 }

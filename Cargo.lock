@@ -11137,6 +11137,7 @@ dependencies = [
  "dojo-types",
  "dojo-world",
  "futures",
+ "ipfs-api-backend-hyper",
  "katana-runner",
  "notify",
  "notify-debouncer-mini",
