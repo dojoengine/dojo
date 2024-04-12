@@ -14,7 +14,7 @@ use dojo_world::metadata::{
 };
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -44,7 +44,7 @@ async fn migrate_with_auto_mine() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
 
     sequencer.stop().unwrap();
 }
@@ -65,7 +65,7 @@ async fn migrate_with_block_time() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
     sequencer.stop().unwrap();
 }
 
@@ -92,16 +92,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         ExecutionEncoding::New,
     );
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &mut migration,
-            &account,
-            Some(TxConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false }),
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &mut migration,
+        &account,
+        TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
+    )
+    .await
+    .is_err());
     sequencer.stop().unwrap();
 }
 
@@ -157,7 +155,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
@@ -191,9 +189,10 @@ async fn migrate_with_metadata() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let output = execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+    let output =
+        execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
 
-    let res = upload_metadata(&ws, &account, output.clone()).await;
+    let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::default()).await;
     assert!(res.is_ok());
 
     let provider = sequencer.provider();
@@ -465,7 +464,7 @@ fn get_and_check_metadata_uri(element_name: &String, uri: &Vec<FieldElement>) ->
 }
 
 /// Check an artifact metadata read from the resource registry against its value
-/// in the local Dojo metadata.  
+/// in the local Dojo metadata.
 ///
 /// # Arguments
 ///

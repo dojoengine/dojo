@@ -75,7 +75,7 @@ pub async fn setup(
         &ws,
         &mut migration,
         &account,
-        Some(TxnConfig { wait: true, ..Default::default() }),
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await?;
     let world = WorldContract::new(output.world_address, account);

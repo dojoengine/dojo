@@ -5,6 +5,7 @@ use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
+use dojo_world::migration::TxnConfig;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
 use starknet::accounts::Account;
@@ -27,7 +28,7 @@ async fn reregister_models() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
     let world_address = &format!("0x{:x}", &migration.world_address().unwrap());
     let account_address = &format!("0x{:x}", account.address());
     let private_key = &format!("0x{:x}", sequencer.raw_account().private_key);
