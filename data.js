@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712913182148,
+  "lastUpdate": 1712913369399,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5155,6 +5155,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17357620,
             "range": "± 214524",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "99bd4cba7536a38a3d821f0e057845b70c542608",
+          "message": "katana: update grafana dashboard with execution metrics (#1818)\n\nref #1791 #1369\r\n\r\n<img width=\"1420\" alt=\"Screenshot 2024-04-12 at 2 36 56 AM\" src=\"https://github.com/dojoengine/dojo/assets/26515232/b97b49df-c5fc-429a-9cb0-bf66138a00b6\">\r\n\r\nshowing total gas and steps using a simple line charts, tracking its growth over time",
+          "timestamp": "2024-04-12T17:07:49+08:00",
+          "tree_id": "fe60c5124272ae650425397a15d3225a152911c6",
+          "url": "https://github.com/dojoengine/dojo/commit/99bd4cba7536a38a3d821f0e057845b70c542608"
+        },
+        "date": 1712913368154,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17079881,
+            "range": "± 612713",
             "unit": "ns/iter"
           }
         ]
