@@ -18,7 +18,7 @@ use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{EntityUpdateStreaming, ModelDiffsStreaming};
-use torii_grpc::proto::world::{RetrieveEntitiesResponse, RetrieveEventMessagesResponse};
+use torii_grpc::proto::world::RetrieveEntitiesResponse;
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{KeysClause, Query};
 use torii_relay::client::EventLoop;
@@ -143,7 +143,7 @@ impl Client {
     /// Similary to entities, this function retrieves event messages matching the query parameter.
     pub async fn event_messages(&self, query: Query) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveEventMessagesResponse { events, total_count: _ } =
+        let RetrieveEntitiesResponse { entities, total_count: _ } =
             grpc_client.retrieve_event_messages(query).await?;
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
