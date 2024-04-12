@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712931327697,
+  "lastUpdate": 1712941068662,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5245,6 +5245,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17268978,
             "range": "± 246385",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9fab2caf970621ed8311330f3752dc9635f60d7",
+          "message": "feat: store contract abi and source in contract metadata (#1682)\n\nsozo: store ABI and source in metadata registry\r\n\r\nThis PR updates the `sozo build` command to save ABI and expanded source files,\r\ninto the `target` directory, for the world contract and every user contracts.\r\n\r\nThese ABI and source files are then uploaded as IPFS artifacts in the `ResourceMetadata`\r\nregistry, for the world, models and contracts.",
+          "timestamp": "2024-04-12T10:49:34-06:00",
+          "tree_id": "fc23f150d43bf75fca1232fac6d17e7141f278d3",
+          "url": "https://github.com/dojoengine/dojo/commit/e9fab2caf970621ed8311330f3752dc9635f60d7"
+        },
+        "date": 1712941067478,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17203142,
+            "range": "± 694002",
             "unit": "ns/iter"
           }
         ]
