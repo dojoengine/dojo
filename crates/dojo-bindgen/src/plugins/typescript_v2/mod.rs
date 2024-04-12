@@ -611,6 +611,10 @@ mod tests {
         let actual_output = TypeScriptV2Plugin::generate_code_content(&data);
         let actual_output_without_header =
             actual_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
+
+        // This test currently is very naive, but DojoData is unsorted, so the output
+        // can change between tests. This is a temporary solution until we have a better
+        // way to test this.
         assert_eq!(actual_output_without_header.len(), 7479);
         assert_eq!(expected_output_without_header.len(), 7479);
     }
