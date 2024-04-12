@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeploymentManifest;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::providers::Provider;
@@ -15,7 +15,7 @@ use crate::utils::handle_transaction_result;
 pub async fn model_register<A, P>(
     models: Vec<FieldElement>,
     world: &WorldContract<A>,
-    txn_config: TxConfig,
+    txn_config: TxnConfig,
     world_reader: WorldContractReader<P>,
     world_address: FieldElement,
     config: &Config,
@@ -65,7 +65,7 @@ where
 
     let mut txn = world.account.execute(calls);
 
-    if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+    if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
         txn = txn.fee_estimate_multiplier(est_fee_mul);
     }
 

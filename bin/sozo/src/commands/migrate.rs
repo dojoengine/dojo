@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
 use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
@@ -172,7 +172,7 @@ impl MigrateArgs {
                 })
             }
             MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
-                let txn_config: Option<TxConfig> = Some(transaction.into());
+                let txn_config: Option<TxnConfig> = Some(transaction.into());
 
                 if name.is_none() {
                     if let Some(root_package) = ws.root_package() {

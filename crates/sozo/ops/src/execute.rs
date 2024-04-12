@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
@@ -12,7 +12,7 @@ pub async fn execute<A>(
     entrypoint: String,
     calldata: Vec<FieldElement>,
     world: &WorldContract<A>,
-    transaction: TxConfig,
+    transaction: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,

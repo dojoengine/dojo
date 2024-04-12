@@ -8,7 +8,7 @@ use dojo_test_utils::sequencer::{
 use dojo_world::manifest::{BaseManifest, DeploymentManifest};
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use scarb::ops;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
@@ -94,7 +94,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         &ws,
         &mut migration,
         &account,
-        Some(TxConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false }),
+        Some(TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false }),
     )
     .await
     .is_err());

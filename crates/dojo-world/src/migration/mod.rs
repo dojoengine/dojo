@@ -91,7 +91,7 @@ pub trait StateDiff {
 
 /// The transaction configuration to use when sending a transaction.
 #[derive(Debug, Copy, Clone, Default)]
-pub struct TxConfig {
+pub struct TxnConfig {
     /// The multiplier for how much the actual transaction max fee should be relative to the
     /// estimated fee. If `None` is provided, the multiplier is set to `1.1`.
     pub fee_estimate_multiplier: Option<f64>,
@@ -105,7 +105,7 @@ pub trait Declarable {
     async fn declare<P, S>(
         &self,
         account: &SingleOwnerAccount<P, S>,
-        txn_config: TxConfig,
+        txn_config: TxnConfig,
     ) -> Result<DeclareOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -126,7 +126,7 @@ pub trait Declarable {
 
         let mut txn = account.declare(Arc::new(flattened_class), casm_class_hash);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
+        if let TxnConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
@@ -152,7 +152,7 @@ pub trait Deployable: Declarable + Sync {
         class_hash: FieldElement,
         base_class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
-        txn_config: TxConfig,
+        txn_config: TxnConfig,
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -199,7 +199,7 @@ pub trait Deployable: Declarable + Sync {
 
         let mut txn = account.execute(vec![call]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
+        if let TxnConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
@@ -225,7 +225,7 @@ pub trait Deployable: Declarable + Sync {
         class_hash: FieldElement,
         constructor_calldata: Vec<FieldElement>,
         account: &SingleOwnerAccount<P, S>,
-        txn_config: TxConfig,
+        txn_config: TxnConfig,
     ) -> Result<DeployOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -272,7 +272,7 @@ pub trait Deployable: Declarable + Sync {
             to: felt!("0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
         }]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
+        if let TxnConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 
@@ -305,7 +305,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
         original_class_hash: FieldElement,
         original_base_class_hash: FieldElement,
         account: &SingleOwnerAccount<P, S>,
-        txn_config: TxConfig,
+        txn_config: TxnConfig,
     ) -> Result<UpgradeOutput, MigrationError<<SingleOwnerAccount<P, S> as Account>::SignError>>
     where
         P: Provider + Sync + Send,
@@ -341,7 +341,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
             to: contract_address,
         }]);
 
-        if let TxConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
+        if let TxnConfig { fee_estimate_multiplier: Some(multiplier), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(multiplier);
         }
 

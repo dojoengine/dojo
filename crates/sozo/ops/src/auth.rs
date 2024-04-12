@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::{cairo_utils, WorldContractReader};
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
@@ -89,7 +89,7 @@ impl FromStr for OwnerResource {
 pub async fn grant_writer<A>(
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
-    txn_config: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -120,7 +120,7 @@ where
     if !calls.is_empty() {
         let mut txn = world.account.execute(calls);
 
-        if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+        if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(est_fee_mul);
         }
 
@@ -141,7 +141,7 @@ where
 pub async fn grant_owner<A>(
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
-    txn_config: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -161,7 +161,7 @@ where
 
     let mut txn = world.account.execute(calls);
 
-    if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+    if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
         txn = txn.fee_estimate_multiplier(est_fee_mul);
     }
 
@@ -181,7 +181,7 @@ where
 pub async fn revoke_writer<A>(
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
-    txn_config: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -212,7 +212,7 @@ where
     if !calls.is_empty() {
         let mut txn = world.account.execute(calls);
 
-        if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+        if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
             txn = txn.fee_estimate_multiplier(est_fee_mul);
         }
 
@@ -233,7 +233,7 @@ where
 pub async fn revoke_owner<A>(
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
-    txn_config: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -253,7 +253,7 @@ where
 
     let mut txn = world.account.execute(calls);
 
-    if let TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
+    if let TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. } = txn_config {
         txn = txn.fee_estimate_multiplier(est_fee_mul);
     }
 

@@ -16,7 +16,7 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff, TxConfig,
+    Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff, TxnConfig,
     Upgradable, UpgradeOutput,
 };
 use dojo_world::utils::TransactionWaiter;
@@ -62,7 +62,7 @@ pub async fn migrate<P, S>(
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
     dry_run: bool,
-    txn_config: Option<TxConfig>,
+    txn_config: Option<TxnConfig>,
 ) -> Result<()>
 where
     P: Provider + Sync + Send + 'static,
@@ -280,7 +280,7 @@ async fn update_manifest_abis(
 pub async fn apply_diff<P, S>(
     ws: &Workspace<'_>,
     account: &SingleOwnerAccount<P, S>,
-    txn_config: Option<TxConfig>,
+    txn_config: Option<TxnConfig>,
     strategy: &mut MigrationStrategy,
 ) -> Result<MigrationOutput>
 where
@@ -416,7 +416,7 @@ pub async fn execute_strategy<P, S>(
     ws: &Workspace<'_>,
     strategy: &mut MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
-    txn_config: Option<TxConfig>,
+    txn_config: Option<TxnConfig>,
 ) -> Result<MigrationOutput>
 where
     P: Provider + Sync + Send + 'static,
@@ -545,7 +545,7 @@ async fn upload_metadata<P, S>(
     world: &ContractMigration,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: &Option<TxConfig>,
+    txn_config: &Option<TxnConfig>,
 ) -> Result<(), anyhow::Error>
 where
     P: Provider + Sync + Send + 'static,
@@ -568,7 +568,7 @@ where
                 let world_contract = WorldContract::new(world.contract_address, migrator);
                 let mut txn = world_contract.set_metadata(&world_metadata);
 
-                if let Some(TxConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
+                if let Some(TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. }) =
                     txn_config
                 {
                     txn = txn.fee_estimate_multiplier(*fee_est_mul);
@@ -608,7 +608,7 @@ async fn deploy_contract<P, S>(
     constructor_calldata: Vec<FieldElement>,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: &Option<TxConfig>,
+    txn_config: &Option<TxnConfig>,
 ) -> Result<ContractDeploymentOutput>
 where
     P: Provider + Sync + Send + 'static,
@@ -656,7 +656,7 @@ async fn upgrade_contract<P, S>(
     original_base_class_hash: FieldElement,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: &Option<TxConfig>,
+    txn_config: &Option<TxnConfig>,
 ) -> Result<ContractUpgradeOutput>
 where
     P: Provider + Sync + Send + 'static,
@@ -698,7 +698,7 @@ async fn register_models<P, S>(
     strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: Option<TxConfig>,
+    txn_config: Option<TxnConfig>,
 ) -> Result<Option<RegisterOutput>>
 where
     P: Provider + Sync + Send + 'static,
@@ -752,7 +752,7 @@ where
 
     let mut txn = world.account.execute(calls);
 
-    if let Some(TxConfig { fee_estimate_multiplier: Some(est_fee_mul), .. }) = txn_config {
+    if let Some(TxnConfig { fee_estimate_multiplier: Some(est_fee_mul), .. }) = txn_config {
         txn = txn.fee_estimate_multiplier(est_fee_mul);
     }
 
@@ -772,7 +772,7 @@ async fn deploy_dojo_contracts<P, S>(
     strategy: &mut MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
-    txn_config: Option<TxConfig>,
+    txn_config: Option<TxnConfig>,
 ) -> Result<Vec<Option<DeployOutput>>>
 where
     P: Provider + Sync + Send + 'static,

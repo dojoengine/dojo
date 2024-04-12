@@ -2,7 +2,7 @@ use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::utils::cairo_short_string_to_felt;
 
@@ -43,7 +43,7 @@ async fn auth_grant_writer_ok() {
     auth::grant_writer(
         &world,
         vec![moves_mc, position_mc],
-        TxConfig { wait: true, ..Default::default() },
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await
     .unwrap();
@@ -83,7 +83,7 @@ async fn auth_revoke_writer_ok() {
     auth::grant_writer(
         &world,
         vec![moves_mc.clone(), position_mc.clone()],
-        TxConfig { wait: true, ..Default::default() },
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await
     .unwrap();
@@ -95,7 +95,7 @@ async fn auth_revoke_writer_ok() {
     auth::revoke_writer(
         &world,
         vec![moves_mc, position_mc],
-        TxConfig { wait: true, ..Default::default() },
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await
     .unwrap();
@@ -132,9 +132,13 @@ async fn auth_grant_owner_ok() {
         owner: account_2_addr,
     };
 
-    auth::grant_owner(&world, vec![moves, position], TxConfig { wait: true, ..Default::default() })
-        .await
-        .unwrap();
+    auth::grant_owner(
+        &world,
+        vec![moves, position],
+        TxnConfig { wait: true, ..Default::default() },
+    )
+    .await
+    .unwrap();
 
     assert!(execute_spawn(&world_2).await);
 }
@@ -170,7 +174,7 @@ async fn auth_revoke_owner_ok() {
     auth::grant_owner(
         &world,
         vec![moves.clone(), position.clone()],
-        TxConfig { wait: true, ..Default::default() },
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await
     .unwrap();
@@ -179,7 +183,7 @@ async fn auth_revoke_owner_ok() {
     auth::revoke_owner(
         &world,
         vec![moves, position],
-        TxConfig { wait: true, ..Default::default() },
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await
     .unwrap();
@@ -202,7 +206,7 @@ async fn execute_spawn<A: ConnectedAccount + Sync + Send + 'static>(
         system_spawn,
         vec![],
         world,
-        TxConfig { wait: true, ..Default::default() },
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await
     .is_ok()
