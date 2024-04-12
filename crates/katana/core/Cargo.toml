@@ -15,6 +15,8 @@ katana-tasks.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
+dojo-metrics.workspace = true
+metrics.workspace = true
 cairo-lang-casm = "2.3.1"
 cairo-lang-starknet = "2.3.1"
 cairo-vm.workspace = true

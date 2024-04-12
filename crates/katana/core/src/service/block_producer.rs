@@ -8,7 +8,7 @@ use std::time::Duration;
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
-use katana_executor::{BlockExecutor, ExecutionOutput, ExecutionResult, ExecutorFactory};
+use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
@@ -42,8 +42,10 @@ pub enum BlockProductionError {
     TransactionExecutionError(#[from] katana_executor::ExecutorError),
 }
 
+#[derive(Debug, Clone)]
 pub struct MinedBlockOutcome {
     pub block_number: u64,
+    pub stats: ExecutionStats,
 }
 
 #[derive(Debug, Clone)]
@@ -264,19 +266,8 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         trace!(target: LOG_TARGET, "Creating new block.");
 
         let block_env = executor.block_env();
-        let ExecutionOutput { states, transactions } = executor.take_execution_output()?;
-
-        let transactions = transactions
-            .into_iter()
-            .filter_map(|(tx, res)| match res {
-                ExecutionResult::Failed { .. } => None,
-                ExecutionResult::Success { receipt, trace, .. } => {
-                    Some(TxWithOutcome { tx, receipt, exec_info: trace })
-                }
-            })
-            .collect::<Vec<_>>();
-
-        let outcome = backend.do_mine_block(&block_env, transactions, states)?;
+        let execution_output = executor.take_execution_output()?;
+        let outcome = backend.do_mine_block(&block_env, execution_output)?;
 
         trace!(target: LOG_TARGET, block_number = %outcome.block_number, "Created new block.");
 
@@ -515,8 +506,10 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         executor.execute_block(block)?;
 
-        let ExecutionOutput { states, transactions } = executor.take_execution_output()?;
-        let txs_outcomes = transactions
+        let execution_output = executor.take_execution_output()?;
+        let txs_outcomes = execution_output
+            .transactions
+            .clone()
             .into_iter()
             .filter_map(|(tx, res)| match res {
                 ExecutionResult::Success { receipt, trace, .. } => {
@@ -526,7 +519,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
             })
             .collect::<Vec<_>>();
 
-        let outcome = backend.do_mine_block(&block_env, txs_outcomes.clone(), states)?;
+        let outcome = backend.do_mine_block(&block_env, execution_output)?;
 
         trace!(target: LOG_TARGET, block_number = %outcome.block_number, "Created new block.");
 

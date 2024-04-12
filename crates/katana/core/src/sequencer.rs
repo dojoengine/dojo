@@ -85,13 +85,13 @@ impl<EF: ExecutorFactory> KatanaSequencer<EF> {
 
         let block_producer = Arc::new(block_producer);
 
-        tokio::spawn(NodeService {
+        tokio::spawn(NodeService::new(
+            Arc::clone(&pool),
             miner,
-            pool: Arc::clone(&pool),
-            block_producer: block_producer.clone(),
+            block_producer.clone(),
             #[cfg(feature = "messaging")]
             messaging,
-        });
+        ));
 
         Ok(Self { pool, config, backend, block_producer })
     }

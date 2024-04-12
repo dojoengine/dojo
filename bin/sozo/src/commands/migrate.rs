@@ -129,7 +129,7 @@ impl MigrateArgs {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+            dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
             None
         };
