@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712941068662,
+  "lastUpdate": 1713024430845,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5275,6 +5275,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17203142,
             "range": "± 694002",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "995dd8dbd33627ef847d1a374a951e71db72063c",
+          "message": "refactor(katana-primitives): remove total supply from fee token genesis config (#1821)\n\n* remove total supply from genesis config\r\n\r\n* add sanity check",
+          "timestamp": "2024-04-13T23:58:55+08:00",
+          "tree_id": "cc09725d1ad9f43b69853d8f635cdd0f902b782e",
+          "url": "https://github.com/dojoengine/dojo/commit/995dd8dbd33627ef847d1a374a951e71db72063c"
+        },
+        "date": 1713024429783,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17092735,
+            "range": "± 277190",
             "unit": "ns/iter"
           }
         ]
