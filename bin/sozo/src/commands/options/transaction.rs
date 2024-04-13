@@ -1,7 +1,7 @@
 use clap::Args;
 use dojo_world::migration::TxConfig;
 
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args)]
 #[command(next_help_heading = "Transaction options")]
 pub struct TransactionOptions {
     #[arg(long)]

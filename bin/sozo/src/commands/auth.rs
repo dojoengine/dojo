@@ -17,6 +17,59 @@ pub struct AuthArgs {
 }
 
 #[derive(Debug, Subcommand)]
+pub enum AuthCommand {
+    #[command(about = "Grant an auth role.")]
+    Grant {
+        #[command(subcommand)]
+        kind: AuthKind,
+
+        #[command(flatten)]
+        world: WorldOptions,
+
+        #[command(flatten)]
+        starknet: StarknetOptions,
+
+        #[command(flatten)]
+        account: AccountOptions,
+
+        #[command(flatten)]
+        transaction: TransactionOptions,
+    },
+    #[command(about = "Revoke an auth role.")]
+    Revoke {
+        #[command(subcommand)]
+        kind: AuthKind,
+
+        #[command(flatten)]
+        world: WorldOptions,
+
+        #[command(flatten)]
+        starknet: StarknetOptions,
+
+        #[command(flatten)]
+        account: AccountOptions,
+
+        #[command(flatten)]
+        transaction: TransactionOptions,
+    },
+}
+
+impl AuthArgs {
+    pub fn run(self, config: &Config) -> Result<()> {
+        let env_metadata = utils::load_metadata_from_config(config)?;
+
+        match self.command {
+            AuthCommand::Grant { kind, world, starknet, account, transaction } => config
+                .tokio_handle()
+                .block_on(grant(world, account, starknet, env_metadata, kind, transaction)),
+            AuthCommand::Revoke { kind, world, starknet, account, transaction } => config
+                .tokio_handle()
+                .block_on(revoke(world, account, starknet, env_metadata, kind, transaction)),
+        }
+    }
+}
+
+#[derive(Debug, Subcommand)]
 pub enum AuthKind {
     #[command(about = "Grant a contract permission to write to a model.")]
     Writer {
@@ -78,59 +131,6 @@ pub async fn revoke(
         }
         AuthKind::Owner { owners_resources } => {
             auth::revoke_owner(&world, owners_resources, transaction.into()).await
-        }
-    }
-}
-
-#[derive(Debug, Subcommand)]
-pub enum AuthCommand {
-    #[command(about = "Grant an auth role.")]
-    Grant {
-        #[command(subcommand)]
-        kind: AuthKind,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-
-        #[command(flatten)]
-        account: AccountOptions,
-
-        #[command(flatten)]
-        transaction: TransactionOptions,
-    },
-    #[command(about = "Revoke an auth role.")]
-    Revoke {
-        #[command(subcommand)]
-        kind: AuthKind,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-
-        #[command(flatten)]
-        account: AccountOptions,
-
-        #[command(flatten)]
-        transaction: TransactionOptions,
-    },
-}
-
-impl AuthArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        let env_metadata = utils::load_metadata_from_config(config)?;
-
-        match self.command {
-            AuthCommand::Grant { kind, world, starknet, account, transaction } => config
-                .tokio_handle()
-                .block_on(grant(world, account, starknet, env_metadata, kind, transaction)),
-            AuthCommand::Revoke { kind, world, starknet, account, transaction } => config
-                .tokio_handle()
-                .block_on(revoke(world, account, starknet, env_metadata, kind, transaction)),
         }
     }
 }

@@ -13,13 +13,13 @@ use super::{
     DOJO_PRIVATE_KEY_ENV_VAR,
 };
 
-#[derive(Debug, Args)]
-#[command(next_help_heading = "Account options")]
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
 //   `keystore_password`. This is enforced by Clap.
 // - For `Scarb.toml`: if both private_key and keystore are specified in `Scarb.toml` private_key
 //   will take priority
+#[derive(Debug, Args)]
+#[command(next_help_heading = "Account options")]
 pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
     pub account_address: Option<FieldElement>,

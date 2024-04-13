@@ -5,7 +5,7 @@ use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 
-#[derive(Args, Debug)]
+#[derive(Debug, Args)]
 pub struct BuildArgs {
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]
