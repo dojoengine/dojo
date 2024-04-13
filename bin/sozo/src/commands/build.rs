@@ -20,7 +20,7 @@ pub struct BuildArgs {
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
 
-    #[arg(long, help = "Display statistics")]
+    #[arg(long, help = "Display statistics about the compiled contracts")]
     pub stats: bool,
 }
 
@@ -41,7 +41,9 @@ impl BuildArgs {
         }
 
         if self.stats {
-            let contracts_statistics = get_contract_statistics_for_dir(&compile_info.target_dir);
+            let target_dir = &compile_info.target_dir;
+            let contracts_statistics = get_contract_statistics_for_dir(target_dir)
+                .expect(format!("Error getting contracts in dir {target_dir}").as_str());
 
             for contract_stats in contracts_statistics {
                 print_stats(contract_stats, config);
@@ -74,10 +76,8 @@ pub fn print_stats(contract_statistic: ContractStatistics, config: &Config) {
     let number_felts = contract_statistic.number_felts;
     let file_size = contract_statistic.file_size;
     config.ui().print(format!("---------------Contract Stats for {contract_name}---------------"));
-    config.ui().print(format!(
-        "- Contract bytecode size (Number of felts in the program): {number_felts}\n"
-    ));
-    config.ui().print(format!("- Contract Class size: {file_size} bytes\n"));
+    config.ui().print(format!("Bytecode size: {number_felts}\n"));
+    config.ui().print(format!("Class size: {file_size} bytes\n"));
 }
 
 #[cfg(test)]
