@@ -2,13 +2,15 @@ use std::env;
 use std::process::exit;
 
 use anyhow::Result;
-use args::{Commands, SozoArgs};
+use args::SozoArgs;
 use clap::Parser;
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
+
+use crate::commands::Commands;
 
 mod args;
 mod commands;

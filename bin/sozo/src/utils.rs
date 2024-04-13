@@ -106,3 +106,16 @@ pub fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result
 
     Ok(())
 }
+
+pub fn generate_version() -> String {
+    const DOJO_VERSION: &str = env!("CARGO_PKG_VERSION");
+    let scarb_version = scarb::version::get().version;
+    let scarb_sierra_version = scarb::version::get().sierra.version;
+    let scarb_cairo_version = scarb::version::get().cairo.version;
+
+    let version_string = format!(
+        "{}\nscarb: {}\ncairo: {}\nsierra: {}",
+        DOJO_VERSION, scarb_version, scarb_cairo_version, scarb_sierra_version,
+    );
+    version_string
+}
