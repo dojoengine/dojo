@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
+use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
@@ -42,12 +43,11 @@ impl BuildArgs {
 
         if self.stats {
             let target_dir = &compile_info.target_dir;
-            let contracts_statistics = get_contract_statistics_for_dir(target_dir)
-                .expect(format!("Error getting contracts in dir {target_dir}").as_str());
-
-            for contract_stats in contracts_statistics {
-                print_stats(contract_stats, config);
-            }
+            let contracts_statistics: Vec<ContractStatistics> =
+                get_contract_statistics_for_dir(target_dir)
+                    .expect(format!("Error getting contracts in dir {target_dir}").as_str());
+            let table = create_stats_table(contracts_statistics);
+            table.printstd()
         }
 
         // Custom plugins are always empty for now.
@@ -71,21 +71,39 @@ impl BuildArgs {
     }
 }
 
-pub fn print_stats(contract_statistic: ContractStatistics, config: &Config) {
-    let contract_name = contract_statistic.contract_name;
-    let number_felts = contract_statistic.number_felts;
-    let file_size = contract_statistic.file_size;
-    config.ui().print(format!("---------------Contract Stats for {contract_name}---------------"));
-    config.ui().print(format!("Bytecode size: {number_felts}\n"));
-    config.ui().print(format!("Class size: {file_size} bytes\n"));
+fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
+    let mut table = Table::new();
+
+    // Add table headers
+    table.add_row(Row::new(vec![
+        Cell::new_align("Contract", format::Alignment::CENTER),
+        Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
+        Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
+    ]));
+
+    for contract_stats in contracts_statistics {
+        // Add table rows
+        let contract_name = contract_stats.contract_name;
+        let number_felts = contract_stats.number_felts;
+        let file_size = contract_stats.file_size;
+
+        table.add_row(Row::new(vec![
+            Cell::new_align(&contract_name, format::Alignment::LEFT),
+            Cell::new_align(format!("{}", number_felts).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", file_size).as_str(), format::Alignment::RIGHT),
+        ]));
+    }
+
+    table
 }
 
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler::build_test_config;
+    use prettytable::{format, Cell, Row, Table};
     use sozo_ops::statistics::ContractStatistics;
 
-    use super::{print_stats, BuildArgs};
+    use super::{create_stats_table, BuildArgs};
 
     #[test]
     fn build_example_with_typescript_and_unity_bindings() {
@@ -102,17 +120,52 @@ mod tests {
     }
 
     #[test]
-    fn test_print_stats() {
+    fn test_create_stats_table() {
         // Arrange
-        let config: scarb::core::Config =
-            build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
+        let contracts_statistics = vec![
+            ContractStatistics {
+                contract_name: "Test1".to_string(),
+                number_felts: 33,
+                file_size: 33,
+            },
+            ContractStatistics {
+                contract_name: "Test2".to_string(),
+                number_felts: 43,
+                file_size: 24,
+            },
+            ContractStatistics {
+                contract_name: "Test3".to_string(),
+                number_felts: 36,
+                file_size: 12,
+            },
+        ];
 
-        let contract_statistic = ContractStatistics {
-            contract_name: String::from("SampleContract"),
-            number_felts: 100,
-            file_size: 1024,
-        };
+        let mut expected_table = Table::new();
+        expected_table.add_row(Row::new(vec![
+            Cell::new_align("Contract", format::Alignment::CENTER),
+            Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
+            Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
+        ]));
+        expected_table.add_row(Row::new(vec![
+            Cell::new_align("Test1", format::Alignment::LEFT),
+            Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 33).as_str(), format::Alignment::RIGHT),
+        ]));
+        expected_table.add_row(Row::new(vec![
+            Cell::new_align("Test2", format::Alignment::LEFT),
+            Cell::new_align(format!("{}", 43).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 24).as_str(), format::Alignment::RIGHT),
+        ]));
+        expected_table.add_row(Row::new(vec![
+            Cell::new_align("Test3", format::Alignment::LEFT),
+            Cell::new_align(format!("{}", 36).as_str(), format::Alignment::RIGHT),
+            Cell::new_align(format!("{}", 12).as_str(), format::Alignment::RIGHT),
+        ]));
+
         // Act
-        print_stats(contract_statistic, &config);
+        let table = create_stats_table(contracts_statistics);
+
+        // Assert
+        assert_eq!(table, expected_table, "Tables mismatch")
     }
 }

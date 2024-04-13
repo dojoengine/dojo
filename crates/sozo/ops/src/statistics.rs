@@ -1,10 +1,11 @@
+use std::fs::{self, File};
+use std::io;
+use std::path::PathBuf;
+
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FlattenedSierraClass;
-use std::fs::{self, File};
-use std::io;
-use std::path::PathBuf;
 
 #[derive(Debug, PartialEq)]
 pub struct ContractStatistics {
