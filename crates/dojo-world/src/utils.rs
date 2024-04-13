@@ -332,6 +332,8 @@ pub fn block_number_from_receipt(receipt: &TransactionReceipt) -> u64 {
     }
 }
 
+/// Extension trait which should be implemented for any type of transactions for which we need to
+/// set configuration options from `TxnConfig` before actually sending them.
 #[allow(async_fn_in_trait)]
 pub trait TransactionExt<T>
 where
@@ -339,6 +341,8 @@ where
 {
     type R;
 
+    /// Sets `fee_estimate_multiplier` from `TxnConfig` if its present before calling `send` method
+    /// on the respective type.
     async fn send_with_cfg(
         self,
         txn_config: &TxnConfig,
