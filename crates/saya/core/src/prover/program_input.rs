@@ -194,7 +194,7 @@ fn test_program_input() -> anyhow::Result<()> {
         },
     };
 
-    let serialized = input.serialize().unwrap();
+    let serialized = input.serialize(None).unwrap();
 
     println!("Serialized: {}", serialized);
 
