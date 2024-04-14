@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713024430845,
+  "lastUpdate": 1713103257813,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5305,6 +5305,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17092735,
             "range": "± 277190",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "371c121fea32430ded6429eed42b1c67a76b8336",
+          "message": "refactor: clean up bin/sozo (#1828)\n\n* refactor: move verify_cairo_version_compatibility to utils module\r\n\r\n* refactor: move around more things to appropriate places\r\n\r\n* refactor: make bin/sozo more consistent\r\n\r\n* fix: paths in test",
+          "timestamp": "2024-04-14T07:52:49-06:00",
+          "tree_id": "a793d6f67d7bd4f91e65269f131b243e5d1b681d",
+          "url": "https://github.com/dojoengine/dojo/commit/371c121fea32430ded6429eed42b1c67a76b8336"
+        },
+        "date": 1713103256780,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16837198,
+            "range": "± 206475",
             "unit": "ns/iter"
           }
         ]
