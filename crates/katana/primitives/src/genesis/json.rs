@@ -99,7 +99,7 @@ pub struct GenesisClassJson {
     pub class_hash: Option<ClassHash>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeTokenConfigJson {
     pub name: String,
@@ -199,7 +199,7 @@ pub enum GenesisJsonError {
 /// (eg, using `serde_json`).
 ///
 /// The path of the class artifact are computed **relative** to the JSON file.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisJson {
     pub parent_hash: BlockHash,
