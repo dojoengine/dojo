@@ -10,7 +10,8 @@ use futures::executor::block_on;
 use katana_runner::KatanaRunner;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
-use sozo::args::{Commands, SozoArgs};
+use sozo::args::SozoArgs;
+use sozo::commands::Commands;
 use starknet::core::types::FieldElement;
 use tokio::process::Command;
 

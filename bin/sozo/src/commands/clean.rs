@@ -20,21 +20,6 @@ pub struct CleanArgs {
 }
 
 impl CleanArgs {
-    pub fn clean_manifests_abis(&self, root_dir: &Utf8PathBuf, profile_name: &str) -> Result<()> {
-        let dirs = vec![
-            root_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
-            root_dir.join(MANIFESTS_DIR).join(profile_name).join(ABIS_DIR).join(BASE_DIR),
-        ];
-
-        for d in dirs {
-            if d.exists() {
-                fs::remove_dir_all(d)?;
-            }
-        }
-
-        Ok(())
-    }
-
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
@@ -51,6 +36,21 @@ impl CleanArgs {
 
         if clean_artifacts {
             scarb::ops::clean(config)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn clean_manifests_abis(&self, root_dir: &Utf8PathBuf, profile_name: &str) -> Result<()> {
+        let dirs = vec![
+            root_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
+            root_dir.join(MANIFESTS_DIR).join(profile_name).join(ABIS_DIR).join(BASE_DIR),
+        ];
+
+        for d in dirs {
+            if d.exists() {
+                fs::remove_dir_all(d)?;
+            }
         }
 
         Ok(())
