@@ -725,7 +725,7 @@ where
     let InvokeTransactionResult { transaction_hash } = migrator
         .execute(calls)
         .fee_estimate_multiplier(
-            txn_config.unwrap_or_default().fee_estimate_multiplier.unwrap_or(1.1),
+            txn_config.unwrap_or_default().fee_estimate_multiplier.unwrap_or(2.0),
         )
         .send()
         .await
@@ -1044,8 +1044,12 @@ where
 
     let calls = resources.iter().map(|r| world.set_metadata_getcall(r)).collect::<Vec<_>>();
 
-    let InvokeTransactionResult { transaction_hash } =
-        migrator.execute(calls).send_with_cfg(&txn_config).await.map_err(|e| {
+    let InvokeTransactionResult { transaction_hash } = migrator
+        .execute(calls)
+        .fee_estimate_multiplier(2.0) // TODO: Replace hardcoded value here
+        .send()
+        .await
+        .map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register metadata into the resource registry: {e}")
         })?;
