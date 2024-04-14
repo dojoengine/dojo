@@ -14,8 +14,7 @@ use itertools::chain;
 use starknet::accounts::ConnectedAccount;
 use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{
-    BlockId, BlockTag, ExecuteInvocation, FieldElement, TransactionExecutionStatus,
-    TransactionStatus, TransactionTrace,
+    BlockId, BlockTag, FieldElement, TransactionExecutionStatus, TransactionStatus,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
