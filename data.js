@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713196471084,
+  "lastUpdate": 1713196476852,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5455,6 +5455,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17120597,
             "range": "± 217390",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "634bf285d42d1e01065422a583cea474dd6473df",
+          "message": "fix: use `fee_estimate_multiplier` on more places (#1823)\n\n* fix: use fee estimate multipler in more places\r\n\r\n* add similar logic at more places\r\n\r\n* rename TxConfig to TxnConfig\r\n\r\n* abstract the logic with a trait\r\n\r\n* fix tests\r\n\r\n* fix formatting\r\n\r\n* add some documentation on type\r\n\r\n* update doc comment",
+          "timestamp": "2024-04-15T09:46:34-06:00",
+          "tree_id": "ad993bfcf607b803c4e496986019522d07a106cb",
+          "url": "https://github.com/dojoengine/dojo/commit/634bf285d42d1e01065422a583cea474dd6473df"
+        },
+        "date": 1713196476298,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17183742,
+            "range": "± 522566",
             "unit": "ns/iter"
           }
         ]
