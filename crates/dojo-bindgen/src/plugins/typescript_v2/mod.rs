@@ -595,7 +595,8 @@ mod tests {
     #[test]
     fn test_output() {
         let mut expected_output = String::new();
-        let mut file = fs::File::open("src/__mocks__/dojo_examples.ts").expect("file not found");
+        let mut file =
+            fs::File::open("src/test_data/mocks/dojo_examples.ts").expect("file not found");
         file.read_to_string(&mut expected_output).expect("error reading file");
 
         let expected_output_without_header =
