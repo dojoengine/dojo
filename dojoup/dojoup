@@ -147,7 +147,7 @@ main() {
 
     # display message only if version is not mentioned by user
     if [ ! -n "$DOJOUP_USER_VERSION" ]; then
-    say "downloading latest dojo"
+      say "downloading latest dojo"
     fi
 
     # Download and extract the binaries archive
