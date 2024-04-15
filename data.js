@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713178361328,
+  "lastUpdate": 1713196471084,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5425,6 +5425,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17207723,
             "range": "± 612192",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cedc5136e98d0d146e97ff01ce3848f5225adf26",
+          "message": "fix: rework clean command to be more intuitive and propose a clean all (#1784)\n\n* fix: rework clean command to be more intuitive and propose a clean all\r\n\r\n* fix: ensure profile directory is the one being cleaned up\r\n\r\n* fix: add comment to explain safe unwrap for manifest dir\r\n\r\n* fix: add missing migrate param\r\n\r\n* fix: reword comment for clarity\r\n\r\n* fix: remove duplicate help for clean command\r\n\r\n* fix: use katana runner for testing",
+          "timestamp": "2024-04-15T09:46:21-06:00",
+          "tree_id": "ad57a508fdeb745764c6665cabf6ad9704fdb007",
+          "url": "https://github.com/dojoengine/dojo/commit/cedc5136e98d0d146e97ff01ce3848f5225adf26"
+        },
+        "date": 1713196470028,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17120597,
+            "range": "± 217390",
             "unit": "ns/iter"
           }
         ]
