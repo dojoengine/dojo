@@ -60,6 +60,7 @@ pub struct ContractMigrationOutput {
     base_class_hash: FieldElement,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn migrate<P, S>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
