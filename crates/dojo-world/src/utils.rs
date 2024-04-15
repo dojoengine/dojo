@@ -332,8 +332,8 @@ pub fn block_number_from_receipt(receipt: &TransactionReceipt) -> u64 {
     }
 }
 
-/// Extension trait which should be implemented for any type of transactions for which we need to
-/// set configuration options from `TxnConfig` before actually sending them.
+/// Helper trait to abstract away setting `TxnConfig` configurations before sending a transaction
+/// Implemented by types from `starknet-accounts` like `Execution`, `Declaration`, etc...
 #[allow(async_fn_in_trait)]
 pub trait TransactionExt<T>
 where
