@@ -38,6 +38,11 @@ define_schema_enum! {
     (StorageChangeSet, TableType::DupSort)
 ]}
 
+// TODO(kariy): maybe add database changelog ?
+//
+// Refer to:
+// - https://github.com/dojoengine/dojo/pull/1773
+// - https://github.com/dojoengine/dojo/pull/1774
 tables! {
     /// Contract nonce changes by block.
     NonceChanges: (BlockNumber, ContractAddress) => ContractNonceChange,
