@@ -60,8 +60,6 @@ pub async fn starknet_apply_diffs(
     ]
     .collect();
 
-    println!("Calldata: {:?}", calldata);
-
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: FieldElement::from_hex_be(
