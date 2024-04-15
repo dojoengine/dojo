@@ -133,6 +133,13 @@ main() {
     RELEASE_URL="https://github.com/${DOJOUP_REPO}/releases/download/${DOJOUP_TAG}/"
     BIN_ARCHIVE_URL="${RELEASE_URL}dojo_${DOJOUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.$EXT"
 
+    # Check if the version mentioned by user exists in the Dojo repository.
+    if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
+      say "Version ${DOJOUP_VERSION} does not exist at ${RELEASE_URL%/}"
+      say "Please mention a valid version."
+      err "Aborting installation."
+    fi
+
     echo $BIN_ARCHIVE_URL
 
     # Download and extract the binaries archive
