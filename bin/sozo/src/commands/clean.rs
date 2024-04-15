@@ -59,6 +59,7 @@ impl CleanArgs {
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler;
+    use dojo_world::migration::TxnConfig;
     use katana_runner::KatanaRunner;
     use sozo_ops::migration;
 
@@ -85,7 +86,7 @@ mod tests {
                 &runner.account(0),
                 Some("dojo_examples".to_string()),
                 true,
-                None,
+                TxnConfig::default(),
             )
             .await
             .unwrap()
