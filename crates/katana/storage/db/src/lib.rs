@@ -8,6 +8,7 @@ use anyhow::{anyhow, Context};
 pub mod codecs;
 pub mod error;
 pub mod mdbx;
+pub mod migration;
 pub mod models;
 pub mod tables;
 pub mod utils;
