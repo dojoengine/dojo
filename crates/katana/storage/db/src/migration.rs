@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 
 use crate::{
     error::DatabaseError,
@@ -29,20 +29,17 @@ pub enum DatabaseMigrationError {
 /// Performs a database migration for an already initialized database with an older
 /// version of the database schema.
 ///
-/// DB migration can only be done on a supported older version of the database schema,
-/// meaning not all older versions can be migrated.
+/// Database migration can only be done on a supported older version of the database schema,
+/// meaning not all older versions can be migrated from.
 pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError> {
     // check that the db version is supported, otherwise return an error
     let ver = get_db_version(&path)?;
 
-    if ver == 0 {
-        // perform the migration
-        // 1. create all the tables exist in the current schema
-        // 2. migrate all the data from the old schema to the new schema
-        let db = open_db(&path)?;
-        migrate_from_v0_to_v1(db)?;
-    } else {
-        return Err(DatabaseMigrationError::UnsupportedVersion(ver));
+    match ver {
+        0 => migrate_from_v0_to_v1(open_db(&path)?)?,
+        _ => {
+            return Err(DatabaseMigrationError::UnsupportedVersion(ver));
+        }
     }
 
     // Update the db version to the current version
@@ -50,28 +47,79 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
     Ok(())
 }
 
+/// Perform migration for database version 0 to version 1.
 fn migrate_from_v0_to_v1(env: DbEnv) -> Result<(), DatabaseMigrationError> {
     env.create_tables()?;
+
     env.update(|tx| {
-        // migrate the block list
-        let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
-        let walker = cursor.walk(None)?;
-        for old_entry in walker {
-            let (old_key, old_val) = old_entry?;
+        {
+            let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
+            cursor.walk(None)?.try_for_each(|entry| {
+                let (old_key, old_val) = entry?;
+                let key = ContractStorageKey { contract_address: old_key, key: old_val.key };
+                tx.put::<tables::StorageChangeSet>(key, BlockList::from_iter(old_val.block_list))?;
+                Result::<(), DatabaseError>::Ok(())
+            })?;
 
-            let key = ContractStorageKey { contract_address: old_key, key: old_val.key };
-            let value = BlockList::from_iter(old_val.block_list);
+            // move data from `NonceChanges` to `NonceChangeHistory`
+            let mut cursor = tx.cursor::<tables::v0::NonceChanges>()?;
+            cursor.walk(None)?.try_for_each(|entry| {
+                let (key, val) = entry?;
+                tx.put::<tables::NonceChangeHistory>(key, val)?;
+                Result::<(), DatabaseError>::Ok(())
+            })?;
 
-            tx.put::<tables::StorageChangeSet>(key, value)?;
+            // move data from `StorageChanges` to `StorageChangeHistory`
+            let mut cursor = tx.cursor::<tables::v0::StorageChanges>()?;
+            cursor.walk(None)?.try_for_each(|entry| {
+                let (key, val) = entry?;
+                tx.put::<tables::StorageChangeHistory>(key, val)?;
+                Result::<(), DatabaseError>::Ok(())
+            })?;
+
+            // move data from `ContractClassChanges` to `ClassChangeHistory`
+            let mut cursor = tx.cursor::<tables::v0::ContractClassChanges>()?;
+            cursor.walk(None)?.try_for_each(|entry| {
+                let (key, val) = entry?;
+                tx.put::<tables::ClassChangeHistory>(key, val)?;
+                Result::<(), DatabaseError>::Ok(())
+            })?;
         }
 
-        drop(cursor);
-
-        // drop the old table
+        // drop the old tables
         unsafe {
             tx.drop_table::<tables::v0::StorageChangeSet>()?;
+            tx.drop_table::<tables::v0::NonceChanges>()?;
+            tx.drop_table::<tables::v0::StorageChanges>()?;
+            tx.drop_table::<tables::v0::ContractClassChanges>()?;
         }
 
         Ok(())
     })?
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{init_db, mdbx::DbEnv};
+    use std::path::PathBuf;
+
+    use super::migrate_db;
+
+    fn create_test_db() -> (DbEnv, PathBuf) {
+        let path = tempfile::TempDir::new().expect("Failed to create temp dir.").into_path();
+        let db = init_db(&path).expect("Failed to initialize db");
+        (db, path)
+    }
+
+    #[test]
+    fn migrate_from_current_version() {
+        let (_, path) = create_test_db();
+        let err = migrate_db(path).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Unsupported database version for migration: 1",
+            "Can't migrate from the current version"
+        );
+    }
 }
