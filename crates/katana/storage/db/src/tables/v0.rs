@@ -5,11 +5,11 @@ use super::*;
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::error::CodecError;
 use crate::models::contract::{ContractClassChange, ContractNonceChange};
-use crate::models::storage::ContractStorageEntry;
-use crate::models::storage::ContractStorageKey;
+use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
 use crate::{define_tables_enum, dupsort, tables};
 
-// TODO(kariy): can we somehow define this without repeating existing tables, and only add the older ones?
+// TODO(kariy): can we somehow define this without repeating existing tables, and only add the older
+// ones?
 define_tables_enum! {[
     (Headers, TableType::Table),
     (BlockHashes, TableType::Table),
