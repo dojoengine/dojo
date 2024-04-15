@@ -1,9 +1,13 @@
 use std::path::Path;
 
+use anyhow::Context;
+
 use crate::{
     error::DatabaseError,
+    mdbx::DbEnv,
+    models::{list::BlockList, storage::ContractStorageKey},
     open_db, tables,
-    version::{get_db_version, DatabaseVersionError},
+    version::{create_db_version_file, get_db_version, DatabaseVersionError},
     CURRENT_DB_VERSION,
 };
 
@@ -31,21 +35,43 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
     // check that the db version is supported, otherwise return an error
     let ver = get_db_version(&path)?;
 
-    if ver != 0 {
+    if ver == 0 {
+        // perform the migration
+        // 1. create all the tables exist in the current schema
+        // 2. migrate all the data from the old schema to the new schema
+        let db = open_db(&path)?;
+        migrate_from_v0_to_v1(db)?;
+    } else {
         return Err(DatabaseMigrationError::UnsupportedVersion(ver));
     }
 
-    // perform the migration
-    // 1. create all the tables exist in the current schema
-    // 2. migrate all the data from the old schema to the new schema
-    // 3. update the db version to the current version
-
-    let env = open_db(path)?;
-    env.create_tables()?;
-
-    env.update(|tx| {
-        let mut cursor = tx.cursor::<tables::StorageChangeSet>()?;
-    })?;
-
+    // Update the db version to the current version
+    create_db_version_file(path, CURRENT_DB_VERSION).context("Updating database version file")?;
     Ok(())
+}
+
+fn migrate_from_v0_to_v1(env: DbEnv) -> Result<(), DatabaseMigrationError> {
+    env.create_tables()?;
+    env.update(|tx| {
+        // migrate the block list
+        let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
+        let walker = cursor.walk(None)?;
+        for old_entry in walker {
+            let (old_key, old_val) = old_entry?;
+
+            let key = ContractStorageKey { contract_address: old_key, key: old_val.key };
+            let value = BlockList::from_iter(old_val.block_list);
+
+            tx.put::<tables::StorageChangeSet>(key, value)?;
+        }
+
+        drop(cursor);
+
+        // drop the old table
+        unsafe {
+            tx.drop_table::<tables::v0::StorageChangeSet>()?;
+        }
+
+        Ok(())
+    })?
 }

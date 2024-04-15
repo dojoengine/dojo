@@ -40,6 +40,12 @@ impl IntegerSet {
     }
 }
 
+impl FromIterator<u64> for IntegerSet {
+    fn from_iter<T: IntoIterator<Item = u64>>(iter: T) -> Self {
+        Self(RoaringTreemap::from_iter(iter))
+    }
+}
+
 impl<const N: usize> From<[u64; N]> for IntegerSet {
     fn from(arr: [u64; N]) -> Self {
         Self(RoaringTreemap::from_iter(arr))
