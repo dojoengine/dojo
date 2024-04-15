@@ -1,4 +1,4 @@
-use katana_primitives::block::Header;
+use katana_primitives::block::{BlockNumber, Header};
 use katana_primitives::contract::{ContractAddress, GenericContractInfo};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
@@ -39,6 +39,7 @@ impl_compress_and_decompress_for_table_values!(
     Receipt,
     FieldElement,
     ContractAddress,
+    Vec<BlockNumber>,
     BlockList,
     GenericContractInfo,
     StoredBlockBodyIndices,
