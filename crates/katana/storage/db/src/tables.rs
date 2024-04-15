@@ -132,6 +132,37 @@ macro_rules! tables {
             }
        )*
     };
+
+    {   $version:ident, $($(#[$docs:meta])+ $table_name:ident: ($key:ty $(,$key_type2:ty)?) => $value:ty ),* } => {
+      	#[doc = concat!("Tables that were changed in ", stringify!($version), ".")]
+    	mod $version {
+     		use super::*;
+
+		    $(
+		        $(#[$docs])+
+		        ///
+		        #[doc = concat!("Takes [`", stringify!($key), "`] as a key and returns [`", stringify!($value), "`].")]
+		        #[derive(Debug)]
+		        pub struct $table_name;
+
+		        impl Table for $table_name {
+		            const NAME: &'static str = stringify!($table_name);
+		            type Key = $key;
+		            type Value = $value;
+		        }
+
+		        $(
+		            dupsort!($table_name, $key_type2);
+		        )?
+
+		        impl std::fmt::Display for $table_name {
+		            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		                write!(f, "{}", stringify!($table_name))
+		            }
+		        }
+		    )*
+    	 }
+    };
 }
 
 /// Macro to declare duplicate key value table.
@@ -225,6 +256,18 @@ tables! {
     /// Account storage change set
     StorageChangeHistory: (BlockNumber, ContractStorageKey) => ContractStorageEntry
 
+}
+
+// Declaring tables struct that exist only previous database versions
+tables! {
+    v0,
+
+    /// Contract nonce changes by block.
+    NonceChanges: (BlockNumber, ContractAddress) => ContractNonceChange,
+    /// Contract class hash changes by block.
+    ContractClassChanges: (BlockNumber, ContractAddress) => ContractClassChange,
+    /// Account storage change set
+    StorageChanges: (BlockNumber, ContractStorageKey) => ContractStorageEntry
 }
 
 #[cfg(test)]
