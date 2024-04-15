@@ -72,9 +72,20 @@ impl SimulationFlag {
     }
 }
 
+/// Stats about the transactions execution.
+#[derive(Debug, Clone, Default)]
+pub struct ExecutionStats {
+    /// The total gas used.
+    pub l1_gas_used: u128,
+    /// The total cairo steps used.
+    pub cairo_steps_used: u128,
+}
+
 /// The output of a executor after a series of executions.
 #[derive(Debug, Default)]
 pub struct ExecutionOutput {
+    /// Statistics throughout the executions process.
+    pub stats: ExecutionStats,
     /// The state updates produced by the executions.
     pub states: StateUpdatesWithDeclaredClasses,
     /// The transactions that have been executed.

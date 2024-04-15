@@ -4,7 +4,8 @@ use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelError;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::{cairo_utils, WorldContractReader};
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::parse_cairo_short_string;
@@ -89,7 +90,7 @@ impl FromStr for OwnerResource {
 pub async fn grant_writer<A>(
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
-    transaction: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -121,15 +122,15 @@ where
         let res = world
             .account
             .execute(calls)
-            .send()
+            .send_with_cfg(&txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
             &world.account.provider(),
             res,
-            transaction.wait,
-            transaction.receipt,
+            txn_config.wait,
+            txn_config.receipt,
         )
         .await?;
     }
@@ -140,7 +141,7 @@ where
 pub async fn grant_owner<A>(
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
-    transaction: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -158,14 +159,18 @@ where
         calls.push(world.grant_owner_getcall(&or.owner.into(), &resource));
     }
 
-    let res =
-        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+    let res = world
+        .account
+        .execute(calls)
+        .send_with_cfg(&txn_config)
+        .await
+        .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
         &world.account.provider(),
         res,
-        transaction.wait,
-        transaction.receipt,
+        txn_config.wait,
+        txn_config.receipt,
     )
     .await?;
 
@@ -175,7 +180,7 @@ where
 pub async fn revoke_writer<A>(
     world: &WorldContract<A>,
     models_contracts: Vec<ModelContract>,
-    transaction: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -207,15 +212,15 @@ where
         let res = world
             .account
             .execute(calls)
-            .send()
+            .send_with_cfg(&txn_config)
             .await
             .with_context(|| "Failed to send transaction")?;
 
         utils::handle_transaction_result(
             &world.account.provider(),
             res,
-            transaction.wait,
-            transaction.receipt,
+            txn_config.wait,
+            txn_config.receipt,
         )
         .await?;
     }
@@ -226,7 +231,7 @@ where
 pub async fn revoke_owner<A>(
     world: &WorldContract<A>,
     owners_resources: Vec<OwnerResource>,
-    transaction: TxConfig,
+    txn_config: TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -244,14 +249,18 @@ where
         calls.push(world.revoke_owner_getcall(&or.owner.into(), &resource));
     }
 
-    let res =
-        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+    let res = world
+        .account
+        .execute(calls)
+        .send_with_cfg(&txn_config)
+        .await
+        .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
         &world.account.provider(),
         res,
-        transaction.wait,
-        transaction.receipt,
+        txn_config.wait,
+        txn_config.receipt,
     )
     .await?;
 

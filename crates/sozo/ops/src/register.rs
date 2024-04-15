@@ -4,7 +4,8 @@ use anyhow::{Context, Result};
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::{WorldContract, WorldContractReader};
 use dojo_world::manifest::DeploymentManifest;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
 use scarb::core::Config;
 use starknet::accounts::ConnectedAccount;
 use starknet::providers::Provider;
@@ -15,7 +16,7 @@ use crate::utils::handle_transaction_result;
 pub async fn model_register<A, P>(
     models: Vec<FieldElement>,
     world: &WorldContract<A>,
-    transaction: TxConfig,
+    txn_config: TxnConfig,
     world_reader: WorldContractReader<P>,
     world_address: FieldElement,
     config: &Config,
@@ -63,16 +64,15 @@ where
         .map(|c| world.register_model_getcall(&(*c).into()))
         .collect::<Vec<_>>();
 
-    let res =
-        world.account.execute(calls).send().await.with_context(|| "Failed to send transaction")?;
+    let res = world
+        .account
+        .execute(calls)
+        .send_with_cfg(&txn_config)
+        .await
+        .with_context(|| "Failed to send transaction")?;
 
-    handle_transaction_result(
-        &world.account.provider(),
-        res,
-        transaction.wait,
-        transaction.receipt,
-    )
-    .await?;
+    handle_transaction_result(&world.account.provider(), res, txn_config.wait, txn_config.receipt)
+        .await?;
 
     Ok(())
 }

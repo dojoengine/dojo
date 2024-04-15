@@ -7,7 +7,7 @@ use anyhow::{ensure, Result};
 use clap::Args;
 use scarb::core::Config;
 
-#[derive(Args, Debug)]
+#[derive(Debug, Args)]
 pub struct InitArgs {
     #[arg(help = "Target directory")]
     path: Option<PathBuf>,

@@ -263,7 +263,7 @@ mod tests {
     use crate::StateProviderDb;
 
     fn new_sierra_class() -> (FlattenedSierraClass, CompiledClass) {
-        let json = include_str!("../../../../primitives/contracts/compiled/cairo1_contract.json");
+        let json = include_str!("../../../../contracts/compiled/cairo1_contract.json");
         let artifact = serde_json::from_str(json).unwrap();
         let compiled_class = parse_compiled_class(artifact).unwrap();
         let sierra_class = parse_sierra_class(json).unwrap().flatten().unwrap();

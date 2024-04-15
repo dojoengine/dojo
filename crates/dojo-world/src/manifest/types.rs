@@ -30,7 +30,7 @@ pub struct BaseManifest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct DeploymentManifest {
-    pub world: Manifest<Contract>,
+    pub world: Manifest<WorldContract>,
     pub base: Manifest<Class>,
     pub contracts: Vec<Manifest<DojoContract>>,
     pub models: Vec<Manifest<DojoModel>>,
@@ -117,7 +117,7 @@ pub struct DojoModel {
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "kind")]
-pub struct Contract {
+pub struct WorldContract {
     #[serde_as(as = "UfeHex")]
     pub class_hash: FieldElement,
     #[serde_as(as = "UfeHex")]
@@ -128,8 +128,8 @@ pub struct Contract {
     #[serde_as(as = "Option<UfeHex>")]
     pub transaction_hash: Option<FieldElement>,
     pub block_number: Option<u64>,
-    // used by World contract
     pub seed: Option<String>,
+    pub metadata: Option<WorldMetadata>,
 }
 
 #[serde_as]
@@ -285,4 +285,12 @@ impl PartialEq for AbiFormat {
             _ => false,
         }
     }
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct WorldMetadata {
+    pub profile_name: String,
+    pub rpc_url: String,
 }

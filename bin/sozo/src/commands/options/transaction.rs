@@ -1,7 +1,7 @@
 use clap::Args;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 
-#[derive(Debug, Args, Clone)]
+#[derive(Debug, Args)]
 #[command(next_help_heading = "Transaction options")]
 pub struct TransactionOptions {
     #[arg(long)]
@@ -29,7 +29,7 @@ pub struct TransactionOptions {
     pub receipt: bool,
 }
 
-impl From<TransactionOptions> for TxConfig {
+impl From<TransactionOptions> for TxnConfig {
     fn from(value: TransactionOptions) -> Self {
         Self {
             fee_estimate_multiplier: value.fee_estimate_multiplier,

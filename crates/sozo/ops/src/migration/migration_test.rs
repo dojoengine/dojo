@@ -8,7 +8,7 @@ use dojo_test_utils::sequencer::{
 use dojo_world::manifest::{BaseManifest, DeploymentManifest};
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use scarb::ops;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::chain_id;
@@ -90,16 +90,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         ExecutionEncoding::New,
     );
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &mut migration,
-            &account,
-            Some(TxConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false }),
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &mut migration,
+        &account,
+        Some(TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false }),
+    )
+    .await
+    .is_err());
     sequencer.stop().unwrap();
 }
 
@@ -117,7 +115,6 @@ fn migrate_world_without_seed_will_fail() {
     assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
 }
 
-#[ignore]
 #[tokio::test]
 async fn migration_from_remote() {
     let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
@@ -139,10 +136,13 @@ async fn migration_from_remote() {
         ExecutionEncoding::New,
     );
 
+    let profile_name = ws.current_profile().unwrap().to_string();
+
     let manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
+
     let world = WorldDiff::compute(manifest, None);
 
     let mut migration = prepare_for_migration(
@@ -156,9 +156,10 @@ async fn migration_from_remote() {
     execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(BASE_DIR),
+        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
     )
     .unwrap();
+
     let remote_manifest = DeploymentManifest::load_from_remote(
         JsonRpcClient::new(HttpTransport::new(sequencer.url())),
         migration.world_address().unwrap(),

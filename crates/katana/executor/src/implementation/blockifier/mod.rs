@@ -19,8 +19,9 @@ use tracing::info;
 use self::output::receipt_from_exec_info;
 use self::state::CachedState;
 use crate::{
-    BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult, ExecutorExt,
-    ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag, StateProviderDb,
+    BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
+    ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,
+    StateProviderDb,
 };
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
@@ -69,6 +70,7 @@ pub struct StarknetVMProcessor<'a> {
     state: CachedState<StateProviderDb<'a>>,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: SimulationFlag,
+    stats: ExecutionStats,
 }
 
 impl<'a> StarknetVMProcessor<'a> {
@@ -81,7 +83,7 @@ impl<'a> StarknetVMProcessor<'a> {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
         let state = state::CachedState::new(StateProviderDb(state));
-        Self { block_context, state, transactions, simulation_flags }
+        Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
     }
 
     fn fill_block_env_from_header(&mut self, header: &PartialHeader) {
@@ -159,6 +161,9 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
                     crate::utils::log_resources(&trace.actual_resources);
                     crate::utils::log_events(receipt.events());
 
+                    self.stats.l1_gas_used += fee.gas_consumed;
+                    self.stats.cairo_steps_used += receipt.resources_used().steps as u128;
+
                     if let Some(reason) = receipt.revert_reason() {
                         info!(target: LOG_TARGET, reason = %reason, "Transaction reverted.");
                     }
@@ -187,7 +192,8 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {
         let states = utils::state_update_from_cached_state(&self.state);
         let transactions = std::mem::take(&mut self.transactions);
-        Ok(ExecutionOutput { states, transactions })
+        let stats = std::mem::take(&mut self.stats);
+        Ok(ExecutionOutput { stats, states, transactions })
     }
 
     fn state(&self) -> Box<dyn StateProvider + 'a> {
