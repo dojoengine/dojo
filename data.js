@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713196476852,
+  "lastUpdate": 1713202654786,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5485,6 +5485,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17183742,
             "range": "± 522566",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "89a5b9eb31a32e58a0429b7d17151361cb09f746",
+          "message": "fix ci (#1836)",
+          "timestamp": "2024-04-15T22:59:32+05:30",
+          "tree_id": "91e937277082d64896396c5cee73e53ff71d3777",
+          "url": "https://github.com/dojoengine/dojo/commit/89a5b9eb31a32e58a0429b7d17151361cb09f746"
+        },
+        "date": 1713202654254,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17011364,
+            "range": "± 636978",
             "unit": "ns/iter"
           }
         ]
