@@ -7,6 +7,7 @@ use libmdbx::{TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
+use super::DbEnv;
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
 use crate::tables::{Schema, SchemaV1, Table, NUM_TABLES};
@@ -147,5 +148,15 @@ impl<S: Schema> Tx<RW, S> {
     /// Aborts the transaction.
     pub fn abort(self) {
         drop(self.inner)
+    }
+
+    /// Drops a table from the database.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure all usages of the table have been stopped before calling this function.
+    pub unsafe fn drop_table<T: Table>(&self) -> Result<(), DatabaseError> {
+        let db = self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?;
+        self.inner.drop_db(db).map_err(|error| DatabaseError::DropTable { table: T::NAME, error })
     }
 }
