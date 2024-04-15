@@ -129,6 +129,21 @@ impl ProgramInput {
 
         Ok(result)
     }
+
+    pub fn da_as_calldata(&self, world: FieldElement) -> Vec<FieldElement> {
+        let mut updates = self
+            .state_updates
+            .storage_updates
+            .get(&ContractAddress::from(world))
+            .unwrap_or(&std::collections::HashMap::new())
+            .iter()
+            .map(|(k, v)| vec![*k, *v])
+            .flatten()
+            .collect::<Vec<_>>();
+
+        updates.insert(0, FieldElement::from(updates.len()));
+        updates
+    }
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L16
@@ -188,12 +203,20 @@ fn test_program_input() -> anyhow::Result<()> {
         }],
         state_updates: StateUpdates {
             nonce_updates: std::collections::HashMap::new(),
-            storage_updates: std::collections::HashMap::new(),
+            storage_updates: vec![(
+                ContractAddress::from(FieldElement::from_str("113")?),
+                vec![(FieldElement::from_str("114")?, FieldElement::from_str("115")?)]
+                    .into_iter()
+                    .collect(),
+            )]
+            .into_iter()
+            .collect(),
             contract_updates: std::collections::HashMap::new(),
             declared_classes: std::collections::HashMap::new(),
         },
     };
 
+    // Serialize without the DA.
     let serialized = input.serialize(None).unwrap();
 
     println!("Serialized: {}", serialized);
@@ -206,16 +229,47 @@ fn test_program_input() -> anyhow::Result<()> {
         "message_to_starknet_segment": [105,106,1,107],
         "message_to_appchain_segment": [108,109,110,111,1,112],
         "nonce_updates": {},
-        "storage_updates": {},
+        "storage_updates": {"113":{"114":115}},
         "contract_updates": {},
-        "declared_classes": {}
+        "declared_classes": {},
+        "world_da": []
     }"#;
 
     let expected = EXPECTED.chars().filter(|c| !c.is_whitespace()).collect::<String>();
-
     println!("{}", expected);
-
     assert_eq!(serialized, expected);
+
+    // Serialize with the DA.
+    let serialized_with_da = input.serialize(Some(FieldElement::from_str("113")?)).unwrap();
+    println!("Serialized: {}", serialized_with_da);
+    pub const EXPECTED_WITH_DA: &str = r#"{
+            "prev_state_root": 101,
+            "block_number": 102,
+            "block_hash": 103,
+            "config_hash": 104,
+            "message_to_starknet_segment": [105,106,1,107],
+            "message_to_appchain_segment": [108,109,110,111,1,112],
+            "nonce_updates": {},
+            "storage_updates": {"113":{"114":115}},
+            "contract_updates": {},
+            "declared_classes": {},
+            "world_da": [114, 115]
+        }"#;
+
+    let expected = EXPECTED_WITH_DA.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+    println!("{}", expected);
+    assert_eq!(serialized_with_da, expected);
+
+    // Serialize just the DA as calldata.
+    let da_calldata = input.da_as_calldata(FieldElement::from_str("113")?);
+    assert_eq!(
+        da_calldata,
+        vec![
+            FieldElement::from_str("2")?,
+            FieldElement::from_str("114")?,
+            FieldElement::from_str("115")?
+        ]
+    );
 
     Ok(())
 }
