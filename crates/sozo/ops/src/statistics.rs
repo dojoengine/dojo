@@ -1,8 +1,8 @@
 use std::fs::{self, File};
-use std::io;
+use std::io::{self, BufReader};
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FlattenedSierraClass;
@@ -15,7 +15,7 @@ pub struct ContractStatistics {
 }
 
 fn read_sierra_json_program(file: &File) -> Result<FlattenedSierraClass> {
-    let contract_artifact: SierraClass = serde_json::from_reader(file)?;
+    let contract_artifact: SierraClass = serde_json::from_reader(BufReader::new(file))?;
     let contract_artifact: FlattenedSierraClass = contract_artifact.flatten()?;
 
     Ok(contract_artifact)
@@ -30,16 +30,13 @@ fn get_file_size(file: &File) -> Result<u64, io::Error> {
 }
 
 fn get_contract_statistics_for_file(
-    file_name: String,
+    contract_name: String,
     sierra_json_file: File,
     contract_artifact: FlattenedSierraClass,
-) -> ContractStatistics {
-    ContractStatistics {
-        contract_name: file_name,
-        number_felts: get_sierra_byte_code_size(contract_artifact),
-        file_size: get_file_size(&sierra_json_file)
-            .expect(format!("Error getting file size for file").as_str()),
-    }
+) -> Result<ContractStatistics> {
+    let file_size = get_file_size(&sierra_json_file).context(format!("Error getting file size"))?;
+    let number_felts = get_sierra_byte_code_size(contract_artifact);
+    Ok(ContractStatistics { file_size, contract_name, number_felts })
 }
 
 pub fn get_contract_statistics_for_dir(
@@ -47,32 +44,31 @@ pub fn get_contract_statistics_for_dir(
 ) -> Result<Vec<ContractStatistics>> {
     let mut contract_statistics = Vec::new();
     let target_directory = target_directory.as_str();
-    let built_contract_paths: fs::ReadDir = fs::read_dir(target_directory)
-        .expect(format!("Error reading dir {target_directory}").as_str());
-    for sierra_json_path in built_contract_paths {
-        let sierra_json_path_buff: PathBuf =
-            sierra_json_path.expect("Error getting buffer for file").path();
+    let dir: fs::ReadDir = fs::read_dir(target_directory)?;
+    for entry in dir {
+        let path: PathBuf = entry?.path();
 
-        let file_name: String = sierra_json_path_buff
-            .file_stem()
-            .expect("Error getting file name")
-            .to_string_lossy()
-            .to_string();
+        if path.is_dir() {
+            continue;
+        }
 
-        let sierra_json_path_str =
-            sierra_json_path_buff.into_os_string().into_string().expect("String is expected");
+        let contract_name: String =
+            path.file_stem().context("Error getting file name")?.to_string_lossy().to_string();
 
-        let sierra_json_file: File = File::open(&sierra_json_path_str)
-            .expect(format!("Error opening Sierra JSON file: {sierra_json_path_str}").as_str());
+        let sierra_json_file: File =
+            File::open(&path).context(format!("Error opening file: {}", path.to_string_lossy()))?;
 
         let contract_artifact: FlattenedSierraClass = read_sierra_json_program(&sierra_json_file)
-            .expect(format!("Error reading Sierra JSON program: {sierra_json_path_str}").as_str());
+            .context(format!(
+            "Error parsing Sierra class artifact: {}",
+            path.to_string_lossy()
+        ))?;
 
         contract_statistics.push(get_contract_statistics_for_file(
-            file_name,
+            contract_name,
             sierra_json_file,
             contract_artifact,
-        ));
+        )?);
     }
     Ok(contract_statistics)
 }
@@ -89,11 +85,10 @@ mod tests {
         get_sierra_byte_code_size, read_sierra_json_program, ContractStatistics,
     };
 
-    const TEST_SIERRA_JSON_CONTRACT: &str = "../../../bin/sozo/tests/test_data/\
-                                             sierra_compiled_contracts/contracts_test.\
-                                             contract_class.json";
+    const TEST_SIERRA_JSON_CONTRACT: &str =
+        "../../../bin/sozo/tests/test_data/compiled_contracts/test_contract.json";
     const TEST_SIERRA_FOLDER_CONTRACTS: &str =
-        "../../../bin/sozo/tests/test_data/sierra_compiled_contracts/";
+        "../../../bin/sozo/tests/test_data/compiled_contracts/";
 
     #[test]
     fn get_sierra_byte_code_size_returns_correct_size() {
@@ -102,16 +97,16 @@ mod tests {
             .unwrap_or_else(|err| panic!("Failed to open file: {}", err));
         let flattened_sierra_class = read_sierra_json_program(&sierra_json_file)
             .unwrap_or_else(|err| panic!("Failed to read JSON program: {}", err));
-        let expected_number_of_felts: u64 = 448;
+        const EXPECTED_NUMBER_OF_FELTS: u64 = 2175;
 
         // Act
         let number_of_felts = get_sierra_byte_code_size(flattened_sierra_class);
 
         // Assert
         assert_eq!(
-            number_of_felts, expected_number_of_felts,
+            number_of_felts, EXPECTED_NUMBER_OF_FELTS,
             "Number of felts mismatch. Expected {}, got {}",
-            expected_number_of_felts, number_of_felts
+            EXPECTED_NUMBER_OF_FELTS, number_of_felts
         );
     }
 
@@ -128,14 +123,15 @@ mod tests {
             .to_string_lossy()
             .to_string();
         let expected_contract_statistics: ContractStatistics = ContractStatistics {
-            contract_name: String::from("contracts_test.contract_class"),
-            number_felts: 448,
-            file_size: 38384,
+            contract_name: String::from("test_contract"),
+            number_felts: 2175,
+            file_size: 114925,
         };
 
         // Act
         let statistics =
-            get_contract_statistics_for_file(filename.clone(), sierra_json_file, contract_artifact);
+            get_contract_statistics_for_file(filename.clone(), sierra_json_file, contract_artifact)
+                .expect("Error getting contract statistics for file");
 
         // Assert
         assert_eq!(statistics, expected_contract_statistics);
@@ -144,14 +140,11 @@ mod tests {
     #[test]
     fn get_contract_statistics_for_dir_returns_correct_statistics() {
         // Arrange
-        let path_full_of_built_sierra_contracts = Utf8PathBuf::from(TEST_SIERRA_FOLDER_CONTRACTS);
+        let target_dir = Utf8PathBuf::from(TEST_SIERRA_FOLDER_CONTRACTS);
 
         // Act
-        let contract_statistics =
-            get_contract_statistics_for_dir(&path_full_of_built_sierra_contracts).expect(
-                format!("Error getting contracts in dir {path_full_of_built_sierra_contracts}")
-                    .as_str(),
-            );
+        let contract_statistics = get_contract_statistics_for_dir(&target_dir)
+            .expect(format!("Error getting contracts in dir {target_dir}").as_str());
 
         // Assert
         assert_eq!(contract_statistics.len(), 1, "Mismatch number of contract statistics");
@@ -162,7 +155,7 @@ mod tests {
         // Arrange
         let sierra_json_file = File::open(TEST_SIERRA_JSON_CONTRACT)
             .unwrap_or_else(|err| panic!("Failed to open test file: {}", err));
-        const EXPECTED_SIZE: u64 = 38384;
+        const EXPECTED_SIZE: u64 = 114925;
 
         // Act
         let file_size = get_file_size(&sierra_json_file)

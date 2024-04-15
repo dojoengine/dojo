@@ -1,7 +1,8 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Args;
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_lang::scarb_internal::compile_workspace;
+use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
 use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
@@ -45,7 +46,7 @@ impl BuildArgs {
             let target_dir = &compile_info.target_dir;
             let contracts_statistics: Vec<ContractStatistics> =
                 get_contract_statistics_for_dir(target_dir)
-                    .expect(format!("Error getting contracts in dir {target_dir}").as_str());
+                    .context(format!("Error getting contracts stats"))?;
             let table = create_stats_table(contracts_statistics);
             table.printstd()
         }
@@ -73,6 +74,7 @@ impl BuildArgs {
 
 fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
     let mut table = Table::new();
+    table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
 
     // Add table headers
     table.add_row(Row::new(vec![
