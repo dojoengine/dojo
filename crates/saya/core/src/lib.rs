@@ -198,7 +198,7 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
-        println!("Program input: {}", new_program_input.serialize(self.config.world_address)?);
+        // println!("Program input: {}", new_program_input.serialize(self.config.world_address)?);
 
         // let to_prove = ProvedStateDiff {
         //     genesis_state_hash,
@@ -226,11 +226,17 @@ impl Saya {
         let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?;
         info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
-        trace!(target: "saya_core", "Applying diffs {block_number}.");
-        let ExtractOutputResult { program_output, program_output_hash: _ } =
-            extract_output(proof.clone()).unwrap();
-        let transaction_hash = starknet_os::starknet_apply_diffs(vec![], program_output).await?;
-        info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
+        if let Some(world) = self.config.world_address {
+            trace!(target: "saya_core", "Applying diffs {block_number}.");
+            let ExtractOutputResult { program_output, program_output_hash: _ } =
+                extract_output(proof.clone()).unwrap();
+            let transaction_hash = starknet_os::starknet_apply_diffs(
+                new_program_input.da_as_calldata(world),
+                program_output,
+            )
+            .await?;
+            info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
+        }
 
         Ok(())
     }
