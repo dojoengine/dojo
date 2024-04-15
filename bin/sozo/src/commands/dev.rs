@@ -13,6 +13,7 @@ use dojo_lang::scarb_internal::build_scarb_root_database;
 use dojo_world::manifest::{BaseManifest, DeploymentManifest};
 use dojo_world::metadata::dojo_metadata_from_workspace;
 use dojo_world::migration::world::WorldDiff;
+use dojo_world::migration::TxnConfig;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::CompilationUnit;
@@ -246,7 +247,7 @@ where
     let ui = ws.config().ui();
     let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
-    match migration::apply_diff(ws, account, None, &mut strategy).await {
+    match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
         Ok(migration_output) => {
             config.ui().print(format!(
                 "🎉 World at address {} updated!",

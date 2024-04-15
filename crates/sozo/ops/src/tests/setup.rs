@@ -4,7 +4,7 @@ use dojo_test_utils::migration::prepare_migration;
 use dojo_test_utils::sequencer::TestSequencer;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::strategy::MigrationStrategy;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
 use scarb::core::{Config, Workspace};
 use scarb::ops;
 use starknet::accounts::SingleOwnerAccount;
@@ -75,7 +75,7 @@ pub async fn setup(
         &ws,
         &mut migration,
         &account,
-        Some(TxConfig { wait: true, ..Default::default() }),
+        TxnConfig { wait: true, ..Default::default() },
     )
     .await?;
     let world = WorldContract::new(output.world_address, account);

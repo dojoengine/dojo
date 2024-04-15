@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use dojo_world::contracts::world::WorldContract;
-use dojo_world::migration::TxConfig;
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
 use starknet::accounts::{Call, ConnectedAccount};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_selector_from_name;
@@ -12,7 +13,7 @@ pub async fn execute<A>(
     entrypoint: String,
     calldata: Vec<FieldElement>,
     world: &WorldContract<A>,
-    transaction: TxConfig,
+    txn_config: &TxnConfig,
 ) -> Result<()>
 where
     A: ConnectedAccount + Sync + Send + 'static,
@@ -25,15 +26,15 @@ where
             to: contract_address,
             selector: get_selector_from_name(&entrypoint)?,
         }])
-        .send()
+        .send_with_cfg(txn_config)
         .await
         .with_context(|| "Failed to send transaction")?;
 
     utils::handle_transaction_result(
         &world.account.provider(),
         res,
-        transaction.wait,
-        transaction.receipt,
+        txn_config.wait,
+        txn_config.receipt,
     )
     .await
 }

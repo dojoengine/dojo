@@ -7,6 +7,7 @@ use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, TestSequencer,
 };
 use dojo_world::contracts::WorldContractReader;
+use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use sozo_ops::migration::execute_strategy;
@@ -47,7 +48,7 @@ async fn test_entities_queries() {
     let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
 
     // spawn
     let tx = account
