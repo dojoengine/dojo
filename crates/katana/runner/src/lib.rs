@@ -62,6 +62,7 @@ impl KatanaRunner {
     }
 
     pub fn new_with_port(port: u16) -> Result<Self> {
+        println!("PORT {port}");
         Self::new_with_port_and_filename(
             "katana",
             port,

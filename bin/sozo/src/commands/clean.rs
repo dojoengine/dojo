@@ -54,7 +54,7 @@ impl CleanArgs {
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler;
-    use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
+    use katana_runner::KatanaRunner;
     use sozo_ops::migration;
 
     use super::*;
@@ -66,9 +66,7 @@ mod tests {
         // Build a completely new project in it's own directory.
         let (temp_project_dir, config, _) = compiler::copy_build_project_temp(source_project, true);
 
-        let sequencer = config.tokio_handle().block_on(async {
-            TestSequencer::start(Default::default(), get_default_test_starknet_config()).await
-        });
+        let runner = KatanaRunner::new().expect("Fail to set runner");
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
 
@@ -78,8 +76,8 @@ mod tests {
                 &ws,
                 None,
                 "chain_id".to_string(),
-                sequencer.url().to_string(),
-                &sequencer.account(),
+                runner.endpoint(),
+                &runner.account(0),
                 Some("dojo_examples".to_string()),
                 true,
                 None,
@@ -126,7 +124,5 @@ mod tests {
         );
         assert!(!manifest_toml.exists(), "Expected 'manifest.toml' to not exist");
         assert!(!manifest_json.exists(), "Expected 'manifest.json' to not exist");
-
-        sequencer.stop().unwrap();
     }
 }
