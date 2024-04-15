@@ -162,10 +162,9 @@ impl<S: Schema> Tx<RW, S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        mdbx::{test_utils::create_test_db, DbEnvKind},
-        tables::{Headers, Table},
-    };
+    use crate::mdbx::test_utils::create_test_db;
+    use crate::mdbx::DbEnvKind;
+    use crate::tables::{Headers, Table};
 
     const ERROR_DROP_TABLE: &str = "Not able to drop table.";
     const ERROR_INIT_TX: &str = "Failed to create a MDBX transaction.";
