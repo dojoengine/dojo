@@ -23,12 +23,15 @@ tables! {
 
 pub type BlockList = Vec<BlockNumber>;
 
+/// This is used as a value type for the [`StorageChangeSet`] dupsort table
 #[derive(Debug)]
 pub struct StorageEntryChangeList {
     pub key: StorageKey,
     pub block_list: Vec<BlockNumber>,
 }
 
+// The `key` field is the subkey of the dupsort table, so we must use
+// the Encode and Decode traits  when de/serializing it to the database.
 impl Compress for StorageEntryChangeList {
     type Compressed = Vec<u8>;
     fn compress(self) -> Self::Compressed {
