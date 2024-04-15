@@ -110,6 +110,7 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::compiler::build_test_config;
+    use prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE;
     use prettytable::{format, Cell, Row, Table};
     use sozo_ops::statistics::ContractStatistics;
 
@@ -124,6 +125,7 @@ mod tests {
             typescript: true,
             unity: true,
             typescript_v2: true,
+            stats: true,
         };
         let result = build_args.run(&config);
         assert!(result.is_ok());
@@ -151,6 +153,7 @@ mod tests {
         ];
 
         let mut expected_table = Table::new();
+        expected_table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
         expected_table.add_row(Row::new(vec![
             Cell::new_align("Contract", format::Alignment::CENTER),
             Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
