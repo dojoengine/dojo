@@ -630,7 +630,7 @@ async fn validate_message(
     } else {
         return Err(Error::InvalidMessageError("Model name is missing".to_string()));
     };
-    let model_selector = get_selector_from_name(&model_name).map_err(|e| {
+    let model_selector = get_selector_from_name(model_name).map_err(|e| {
         Error::InvalidMessageError(format!("Failed to get selector from model name: {}", e))
     })?;
 

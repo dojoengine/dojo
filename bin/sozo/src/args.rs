@@ -1,38 +1,14 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use scarb::compiler::Profile;
 use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
 use tracing_log::AsTrace;
 
-use crate::commands::auth::AuthArgs;
-use crate::commands::build::BuildArgs;
-use crate::commands::call::CallArgs;
-use crate::commands::clean::CleanArgs;
-use crate::commands::completions::CompletionsArgs;
-use crate::commands::dev::DevArgs;
-use crate::commands::events::EventsArgs;
-use crate::commands::execute::ExecuteArgs;
-use crate::commands::init::InitArgs;
-use crate::commands::migrate::MigrateArgs;
-use crate::commands::model::ModelArgs;
-use crate::commands::register::RegisterArgs;
-use crate::commands::test::TestArgs;
-
-fn generate_version() -> String {
-    const DOJO_VERSION: &str = env!("CARGO_PKG_VERSION");
-    let scarb_version = scarb::version::get().version;
-    let scarb_sierra_version = scarb::version::get().sierra.version;
-    let scarb_cairo_version = scarb::version::get().cairo.version;
-
-    let version_string = format!(
-        "{}\nscarb: {}\ncairo: {}\nsierra: {}",
-        DOJO_VERSION, scarb_version, scarb_cairo_version, scarb_sierra_version,
-    );
-    version_string
-}
+use crate::commands::Commands;
+use crate::utils::generate_version;
 
 #[derive(Parser)]
 #[command(author, version=generate_version(), about, long_about = None)]
@@ -61,37 +37,6 @@ pub struct SozoArgs {
 
     #[command(subcommand)]
     pub command: Commands,
-}
-
-#[derive(Subcommand)]
-pub enum Commands {
-    #[command(about = "Build the world, generating the necessary artifacts for deployment")]
-    Build(BuildArgs),
-    #[command(about = "Initialize a new project")]
-    Init(InitArgs),
-    #[command(about = "Remove generated artifacts, manifests and abis")]
-    Clean(CleanArgs),
-    #[command(about = "Run a migration, declaring and deploying contracts as necessary to \
-                       update the world")]
-    Migrate(Box<MigrateArgs>),
-    #[command(about = "Developer mode: watcher for building and migration")]
-    Dev(DevArgs),
-    #[command(about = "Test the project's smart contracts")]
-    Test(TestArgs),
-    #[command(about = "Execute a world's system")]
-    Execute(ExecuteArgs),
-    #[command(about = "Call a world's system")]
-    Call(CallArgs),
-    #[command(about = "Interact with a worlds models")]
-    Model(ModelArgs),
-    #[command(about = "Register new models")]
-    Register(RegisterArgs),
-    #[command(about = "Queries world events")]
-    Events(EventsArgs),
-    #[command(about = "Manage world authorization")]
-    Auth(AuthArgs),
-    #[command(about = "Generate shell completion file for specified shell")]
-    Completions(CompletionsArgs),
 }
 
 impl SozoArgs {

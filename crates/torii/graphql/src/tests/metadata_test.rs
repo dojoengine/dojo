@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use dojo_world::metadata::Metadata as DojoMetadata;
+    use dojo_world::metadata::{project_to_world_metadata, ProjectMetadata};
     use sqlx::SqlitePool;
     use starknet_crypto::FieldElement;
     use torii_core::sql::Sql;
@@ -51,7 +51,7 @@ mod tests {
         let schema = build_schema(&pool).await.unwrap();
 
         let cover_img = "QWxsIHlvdXIgYmFzZSBiZWxvbmcgdG8gdXM=";
-        let dojo_metadata: DojoMetadata = toml::from_str(
+        let project_metadata: ProjectMetadata = toml::from_str(
             r#"
   [world]
   name = "example"
@@ -62,7 +62,7 @@ mod tests {
           "#,
         )
         .unwrap();
-        let world_metadata = dojo_metadata.world.unwrap();
+        let world_metadata = project_to_world_metadata(project_metadata.world);
         db.set_metadata(&RESOURCE, URI, BLOCK_TIMESTAMP);
         db.update_metadata(&RESOURCE, URI, &world_metadata, &None, &Some(cover_img.to_string()))
             .await
