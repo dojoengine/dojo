@@ -11,8 +11,6 @@ pub struct CleanArgs {
     #[arg(short, long)]
     #[arg(help = "Removes all the generated files, including scarb artifacts and ALL the \
                   manifests files.")]
-    #[arg(long_help = "Removes all the generated files, including scarb artifacts and ALL the \
-                       manifests files.")]
     pub all: bool,
 }
 
