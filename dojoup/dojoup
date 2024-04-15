@@ -73,6 +73,9 @@ main() {
 
   DOJOUP_REPO=${DOJOUP_REPO-dojoengine/dojo}
 
+  # Store user specified version seperately
+  DOJOUP_USER_VERSION=${DOJOUP_VERSION}
+
   # Install by downloading binaries
   if [[ "$DOJOUP_REPO" == "dojoengine/dojo" && -z "$DOJOUP_BRANCH" && -z "$DOJOUP_COMMIT" ]]; then
     DOJOUP_VERSION=${DOJOUP_VERSION-stable}
@@ -142,8 +145,12 @@ main() {
 
     echo $BIN_ARCHIVE_URL
 
-    # Download and extract the binaries archive
+    # display message only if version is not mentioned by user
+    if [ ! -n "$DOJOUP_USER_VERSION" ]; then
     say "downloading latest dojo"
+    fi
+
+    # Download and extract the binaries archive
     if [ "$PLATFORM" = "win32" ]; then
       tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
       ensure download "$BIN_ARCHIVE_URL" "$tmp"
