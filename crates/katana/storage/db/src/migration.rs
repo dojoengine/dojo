@@ -101,25 +101,46 @@ fn migrate_from_v0_to_v1(env: DbEnv) -> Result<(), DatabaseMigrationError> {
 #[cfg(test)]
 mod tests {
 
-    use crate::{init_db, mdbx::DbEnv};
+    use crate::{init_db, mdbx::DbEnv, open_db, version::create_db_version_file};
     use std::path::PathBuf;
 
     use super::migrate_db;
 
+    const ERROR_CREATE_TEMP_DIR: &str = "Failed to create temp dir.";
+    const ERROR_MIGRATE_DB: &str = "Failed to migrate db.";
+    const ERROR_INIT_DB: &str = "Failed to initialize db.";
+    const ERROR_CREATE_TABLES: &str = "Failed to create tables.";
+    const ERROR_CREATE_VER_FILE: &str = "Failed to create version file.";
+
     fn create_test_db() -> (DbEnv, PathBuf) {
-        let path = tempfile::TempDir::new().expect("Failed to create temp dir.").into_path();
-        let db = init_db(&path).expect("Failed to initialize db");
+        let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
+        let db = init_db(&path).expect(ERROR_INIT_DB);
+        (db, path)
+    }
+
+    fn create_v0_test_db() -> (DbEnv, PathBuf) {
+        let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
+
+        let db = open_db(&path).expect(ERROR_INIT_DB);
+        let _ = db.create_v0_tables().expect(ERROR_CREATE_TABLES);
+        let _ = create_db_version_file(&path, 0).expect(ERROR_CREATE_VER_FILE);
+
         (db, path)
     }
 
     #[test]
     fn migrate_from_current_version() {
         let (_, path) = create_test_db();
-        let err = migrate_db(path).unwrap_err();
         assert_eq!(
-            err.to_string(),
+            migrate_db(path).unwrap_err().to_string(),
             "Unsupported database version for migration: 1",
             "Can't migrate from the current version"
         );
+    }
+
+    #[test]
+    fn migrate_from_v0() {
+        let (env, path) = create_v0_test_db();
+        let _ = migrate_db(path).expect(ERROR_MIGRATE_DB);
     }
 }
