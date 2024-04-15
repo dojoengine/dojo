@@ -2,14 +2,12 @@ use std::path::Path;
 
 use anyhow::{anyhow, Context};
 
-use crate::{
-    error::DatabaseError,
-    mdbx::DbEnv,
-    models::{list::BlockList, storage::ContractStorageKey},
-    open_db, tables,
-    version::{create_db_version_file, get_db_version, DatabaseVersionError},
-    CURRENT_DB_VERSION,
-};
+use crate::error::DatabaseError;
+use crate::mdbx::DbEnv;
+use crate::models::list::BlockList;
+use crate::models::storage::ContractStorageKey;
+use crate::version::{create_db_version_file, get_db_version, DatabaseVersionError};
+use crate::{open_db, tables, CURRENT_DB_VERSION};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseMigrationError {
@@ -101,10 +99,12 @@ fn migrate_from_v0_to_v1(env: DbEnv) -> Result<(), DatabaseMigrationError> {
 #[cfg(test)]
 mod tests {
 
-    use crate::{init_db, mdbx::DbEnv, open_db, version::create_db_version_file};
     use std::path::PathBuf;
 
     use super::migrate_db;
+    use crate::mdbx::DbEnv;
+    use crate::version::create_db_version_file;
+    use crate::{init_db, open_db};
 
     const ERROR_CREATE_TEMP_DIR: &str = "Failed to create temp dir.";
     const ERROR_MIGRATE_DB: &str = "Failed to migrate db.";
