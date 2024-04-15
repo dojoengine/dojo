@@ -74,3 +74,13 @@ pub(super) fn get_db_version(path: impl AsRef<Path>) -> Result<u32, DatabaseVers
 pub(super) fn default_version_file_path(path: &Path) -> PathBuf {
     path.join(DB_VERSION_FILE_NAME)
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_current_version() {
+        use super::CURRENT_DB_VERSION;
+        assert_eq!(CURRENT_DB_VERSION, 1, "Invalid current database version")
+    }
+}
