@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713158838112,
+  "lastUpdate": 1713178361328,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5395,6 +5395,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17107632,
             "range": "± 207605",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "de25042cb003866a0a4dcb519ba2d32994f868b6",
+          "message": "fix: calculate address of all contracts during migration (#1822)",
+          "timestamp": "2024-04-15T16:14:15+05:30",
+          "tree_id": "2348748a44ceeb000433cebe37ece3a3027f077a",
+          "url": "https://github.com/dojoengine/dojo/commit/de25042cb003866a0a4dcb519ba2d32994f868b6"
+        },
+        "date": 1713178360590,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17207723,
+            "range": "± 612192",
             "unit": "ns/iter"
           }
         ]
