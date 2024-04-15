@@ -15,6 +15,11 @@ pub struct CleanArgs {
 }
 
 impl CleanArgs {
+    /// Cleans the manifests and abis files that are generated at build time.
+    ///
+    /// # Arguments
+    ///
+    /// * `profile_dir` - The directory where the profile files are located.
     pub fn clean_manifests(&self, profile_dir: &Utf8PathBuf) -> Result<()> {
         let dirs = vec![profile_dir.join(BASE_DIR), profile_dir.join(ABIS_DIR).join(BASE_DIR)];
 

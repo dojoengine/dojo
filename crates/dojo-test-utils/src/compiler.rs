@@ -142,25 +142,40 @@ pub fn build_test_config_default(path: &str) -> anyhow::Result<Config> {
 }
 
 pub fn build_test_config(path: &str) -> anyhow::Result<Config> {
+    build_full_test_config(path, true)
+}
+
+pub fn build_full_test_config(path: &str, override_dirs: bool) -> anyhow::Result<Config> {
     let mut compilers = CompilerRepository::empty();
     compilers.add(Box::new(DojoCompiler)).unwrap();
 
     let cairo_plugins = CairoPluginRepository::default();
-
-    let cache_dir = TempDir::new().unwrap();
-    let config_dir = TempDir::new().unwrap();
-    let target_dir = TempDir::new().unwrap();
-
     let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
-    Config::builder(path.canonicalize_utf8().unwrap())
-        .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
-        .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))
-        .target_dir_override(Some(Utf8Path::from_path(target_dir.path()).unwrap().to_path_buf()))
-        .ui_verbosity(Verbosity::Verbose)
-        .log_filter_directive(env::var_os("SCARB_LOG"))
-        .compilers(compilers)
-        .cairo_plugins(cairo_plugins.into())
-        .build()
+
+    if override_dirs {
+        let cache_dir = TempDir::new().unwrap();
+        let config_dir = TempDir::new().unwrap();
+        let target_dir = TempDir::new().unwrap();
+
+        Config::builder(path.canonicalize_utf8().unwrap())
+            .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
+            .global_config_dir_override(Some(Utf8Path::from_path(config_dir.path()).unwrap()))
+            .target_dir_override(Some(
+                Utf8Path::from_path(target_dir.path()).unwrap().to_path_buf(),
+            ))
+            .ui_verbosity(Verbosity::Verbose)
+            .log_filter_directive(env::var_os("SCARB_LOG"))
+            .compilers(compilers)
+            .cairo_plugins(cairo_plugins.into())
+            .build()
+    } else {
+        Config::builder(path.canonicalize_utf8().unwrap())
+            .ui_verbosity(Verbosity::Verbose)
+            .log_filter_directive(env::var_os("SCARB_LOG"))
+            .compilers(compilers)
+            .cairo_plugins(cairo_plugins.into())
+            .build()
+    }
 }
 
 pub fn corelib() -> PathBuf {

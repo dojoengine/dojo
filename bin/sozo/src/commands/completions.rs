@@ -6,7 +6,7 @@ use clap_complete::{generate, Shell};
 
 use crate::args::SozoArgs;
 
-#[derive(Args, Debug)]
+#[derive(Debug, Args)]
 pub struct CompletionsArgs {
     shell: Shell,
 }

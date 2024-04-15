@@ -5,11 +5,15 @@ use dojo_lang::scarb_internal::compile_workspace;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 
-#[derive(Args, Debug)]
+#[derive(Debug, Args)]
 pub struct BuildArgs {
     #[arg(long)]
     #[arg(help = "Generate Typescript bindings.")]
     pub typescript: bool,
+
+    #[arg(long)]
+    #[arg(help = "Generate Typescript bindings.")]
+    pub typescript_v2: bool,
 
     #[arg(long)]
     #[arg(help = "Generate Unity bindings.")]
@@ -30,6 +34,10 @@ impl BuildArgs {
         let mut builtin_plugins = vec![];
         if self.typescript {
             builtin_plugins.push(BuiltinPlugins::Typescript);
+        }
+
+        if self.typescript_v2 {
+            builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
         }
 
         if self.unity {
@@ -67,8 +75,12 @@ mod tests {
     fn build_example_with_typescript_and_unity_bindings() {
         let config = build_test_config("../../examples/spawn-and-move/Scarb.toml").unwrap();
 
-        let build_args =
-            BuildArgs { bindings_output: "generated".to_string(), typescript: true, unity: true };
+        let build_args = BuildArgs {
+            bindings_output: "generated".to_string(),
+            typescript: true,
+            unity: true,
+            typescript_v2: true,
+        };
         let result = build_args.run(&config);
         assert!(result.is_ok());
     }

@@ -19,7 +19,10 @@ jobs:
       # Workaround described here: https://github.com/actions/checkout/issues/760
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: cargo release version ${{ inputs.version }} --execute --no-confirm && cargo release replace --execute --no-confirm
+      - run: |
+          version=${{ inputs.version }}
+          version=${version#v}
+          cargo release version ${{ inputs.version }} --execute --no-confirm && cargo release replace --execute --no-confirm
       - id: version_info
         run: |
           cargo install cargo-get

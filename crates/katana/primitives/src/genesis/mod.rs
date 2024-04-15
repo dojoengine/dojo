@@ -42,8 +42,6 @@ pub struct FeeTokenConfig {
     pub address: ContractAddress,
     /// The decimals of the fee token.
     pub decimals: u8,
-    /// The total supply of the fee token.
-    pub total_supply: U256,
     /// The class hash of the fee token contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: ClassHash,
@@ -186,24 +184,13 @@ impl Genesis {
             states.state_updates.storage_updates.insert(address, storage);
         }
 
-        // TODO: put this in a separate function
-
         // insert fee token related data
         let mut fee_token_storage = self.fee_token.storage.clone().unwrap_or_default();
-
-        let name: FieldElement = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
-        let symbol: FieldElement = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
-        let decimals: FieldElement = self.fee_token.decimals.into();
-        let (total_supply_low, total_supply_high) = split_u256(self.fee_token.total_supply);
-
-        fee_token_storage.insert(ERC20_NAME_STORAGE_SLOT, name);
-        fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
-        fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
+        let mut fee_token_total_supply = U256::ZERO;
 
         for (address, alloc) in &self.allocations {
             if let Some(balance) = alloc.balance() {
+                fee_token_total_supply += balance;
                 let (low, high) = split_u256(balance);
 
                 // the base storage address for a standard ERC20 contract balance
@@ -218,6 +205,19 @@ impl Genesis {
                 fee_token_storage.insert(high_bal_storage_var, high);
             }
         }
+
+        // TODO: put this in a separate function
+
+        let name: FieldElement = cairo_short_string_to_felt(&self.fee_token.name).unwrap();
+        let symbol: FieldElement = cairo_short_string_to_felt(&self.fee_token.symbol).unwrap();
+        let decimals: FieldElement = self.fee_token.decimals.into();
+        let (total_supply_low, total_supply_high) = split_u256(fee_token_total_supply);
+
+        fee_token_storage.insert(ERC20_NAME_STORAGE_SLOT, name);
+        fee_token_storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
+        fee_token_storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
+        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
+        fee_token_storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into(), total_supply_high);
 
         states
             .state_updates
@@ -246,7 +246,6 @@ impl Default for Genesis {
             decimals: 18,
             name: "Ether".into(),
             symbol: "ETH".into(),
-            total_supply: U256::ZERO,
             address: DEFAULT_FEE_TOKEN_ADDRESS,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
             storage: None,
@@ -352,7 +351,6 @@ mod tests {
             address: DEFAULT_FEE_TOKEN_ADDRESS,
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
-            total_supply: U256::from_str("0x1a784379d99db42000000").unwrap(),
             decimals: 18,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
             storage: Some(HashMap::from([
@@ -420,12 +418,16 @@ mod tests {
             universal_deployer: Some(ud.clone()),
         };
 
-        // setup expected values
+        // setup expected storage values
 
         let name: FieldElement = cairo_short_string_to_felt(&fee_token.name).unwrap();
         let symbol: FieldElement = cairo_short_string_to_felt(&fee_token.symbol).unwrap();
         let decimals: FieldElement = fee_token.decimals.into();
-        let (total_supply_low, total_supply_high) = split_u256(fee_token.total_supply);
+
+        // there are only two allocations so the total token supply is
+        // 0xD3C21BCECCEDA1000000 * 2 = 0x1a784379d99db42000000
+        let (total_supply_low, total_supply_high) =
+            split_u256(U256::from_str("0x1a784379d99db42000000").unwrap());
 
         let mut fee_token_storage = HashMap::new();
         fee_token_storage.insert(ERC20_NAME_STORAGE_SLOT, name);
@@ -649,7 +651,7 @@ mod tests {
         assert_eq!(fee_token_storage.get(&felt!("0x111")), Some(&felt!("0x1")));
         assert_eq!(fee_token_storage.get(&felt!("0x222")), Some(&felt!("0x2")));
 
-        let mut actual_total_supply = U256::ZERO;
+        let mut allocs_total_supply = U256::ZERO;
 
         // check for balance
         for (address, alloc) in &allocations {
@@ -667,13 +669,24 @@ mod tests {
                 assert_eq!(fee_token_storage.get(&low_bal_storage_var), Some(&low));
                 assert_eq!(fee_token_storage.get(&high_bal_storage_var), Some(&high));
 
-                actual_total_supply += balance;
+                allocs_total_supply += balance;
             }
         }
 
+        // Check that the total supply is the sum of all balances in the allocations.
+        // Technically this is not necessary bcs we already checked the total supply in
+        // the fee token storage but it's a good sanity check.
+
+        let (actual_total_supply_low, actual_total_supply_high) = split_u256(allocs_total_supply);
         assert_eq!(
-            actual_total_supply, fee_token.total_supply,
-            "total supply should match the total balances of all allocations"
+            fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
+            Some(&actual_total_supply_low),
+            "total supply must be calculated from allocations balances correctly"
+        );
+        assert_eq!(
+            fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + 1u8.into())),
+            Some(&actual_total_supply_high),
+            "total supply must be calculated from allocations balances correctly"
         );
 
         let udc_storage =
