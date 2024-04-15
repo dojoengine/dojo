@@ -111,9 +111,28 @@ impl DbEnv {
 
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils {
-    use std::path::Path;
+    use super::*;
+    use crate::tables::v0::Tables as V0Tables;
 
-    use super::{DbEnv, DbEnvKind};
+    impl DbEnv {
+        /// Creates all the defined tables in [`Tables`], if necessary.
+        pub fn create_v0_tables(&self) -> Result<(), DatabaseError> {
+            let tx = self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
+
+            for table in V0Tables::ALL {
+                let flags = match table.table_type() {
+                    TableType::Table => DatabaseFlags::default(),
+                    TableType::DupSort => DatabaseFlags::DUP_SORT,
+                };
+
+                tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
+            }
+
+            tx.commit().map_err(DatabaseError::Commit)?;
+
+            Ok(())
+        }
+    }
 
     const ERROR_DB_CREATION: &str = "Not able to create the mdbx file.";
 
