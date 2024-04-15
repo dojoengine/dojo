@@ -7,7 +7,6 @@ use libmdbx::{TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
-use super::DbEnv;
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
 use crate::tables::{Schema, SchemaV1, Table, NUM_TABLES};
@@ -154,9 +153,36 @@ impl<S: Schema> Tx<RW, S> {
     ///
     /// # Safety
     ///
-    /// Caller must ensure all usages of the table have been stopped before calling this function.
+    /// Caller must ensure all usages of the table have been stopped before calling this method.
     pub unsafe fn drop_table<T: Table>(&self) -> Result<(), DatabaseError> {
         let db = self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?;
         self.inner.drop_db(db).map_err(|error| DatabaseError::DropTable { table: T::NAME, error })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        mdbx::{test_utils::create_test_db, DbEnvKind},
+        tables::{Headers, Table},
+    };
+
+    const ERROR_DROP_TABLE: &str = "Not able to drop table.";
+    const ERROR_INIT_TX: &str = "Failed to create a MDBX transaction.";
+
+    #[test]
+    fn db_table_drop() {
+        let env = create_test_db(DbEnvKind::RW);
+        let tx = env.tx_mut().expect(ERROR_INIT_TX);
+
+        // check that table initially exists
+        assert!(tx.inner.open_db(Some(Headers::NAME)).is_ok(), "Table should exist.");
+
+        unsafe {
+            tx.drop_table::<Headers>().expect(ERROR_DROP_TABLE);
+        }
+
+        // check that table must not exist after dropping
+        assert!(tx.inner.open_db(Some(Headers::NAME)).is_err(), "Table should be dropped.");
     }
 }
