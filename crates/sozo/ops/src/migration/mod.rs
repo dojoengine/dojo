@@ -220,18 +220,16 @@ async fn update_manifests_and_abis(
                     .find(|c| c.name == output.name)
                     .expect("contract got migrated, means it should be present here");
 
-                let salt = generate_salt(&local.name);
-                local.inner.address = Some(get_contract_address(
-                    salt,
-                    output.base_class_hash,
-                    &[],
-                    migration_output.world_address,
-                ));
-
                 local.inner.base_class_hash = output.base_class_hash;
             }
         });
     }
+
+    local_manifest.contracts.iter_mut().for_each(|contract| {
+        let salt = generate_salt(&contract.name);
+        contract.inner.address =
+            Some(get_contract_address(salt, contract.inner.base_class_hash, &[], world_address));
+    });
 
     // copy abi files from `abi/base` to `abi/deployments/{chain_id}` and update abi path in
     // local_manifest
@@ -923,7 +921,6 @@ where
 /// # Returns
 /// A [`ResourceData`] object to register in the Dojo resource register
 /// on success.
-///  
 async fn upload_on_ipfs_and_create_resource(
     ui: &Ui,
     element_name: String,
