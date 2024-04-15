@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713152983440,
+  "lastUpdate": 1713158838112,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5365,6 +5365,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17233039,
             "range": "± 72549",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jasper@codictive.be",
+            "name": "RareSecond",
+            "username": "RareSecond"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "017c0d14286512ec195e6b1f0cfff2cd18d4385b",
+          "message": "Add new TypeScript bindgen (#1783)\n\n* feat: added new bindgen with all types and utility functions\r\n\r\n* feat: removed bunch of extracted functions and extracted models to function\r\n\r\n* refactor: moved generating to main function to intertwine models and contracts\r\n\r\n* feat: generated system calls\r\n\r\n* cleanup: removed old contract generation code\r\n\r\n* feat: finished bindgen\r\n\r\n* refactor: renamed TypescriptNew to TypeScriptV2\r\n\r\n* Updated flag naming to typescript_v2\r\n\r\n* Fixed some build and layout issues\r\n\r\n* Fixed empty line in models\r\n\r\n* Renamed modules as well\r\n\r\n* Update crates/dojo-bindgen/src/plugins/typescript_v2/mod.rs\r\n\r\nCo-authored-by: glihm <dev@glihm.net>\r\n\r\n* Fixed formatting\r\n\r\n* Updated return values\r\n\r\n* Added query function to class\r\n\r\n* Added test for the generated file\r\n\r\n* Removed full file test for now until DojoData is sorted\r\n\r\n* Added comment\r\n\r\n* fix: move mocks to test_data\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-14T23:19:08-06:00",
+          "tree_id": "c0b6c3177a6b12434db48c80333d0b11dd7aaa36",
+          "url": "https://github.com/dojoengine/dojo/commit/017c0d14286512ec195e6b1f0cfff2cd18d4385b"
+        },
+        "date": 1713158837578,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17107632,
+            "range": "± 207605",
             "unit": "ns/iter"
           }
         ]
