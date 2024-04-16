@@ -579,7 +579,7 @@ mod world {
                 i += 1;
             };
             let program_output_hash = program_output_hasher.finalize();
-            // assert(program_output_hash == *program_output.at(5), 'wrong output hash');
+            assert(program_output_hash == *program_output.at(5), 'wrong output hash');
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
             assert(
                 IFactRegistryDispatcher {
