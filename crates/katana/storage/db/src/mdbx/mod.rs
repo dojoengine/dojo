@@ -109,7 +109,7 @@ impl<S: Schema> DbEnv<S> {
     /// committed in the end of the execution.
     pub fn view<T, F>(&self, f: F) -> Result<T, DatabaseError>
     where
-        F: FnOnce(&Tx<RO>) -> T,
+        F: FnOnce(&Tx<RO, S>) -> T,
     {
         let tx = self.tx()?;
         let res = f(&tx);

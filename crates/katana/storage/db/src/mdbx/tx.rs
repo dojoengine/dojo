@@ -57,7 +57,8 @@ where
         // the index is guaranteed to be in bounds by the schema only on current schema
         // version because we hardcode the size exactly for the number of tables in current db
         // schema. see `tables::v1::NUM_TABLES`.
-        let table = S::index::<T>().expect(&format!("table {} not found in schema", T::NAME));
+        let table =
+            S::index::<T>().unwrap_or_else(|| panic!("table {} not found in schema", T::NAME));
 
         let mut handles = self.db_handles.write();
         let dbi_handle = handles.get_mut(table).expect("should exist");
