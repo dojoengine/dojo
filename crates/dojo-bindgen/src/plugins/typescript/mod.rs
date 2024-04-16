@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
+use cainome::parser::tokens::Token;
 use cainome::parser::tokens::{Composite, CompositeType, Function};
 use convert_case::Casing;
 
@@ -247,23 +248,22 @@ export function defineContractComponents(world: World) {
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
+        fn map_type(token: &Token) -> String {
+            match token {
+                Token::CoreBasic(t) => TypescriptPlugin::map_type(&t.type_name())
+                .replace("RecsType.", "")
+                // types should be lowercased
+                .to_lowercase(),
+                Token::Composite(t) => t.type_name(),
+                Token::Array(t) => format!("{}[]", map_type(&t.inner)),
+                _ => panic!("Unsupported token type: {:?}", token),
+            }
+        }
+
         let args = system
             .inputs
             .iter()
-            .map(|arg| {
-                format!(
-                    "{}: {}",
-                    arg.0,
-                    if TypescriptPlugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
-                        format!("models.{}", arg.1.type_name())
-                    } else {
-                        TypescriptPlugin::map_type(&arg.1.type_name())
-                            .replace("RecsType.", "")
-                            // types should be lowercased
-                            .to_lowercase()
-                    }
-                )
-            })
+            .map(|arg| format!("{}: {}", arg.0, map_type(&arg.1)))
             .collect::<Vec<String>>()
             .join(", ");
 
