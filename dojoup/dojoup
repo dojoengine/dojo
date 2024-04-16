@@ -145,7 +145,7 @@ main() {
 
     echo $BIN_ARCHIVE_URL
 
-    # display message only if version is not mentioned by user
+    # Display message only if version is not mentioned by user.
     if [ ! -n "$DOJOUP_USER_VERSION" ]; then
       say "downloading latest dojo"
     fi
