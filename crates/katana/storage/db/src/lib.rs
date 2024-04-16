@@ -14,6 +14,7 @@ pub mod utils;
 pub mod version;
 
 use mdbx::{DbEnv, DbEnvKind};
+use tables::{Schema, Tables};
 use utils::is_database_empty;
 use version::{check_db_version, create_db_version_file, DatabaseVersionError, CURRENT_DB_VERSION};
 
@@ -22,6 +23,17 @@ use version::{check_db_version, create_db_version_file, DatabaseVersionError, CU
 ///
 /// This will create the default tables, if necessary.
 pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
+    init_db_with_schema::<Tables>(path)
+}
+
+/// Open the database at the given `path` in read-write mode.
+pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
+    DbEnv::open(path.as_ref(), DbEnvKind::RW).with_context(|| {
+        format!("Opening database in read-write mode at path {}", path.as_ref().display())
+    })
+}
+
+pub(crate) fn init_db_with_schema<S: Schema>(path: impl AsRef<Path>) -> anyhow::Result<DbEnv> {
     if is_database_empty(path.as_ref()) {
         fs::create_dir_all(&path).with_context(|| {
             format!("Creating database directory at path {}", path.as_ref().display())
@@ -47,13 +59,6 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
     let env = open_db(path)?;
     env.create_tables()?;
     Ok(env)
-}
-
-/// Open the database at the given `path` in read-write mode.
-pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
-    DbEnv::open(path.as_ref(), DbEnvKind::RW).with_context(|| {
-        format!("Opening database in read-write mode at path {}", path.as_ref().display())
-    })
 }
 
 #[cfg(test)]

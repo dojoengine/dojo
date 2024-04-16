@@ -12,8 +12,9 @@ pub const NUM_TABLES: usize = 22;
 
 // TODO(kariy): can we somehow define this without repeating existing tables, and only add the older
 // ones?
-define_tables_enum! {[
-    (Headers, TableType::Table),
+define_tables_enum! {
+    0,
+    [(Headers, TableType::Table),
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
     (BlockBodyIndices, TableType::Table),

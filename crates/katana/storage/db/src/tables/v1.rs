@@ -17,8 +17,9 @@ use super::{DupSort, Schema, Table, TableType};
 
 pub const NUM_TABLES: usize = 23;
 
-define_tables_enum! {[
-    (Headers, TableType::Table),
+define_tables_enum! {
+    1,
+    [(Headers, TableType::Table),
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
     (BlockBodyIndices, TableType::Table),

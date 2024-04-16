@@ -17,6 +17,8 @@ impl<T> Value for T where T: Compress + Decompress + std::fmt::Debug {}
 ///
 /// This trait is useful for us to maintain the schema for different database versions.
 pub trait Schema: Debug + Display + FromStr + 'static {
+    /// The version of the schema.
+    const VERSION: u32;
     /// Returns the list of tables in the schema.
     fn all() -> &'static [Self];
     /// The name of the tables.
@@ -55,7 +57,7 @@ pub enum TableType {
 /// Macro to declare database tables based on the [DatabaseTables] trait.
 #[macro_export]
 macro_rules! define_tables_enum {
-    { [$(($table:ident, $type:expr)),*] } => {
+    { $ver:expr, [$(($table:ident, $type:expr)),*] } => {
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub enum Tables {
             $(
@@ -64,6 +66,8 @@ macro_rules! define_tables_enum {
         }
 
         impl Schema for Tables {
+        	const VERSION: u32 = $ver;
+
             fn all() -> &'static [Self] {
 				&[$(Tables::$table,)*]
 			}
