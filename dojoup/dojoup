@@ -138,7 +138,7 @@ main() {
 
     # Check if the version mentioned by user exists in the Dojo repository.
     if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
-      say "Version ${DOJOUP_VERSION} does not exist at ${RELEASE_URL%/}"
+      say "Version ${DOJOUP_VERSION} does not match any release listed at https://github.com/dojoengine/dojo/releases."
       say "Please specify a valid version, or omit -v to install the latest stable version automatically."
       err "Aborting installation."
     fi
