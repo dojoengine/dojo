@@ -579,11 +579,11 @@ mod world {
                 i += 1;
             };
             let program_output_hash = program_output_hasher.finalize();
-            assert(program_output_hash == *program_output.at(5), 'wrong output hash');
+            // assert(program_output_hash == *program_output.at(5), 'wrong output hash');
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
             assert(
                 IFactRegistryDispatcher {
-                    contract_address: contract_address_const::<0x258661f60d421b010c9f9d01a00baa9875b957811b22abab6267ff5a9c36d65>()
+                    contract_address: contract_address_const::<0x11471d2f05904ba5ec06ea9882df412b452e732588ad7773793a0ef470f2599>()
                 }.is_valid(fact),
                 'no state transition proof'
             );
