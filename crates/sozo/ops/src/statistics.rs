@@ -92,17 +92,14 @@ mod tests {
 
     #[test]
     fn get_sierra_byte_code_size_returns_correct_size() {
-        // Arrange
         let sierra_json_file = File::open(TEST_SIERRA_JSON_CONTRACT)
             .unwrap_or_else(|err| panic!("Failed to open file: {}", err));
         let flattened_sierra_class = read_sierra_json_program(&sierra_json_file)
             .unwrap_or_else(|err| panic!("Failed to read JSON program: {}", err));
         const EXPECTED_NUMBER_OF_FELTS: u64 = 2175;
 
-        // Act
         let number_of_felts = get_sierra_byte_code_size(flattened_sierra_class);
 
-        // Assert
         assert_eq!(
             number_of_felts, EXPECTED_NUMBER_OF_FELTS,
             "Number of felts mismatch. Expected {}, got {}",
@@ -112,7 +109,6 @@ mod tests {
 
     #[test]
     fn get_contract_statistics_for_file_returns_correct_statistics() {
-        // Arrange
         let sierra_json_file = File::open(TEST_SIERRA_JSON_CONTRACT)
             .unwrap_or_else(|err| panic!("Failed to open file: {}", err));
         let contract_artifact = read_sierra_json_program(&sierra_json_file)
@@ -128,40 +124,32 @@ mod tests {
             file_size: 114925,
         };
 
-        // Act
         let statistics =
             get_contract_statistics_for_file(filename.clone(), sierra_json_file, contract_artifact)
                 .expect("Error getting contract statistics for file");
 
-        // Assert
         assert_eq!(statistics, expected_contract_statistics);
     }
 
     #[test]
     fn get_contract_statistics_for_dir_returns_correct_statistics() {
-        // Arrange
         let target_dir = Utf8PathBuf::from(TEST_SIERRA_FOLDER_CONTRACTS);
 
-        // Act
         let contract_statistics = get_contract_statistics_for_dir(&target_dir)
             .expect(format!("Error getting contracts in dir {target_dir}").as_str());
 
-        // Assert
         assert_eq!(contract_statistics.len(), 1, "Mismatch number of contract statistics");
     }
 
     #[test]
     fn get_file_size_returns_correct_size() {
-        // Arrange
         let sierra_json_file = File::open(TEST_SIERRA_JSON_CONTRACT)
             .unwrap_or_else(|err| panic!("Failed to open test file: {}", err));
         const EXPECTED_SIZE: u64 = 114925;
 
-        // Act
         let file_size = get_file_size(&sierra_json_file)
             .expect(format!("Error getting file size for test file").as_str());
 
-        // Assert
         assert_eq!(file_size, EXPECTED_SIZE, "File size mismatch");
     }
 
@@ -171,10 +159,8 @@ mod tests {
         let sierra_json_file = File::open(TEST_SIERRA_JSON_CONTRACT)
             .unwrap_or_else(|err| panic!("Failed to open test file: {}", err));
 
-        // Act
         let result = read_sierra_json_program(&sierra_json_file);
 
-        // Assert
         assert!(result.is_ok(), "Expected Ok result");
     }
 }

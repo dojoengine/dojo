@@ -32,7 +32,7 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        let compile_info: dojo_lang::scarb_internal::CompileInfo = compile_workspace(
+        let compile_info = compile_workspace(
             config,
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
         )?;
@@ -52,9 +52,8 @@ impl BuildArgs {
 
         if self.stats {
             let target_dir = &compile_info.target_dir;
-            let contracts_statistics: Vec<ContractStatistics> =
-                get_contract_statistics_for_dir(target_dir)
-                    .context(format!("Error getting contracts stats"))?;
+            let contracts_statistics = get_contract_statistics_for_dir(target_dir)
+                .context(format!("Error getting contracts stats"))?;
             let table = create_stats_table(contracts_statistics);
             table.printstd()
         }
@@ -85,7 +84,7 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
     table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
 
     // Add table headers
-    table.add_row(Row::new(vec![
+    table.set_titles(Row::new(vec![
         Cell::new_align("Contract", format::Alignment::CENTER),
         Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
         Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
@@ -154,7 +153,7 @@ mod tests {
 
         let mut expected_table = Table::new();
         expected_table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
-        expected_table.add_row(Row::new(vec![
+        expected_table.set_titles(Row::new(vec![
             Cell::new_align("Contract", format::Alignment::CENTER),
             Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
             Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
