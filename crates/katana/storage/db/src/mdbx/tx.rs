@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use libmdbx::ffi::DBI;
-use libmdbx::{TransactionKind, WriteFlags, RW};
+use libmdbx::{DatabaseFlags, TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
@@ -49,6 +49,12 @@ where
             .cursor_with_dbi(self.get_dbi::<T>()?)
             .map(Cursor::new)
             .map_err(DatabaseError::CreateCursor)
+    }
+
+    /// Creates a cursor to iterate over a table items.
+    pub fn cursor_unchecked<T: Table>(&self) -> Result<Cursor<K, T>, DatabaseError> {
+        let dbi = self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?.dbi();
+        self.inner.cursor_with_dbi(dbi).map(Cursor::new).map_err(DatabaseError::CreateCursor)
     }
 
     /// Gets a table database handle if it exists, otherwise creates it.
@@ -112,6 +118,10 @@ where
 }
 
 impl<S: Schema> Tx<RW, S> {
+    pub fn create_table<T: Table>(&self, flags: DatabaseFlags) -> Result<DBI, DatabaseError> {
+        Ok(self.inner.create_db(Some(T::NAME), flags).unwrap().dbi())
+    }
+
     /// Inserts an item into a database.
     ///
     /// This function stores key/data pairs in the database. The default behavior is to enter the
@@ -121,6 +131,18 @@ impl<S: Schema> Tx<RW, S> {
         let key = key.encode();
         let value = value.compress();
         self.inner.put(self.get_dbi::<T>()?, key, value, WriteFlags::UPSERT).unwrap();
+        Ok(())
+    }
+
+    pub fn put_unchecked<T: Table>(
+        &self,
+        key: T::Key,
+        value: T::Value,
+    ) -> Result<(), DatabaseError> {
+        let key = key.encode();
+        let value = value.compress();
+        let dbi = self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?.dbi();
+        self.inner.put(dbi, key, value, WriteFlags::UPSERT).unwrap();
         Ok(())
     }
 

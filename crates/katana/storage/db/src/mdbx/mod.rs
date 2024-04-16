@@ -79,20 +79,22 @@ impl<S: Schema> DbEnv<S> {
 
     /// Creates all the defined tables in [`Tables`], if necessary.
     pub fn create_tables(&self) -> Result<(), DatabaseError> {
-        let tx = self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
+        // let tx = self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
 
-        for table in dbg!(S::all()) {
-            let flags = match table.table_type() {
-                TableType::Table => DatabaseFlags::default(),
-                TableType::DupSort => DatabaseFlags::DUP_SORT,
-            };
+        // for table in dbg!(S::all()) {
+        //     let flags = match table.table_type() {
+        //         TableType::Table => DatabaseFlags::default(),
+        //         TableType::DupSort => DatabaseFlags::DUP_SORT,
+        //     };
 
-            tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
-        }
+        //     tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
+        // }
 
-        tx.commit().map_err(DatabaseError::Commit)?;
+        // tx.commit().map_err(DatabaseError::Commit)?;
 
-        Ok(())
+        // Ok(())
+
+        self.create_tables_from_schema::<S>()
     }
 
     /// Begin a read-only transaction.
@@ -127,6 +129,24 @@ impl<S: Schema> DbEnv<S> {
         let res = f(&tx);
         tx.commit()?;
         Ok(res)
+    }
+
+    /// Creates all the defined tables in [`Tables`], if necessary.
+    pub(crate) fn create_tables_from_schema<R: Schema>(&self) -> Result<(), DatabaseError> {
+        let tx = self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
+
+        for table in R::all() {
+            let flags = match table.table_type() {
+                TableType::Table => DatabaseFlags::default(),
+                TableType::DupSort => DatabaseFlags::DUP_SORT,
+            };
+
+            tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
+        }
+
+        tx.commit().map_err(DatabaseError::Commit)?;
+
+        Ok(())
     }
 }
 

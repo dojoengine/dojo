@@ -1,13 +1,21 @@
+use std::collections::HashMap;
+use std::fs;
+use std::hash::Hash;
 use std::path::Path;
 
 use anyhow::Context;
+use katana_primitives::contract::ContractAddress;
+use libmdbx::DatabaseFlags;
 
 use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
 use crate::models::storage::ContractStorageKey;
-use crate::version::{create_db_version_file, get_db_version, DatabaseVersionError};
-use crate::{open_db, tables, CURRENT_DB_VERSION};
+use crate::tables::v0::{SchemaV0, StorageEntryChangeList};
+use crate::version::{
+    create_db_version_file, get_db_version, remove_db_version_file, DatabaseVersionError,
+};
+use crate::{open_db, open_db_with_schema, tables, CURRENT_DB_VERSION};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseMigrationError {
@@ -34,13 +42,15 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
     let ver = get_db_version(&path)?;
 
     match ver {
-        0 => migrate_from_v0_to_v1(open_db(&path)?)?,
+        0 => migrate_from_v0_to_v1(open_db_with_schema(&path)?)?,
         _ => {
             return Err(DatabaseMigrationError::UnsupportedVersion(ver));
         }
     }
 
     // Update the db version to the current version
+
+    remove_db_version_file(&path)?;
     create_db_version_file(path, CURRENT_DB_VERSION).context("Updating database version file")?;
     Ok(())
 }
@@ -63,47 +73,70 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
 /// - Changed key type to [ContractStorageKey](crate::models::storage::ContractStorageKey).
 /// - Changed value type to [BlockList](crate::models::list::BlockList).
 ///
-fn migrate_from_v0_to_v1(env: DbEnv) -> Result<(), DatabaseMigrationError> {
-    env.create_tables()?;
+fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), DatabaseMigrationError> {
+    // env.create_tables_from_schema::<tables::SchemaV1>()?;
 
     env.update(|tx| {
         {
+            // store in a static file first before putting it back in the new table
+            // let file = tempfile().expect("able to create temp file");
+            // let file = LineWriter::new(file);
+
             let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
-            cursor.walk(None)?.try_for_each(|entry| {
-                let (old_key, old_val) = entry?;
-                let key = ContractStorageKey { contract_address: old_key, key: old_val.key };
-                tx.put::<tables::StorageChangeSet>(key, BlockList::from_iter(old_val.block_list))?;
+            let mut old_entries: HashMap<ContractAddress, Vec<StorageEntryChangeList>> =
+                HashMap::new();
+
+            cursor.walk(None)?.enumerate().try_for_each(|(i, entry)| {
+                let (key, val) = entry?;
+                dbg!(i, &key, &val);
+                old_entries.entry(key).or_default().push(val);
                 Result::<(), DatabaseError>::Ok(())
             })?;
 
+            drop(cursor);
+            unsafe {
+                tx.drop_table::<tables::v0::StorageChangeSet>()?;
+            }
+            tx.create_table::<tables::StorageChangeSet>(DatabaseFlags::default())?;
+
+            for (key, vals) in old_entries {
+                for val in vals {
+                    let key = ContractStorageKey { contract_address: key, key: val.key };
+                    let val = BlockList::from_iter(val.block_list);
+                    tx.put::<tables::StorageChangeSet>(key, val)?;
+                }
+            }
+
             // move data from `NonceChanges` to `NonceChangeHistory`
+            tx.create_table::<tables::NonceChangeHistory>(DatabaseFlags::DUP_SORT)?;
             let mut cursor = tx.cursor::<tables::v0::NonceChanges>()?;
             cursor.walk(None)?.try_for_each(|entry| {
                 let (key, val) = entry?;
-                tx.put::<tables::NonceChangeHistory>(key, val)?;
+                tx.put_unchecked::<tables::NonceChangeHistory>(key, val)?;
                 Result::<(), DatabaseError>::Ok(())
             })?;
 
+            tx.create_table::<tables::StorageChangeHistory>(DatabaseFlags::DUP_SORT)?;
             // move data from `StorageChanges` to `StorageChangeHistory`
             let mut cursor = tx.cursor::<tables::v0::StorageChanges>()?;
             cursor.walk(None)?.try_for_each(|entry| {
                 let (key, val) = entry?;
-                tx.put::<tables::StorageChangeHistory>(key, val)?;
+                tx.put_unchecked::<tables::StorageChangeHistory>(key, val)?;
                 Result::<(), DatabaseError>::Ok(())
             })?;
 
+            tx.create_table::<tables::ClassChangeHistory>(DatabaseFlags::DUP_SORT)?;
             // move data from `ContractClassChanges` to `ClassChangeHistory`
             let mut cursor = tx.cursor::<tables::v0::ContractClassChanges>()?;
             cursor.walk(None)?.try_for_each(|entry| {
                 let (key, val) = entry?;
-                tx.put::<tables::ClassChangeHistory>(key, val)?;
+                tx.put_unchecked::<tables::ClassChangeHistory>(key, val)?;
                 Result::<(), DatabaseError>::Ok(())
             })?;
         }
 
         // drop the old tables
         unsafe {
-            tx.drop_table::<tables::v0::StorageChangeSet>()?;
             tx.drop_table::<tables::v0::NonceChanges>()?;
             tx.drop_table::<tables::v0::StorageChanges>()?;
             tx.drop_table::<tables::v0::ContractClassChanges>()?;
@@ -126,7 +159,7 @@ mod tests {
     use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
     use crate::tables::v0::{self, StorageEntryChangeList};
-    use crate::{init_db, tables};
+    use crate::{init_db, open_db, tables};
 
     const ERROR_CREATE_TEMP_DIR: &str = "Failed to create temp dir.";
     const ERROR_MIGRATE_DB: &str = "Failed to migrate db.";
@@ -139,9 +172,9 @@ mod tests {
     }
 
     // TODO(kariy): create Arbitrary for database key/value types to easily create random test vectors
-    fn create_v0_test_db() -> (DbEnv<v0::Tables>, PathBuf) {
+    fn create_v0_test_db() -> (DbEnv<v0::SchemaV0>, PathBuf) {
         let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
-        let db = crate::init_db_with_schema::<v0::Tables>(&path).expect(ERROR_INIT_DB);
+        let db = crate::init_db_with_schema::<v0::SchemaV0>(&path).expect(ERROR_INIT_DB);
 
         db.update(|tx| {
             tx.put::<v0::NonceChanges>(
@@ -233,8 +266,10 @@ mod tests {
 
     #[test]
     fn migrate_from_v0() {
-        let (env, path) = create_v0_test_db();
-        let _ = migrate_db(path).expect(ERROR_MIGRATE_DB);
+        // we cant have multiple instances of the db open in the same process, so we drop here first before migrating
+        let (_, path) = create_v0_test_db();
+        let _ = migrate_db(&path).expect(ERROR_MIGRATE_DB);
+        let env = open_db(path).unwrap();
 
         env.view(|tx| {
             let mut cursor = tx.cursor::<tables::NonceChangeHistory>().unwrap();

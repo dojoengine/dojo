@@ -77,6 +77,12 @@ pub(super) fn default_version_file_path(path: &Path) -> PathBuf {
     path.join(DB_VERSION_FILE_NAME)
 }
 
+pub(super) fn remove_db_version_file(path: impl AsRef<Path>) -> Result<(), DatabaseVersionError> {
+    let path = path.as_ref();
+    let path = if path.is_dir() { default_version_file_path(path) } else { path.to_path_buf() };
+    fs::remove_file(path).map_err(DatabaseVersionError::Io)
+}
+
 #[cfg(test)]
 mod tests {
 
