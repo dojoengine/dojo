@@ -8,8 +8,8 @@ use starknet_crypto::FieldElement;
 
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
-    SubscribeModelsRequest, SubscribeModelsResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeModelsRequest,
+    SubscribeModelsResponse,
 };
 use crate::types::schema::Entity;
 use crate::types::{KeysClause, Query};
