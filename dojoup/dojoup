@@ -73,7 +73,7 @@ main() {
 
   DOJOUP_REPO=${DOJOUP_REPO-dojoengine/dojo}
 
-  # Store user specified version seperately
+  # Store user specified version seperately.
   DOJOUP_USER_VERSION=${DOJOUP_VERSION}
 
   # Install by downloading binaries
