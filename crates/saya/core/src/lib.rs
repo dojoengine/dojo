@@ -1,8 +1,11 @@
 //! Saya core library.
 
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
 
 use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
+use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
@@ -11,6 +14,7 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
+use starknet_crypto::poseidon_hash_many;
 use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
 use url::Url;
@@ -226,15 +230,20 @@ impl Saya {
         let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?;
         info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
+        let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
+        let ExtractOutputResult { program_output: _, program_output_hash } =
+            extract_output(&proof)?;
+        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        info!(target: "saya_core", expected_fact, "Expected fact.");
+
+        sleep(Duration::from_millis(5000));
+
         if let Some(world) = self.config.world_address {
             trace!(target: "saya_core", "Applying diffs {block_number}.");
             let ExtractOutputResult { program_output, program_output_hash: _ } =
-                extract_output(proof.clone()).unwrap();
-            let transaction_hash = starknet_os::starknet_apply_diffs(
-                new_program_input.da_as_calldata(world),
-                program_output,
-            )
-            .await?;
+                extract_output(&proof)?;
+            let transaction_hash =
+                starknet_os::starknet_apply_diffs(vec![], program_output).await?;
             info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
         }
 
@@ -259,13 +268,13 @@ impl From<starknet::providers::ProviderError> for error::Error {
 
 //     #[tokio::test]
 //     async fn test_herodotus_verify() {
-//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-//         let _tx = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await.unwrap();
+//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await?;
+//         let _tx = verify(proof, VerifierIdentifier::HerodotusStarknetSepolia).await?;
 //     }
 
 //     #[tokio::test]
 //     async fn test_local_verify() {
-//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await.unwrap();
-//         let _res = verify(proof, VerifierIdentifier::StoneLocal).await.unwrap();
+//         let proof = prove(EXAMPLE_STATE_DIFF.into(), ProverIdentifier::Stone).await?;
+//         let _res = verify(proof, VerifierIdentifier::StoneLocal).await?;
 //     }
 // }

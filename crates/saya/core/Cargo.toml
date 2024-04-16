@@ -16,7 +16,7 @@ saya-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
-cairo-proof-parser.workspace = true
+cairo-proof-parser = { git = "https://github.com/cartridge-gg/cairo-proof-parser", rev = "9e8922780f064d194b45caef36a72cc211f8348d" }
 cairo-vm.workspace = true
 convert_case.workspace = true
 flate2.workspace = true
@@ -31,6 +31,7 @@ serde_with.workspace = true
 starknet-types-core = { version = "0.0.9", default-features = false, features = [ "curve", "num-traits", "serde" ] }
 starknet.workspace = true
 starknet_api.workspace = true
+starknet-crypto = "0.6.2"
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
