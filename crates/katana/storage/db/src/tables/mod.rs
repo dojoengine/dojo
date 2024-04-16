@@ -15,7 +15,7 @@ impl<T> Value for T where T: Compress + Decompress + std::fmt::Debug {}
 
 /// Trait for defining the database schema.
 pub trait Schema: Debug + Display + FromStr + 'static {
-    /// The number of tables in the schema.
+    /// Returns the list of tables in the schema.
     fn all() -> &'static [Self];
     /// The name of the tables.
     fn name(&self) -> &str;
