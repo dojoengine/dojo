@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713202654786,
+  "lastUpdate": 1713240421629,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5515,6 +5515,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17011364,
             "range": "± 636978",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bhavyagosai4@gmail.com",
+            "name": "Bhavya Gosai",
+            "username": "bhavyagosai"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b44b5c643dda4e7c3234f066d8f0a943c0a6002",
+          "message": "fix: handle invalid version validation for installation script (#1840)\n\n* fix: handle script for invalid version\r\n\r\n* fix: display message only if user version is not specified\r\n\r\n* fix: identation\r\n\r\n* fix: further clarify user message\r\n\r\n* fix: reword invalid version\r\n\r\n* fix: punctuation\r\n\r\n* fix: punctuation\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-15T21:58:45-06:00",
+          "tree_id": "ff8278161b1d456138cb8fcc20c5c9768c0c6b5a",
+          "url": "https://github.com/dojoengine/dojo/commit/9b44b5c643dda4e7c3234f066d8f0a943c0a6002"
+        },
+        "date": 1713240421116,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17371280,
+            "range": "± 84309",
             "unit": "ns/iter"
           }
         ]
