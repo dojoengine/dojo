@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use cainome::parser::tokens::Token;
-use cainome::parser::tokens::{Composite, CompositeType, Function};
+use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 use convert_case::Casing;
 
 use crate::error::BindgenResult;
