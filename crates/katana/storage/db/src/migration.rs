@@ -124,10 +124,11 @@ mod tests {
     use super::tables::v0;
     use crate::mdbx::DbEnv;
     use crate::models::contract::{ContractClassChange, ContractNonceChange};
+    use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
     use crate::tables::v0::{ContractClassChanges, StorageEntryChangeList};
     use crate::version::create_db_version_file;
-    use crate::{init_db, open_db};
+    use crate::{init_db, open_db, tables};
 
     const ERROR_CREATE_TEMP_DIR: &str = "Failed to create temp dir.";
     const ERROR_MIGRATE_DB: &str = "Failed to migrate db.";
@@ -241,5 +242,43 @@ mod tests {
     fn migrate_from_v0() {
         let (env, path) = create_v0_test_db();
         let _ = migrate_db(path).expect(ERROR_MIGRATE_DB);
+
+        env.view(|tx| {
+            let mut cursor = tx.cursor::<tables::NonceChangeHistory>().unwrap();
+            let val1 = cursor.seek_by_key_subkey(1, felt!("0x1").into()).unwrap();
+            let val2 = cursor.seek_by_key_subkey(1, felt!("0x2").into()).unwrap();
+            let val3 = cursor.seek_by_key_subkey(3, felt!("0x3").into()).unwrap();
+
+            let exp_val1 = ContractNonceChange::new(felt!("0x1").into(), felt!("0x2"));
+            let exp_val2 = ContractNonceChange::new(felt!("0x2").into(), felt!("0x2"));
+            let exp_val3 = ContractNonceChange::new(felt!("0x3").into(), felt!("0x2"));
+            assert_eq!(val1, Some(exp_val1));
+            assert_eq!(val2, Some(exp_val2));
+            assert_eq!(val3, Some(exp_val3));
+
+            let mut cursor = tx.cursor::<tables::ClassChangeHistory>().unwrap();
+            let val1 = cursor.seek_by_key_subkey(1, felt!("0x1").into()).unwrap();
+            let val2 = cursor.seek_by_key_subkey(1, felt!("0x2").into()).unwrap();
+
+            let exp_val1 = ContractClassChange::new(felt!("0x1").into(), felt!("0x1"));
+            let exp_val2 = ContractClassChange::new(felt!("0x2").into(), felt!("0x1"));
+            assert_eq!(val1, Some(exp_val1));
+            assert_eq!(val2, Some(exp_val2));
+
+            let key1 = ContractStorageKey::new(felt!("0x1").into(), felt!("0x1"));
+            let key2 = ContractStorageKey::new(felt!("0x1").into(), felt!("0x2"));
+            let key3 = ContractStorageKey::new(felt!("0x2").into(), felt!("0x3"));
+            let val1 = tx.get::<tables::StorageChangeSet>(key1).unwrap();
+            let val2 = tx.get::<tables::StorageChangeSet>(key2).unwrap();
+            let val3 = tx.get::<tables::StorageChangeSet>(key3).unwrap();
+
+            let exp_val1 = BlockList::from([1, 2]);
+            let exp_val2 = BlockList::from([1, 3]);
+            let exp_val3 = BlockList::from([4, 5]);
+            assert_eq!(val1, Some(exp_val1));
+            assert_eq!(val2, Some(exp_val2));
+            assert_eq!(val3, Some(exp_val3));
+        })
+        .unwrap();
     }
 }

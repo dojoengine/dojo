@@ -40,6 +40,12 @@ pub struct ContractStorageKey {
     pub key: StorageKey,
 }
 
+impl ContractStorageKey {
+    pub fn new(contract_address: ContractAddress, key: StorageKey) -> Self {
+        Self { contract_address, key }
+    }
+}
+
 impl Encode for ContractStorageKey {
     type Encoded = [u8; 64];
     fn encode(self) -> Self::Encoded {

@@ -18,6 +18,12 @@ pub struct ContractClassChange {
     pub class_hash: ClassHash,
 }
 
+impl ContractClassChange {
+    pub fn new(contract_address: ContractAddress, class_hash: ClassHash) -> Self {
+        Self { contract_address, class_hash }
+    }
+}
+
 impl Compress for ContractClassChange {
     type Compressed = Vec<u8>;
     fn compress(self) -> Self::Compressed {
@@ -42,6 +48,12 @@ pub struct ContractNonceChange {
     pub contract_address: ContractAddress,
     /// The updated nonce value of `contract_address`.
     pub nonce: Nonce,
+}
+
+impl ContractNonceChange {
+    pub fn new(contract_address: ContractAddress, nonce: Nonce) -> Self {
+        Self { contract_address, nonce }
+    }
 }
 
 impl Compress for ContractNonceChange {
