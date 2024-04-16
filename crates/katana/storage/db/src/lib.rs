@@ -16,6 +16,7 @@ pub mod version;
 use mdbx::{DbEnv, DbEnvKind};
 use tables::Schema;
 use utils::is_database_empty;
+pub use version::CURRENT_DB_VERSION;
 use version::{check_db_version, create_db_version_file, DatabaseVersionError};
 
 /// Initialize the database at the given path and returning a handle to the its
