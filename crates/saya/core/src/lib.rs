@@ -15,7 +15,6 @@ use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use starknet_crypto::poseidon_hash_many;
-use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -218,14 +217,6 @@ impl Saya {
         .await?;
         info!(target: "saya_core", block_number, "Block proven.");
 
-        // save proof to file
-        tokio::fs::File::create(format!("proof_{}.json", block_number))
-            .await
-            .unwrap()
-            .write_all(proof.as_bytes())
-            .await
-            .unwrap();
-
         trace!(target: "saya_core", "Verifying block {block_number}.");
         let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?;
         info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
@@ -239,11 +230,14 @@ impl Saya {
         sleep(Duration::from_millis(5000));
 
         if let Some(world) = self.config.world_address {
+            let world_da = new_program_input.da_as_calldata(world);
+            let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
+            trace!(target: "saya_core", "World DA {world_da_printable:?}.");
             trace!(target: "saya_core", "Applying diffs {block_number}.");
             let ExtractOutputResult { program_output, program_output_hash: _ } =
                 extract_output(&proof)?;
             let transaction_hash =
-                starknet_os::starknet_apply_diffs(vec![], program_output).await?;
+                starknet_os::starknet_apply_diffs(world_da, program_output).await?;
             info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
         }
 
