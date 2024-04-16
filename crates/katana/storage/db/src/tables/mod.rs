@@ -14,6 +14,8 @@ impl<T> Key for T where T: Encode + Decode + Clone + std::fmt::Debug {}
 impl<T> Value for T where T: Compress + Decompress + std::fmt::Debug {}
 
 /// Trait for defining the database schema.
+///
+/// This trait is useful for us to maintain the schema for different database versions.
 pub trait Schema: Debug + Display + FromStr + 'static {
     /// Returns the list of tables in the schema.
     fn all() -> &'static [Self];
