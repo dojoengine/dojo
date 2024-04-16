@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::marker::PhantomData;
 
-use libmdbx::{self, TransactionKind, WriteFlags, RW};
+use libmdbx::{TransactionKind, WriteFlags, RW};
 
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;

@@ -1,10 +1,10 @@
 pub mod v0;
 mod v1;
 
-pub use self::v1::*;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
+pub use self::v1::*;
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 
 pub trait Key: Encode + Decode + Clone + std::fmt::Debug {}
@@ -25,6 +25,8 @@ pub trait Schema: Debug + Display + FromStr + 'static {
     fn name(&self) -> &str;
     /// The type of the tables.
     fn table_type(&self) -> TableType;
+
+    fn index<T: Table>() -> Option<usize>;
 }
 
 /// An asbtraction for a table.
@@ -54,27 +56,25 @@ pub enum TableType {
     DupSort,
 }
 
-/// Macro to declare database tables based on the [DatabaseTables] trait.
+/// Macro to declare database tables based on the [Database$name] trait.
 #[macro_export]
-macro_rules! define_tables_enum {
-    { $ver:expr, [$(($table:ident, $type:expr)),*] } => {
+macro_rules! define_schema_enum {
+    { $ver:expr, $name:ident, [$(($table:ident, $type:expr)),*] } => {
         #[derive(Debug, PartialEq, Copy, Clone)]
-        pub enum Tables {
+        pub enum $name {
             $(
                 $table,
             )*
         }
 
-        impl Schema for Tables {
+        impl Schema for $name {
         	const VERSION: u32 = $ver;
 
-            fn all() -> &'static [Self] {
-				&[$(Tables::$table,)*]
-			}
+            fn all() -> &'static [Self] { &[$($name::$table,)*] }
 
             fn name(&self) -> &str {
                 match self {
-                    $(Tables::$table => {
+                    $($name::$table => {
                         $table::NAME
                     },)*
                 }
@@ -82,26 +82,37 @@ macro_rules! define_tables_enum {
 
             fn table_type(&self) -> TableType {
                 match self {
-                    $(Tables::$table => {
+                    $($name::$table => {
                         $type
                     },)*
                 }
             }
+
+            fn index<T: Table>() -> Option<usize> {
+	            match T::NAME {
+	                $($table::NAME => {
+	                    Some($name::$table as usize)
+	                },)*
+	                _ => {
+	                    None
+	                }
+	            }
+            }
         }
 
-        impl std::fmt::Display for Tables {
+        impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.name())
             }
         }
 
-        impl std::str::FromStr for Tables {
+        impl std::str::FromStr for $name {
             type Err = String;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s {
                     $($table::NAME => {
-                        return Ok(Tables::$table)
+                        return Ok($name::$table)
                     },)*
                     _ => {
                         return Err(format!("unknown table `{s}`"))

@@ -1,6 +1,6 @@
 //! Transaction wrapper for libmdbx-sys.
 
-use std::str::FromStr;
+use std::marker::PhantomData;
 
 use libmdbx::ffi::DBI;
 use libmdbx::{TransactionKind, WriteFlags, RW};
@@ -9,29 +9,38 @@ use parking_lot::RwLock;
 use super::cursor::Cursor;
 use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
-use crate::tables::{Table, Tables, NUM_TABLES};
+use crate::tables::{Schema, SchemaV1, Table, NUM_TABLES};
 use crate::utils::decode_one;
 
-/// Alias for read-only transaction.
-pub type TxRO = Tx<libmdbx::RO>;
-/// Alias for read-write transaction.
-pub type TxRW = Tx<libmdbx::RW>;
+/// Alias for read-only transaction on the default schema.
+pub type TxRO = Tx<libmdbx::RO, SchemaV1>;
+/// Alias for read-write transaction on the default schema.
+pub type TxRW = Tx<libmdbx::RW, SchemaV1>;
 
 /// Database transaction.
 ///
 /// Wrapper for a `libmdbx` transaction.
 #[derive(Debug)]
-pub struct Tx<K: TransactionKind> {
+pub struct Tx<K: TransactionKind, S: Schema> {
     /// Libmdbx-sys transaction.
     inner: libmdbx::Transaction<K>,
+    /// Marker for the db schema.
+    _schema: std::marker::PhantomData<S>,
+    // the array size is hardcoded to the number of tables in current db version for now. ideally
+    // we could use the associated constant from the schema trait. but that would require the
+    // `generic_const_exprs`.
     /// Database table handle cache.
     db_handles: RwLock<[Option<DBI>; NUM_TABLES]>,
 }
 
-impl<K: TransactionKind> Tx<K> {
+impl<K, S> Tx<K, S>
+where
+    K: TransactionKind,
+    S: Schema,
+{
     /// Creates new `Tx` object with a `RO` or `RW` transaction.
     pub fn new(inner: libmdbx::Transaction<K>) -> Self {
-        Self { inner, db_handles: Default::default() }
+        Self { inner, _schema: PhantomData, db_handles: Default::default() }
     }
 
     /// Creates a cursor to iterate over a table items.
@@ -44,13 +53,18 @@ impl<K: TransactionKind> Tx<K> {
 
     /// Gets a table database handle if it exists, otherwise creates it.
     pub fn get_dbi<T: Table>(&self) -> Result<DBI, DatabaseError> {
-        let mut handles = self.db_handles.write();
-        let table = Tables::from_str(T::NAME).expect("requested table should be part of `Tables`.");
+        // SAFETY:
+        // the index is guaranteed to be in bounds by the schema only on current schema
+        // version because we hardcode the size exactly for the number of tables in current db
+        // schema. see `tables::v1::NUM_TABLES`.
+        let table = S::index::<T>().expect(&format!("table {} not found in schema", T::NAME));
 
-        let dbi_handle = handles.get_mut(table as usize).expect("should exist");
+        let mut handles = self.db_handles.write();
+        let dbi_handle = handles.get_mut(table).expect("should exist");
+
         if dbi_handle.is_none() {
-            *dbi_handle =
-                Some(self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?.dbi());
+            let dbi = self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?.dbi();
+            *dbi_handle = Some(dbi);
         }
 
         Ok(dbi_handle.expect("is some; qed"))
@@ -61,6 +75,22 @@ impl<K: TransactionKind> Tx<K> {
         let key = Encode::encode(key);
         self.inner
             .get(self.get_dbi::<T>()?, key.as_ref())
+            .map_err(DatabaseError::Read)?
+            .map(decode_one::<T>)
+            .transpose()
+    }
+
+    /// Gets a value from a table using the given key without checking if the table exist in the
+    /// schema.
+    pub fn get_unchecked<T: Table>(
+        &self,
+        key: T::Key,
+    ) -> Result<Option<<T as Table>::Value>, DatabaseError> {
+        let dbi = self.inner.open_db(Some(T::NAME)).map_err(DatabaseError::OpenDb)?.dbi();
+        let key = Encode::encode(key);
+
+        self.inner
+            .get(dbi, key.as_ref())
             .map_err(DatabaseError::Read)?
             .map(decode_one::<T>)
             .transpose()
@@ -80,7 +110,7 @@ impl<K: TransactionKind> Tx<K> {
     }
 }
 
-impl Tx<RW> {
+impl<S: Schema> Tx<RW, S> {
     /// Inserts an item into a database.
     ///
     /// This function stores key/data pairs in the database. The default behavior is to enter the

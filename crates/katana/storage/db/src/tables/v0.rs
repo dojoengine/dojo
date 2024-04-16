@@ -2,18 +2,18 @@ use katana_primitives::block::BlockNumber;
 use katana_primitives::contract::{ContractAddress, StorageKey};
 
 use super::*;
-use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::error::CodecError;
 use crate::models::contract::{ContractClassChange, ContractNonceChange};
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
-use crate::{define_tables_enum, dupsort, tables};
+use crate::{define_schema_enum, dupsort, tables};
 
 pub const NUM_TABLES: usize = 22;
 
 // TODO(kariy): can we somehow define this without repeating existing tables, and only add the older
 // ones?
-define_tables_enum! {
+define_schema_enum! {
     0,
+    SchemaV0,
     [(Headers, TableType::Table),
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),

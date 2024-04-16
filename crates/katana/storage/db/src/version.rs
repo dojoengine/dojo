@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use crate::tables::{self, Schema};
 
 /// The version of the latest database schema we're using.
-pub const CURRENT_DB_VERSION: u32 = tables::Tables::VERSION;
+pub const CURRENT_DB_VERSION: u32 = tables::SchemaV1::VERSION;
 
 /// Name of the version file.
 const DB_VERSION_FILE_NAME: &str = "db.version";

@@ -24,12 +24,12 @@ use version::{check_db_version, create_db_version_file, DatabaseVersionError};
 ///
 /// This will create the default tables, if necessary.
 pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
-    init_db_with_schema::<tables::Tables>(path)
+    init_db_with_schema::<tables::SchemaV1>(path)
 }
 
 /// Open the database at the given `path` in read-write mode.
 pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
-    open_db_with_schema::<tables::Tables>(path)
+    open_db_with_schema::<tables::SchemaV1>(path)
 }
 
 pub(crate) fn init_db_with_schema<S: Schema>(path: impl AsRef<Path>) -> anyhow::Result<DbEnv<S>> {

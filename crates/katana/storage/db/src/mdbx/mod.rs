@@ -11,7 +11,7 @@ use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMod
 
 use self::tx::Tx;
 use crate::error::DatabaseError;
-use crate::tables::{Schema, TableType, Tables};
+use crate::tables::{Schema, SchemaV1, TableType};
 use crate::utils;
 
 const GIGABYTE: usize = 1024 * 1024 * 1024;
@@ -31,7 +31,10 @@ pub enum DbEnvKind {
 
 /// Wrapper for `libmdbx-sys` environment.
 #[derive(Debug)]
-pub struct DbEnv<S: Schema = Tables> {
+pub struct DbEnv<S = SchemaV1>
+where
+    S: Schema,
+{
     inner: libmdbx::Environment,
     _tables: std::marker::PhantomData<S>,
 }
@@ -93,12 +96,12 @@ impl<S: Schema> DbEnv<S> {
     }
 
     /// Begin a read-only transaction.
-    pub fn tx(&self) -> Result<Tx<RO>, DatabaseError> {
+    pub fn tx(&self) -> Result<Tx<RO, S>, DatabaseError> {
         Ok(Tx::new(self.inner.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
     }
 
     /// Begin a read-write transaction.
-    pub fn tx_mut(&self) -> Result<Tx<RW>, DatabaseError> {
+    pub fn tx_mut(&self) -> Result<Tx<RW, S>, DatabaseError> {
         Ok(Tx::new(self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
 
@@ -106,7 +109,7 @@ impl<S: Schema> DbEnv<S> {
     /// committed in the end of the execution.
     pub fn update<T, F>(&self, f: F) -> Result<T, DatabaseError>
     where
-        F: FnOnce(&Tx<RW>) -> T,
+        F: FnOnce(&Tx<RW, S>) -> T,
     {
         let tx = self.tx_mut()?;
         let res = f(&tx);
@@ -118,6 +121,7 @@ impl<S: Schema> DbEnv<S> {
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils {
     use super::*;
+    use crate::tables;
 
     const ERROR_DB_CREATION: &str = "Not able to create the mdbx file.";
 
@@ -131,7 +135,7 @@ pub mod test_utils {
 
     /// Create database for testing with specified path
     pub fn create_test_db_with_path(kind: DbEnvKind, path: &Path) -> DbEnv {
-        let env = DbEnv::<Tables>::open(path, kind).expect(ERROR_DB_CREATION);
+        let env = DbEnv::<tables::SchemaV1>::open(path, kind).expect(ERROR_DB_CREATION);
         env.create_tables().expect("Failed to create tables.");
         env
     }

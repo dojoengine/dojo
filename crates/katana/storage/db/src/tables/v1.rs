@@ -7,18 +7,18 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber};
 
+use super::{DupSort, Schema, Table, TableType};
 use crate::models::block::StoredBlockBodyIndices;
 use crate::models::contract::{ContractClassChange, ContractInfoChangeList, ContractNonceChange};
 use crate::models::list::BlockList;
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey, StorageEntry};
-use crate::{define_tables_enum, dupsort, tables};
-
-use super::{DupSort, Schema, Table, TableType};
+use crate::{define_schema_enum, dupsort, tables};
 
 pub const NUM_TABLES: usize = 23;
 
-define_tables_enum! {
+define_schema_enum! {
     1,
+    SchemaV1,
     [(Headers, TableType::Table),
     (BlockHashes, TableType::Table),
     (BlockNumbers, TableType::Table),
@@ -108,54 +108,54 @@ mod tests {
     fn test_tables() {
         use super::*;
 
-        assert_eq!(Tables::all().len(), NUM_TABLES);
-        assert_eq!(Tables::all()[0].name(), Headers::NAME);
-        assert_eq!(Tables::all()[1].name(), BlockHashes::NAME);
-        assert_eq!(Tables::all()[2].name(), BlockNumbers::NAME);
-        assert_eq!(Tables::all()[3].name(), BlockBodyIndices::NAME);
-        assert_eq!(Tables::all()[4].name(), BlockStatusses::NAME);
-        assert_eq!(Tables::all()[5].name(), TxNumbers::NAME);
-        assert_eq!(Tables::all()[6].name(), TxBlocks::NAME);
-        assert_eq!(Tables::all()[7].name(), TxTraces::NAME);
-        assert_eq!(Tables::all()[8].name(), TxHashes::NAME);
-        assert_eq!(Tables::all()[9].name(), Transactions::NAME);
-        assert_eq!(Tables::all()[10].name(), Receipts::NAME);
-        assert_eq!(Tables::all()[11].name(), CompiledClassHashes::NAME);
-        assert_eq!(Tables::all()[12].name(), CompiledClasses::NAME);
-        assert_eq!(Tables::all()[13].name(), SierraClasses::NAME);
-        assert_eq!(Tables::all()[14].name(), ContractInfo::NAME);
-        assert_eq!(Tables::all()[15].name(), ContractStorage::NAME);
-        assert_eq!(Tables::all()[16].name(), ClassDeclarationBlock::NAME);
-        assert_eq!(Tables::all()[17].name(), ClassDeclarations::NAME);
-        assert_eq!(Tables::all()[18].name(), ContractInfoChangeSet::NAME);
-        assert_eq!(Tables::all()[19].name(), NonceChangeHistory::NAME);
-        assert_eq!(Tables::all()[20].name(), ClassChangeHistory::NAME);
-        assert_eq!(Tables::all()[21].name(), StorageChangeHistory::NAME);
-        assert_eq!(Tables::all()[22].name(), StorageChangeSet::NAME);
+        assert_eq!(SchemaV1::all().len(), NUM_TABLES);
+        assert_eq!(SchemaV1::all()[0].name(), Headers::NAME);
+        assert_eq!(SchemaV1::all()[1].name(), BlockHashes::NAME);
+        assert_eq!(SchemaV1::all()[2].name(), BlockNumbers::NAME);
+        assert_eq!(SchemaV1::all()[3].name(), BlockBodyIndices::NAME);
+        assert_eq!(SchemaV1::all()[4].name(), BlockStatusses::NAME);
+        assert_eq!(SchemaV1::all()[5].name(), TxNumbers::NAME);
+        assert_eq!(SchemaV1::all()[6].name(), TxBlocks::NAME);
+        assert_eq!(SchemaV1::all()[7].name(), TxTraces::NAME);
+        assert_eq!(SchemaV1::all()[8].name(), TxHashes::NAME);
+        assert_eq!(SchemaV1::all()[9].name(), Transactions::NAME);
+        assert_eq!(SchemaV1::all()[10].name(), Receipts::NAME);
+        assert_eq!(SchemaV1::all()[11].name(), CompiledClassHashes::NAME);
+        assert_eq!(SchemaV1::all()[12].name(), CompiledClasses::NAME);
+        assert_eq!(SchemaV1::all()[13].name(), SierraClasses::NAME);
+        assert_eq!(SchemaV1::all()[14].name(), ContractInfo::NAME);
+        assert_eq!(SchemaV1::all()[15].name(), ContractStorage::NAME);
+        assert_eq!(SchemaV1::all()[16].name(), ClassDeclarationBlock::NAME);
+        assert_eq!(SchemaV1::all()[17].name(), ClassDeclarations::NAME);
+        assert_eq!(SchemaV1::all()[18].name(), ContractInfoChangeSet::NAME);
+        assert_eq!(SchemaV1::all()[19].name(), NonceChangeHistory::NAME);
+        assert_eq!(SchemaV1::all()[20].name(), ClassChangeHistory::NAME);
+        assert_eq!(SchemaV1::all()[21].name(), StorageChangeHistory::NAME);
+        assert_eq!(SchemaV1::all()[22].name(), StorageChangeSet::NAME);
 
-        assert_eq!(Tables::Headers.table_type(), TableType::Table);
-        assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
-        assert_eq!(Tables::BlockNumbers.table_type(), TableType::Table);
-        assert_eq!(Tables::BlockBodyIndices.table_type(), TableType::Table);
-        assert_eq!(Tables::BlockStatusses.table_type(), TableType::Table);
-        assert_eq!(Tables::TxNumbers.table_type(), TableType::Table);
-        assert_eq!(Tables::TxBlocks.table_type(), TableType::Table);
-        assert_eq!(Tables::TxHashes.table_type(), TableType::Table);
-        assert_eq!(Tables::TxTraces.table_type(), TableType::Table);
-        assert_eq!(Tables::Transactions.table_type(), TableType::Table);
-        assert_eq!(Tables::Receipts.table_type(), TableType::Table);
-        assert_eq!(Tables::CompiledClassHashes.table_type(), TableType::Table);
-        assert_eq!(Tables::CompiledClasses.table_type(), TableType::Table);
-        assert_eq!(Tables::SierraClasses.table_type(), TableType::Table);
-        assert_eq!(Tables::ContractInfo.table_type(), TableType::Table);
-        assert_eq!(Tables::ContractStorage.table_type(), TableType::DupSort);
-        assert_eq!(Tables::ClassDeclarationBlock.table_type(), TableType::Table);
-        assert_eq!(Tables::ClassDeclarations.table_type(), TableType::DupSort);
-        assert_eq!(Tables::ContractInfoChangeSet.table_type(), TableType::Table);
-        assert_eq!(Tables::NonceChangeHistory.table_type(), TableType::DupSort);
-        assert_eq!(Tables::ClassChangeHistory.table_type(), TableType::DupSort);
-        assert_eq!(Tables::StorageChangeHistory.table_type(), TableType::DupSort);
-        assert_eq!(Tables::StorageChangeSet.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::Headers.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::BlockHashes.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::BlockNumbers.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::BlockBodyIndices.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::BlockStatusses.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::TxNumbers.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::TxBlocks.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::TxHashes.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::TxTraces.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::Transactions.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::Receipts.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::CompiledClassHashes.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::CompiledClasses.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::SierraClasses.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::ContractInfo.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::ContractStorage.table_type(), TableType::DupSort);
+        assert_eq!(SchemaV1::ClassDeclarationBlock.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::ClassDeclarations.table_type(), TableType::DupSort);
+        assert_eq!(SchemaV1::ContractInfoChangeSet.table_type(), TableType::Table);
+        assert_eq!(SchemaV1::NonceChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(SchemaV1::ClassChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(SchemaV1::StorageChangeHistory.table_type(), TableType::DupSort);
+        assert_eq!(SchemaV1::StorageChangeSet.table_type(), TableType::Table);
     }
 
     use katana_primitives::block::{BlockHash, BlockNumber, FinalityStatus, Header};
