@@ -127,14 +127,11 @@ mod tests {
     use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
     use crate::tables::v0::StorageEntryChangeList;
-    use crate::version::create_db_version_file;
-    use crate::{init_db, open_db, tables};
+    use crate::{init_db, tables};
 
     const ERROR_CREATE_TEMP_DIR: &str = "Failed to create temp dir.";
     const ERROR_MIGRATE_DB: &str = "Failed to migrate db.";
     const ERROR_INIT_DB: &str = "Failed to initialize db.";
-    const ERROR_CREATE_TABLES: &str = "Failed to create tables.";
-    const ERROR_CREATE_VER_FILE: &str = "Failed to create version file.";
 
     fn create_test_db() -> (DbEnv, PathBuf) {
         let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
@@ -145,10 +142,7 @@ mod tests {
     // TODO(kariy): create Arbitrary for database key/value types to easily create random test vectors
     fn create_v0_test_db() -> (DbEnv, PathBuf) {
         let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
-
-        let db = open_db(&path).expect(ERROR_INIT_DB);
-        let _ = db.create_v0_tables().expect(ERROR_CREATE_TABLES);
-        let _ = create_db_version_file(&path, 0).expect(ERROR_CREATE_VER_FILE);
+        let db = crate::init_db_with_schema::<tables::v0::Tables>(&path).expect(ERROR_INIT_DB);
 
         db.update(|tx| {
             tx.put::<v0::NonceChanges>(
