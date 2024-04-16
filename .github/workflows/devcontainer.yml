@@ -6,6 +6,8 @@ on:
       - ".devcontainer/**"
       - ".github/workflows/devcontainer.yml"
       - "!.devcontainer/devcontainer.json"
+  release:
+    types: [created]
 
 jobs:
   build-and-push:
@@ -56,6 +58,7 @@ jobs:
           tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
           build-args: |
             VARIANT=bookworm
+            DOJO_VERSION=${{ github.event_name == 'release' && github.event.release.tag_name || 'stable' }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 
@@ -85,8 +88,8 @@ jobs:
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
-          commit-message: "Update devcontainer image hash: ${{ needs.build-and-push.outputs.tag_name }}"
+          title: "Update devcontainer image: ${{ needs.build-and-push.outputs.tag_name }}"
+          commit-message: "Update devcontainer image: ${{ needs.build-and-push.outputs.tag_name }}"
           branch: bump-devcontainer
           base: main
           delete-branch: true
