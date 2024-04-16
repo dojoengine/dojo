@@ -15,14 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/dojoengine/dojo-dev:8d66222
+    env:
+      VERSION: ""
     steps:
       # Workaround described here: https://github.com/actions/checkout/issues/760
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: |
-          version=${{ inputs.version }}
-          version=${version#v}
-          cargo release version ${{ inputs.version }} --execute --no-confirm && cargo release replace --execute --no-confirm
+          VERSION=${{ inputs.version }}
+          VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          cargo release version ${{ env.VERSION }} --execute --no-confirm && cargo release replace --execute --no-confirm
       - id: version_info
         run: |
           cargo install cargo-get
