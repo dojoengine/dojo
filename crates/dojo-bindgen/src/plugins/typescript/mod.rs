@@ -257,7 +257,10 @@ export function defineContractComponents(world: World) {
                     if TypescriptPlugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
                         format!("models.{}", arg.1.type_name())
                     } else {
-                        TypescriptPlugin::map_type(&arg.1.type_name()).replace("RecsType.", "")
+                        TypescriptPlugin::map_type(&arg.1.type_name())
+                            .replace("RecsType.", "")
+                            // types should be lowercased
+                            .to_lowercase()
                     }
                 )
             })
