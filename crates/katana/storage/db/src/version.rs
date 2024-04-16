@@ -4,8 +4,10 @@ use std::io::{Read, Write};
 use std::mem;
 use std::path::{Path, PathBuf};
 
-/// Current version of the database.
-pub const CURRENT_DB_VERSION: u32 = 1;
+use crate::tables::{self, Schema};
+
+/// The version of the latest database schema we're using.
+pub const CURRENT_DB_VERSION: u32 = tables::Tables::VERSION;
 
 /// Name of the version file.
 const DB_VERSION_FILE_NAME: &str = "db.version";

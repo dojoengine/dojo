@@ -14,51 +14,54 @@ pub mod utils;
 pub mod version;
 
 use mdbx::{DbEnv, DbEnvKind};
-use tables::{Schema, Tables};
+use tables::Schema;
 use utils::is_database_empty;
-use version::{check_db_version, create_db_version_file, DatabaseVersionError, CURRENT_DB_VERSION};
+use version::{check_db_version, create_db_version_file, DatabaseVersionError};
 
 /// Initialize the database at the given path and returning a handle to the its
 /// environment.
 ///
 /// This will create the default tables, if necessary.
 pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
-    init_db_with_schema::<Tables>(path)
+    init_db_with_schema::<tables::Tables>(path)
 }
 
 /// Open the database at the given `path` in read-write mode.
 pub fn open_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbEnv> {
-    DbEnv::open(path.as_ref(), DbEnvKind::RW).with_context(|| {
-        format!("Opening database in read-write mode at path {}", path.as_ref().display())
-    })
+    open_db_with_schema::<tables::Tables>(path)
 }
 
-pub(crate) fn init_db_with_schema<S: Schema>(path: impl AsRef<Path>) -> anyhow::Result<DbEnv> {
+pub(crate) fn init_db_with_schema<S: Schema>(path: impl AsRef<Path>) -> anyhow::Result<DbEnv<S>> {
     if is_database_empty(path.as_ref()) {
         fs::create_dir_all(&path).with_context(|| {
             format!("Creating database directory at path {}", path.as_ref().display())
         })?;
-        create_db_version_file(&path, CURRENT_DB_VERSION).with_context(|| {
+        create_db_version_file(&path, S::VERSION).with_context(|| {
             format!("Inserting database version file at path {}", path.as_ref().display())
         })?
     } else {
         match check_db_version(&path) {
             Ok(_) => {}
-            Err(DatabaseVersionError::FileNotFound) => {
-                create_db_version_file(&path, CURRENT_DB_VERSION).with_context(|| {
+            Err(DatabaseVersionError::FileNotFound) => create_db_version_file(&path, S::VERSION)
+                .with_context(|| {
                     format!(
                         "No database version file found. Inserting version file at path {}",
                         path.as_ref().display()
                     )
-                })?
-            }
+                })?,
             Err(err) => return Err(anyhow!(err)),
         }
     }
 
-    let env = open_db(path)?;
+    let env = open_db_with_schema::<S>(path)?;
     env.create_tables()?;
     Ok(env)
+}
+
+fn open_db_with_schema<S: Schema>(path: impl AsRef<Path>) -> anyhow::Result<DbEnv<S>> {
+    DbEnv::<S>::open(path.as_ref(), DbEnvKind::RW).with_context(|| {
+        format!("Opening database in read-write mode at path {}", path.as_ref().display())
+    })
 }
 
 #[cfg(test)]
