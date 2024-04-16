@@ -92,18 +92,6 @@ impl<S: Schema> DbEnv<S> {
         Ok(Tx::new(self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
 
-    /// Takes a function and passes a read-only transaction into it, making sure it's always
-    /// committed in the end of the execution.
-    pub fn view<T, F>(&self, f: F) -> Result<T, DatabaseError>
-    where
-        F: FnOnce(&Tx<RO, S>) -> T,
-    {
-        let tx = self.tx()?;
-        let res = f(&tx);
-        tx.commit()?;
-        Ok(res)
-    }
-
     /// Takes a function and passes a read-write transaction into it, making sure it's always
     /// committed in the end of the execution.
     pub fn update<T, F>(&self, f: F) -> Result<T, DatabaseError>
