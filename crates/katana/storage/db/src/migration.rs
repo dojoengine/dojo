@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 
 use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
@@ -30,7 +30,7 @@ pub enum DatabaseMigrationError {
 /// Database migration can only be done on a supported older version of the database schema,
 /// meaning not all older versions can be migrated from.
 pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError> {
-    // check that the db version is supported, otherwise return an error
+    // check that the db version is supported
     let ver = get_db_version(&path)?;
 
     match ver {
@@ -46,6 +46,23 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
 }
 
 /// Perform migration for database version 0 to version 1.
+///
+/// # Changelog from v0 to v1
+///
+/// 1. [ContractClassChanges](tables::v0::ContractClassChanges)
+/// - Renamed to [ClassChangeHistory](tables::ClassCh
+///
+/// 2. [StorageChanges](tables::v0::StorageChanges)
+/// - Renamed to [StorageChangeHistory](tables::StorageChangeHistory)
+///
+/// 3. [NonceChanges](tables::v0::NonceChanges)
+/// - Renamed to [NonceChangeHistory](tables::NonceChangeHistory)
+///
+/// 4. [StorageChangeSet](tables::v0::StorageChangeSet)
+/// - Changed table type from dupsort to normal table.
+/// - Changed key type to [ContractStorageKey](crate::models::storage::ContractStorageKey).
+/// - Changed value type to [BlockList](crate::models::list::BlockList).
+///
 fn migrate_from_v0_to_v1(env: DbEnv) -> Result<(), DatabaseMigrationError> {
     env.create_tables()?;
 
@@ -101,8 +118,13 @@ mod tests {
 
     use std::path::PathBuf;
 
+    use starknet::macros::felt;
+
     use super::migrate_db;
+    use super::tables::v0;
     use crate::mdbx::DbEnv;
+    use crate::models::contract::ContractNonceChange;
+    use crate::tables::v0::StorageEntryChangeList;
     use crate::version::create_db_version_file;
     use crate::{init_db, open_db};
 
@@ -118,12 +140,54 @@ mod tests {
         (db, path)
     }
 
+    // TODO(kariy): create Arbitrary for database key/value types to easily create random test vectors
     fn create_v0_test_db() -> (DbEnv, PathBuf) {
         let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
 
         let db = open_db(&path).expect(ERROR_INIT_DB);
         let _ = db.create_v0_tables().expect(ERROR_CREATE_TABLES);
         let _ = create_db_version_file(&path, 0).expect(ERROR_CREATE_VER_FILE);
+
+        db.update(|tx| {
+            tx.put::<v0::StorageChangeSet>(
+                felt!("0x1").into(),
+                StorageEntryChangeList { key: felt!("0x1"), block_list: vec![1, 2] },
+            )
+            .unwrap();
+            tx.put::<v0::StorageChangeSet>(
+                felt!("0x1").into(),
+                StorageEntryChangeList { key: felt!("0x2"), block_list: vec![1, 3] },
+            )
+            .unwrap();
+            tx.put::<v0::StorageChangeSet>(
+                felt!("0x2").into(),
+                StorageEntryChangeList { key: felt!("0x3"), block_list: vec![4, 5] },
+            )
+            .unwrap();
+
+            tx.put::<v0::NonceChanges>(
+                1,
+                ContractNonceChange { contract_address: felt!("0x1").into(), nonce: felt!("0x2") },
+            )
+            .unwrap();
+            tx.put::<v0::NonceChanges>(
+                1,
+                ContractNonceChange { contract_address: felt!("0x2").into(), nonce: felt!("0x2") },
+            )
+            .unwrap();
+            tx.put::<v0::NonceChanges>(
+                3,
+                ContractNonceChange { contract_address: felt!("0x3").into(), nonce: felt!("0x2") },
+            )
+            .unwrap();
+
+            tx.put::<v0::NonceChanges>(
+                1,
+                ContractNonceChange { contract_address: felt!("0x1").into(), nonce: felt!("0x2") },
+            )
+            .unwrap();
+        })
+        .expect(ERROR_INIT_DB);
 
         (db, path)
     }
