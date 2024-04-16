@@ -11,7 +11,7 @@ use libmdbx::{DatabaseFlags, EnvironmentFlags, Geometry, Mode, PageSize, SyncMod
 
 use self::tx::Tx;
 use crate::error::DatabaseError;
-use crate::tables::{TableType, Tables};
+use crate::tables::{Schema, TableType, Tables};
 use crate::utils;
 
 const GIGABYTE: usize = 1024 * 1024 * 1024;
@@ -31,13 +31,16 @@ pub enum DbEnvKind {
 
 /// Wrapper for `libmdbx-sys` environment.
 #[derive(Debug)]
-pub struct DbEnv(libmdbx::Environment);
+pub struct DbEnv<S: Schema = Tables> {
+    inner: libmdbx::Environment,
+    _tables: std::marker::PhantomData<S>,
+}
 
-impl DbEnv {
+impl<S: Schema> DbEnv<S> {
     /// Opens the database at the specified path with the given `EnvKind`.
     ///
     /// It does not create the tables, for that call [`DbEnv::create_tables`].
-    pub fn open(path: impl AsRef<Path>, kind: DbEnvKind) -> Result<DbEnv, DatabaseError> {
+    pub fn open(path: impl AsRef<Path>, kind: DbEnvKind) -> Result<DbEnv<S>, DatabaseError> {
         let mode = match kind {
             DbEnvKind::RO => Mode::ReadOnly,
             DbEnvKind::RW => Mode::ReadWrite { sync_mode: SyncMode::Durable },
@@ -45,7 +48,7 @@ impl DbEnv {
 
         let mut builder = libmdbx::Environment::builder();
         builder
-            .set_max_dbs(Tables::ALL.len())
+            .set_max_dbs(S::all().len())
             .set_geometry(Geometry {
                 // Maximum database size of 1 terabytes
                 size: Some(0..(TERABYTE)),
@@ -65,14 +68,17 @@ impl DbEnv {
             })
             .set_max_readers(DEFAULT_MAX_READERS);
 
-        Ok(DbEnv(builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?))
+        Ok(DbEnv {
+            inner: builder.open(path.as_ref()).map_err(DatabaseError::OpenEnv)?,
+            _tables: std::marker::PhantomData,
+        })
     }
 
     /// Creates all the defined tables in [`Tables`], if necessary.
     pub fn create_tables(&self) -> Result<(), DatabaseError> {
-        let tx = self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
+        let tx = self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
 
-        for table in Tables::ALL {
+        for table in S::all() {
             let flags = match table.table_type() {
                 TableType::Table => DatabaseFlags::default(),
                 TableType::DupSort => DatabaseFlags::DUP_SORT,
@@ -88,12 +94,12 @@ impl DbEnv {
 
     /// Begin a read-only transaction.
     pub fn tx(&self) -> Result<Tx<RO>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
+        Ok(Tx::new(self.inner.begin_ro_txn().map_err(DatabaseError::CreateROTx)?))
     }
 
     /// Begin a read-write transaction.
     pub fn tx_mut(&self) -> Result<Tx<RW>, DatabaseError> {
-        Ok(Tx::new(self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
+        Ok(Tx::new(self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?))
     }
 
     /// Takes a function and passes a read-write transaction into it, making sure it's always
@@ -112,27 +118,6 @@ impl DbEnv {
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils {
     use super::*;
-    use crate::tables::v0::Tables as V0Tables;
-
-    impl DbEnv {
-        /// Creates all the defined tables in [`Tables`], if necessary.
-        pub fn create_v0_tables(&self) -> Result<(), DatabaseError> {
-            let tx = self.0.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
-
-            for table in V0Tables::ALL {
-                let flags = match table.table_type() {
-                    TableType::Table => DatabaseFlags::default(),
-                    TableType::DupSort => DatabaseFlags::DUP_SORT,
-                };
-
-                tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
-            }
-
-            tx.commit().map_err(DatabaseError::Commit)?;
-
-            Ok(())
-        }
-    }
 
     const ERROR_DB_CREATION: &str = "Not able to create the mdbx file.";
 
@@ -146,7 +131,7 @@ pub mod test_utils {
 
     /// Create database for testing with specified path
     pub fn create_test_db_with_path(kind: DbEnvKind, path: &Path) -> DbEnv {
-        let env = DbEnv::open(path, kind).expect(ERROR_DB_CREATION);
+        let env = DbEnv::<Tables>::open(path, kind).expect(ERROR_DB_CREATION);
         env.create_tables().expect("Failed to create tables.");
         env
     }

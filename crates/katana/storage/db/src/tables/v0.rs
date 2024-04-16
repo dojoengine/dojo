@@ -8,6 +8,8 @@ use crate::models::contract::{ContractClassChange, ContractNonceChange};
 use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
 use crate::{define_tables_enum, dupsort, tables};
 
+pub const NUM_TABLES: usize = 22;
+
 // TODO(kariy): can we somehow define this without repeating existing tables, and only add the older
 // ones?
 define_tables_enum! {[
