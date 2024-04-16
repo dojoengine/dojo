@@ -24,11 +24,11 @@ use starknet::signers::{LocalWallet, SigningKey};
 use tokio::time::sleep;
 use url::Url;
 // will need to be read from the environment for chains other than sepoia
-pub const STARKNET_URL: &str = "https://free-rpc.nethermind.io/sepolia-juno/v0_6";
+pub const STARKNET_URL: &str = "https://free-rpc.nethermind.io/sepolia-juno/v0_7";
 pub const CHAIN_ID: &str = "0x00000000000000000000000000000000000000000000534e5f5345504f4c4941";
 pub const SIGNER_ADDRESS: &str =
-    "0x76372bcb1d993b9ab059e542a93004962fb70d743b0f10e611df9ffe13c6d64";
-pub const SIGNER_KEY: &str = "0x710d3218ae70bf7ec580c620ec81e601a6258ceec2494c4261f916f42667000";
+    "0x00ceE714eAF27390e630c62aa4b51319f9EdA813d6DDd12dA0ae8Ce00453cb4b";
+pub const SIGNER_KEY: &str = "0x01c49f9a0f5d2ca87fe7bb0530c611f91faf4adda6b7fcff479ce92ea13b1b4c";
 
 lazy_static::lazy_static!(
     pub static ref STARKNET_ACCOUNT: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> = {
@@ -42,7 +42,7 @@ lazy_static::lazy_static!(
         let address = FieldElement::from_hex_be(SIGNER_ADDRESS).expect("invalid signer address");
         let chain_id = FieldElement::from_hex_be(CHAIN_ID).expect("invalid chain id");
 
-        let mut account = SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::Legacy);
+        let mut account = SingleOwnerAccount::new(provider, signer, address, chain_id, ExecutionEncoding::New);
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
         account
     };
@@ -54,24 +54,31 @@ pub async fn starknet_apply_diffs(
 ) -> anyhow::Result<String> {
     let calldata = chain![
         vec![FieldElement::from_dec_str(&new_state.len().to_string()).unwrap()].into_iter(),
-        new_state.into_iter(),
+        new_state.clone().into_iter(),
         vec![FieldElement::from_dec_str(&program_output.len().to_string()).unwrap()].into_iter(),
         program_output.into_iter()
     ]
-    .collect();
+    .collect::<Vec<FieldElement>>();
+
+    println!("new state: {:?}", new_state);
+
+    let x: Vec<String> = calldata.iter().map(|x| x.to_string()).collect::<Vec<String>>();
+    println!("calldata: {:?}", x);
 
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: FieldElement::from_hex_be(
-                "0x4c4e3d09d5db141773381a11dff7259b99283cc9c6558705cb955f919b2af36",
+                "0x7bebcdec9000528645bbe2736004a99ae438274747ae242755cb14a944008a9",
             )
             .expect("invalid world address"),
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
-            calldata: calldata,
+            calldata,
         }])
-        .max_fee(starknet::macros::felt!("1000000000000000")) // sometimes failing without this line 
         .send()
-        .await?;
+        .await
+        .unwrap();
+
+    println!("tx hash: {:#x}", tx.transaction_hash);
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);

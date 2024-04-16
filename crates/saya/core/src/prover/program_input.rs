@@ -135,7 +135,7 @@ impl ProgramInput {
     }
 
     pub fn da_as_calldata(&self, world: FieldElement) -> Vec<FieldElement> {
-        let mut updates = self
+        let updates = self
             .state_updates
             .storage_updates
             .get(&ContractAddress::from(world))
@@ -145,7 +145,6 @@ impl ProgramInput {
             .flatten()
             .collect::<Vec<_>>();
 
-        updates.insert(0, FieldElement::from(updates.len()));
         updates
     }
 }
