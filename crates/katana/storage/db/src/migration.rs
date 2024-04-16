@@ -121,12 +121,11 @@ mod tests {
     use starknet::macros::felt;
 
     use super::migrate_db;
-    use super::tables::v0;
     use crate::mdbx::DbEnv;
     use crate::models::contract::{ContractClassChange, ContractNonceChange};
     use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
-    use crate::tables::v0::StorageEntryChangeList;
+    use crate::tables::v0::{self, StorageEntryChangeList};
     use crate::{init_db, tables};
 
     const ERROR_CREATE_TEMP_DIR: &str = "Failed to create temp dir.";
@@ -140,9 +139,9 @@ mod tests {
     }
 
     // TODO(kariy): create Arbitrary for database key/value types to easily create random test vectors
-    fn create_v0_test_db() -> (DbEnv, PathBuf) {
+    fn create_v0_test_db() -> (DbEnv<v0::Tables>, PathBuf) {
         let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
-        let db = crate::init_db_with_schema::<tables::v0::Tables>(&path).expect(ERROR_INIT_DB);
+        let db = crate::init_db_with_schema::<v0::Tables>(&path).expect(ERROR_INIT_DB);
 
         db.update(|tx| {
             tx.put::<v0::NonceChanges>(

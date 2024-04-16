@@ -81,7 +81,7 @@ impl<S: Schema> DbEnv<S> {
     pub fn create_tables(&self) -> Result<(), DatabaseError> {
         let tx = self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
 
-        for table in S::all() {
+        for table in dbg!(S::all()) {
             let flags = match table.table_type() {
                 TableType::Table => DatabaseFlags::default(),
                 TableType::DupSort => DatabaseFlags::DUP_SORT,
