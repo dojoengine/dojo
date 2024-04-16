@@ -123,8 +123,9 @@ mod tests {
     use super::migrate_db;
     use super::tables::v0;
     use crate::mdbx::DbEnv;
-    use crate::models::contract::ContractNonceChange;
-    use crate::tables::v0::StorageEntryChangeList;
+    use crate::models::contract::{ContractClassChange, ContractNonceChange};
+    use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
+    use crate::tables::v0::{ContractClassChanges, StorageEntryChangeList};
     use crate::version::create_db_version_file;
     use crate::{init_db, open_db};
 
@@ -149,22 +150,6 @@ mod tests {
         let _ = create_db_version_file(&path, 0).expect(ERROR_CREATE_VER_FILE);
 
         db.update(|tx| {
-            tx.put::<v0::StorageChangeSet>(
-                felt!("0x1").into(),
-                StorageEntryChangeList { key: felt!("0x1"), block_list: vec![1, 2] },
-            )
-            .unwrap();
-            tx.put::<v0::StorageChangeSet>(
-                felt!("0x1").into(),
-                StorageEntryChangeList { key: felt!("0x2"), block_list: vec![1, 3] },
-            )
-            .unwrap();
-            tx.put::<v0::StorageChangeSet>(
-                felt!("0x2").into(),
-                StorageEntryChangeList { key: felt!("0x3"), block_list: vec![4, 5] },
-            )
-            .unwrap();
-
             tx.put::<v0::NonceChanges>(
                 1,
                 ContractNonceChange { contract_address: felt!("0x1").into(), nonce: felt!("0x2") },
@@ -181,9 +166,59 @@ mod tests {
             )
             .unwrap();
 
-            tx.put::<v0::NonceChanges>(
+            tx.put::<v0::ContractClassChanges>(
                 1,
-                ContractNonceChange { contract_address: felt!("0x1").into(), nonce: felt!("0x2") },
+                ContractClassChange {
+                    contract_address: felt!("0x1").into(),
+                    class_hash: felt!("0x1"),
+                },
+            )
+            .unwrap();
+            tx.put::<v0::ContractClassChanges>(
+                1,
+                ContractClassChange {
+                    contract_address: felt!("0x2").into(),
+                    class_hash: felt!("0x1"),
+                },
+            )
+            .unwrap();
+
+            tx.put::<v0::StorageChangeSet>(
+                felt!("0x1").into(),
+                StorageEntryChangeList { key: felt!("0x1"), block_list: vec![1, 2] },
+            )
+            .unwrap();
+            tx.put::<v0::StorageChangeSet>(
+                felt!("0x1").into(),
+                StorageEntryChangeList { key: felt!("0x2"), block_list: vec![1, 3] },
+            )
+            .unwrap();
+            tx.put::<v0::StorageChangeSet>(
+                felt!("0x2").into(),
+                StorageEntryChangeList { key: felt!("0x3"), block_list: vec![4, 5] },
+            )
+            .unwrap();
+
+            tx.put::<v0::StorageChanges>(
+                1,
+                ContractStorageEntry {
+                    key: ContractStorageKey {
+                        contract_address: felt!("0x1").into(),
+                        key: felt!("0x1"),
+                    },
+                    value: felt!("0x1"),
+                },
+            )
+            .unwrap();
+            tx.put::<v0::StorageChanges>(
+                3,
+                ContractStorageEntry {
+                    key: ContractStorageKey {
+                        contract_address: felt!("0x1").into(),
+                        key: felt!("0x2"),
+                    },
+                    value: felt!("0x2"),
+                },
             )
             .unwrap();
         })
