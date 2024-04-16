@@ -126,7 +126,7 @@ mod tests {
     use crate::models::contract::{ContractClassChange, ContractNonceChange};
     use crate::models::list::BlockList;
     use crate::models::storage::{ContractStorageEntry, ContractStorageKey};
-    use crate::tables::v0::{ContractClassChanges, StorageEntryChangeList};
+    use crate::tables::v0::StorageEntryChangeList;
     use crate::version::create_db_version_file;
     use crate::{init_db, open_db, tables};
 
