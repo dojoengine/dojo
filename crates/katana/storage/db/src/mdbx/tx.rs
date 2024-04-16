@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use libmdbx::ffi::DBI;
-use libmdbx::{DatabaseFlags, TransactionKind, WriteFlags, RW};
+use libmdbx::{TransactionKind, WriteFlags, RW};
 use parking_lot::RwLock;
 
 use super::cursor::Cursor;
@@ -23,7 +23,7 @@ pub type TxRW = Tx<libmdbx::RW, SchemaV1>;
 #[derive(Debug)]
 pub struct Tx<K: TransactionKind, S: Schema> {
     /// Libmdbx-sys transaction.
-    inner: libmdbx::Transaction<K>,
+    pub(crate) inner: libmdbx::Transaction<K>,
     /// Marker for the db schema.
     _schema: std::marker::PhantomData<S>,
     // the array size is hardcoded to the number of tables in current db version for now. ideally
@@ -118,10 +118,6 @@ where
 }
 
 impl<S: Schema> Tx<RW, S> {
-    pub fn create_table<T: Table>(&self, flags: DatabaseFlags) -> Result<DBI, DatabaseError> {
-        Ok(self.inner.create_db(Some(T::NAME), flags).unwrap().dbi())
-    }
-
     /// Inserts an item into a database.
     ///
     /// This function stores key/data pairs in the database. The default behavior is to enter the

@@ -11,11 +11,12 @@ use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
 use crate::models::storage::ContractStorageKey;
-use crate::tables::v0::{SchemaV0, StorageEntryChangeList};
+use crate::tables::v0::StorageEntryChangeList;
+use crate::tables::Table;
 use crate::version::{
     create_db_version_file, get_db_version, remove_db_version_file, DatabaseVersionError,
 };
-use crate::{open_db, open_db_with_schema, tables, CURRENT_DB_VERSION};
+use crate::{open_db_with_schema, tables, CURRENT_DB_VERSION};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseMigrationError {
@@ -76,6 +77,14 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
 fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), DatabaseMigrationError> {
     // env.create_tables_from_schema::<tables::SchemaV1>()?;
 
+    macro_rules! create_table {
+        ($tx:expr, $table:ty, $flags:expr) => {
+            $tx.inner.create_db(Some(<$table as Table>::NAME), $flags).map_err(|error| {
+                DatabaseError::CreateTable { table: <$table as Table>::NAME, error }
+            })?;
+        };
+    }
+
     env.update(|tx| {
         {
             // store in a static file first before putting it back in the new table
@@ -97,7 +106,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
             unsafe {
                 tx.drop_table::<tables::v0::StorageChangeSet>()?;
             }
-            tx.create_table::<tables::StorageChangeSet>(DatabaseFlags::default())?;
+            create_table!(tx, tables::StorageChangeSet, DatabaseFlags::default());
 
             for (key, vals) in old_entries {
                 for val in vals {
@@ -108,7 +117,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
             }
 
             // move data from `NonceChanges` to `NonceChangeHistory`
-            tx.create_table::<tables::NonceChangeHistory>(DatabaseFlags::DUP_SORT)?;
+            create_table!(tx, tables::NonceChangeHistory, DatabaseFlags::DUP_SORT);
             let mut cursor = tx.cursor::<tables::v0::NonceChanges>()?;
             cursor.walk(None)?.try_for_each(|entry| {
                 let (key, val) = entry?;
@@ -116,7 +125,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
                 Result::<(), DatabaseError>::Ok(())
             })?;
 
-            tx.create_table::<tables::StorageChangeHistory>(DatabaseFlags::DUP_SORT)?;
+            create_table!(tx, tables::StorageChangeHistory, DatabaseFlags::DUP_SORT);
             // move data from `StorageChanges` to `StorageChangeHistory`
             let mut cursor = tx.cursor::<tables::v0::StorageChanges>()?;
             cursor.walk(None)?.try_for_each(|entry| {
@@ -125,7 +134,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
                 Result::<(), DatabaseError>::Ok(())
             })?;
 
-            tx.create_table::<tables::ClassChangeHistory>(DatabaseFlags::DUP_SORT)?;
+            create_table!(tx, tables::ClassChangeHistory, DatabaseFlags::DUP_SORT);
             // move data from `ContractClassChanges` to `ClassChangeHistory`
             let mut cursor = tx.cursor::<tables::v0::ContractClassChanges>()?;
             cursor.walk(None)?.try_for_each(|entry| {

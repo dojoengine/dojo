@@ -79,21 +79,6 @@ impl<S: Schema> DbEnv<S> {
 
     /// Creates all the defined tables in [`Tables`], if necessary.
     pub fn create_tables(&self) -> Result<(), DatabaseError> {
-        // let tx = self.inner.begin_rw_txn().map_err(DatabaseError::CreateRWTx)?;
-
-        // for table in dbg!(S::all()) {
-        //     let flags = match table.table_type() {
-        //         TableType::Table => DatabaseFlags::default(),
-        //         TableType::DupSort => DatabaseFlags::DUP_SORT,
-        //     };
-
-        //     tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
-        // }
-
-        // tx.commit().map_err(DatabaseError::Commit)?;
-
-        // Ok(())
-
         self.create_tables_from_schema::<S>()
     }
 
@@ -141,7 +126,9 @@ impl<S: Schema> DbEnv<S> {
                 TableType::DupSort => DatabaseFlags::DUP_SORT,
             };
 
-            tx.create_db(Some(table.name()), flags).map_err(DatabaseError::CreateTable)?;
+            let name = table.name();
+            tx.create_db(Some(name), flags)
+                .map_err(|error| DatabaseError::CreateTable { table: name, error })?;
         }
 
         tx.commit().map_err(DatabaseError::Commit)?;

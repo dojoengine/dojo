@@ -6,8 +6,8 @@ pub enum DatabaseError {
     #[error(transparent)]
     Codec(#[from] CodecError),
 
-    #[error("failed to create db table: {0}")]
-    CreateTable(libmdbx::Error),
+    #[error("failed to create db table '{table}': {error}")]
+    CreateTable { table: &'static str, error: libmdbx::Error },
 
     #[error("failed to commit db transaction: {0}")]
     Commit(libmdbx::Error),
