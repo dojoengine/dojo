@@ -60,15 +60,10 @@ pub async fn starknet_apply_diffs(
     ]
     .collect::<Vec<FieldElement>>();
 
-    println!("new state: {:?}", new_state);
-
-    let x: Vec<String> = calldata.iter().map(|x| x.to_string()).collect::<Vec<String>>();
-    println!("calldata: {:?}", x);
-
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: FieldElement::from_hex_be(
-                "0x7bebcdec9000528645bbe2736004a99ae438274747ae242755cb14a944008a9",
+                "0x6175092ce3189deeaac393167067afb88ff9ad25ea4fdc278dbdf4c1ed9cf30",
             )
             .expect("invalid world address"),
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
@@ -77,8 +72,6 @@ pub async fn starknet_apply_diffs(
         .send()
         .await
         .unwrap();
-
-    println!("tx hash: {:#x}", tx.transaction_hash);
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);
