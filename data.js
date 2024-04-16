@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713240421629,
+  "lastUpdate": 1713255848567,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5545,6 +5545,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17371280,
             "range": "± 84309",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c0548a4d382ae81d75784c95c88f8b8f97cd8ec2",
+          "message": "fix(katana-runner): expected module path in json logs (#1842)\n\nfix: expected module path in json logs",
+          "timestamp": "2024-04-16T16:16:01+08:00",
+          "tree_id": "a21d40b9ffbb289d229505d22e5f75302721016d",
+          "url": "https://github.com/dojoengine/dojo/commit/c0548a4d382ae81d75784c95c88f8b8f97cd8ec2"
+        },
+        "date": 1713255848023,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16854008,
+            "range": "± 143986",
             "unit": "ns/iter"
           }
         ]
