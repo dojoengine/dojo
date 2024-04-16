@@ -24,8 +24,7 @@ jobs:
       - run: |
           VERSION=${{ inputs.version }}
           VERSION=${VERSION#v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          cargo release version ${{ env.VERSION }} --execute --no-confirm && cargo release replace --execute --no-confirm
+          cargo release version $VERSION --execute --no-confirm && cargo release replace --execute --no-confirm
       - id: version_info
         run: |
           cargo install cargo-get
