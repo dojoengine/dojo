@@ -568,18 +568,20 @@ mod world {
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
         fn upgrade_state(ref self: ContractState, new_state: Span<felt252>, program_output: Span<felt252>) {
-            let program_hash = 2885402680125272674507425218982735911081064423300562598159673897356937612416;
-            let mut program_output_hasher = PedersenImpl::new(0);
+            let program_hash = 18468145346606952491117791430885172818429658569709932865894865254677766952;
+            let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
             loop {
                 if i == new_state.len() {
                     break;
                 }
-                program_output_hasher = program_output_hasher.update(*new_state.at(i));
+                da_hasher = da_hasher.update(*new_state.at(i));
                 i += 1;
             };
-            let program_output_hash = program_output_hasher.finalize();
-            assert(program_output_hash == *program_output.at(5), 'wrong output hash');
+            let da_hash = da_hasher.finalize();
+            assert(da_hash == *program_output.at(5), 'wrong output hash');
+
+            let program_output_hash = poseidon_hash_span(program_output);
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
             assert(
                 IFactRegistryDispatcher {

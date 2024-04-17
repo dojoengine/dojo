@@ -198,13 +198,9 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
-        // println!("Program input: {}", new_program_input.serialize(self.config.world_address)?);
-
-        // let to_prove = ProvedStateDiff {
-        //     genesis_state_hash,
-        //     prev_state_hash: prev_block.header.header.state_root,
-        //     state_updates: state_updates_to_prove,
-        // };
+        let world_da = new_program_input.da_as_calldata(self.config.world_address);
+        let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
+        trace!(target: "saya_core", "World DA {world_da_printable:?}.");
 
         trace!(target: "saya_core", "Proving block {block_number}.");
         let proof =
@@ -228,9 +224,6 @@ impl Saya {
 
         sleep(Duration::from_millis(5000));
 
-        let world_da = new_program_input.da_as_calldata(self.config.world_address);
-        let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
-        trace!(target: "saya_core", "World DA {world_da_printable:?}.");
         trace!(target: "saya_core", "Applying diffs {block_number}.");
         let ExtractOutputResult { program_output, program_output_hash: _ } =
             extract_output(&proof)?;
