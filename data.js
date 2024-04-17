@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713282484394,
+  "lastUpdate": 1713369891147,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5665,6 +5665,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17208865,
             "range": "± 226834",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "fabrobles92@gmail.com",
+            "name": "Fabricio Robles",
+            "username": "fabrobles92"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b7eab85ad342b670b8a1c5069ea12524e32cdf4d",
+          "message": "feat(sozo): add `--stats` flag to output stats of the build artifacts (#1799)\n\n* Showing number of felts and size in bytes per built contract\r\n\r\n* Creation of statistics.rs file and move some of the logic to compute statistics.\r\n\r\n* Refactor moving more logic to statistics.rs\r\n\r\n* 1- Creation of starknet_constants.json file\r\n2- Print stats method in build.rs\r\n3- Compare_agains_limit in statistics.rs\r\n\r\n* Some fixes mentioned by clippy and rust_fmt.sh\r\n\r\n* Delete limit/comparison logic and output\r\n\r\n* Add unit tests\r\n\r\n* Move statistics to crates/sozo/ops/src and Use scarb print method\r\n\r\n* Applying all PR recomendations\r\n\r\n* Create table to output stats for contracts\r\n\r\n* Apply Code review recommendations in error handling and style nits\r\n\r\n* Fix unit test\r\n\r\n* - Delete Act Arrange Assert comments\r\n- Let compiler infer types",
+          "timestamp": "2024-04-17T23:56:11+08:00",
+          "tree_id": "aad6d09efb5ba6732ccf09df2601bd0d9f9ed8b3",
+          "url": "https://github.com/dojoengine/dojo/commit/b7eab85ad342b670b8a1c5069ea12524e32cdf4d"
+        },
+        "date": 1713369890408,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17246335,
+            "range": "± 40410",
             "unit": "ns/iter"
           }
         ]
