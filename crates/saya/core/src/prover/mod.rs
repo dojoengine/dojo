@@ -26,6 +26,8 @@ pub enum ProverIdentifier {
     Stone,
     Sharp,
     Platinum,
+    #[cfg(test)]
+    Dummy,
 }
 
 pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<String> {
@@ -33,6 +35,11 @@ pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<St
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Stone => prove_stone(input).await,
         ProverIdentifier::Platinum => todo!(),
+        #[cfg(test)]
+        ProverIdentifier::Dummy => {
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            Ok("dummy ok".to_string())
+        }
     }
 }
 

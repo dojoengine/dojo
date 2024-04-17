@@ -136,6 +136,8 @@ impl Saya {
                 .collect::<Vec<_>>();
 
             let mut processed = Vec::with_capacity(params.len());
+            // Updating the local state sequentially, as there is only one instance of `self.blockchain`
+            // This part does no actual  proving, so should not be a problem
             for p in params.clone() {
                 let prover_input = self.process_block(block, p).await?;
                 if let Some(input) = prover_input {
@@ -144,6 +146,7 @@ impl Saya {
                 block += 1;
             }
 
+            // Prove each of the leaf nodes of the recursion tree and merge them into one
             let proof = prove_recursively(processed, self.config.prover).await?;
             println!("Proof: {}", proof);
         }
@@ -169,7 +172,7 @@ impl Saya {
         &mut self,
         block_number: BlockNumber,
         blocks: (SealedBlock, FieldElement, FieldElement),
-    ) -> SayaResult<Option<ProgramInput>> {
+    ) -> SayaResult<Option<ProverInput>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
         let (block, prev_state_root, _genesis_state_hash) = blocks;
@@ -211,7 +214,7 @@ impl Saya {
         let (message_to_starknet_segment, message_to_appchain_segment) =
             extract_messages(&exec_infos, transactions);
 
-        let new_program_input = ProgramInput {
+        let state_diff_prover_input = ProverInput {
             prev_state_root,
             block_number,
             block_hash: block.block.header.hash,
@@ -257,7 +260,7 @@ impl Saya {
 
         trace!(target: LOG_TARGET, "Processed block {block_number}.");
 
-        println!("Program input: {}", new_program_input.serialize()?);
+        println!("Program input: {}", state_diff_prover_input.serialize()?);
 
         // let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
 
@@ -265,7 +268,7 @@ impl Saya {
         // let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?; // TODO: If we use scheduler this part is only needed at the end of proving
         // info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
-        Ok(Some(new_program_input))
+        Ok(Some(state_diff_prover_input))
     }
 }
 
