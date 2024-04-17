@@ -4,7 +4,6 @@ use std::mem;
 use std::path::Path;
 
 use anyhow::{anyhow, Context};
-
 use libmdbx::DatabaseFlags;
 use tempfile::NamedTempFile;
 use tracing::trace;
@@ -14,9 +13,8 @@ use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
 use crate::models::storage::ContractStorageKey;
-use crate::tables::Schema;
-use crate::tables::Table;
-use crate::tables::{v0::SchemaV0, SchemaV1};
+use crate::tables::v0::SchemaV0;
+use crate::tables::{Schema, SchemaV1, Table};
 use crate::version::{
     create_db_version_file, get_db_version, remove_db_version_file, DatabaseVersionError,
 };
@@ -84,7 +82,6 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
 /// - Changed table type from dupsort to normal table.
 /// - Changed key type to [ContractStorageKey](crate::models::storage::ContractStorageKey).
 /// - Changed value type to [BlockList](crate::models::list::BlockList).
-///
 #[tracing::instrument(target = "katana::db", skip(env))]
 fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), DatabaseMigrationError> {
     macro_rules! create_table {
@@ -339,7 +336,8 @@ mod tests {
         (db, path)
     }
 
-    // TODO(kariy): create Arbitrary for database key/value types to easily create random test vectors
+    // TODO(kariy): create Arbitrary for database key/value types to easily create random test
+    // vectors
     fn create_v0_test_db() -> (DbEnv<v0::SchemaV0>, PathBuf) {
         let path = tempfile::TempDir::new().expect(ERROR_CREATE_TEMP_DIR).into_path();
         let db = crate::init_db_with_schema::<v0::SchemaV0>(&path).expect(ERROR_INIT_DB);
@@ -388,7 +386,8 @@ mod tests {
 
     #[test]
     fn migrate_from_v0() {
-        // we cant have multiple instances of the db open in the same process, so we drop here first before migrating
+        // we cant have multiple instances of the db open in the same process, so we drop here first
+        // before migrating
         let (_, path) = create_v0_test_db();
         let _ = migrate_db(&path).expect(ERROR_MIGRATE_DB);
         let env = open_db(path).unwrap();
