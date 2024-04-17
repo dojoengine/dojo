@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::io::{self, BufReader, Read, Seek, SeekFrom, Write};
+use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::marker::PhantomData;
 use std::path::Path;
 
 use anyhow::Context;
@@ -97,14 +98,15 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
     env.update(|tx| {
         {
             let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
-            let mut old_entries: HashMap<ContractAddress, Vec<StorageEntryChangeList>> =
-                HashMap::new();
+            let mut yeeter = Yeeter::<tables::v0::StorageChangeSet>::new();
 
-            cursor.walk(None)?.enumerate().try_for_each(|(i, entry)| {
+            cursor.walk(None)?.try_for_each(|entry| {
                 let (key, val) = entry?;
-                old_entries.entry(key).or_default().push(val);
+                yeeter.push(key, val);
                 Result::<(), DatabaseError>::Ok(())
             })?;
+
+            yeeter.flush()?;
 
             drop(cursor);
             unsafe {
@@ -112,12 +114,11 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
             }
             create_table!(tx, tables::StorageChangeSet, DatabaseFlags::default());
 
-            for (key, vals) in old_entries {
-                for val in vals {
-                    let key = ContractStorageKey { contract_address: key, key: val.key };
-                    let val = BlockList::from_iter(val.block_list);
-                    tx.put::<tables::StorageChangeSet>(key, val)?;
-                }
+            for entry in yeeter.iter() {
+                let (key, val) = entry?;
+                let key = ContractStorageKey { contract_address: key, key: val.key };
+                let val = BlockList::from_iter(val.block_list);
+                tx.put::<tables::StorageChangeSet>(key, val)?;
             }
 
             // move data from `NonceChanges` to `NonceChangeHistory`
@@ -169,6 +170,10 @@ struct Yeeter<T: Table> {
 }
 
 impl<T: Table> Yeeter<T> {
+    fn new() -> Self {
+        Self { files: Vec::new(), buffer: Vec::new() }
+    }
+
     fn push(&mut self, key: T::Key, value: T::Value) {
         self.buffer.push((key.encode(), value.compress()));
     }
@@ -180,37 +185,27 @@ impl<T: Table> Yeeter<T> {
         self.files.push(YeeterFile::new(buffer)?);
         Ok(())
     }
+
+    fn iter(&mut self) -> YeeterIter<T> {
+        YeeterIter { files: &mut self.files, index: (0, 0), _table: PhantomData }
+    }
 }
 
-// impl IntoIterator for Yeeter<T> {
-//     type Item = Result<(T::Key, T::Value), io::Error>;
-//     type IntoIter = YeeterIter<'a, T>;
-
-//     fn into_iter(self) -> Self::IntoIter {
-//         YeeterIter { yeeter: self, index: (0, 0) }
-//     }
-// }
-
 struct YeeterIter<'a, T: Table> {
-    yeeter: &'a mut Yeeter<T>,
+    files: &'a mut Vec<YeeterFile>,
     index: (usize, usize), // (file, entry)
+    _table: PhantomData<T>,
 }
 
 impl<T: Table> Iterator for YeeterIter<'_, T> {
     type Item = Result<(T::Key, T::Value), io::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index.0 >= self.yeeter.files.len() {
+        if self.index.0 >= self.files.len() {
             return None;
         }
 
-        let file = &mut self.yeeter.files[self.index.0];
-        if self.index.1 >= file.len {
-            self.index.0 += 1; // move to the next file
-            self.index.1 = 0; // reset the entry index
-            return self.next();
-        }
-
+        let file = &mut self.files[self.index.0];
         match file.read_next() {
             Ok(Some((key_buf, value_buf))) => {
                 let key = <T::Key as Decode>::decode(&key_buf).unwrap();
@@ -220,7 +215,13 @@ impl<T: Table> Iterator for YeeterIter<'_, T> {
 
                 Some(Ok((key, value)))
             }
-            Ok(None) => None,
+
+            Ok(None) => {
+                self.index.0 += 1; // move to the next file
+                self.index.1 = 0; // reset the entry index
+                return self.next();
+            }
+
             Err(error) => Some(Err(error)),
         }
     }
@@ -239,8 +240,8 @@ impl YeeterFile {
         K: AsRef<[u8]>,
         V: AsRef<[u8]>,
     {
-        let mut file = NamedTempFile::new()?;
-        let mut len = 0;
+        let mut file = BufWriter::new(NamedTempFile::new()?);
+        let len = buf.len();
 
         for (key, val) in buf {
             let key = key.as_ref();
@@ -251,15 +252,14 @@ impl YeeterFile {
 
             file.write_all(&key_size)?;
             file.write_all(&val_size)?;
-            file.write_all(&key)?;
-            file.write_all(&val)?;
-
-            len += 1;
+            file.write_all(key)?;
+            file.write_all(val)?;
         }
 
+        let mut file = BufReader::new(file.into_inner()?);
         // reset the file cursor to the beginning
         file.seek(SeekFrom::Start(0))?;
-        Ok(Self { file: BufReader::new(file), len })
+        Ok(Self { file, len })
     }
 
     fn read_next(&mut self) -> Result<Option<(Vec<u8>, Vec<u8>)>, io::Error> {
@@ -275,8 +275,9 @@ impl YeeterFile {
         self.file.read_exact(&mut value_size)?;
 
         // read the key and value
-        let mut key = Vec::with_capacity(u64::from_be_bytes(key_size) as usize);
-        let mut value = Vec::with_capacity(u64::from_be_bytes(value_size) as usize);
+
+        let mut key = vec![0; u64::from_be_bytes(key_size) as usize];
+        let mut value = vec![0; u64::from_be_bytes(value_size) as usize];
         self.file.read_exact(&mut key)?;
         self.file.read_exact(&mut value)?;
 
