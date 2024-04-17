@@ -234,7 +234,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             "type InitialParams = GeneralParams &
     (
         | {{
-                rpcUrl: string;
+                rpcUrl?: string;
                 worldAddress: string;
                 {system_addresses}
             }}
@@ -249,8 +249,8 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         let mut out = String::new();
 
         out += "type GeneralParams = {
-    toriiUrl: string;
-    relayUrl: string;
+    toriiUrl?: string;
+    relayUrl?: string;
     account?: Account;
 };";
 
@@ -346,15 +346,16 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
         if (\"manifest\" in params) {{
             const config = createManifestFromJson(params.manifest);
             this.worldAddress = config.world.address;
+            this.rpcUrl = config.world.metadata.rpc_url;
 
             {system_address_initializations}
         }} else {{
-            this.rpcUrl = params.rpcUrl;
+            this.rpcUrl = params.rpcUrl || LOCAL_KATANA;
             this.worldAddress = params.worldAddress;
             {system_address_initializations_from_params}
         }}
-        this.toriiUrl = params.toriiUrl;
-        this.relayUrl = params.relayUrl;
+        this.toriiUrl = params.toriiUrl || LOCAL_TORII;
+        this.relayUrl = params.relayUrl || LOCAL_TORII;
         this._account = params.account;
         {system_initializations}
 
