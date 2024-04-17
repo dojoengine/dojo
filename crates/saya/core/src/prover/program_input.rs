@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
@@ -132,6 +134,42 @@ impl ProverInput {
         result.push_str(&format!("{}", "}"));
 
         Ok(result)
+    }
+
+    pub fn combine(mut self, other: ProverInput) -> ProverInput {
+        self.message_to_appchain_segment.extend(other.message_to_appchain_segment);
+        self.message_to_starknet_segment.extend(other.message_to_starknet_segment);
+
+        // the later state should overwrite the previous one.
+        other.state_updates.contract_updates.into_iter().for_each(|(k, v)| {
+            self.state_updates.contract_updates.insert(k, v);
+        });
+        other.state_updates.declared_classes.into_iter().for_each(|(k, v)| {
+            self.state_updates.declared_classes.insert(k, v);
+        });
+        other.state_updates.nonce_updates.into_iter().for_each(|(k, v)| {
+            self.state_updates.nonce_updates.insert(k, v);
+        });
+        other.state_updates.storage_updates.into_iter().for_each(|(c, h)| {
+            h.into_iter().for_each(|(k, v)| {
+                self.state_updates
+                    .storage_updates
+                    .entry(c)
+                    .or_insert_with(HashMap::new)
+                    .insert(k, v);
+            });
+        });
+
+        // The block number is the one from the last block.
+        ProverInput {
+            prev_state_root: self.prev_state_root,
+            block_number: other.block_number,
+            block_hash: other.block_hash,
+            config_hash: self.config_hash,
+            message_to_appchain_segment: self.message_to_appchain_segment,
+            message_to_starknet_segment: self.message_to_starknet_segment,
+            state_updates: self.state_updates,
+        }
     }
 }
 

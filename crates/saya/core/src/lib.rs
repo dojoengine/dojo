@@ -144,7 +144,7 @@ impl Saya {
 
             // Prove each of the leaf nodes of the recursion tree and merge them into one
             let proof = prove_recursively(processed, self.config.prover).await?;
-            println!("Proof: {}", proof);
+            println!("Proof: {}", proof.0);
         }
     }
 
