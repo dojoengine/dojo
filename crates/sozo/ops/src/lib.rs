@@ -5,6 +5,7 @@ pub mod execute;
 pub mod migration;
 pub mod model;
 pub mod register;
+pub mod statistics;
 pub mod utils;
 
 #[cfg(test)]
