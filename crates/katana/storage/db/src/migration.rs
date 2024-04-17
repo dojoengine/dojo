@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{self, Read, Write};
+use std::io::{self, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 use anyhow::Context;
@@ -8,7 +8,7 @@ use katana_primitives::genesis::json;
 use libmdbx::DatabaseFlags;
 use tempfile::NamedTempFile;
 
-use crate::codecs::{Compress, Encode};
+use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
@@ -173,46 +173,93 @@ impl<T: Table> Yeeter<T> {
         self.buffer.push((key.encode(), value.compress()));
     }
 
+    // write to file
     fn flush(&mut self) -> Result<(), io::Error> {
         let mut buffer = Vec::with_capacity(self.buffer.len());
         std::mem::swap(&mut buffer, &mut self.buffer);
+        self.files.push(YeeterFile::new(buffer)?);
+        Ok(())
+    }
+}
 
-        // write to file
-        let mut file = YeeterFile::new()?;
-        for (key, value) in buffer {
-            file.write(key.as_ref(), value.as_ref())?;
+// impl IntoIterator for Yeeter<T> {
+//     type Item = Result<(T::Key, T::Value), io::Error>;
+//     type IntoIter = YeeterIter<'a, T>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         YeeterIter { yeeter: self, index: (0, 0) }
+//     }
+// }
+
+struct YeeterIter<'a, T: Table> {
+    yeeter: &'a mut Yeeter<T>,
+    index: (usize, usize), // (file, entry)
+}
+
+impl<T: Table> Iterator for YeeterIter<'_, T> {
+    type Item = Result<(T::Key, T::Value), io::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index.0 >= self.yeeter.files.len() {
+            return None;
         }
 
-        self.files.push(file);
-        Ok(())
+        let file = &mut self.yeeter.files[self.index.0];
+        if self.index.1 >= file.len {
+            self.index.0 += 1; // move to the next file
+            self.index.1 = 0; // reset the entry index
+            return self.next();
+        }
+
+        match file.read_next() {
+            Ok(Some((key_buf, value_buf))) => {
+                let key = <T::Key as Decode>::decode(&key_buf).unwrap();
+                let value = <T::Value as Decompress>::decompress(&value_buf).unwrap();
+
+                self.index.1 += 1;
+
+                Some(Ok((key, value)))
+            }
+            Ok(None) => None,
+            Err(error) => Some(Err(error)),
+        }
     }
 }
 
 struct YeeterFile {
     // the underlying file used to store the buffer
-    file: NamedTempFile,
+    file: BufReader<NamedTempFile>,
     // the total number of key/value pairs written to the file
     len: usize,
 }
 
 impl YeeterFile {
-    fn new() -> Result<Self, io::Error> {
-        let file = NamedTempFile::new()?;
-        Ok(Self { file, len: 0 })
-    }
+    fn new<K, V>(buf: Vec<(K, V)>) -> Result<Self, io::Error>
+    where
+        K: AsRef<[u8]>,
+        V: AsRef<[u8]>,
+    {
+        let mut file = NamedTempFile::new()?;
+        let mut len = 0;
 
-    fn write(&mut self, key: &[u8], value: &[u8]) -> Result<(), io::Error> {
-        let key_size = key.len().to_be_bytes();
-        let value_size = value.len().to_be_bytes();
+        for (key, val) in buf {
+            let key = key.as_ref();
+            let val = val.as_ref();
 
-        self.file.write_all(&key_size)?;
-        self.file.write_all(&value_size)?;
-        self.file.write_all(&key)?;
-        self.file.write_all(&value)?;
+            let key_size = key.len().to_be_bytes();
+            let val_size = val.len().to_be_bytes();
 
-        self.len += 1;
+            file.write_all(&key_size)?;
+            file.write_all(&val_size)?;
+            file.write_all(&key)?;
+            file.write_all(&val)?;
 
-        Ok(())
+            len += 1;
+        }
+
+        // reset the file cursor to the beginning
+        file.seek(SeekFrom::Start(0))?;
+        Ok(Self { file: BufReader::new(file), len })
     }
 
     fn read_next(&mut self) -> Result<Option<(Vec<u8>, Vec<u8>)>, io::Error> {
