@@ -7,13 +7,13 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
 
-pub async fn starknet_verify(serialized_proof: Vec<FieldElement>) -> anyhow::Result<String> {
+pub async fn starknet_verify(
+    fact_registry_address: FieldElement,
+    serialized_proof: Vec<FieldElement>,
+) -> anyhow::Result<String> {
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
-            to: FieldElement::from_hex_be(
-                "0x11471d2f05904ba5ec06ea9882df412b452e732588ad7773793a0ef470f2599",
-            )
-            .expect("invalid verifier address"),
+            to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,
         }])

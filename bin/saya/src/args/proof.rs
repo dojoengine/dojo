@@ -7,7 +7,6 @@ use clap::builder::PossibleValue;
 use clap::{Args, ValueEnum};
 use katana_primitives::FieldElement;
 use saya_core::prover::ProverIdentifier;
-use saya_core::verifier::VerifierIdentifier;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Prover {
@@ -28,28 +27,15 @@ pub enum Verifier {
     HerodotusStarknetSepolia,
 }
 
-impl From<Verifier> for VerifierIdentifier {
-    fn from(p: Verifier) -> Self {
-        match p {
-            Verifier::StoneLocal => VerifierIdentifier::StoneLocal,
-            Verifier::HerodotusStarknetSepolia => VerifierIdentifier::HerodotusStarknetSepolia,
-        }
-    }
-}
-
 #[derive(Debug, Args, Clone)]
 pub struct ProofOptions {
-    #[arg(long)]
-    #[arg(help = "Prover to generated the proof from the provable program.")]
-    pub prover: Prover,
-
-    #[arg(long)]
-    #[arg(help = "Verifier on which the proof should be sent to.")]
-    pub verifier: Verifier,
-
     #[arg(help = "The address of the World contract.")]
     #[arg(long = "world")]
-    pub world_address: Option<FieldElement>,
+    pub world_address: FieldElement,
+
+    #[arg(help = "The address of the Fact Registry contract.")]
+    #[arg(long = "registry")]
+    pub fact_registry_address: FieldElement,
 }
 
 // -- Prover.

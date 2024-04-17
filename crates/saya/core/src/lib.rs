@@ -10,19 +10,17 @@ use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
 use katana_primitives::FieldElement;
-use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
 use starknet_crypto::poseidon_hash_many;
 use tracing::{error, info, trace};
 use url::Url;
-use verifier::VerifierIdentifier;
 
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::{extract_messages, ProgramInput};
+use crate::prover::{extract_messages, parse_proof, prove_stone, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -40,9 +38,8 @@ pub struct SayaConfig {
     pub katana_rpc: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
-    pub prover: ProverIdentifier,
-    pub verifier: VerifierIdentifier,
-    pub world_address: Option<FieldElement>,
+    pub world_address: FieldElement,
+    pub fact_registry_address: FieldElement,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -210,15 +207,17 @@ impl Saya {
         // };
 
         trace!(target: "saya_core", "Proving block {block_number}.");
-        let proof = prover::prove(
-            new_program_input.serialize(self.config.world_address)?,
-            self.config.prover,
-        )
-        .await?;
+        let proof =
+            prove_stone(new_program_input.serialize(Some(self.config.world_address))?).await?;
         info!(target: "saya_core", block_number, "Block proven.");
 
         trace!(target: "saya_core", "Verifying block {block_number}.");
-        let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?;
+        let serialized_proof = parse_proof(&proof).unwrap();
+        let transaction_hash = verifier::starknet::starknet_verify(
+            self.config.fact_registry_address,
+            serialized_proof,
+        )
+        .await?;
         info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
@@ -229,18 +228,16 @@ impl Saya {
 
         sleep(Duration::from_millis(5000));
 
-        if let Some(world) = self.config.world_address {
-            let world_da = new_program_input.da_as_calldata(world);
-            let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
-            trace!(target: "saya_core", "World DA {world_da_printable:?}.");
-            trace!(target: "saya_core", "Applying diffs {block_number}.");
-            let ExtractOutputResult { program_output, program_output_hash: _ } =
-                extract_output(&proof)?;
-            let transaction_hash =
-                starknet_os::starknet_apply_diffs(world_da, program_output).await?;
-            info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
-        }
-
+        let world_da = new_program_input.da_as_calldata(self.config.world_address);
+        let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
+        trace!(target: "saya_core", "World DA {world_da_printable:?}.");
+        trace!(target: "saya_core", "Applying diffs {block_number}.");
+        let ExtractOutputResult { program_output, program_output_hash: _ } =
+            extract_output(&proof)?;
+        let transaction_hash =
+            starknet_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
+                .await?;
+        info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
         Ok(())
     }
 }
