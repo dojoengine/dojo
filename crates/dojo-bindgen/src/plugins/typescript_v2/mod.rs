@@ -51,7 +51,11 @@ import {
     createClient,
     valueToToriiValueAndOperator,
 } from \"@dojoengine/torii-client\";
-import { LOCAL_KATANA, createManifestFromJson } from \"@dojoengine/core\";"
+import {
+    LOCAL_KATANA,
+    LOCAL_TORII,
+    createManifestFromJson,
+} from \"@dojoengine/core\";"
             .to_string()
     }
 
