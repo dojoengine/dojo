@@ -13,8 +13,7 @@ use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
 use crate::models::storage::ContractStorageKey;
-use crate::tables::v0::SchemaV0;
-use crate::tables::{Schema, SchemaV1, Table};
+use crate::tables::Table;
 use crate::version::{
     create_db_version_file, get_db_version, remove_db_version_file, DatabaseVersionError,
 };
@@ -204,7 +203,7 @@ impl<T: Table> Yeeter<T> {
         Ok(())
     }
 
-    fn iter(&mut self) -> Result<YeeterIter<T>, io::Error> {
+    fn iter(&mut self) -> Result<YeeterIter<'_, T>, io::Error> {
         // flush the remaining buffer
         if !self.buffer.is_empty() {
             self.flush()?;
@@ -231,8 +230,8 @@ impl<T: Table> Iterator for YeeterIter<'_, T> {
         let file = &mut self.files[self.index.0];
         match file.read_next() {
             Ok(Some((key_buf, value_buf))) => {
-                let key = <T::Key as Decode>::decode(&key_buf).unwrap();
-                let value = <T::Value as Decompress>::decompress(&value_buf).unwrap();
+                let key = <T::Key as Decode>::decode(key_buf).unwrap();
+                let value = <T::Value as Decompress>::decompress(value_buf).unwrap();
                 self.index.1 += 1;
                 Some(Ok((key, value)))
             }
@@ -240,7 +239,7 @@ impl<T: Table> Iterator for YeeterIter<'_, T> {
             Ok(None) => {
                 self.index.0 += 1; // move to the next file
                 self.index.1 = 0; // reset the entry index
-                return self.next();
+                self.next()
             }
 
             Err(error) => Some(Err(anyhow!(error))),
@@ -286,6 +285,7 @@ impl YeeterFile {
         Ok(Self { file, len })
     }
 
+    #[allow(clippy::type_complexity)]
     fn read_next(&mut self) -> Result<Option<(Vec<u8>, Vec<u8>)>, io::Error> {
         // check if we have reached the end of the file
         if self.len == 0 {
@@ -389,7 +389,7 @@ mod tests {
         // we cant have multiple instances of the db open in the same process, so we drop here first
         // before migrating
         let (_, path) = create_v0_test_db();
-        let _ = migrate_db(&path).expect(ERROR_MIGRATE_DB);
+        migrate_db(&path).expect(ERROR_MIGRATE_DB);
         let env = open_db(path).unwrap();
 
         env.view(|tx| {
