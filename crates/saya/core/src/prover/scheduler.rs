@@ -6,7 +6,11 @@ use super::{prove, ProverIdentifier, ProverInput};
 
 type Proof = String;
 
-async fn combine_proofs(first: Proof, second: Proof) -> anyhow::Result<Proof> {
+async fn combine_proofs(
+    first: Proof,
+    second: Proof,
+    _input: &ProverInput,
+) -> anyhow::Result<Proof> {
     // TODO: Insert the real `merge program` here
     let proof = first + " & " + &second;
 
@@ -19,27 +23,34 @@ async fn combine_proofs(first: Proof, second: Proof) -> anyhow::Result<Proof> {
 pub fn prove_recursively(
     mut inputs: Vec<ProverInput>,
     prover: ProverIdentifier,
-) -> BoxFuture<'static, anyhow::Result<Proof>> {
+) -> BoxFuture<'static, anyhow::Result<(Proof, ProverInput)>> {
     async move {
         if inputs.len() <= 1 {
             // If only one block to prove, use the passed prover program.
-            let block_number = inputs[0].block_number;
+            let input = inputs.pop().unwrap();
+            let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}.");
-            let proof = prove(inputs[0].serialize()?, prover).await;
+            let proof = prove(input.serialize()?, prover).await;
             info!(target: "saya_core", block_number, "Block proven.");
 
-            proof
+            Ok((proof?, input))
         } else {
             // If more then one prover is remaining to be proven, split them in half and wait for both to be proven.
             let last = inputs.split_off(inputs.len() / 2);
 
-            let proofs = tokio::try_join!(
+            let (earlier, later) = tokio::try_join!(
                 tokio::spawn(async move { prove_recursively(inputs, prover).await }),
                 tokio::spawn(async move { prove_recursively(last, prover).await })
             )?;
+            let (earlier, later) = (earlier?, later?);
+
+            // Getting the inputs back from the two proofs, to avoid making a copy.
+            let input = earlier.1.combine(later.1);
 
             // Use the `merge program` to make a single proof of combined state diff
-            combine_proofs(proofs.0?, proofs.1?).await
+            let merged_proofs = combine_proofs(earlier.0, later.0, &input).await?;
+
+            Ok((merged_proofs, input))
         }
     }
     .boxed()
