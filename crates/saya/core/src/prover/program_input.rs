@@ -9,7 +9,7 @@ use super::state_diff::state_updates_to_json_like;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by the prover.
-pub struct ProgramInput {
+pub struct ProverInput {
     pub prev_state_root: FieldElement,
     pub block_number: u64,
     pub block_hash: FieldElement,
@@ -94,7 +94,7 @@ pub fn extract_messages(
     (message_to_starknet_segment, message_to_appchain_segment)
 }
 
-impl ProgramInput {
+impl ProverInput {
     pub fn serialize(&self) -> anyhow::Result<String> {
         let message_to_starknet = self
             .message_to_starknet_segment
@@ -173,7 +173,7 @@ impl MessageToAppchain {
 fn test_program_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
-    let input = ProgramInput {
+    let input = ProverInput {
         prev_state_root: FieldElement::from_str("101")?,
         block_number: 102,
         block_hash: FieldElement::from_str("103")?,
