@@ -51,10 +51,12 @@ pub(super) fn create_db_version_file(
 /// Check the version of the database at the given `path`.
 ///
 /// Returning `Ok` if the version matches with [`CURRENT_DB_VERSION`], otherwise `Err` is returned.
-pub(super) fn check_db_version(path: impl AsRef<Path>) -> Result<(), DatabaseVersionError> {
+pub(super) fn check_db_version<S: Schema>(
+    path: impl AsRef<Path>,
+) -> Result<(), DatabaseVersionError> {
     let version = get_db_version(path)?;
-    if version != CURRENT_DB_VERSION {
-        Err(DatabaseVersionError::MismatchVersion { expected: CURRENT_DB_VERSION, found: version })
+    if version != S::VERSION {
+        Err(DatabaseVersionError::MismatchVersion { expected: S::VERSION, found: version })
     } else {
         Ok(())
     }

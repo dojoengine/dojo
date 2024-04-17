@@ -45,7 +45,7 @@ pub(crate) fn init_db_with_schema<S: Schema>(path: impl AsRef<Path>) -> anyhow::
             format!("Inserting database version file at path {}", path.as_ref().display())
         })?
     } else {
-        match check_db_version(&path) {
+        match check_db_version::<S>(&path) {
             Ok(_) => {}
             Err(DatabaseVersionError::MismatchVersion { expected, found }) => {
                 warn!(target: LOG_TARGET, %expected, %found, "Mismatch database version.");
