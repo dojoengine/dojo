@@ -1,11 +1,10 @@
-use std::collections::HashMap;
 use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::marker::PhantomData;
+use std::mem;
 use std::path::Path;
 
-use anyhow::Context;
-use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::json;
+use anyhow::{anyhow, Context};
+
 use libmdbx::DatabaseFlags;
 use tempfile::NamedTempFile;
 
@@ -14,8 +13,7 @@ use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
 use crate::models::storage::ContractStorageKey;
-use crate::tables::v0::StorageEntryChangeList;
-use crate::tables::{Key, Table};
+use crate::tables::Table;
 use crate::version::{
     create_db_version_file, get_db_version, remove_db_version_file, DatabaseVersionError,
 };
@@ -85,8 +83,6 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
 /// - Changed value type to [BlockList](crate::models::list::BlockList).
 ///
 fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), DatabaseMigrationError> {
-    // env.create_tables_from_schema::<tables::SchemaV1>()?;
-
     macro_rules! create_table {
         ($tx:expr, $table:ty, $flags:expr) => {
             $tx.inner.create_db(Some(<$table as Table>::NAME), $flags).map_err(|error| {
@@ -97,24 +93,23 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
 
     env.update(|tx| {
         {
-            let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
             let mut yeeter = Yeeter::<tables::v0::StorageChangeSet>::new();
 
-            cursor.walk(None)?.try_for_each(|entry| {
-                let (key, val) = entry?;
-                yeeter.push(key, val);
-                Result::<(), DatabaseError>::Ok(())
-            })?;
+            {
+                let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
+                cursor.walk(None)?.try_for_each(|entry| {
+                    let (key, val) = entry?;
+                    yeeter.push(key, val)?;
+                    Result::<(), DatabaseMigrationError>::Ok(())
+                })?;
+            }
 
-            yeeter.flush()?;
-
-            drop(cursor);
             unsafe {
                 tx.drop_table::<tables::v0::StorageChangeSet>()?;
             }
             create_table!(tx, tables::StorageChangeSet, DatabaseFlags::default());
 
-            for entry in yeeter.iter() {
+            for entry in yeeter.iter()? {
                 let (key, val) = entry?;
                 let key = ContractStorageKey { contract_address: key, key: val.key };
                 let val = BlockList::from_iter(val.block_list);
@@ -163,10 +158,13 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
 // - collects all the buffer that we want to push to a temp file
 // - each yeeter will be speciifc to a particular table
 // - when the buffer is full, we write to a temp file
-
+//
+/// use to temporarily store data in the disk. use when migrating tables.
+/// storing data may not be feasible in memory as the size may be too large.
+/// so we store the data in a temp file first and then read it back when needed.
 struct Yeeter<T: Table> {
     files: Vec<YeeterFile>,
-    buffer: Vec<(<T::Key as Encode>::Encoded, <T::Value as Compress>::Compressed)>,
+    buffer: Vec<(T::Key, T::Value)>,
 }
 
 impl<T: Table> Yeeter<T> {
@@ -174,20 +172,41 @@ impl<T: Table> Yeeter<T> {
         Self { files: Vec::new(), buffer: Vec::new() }
     }
 
-    fn push(&mut self, key: T::Key, value: T::Value) {
-        self.buffer.push((key.encode(), value.compress()));
+    fn push(&mut self, key: T::Key, value: T::Value) -> Result<(), io::Error> {
+        const BUFFER_THRESHOLD: usize = 500 * (1024 * 1024); // 500 MB
+
+        self.buffer.push((key, value));
+
+        // check size of buffer, in terms of bytes
+        // if buffer size is greater than the threshold, flush to file
+        let buffer_size = mem::size_of_val(self.buffer.as_slice());
+        dbg!(buffer_size);
+        if buffer_size > BUFFER_THRESHOLD {
+            self.flush()?;
+        }
+
+        Ok(())
     }
 
     // write to file
     fn flush(&mut self) -> Result<(), io::Error> {
         let mut buffer = Vec::with_capacity(self.buffer.len());
         std::mem::swap(&mut buffer, &mut self.buffer);
-        self.files.push(YeeterFile::new(buffer)?);
+
+        let buffer = buffer.into_iter().map(|(k, v)| (k.encode(), v.compress()));
+        let file = YeeterFile::new(buffer)?;
+        self.files.push(file);
+
         Ok(())
     }
 
-    fn iter(&mut self) -> YeeterIter<T> {
-        YeeterIter { files: &mut self.files, index: (0, 0), _table: PhantomData }
+    fn iter(&mut self) -> Result<YeeterIter<T>, io::Error> {
+        // flush the remaining buffer
+        if !self.buffer.is_empty() {
+            self.flush()?;
+        }
+
+        Ok(YeeterIter { files: &mut self.files, index: (0, 0), _table: PhantomData })
     }
 }
 
@@ -198,7 +217,7 @@ struct YeeterIter<'a, T: Table> {
 }
 
 impl<T: Table> Iterator for YeeterIter<'_, T> {
-    type Item = Result<(T::Key, T::Value), io::Error>;
+    type Item = Result<(T::Key, T::Value), anyhow::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index.0 >= self.files.len() {
@@ -210,9 +229,7 @@ impl<T: Table> Iterator for YeeterIter<'_, T> {
             Ok(Some((key_buf, value_buf))) => {
                 let key = <T::Key as Decode>::decode(&key_buf).unwrap();
                 let value = <T::Value as Decompress>::decompress(&value_buf).unwrap();
-
                 self.index.1 += 1;
-
                 Some(Ok((key, value)))
             }
 
@@ -222,7 +239,7 @@ impl<T: Table> Iterator for YeeterIter<'_, T> {
                 return self.next();
             }
 
-            Err(error) => Some(Err(error)),
+            Err(error) => Some(Err(anyhow!(error))),
         }
     }
 }
@@ -235,13 +252,14 @@ struct YeeterFile {
 }
 
 impl YeeterFile {
-    fn new<K, V>(buf: Vec<(K, V)>) -> Result<Self, io::Error>
+    fn new<I, K, V>(buf: I) -> Result<Self, io::Error>
     where
+        I: Iterator<Item = (K, V)>,
         K: AsRef<[u8]>,
         V: AsRef<[u8]>,
     {
         let mut file = BufWriter::new(NamedTempFile::new()?);
-        let len = buf.len();
+        let mut len = 0;
 
         for (key, val) in buf {
             let key = key.as_ref();
@@ -254,6 +272,8 @@ impl YeeterFile {
             file.write_all(&val_size)?;
             file.write_all(key)?;
             file.write_all(val)?;
+
+            len += 1;
         }
 
         let mut file = BufReader::new(file.into_inner()?);
