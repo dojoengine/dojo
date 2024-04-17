@@ -53,6 +53,7 @@ import {
 } from \"@dojoengine/torii-client\";
 import {
     LOCAL_KATANA,
+    LOCAL_RELAY,
     LOCAL_TORII,
     createManifestFromJson,
 } from \"@dojoengine/core\";"
@@ -354,7 +355,7 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
             {system_address_initializations_from_params}
         }}
         this.toriiUrl = params.toriiUrl || LOCAL_TORII;
-        this.relayUrl = params.relayUrl || LOCAL_TORII;
+        this.relayUrl = params.relayUrl || LOCAL_RELAY;
         this._account = params.account;
         {system_initializations}
 
