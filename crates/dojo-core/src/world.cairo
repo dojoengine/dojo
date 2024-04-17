@@ -581,7 +581,7 @@ mod world {
             let da_hash = da_hasher.finalize();
             assert(da_hash == *program_output.at(5), 'wrong output hash');
 
-            let program_output_hash = poseidon_hash_span(program_output);
+            let program_output_hash = poseidon::poseidon_hash_span(program_output);
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
             assert(
                 IFactRegistryDispatcher {
