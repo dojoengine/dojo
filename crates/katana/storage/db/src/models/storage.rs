@@ -71,6 +71,12 @@ pub struct ContractStorageEntry {
     pub value: StorageValue,
 }
 
+impl ContractStorageEntry {
+    pub fn new(key: ContractStorageKey, value: StorageValue) -> Self {
+        Self { key, value }
+    }
+}
+
 impl Compress for ContractStorageEntry {
     type Compressed = Vec<u8>;
     fn compress(self) -> Self::Compressed {

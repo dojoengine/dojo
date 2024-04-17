@@ -64,6 +64,12 @@ pub struct StorageEntryChangeList {
     pub block_list: Vec<BlockNumber>,
 }
 
+impl StorageEntryChangeList {
+    pub fn new(key: StorageKey, block_list: Vec<BlockNumber>) -> Self {
+        Self { key, block_list }
+    }
+}
+
 // The `key` field is the subkey of the dupsort table, so we must use
 // the Encode and Decode traits  when de/serializing it to the database.
 impl Compress for StorageEntryChangeList {

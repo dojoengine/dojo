@@ -186,77 +186,31 @@ mod tests {
         let db = crate::init_db_with_schema::<v0::SchemaV0>(&path).expect(ERROR_INIT_DB);
 
         db.update(|tx| {
-            tx.put::<v0::NonceChanges>(
-                1,
-                ContractNonceChange { contract_address: felt!("0x1").into(), nonce: felt!("0x2") },
-            )
-            .unwrap();
-            tx.put::<v0::NonceChanges>(
-                1,
-                ContractNonceChange { contract_address: felt!("0x2").into(), nonce: felt!("0x2") },
-            )
-            .unwrap();
-            tx.put::<v0::NonceChanges>(
-                3,
-                ContractNonceChange { contract_address: felt!("0x3").into(), nonce: felt!("0x2") },
-            )
-            .unwrap();
+            let val1 = ContractNonceChange::new(felt!("0x1").into(), felt!("0x2"));
+            let val2 = ContractNonceChange::new(felt!("0x2").into(), felt!("0x2"));
+            let val3 = ContractNonceChange::new(felt!("0x3").into(), felt!("0x2"));
+            tx.put::<v0::NonceChanges>(1, val1).unwrap();
+            tx.put::<v0::NonceChanges>(1, val2).unwrap();
+            tx.put::<v0::NonceChanges>(3, val3).unwrap();
 
-            tx.put::<v0::ContractClassChanges>(
-                1,
-                ContractClassChange {
-                    contract_address: felt!("0x1").into(),
-                    class_hash: felt!("0x1"),
-                },
-            )
-            .unwrap();
-            tx.put::<v0::ContractClassChanges>(
-                1,
-                ContractClassChange {
-                    contract_address: felt!("0x2").into(),
-                    class_hash: felt!("0x1"),
-                },
-            )
-            .unwrap();
+            let val1 = ContractClassChange::new(felt!("0x1").into(), felt!("0x1"));
+            let val2 = ContractClassChange::new(felt!("0x2").into(), felt!("0x1"));
+            tx.put::<v0::ContractClassChanges>(1, val1).unwrap();
+            tx.put::<v0::ContractClassChanges>(1, val2).unwrap();
 
-            tx.put::<v0::StorageChangeSet>(
-                felt!("0x1").into(),
-                StorageEntryChangeList { key: felt!("0x1"), block_list: vec![1, 2] },
-            )
-            .unwrap();
-            tx.put::<v0::StorageChangeSet>(
-                felt!("0x1").into(),
-                StorageEntryChangeList { key: felt!("0x2"), block_list: vec![1, 3] },
-            )
-            .unwrap();
-            tx.put::<v0::StorageChangeSet>(
-                felt!("0x2").into(),
-                StorageEntryChangeList { key: felt!("0x3"), block_list: vec![4, 5] },
-            )
-            .unwrap();
+            let val1 = StorageEntryChangeList::new(felt!("0x1"), vec![1, 2]);
+            let val2 = StorageEntryChangeList::new(felt!("0x2"), vec![1, 3]);
+            let val3 = StorageEntryChangeList::new(felt!("0x3"), vec![4, 5]);
+            tx.put::<v0::StorageChangeSet>(felt!("0x1").into(), val1).unwrap();
+            tx.put::<v0::StorageChangeSet>(felt!("0x1").into(), val2).unwrap();
+            tx.put::<v0::StorageChangeSet>(felt!("0x2").into(), val3).unwrap();
 
-            tx.put::<v0::StorageChanges>(
-                1,
-                ContractStorageEntry {
-                    key: ContractStorageKey {
-                        contract_address: felt!("0x1").into(),
-                        key: felt!("0x1"),
-                    },
-                    value: felt!("0x1"),
-                },
-            )
-            .unwrap();
-            tx.put::<v0::StorageChanges>(
-                3,
-                ContractStorageEntry {
-                    key: ContractStorageKey {
-                        contract_address: felt!("0x1").into(),
-                        key: felt!("0x2"),
-                    },
-                    value: felt!("0x2"),
-                },
-            )
-            .unwrap();
+            let subkey = ContractStorageKey::new(felt!("0x1").into(), felt!("0x1"));
+            let val1 = ContractStorageEntry::new(subkey, felt!("0x1"));
+            let subkey = ContractStorageKey::new(felt!("0x1").into(), felt!("0x2"));
+            let val2 = ContractStorageEntry::new(subkey, felt!("0x2"));
+            tx.put::<v0::StorageChanges>(1, val1).unwrap();
+            tx.put::<v0::StorageChanges>(3, val2).unwrap();
         })
         .expect(ERROR_INIT_DB);
 
