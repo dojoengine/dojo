@@ -1,18 +1,20 @@
 use std::collections::HashMap;
-use std::fs;
-use std::hash::Hash;
+use std::io::{self, Read, Write};
 use std::path::Path;
 
 use anyhow::Context;
 use katana_primitives::contract::ContractAddress;
+use katana_primitives::genesis::json;
 use libmdbx::DatabaseFlags;
+use tempfile::NamedTempFile;
 
+use crate::codecs::{Compress, Encode};
 use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
 use crate::models::storage::ContractStorageKey;
 use crate::tables::v0::StorageEntryChangeList;
-use crate::tables::Table;
+use crate::tables::{Key, Table};
 use crate::version::{
     create_db_version_file, get_db_version, remove_db_version_file, DatabaseVersionError,
 };
@@ -28,6 +30,9 @@ pub enum DatabaseMigrationError {
 
     #[error(transparent)]
     Database(#[from] DatabaseError),
+
+    #[error("failed to open temporary file: {0}")]
+    Io(#[from] io::Error),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -49,10 +54,14 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
         }
     }
 
-    // Update the db version to the current version
+    // Update the db version to the migrated version
+    {
+        // we have to remove it first because the version file is read-only
+        remove_db_version_file(&path)?;
+        create_db_version_file(path, CURRENT_DB_VERSION)
+    }
+    .context("Updating database version file")?;
 
-    remove_db_version_file(&path)?;
-    create_db_version_file(path, CURRENT_DB_VERSION).context("Updating database version file")?;
     Ok(())
 }
 
@@ -87,17 +96,12 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
 
     env.update(|tx| {
         {
-            // store in a static file first before putting it back in the new table
-            // let file = tempfile().expect("able to create temp file");
-            // let file = LineWriter::new(file);
-
             let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
             let mut old_entries: HashMap<ContractAddress, Vec<StorageEntryChangeList>> =
                 HashMap::new();
 
             cursor.walk(None)?.enumerate().try_for_each(|(i, entry)| {
                 let (key, val) = entry?;
-                dbg!(i, &key, &val);
                 old_entries.entry(key).or_default().push(val);
                 Result::<(), DatabaseError>::Ok(())
             })?;
@@ -153,6 +157,86 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
 
         Ok(())
     })?
+}
+
+// - collects all the buffer that we want to push to a temp file
+// - each yeeter will be speciifc to a particular table
+// - when the buffer is full, we write to a temp file
+
+struct Yeeter<T: Table> {
+    files: Vec<YeeterFile>,
+    buffer: Vec<(<T::Key as Encode>::Encoded, <T::Value as Compress>::Compressed)>,
+}
+
+impl<T: Table> Yeeter<T> {
+    fn push(&mut self, key: T::Key, value: T::Value) {
+        self.buffer.push((key.encode(), value.compress()));
+    }
+
+    fn flush(&mut self) -> Result<(), io::Error> {
+        let mut buffer = Vec::with_capacity(self.buffer.len());
+        std::mem::swap(&mut buffer, &mut self.buffer);
+
+        // write to file
+        let mut file = YeeterFile::new()?;
+        for (key, value) in buffer {
+            file.write(key.as_ref(), value.as_ref())?;
+        }
+
+        self.files.push(file);
+        Ok(())
+    }
+}
+
+struct YeeterFile {
+    // the underlying file used to store the buffer
+    file: NamedTempFile,
+    // the total number of key/value pairs written to the file
+    len: usize,
+}
+
+impl YeeterFile {
+    fn new() -> Result<Self, io::Error> {
+        let file = NamedTempFile::new()?;
+        Ok(Self { file, len: 0 })
+    }
+
+    fn write(&mut self, key: &[u8], value: &[u8]) -> Result<(), io::Error> {
+        let key_size = key.len().to_be_bytes();
+        let value_size = value.len().to_be_bytes();
+
+        self.file.write_all(&key_size)?;
+        self.file.write_all(&value_size)?;
+        self.file.write_all(&key)?;
+        self.file.write_all(&value)?;
+
+        self.len += 1;
+
+        Ok(())
+    }
+
+    fn read_next(&mut self) -> Result<Option<(Vec<u8>, Vec<u8>)>, io::Error> {
+        // check if we have reached the end of the file
+        if self.len == 0 {
+            return Ok(None);
+        }
+
+        // get thee sizes of the key and value
+        let mut key_size = [0u8; 8];
+        let mut value_size = [0u8; 8];
+        self.file.read_exact(&mut key_size)?;
+        self.file.read_exact(&mut value_size)?;
+
+        // read the key and value
+        let mut key = Vec::with_capacity(u64::from_be_bytes(key_size) as usize);
+        let mut value = Vec::with_capacity(u64::from_be_bytes(value_size) as usize);
+        self.file.read_exact(&mut key)?;
+        self.file.read_exact(&mut value)?;
+
+        self.len -= 1;
+
+        Ok(Some((key, value)))
+    }
 }
 
 #[cfg(test)]

@@ -163,6 +163,8 @@ pub mod test_utils {
 #[cfg(test)]
 mod tests {
 
+    use std::os;
+
     use katana_primitives::block::Header;
     use katana_primitives::contract::{ContractAddress, GenericContractInfo};
     use katana_primitives::FieldElement;
