@@ -172,8 +172,10 @@ mod tests {
     use crate::codecs::Encode;
     use crate::mdbx::cursor::Walker;
     use crate::mdbx::test_utils::create_test_db;
-    use crate::models::storage::StorageEntry;
-    use crate::tables::{BlockHashes, ContractInfo, ContractStorage, Headers, Table};
+    use crate::models::contract::ContractNonceChange;
+    use crate::models::list::BlockList;
+    use crate::models::storage::{ContractStorageKey, StorageEntry};
+    use crate::tables::{self, BlockHashes, ContractInfo, ContractStorage, Headers, Table};
 
     const ERROR_PUT: &str = "Not able to insert value into table.";
     const ERROR_DELETE: &str = "Failed to delete value from table.";
@@ -428,5 +430,34 @@ mod tests {
                     .expect("should be able to retrieve it.")
             );
         }
+    }
+
+    #[test]
+    fn db_get_put_unchecked() {
+        // create a database with the v1 schema
+        let env = create_test_db(DbEnvKind::RW);
+        let tx = env.tx_mut().expect(ERROR_INIT_TX);
+
+        // drop a table first bcs database already reached max tables limit
+        unsafe { tx.drop_table::<tables::NonceChangeHistory>().unwrap() }
+
+        // get a value from an existing table from the database will not return error
+        let result = tx.get_unchecked::<tables::StorageChangeSet>(ContractStorageKey::default());
+        assert!(result.is_ok());
+
+        // get a value from a nonexistent table from the database will return error
+        let result = tx.get_unchecked::<tables::v0::NonceChanges>(1);
+        assert_eq!(result, Err(DatabaseError::OpenDb(libmdbx::Error::NotFound)));
+
+        // put a value into an existing table in the database will not return error
+        let key = ContractStorageKey::default();
+        let val = BlockList::new();
+        let result = tx.put_unchecked::<tables::StorageChangeSet>(key, val);
+        assert!(result.is_ok());
+
+        // put a value into a nonexistent table in the database will return error
+        let val = ContractNonceChange::new(felt!("0x1").into(), felt!("0x1"));
+        let result = tx.put_unchecked::<tables::v0::NonceChanges>(1, val);
+        assert_eq!(result, Err(DatabaseError::OpenDb(libmdbx::Error::NotFound)));
     }
 }
