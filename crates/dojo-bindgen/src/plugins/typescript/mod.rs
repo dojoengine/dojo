@@ -211,6 +211,11 @@ export enum {} {{
             });
 
             for token in &structs {
+                if handled_tokens.iter().filter(|t| t.type_name() == token.type_name()).count() > 1
+                {
+                    continue;
+                }
+
                 // first index is our model struct
                 if token.type_name() == model.name {
                     models_structs.push(token.to_composite().unwrap().clone());
@@ -222,6 +227,10 @@ export enum {} {{
             }
 
             for token in &tokens.enums {
+                if handled_tokens.iter().filter(|t| t.type_name() == token.type_name()).count() > 1
+                {
+                    continue;
+                }
                 out += TypescriptPlugin::format_enum(token.to_composite().unwrap()).as_str();
             }
 
@@ -253,7 +262,7 @@ export function defineContractComponents(world: World) {
                 .replace("RecsType.", "")
                 // types should be lowercased
                 .to_lowercase(),
-                Token::Composite(t) => t.type_name(),
+                Token::Composite(t) => format!("models.{}", t.type_name()),
                 Token::Array(t) => format!("{}[]", map_type(&t.inner)),
                 _ => panic!("Unsupported token type: {:?}", token),
             }

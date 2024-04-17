@@ -147,6 +147,10 @@ public class {} : ModelInstance {{
         let mut model_struct: Option<&Composite> = None;
         let tokens = &model.tokens;
         for token in &tokens.structs {
+            if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                continue;
+            }
+
             handled_tokens.push(token.to_composite().unwrap().to_owned());
 
             // first index is our model struct
@@ -159,6 +163,10 @@ public class {} : ModelInstance {{
         }
 
         for token in &tokens.enums {
+            if handled_tokens.iter().any(|t| t.type_name() == token.type_name()) {
+                continue;
+            }
+
             handled_tokens.push(token.to_composite().unwrap().to_owned());
             out += UnityPlugin::format_enum(token.to_composite().unwrap()).as_str();
         }
