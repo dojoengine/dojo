@@ -115,9 +115,8 @@ impl TryFrom<SayaArgs> for SayaConfig {
                 katana_rpc: args.rpc_url,
                 start_block: args.start_block,
                 data_availability: da_config,
-                prover: args.proof.prover.into(),
-                verifier: args.proof.verifier.into(),
                 world_address: args.proof.world_address,
+                fact_registry_address: args.proof.fact_registry_address,
             })
         }
     }
@@ -150,9 +149,8 @@ mod tests {
                 },
             },
             proof: ProofOptions {
-                prover: Default::default(),
-                verifier: Default::default(),
-                world_address: None,
+                world_address: Default::default(),
+                fact_registry_address: Default::default(),
             },
         };
 

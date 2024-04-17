@@ -49,6 +49,7 @@ lazy_static::lazy_static!(
 );
 
 pub async fn starknet_apply_diffs(
+    world: FieldElement,
     new_state: Vec<FieldElement>,
     program_output: Vec<FieldElement>,
 ) -> anyhow::Result<String> {
@@ -62,10 +63,7 @@ pub async fn starknet_apply_diffs(
 
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
-            to: FieldElement::from_hex_be(
-                "0x6175092ce3189deeaac393167067afb88ff9ad25ea4fdc278dbdf4c1ed9cf30",
-            )
-            .expect("invalid world address"),
+            to: world,
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
             calldata,
         }])

@@ -568,7 +568,7 @@ mod world {
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
         fn upgrade_state(ref self: ContractState, new_state: Span<felt252>, program_output: Span<felt252>) {
-            let program_hash = 2850285338935092388591461633885948703359460981313991857381735914345485085131;
+            let program_hash = 2885402680125272674507425218982735911081064423300562598159673897356937612416;
             let mut program_output_hasher = PedersenImpl::new(0);
             let mut i = 0;
             loop {
@@ -583,7 +583,7 @@ mod world {
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
             assert(
                 IFactRegistryDispatcher {
-                    contract_address: contract_address_const::<0x11471d2f05904ba5ec06ea9882df412b452e732588ad7773793a0ef470f2599>()
+                    contract_address: contract_address_const::<0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb>()
                 }.is_valid(fact),
                 'no state transition proof'
             );
