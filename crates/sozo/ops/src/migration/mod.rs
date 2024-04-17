@@ -2,14 +2,13 @@ use std::path::Path;
 
 use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
-use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR, OVERLAYS_DIR};
+use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, DEPLOYMENTS_DIR, MANIFESTS_DIR};
 use dojo_world::contracts::abi::world::ResourceMetadata;
 use dojo_world::contracts::cairo_utils;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::manifest::{
-    AbiFormat, AbstractManifestError, BaseManifest, DeploymentManifest, DojoContract, DojoModel,
-    Manifest, ManifestMethods, OverlayManifest, WorldContract as ManifestWorldContract,
-    WorldMetadata,
+    AbiFormat, BaseManifest, DeploymentManifest, DojoContract, DojoModel, Manifest,
+    ManifestMethods, WorldContract as ManifestWorldContract, WorldMetadata,
 };
 use dojo_world::metadata::{dojo_metadata_from_workspace, ArtifactMetadata};
 use dojo_world::migration::contract::ContractMigration;
@@ -31,14 +30,13 @@ use starknet::core::utils::{
     cairo_short_string_to_felt, get_contract_address, get_selector_from_name,
 };
 use starknet::providers::{Provider, ProviderError};
+use starknet::signers::Signer;
 use tokio::fs;
 
 mod ui;
+mod utils;
 
-use starknet::signers::Signer;
-use ui::MigrationUi;
-
-use self::ui::{bold_message, italic_message};
+use self::ui::{bold_message, italic_message, MigrationUi};
 
 #[derive(Debug, Default, Clone)]
 pub struct MigrationOutput {
@@ -92,13 +90,16 @@ where
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        load_world_manifests(&profile_dir, account, world_address, &ui).await.map_err(|e| {
-            ui.error(e.to_string());
-            anyhow!(
-                "\n Use `sozo clean` to clean your project, or `sozo clean --manifests-abis` to \
-                 clean manifest and abi files only.\nThen, rebuild your project with `sozo build`.",
-            )
-        })?;
+        utils::load_world_manifests(&profile_dir, account, world_address, &ui).await.map_err(
+            |e| {
+                ui.error(e.to_string());
+                anyhow!(
+                    "\n Use `sozo clean` to clean your project, or `sozo clean --manifests-abis` \
+                     to clean manifest and abi files only.\nThen, rebuild your project with `sozo \
+                     build`.",
+                )
+            },
+        )?;
 
     // Calculate diff between local and remote World manifests.
     ui.print_step(2, "🧰", "Evaluating Worlds diff...");
@@ -354,53 +355,6 @@ where
     }
 
     Ok(migration_output)
-}
-
-async fn load_world_manifests<P, S>(
-    profile_dir: &Utf8PathBuf,
-    account: &SingleOwnerAccount<P, S>,
-    world_address: Option<FieldElement>,
-    ui: &Ui,
-) -> Result<(BaseManifest, Option<DeploymentManifest>)>
-where
-    P: Provider + Sync + Send + 'static,
-    S: Signer + Sync + Send + 'static,
-{
-    ui.print_step(1, "🌎", "Building World state...");
-
-    let mut local_manifest = BaseManifest::load_from_path(&profile_dir.join(BASE_DIR))
-        .map_err(|e| anyhow!("Fail to load local manifest file: {e}."))?;
-
-    let overlay_path = profile_dir.join(OVERLAYS_DIR);
-    if overlay_path.exists() {
-        let overlay_manifest = OverlayManifest::load_from_path(&profile_dir.join(OVERLAYS_DIR))
-            .map_err(|e| anyhow!("Fail to load overlay manifest file: {e}."))?;
-
-        // merge user defined changes to base manifest
-        local_manifest.merge(overlay_manifest);
-    }
-
-    let remote_manifest = if let Some(address) = world_address {
-        match DeploymentManifest::load_from_remote(account.provider(), address).await {
-            Ok(manifest) => {
-                ui.print_sub(format!("Found remote World: {address:#x}"));
-                Some(manifest)
-            }
-            Err(AbstractManifestError::RemoteWorldNotFound) => None,
-            Err(e) => {
-                ui.verbose(format!("{e:?}"));
-                return Err(anyhow!("Failed to build remote World state: {e}"));
-            }
-        }
-    } else {
-        None
-    };
-
-    if remote_manifest.is_none() {
-        ui.print_sub("No remote World found");
-    }
-
-    Ok((local_manifest, remote_manifest))
 }
 
 pub fn prepare_migration(
