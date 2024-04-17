@@ -22,28 +22,33 @@ use super::{
 #[command(next_help_heading = "Account options")]
 pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
+    #[arg(global = true)]
     pub account_address: Option<FieldElement>,
 
     #[arg(long, env = DOJO_PRIVATE_KEY_ENV_VAR)]
     #[arg(conflicts_with = "keystore_path")]
     #[arg(help_heading = "Signer options - RAW")]
     #[arg(help = "The raw private key associated with the account contract.")]
+    #[arg(global = true)]
     pub private_key: Option<String>,
 
     #[arg(long = "keystore", env = DOJO_KEYSTORE_PATH_ENV_VAR)]
     #[arg(value_name = "PATH")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "Use the keystore in the given folder or file.")]
+    #[arg(global = true)]
     pub keystore_path: Option<String>,
 
     #[arg(long = "password", env = DOJO_KEYSTORE_PASSWORD_ENV_VAR)]
     #[arg(value_name = "PASSWORD")]
     #[arg(help_heading = "Signer options - KEYSTORE")]
     #[arg(help = "The keystore password. Used with --keystore.")]
+    #[arg(global = true)]
     pub keystore_password: Option<String>,
 
     #[arg(long)]
     #[arg(help = "Use legacy account (cairo0 account)")]
+    #[arg(global = true)]
     pub legacy: bool,
 }
 

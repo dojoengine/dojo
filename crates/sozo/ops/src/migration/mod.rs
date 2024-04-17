@@ -62,7 +62,6 @@ pub struct ContractMigrationOutput {
 pub async fn migrate<P, S>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
-    chain_id: String,
     rpc_url: String,
     account: &SingleOwnerAccount<P, S>,
     name: Option<String>,
@@ -74,9 +73,6 @@ where
     S: Signer + Sync + Send + 'static,
 {
     let ui = ws.config().ui();
-
-    // Setup account for migration and fetch world address if it exists.
-    ui.print(format!("Chain ID: {}\n", &chain_id));
 
     // its path to a file so `parent` should never return `None`
     let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();

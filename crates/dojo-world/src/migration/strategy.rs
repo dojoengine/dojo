@@ -102,12 +102,14 @@ pub fn prepare_for_migration(
             seed.map(poseidon_hash_single).ok_or(anyhow!("Missing seed for World deployment."))?;
 
         world.salt = salt;
-        world.contract_address = get_contract_address(
+        let generated_world_address = get_contract_address(
             salt,
             diff.world.original_class_hash,
             &[base.as_ref().unwrap().diff.original_class_hash],
             FieldElement::ZERO,
         );
+
+        world.contract_address = generated_world_address;
     }
 
     Ok(MigrationStrategy { world_address, world, base, contracts, models })

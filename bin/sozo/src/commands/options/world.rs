@@ -12,6 +12,7 @@ use super::DOJO_WORLD_ADDRESS_ENV_VAR;
 pub struct WorldOptions {
     #[arg(help = "The address of the World contract.")]
     #[arg(long = "world", env = DOJO_WORLD_ADDRESS_ENV_VAR)]
+    #[arg(global = true)]
     pub world_address: Option<FieldElement>,
 }
 

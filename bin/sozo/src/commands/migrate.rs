@@ -22,44 +22,29 @@ use super::options::world::WorldOptions;
 pub struct MigrateArgs {
     #[command(subcommand)]
     pub command: MigrateCommand,
+
+    #[arg(long, global = true)]
+    #[arg(help = "Name of the World.")]
+    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
+                       the contract to avoid address conflicts.")]
+    name: Option<String>,
+
+    #[command(flatten)]
+    world: WorldOptions,
+
+    #[command(flatten)]
+    starknet: StarknetOptions,
+
+    #[command(flatten)]
+    account: AccountOptions,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum MigrateCommand {
     #[command(about = "Plan the migration and output the manifests.")]
-    Plan {
-        #[arg(long)]
-        #[arg(help = "Name of the World.")]
-        #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
-                           the contract to avoid address conflicts.")]
-        name: Option<String>,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-
-        #[command(flatten)]
-        account: AccountOptions,
-    },
+    Plan,
     #[command(about = "Apply the migration on-chain.")]
     Apply {
-        #[arg(long)]
-        #[arg(help = "Name of the World.")]
-        #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
-                           the contract to avoid address conflicts.")]
-        name: Option<String>,
-
-        #[command(flatten)]
-        world: WorldOptions,
-
-        #[command(flatten)]
-        starknet: StarknetOptions,
-
-        #[command(flatten)]
-        account: AccountOptions,
-
         #[command(flatten)]
         transaction: TransactionOptions,
     },
@@ -80,71 +65,38 @@ impl MigrateArgs {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 
-        match self.command {
-            MigrateCommand::Plan { mut name, world, starknet, account } => {
-                if name.is_none() {
-                    if let Some(root_package) = ws.root_package() {
-                        name = Some(root_package.id.name.to_string())
-                    }
-                };
+        let MigrateArgs { mut name, world, starknet, account, .. } = self;
 
-                config.tokio_handle().block_on(async {
-                    let (world_address, account, chain_id, rpc_url) = setup_env(
-                        &ws,
-                        account,
-                        starknet,
-                        world,
-                        name.as_ref(),
-                        env_metadata.as_ref(),
-                    )
-                    .await?;
-
-                    migration::migrate(
-                        &ws,
-                        world_address,
-                        chain_id,
-                        rpc_url,
-                        &account,
-                        name,
-                        true,
-                        TxnConfig::default(),
-                    )
-                    .await
-                })
+        if name.is_none() {
+            if let Some(root_package) = ws.root_package() {
+                name = Some(root_package.id.name.to_string())
             }
-            MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
+        };
+
+        let (world_address, account, chain_id, rpc_url) =
+            config.tokio_handle().block_on(async {
+                setup_env(&ws, account, starknet, world, name.as_ref(), env_metadata.as_ref()).await
+            })?;
+
+        match self.command {
+            MigrateCommand::Plan => config.tokio_handle().block_on(async {
+                migration::migrate(
+                    &ws,
+                    world_address,
+                    rpc_url,
+                    &account,
+                    name,
+                    true,
+                    TxnConfig::default(),
+                )
+                .await
+            }),
+            MigrateCommand::Apply { transaction } => config.tokio_handle().block_on(async {
                 let txn_config: TxnConfig = transaction.into();
 
-                if name.is_none() {
-                    if let Some(root_package) = ws.root_package() {
-                        name = Some(root_package.id.name.to_string())
-                    }
-                };
-
-                config.tokio_handle().block_on(async {
-                    let (world_address, account, chain_id, rpc_url) = setup_env(
-                        &ws,
-                        account,
-                        starknet,
-                        world,
-                        name.as_ref(),
-                        env_metadata.as_ref(),
-                    )
-                    .await?;
-
-                    migration::migrate(
-                        &ws,
-                        world_address,
-                        chain_id,
-                        rpc_url,
-                        &account,
-                        name,
-                        false,
-                        txn_config,
-                    )
+                migration::migrate(&ws, world_address, rpc_url, &account, name, false, txn_config)
                     .await
-                })
-            }
+            }),
         }
     }
 }
@@ -191,9 +143,12 @@ pub async fn setup_env<'a>(
         let address = account.address();
 
         ui.print(format!("\nMigration account: {address:#x}"));
+
         if let Some(name) = name {
-            ui.print(format!("\nWorld name: {name}\n"));
+            ui.print(format!("\nWorld name: {name}"));
         }
+
+        ui.print(format!("\nChain ID: {chain_id}\n"));
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
             Ok(_) => Ok((account, chain_id, rpc_url)),
