@@ -342,11 +342,10 @@ function convertQueryToToriiClause(query: Query): Clause | undefined {{
     {system_properties}
 
     constructor(params: InitialParams) {{
-        this.rpcUrl = LOCAL_KATANA;
         if (\"manifest\" in params) {{
             const config = createManifestFromJson(params.manifest);
-            this.worldAddress = config.world.address;
             this.rpcUrl = config.world.metadata.rpc_url;
+            this.worldAddress = config.world.address;
 
             {system_address_initializations}
         }} else {{
