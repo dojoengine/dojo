@@ -36,7 +36,7 @@ async fn reregister_models() {
 
     let moves_model =
         migration.models.iter().find(|m| m.diff.name == "dojo_examples::models::moves").unwrap();
-    let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local);
+    let moves_model_class_hash = &format!("0x{:x}", moves_model.diff.local_class_hash);
     let args_vec = [
         "register",
         "model",

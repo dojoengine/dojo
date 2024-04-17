@@ -12,6 +12,9 @@ use starknet_crypto::FieldElement;
 
 use super::ui::MigrationUi;
 
+/// Loads:
+///     - `BaseManifest` from filesystem
+///     - `DeployedManifest` from onchain dataa if `world_address` is `Some`
 pub(super) async fn load_world_manifests<P, S>(
     profile_dir: &Utf8PathBuf,
     account: &SingleOwnerAccount<P, S>,

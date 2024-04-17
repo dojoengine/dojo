@@ -417,7 +417,7 @@ where
                     ui.print_sub(format!("Class Hash: {:#x}", res.class_hash));
                 }
                 Err(MigrationError::ClassAlreadyDeclared) => {
-                    ui.print_sub(format!("Already declared: {:#x}", base.diff.local));
+                    ui.print_sub(format!("Already declared: {:#x}", base.diff.local_class_hash));
                 }
                 Err(MigrationError::ArtifactError(e)) => {
                     return Err(handle_artifact_error(&ui, base.artifact_path(), e));
@@ -442,7 +442,7 @@ where
                     world,
                     "world",
                     world.diff.original_class_hash,
-                    strategy.base.as_ref().unwrap().diff.original,
+                    strategy.base.as_ref().unwrap().diff.original_class_hash,
                     migrator,
                     &ui,
                     &txn_config,
@@ -458,7 +458,7 @@ where
                     world.contract_address
                 ));
             } else {
-                let calldata = vec![strategy.base.as_ref().unwrap().diff.local];
+                let calldata = vec![strategy.base.as_ref().unwrap().diff.local_class_hash];
                 let deploy_result =
                     deploy_contract(world, "world", calldata.clone(), migrator, &ui, &txn_config)
                         .await
@@ -650,7 +650,7 @@ where
 
             // Continue if model is already declared
             Err(MigrationError::ClassAlreadyDeclared) => {
-                ui.print_sub(format!("Already declared: {:#x}", c.diff.local));
+                ui.print_sub(format!("Already declared: {:#x}", c.diff.local_class_hash));
                 continue;
             }
             Err(MigrationError::ArtifactError(e)) => {
@@ -662,7 +662,7 @@ where
             }
         }
 
-        ui.print_sub(format!("Class hash: {:#x}", c.diff.local));
+        ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
     }
 
     let world_address = strategy.world_address()?;
@@ -672,7 +672,7 @@ where
         .iter()
         .map(|c| {
             registered_model_names.push(c.diff.name.clone());
-            world.register_model_getcall(&c.diff.local.into())
+            world.register_model_getcall(&c.diff.local_class_hash.into())
         })
         .collect::<Vec<_>>();
 
@@ -834,7 +834,7 @@ where
 
     if let Some(base) = &strategy.base {
         ui.print_header("# Base Contract");
-        ui.print_sub(format!("declare (class hash: {:#x})\n", base.diff.local));
+        ui.print_sub(format!("declare (class hash: {:#x})\n", base.diff.local_class_hash));
     }
 
     if let Some(world) = &strategy.world {
@@ -845,7 +845,10 @@ where
     if !&strategy.models.is_empty() {
         ui.print_header(format!("# Models ({})", &strategy.models.len()));
         for m in &strategy.models {
-            ui.print_sub(format!("register {} (class hash: {:#x})", m.diff.name, m.diff.local));
+            ui.print_sub(format!(
+                "register {} (class hash: {:#x})",
+                m.diff.name, m.diff.local_class_hash
+            ));
         }
         ui.print(" ");
     }

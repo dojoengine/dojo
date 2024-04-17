@@ -105,7 +105,7 @@ pub fn prepare_for_migration(
         world.contract_address = get_contract_address(
             salt,
             diff.world.original_class_hash,
-            &[base.as_ref().unwrap().diff.original],
+            &[base.as_ref().unwrap().diff.original_class_hash],
             FieldElement::ZERO,
         );
     }
@@ -136,8 +136,10 @@ fn evaluate_class_to_migrate(
     artifact_paths: &HashMap<String, PathBuf>,
     world_contract_will_migrate: bool,
 ) -> Result<Option<ClassMigration>> {
-    match class.remote {
-        Some(remote) if remote == class.local && !world_contract_will_migrate => Ok(None),
+    match class.remote_class_hash {
+        Some(remote) if remote == class.local_class_hash && !world_contract_will_migrate => {
+            Ok(None)
+        }
         _ => {
             let path = find_artifact_path(class.name.as_str(), artifact_paths)?;
             Ok(Some(ClassMigration { diff: class.clone(), artifact_path: path.clone() }))
