@@ -7,17 +7,20 @@ use anyhow::{anyhow, Context};
 
 use libmdbx::DatabaseFlags;
 use tempfile::NamedTempFile;
+use tracing::trace;
 
 use crate::codecs::{Compress, Decode, Decompress, Encode};
 use crate::error::DatabaseError;
 use crate::mdbx::DbEnv;
 use crate::models::list::BlockList;
 use crate::models::storage::ContractStorageKey;
+use crate::tables::Schema;
 use crate::tables::Table;
+use crate::tables::{v0::SchemaV0, SchemaV1};
 use crate::version::{
     create_db_version_file, get_db_version, remove_db_version_file, DatabaseVersionError,
 };
-use crate::{open_db_with_schema, tables, CURRENT_DB_VERSION};
+use crate::{open_db_with_schema, tables, CURRENT_DB_VERSION, LOG_TARGET};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseMigrationError {
@@ -82,6 +85,7 @@ pub fn migrate_db<P: AsRef<Path>>(path: P) -> Result<(), DatabaseMigrationError>
 /// - Changed key type to [ContractStorageKey](crate::models::storage::ContractStorageKey).
 /// - Changed value type to [BlockList](crate::models::list::BlockList).
 ///
+#[tracing::instrument(target = "katana::db", skip(env))]
 fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), DatabaseMigrationError> {
     macro_rules! create_table {
         ($tx:expr, $table:ty, $flags:expr) => {
@@ -95,6 +99,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
         {
             let mut yeeter = Yeeter::<tables::v0::StorageChangeSet>::new();
 
+            trace!(target: LOG_TARGET, table = tables::v0::StorageChangeSet::NAME, "Migrating table.");
             {
                 let mut cursor = tx.cursor::<tables::v0::StorageChangeSet>()?;
                 cursor.walk(None)?.try_for_each(|entry| {
@@ -116,6 +121,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
                 tx.put::<tables::StorageChangeSet>(key, val)?;
             }
 
+            trace!(target: LOG_TARGET, table = tables::v0::NonceChanges::NAME, "Migrating table.");
             // move data from `NonceChanges` to `NonceChangeHistory`
             create_table!(tx, tables::NonceChangeHistory, DatabaseFlags::DUP_SORT);
             let mut cursor = tx.cursor::<tables::v0::NonceChanges>()?;
@@ -125,6 +131,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
                 Result::<(), DatabaseError>::Ok(())
             })?;
 
+            trace!(target: LOG_TARGET, table = tables::v0::StorageChanges::NAME, "Migrating table.");
             create_table!(tx, tables::StorageChangeHistory, DatabaseFlags::DUP_SORT);
             // move data from `StorageChanges` to `StorageChangeHistory`
             let mut cursor = tx.cursor::<tables::v0::StorageChanges>()?;
@@ -134,6 +141,7 @@ fn migrate_from_v0_to_v1(env: DbEnv<tables::v0::SchemaV0>) -> Result<(), Databas
                 Result::<(), DatabaseError>::Ok(())
             })?;
 
+            trace!(target: LOG_TARGET, table = tables::v0::ContractClassChanges::NAME, "Migrating table.");
             create_table!(tx, tables::ClassChangeHistory, DatabaseFlags::DUP_SORT);
             // move data from `ContractClassChanges` to `ClassChangeHistory`
             let mut cursor = tx.cursor::<tables::v0::ContractClassChanges>()?;
@@ -180,7 +188,6 @@ impl<T: Table> Yeeter<T> {
         // check size of buffer, in terms of bytes
         // if buffer size is greater than the threshold, flush to file
         let buffer_size = mem::size_of_val(self.buffer.as_slice());
-        dbg!(buffer_size);
         if buffer_size > BUFFER_THRESHOLD {
             self.flush()?;
         }

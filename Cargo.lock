@@ -6781,6 +6781,7 @@ dependencies = [
  "starknet_api",
  "tempfile",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]

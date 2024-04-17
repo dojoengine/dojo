@@ -16,9 +16,12 @@ pub mod version;
 
 use mdbx::{DbEnv, DbEnvKind};
 use tables::Schema;
+use tracing::{info, warn};
 use utils::is_database_empty;
 pub use version::CURRENT_DB_VERSION;
 use version::{check_db_version, create_db_version_file, DatabaseVersionError};
+
+pub(crate) const LOG_TARGET: &str = "katana::db";
 
 /// Initialize the database at the given path and returning a handle to the its
 /// environment.
@@ -44,6 +47,12 @@ pub(crate) fn init_db_with_schema<S: Schema>(path: impl AsRef<Path>) -> anyhow::
     } else {
         match check_db_version(&path) {
             Ok(_) => {}
+            Err(DatabaseVersionError::MismatchVersion { expected, found }) => {
+                warn!(target: LOG_TARGET, %expected, %found, "Mismatch database version.");
+
+                info!(target: LOG_TARGET, "Attempting to migrate database.");
+                migration::migrate_db(path.as_ref()).context("Migrating database")?;
+            }
             Err(DatabaseVersionError::FileNotFound) => create_db_version_file(&path, S::VERSION)
                 .with_context(|| {
                     format!(
