@@ -388,6 +388,33 @@
     ]
   },
   {
+    "type": "impl",
+    "name": "UpgradeableState",
+    "interface_name": "dojo::interfaces::IUpgradeableState"
+  },
+  {
+    "type": "interface",
+    "name": "dojo::interfaces::IUpgradeableState",
+    "items": [
+      {
+        "type": "function",
+        "name": "upgrade_state",
+        "inputs": [
+          {
+            "name": "new_state",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "program_output",
+            "type": "core::array::Span::<core::felt252>"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
     "type": "constructor",
     "name": "constructor",
     "inputs": [
