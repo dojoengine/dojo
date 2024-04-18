@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use cainome::parser::tokens::{Composite, CompositeType, Function};
+use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -26,6 +26,7 @@ impl UnityPlugin {
             "u256" => "BigInteger".to_string(),
             "usize" => "uint".to_string(),
             "felt252" => "FieldElement".to_string(),
+            "bytes31" => "string".to_string(),
             "ClassHash" => "FieldElement".to_string(),
             "ContractAddress" => "FieldElement".to_string(),
 
@@ -182,10 +183,19 @@ public class {} : ModelInstance {{
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
+        fn map_type(token: &Token) -> String {
+            match token {
+                Token::CoreBasic(t) => UnityPlugin::map_type(&t.type_name()),
+                Token::Composite(t) => format!("{}", t.type_name()),
+                Token::Array(t) => format!("{}[]", map_type(&t.inner)),
+                _ => panic!("Unsupported token type: {:?}", token),
+            }
+        }
+
         let args = system
             .inputs
             .iter()
-            .map(|arg| format!("{} {}", UnityPlugin::map_type(&arg.1.type_name()), arg.0,))
+            .map(|arg| format!("{} {}", map_type(&arg.1), &arg.0))
             .collect::<Vec<String>>()
             .join(", ");
 

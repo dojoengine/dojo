@@ -28,6 +28,7 @@ impl TypescriptPlugin {
             "u256" => "RecsType.BigInt".to_string(),
             "usize" => "RecsType.Number".to_string(),
             "felt252" => "RecsType.BigInt".to_string(),
+            "bytes31" => "RecsType.String".to_string(),
             "ClassHash" => "RecsType.BigInt".to_string(),
             "ContractAddress" => "RecsType.BigInt".to_string(),
 
