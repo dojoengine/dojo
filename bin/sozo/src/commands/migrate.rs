@@ -25,8 +25,8 @@ pub struct MigrateArgs {
 
     #[arg(long, global = true)]
     #[arg(help = "Name of the World.")]
-    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying \
-                       the contract to avoid address conflicts.")]
+    #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
+                       contract to avoid address conflicts.")]
     name: Option<String>,
 
     #[command(flatten)]

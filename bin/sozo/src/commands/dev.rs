@@ -18,7 +18,7 @@ use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::CompilationUnit;
 use scarb::core::{Config, Workspace};
-use sozo_ops::migration::{self, prepare_migration};
+use sozo_ops::migration;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
@@ -245,7 +245,7 @@ where
     }
 
     let ui = ws.config().ui();
-    let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let mut strategy = migration::prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
     match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
         Ok(migration_output) => {
