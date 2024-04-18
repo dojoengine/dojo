@@ -171,7 +171,7 @@ impl Saya {
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         if exec_infos.is_empty() {
-            trace!(target: "saya_core", block_number, "Skipping empty block.");
+            trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
             return Ok(());
         }
 
@@ -200,37 +200,37 @@ impl Saya {
 
         let world_da = new_program_input.da_as_calldata(self.config.world_address);
         let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
-        trace!(target: "saya_core", "World DA {world_da_printable:?}.");
+        trace!(target: LOG_TARGET, "World DA {world_da_printable:?}.");
 
-        trace!(target: "saya_core", "Proving block {block_number}.");
+        trace!(target: LOG_TARGET, "Proving block {block_number}.");
         let proof =
             prove_stone(new_program_input.serialize(Some(self.config.world_address))?).await?;
-        info!(target: "saya_core", block_number, "Block proven.");
+        info!(target: LOG_TARGET, block_number, "Block proven.");
 
-        trace!(target: "saya_core", "Verifying block {block_number}.");
+        trace!(target: LOG_TARGET, "Verifying block {block_number}.");
         let serialized_proof = parse_proof(&proof).unwrap();
         let transaction_hash = verifier::starknet::starknet_verify(
             self.config.fact_registry_address,
             serialized_proof,
         )
         .await?;
-        info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
         let ExtractOutputResult { program_output: _, program_output_hash } =
             extract_output(&proof)?;
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
-        info!(target: "saya_core", expected_fact, "Expected fact.");
+        info!(target: LOG_TARGET, expected_fact, "Expected fact.");
 
         sleep(Duration::from_millis(5000));
 
-        trace!(target: "saya_core", "Applying diffs {block_number}.");
+        trace!(target: LOG_TARGET, "Applying diffs {block_number}.");
         let ExtractOutputResult { program_output, program_output_hash: _ } =
             extract_output(&proof)?;
         let transaction_hash =
             starknet_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
                 .await?;
-        info!(target: "saya_core", block_number, transaction_hash, "Diffs applied.");
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
         Ok(())
     }
 }
