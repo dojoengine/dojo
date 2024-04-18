@@ -307,7 +307,7 @@ export function defineContractComponents(world: World) {
         format!(
             "
         // Call the `{system_name}` system with the specified Account and calldata
-        const {pretty_system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
+        const {system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
             try {{
                 return await provider.execute(
                     props.account,
@@ -323,10 +323,6 @@ export function defineContractComponents(world: World) {
             ",
             // selector for execute
             system_name = system.name,
-            // pretty system name
-            // snake case to camel case
-            // move_to -> moveTo
-            pretty_system_name = system.name.to_case(convert_case::Case::Camel),
             // add comma if we have args
             arg_sep = if !args.is_empty() { ", " } else { "" },
             // formatted args to use our mapped types

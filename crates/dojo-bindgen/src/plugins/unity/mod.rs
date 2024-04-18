@@ -240,7 +240,7 @@ public class {} : ModelInstance {{
     // Call the `{system_name}` system with the specified Account and calldata
     // Returns the transaction hash. Use `WaitForTransaction` to wait for the transaction to be \
              confirmed.
-    public async Task<FieldElement> {pretty_system_name}(Account account{arg_sep}{args}) {{
+    public async Task<FieldElement> {system_name}(Account account{arg_sep}{args}) {{
         return await account.ExecuteRaw(new dojo.Call[] {{
             new dojo.Call{{
                 to = contractAddress,
@@ -254,21 +254,6 @@ public class {} : ModelInstance {{
             ",
             // selector for execute
             system_name = system.name,
-            // pretty system name
-            // snake case to camel case
-            // move_to -> MoveTo
-            pretty_system_name = system
-                .name
-                .split('_')
-                .map(|s| {
-                    let mut c = s.chars();
-                    match c.next() {
-                        None => String::new(),
-                        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(""),
             // add comma if we have args
             arg_sep = if !args.is_empty() { ", " } else { "" },
             // formatted args to use our mapped types
