@@ -38,14 +38,22 @@ impl StateProvider for ForkedStateDb {
         &self,
         address: ContractAddress,
     ) -> ProviderResult<Option<ClassHash>> {
-        if let hash @ Some(_) = self.contract_state.read().get(&address).map(|i| i.class_hash) {
+        if let hash @ Some(_) = self
+            .contract_state
+            .read()
+            .get(&address)
+            .map(|i| i.class_hash)
+            .filter(|h| h != &ClassHash::ZERO)
+        {
             return Ok(hash);
         }
         StateProvider::class_hash_of_contract(&self.db, address)
     }
 
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        if let nonce @ Some(_) = self.contract_state.read().get(&address).map(|i| i.nonce) {
+        if let nonce @ Some(_) =
+            self.contract_state.read().get(&address).map(|i| i.nonce).filter(|n| n != &Nonce::ZERO)
+        {
             return Ok(nonce);
         }
         StateProvider::nonce(&self.db, address)
@@ -148,7 +156,13 @@ impl ContractInfoProvider for ForkedSnapshot {
 
 impl StateProvider for ForkedSnapshot {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        if let nonce @ Some(_) = self.inner.contract_state.get(&address).map(|info| info.nonce) {
+        if let nonce @ Some(_) = self
+            .inner
+            .contract_state
+            .get(&address)
+            .map(|info| info.nonce)
+            .filter(|n| n != &Nonce::ZERO)
+        {
             return Ok(nonce);
         }
         StateProvider::nonce(&self.inner.db, address)
@@ -171,8 +185,12 @@ impl StateProvider for ForkedSnapshot {
         &self,
         address: ContractAddress,
     ) -> ProviderResult<Option<ClassHash>> {
-        if let class_hash @ Some(_) =
-            self.inner.contract_state.get(&address).map(|info| info.class_hash)
+        if let class_hash @ Some(_) = self
+            .inner
+            .contract_state
+            .get(&address)
+            .map(|info| info.class_hash)
+            .filter(|h| h != &ClassHash::ZERO)
         {
             return Ok(class_hash);
         }
