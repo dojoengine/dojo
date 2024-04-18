@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::OnceCell;
-use tracing::warn;
 
 use super::{ProverClient, ProverIdentifier};
 
@@ -48,34 +47,24 @@ impl ProverClient for StoneProver {
 
 impl StoneProver {
     async fn new() -> anyhow::Result<StoneProver> {
-        static STONE_PROVER: OnceCell<(anyhow::Result<String>, anyhow::Result<String>)> =
-            OnceCell::const_new();
+        static STONE_PROVER: OnceCell<anyhow::Result<String>> = OnceCell::const_new();
 
-        let source = "neotheprogramist/state-diff-commitment:latest";
-        let verifier = "neotheprogramist/verifier:latest";
+        let prover = "neotheprogramist/state-diff-commitment:latest";
 
         let result = STONE_PROVER
             .get_or_init(|| async {
                 let mut command = Command::new("podman");
-                command.arg("pull").arg(format!("docker.io/{}", source));
+                command.arg("pull").arg(format!("docker.io/{}", prover));
 
-                let mut verifier_command = Command::new("podman");
-                verifier_command.arg("pull").arg(format!("docker.io/{}", verifier));
-
-                (
-                    run(command, None).await.context("Failed to pull prover"),
-                    run(verifier_command, None).await.context("Failed to pull prover"),
-                )
+                run(command, None).await.context("Failed to pull prover")
             })
             .await;
 
-        if result.0.is_err() {
+        if result.is_err() {
             bail!("Failed to pull prover");
-        } else if result.1.is_err() {
-            warn!("Failed to pull verifier");
         }
 
-        Ok(StoneProver(source.to_string()))
+        Ok(StoneProver(prover.to_string()))
     }
 }
 
