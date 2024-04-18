@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
-use convert_case::Casing;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -392,9 +391,7 @@ export function defineContractComponents(world: World) {
                 contract
                     .systems
                     .iter()
-                    .map(|system| {
-                        system.to_function().unwrap().name.to_case(convert_case::Case::Camel)
-                    })
+                    .map(|system| { system.to_function().unwrap().name.to_string() })
                     .collect::<Vec<String>>()
                     .join(", ")
             );
