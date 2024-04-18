@@ -583,30 +583,9 @@ use core::traits::TryInto;
             let da_hash = da_hasher.finalize();
             assert(da_hash == program_output.world_da_hash, 'wrong output hash');
 
-            let mut program_output_hash = poseidon::PoseidonImpl::new()
-                .update(program_output.prev_state_root)
-                .update(program_output.new_state_root)
-                .update(program_output.block_number)
-                .update(program_output.block_hash)
-                .update(program_output.config_hash)
-                .update(program_output.world_da_hash);
-            let mut i = 0;
-            loop {
-                if i == program_output.message_to_starknet_segment.len() {
-                    break;
-                }
-                program_output_hash = program_output_hash.update(*program_output.message_to_starknet_segment.at(i));
-                i += 1;
-            };
-            let mut i = 0;
-            loop {
-                if i == program_output.message_to_appchain_segment.len() {
-                    break;
-                }
-                program_output_hash = program_output_hash.update(*program_output.message_to_appchain_segment.at(i));
-                i += 1;
-            };
-            program_output_hash = program_output_hash.finalize();
+            let mut program_output_array = array![];
+            program_output.serialize(ref program_output_array);
+            let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
 
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
             assert(
