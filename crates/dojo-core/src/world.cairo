@@ -60,7 +60,8 @@ mod Errors {
 
 #[starknet::contract]
 mod world {
-    use core::traits::TryInto;
+    use core::to_byte_array::FormatAsByteArray;
+use core::traits::TryInto;
     use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use option::OptionTrait;
@@ -80,7 +81,7 @@ mod world {
     use dojo::database::introspect::Introspect;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
     use dojo::model::Model;
-    use dojo::interfaces::{IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl};
+    use dojo::interfaces::{IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl, StorageUpdate, ProgramOutput};
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
     use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
@@ -567,7 +568,7 @@ mod world {
 
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
-        fn upgrade_state(ref self: ContractState, new_state: Span<felt252>, program_output: Span<felt252>) {
+        fn upgrade_state(ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput) {
             let program_hash = 18468145346606952491117791430885172818429658569709932865894865254677766952;
             let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
@@ -575,13 +576,38 @@ mod world {
                 if i == new_state.len() {
                     break;
                 }
-                da_hasher = da_hasher.update(*new_state.at(i));
+                da_hasher = da_hasher.update(*new_state.at(i).key);
+                da_hasher = da_hasher.update(*new_state.at(i).value);
                 i += 1;
             };
             let da_hash = da_hasher.finalize();
-            assert(da_hash == *program_output.at(5), 'wrong output hash');
+            assert(da_hash == program_output.world_da_hash, 'wrong output hash');
 
-            let program_output_hash = poseidon::poseidon_hash_span(program_output);
+            let mut program_output_hash = poseidon::PoseidonImpl::new()
+                .update(program_output.prev_state_root)
+                .update(program_output.new_state_root)
+                .update(program_output.block_number)
+                .update(program_output.block_hash)
+                .update(program_output.config_hash)
+                .update(program_output.world_da_hash);
+            let mut i = 0;
+            loop {
+                if i == program_output.message_to_starknet_segment.len() {
+                    break;
+                }
+                program_output_hash = program_output_hash.update(*program_output.message_to_starknet_segment.at(i));
+                i += 1;
+            };
+            let mut i = 0;
+            loop {
+                if i == program_output.message_to_appchain_segment.len() {
+                    break;
+                }
+                program_output_hash = program_output_hash.update(*program_output.message_to_appchain_segment.at(i));
+                i += 1;
+            };
+            program_output_hash = program_output_hash.finalize();
+
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
             assert(
                 IFactRegistryDispatcher {
@@ -595,9 +621,9 @@ mod world {
                 if i >= new_state.len() {
                     break;
                 }
-                let base = starknet::storage_base_address_from_felt252(*new_state[i]);
+                let base = starknet::storage_base_address_from_felt252(*new_state.at(i).key);
                 starknet::storage_write_syscall(
-                    0, starknet::storage_address_from_base(base), *new_state[i + 1]
+                    0, starknet::storage_address_from_base(base), *new_state.at(i + 1).value
                 ).unwrap_syscall();
                 i += 2;
             }
