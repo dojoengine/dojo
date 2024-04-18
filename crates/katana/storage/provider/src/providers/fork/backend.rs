@@ -364,6 +364,9 @@ impl StateProvider for SharedStateProvider {
         // value or just the default value. So this filter is a pessimistic approach to always
         // invalidate 0 nonce value in the cache.
         //
+        // Meaning, if the nonce is 0, we always fetch the nonce from the forked provider, even if
+        // we already fetched it before.
+        //
         // Similar story with `class_hash_of_contract`
         //
         if let nonce @ Some(_) =
