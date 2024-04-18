@@ -91,7 +91,7 @@ pub fn extract_messages(
 }
 
 impl ProgramInput {
-    pub fn serialize(&self, world: Option<FieldElement>) -> anyhow::Result<String> {
+    pub fn serialize(&self, world: FieldElement) -> anyhow::Result<String> {
         let message_to_starknet = self
             .message_to_starknet_segment
             .iter()
@@ -215,31 +215,8 @@ fn test_program_input() -> anyhow::Result<()> {
         },
     };
 
-    // Serialize without the DA.
-    let serialized = input.serialize(None).unwrap();
-
-    println!("Serialized: {}", serialized);
-
-    pub const EXPECTED: &str = r#"{
-        "prev_state_root": 101,
-        "block_number": 102,
-        "block_hash": 103,
-        "config_hash": 104,
-        "message_to_starknet_segment": [105,106,1,107],
-        "message_to_appchain_segment": [108,109,110,111,1,112],
-        "nonce_updates": {},
-        "storage_updates": {"113":{"114":115}},
-        "contract_updates": {},
-        "declared_classes": {},
-        "world_da": []
-    }"#;
-
-    let expected = EXPECTED.chars().filter(|c| !c.is_whitespace()).collect::<String>();
-    println!("{}", expected);
-    assert_eq!(serialized, expected);
-
     // Serialize with the DA.
-    let serialized_with_da = input.serialize(Some(FieldElement::from_str("113")?)).unwrap();
+    let serialized_with_da = input.serialize(FieldElement::from_str("113")?).unwrap();
     println!("Serialized: {}", serialized_with_da);
     pub const EXPECTED_WITH_DA: &str = r#"{
             "prev_state_root": 101,

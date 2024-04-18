@@ -203,17 +203,13 @@ impl Saya {
         trace!(target: LOG_TARGET, "World DA {world_da_printable:?}.");
 
         trace!(target: LOG_TARGET, "Proving block {block_number}.");
-        let proof =
-            prove_stone(new_program_input.serialize(Some(self.config.world_address))?).await?;
+        let proof = prove_stone(new_program_input.serialize(self.config.world_address)?).await?;
         info!(target: LOG_TARGET, block_number, "Block proven.");
 
         trace!(target: LOG_TARGET, "Verifying block {block_number}.");
         let serialized_proof = parse_proof(&proof).unwrap();
-        let transaction_hash = verifier::starknet::starknet_verify(
-            self.config.fact_registry_address,
-            serialized_proof,
-        )
-        .await?;
+        let transaction_hash =
+            verifier::starknet_verify(self.config.fact_registry_address, serialized_proof).await?;
         info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
