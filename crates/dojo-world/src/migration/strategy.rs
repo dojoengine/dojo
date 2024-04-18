@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use camino::Utf8PathBuf;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{cairo_short_string_to_felt, get_contract_address};
@@ -109,6 +109,14 @@ pub fn prepare_for_migration(
             FieldElement::ZERO,
         );
 
+        if let Some(world_address) = world_address {
+            if world_address != generated_world_address {
+                bail!(
+                    "Calculated world address doesn't match provided world address\n
+                    Make sure `seed/name` passed is correct.\n"
+                )
+            }
+        }
         world.contract_address = generated_world_address;
     }
 
