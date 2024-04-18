@@ -14,7 +14,7 @@ jobs:
   test:
     runs-on: ubuntu-latest-16-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -31,7 +31,7 @@ jobs:
   ensure-wasm:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -66,7 +66,7 @@ jobs:
   dojo-core-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -75,7 +75,7 @@ jobs:
   dojo-spawn-and-move-example-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -84,7 +84,7 @@ jobs:
   dojo-world-bindings-check:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -93,7 +93,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -102,7 +102,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -111,7 +111,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:8d66222
+      image: ghcr.io/dojoengine/dojo-dev:3153a80
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
