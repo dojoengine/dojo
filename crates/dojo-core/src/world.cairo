@@ -602,7 +602,7 @@ use core::traits::TryInto;
                 }
                 let base = starknet::storage_base_address_from_felt252(*new_state.at(i).key);
                 starknet::storage_write_syscall(
-                    0, starknet::storage_address_from_base(base), *new_state.at(i + 1).value
+                    0, starknet::storage_address_from_base(base), *new_state.at(i).value
                 ).unwrap_syscall();
                 i += 2;
             }
