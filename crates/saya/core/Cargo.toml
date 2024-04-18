@@ -16,7 +16,7 @@ saya-provider.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
-cairo-proof-parser = { git = "https://github.com/cartridge-gg/cairo-proof-parser", rev = "9e8922780f064d194b45caef36a72cc211f8348d" }
+cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
 flate2.workspace = true
