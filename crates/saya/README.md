@@ -71,6 +71,8 @@ However, papyrus and blockifier which we depend on are still in `-dev` version, 
 
 ## Local Testing
 
+Local Testing is only supported on `amd64` arch for now.
+
 ```bash
 cargo run -r -p katana # Start an appchain
 cargo run -r -p sozo -- build --manifest-path examples/spawn-and-move/Scarb.toml
