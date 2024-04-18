@@ -54,10 +54,7 @@ pub const EXAMPLE_KATANA_DIFF: &str = r#"{
     }
 }"#;
 
-pub fn state_updates_to_json_like(
-    state_updates: &StateUpdates,
-    world: Option<FieldElement>,
-) -> String {
+pub fn state_updates_to_json_like(state_updates: &StateUpdates, world: FieldElement) -> String {
     let mut result = String::new();
 
     result.push_str(&format!(r#""nonce_updates":{}"#, "{"));
@@ -103,17 +100,13 @@ pub fn state_updates_to_json_like(
     result.push_str(&format!("{}{}", declared_classes, "}"));
 
     result.push_str(r#","world_da":"#);
-    let storage = match world {
-        Some(world) => {
-            if let Some(storage) = state_updates.storage_updates.get(&ContractAddress::from(world))
-            {
-                storage.iter().map(|(k, v)| format!("{},{}", k, v)).collect::<Vec<_>>().join(",")
-            } else {
-                String::new()
-            }
-        }
-        None => String::new(),
-    };
+    let storage =
+        if let Some(storage) = state_updates.storage_updates.get(&ContractAddress::from(world)) {
+            storage.iter().map(|(k, v)| format!("{},{}", k, v)).collect::<Vec<_>>().join(",")
+        } else {
+            String::new()
+        };
+
     result.push_str(&format!("[{}]", storage));
 
     result
@@ -121,7 +114,7 @@ pub fn state_updates_to_json_like(
 
 /// We need custom implementation because of dynamic keys in json
 impl ProvedStateDiff {
-    pub fn serialize(&self, _world: Option<FieldElement>) -> String {
+    pub fn serialize(&self) -> String {
         let mut result = String::from('{');
         result.push_str(&format!(r#""genesis_state_hash":{}"#, self.genesis_state_hash));
         result.push_str(&format!(r#","prev_state_hash":{}"#, self.prev_state_hash));
