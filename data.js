@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713398683266,
+  "lastUpdate": 1713484663851,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5755,6 +5755,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17275277,
             "range": "± 261357",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9a18f4d2188959657cc7c940153a3024b7204ff8",
+          "message": "fix(dojo-bindgen): typescript code gen (#1847)\n\n* fix: system arg types\r\n\r\n* fix: handle arrays\r\n\r\n* fmt\r\n\r\n* fix: duplicate tokens\r\n\r\n* feat: do same thing for unity plugin & support bytes31\r\n\r\n* fix: casing for system names\r\n\r\n* fix: ts return namoing",
+          "timestamp": "2024-04-18T17:49:18-06:00",
+          "tree_id": "6e48660dc1d61e46adc69c2d0dda59b0d502995f",
+          "url": "https://github.com/dojoengine/dojo/commit/9a18f4d2188959657cc7c940153a3024b7204ff8"
+        },
+        "date": 1713484662739,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16975995,
+            "range": "± 233686",
             "unit": "ns/iter"
           }
         ]
