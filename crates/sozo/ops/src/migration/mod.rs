@@ -127,24 +127,8 @@ where
         .await?;
     } else {
         // Migrate according to the diff.
-        match apply_diff(ws, account, txn_config, &mut strategy).await {
-            Ok(migration_output) => {
-                update_manifests_and_abis(
-                    ws,
-                    local_manifest.clone(),
-                    &profile_dir,
-                    &profile_name,
-                    &rpc_url,
-                    world_address,
-                    Some(migration_output.clone()),
-                    name.as_ref(),
-                )
-                .await?;
-
-                if !ws.config().offline() {
-                    upload_metadata(ws, account, migration_output, txn_config).await?;
-                }
-            }
+        let migration_output = match apply_diff(ws, account, txn_config, &mut strategy).await {
+            Ok(migration_output) => Some(migration_output),
             Err(e) => {
                 update_manifests_and_abis(
                     ws,
@@ -158,6 +142,24 @@ where
                 )
                 .await?;
                 return Err(e)?;
+            }
+        };
+
+        update_manifests_and_abis(
+            ws,
+            local_manifest.clone(),
+            &profile_dir,
+            &profile_name,
+            &rpc_url,
+            world_address,
+            migration_output.clone(),
+            name.as_ref(),
+        )
+        .await?;
+
+        if let Some(migration_output) = migration_output {
+            if !ws.config().offline() {
+                upload_metadata(ws, account, migration_output, txn_config).await?;
             }
         }
     };

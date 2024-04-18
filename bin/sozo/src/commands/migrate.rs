@@ -73,10 +73,9 @@ impl MigrateArgs {
             }
         };
 
-        let (world_address, account, chain_id, rpc_url) =
-            config.tokio_handle().block_on(async {
-                setup_env(&ws, account, starknet, world, name.as_ref(), env_metadata.as_ref()).await
-            })?;
+        let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {
+            setup_env(&ws, account, starknet, world, name.as_ref(), env_metadata.as_ref()).await
+        })?;
 
         match self.command {
             MigrateCommand::Plan => config.tokio_handle().block_on(async {
@@ -112,13 +111,12 @@ pub async fn setup_env<'a>(
     Option<FieldElement>,
     SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     String,
-    String,
 )> {
     let ui = ws.config().ui();
 
     let world_address = world.address(env).ok();
 
-    let (account, chain_id, rpc_url) = {
+    let (account, rpc_url) = {
         let provider = starknet.provider(env)?;
 
         let spec_version = provider.spec_version().await?;
@@ -151,7 +149,7 @@ pub async fn setup_env<'a>(
         ui.print(format!("\nChain ID: {chain_id}\n"));
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-            Ok(_) => Ok((account, chain_id, rpc_url)),
+            Ok(_) => Ok((account, rpc_url)),
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
                 Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
             }
@@ -160,5 +158,5 @@ pub async fn setup_env<'a>(
     }
     .with_context(|| "Problem initializing account for migration.")?;
 
-    Ok((world_address, account, chain_id, rpc_url.to_string()))
+    Ok((world_address, account, rpc_url.to_string()))
 }
