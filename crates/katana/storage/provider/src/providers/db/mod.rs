@@ -561,7 +561,7 @@ impl BlockWriter for DbProvider {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
-        _executions: Vec<TxExecInfo>,
+        executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         self.0.update(move |db_tx| -> ProviderResult<()> {
             let block_hash = block.block.header.hash;
@@ -581,7 +581,9 @@ impl BlockWriter for DbProvider {
             db_tx.put::<tables::Headers>(block_number, block_header)?;
             db_tx.put::<tables::BlockBodyIndices>(block_number, block_body_indices)?;
 
-            for (i, (transaction, receipt)) in transactions.into_iter().zip(receipts).enumerate() {
+            for (i, ((transaction, receipt), execution)) in
+                transactions.into_iter().zip(receipts).zip(executions).enumerate()
+            {
                 let tx_number = tx_offset + i as u64;
                 let tx_hash = transaction.hash;
 
@@ -590,6 +592,7 @@ impl BlockWriter for DbProvider {
                 db_tx.put::<tables::TxBlocks>(tx_number, block_number)?;
                 db_tx.put::<tables::Transactions>(tx_number, transaction.transaction)?;
                 db_tx.put::<tables::Receipts>(tx_number, receipt)?;
+                db_tx.put::<tables::TxExecutions>(tx_number, execution)?;
             }
 
             // insert classes
