@@ -5,6 +5,7 @@ use camino::Utf8PathBuf;
 use dojo_world::contracts::abi::world;
 use dojo_world::contracts::{cairo_utils, WorldContract};
 use dojo_world::metadata::{dojo_metadata_from_workspace, ArtifactMetadata};
+use dojo_world::migration::class::ClassMigration;
 use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
@@ -215,9 +216,11 @@ where
         contracts: vec![],
     };
 
+    let world_address = strategy.world_address()?;
+
     // Once Torii supports indexing arrays, we should declare and register the
     // ResourceMetadata model.
-    match register_models(strategy, migrator, &ui, &txn_config).await {
+    match register_dojo_models(&strategy.models, world_address, migrator, &ui, &txn_config).await {
         Ok(output) => {
             migration_output.models = output.registered_model_names;
         }
@@ -227,7 +230,15 @@ where
         }
     };
 
-    match deploy_dojo_contracts(strategy, migrator, &ui, &txn_config).await {
+    match register_dojo_contracts(
+        &mut strategy.contracts,
+        world_address,
+        migrator,
+        &ui,
+        &txn_config,
+    )
+    .await
+    {
         Ok(output) => {
             migration_output.contracts = output;
         }
@@ -396,8 +407,9 @@ where
     Ok(())
 }
 
-async fn register_models<P, S>(
-    strategy: &MigrationStrategy,
+async fn register_dojo_models<P, S>(
+    models: &Vec<ClassMigration>,
+    world_address: FieldElement,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -406,8 +418,6 @@ where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    let models = &strategy.models;
-
     if models.is_empty() {
         return Ok(RegisterOutput {
             transaction_hash: FieldElement::ZERO,
@@ -449,7 +459,6 @@ where
         ui.print_sub(format!("Class hash: {:#x}", c.diff.local_class_hash));
     }
 
-    let world_address = strategy.world_address()?;
     let world = WorldContract::new(world_address, migrator);
 
     let calls = models
@@ -473,8 +482,9 @@ where
     Ok(RegisterOutput { transaction_hash, declare_output, registered_model_names })
 }
 
-async fn deploy_dojo_contracts<P, S>(
-    strategy: &mut MigrationStrategy,
+async fn register_dojo_contracts<P, S>(
+    contracts: &mut Vec<ContractMigration>,
+    world_address: FieldElement,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
     txn_config: &TxnConfig,
@@ -483,8 +493,6 @@ where
     P: Provider + Sync + Send + 'static,
     S: Signer + Sync + Send + 'static,
 {
-    let contracts = &strategy.contracts;
-
     if contracts.is_empty() {
         return Ok(vec![]);
     }
@@ -493,10 +501,7 @@ where
 
     let mut deploy_output = vec![];
 
-    let world_address = strategy.world_address()?;
-
-    let contracts = &mut strategy.contracts;
-    for contract in contracts {
+    for contract in contracts.iter_mut() {
         let name = &contract.diff.name;
         ui.print(italic_message(name).to_string());
         match contract
@@ -517,6 +522,8 @@ where
                     ));
                 }
 
+                // NOTE: this assignment may not look useful since we are dropping `MigrationStrategy` without actually using this value from it.
+                // but some tests depend on this behaviour
                 contract.contract_address = output.contract_address;
 
                 if output.was_upgraded {
