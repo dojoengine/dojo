@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713486538912,
+  "lastUpdate": 1713490668552,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5815,6 +5815,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 17251870,
             "range": "± 1058622",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jasper@codictive.be",
+            "name": "RareSecond",
+            "username": "RareSecond"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9fd4cc4d85989285bb3f74a9c1c6df23cb291ebf",
+          "message": "Update defaults for new TypeScript bindgen (#1846)\n\n* Updated imports\r\n\r\n* Filled in default values for rpc, torii and relay\r\n\r\n* Removed invalid older setter\r\n\r\n* Fixed incorrectly setting relayUrl\r\n\r\n* Updated test\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-18T19:29:33-06:00",
+          "tree_id": "ca075a28298bb30e0366d506dab95135dedefc64",
+          "url": "https://github.com/dojoengine/dojo/commit/9fd4cc4d85989285bb3f74a9c1c6df23cb291ebf"
+        },
+        "date": 1713490667725,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17007331,
+            "range": "± 271094",
             "unit": "ns/iter"
           }
         ]
