@@ -12,14 +12,13 @@ async fn combine_proofs(
     _input: &ProverInput,
 ) -> anyhow::Result<Proof> {
     // TODO: Insert the real `merge program` here
-    let proof = first + " & " + &second;
-
+    let proof: String = first + " & " + &second;
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     Ok(proof)
 }
 
-// Return type based on: https://rust-lang.github.io/async-book/07_workarounds/04_recursion.html.
+// Return type based on: https://rust-lang.githmergeub.io/async-book/07_workarounds/04_recursion.html.
 pub fn prove_recursively(
     mut inputs: Vec<ProverInput>,
     prover: ProverIdentifier,
@@ -59,11 +58,11 @@ pub fn prove_recursively(
 // TODO: Migrate this tests to the new inputs.
 #[cfg(test)]
 mod tests {
-    // use katana_primitives::FieldElement;
+    use katana_primitives::FieldElement;
 
-    // use crate::prover::{state_diff::ProvedStateDiff, ProverIdentifier};
+    use crate::prover::{state_diff::ProvedStateDiff, ProverIdentifier};
 
-    // use super::prove_recursively;
+    use super::prove_recursively;
 
     // #[tokio::test]
     // async fn test_one() {
@@ -78,7 +77,7 @@ mod tests {
 
     //     let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
 
-    //     assert_eq!(proof, "dummy ok".to_string());
+    //     assert_eq!(proof.0, "dummy ok".to_string());
     //     assert_eq!(start_instant.elapsed().as_secs(), 1);
     // }
 
@@ -117,4 +116,5 @@ mod tests {
     //     assert_eq!(proof, expected);
     //     assert_eq!(start_instant.elapsed().as_secs(), 4);
     // }
+
 }
