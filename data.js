@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713484663851,
+  "lastUpdate": 1713486538912,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5785,6 +5785,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16975995,
             "range": "± 233686",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dbad8791ef2ad3e4f7a69f38a0cf3b33a9e082b2",
+          "message": "fix(katana-provider): temporarily invalidate cache if nonce or class hash is default value (#1850)\n\n* invalidate default value in cache\r\n\r\n* more comment\r\n\r\n* invalidate at local storage level as well",
+          "timestamp": "2024-04-19T08:20:43+08:00",
+          "tree_id": "869856301a8de85e643dcfe034f8b9ba65c644d3",
+          "url": "https://github.com/dojoengine/dojo/commit/dbad8791ef2ad3e4f7a69f38a0cf3b33a9e082b2"
+        },
+        "date": 1713486537767,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 17251870,
+            "range": "± 1058622",
             "unit": "ns/iter"
           }
         ]
