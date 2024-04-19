@@ -1041,7 +1041,7 @@ where
 
     let InvokeTransactionResult { transaction_hash } = migrator
         .execute(calls)
-        .fee_estimate_multiplier(2.0) // TODO: Replace hardcoded value here
+        .fee_estimate_multiplier(txn_config.fee_estimate_multiplier.unwrap_or(2.0)) // TODO: Replace hardcoded value here
         .send()
         .await
         .map_err(|e| {
