@@ -19,7 +19,7 @@ use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff, TxnConfig,
     Upgradable, UpgradeOutput,
 };
-use dojo_world::utils::{TransactionExt, TransactionWaiter};
+use dojo_world::utils::TransactionWaiter;
 use futures::future;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
