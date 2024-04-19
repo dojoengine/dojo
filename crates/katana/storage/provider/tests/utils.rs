@@ -50,3 +50,22 @@ pub fn generate_dummy_blocks_and_receipts(
 
     blocks
 }
+
+pub fn generate_dummy_blocks_empty(count: u64) -> Vec<SealedBlockWithStatus> {
+    let mut blocks = Vec::with_capacity(count as usize);
+    let mut parent_hash: BlockHash = 0u8.into();
+
+    for i in 0..count {
+        let header = Header { parent_hash, number: i, ..Default::default() };
+        let body = vec![];
+
+        let block =
+            Block { header, body }.seal_with_hash(FieldElement::from(rand::random::<u128>()));
+
+        parent_hash = block.header.hash;
+
+        blocks.push(SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 });
+    }
+
+    blocks
+}
