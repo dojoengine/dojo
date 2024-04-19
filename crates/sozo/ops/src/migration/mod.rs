@@ -19,7 +19,7 @@ use dojo_world::migration::{
     Declarable, DeployOutput, Deployable, MigrationError, RegisterOutput, StateDiff, TxnConfig,
     Upgradable, UpgradeOutput,
 };
-use dojo_world::utils::TransactionWaiter;
+use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use futures::future;
 use scarb::core::Workspace;
 use scarb_ui::Ui;
@@ -1039,12 +1039,8 @@ where
 
     let calls = resources.iter().map(|r| world.set_metadata_getcall(r)).collect::<Vec<_>>();
 
-    let InvokeTransactionResult { transaction_hash } = migrator
-        .execute(calls)
-        .fee_estimate_multiplier(txn_config.fee_estimate_multiplier.unwrap_or(2.0)) // TODO: Replace hardcoded value here
-        .send()
-        .await
-        .map_err(|e| {
+    let InvokeTransactionResult { transaction_hash } =
+        migrator.execute(calls).send_with_cfg(&txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register metadata into the resource registry: {e}")
         })?;
