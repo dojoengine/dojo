@@ -1,12 +1,13 @@
 // Required modules and traits for future and async handling.
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use tracing::{info, trace};
+use tracing::{info, level_filters::STATIC_MAX_LEVEL, trace};
 
 // Imports from the parent module.
 use super::{ProverIdentifier, ProverInput};
 
 type Proof = String;
+
 
 // Asynchronously combines two proofs into a single proof.
 async fn combine_proofs(
@@ -17,15 +18,14 @@ async fn combine_proofs(
     // Placeholder: Combine proofs, the current implementation is simplistic.
     let proof: String = first + " & " + &second;
     // Simulate a delay to mimic a time-consuming process.
+    println!("{}: Combining proofs {}",&_input.block_number,proof);
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-
     Ok(proof)
 }
 async fn prove(id:String, prover: ProverIdentifier) -> anyhow::Result<String> {
     // Placeholder: Prove the input, the current implementation is simplistic.
     let proof = format!("dummy {}",id).to_string();
     // Simulate a delay to mimic a time-consuming process.
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
     Ok(proof)
 
 }
@@ -36,7 +36,7 @@ pub fn prove_recursively(
     prover: ProverIdentifier,
 ) -> BoxFuture<'static, anyhow::Result<(Proof, ProverInput)>> {
     async move {
-        if inputs.len() <= 1 {
+        if inputs.len() == 1 {
             // Handle the base case with only one input.
             let input = inputs.pop().unwrap();
             let block_number = input.block_number;
@@ -48,7 +48,7 @@ pub fn prove_recursively(
         } else {
             // Recursive case: split inputs into two halves and process each half recursively.
             let last = inputs.split_off(inputs.len() / 2);
-            println!("Splitting inputs: {} & {}", inputs.len(), last.len());
+            
 
             // Parallelize the proving process using tokio::try_join.
             let (earlier, later) = tokio::try_join!(
@@ -59,7 +59,7 @@ pub fn prove_recursively(
 
             // Combine the results from two halves.
             let input = earlier.1.combine(later.1);
-            
+
             // Merge the proofs into a single proof.
             let merged_proofs = combine_proofs(earlier.0, later.0, &input).await?;
 
@@ -78,6 +78,7 @@ mod tests {
     use crate::prover::{state_diff::ProvedStateDiff, ProverIdentifier,ProverInput};
     use super::prove_recursively;
     use super::combine_proofs;
+    use std::time::{Duration, Instant};
     
     // Test the case with one input.
     #[tokio::test]
@@ -139,6 +140,33 @@ mod tests {
             "dummy 0 & dummy 1 & dummy 2 & dummy 3 & dummy 4 & dummy 5 & dummy 6 & dummy 7"
                 .to_string();
         assert_eq!(proof.0, expected);
+    }
+#[tokio::test]
+    async fn time_test(){
+        let inputs = (0..512u64)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
+        let start = std::time::Instant::now();
+        let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
+        let elapsed = start.elapsed();
+        println!("Time elapsed: {:?}", elapsed);
+        let _tolerance = 0.1;
+        let expected_duration = Duration::from_secs(9);
+        let lower_bound = expected_duration - Duration::from_secs_f64(_tolerance * expected_duration.as_secs_f64());
+        let upper_bound = expected_duration + Duration::from_secs_f64(_tolerance * expected_duration.as_secs_f64());
+        
+        assert!(
+            elapsed >= lower_bound && elapsed <= upper_bound,
+            "Test failed: elapsed time is not within the expected range"
+        );
     }
 
      
