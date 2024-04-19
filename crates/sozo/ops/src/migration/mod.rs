@@ -40,9 +40,9 @@ pub struct MigrationOutput {
 
 #[derive(Debug, Default, Clone)]
 pub struct ContractMigrationOutput {
-    name: String,
-    contract_address: FieldElement,
-    base_class_hash: FieldElement,
+    pub name: String,
+    pub contract_address: FieldElement,
+    pub base_class_hash: FieldElement,
 }
 
 #[allow(clippy::too_many_arguments)]

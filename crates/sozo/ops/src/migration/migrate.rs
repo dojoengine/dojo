@@ -123,7 +123,7 @@ where
 
 pub async fn execute_strategy<P, S>(
     ws: &Workspace<'_>,
-    strategy: &mut MigrationStrategy,
+    strategy: &MigrationStrategy,
     migrator: &SingleOwnerAccount<P, S>,
     txn_config: TxnConfig,
 ) -> Result<MigrationOutput>
@@ -230,14 +230,8 @@ where
         }
     };
 
-    match register_dojo_contracts(
-        &mut strategy.contracts,
-        world_address,
-        migrator,
-        &ui,
-        &txn_config,
-    )
-    .await
+    match register_dojo_contracts(&strategy.contracts, world_address, migrator, &ui, &txn_config)
+        .await
     {
         Ok(output) => {
             migration_output.contracts = output;
@@ -483,7 +477,7 @@ where
 }
 
 async fn register_dojo_contracts<P, S>(
-    contracts: &mut Vec<ContractMigration>,
+    contracts: &Vec<ContractMigration>,
     world_address: FieldElement,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
@@ -501,7 +495,7 @@ where
 
     let mut deploy_output = vec![];
 
-    for contract in contracts.iter_mut() {
+    for contract in contracts {
         let name = &contract.diff.name;
         ui.print(italic_message(name).to_string());
         match contract
@@ -522,9 +516,10 @@ where
                     ));
                 }
 
-                // NOTE: this assignment may not look useful since we are dropping `MigrationStrategy` without actually using this value from it.
+                // NOTE: this assignment may not look useful since we are dropping
+                // `MigrationStrategy` without actually using this value from it.
                 // but some tests depend on this behaviour
-                contract.contract_address = output.contract_address;
+                // contract.contract_address = output.contract_address;
 
                 if output.was_upgraded {
                     ui.print_hidden_sub(format!(
