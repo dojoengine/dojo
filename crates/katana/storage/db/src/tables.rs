@@ -44,7 +44,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 22;
+pub const NUM_TABLES: usize = 23;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -153,6 +153,7 @@ define_tables_enum! {[
     (TxNumbers, TableType::Table),
     (TxBlocks, TableType::Table),
     (TxHashes, TableType::Table),
+    (TxExecutions, TableType::Table),
     (Transactions, TableType::Table),
     (Receipts, TableType::Table),
     (CompiledClassHashes, TableType::Table),

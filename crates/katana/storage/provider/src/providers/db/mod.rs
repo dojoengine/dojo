@@ -492,8 +492,18 @@ impl TransactionStatusProvider for DbProvider {
 }
 
 impl TransactionTraceProvider for DbProvider {
-    fn transaction_execution(&self, _hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
-        todo!()
+    fn transaction_execution(&self, hash: TxHash) -> ProviderResult<Option<TxExecInfo>> {
+        let db_tx = self.0.tx()?;
+        if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
+            let execution = db_tx
+                .get::<katana_db::tables::TxExecutions>(num)?
+                .ok_or(ProviderError::MissingTxExecution(num))?;
+
+            db_tx.commit()?;
+            Ok(Some(execution))
+        } else {
+            Ok(None)
+        }
     }
 
     fn transactions_executions_by_block(
