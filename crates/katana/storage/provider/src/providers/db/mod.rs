@@ -508,9 +508,24 @@ impl TransactionTraceProvider for DbProvider {
 
     fn transactions_executions_by_block(
         &self,
-        _block_id: BlockHashOrNumber,
+        block_id: BlockHashOrNumber,
     ) -> ProviderResult<Option<Vec<TxExecInfo>>> {
-        todo!()
+        if let Some(indices) = self.block_body_indices(block_id)? {
+            let db_tx = self.0.tx()?;
+            let mut executions = Vec::with_capacity(indices.tx_count as usize);
+
+            let range = indices.tx_offset..indices.tx_offset + indices.tx_count;
+            for i in range {
+                if let Some(execution) = db_tx.get::<tables::TxExecutions>(i)? {
+                    executions.push(execution);
+                }
+            }
+
+            db_tx.commit()?;
+            Ok(Some(executions))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -740,6 +755,7 @@ mod tests {
     use katana_primitives::contract::ContractAddress;
     use katana_primitives::receipt::Receipt;
     use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+    use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxHash, TxWithHash};
     use starknet::macros::felt;
 
@@ -825,7 +841,7 @@ mod tests {
             block.clone(),
             state_updates,
             vec![Receipt::Invoke(Default::default())],
-            vec![],
+            vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
 
@@ -903,7 +919,7 @@ mod tests {
             block.clone(),
             state_updates1,
             vec![Receipt::Invoke(Default::default())],
-            vec![],
+            vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
 
@@ -913,7 +929,7 @@ mod tests {
             block,
             state_updates2,
             vec![Receipt::Invoke(Default::default())],
-            vec![],
+            vec![TxExecInfo::default()],
         )
         .expect("failed to insert block");
 
