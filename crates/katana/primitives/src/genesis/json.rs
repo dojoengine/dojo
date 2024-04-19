@@ -99,7 +99,7 @@ pub struct GenesisClassJson {
     pub class_hash: Option<ClassHash>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeTokenConfigJson {
     pub name: String,
@@ -199,7 +199,7 @@ pub enum GenesisJsonError {
 /// (eg, using `serde_json`).
 ///
 /// The path of the class artifact are computed **relative** to the JSON file.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GenesisJson {
     pub parent_hash: BlockHash,
@@ -315,10 +315,9 @@ impl TryFrom<GenesisJson> for Genesis {
             })
             .collect::<Result<_, GenesisJsonError>>()?;
 
-        let mut fee_token = FeeTokenConfig {
+        let fee_token = FeeTokenConfig {
             name: value.fee_token.name,
             symbol: value.fee_token.symbol,
-            total_supply: U256::ZERO,
             decimals: value.fee_token.decimals,
             address: value.fee_token.address.unwrap_or(DEFAULT_FEE_TOKEN_ADDRESS),
             class_hash: value.fee_token.class.unwrap_or(DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH),
@@ -414,11 +413,6 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             };
 
-            // increase the total supply of the fee token if balance is given
-            if let Some(balance) = account.balance {
-                fee_token.total_supply += balance;
-            }
-
             match account.private_key {
                 Some(private_key) => allocations.insert(
                     address,
@@ -454,11 +448,6 @@ impl TryFrom<GenesisJson> for Genesis {
                 if !classes.contains_key(&hash) {
                     return Err(GenesisJsonError::MissingClass(hash));
                 }
-            }
-
-            // increase the total supply of the fee token if balance is given
-            if let Some(balance) = contract.balance {
-                fee_token.total_supply += balance;
             }
 
             allocations.insert(
@@ -705,15 +694,16 @@ mod tests {
             vec![
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
-                    class: PathBuf::from("../../contracts/compiled/erc20.json").into(),
+                    class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
-                    class: PathBuf::from("../../contracts/compiled/universal_deployer.json").into(),
+                    class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
+                        .into(),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0xa55")),
-                    class: PathBuf::from("../../contracts/compiled/oz_account_080.json").into(),
+                    class: PathBuf::from("../../../contracts/compiled/oz_account_080.json").into(),
                 },
             ]
         );
@@ -729,11 +719,12 @@ mod tests {
             vec![
                 GenesisClassJson {
                     class_hash: Some(felt!("0x8")),
-                    class: PathBuf::from("../../contracts/compiled/erc20.json").into(),
+                    class: PathBuf::from("../../../contracts/compiled/erc20.json").into(),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0x80085")),
-                    class: PathBuf::from("../../contracts/compiled/universal_deployer.json").into(),
+                    class: PathBuf::from("../../../contracts/compiled/universal_deployer.json")
+                        .into(),
                 },
                 GenesisClassJson {
                     class_hash: Some(felt!("0xa55")),
@@ -801,9 +792,6 @@ mod tests {
             address: ContractAddress::from(felt!("0x55")),
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
-            total_supply: U256::from_str("0xD3C21BCECCEDA1000000")
-                .unwrap()
-                .wrapping_mul(U256::from(5)),
             decimals: 18,
             class_hash: felt!("0x8"),
             storage: Some(HashMap::from([
@@ -937,16 +925,12 @@ mod tests {
         assert_eq!(actual_genesis.timestamp, expected_genesis.timestamp);
         assert_eq!(actual_genesis.state_root, expected_genesis.state_root);
         assert_eq!(actual_genesis.gas_prices, expected_genesis.gas_prices);
-
         assert_eq!(actual_genesis.fee_token.address, expected_genesis.fee_token.address);
         assert_eq!(actual_genesis.fee_token.name, expected_genesis.fee_token.name);
         assert_eq!(actual_genesis.fee_token.symbol, expected_genesis.fee_token.symbol);
         assert_eq!(actual_genesis.fee_token.decimals, expected_genesis.fee_token.decimals);
-        assert_eq!(actual_genesis.fee_token.total_supply, expected_genesis.fee_token.total_supply);
         assert_eq!(actual_genesis.fee_token.class_hash, expected_genesis.fee_token.class_hash);
-
         assert_eq!(actual_genesis.universal_deployer, expected_genesis.universal_deployer);
-
         assert_eq!(actual_genesis.allocations.len(), expected_genesis.allocations.len());
 
         for alloc in actual_genesis.allocations {
@@ -1028,7 +1012,6 @@ mod tests {
             address: DEFAULT_FEE_TOKEN_ADDRESS,
             name: String::from("ETHER"),
             symbol: String::from("ETH"),
-            total_supply: U256::from_str("0xD3C21BCECCEDA1000000").unwrap(),
             decimals: 18,
             class_hash: DEFAULT_LEGACY_ERC20_CONTRACT_CLASS_HASH,
             storage: None,

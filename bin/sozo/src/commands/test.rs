@@ -21,7 +21,7 @@ use tracing::trace;
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
 
 /// Execute all unit tests of a local package.
-#[derive(Args, Clone)]
+#[derive(Debug, Args)]
 pub struct TestArgs {
     /// The filter for the tests, running only tests containing the filter string.
     #[arg(short, long, default_value_t = String::default())]

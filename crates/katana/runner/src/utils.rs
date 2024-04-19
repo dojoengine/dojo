@@ -23,7 +23,7 @@ pub fn wait_for_server_started_and_signal(path: &Path, stdout: ChildStdout, send
         let line = line.expect("failed to read line from subprocess stdout");
         writeln!(log_writer, "{}", line).expect("failed to write to log file");
 
-        if line.contains(r#""target":"katana""#) {
+        if line.contains(r#""target":"katana::cli""#) {
             sender.send(()).expect("failed to send start signal");
         }
     }

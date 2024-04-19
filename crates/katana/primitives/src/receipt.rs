@@ -122,6 +122,7 @@ impl Receipt {
         }
     }
 
+    /// Returns the L1 messages sent.
     pub fn messages_sent(&self) -> &[MessageToL1] {
         match self {
             Receipt::Invoke(rct) => &rct.messages_sent,
@@ -131,12 +132,23 @@ impl Receipt {
         }
     }
 
+    /// Returns the events emitted.
     pub fn events(&self) -> &[Event] {
         match self {
             Receipt::Invoke(rct) => &rct.events,
             Receipt::Declare(rct) => &rct.events,
             Receipt::L1Handler(rct) => &rct.events,
             Receipt::DeployAccount(rct) => &rct.events,
+        }
+    }
+
+    /// Returns the execution resources used.
+    pub fn resources_used(&self) -> &TxExecutionResources {
+        match self {
+            Receipt::Invoke(rct) => &rct.execution_resources,
+            Receipt::Declare(rct) => &rct.execution_resources,
+            Receipt::L1Handler(rct) => &rct.execution_resources,
+            Receipt::DeployAccount(rct) => &rct.execution_resources,
         }
     }
 }

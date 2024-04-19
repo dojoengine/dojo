@@ -30,6 +30,12 @@ serde_json.workspace = true
 tower = "0.4.13"
 tracing.workspace = true
 
+[dev-dependencies]
+scarb.workspace = true
+dojo-test-utils.workspace = true
+sozo-ops.workspace = true
+dojo-world = { path = "../../dojo-world", features = [ "contracts" ] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client.workspace = true
 wasm-prost.workspace = true

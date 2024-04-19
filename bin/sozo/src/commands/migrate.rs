@@ -2,6 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::{Args, Subcommand};
 use dojo_lang::compiler::MANIFESTS_DIR;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
+use dojo_world::migration::TxnConfig;
 use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration;
@@ -14,6 +15,7 @@ use starknet::signers::LocalWallet;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
+use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 
 #[derive(Debug, Args)]
@@ -57,63 +59,10 @@ pub enum MigrateCommand {
 
         #[command(flatten)]
         account: AccountOptions,
+
+        #[command(flatten)]
+        transaction: TransactionOptions,
     },
-}
-
-pub async fn setup_env<'a>(
-    ws: &'a Workspace<'a>,
-    account: AccountOptions,
-    starknet: StarknetOptions,
-    world: WorldOptions,
-    name: Option<&'a String>,
-    env: Option<&'a Environment>,
-) -> Result<(
-    Option<FieldElement>,
-    SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    String,
-)> {
-    let ui = ws.config().ui();
-
-    let world_address = world.address(env).ok();
-
-    let (account, chain_id) = {
-        let provider = starknet.provider(env)?;
-
-        let spec_version = provider.spec_version().await?;
-
-        if spec_version != RPC_SPEC_VERSION {
-            return Err(anyhow!(
-                "Unsupported Starknet RPC version: {}, expected {}.",
-                spec_version,
-                RPC_SPEC_VERSION
-            ));
-        }
-
-        let chain_id = provider.chain_id().await?;
-        let chain_id = parse_cairo_short_string(&chain_id)
-            .with_context(|| "Cannot parse chain_id as string")?;
-
-        let mut account = account.account(provider, env).await?;
-        account.set_block_id(BlockId::Tag(BlockTag::Pending));
-
-        let address = account.address();
-
-        ui.print(format!("\nMigration account: {address:#x}"));
-        if let Some(name) = name {
-            ui.print(format!("\nWorld name: {name}\n"));
-        }
-
-        match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-            Ok(_) => Ok((account, chain_id)),
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
-            }
-            Err(e) => Err(e.into()),
-        }
-    }
-    .with_context(|| "Problem initializing account for migration.")?;
-
-    Ok((world_address, account, chain_id))
 }
 
 impl MigrateArgs {
@@ -121,7 +70,7 @@ impl MigrateArgs {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         let env_metadata = if config.manifest_path().exists() {
-            dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+            dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
             None
         };
@@ -140,7 +89,7 @@ impl MigrateArgs {
                 };
 
                 config.tokio_handle().block_on(async {
-                    let (world_address, account, chain_id) = setup_env(
+                    let (world_address, account, chain_id, rpc_url) = setup_env(
                         &ws,
                         account,
                         starknet,
@@ -150,10 +99,22 @@ impl MigrateArgs {
                     )
                     .await?;
 
-                    migration::migrate(&ws, world_address, chain_id, &account, name, true).await
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        chain_id,
+                        rpc_url,
+                        &account,
+                        name,
+                        true,
+                        TxnConfig::default(),
+                    )
+                    .await
                 })
             }
-            MigrateCommand::Apply { mut name, world, starknet, account } => {
+            MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
+                let txn_config: TxnConfig = transaction.into();
+
                 if name.is_none() {
                     if let Some(root_package) = ws.root_package() {
                         name = Some(root_package.id.name.to_string())
@@ -161,7 +122,7 @@ impl MigrateArgs {
                 };
 
                 config.tokio_handle().block_on(async {
-                    let (world_address, account, chain_id) = setup_env(
+                    let (world_address, account, chain_id, rpc_url) = setup_env(
                         &ws,
                         account,
                         starknet,
@@ -171,9 +132,78 @@ impl MigrateArgs {
                     )
                     .await?;
 
-                    migration::migrate(&ws, world_address, chain_id, &account, name, false).await
+                    migration::migrate(
+                        &ws,
+                        world_address,
+                        chain_id,
+                        rpc_url,
+                        &account,
+                        name,
+                        false,
+                        txn_config,
+                    )
+                    .await
                 })
             }
         }
     }
+}
+
+pub async fn setup_env<'a>(
+    ws: &'a Workspace<'a>,
+    account: AccountOptions,
+    starknet: StarknetOptions,
+    world: WorldOptions,
+    name: Option<&'a String>,
+    env: Option<&'a Environment>,
+) -> Result<(
+    Option<FieldElement>,
+    SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    String,
+    String,
+)> {
+    let ui = ws.config().ui();
+
+    let world_address = world.address(env).ok();
+
+    let (account, chain_id, rpc_url) = {
+        let provider = starknet.provider(env)?;
+
+        let spec_version = provider.spec_version().await?;
+
+        if spec_version != RPC_SPEC_VERSION {
+            return Err(anyhow!(
+                "Unsupported Starknet RPC version: {}, expected {}.",
+                spec_version,
+                RPC_SPEC_VERSION
+            ));
+        }
+
+        let rpc_url = starknet.url(env)?;
+
+        let chain_id = provider.chain_id().await?;
+        let chain_id = parse_cairo_short_string(&chain_id)
+            .with_context(|| "Cannot parse chain_id as string")?;
+
+        let mut account = account.account(provider, env).await?;
+        account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        let address = account.address();
+
+        ui.print(format!("\nMigration account: {address:#x}"));
+        if let Some(name) = name {
+            ui.print(format!("\nWorld name: {name}\n"));
+        }
+
+        match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
+            Ok(_) => Ok((account, chain_id, rpc_url)),
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
+            }
+            Err(e) => Err(e.into()),
+        }
+    }
+    .with_context(|| "Problem initializing account for migration.")?;
+
+    Ok((world_address, account, chain_id, rpc_url.to_string()))
 }
