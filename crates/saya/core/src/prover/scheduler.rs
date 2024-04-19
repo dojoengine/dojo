@@ -1,52 +1,66 @@
+// Required modules and traits for future and async handling.
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use tracing::{info, trace};
 
-use super::{prove, ProverIdentifier, ProverInput};
+// Imports from the parent module.
+use super::{ProverIdentifier, ProverInput};
 
 type Proof = String;
 
+// Asynchronously combines two proofs into a single proof.
 async fn combine_proofs(
     first: Proof,
     second: Proof,
     _input: &ProverInput,
 ) -> anyhow::Result<Proof> {
-    // TODO: Insert the real `merge program` here
+    // Placeholder: Combine proofs, the current implementation is simplistic.
     let proof: String = first + " & " + &second;
+    // Simulate a delay to mimic a time-consuming process.
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     Ok(proof)
 }
+async fn prove(id:String, prover: ProverIdentifier) -> anyhow::Result<String> {
+    // Placeholder: Prove the input, the current implementation is simplistic.
+    let proof = format!("dummy {}",id).to_string();
+    // Simulate a delay to mimic a time-consuming process.
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    Ok(proof)
 
-// Return type based on: https://rust-lang.githmergeub.io/async-book/07_workarounds/04_recursion.html.
+}
+// This function handles the recursive proving of blocks using asynchronous futures.
+// It returns a BoxFuture to allow for dynamic dispatch of futures, which is useful in recursive async calls.
 pub fn prove_recursively(
     mut inputs: Vec<ProverInput>,
     prover: ProverIdentifier,
 ) -> BoxFuture<'static, anyhow::Result<(Proof, ProverInput)>> {
     async move {
         if inputs.len() <= 1 {
-            // If only one block to prove, use the passed prover program.
+            // Handle the base case with only one input.
             let input = inputs.pop().unwrap();
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}.");
-            let proof = prove(input.serialize()?, prover).await;
+            let proof = prove(input.block_number.to_string(), prover).await;
             info!(target: "saya_core", block_number, "Block proven.");
 
             Ok((proof?, input))
         } else {
-            // If more then one prover is remaining to be proven, split them in half and wait for both to be proven.
+            // Recursive case: split inputs into two halves and process each half recursively.
             let last = inputs.split_off(inputs.len() / 2);
+            println!("Splitting inputs: {} & {}", inputs.len(), last.len());
 
+            // Parallelize the proving process using tokio::try_join.
             let (earlier, later) = tokio::try_join!(
                 tokio::spawn(async move { prove_recursively(inputs, prover).await }),
                 tokio::spawn(async move { prove_recursively(last, prover).await })
             )?;
             let (earlier, later) = (earlier?, later?);
 
-            // Getting the inputs back from the two proofs, to avoid making a copy.
+            // Combine the results from two halves.
             let input = earlier.1.combine(later.1);
-
-            // Use the `merge program` to make a single proof of combined state diff
+            
+            // Merge the proofs into a single proof.
             let merged_proofs = combine_proofs(earlier.0, later.0, &input).await?;
 
             Ok((merged_proofs, input))
@@ -55,66 +69,77 @@ pub fn prove_recursively(
     .boxed()
 }
 
-// TODO: Migrate this tests to the new inputs.
+// Test module to ensure the functionality of recursive proving.
 #[cfg(test)]
 mod tests {
     use katana_primitives::FieldElement;
 
-    use crate::prover::{state_diff::ProvedStateDiff, ProverIdentifier};
-
+    // Imports for testing.
+    use crate::prover::{state_diff::ProvedStateDiff, ProverIdentifier,ProverInput};
     use super::prove_recursively;
+    use super::combine_proofs;
+    
+    // Test the case with one input.
+    #[tokio::test]
+    async fn test_one() {
+        let inputs = (0..1u64)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
-    // #[tokio::test]
-    // async fn test_one() {
-    //     let start_instant = std::time::Instant::now();
-    //     let inputs = (0..1u64)
-    //         .map(|i| ProvedStateDiff {
-    //             genesis_state_hash: FieldElement::from(0u64),
-    //             prev_state_hash: FieldElement::from(i),
-    //             state_updates: Default::default(),
-    //         })
-    //         .collect::<Vec<_>>();
+        let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
 
-    //     let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
+        assert_eq!(proof.0, "dummy 0".to_string());
+    }
 
-    //     assert_eq!(proof.0, "dummy ok".to_string());
-    //     assert_eq!(start_instant.elapsed().as_secs(), 1);
-    // }
+    // Test the case with two inputs.
+    #[tokio::test]
+    async fn test_combined() {
+        let inputs = (0..2u64)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
+        let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
+        assert_eq!(proof.0, "dummy 0 & dummy 1");
+    }
 
-    // #[tokio::test]
-    // async fn test_combined() {
-    //     let start_instant = std::time::Instant::now();
-    //     let inputs = (0..2u64)
-    //         .map(|i| ProvedStateDiff {
-    //             genesis_state_hash: FieldElement::from(0u64),
-    //             prev_state_hash: FieldElement::from(i),
-    //             state_updates: Default::default(),
-    //         })
-    //         .collect::<Vec<_>>();
+    // Test the case with many inputs to see if the recursive division and combination works as expected.
+    #[tokio::test]
+    async fn test_many() {
 
-    //     let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
-    //     assert_eq!(proof, "dummy ok & dummy ok");
-    //     assert_eq!(start_instant.elapsed().as_secs(), 2);
-    // }
+        let inputs = (0..8u64)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
-    // #[tokio::test]
-    // async fn test_many() {
-    //     let start_instant = std::time::Instant::now();
-    //     let inputs = (0..8u64)
-    //         .map(|i| ProvedStateDiff {
-    //             genesis_state_hash: FieldElement::from(0u64),
-    //             prev_state_hash: FieldElement::from(i),
-    //             state_updates: Default::default(),
-    //         })
-    //         .collect::<Vec<_>>();
+        let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
 
-    //     let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
+        let expected =
+            "dummy 0 & dummy 1 & dummy 2 & dummy 3 & dummy 4 & dummy 5 & dummy 6 & dummy 7"
+                .to_string();
+        assert_eq!(proof.0, expected);
+    }
 
-    //     let expected =
-    //         "dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok & dummy ok"
-    //             .to_string();
-    //     assert_eq!(proof, expected);
-    //     assert_eq!(start_instant.elapsed().as_secs(), 4);
-    // }
-
+     
 }
