@@ -36,7 +36,7 @@ pub struct SignerOptions {
 }
 
 impl SignerOptions {
-    pub fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {
+    pub fn signer(&self, env_metadata: Option<&Environment>, no_wait: bool) -> Result<LocalWallet> {
         if let Some(private_key) =
             self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
         {
@@ -58,7 +58,13 @@ impl SignerOptions {
                 {
                     password.to_owned()
                 } else {
-                    rpassword::prompt_password("Enter password: ")?
+                    if no_wait {
+                        return Err(anyhow!(
+                            "Could not find password. Please specify the password."
+                        ));
+                    } else {
+                        rpassword::prompt_password("Enter password: ")?
+                    }
                 }
             };
             let private_key = SigningKey::from_keystore(path, &password)?;
@@ -109,7 +115,7 @@ mod tests {
         let private_key = "0x1";
 
         let cmd = Command::parse_from(["sozo", "--private-key", private_key]);
-        let result_wallet = cmd.signer.signer(None).unwrap();
+        let result_wallet = cmd.signer.signer(None, true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
             FieldElement::from_str(private_key).unwrap(),
         ));
@@ -128,7 +134,7 @@ mod tests {
         };
 
         let cmd = Command::parse_from(["sozo"]);
-        let result_wallet = cmd.signer.signer(Some(&env_metadata)).unwrap();
+        let result_wallet = cmd.signer.signer(Some(&env_metadata), true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
             FieldElement::from_str(private_key).unwrap(),
         ));
@@ -151,7 +157,7 @@ mod tests {
             "--password",
             keystore_password,
         ]);
-        let result_wallet = cmd.signer.signer(None).unwrap();
+        let result_wallet = cmd.signer.signer(None, true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
             FieldElement::from_str(private_key).unwrap(),
         ));
@@ -173,7 +179,7 @@ mod tests {
         };
 
         let cmd = Command::parse_from(["sozo", "--password", keystore_password]);
-        let result_wallet = cmd.signer.signer(Some(&env_metadata)).unwrap();
+        let result_wallet = cmd.signer.signer(Some(&env_metadata), true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
             FieldElement::from_str(private_key).unwrap(),
         ));
@@ -195,7 +201,7 @@ mod tests {
         };
 
         let cmd = Command::parse_from(["sozo", "--keystore", keystore_path]);
-        let result_wallet = cmd.signer.signer(Some(&env_metadata)).unwrap();
+        let result_wallet = cmd.signer.signer(Some(&env_metadata), true).unwrap();
         let expected_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
             FieldElement::from_str(private_key).unwrap(),
         ));
@@ -224,7 +230,7 @@ mod tests {
         let keystore_path = "./tests/test_data/keystore/test.json";
 
         let cmd = Command::parse_from(["sozo", "--keystore", keystore_path]);
-        let result = cmd.signer.signer(None);
+        let result = cmd.signer.signer(None, true);
 
         assert!(result.is_err());
     }
@@ -232,7 +238,7 @@ mod tests {
     #[test]
     fn signer_without_pk_or_keystore() {
         let cmd = Command::parse_from(["sozo"]);
-        let result = cmd.signer.signer(None);
+        let result = cmd.signer.signer(None, true);
 
         assert!(result.is_err());
     }

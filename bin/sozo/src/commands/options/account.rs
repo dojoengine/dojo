@@ -41,7 +41,7 @@ impl AccountOptions {
         P: Provider + Send + Sync,
     {
         let account_address = self.account_address(env_metadata)?;
-        let signer = self.signer.signer(env_metadata)?;
+        let signer = self.signer.signer(env_metadata, false)?;
 
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
