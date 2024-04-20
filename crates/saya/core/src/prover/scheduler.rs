@@ -1,7 +1,8 @@
 // Required modules and traits for future and async handling.
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use tracing::{info, trace, level_filters::STATIC_MAX_LEVEL};
+use tracing::level_filters::STATIC_MAX_LEVEL;
+use tracing::{info, trace};
 
 // Imports from the parent module.
 use super::{ProverIdentifier, ProverInput};
@@ -26,7 +27,8 @@ async fn prove(id: String, _prover: ProverIdentifier) -> anyhow::Result<String> 
 }
 
 /// Handles the recursive proving of blocks using asynchronous futures.
-/// It returns a BoxFuture to allow for dynamic dispatch of futures, useful in recursive async calls.
+/// It returns a BoxFuture to allow for dynamic dispatch of futures, useful in recursive async
+/// calls.
 pub fn prove_recursively(
     mut inputs: Vec<ProverInput>,
     prover: ProverIdentifier,
@@ -59,22 +61,26 @@ pub fn prove_recursively(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use katana_primitives::FieldElement;
     use std::time::{Duration, Instant};
+
+    use katana_primitives::FieldElement;
+
+    use super::*;
 
     /// Test case for a single input.
     #[tokio::test]
     async fn test_one() {
-        let inputs = (0..1).map(|i| ProverInput {
-            prev_state_root: FieldElement::from(i),
-            block_number: i,
-            block_hash: FieldElement::from(i),
-            config_hash: FieldElement::from(i),
-            message_to_appchain_segment: Default::default(),
-            message_to_starknet_segment: Default::default(),
-            state_updates: Default::default(),
-        }).collect::<Vec<_>>();
+        let inputs = (0..1)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
         assert_eq!(proof.0, "dummy 0");
@@ -83,15 +89,17 @@ mod tests {
     /// Test case for combined inputs.
     #[tokio::test]
     async fn test_combined() {
-        let inputs = (0..2).map(|i| ProverInput {
-            prev_state_root: FieldElement::from(i),
-            block_number: i,
-            block_hash: FieldElement::from(i),
-            config_hash: FieldElement::from(i),
-            message_to_appchain_segment: Default::default(),
-            message_to_starknet_segment: Default::default(),
-            state_updates: Default::default(),
-        }).collect::<Vec<_>>();
+        let inputs = (0..2)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
         assert_eq!(proof.0, "dummy 0 & dummy 1");
@@ -100,33 +108,38 @@ mod tests {
     /// Test case to verify recursive division and combination with many inputs.
     #[tokio::test]
     async fn test_many() {
-        let inputs = (0..8).map(|i| ProverInput {
-            prev_state_root: FieldElement::from(i),
-            block_number: i,
-            block_hash: FieldElement::from(i),
-            config_hash: FieldElement::from(i),
-            message_to_appchain_segment: Default::default(),
-            message_to_starknet_segment: Default::default(),
-            state_updates: Default::default(),
-        }).collect::<Vec<_>>();
+        let inputs = (0..8)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
-        let expected = "dummy 0 & dummy 1 & dummy 2 & dummy 3 & dummy 4 & dummy 5 & dummy 6 & dummy 7";
+        let expected =
+            "dummy 0 & dummy 1 & dummy 2 & dummy 3 & dummy 4 & dummy 5 & dummy 6 & dummy 7";
         assert_eq!(proof.0, expected);
     }
 
     /// Test to measure the time taken for a large number of proofs.
     #[tokio::test]
     async fn time_test() {
-        let inputs = (0..512).map(|i| ProverInput {
-            prev_state_root: FieldElement::from(i),
-            block_number: i,
-            block_hash: FieldElement::from(i),
-            config_hash: FieldElement::from(i),
-            message_to_appchain_segment: Default::default(),
-            message_to_starknet_segment: Default::default(),
-            state_updates: Default::default(),
-        }).collect::<Vec<_>>();
+        let inputs = (0..512)
+            .map(|i| ProverInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
         let start = Instant::now();
         let _proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
@@ -135,9 +148,10 @@ mod tests {
 
         let expected_duration = Duration::from_secs(9);
         let tolerance = 0.1;
-        let lower_bound = expected_duration - Duration::from_secs_f64(tolerance * expected_duration.as_secs_f64());
-        let upper_bound = expected_duration + Duration::from_secs_f64(tolerance * expected_duration.as_secs_f64());
-        
+        let lower_bound = expected_duration
+            - Duration::from_secs_f64(tolerance * expected_duration.as_secs_f64());
+        let upper_bound = expected_duration
+            + Duration::from_secs_f64(tolerance * expected_duration.as_secs_f64());
         assert!(
             elapsed >= lower_bound && elapsed <= upper_bound,
             "Test failed: elapsed time is not within the expected range"
