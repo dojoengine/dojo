@@ -123,7 +123,8 @@ impl Saya {
             )
             .await?;
 
-            // shift the state roots to the right by one, as proof of each block is based on the previous state root
+            // shift the state roots to the right by one, as proof of each block is based on the
+            // previous state root
             let mut state_roots =
                 fetched_blocks.iter().map(|b| b.header.header.state_root).collect::<Vec<_>>();
             state_roots.insert(0, previous_block_state_root);
@@ -136,8 +137,9 @@ impl Saya {
                 .collect::<Vec<_>>();
 
             let mut processed = Vec::with_capacity(params.len());
-            // Updating the local state sequentially, as there is only one instance of `self.blockchain`
-            // This part does no actual  proving, so should not be a problem
+            // Updating the local state sequentially, as there is only one instance of
+            // `self.blockchain` This part does no actual  proving, so should not be a
+            // problem
             for p in params.clone() {
                 let prover_input = self.process_block(block, p).await?;
                 if let Some(input) = prover_input {
@@ -167,7 +169,8 @@ impl Saya {
     /// # Arguments
     ///
     /// * `block_number` - The block number.
-    /// * `blocks` - The block to process, along with the state roots of the previous block and the genesis block.
+    /// * `blocks` - The block to process, along with the state roots of the previous block and the
+    ///   genesis block.
     async fn process_block(
         &mut self,
         block_number: BlockNumber,
@@ -265,7 +268,8 @@ impl Saya {
         // let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
 
         // trace!(target: "saya_core", "Verifying block {block_number}.");
-        // let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?; // TODO: If we use scheduler this part is only needed at the end of proving
+        // let transaction_hash = verifier::verify(proof.clone(), self.config.verifier).await?; //
+        // TODO: If we use scheduler this part is only needed at the end of proving
         // info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
 
         Ok(Some(state_diff_prover_input))
