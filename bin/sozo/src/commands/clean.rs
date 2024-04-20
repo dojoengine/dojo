@@ -105,13 +105,13 @@ mod tests {
         let manifest_toml = profile_manifests_dir.join("manifest").with_extension("toml");
         let manifest_json = profile_manifests_dir.join("manifest").with_extension("json");
 
-        assert!(fs::read_dir(&target_dev_dir).is_err(), "Expected 'target/dev' to be empty");
+        assert!(fs::read_dir(target_dev_dir).is_err(), "Expected 'target/dev' to be empty");
         assert!(
-            fs::read_dir(&manifests_dev_base_dir).is_err(),
+            fs::read_dir(manifests_dev_base_dir).is_err(),
             "Expected 'manifests/dev/base' to be empty"
         );
         assert!(
-            fs::read_dir(&manifests_dev_abis_base_dir).is_err(),
+            fs::read_dir(manifests_dev_abis_base_dir).is_err(),
             "Expected 'manifests/dev/abis/base' to be empty"
         );
         assert!(

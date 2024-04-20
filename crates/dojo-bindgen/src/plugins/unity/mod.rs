@@ -186,7 +186,7 @@ public class {} : ModelInstance {{
         fn map_type(token: &Token) -> String {
             match token {
                 Token::CoreBasic(t) => UnityPlugin::map_type(&t.type_name()),
-                Token::Composite(t) => format!("{}", t.type_name()),
+                Token::Composite(t) => t.type_name().to_string(),
                 Token::Array(t) => format!("{}[]", map_type(&t.inner)),
                 _ => panic!("Unsupported token type: {:?}", token),
             }

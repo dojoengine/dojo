@@ -168,6 +168,7 @@ where
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,
@@ -723,7 +724,7 @@ where
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
-        world.account.execute(calls).send_with_cfg(&txn_config).await.map_err(|e| {
+        world.account.execute(calls).send_with_cfg(txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register models to World: {e}")
         })?;

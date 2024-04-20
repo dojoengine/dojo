@@ -99,7 +99,7 @@ async fn test_entities_queries() {
 
     assert_eq!(entities.len(), 1);
 
-    let entity: Entity = entities.get(0).unwrap().clone().try_into().unwrap();
+    let entity: Entity = entities.first().unwrap().clone().try_into().unwrap();
     assert_eq!(entity.models.first().unwrap().name, "Position");
     assert_eq!(entity.models.get(1).unwrap().name, "Moves");
     assert_eq!(entity.hashed_keys, poseidon_hash_many(&[account.address()]));
