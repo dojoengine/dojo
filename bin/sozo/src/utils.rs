@@ -1,8 +1,12 @@
-use anyhow::Error;
+use std::str::FromStr;
+
+use anyhow::{Error, Result};
+use camino::Utf8PathBuf;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::metadata::{dojo_metadata_from_workspace, Environment};
-use scarb::core::Config;
+use scarb::core::{Config, TomlManifest};
+use semver::Version;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -25,7 +29,7 @@ pub fn load_metadata_from_config(config: &Config) -> Result<Option<Environment>,
     let env_metadata = if config.manifest_path().exists() {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        dojo_metadata_from_workspace(&ws).and_then(|inner| inner.env().cloned())
+        dojo_metadata_from_workspace(&ws).env().cloned()
     } else {
         None
     };
@@ -78,4 +82,40 @@ pub async fn world_reader_from_env_metadata(
     let provider = starknet.provider(env_metadata.as_ref())?;
 
     Ok(WorldContractReader::new(world_address, provider))
+}
+
+pub fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result<()> {
+    let scarb_cairo_version = scarb::version::get().cairo;
+    // When manifest file doesn't exists ignore it. Would be the case during `sozo init`
+    let Ok(manifest) = TomlManifest::read_from_path(manifest_path) else { return Ok(()) };
+
+    // For any kind of error, like package not specified, cairo version not specified return
+    // without an error
+    let Some(package) = manifest.package else { return Ok(()) };
+
+    let Some(cairo_version) = package.cairo_version else { return Ok(()) };
+
+    // only when cairo version is found in manifest file confirm that it matches
+    let version_req = cairo_version.as_defined().unwrap();
+    let version = Version::from_str(scarb_cairo_version.version).unwrap();
+    if !version_req.matches(&version) {
+        anyhow::bail!(
+            "Specified cairo version not supported by dojo. Please verify and update dojo."
+        );
+    };
+
+    Ok(())
+}
+
+pub fn generate_version() -> String {
+    const DOJO_VERSION: &str = env!("CARGO_PKG_VERSION");
+    let scarb_version = scarb::version::get().version;
+    let scarb_sierra_version = scarb::version::get().sierra.version;
+    let scarb_cairo_version = scarb::version::get().cairo.version;
+
+    let version_string = format!(
+        "{}\nscarb: {}\ncairo: {}\nsierra: {}",
+        DOJO_VERSION, scarb_version, scarb_cairo_version, scarb_sierra_version,
+    );
+    version_string
 }

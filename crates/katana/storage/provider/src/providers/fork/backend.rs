@@ -353,7 +353,25 @@ impl ContractInfoProvider for SharedStateProvider {
 
 impl StateProvider for SharedStateProvider {
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        if let nonce @ Some(_) = self.contract(address)?.map(|i| i.nonce) {
+        // TEMP:
+        //
+        // The nonce and class hash are stored in the same struct, so if we call either `nonce` or
+        // `class_hash_of_contract` first, the other would be filled with the default value.
+        // Currently, the data types that we're using doesn't allow us to distinguish between
+        // 'not fetched' vs the actual value.
+        //
+        // Right now, if the nonce value is 0, we couldn't distinguish whether that is the actual
+        // value or just the default value. So this filter is a pessimistic approach to always
+        // invalidate 0 nonce value in the cache.
+        //
+        // Meaning, if the nonce is 0, we always fetch the nonce from the forked provider, even if
+        // we already fetched it before.
+        //
+        // Similar story with `class_hash_of_contract`
+        //
+        if let nonce @ Some(_) =
+            self.contract(address)?.map(|i| i.nonce).filter(|n| n != &Nonce::ZERO)
+        {
             return Ok(nonce);
         }
 
@@ -413,7 +431,10 @@ impl StateProvider for SharedStateProvider {
         &self,
         address: ContractAddress,
     ) -> ProviderResult<Option<ClassHash>> {
-        if let hash @ Some(_) = self.contract(address)?.map(|i| i.class_hash) {
+        // See comment at `nonce` for the explanation of this filter.
+        if let hash @ Some(_) =
+            self.contract(address)?.map(|i| i.class_hash).filter(|h| h != &ClassHash::ZERO)
+        {
             return Ok(hash);
         }
 

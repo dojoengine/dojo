@@ -73,6 +73,9 @@ main() {
 
   DOJOUP_REPO=${DOJOUP_REPO-dojoengine/dojo}
 
+  # Store user specified version seperately.
+  DOJOUP_USER_VERSION=${DOJOUP_VERSION}
+
   # Install by downloading binaries
   if [[ "$DOJOUP_REPO" == "dojoengine/dojo" && -z "$DOJOUP_BRANCH" && -z "$DOJOUP_COMMIT" ]]; then
     DOJOUP_VERSION=${DOJOUP_VERSION-stable}
@@ -133,10 +136,21 @@ main() {
     RELEASE_URL="https://github.com/${DOJOUP_REPO}/releases/download/${DOJOUP_TAG}/"
     BIN_ARCHIVE_URL="${RELEASE_URL}dojo_${DOJOUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.$EXT"
 
+    # Check if the version mentioned by user exists in the Dojo repository.
+    if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
+      say "Version ${DOJOUP_VERSION} does not match any release listed at https://github.com/dojoengine/dojo/releases."
+      say "Please specify a valid version, or omit -v to install the latest stable version automatically."
+      err "Aborting installation."
+    fi
+
     echo $BIN_ARCHIVE_URL
 
+    # Display message only if version is not mentioned by user.
+    if [ ! -n "$DOJOUP_USER_VERSION" ]; then
+      say "downloading latest dojo"
+    fi
+
     # Download and extract the binaries archive
-    say "downloading latest dojo"
     if [ "$PLATFORM" = "win32" ]; then
       tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
       ensure download "$BIN_ARCHIVE_URL" "$tmp"

@@ -4,12 +4,16 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::FutureExt;
+use starknet::accounts::{AccountError, ConnectedAccount, Declaration, Execution};
 use starknet::core::types::{
-    ExecutionResult, FieldElement, MaybePendingTransactionReceipt, PendingTransactionReceipt,
-    StarknetError, TransactionFinalityStatus, TransactionReceipt, TransactionStatus,
+    DeclareTransactionResult, ExecutionResult, FieldElement, InvokeTransactionResult,
+    MaybePendingTransactionReceipt, PendingTransactionReceipt, StarknetError,
+    TransactionFinalityStatus, TransactionReceipt, TransactionStatus,
 };
 use starknet::providers::{Provider, ProviderError};
 use tokio::time::{Instant, Interval};
+
+use crate::migration::TxnConfig;
 
 type GetTxStatusResult = Result<TransactionStatus, ProviderError>;
 type GetTxReceiptResult = Result<MaybePendingTransactionReceipt, ProviderError>;
@@ -325,6 +329,59 @@ pub fn block_number_from_receipt(receipt: &TransactionReceipt) -> u64 {
         TransactionReceipt::Declare(tx) => tx.block_number,
         TransactionReceipt::Deploy(tx) => tx.block_number,
         TransactionReceipt::DeployAccount(tx) => tx.block_number,
+    }
+}
+
+/// Helper trait to abstract away setting `TxnConfig` configurations before sending a transaction
+/// Implemented by types from `starknet-accounts` like `Execution`, `Declaration`, etc...
+#[allow(async_fn_in_trait)]
+pub trait TransactionExt<T>
+where
+    T: ConnectedAccount + Sync,
+{
+    type R;
+
+    /// Sets `fee_estimate_multiplier` from `TxnConfig` if its present before calling `send` method
+    /// on the respective type.
+    async fn send_with_cfg(
+        self,
+        txn_config: &TxnConfig,
+    ) -> Result<Self::R, AccountError<T::SignError>>;
+}
+
+impl<T> TransactionExt<T> for Execution<'_, T>
+where
+    T: ConnectedAccount + Sync,
+{
+    type R = InvokeTransactionResult;
+
+    async fn send_with_cfg(
+        mut self,
+        txn_config: &TxnConfig,
+    ) -> Result<Self::R, AccountError<T::SignError>> {
+        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
+            self = self.fee_estimate_multiplier(*fee_est_mul);
+        }
+
+        self.send().await
+    }
+}
+
+impl<T> TransactionExt<T> for Declaration<'_, T>
+where
+    T: ConnectedAccount + Sync,
+{
+    type R = DeclareTransactionResult;
+
+    async fn send_with_cfg(
+        mut self,
+        txn_config: &TxnConfig,
+    ) -> Result<Self::R, AccountError<T::SignError>> {
+        if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
+            self = self.fee_estimate_multiplier(*fee_est_mul);
+        }
+
+        self.send().await
     }
 }
 

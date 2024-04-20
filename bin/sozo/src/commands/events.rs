@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::Args;
 use scarb::core::Config;
 use sozo_ops::events;
 
@@ -7,7 +7,7 @@ use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Args)]
 pub struct EventsArgs {
     #[arg(help = "List of specific events to be filtered")]
     #[arg(value_delimiter = ',')]

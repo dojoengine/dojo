@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use scarb::core::Config;
 use sozo_ops::keystore;
 
 #[derive(Debug, Args)]
@@ -65,7 +66,7 @@ pub enum KeystoreCommand {
 }
 
 impl KeystoreArgs {
-    pub fn run(self) -> Result<()> {
+    pub fn run(self, _config: &Config) -> Result<()> {
         match self.command {
             KeystoreCommand::New { password, force, file } => keystore::new(password, force, file),
             KeystoreCommand::FromKey { force, private_key, password, file } => {

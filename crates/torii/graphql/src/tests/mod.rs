@@ -11,6 +11,7 @@ use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use dojo_world::contracts::WorldContractReader;
 use dojo_world::manifest::DeploymentManifest;
+use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionWaiter;
 use scarb::ops;
 use serde::Deserialize;
@@ -292,7 +293,7 @@ pub async fn spinup_types_test() -> Result<SqlitePool> {
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
 
-    execute_strategy(&ws, &mut migration, &account, None).await.unwrap();
+    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
 
     let manifest =
         DeploymentManifest::load_from_remote(&provider, migration.world_address().unwrap())
