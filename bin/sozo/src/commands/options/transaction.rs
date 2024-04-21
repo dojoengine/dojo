@@ -27,6 +27,11 @@ pub struct TransactionOptions {
     #[arg(long_help = "If --wait is set, returns the full transaction receipt. Otherwise, it is \
                        a no-op.")]
     pub receipt: bool,
+
+    #[arg(short, long)]
+    #[arg(help = "Raw value for fees.")]
+    #[arg(long_help = "Raw value for fees. The value is expected to be in wei")]
+    pub raw_fee: Option<FieldElement>,
 }
 
 impl From<TransactionOptions> for TxnConfig {
@@ -35,6 +40,7 @@ impl From<TransactionOptions> for TxnConfig {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait,
             receipt: value.receipt,
+            raw_fee: value.raw_fee
         }
     }
 }
