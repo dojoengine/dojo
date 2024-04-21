@@ -8,6 +8,7 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
+use dojo::config::interface::{IConfigDispatcher, IConfigDispatcherImpl};
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
     IUpgradeableWorldDispatcherTrait, ResourceMetadata
@@ -584,4 +585,28 @@ fn test_upgradeable_world_from_non_owner() {
         contract_address: world.contract_address
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_set_program_hash() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_program_hash(98758347158781475198374598718743);
+    let program_hash = config.get_program_hash();
+
+    assert(program_hash == 98758347158781475198374598718743, 'invalid program hash');
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_set_facts_registry() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_facts_registry(contract_address_const::<0x875914875149357>());
+    let facts_registry = config.get_facts_registry();
+
+    assert(facts_registry == contract_address_const::<0x875914875149357>(), 'invalid program hash');
 }

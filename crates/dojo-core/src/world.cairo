@@ -60,7 +60,8 @@ mod Errors {
 
 #[starknet::contract]
 mod world {
-    use core::to_byte_array::FormatAsByteArray;
+    use dojo::config::interface::IConfig;
+use core::to_byte_array::FormatAsByteArray;
 use core::traits::TryInto;
     use array::{ArrayTrait, SpanTrait};
     use traits::Into;
@@ -80,6 +81,7 @@ use core::traits::TryInto;
     use dojo::database;
     use dojo::database::introspect::Introspect;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+    use dojo::config::component::Config;
     use dojo::model::Model;
     use dojo::interfaces::{IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl, StorageUpdate, ProgramOutput};
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
@@ -89,6 +91,11 @@ use core::traits::TryInto;
     use super::Errors;
 
     const WORLD: felt252 = 0;
+
+    component!(path: Config, storage: config, event: ConfigEvent);
+
+    #[abi(embed_v0)]
+    impl ConfigImpl = Config::ConfigImpl<ContractState>;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -103,6 +110,7 @@ use core::traits::TryInto;
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
+        ConfigEvent: Config::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -180,6 +188,8 @@ use core::traits::TryInto;
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
+        #[substorage(v0)]
+        config: Config::Storage,
     }
 
     #[constructor]
@@ -569,7 +579,6 @@ use core::traits::TryInto;
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
         fn upgrade_state(ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput) {
-            let program_hash = 18468145346606952491117791430885172818429658569709932865894865254677766952;
             let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
             loop {
@@ -587,13 +596,10 @@ use core::traits::TryInto;
             program_output.serialize(ref program_output_array);
             let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
 
+            let program_hash = self.config.get_program_hash();
             let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
-            assert(
-                IFactRegistryDispatcher {
-                    contract_address: contract_address_const::<0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb>()
-                }.is_valid(fact),
-                'no state transition proof'
-            );
+            let fact_registry = IFactRegistryDispatcher { contract_address: self.config.get_facts_registry() };
+            assert(fact_registry.is_valid(fact), 'no state transition proof');
 
             let mut i = 0;
             loop {
