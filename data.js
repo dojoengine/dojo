@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713491773067,
+  "lastUpdate": 1713710427957,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5875,6 +5875,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16648969,
             "range": "± 201500",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158521482+JimmyFate@users.noreply.github.com",
+            "name": "Jimmy Fate",
+            "username": "JimmyFate"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d92decdc87c02c3d6d3c783d5079b86bf21250b5",
+          "message": "[sozo] Deploy Account (#1601)\n\n* sozo keystore, sozo account\r\n\r\n* STARKNET_POLL_INTERVAL default 5000 -> 1000\r\n\r\n* Prompt password instead of error\r\n\r\n* Remove num-bigint dependency\r\n\r\n* Mention starkli license in sozo README\r\n\r\n* Remove dead code\r\n\r\n* Add dojo-utils crate\r\n\r\n* Revert \"Add dojo-utils crate\"\r\n\r\nThis reverts commit 43a1f6e9e9f793a9f9f9170c03ed60c9125babd4.\r\n\r\n* Use TransactionWaiter\r\n\r\n* Remove unwraps\r\n\r\n* Add sozo account fetch\r\n\r\n* Add keystore tests\r\n\r\n* Add account tests\r\n\r\n* Remove test_account_deploy\r\n\r\n* output -> file\r\n\r\n* add --no-confirmation flag and refactor deploy function\r\n\r\n* fix typo\r\n\r\n* add `no_wait` for test\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-04-21T20:02:33+05:30",
+          "tree_id": "ce59fcef0fddc0fd9688238b7a8fe72fd686f71d",
+          "url": "https://github.com/dojoengine/dojo/commit/d92decdc87c02c3d6d3c783d5079b86bf21250b5"
+        },
+        "date": 1713710427417,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15984028,
+            "range": "± 468794",
             "unit": "ns/iter"
           }
         ]
