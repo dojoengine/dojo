@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713710427957,
+  "lastUpdate": 1713733912203,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5905,6 +5905,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 15984028,
             "range": "± 468794",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "010444fa3797429a4903b3e480956e2df8ea3153",
+          "message": "fix(ci): exit with non-zero status code if any function call fails (#1853)\n\n* fix(ci): exit with non-zero status code if any function call fails\r\n\r\n* fix: clippy lints\r\n\r\n* fix: more clippy lints",
+          "timestamp": "2024-04-22T02:33:15+05:30",
+          "tree_id": "24e9fbb3b4eadd03a60cb20e619319eff6e8adb8",
+          "url": "https://github.com/dojoengine/dojo/commit/010444fa3797429a4903b3e480956e2df8ea3153"
+        },
+        "date": 1713733911076,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16921801,
+            "range": "± 277296",
             "unit": "ns/iter"
           }
         ]
