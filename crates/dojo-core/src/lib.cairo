@@ -1,6 +1,7 @@
 mod base;
 #[cfg(test)]
 mod base_test;
+mod config;
 mod database;
 mod interfaces;
 #[cfg(test)]
