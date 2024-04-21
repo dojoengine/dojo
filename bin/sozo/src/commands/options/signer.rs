@@ -57,14 +57,10 @@ impl SignerOptions {
                     .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
                 {
                     password.to_owned()
+                } else if no_wait {
+                    return Err(anyhow!("Could not find password. Please specify the password."));
                 } else {
-                    if no_wait {
-                        return Err(anyhow!(
-                            "Could not find password. Please specify the password."
-                        ));
-                    } else {
-                        rpassword::prompt_password("Enter password: ")?
-                    }
+                    rpassword::prompt_password("Enter password: ")?
                 }
             };
             let private_key = SigningKey::from_keystore(path, &password)?;

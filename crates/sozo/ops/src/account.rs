@@ -185,6 +185,7 @@ pub async fn new(signer: LocalWallet, force: bool, file: PathBuf) -> Result<()> 
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn deploy(
     provider: JsonRpcClient<HttpTransport>,
     signer: LocalWallet,
@@ -284,7 +285,7 @@ pub async fn deploy(
 
     if simulate {
         simulate_account_deploy(&account_deployment).await?;
-        return Ok(());
+        Ok(())
     } else {
         do_account_deploy(
             max_fee,
@@ -398,7 +399,7 @@ async fn simulate_account_deploy(
         colored_json::to_colored_json(&simulation_json, ColorMode::Auto(Output::StdOut))?;
 
     println!("{simulation_json}");
-    return Ok(());
+    Ok(())
 }
 
 pub async fn fetch(
