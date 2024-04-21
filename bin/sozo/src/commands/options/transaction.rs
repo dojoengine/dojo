@@ -29,9 +29,9 @@ pub struct TransactionOptions {
     pub receipt: bool,
 
     #[arg(short, long)]
-    #[arg(help = "Raw value for fees.")]
-    #[arg(long_help = "Raw value for fees. The value is expected to be in wei")]
-    pub raw_fee: Option<FieldElement>,
+    #[arg(help = "Maximum raw value to be used for fees.")]
+    #[arg(long_help = "Maximum raw value to be used for fees. The value is expected to be in wei")]
+    pub max_fee_raw: Option<FieldElement>,
 }
 
 impl From<TransactionOptions> for TxnConfig {
@@ -40,7 +40,7 @@ impl From<TransactionOptions> for TxnConfig {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait,
             receipt: value.receipt,
-            raw_fee: value.raw_fee
+            raw_fee: value.max_fee_raw
         }
     }
 }
