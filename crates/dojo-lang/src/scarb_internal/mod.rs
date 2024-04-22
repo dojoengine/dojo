@@ -14,7 +14,7 @@ use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use camino::Utf8PathBuf;
-use scarb::compiler::CompilationUnit;
+use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::Config;
 use scarb::ops::CompileOpts;
 use smol_str::SmolStr;
@@ -31,9 +31,9 @@ pub struct CompileInfo {
     pub root_package_name: Option<String>,
 }
 
-pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesConfig {
+pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCratesConfig {
     let crates_config: OrderedHashMap<SmolStr, CrateSettings> = unit
-        .components
+        .components()
         .iter()
         .map(|component| {
             (
@@ -48,7 +48,7 @@ pub fn crates_config_for_compilation_unit(unit: &CompilationUnit) -> AllCratesCo
 
 /// Builds the scarb root database injecting the dojo plugin suite, additionaly to the
 /// default Starknet and Test suites.
-pub fn build_scarb_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
+pub fn build_scarb_root_database(unit: &CairoCompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
     b.with_cfg(unit.cfg_set.clone());
@@ -73,14 +73,18 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
         .filter(|cu| {
             opts.include_targets.is_empty() || opts.include_targets.contains(&cu.target().kind)
         })
-        .filter(|cu| packages.contains(&cu.main_package_id))
+        .filter(|cu| packages.contains(&cu.main_package_id()))
         .collect::<Vec<_>>();
 
     for unit in compilation_units {
-        let mut db = build_scarb_root_database(&unit).unwrap();
+        if let CompilationUnit::Cairo(unit) = unit {
+            let mut db = build_scarb_root_database(&unit).unwrap();
 
-        if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
-            ws.config().ui().anyhow(&err)
+            if let Err(err) = ws.config().compilers().compile(unit.clone(), &mut (db), &ws) {
+                ws.config().ui().anyhow(&err)
+            }
+        } else {
+            tracing::warn!(target: LOG_TARGET, name = unit.name(), "Skipping compilation unit.");
         }
     }
 
@@ -102,9 +106,9 @@ pub fn compile_workspace(config: &Config, opts: CompileOpts) -> Result<CompileIn
     Ok(CompileInfo { manifest_path, target_dir, root_package_name, profile_name })
 }
 
-fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
+fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
     let crate_roots = unit
-        .components
+        .components()
         .iter()
         .filter(|model| !model.package.id.is_core())
         .map(|model| (model.cairo_package_name(), model.target.source_root().into()))
