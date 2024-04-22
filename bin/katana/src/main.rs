@@ -17,6 +17,7 @@ use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::{spawn, NodeHandle};
+use starknet::core::utils::parse_cairo_short_string;
 use tokio::signal::ctrl_c;
 use tracing::info;
 
@@ -174,7 +175,7 @@ fn print_environment(starknet_config: &StarknetConfig, genesis: &Genesis) {
 ENVIRONMENT
 ==================
 
-| Chain ID            | {}
+| Chain ID            | {} ({})
 | Disable Fee         | {}
 | Disable Validate    | {}
 | Validate max steps  | {}
@@ -182,6 +183,7 @@ ENVIRONMENT
 | ETH Gas Price       | {}
 | STRK Gas Price      | {}",
         starknet_config.env.chain_id,
+        parse_cairo_short_string(&starknet_config.env.chain_id.id()).unwrap_or("".into()),
         starknet_config.disable_fee,
         starknet_config.disable_validate,
         starknet_config.env.validate_max_steps,
