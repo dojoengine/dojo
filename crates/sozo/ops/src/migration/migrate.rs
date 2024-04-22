@@ -47,7 +47,7 @@ pub fn prepare_migration(
 ) -> Result<MigrationStrategy> {
     ui.print_step(3, "📦", "Preparing for migration...");
 
-    let name = cairo_short_string_to_felt(&name).with_context(|| "Failed to parse World name.")?;
+    let name = cairo_short_string_to_felt(name).with_context(|| "Failed to parse World name.")?;
 
     let migration = prepare_for_migration(world_address, name, target_dir, diff)
         .with_context(|| "Problem preparing for migration.")?;
@@ -397,7 +397,7 @@ where
 }
 
 async fn register_dojo_models<P, S>(
-    models: &Vec<ClassMigration>,
+    models: &[ClassMigration],
     world_address: FieldElement,
     migrator: &SingleOwnerAccount<P, S>,
     ui: &Ui,
@@ -459,7 +459,7 @@ where
         .collect::<Vec<_>>();
 
     let InvokeTransactionResult { transaction_hash } =
-        world.account.execute(calls).send_with_cfg(&txn_config).await.map_err(|e| {
+        world.account.execute(calls).send_with_cfg(txn_config).await.map_err(|e| {
             ui.verbose(format!("{e:?}"));
             anyhow!("Failed to register models to World: {e}")
         })?;
@@ -731,6 +731,7 @@ where
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn update_manifests_and_abis(
     ws: &Workspace<'_>,
     local_manifest: BaseManifest,

@@ -88,7 +88,7 @@ where
         return Ok(());
     }
 
-    let mut strategy = prepare_migration(&target_dir, diff, &name, world_address, &ui)?;
+    let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
     if dry_run {
@@ -102,7 +102,7 @@ where
             &rpc_url,
             world_address,
             None,
-            &name,
+            name,
         )
         .await?;
     } else {
@@ -118,7 +118,7 @@ where
                     &rpc_url,
                     world_address,
                     None,
-                    &name,
+                    name,
                 )
                 .await?;
                 return Err(e)?;
@@ -133,7 +133,7 @@ where
             &rpc_url,
             world_address,
             migration_output.clone(),
-            name.as_ref(),
+            name,
         )
         .await?;
 

@@ -66,14 +66,14 @@ pub async fn setup(
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration()?;
+    let migration = setup_migration()?;
 
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
     let output = migration::execute_strategy(
         &ws,
-        &mut migration,
+        &migration,
         &account,
         TxnConfig { wait: true, ..Default::default() },
     )

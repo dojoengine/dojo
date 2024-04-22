@@ -37,7 +37,7 @@ async fn migrate_with_auto_mine() {
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -45,7 +45,7 @@ async fn migrate_with_auto_mine() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     sequencer.stop().unwrap();
 }
@@ -55,7 +55,7 @@ async fn migrate_with_block_time() {
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer = TestSequencer::start(
         SequencerConfig { block_time: Some(1000), ..Default::default() },
@@ -66,7 +66,7 @@ async fn migrate_with_block_time() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
     sequencer.stop().unwrap();
 }
 
@@ -75,7 +75,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer = TestSequencer::start(
         Default::default(),
@@ -93,16 +93,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         ExecutionEncoding::New,
     );
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &mut migration,
-            &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &migration,
+        &account,
+        TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
+    )
+    .await
+    .is_err());
     sequencer.stop().unwrap();
 }
 
@@ -136,7 +134,7 @@ async fn migration_from_remote() {
 
     let world = WorldDiff::compute(manifest, None);
 
-    let mut migration = prepare_for_migration(
+    let migration = prepare_for_migration(
         None,
         felt!("0x12345"),
         &Utf8Path::new(&target_dir).to_path_buf(),
@@ -144,7 +142,7 @@ async fn migration_from_remote() {
     )
     .unwrap();
 
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
@@ -170,7 +168,7 @@ async fn migrate_with_metadata() {
         .unwrap_or_else(|c| panic!("Error loading config: {c:?}"));
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -178,8 +176,7 @@ async fn migrate_with_metadata() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let output =
-        execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::default()).await;
     assert!(res.is_ok());

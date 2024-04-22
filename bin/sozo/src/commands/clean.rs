@@ -83,7 +83,7 @@ mod tests {
                 None,
                 runner.endpoint(),
                 &runner.account(0),
-                &"dojo_examples",
+                "dojo_examples",
                 true,
                 TxnConfig::default(),
             )
