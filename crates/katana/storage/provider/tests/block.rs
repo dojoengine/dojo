@@ -255,7 +255,7 @@ where
         assert_eq!(actual_status, Some(FinalityStatus::AcceptedOnL2));
         assert_eq!(actual_block_with_tx_hashes, Some(expected_block_with_tx_hashes));
 
-        let tx_hash = FieldElement::ONE;
+        let tx_hash = FieldElement::ZERO;
 
         let actual_receipt = provider.receipt_by_hash(tx_hash)?;
         let actual_execution = provider.transaction_execution(tx_hash)?;
