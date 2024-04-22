@@ -496,7 +496,7 @@ impl TransactionTraceProvider for DbProvider {
         let db_tx = self.0.tx()?;
         if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
             let execution = db_tx
-                .get::<katana_db::tables::TxExecutions>(num)?
+                .get::<katana_db::tables::TxTraces>(num)?
                 .ok_or(ProviderError::MissingTxExecution(num))?;
 
             db_tx.commit()?;
@@ -516,7 +516,7 @@ impl TransactionTraceProvider for DbProvider {
 
             let range = indices.tx_offset..indices.tx_offset + indices.tx_count;
             for i in range {
-                if let Some(execution) = db_tx.get::<tables::TxExecutions>(i)? {
+                if let Some(execution) = db_tx.get::<tables::TxTraces>(i)? {
                     executions.push(execution);
                 }
             }
@@ -617,7 +617,7 @@ impl BlockWriter for DbProvider {
                 db_tx.put::<tables::TxBlocks>(tx_number, block_number)?;
                 db_tx.put::<tables::Transactions>(tx_number, transaction.transaction)?;
                 db_tx.put::<tables::Receipts>(tx_number, receipt)?;
-                db_tx.put::<tables::TxExecutions>(tx_number, execution)?;
+                db_tx.put::<tables::TxTraces>(tx_number, execution)?;
             }
 
             // insert classes

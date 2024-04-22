@@ -153,7 +153,7 @@ define_tables_enum! {[
     (TxNumbers, TableType::Table),
     (TxBlocks, TableType::Table),
     (TxHashes, TableType::Table),
-    (TxExecutions, TableType::Table),
+    (TxTraces, TableType::Table),
     (Transactions, TableType::Table),
     (Receipts, TableType::Table),
     (CompiledClassHashes, TableType::Table),
@@ -190,8 +190,8 @@ tables! {
     Transactions: (TxNumber) => Tx,
     /// Stores the block number of a transaction.
     TxBlocks: (TxNumber) => BlockNumber,
-    /// Stores the transaction's execution info.
-    TxExecutions: (TxNumber) => TxExecInfo,
+    /// Stores the transaction's traces.
+    TxTraces: (TxNumber) => TxExecInfo,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Store compiled classes
@@ -243,7 +243,7 @@ mod tests {
         assert_eq!(Tables::ALL[5].name(), TxNumbers::NAME);
         assert_eq!(Tables::ALL[6].name(), TxBlocks::NAME);
         assert_eq!(Tables::ALL[7].name(), TxHashes::NAME);
-        assert_eq!(Tables::ALL[8].name(), TxExecutions::NAME);
+        assert_eq!(Tables::ALL[8].name(), TxTraces::NAME);
         assert_eq!(Tables::ALL[9].name(), Transactions::NAME);
         assert_eq!(Tables::ALL[10].name(), Receipts::NAME);
         assert_eq!(Tables::ALL[11].name(), CompiledClassHashes::NAME);
@@ -267,7 +267,7 @@ mod tests {
         assert_eq!(Tables::TxNumbers.table_type(), TableType::Table);
         assert_eq!(Tables::TxBlocks.table_type(), TableType::Table);
         assert_eq!(Tables::TxHashes.table_type(), TableType::Table);
-        assert_eq!(Tables::TxExecutions.table_type(), TableType::Table);
+        assert_eq!(Tables::TxTraces.table_type(), TableType::Table);
         assert_eq!(Tables::Transactions.table_type(), TableType::Table);
         assert_eq!(Tables::Receipts.table_type(), TableType::Table);
         assert_eq!(Tables::CompiledClassHashes.table_type(), TableType::Table);
