@@ -15,7 +15,7 @@ service World {
     rpc SubscribeEntities (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
 
     // Unsuscribe to entity updates.
-    rpc UnsubscribeEntities (SubscribeEntitiesRequest) returns (Empty);
+    rpc UnsubscribeEntities (UnsubscribeEntitiesRequest) returns (Empty);
 
     // Retrieve entities
     rpc RetrieveEntities (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
@@ -24,7 +24,7 @@ service World {
     rpc SubscribeEventMessages (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
 
     // Unsuscribe to entity updates.
-    rpc UnsubscribeEventMessages (SubscribeEntitiesRequest) returns (Empty);
+    rpc UnsubscribeEventMessages (UnsubscribeEntitiesRequest) returns (Empty);
 
     // Retrieve entities
     rpc RetrieveEventMessages (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
@@ -58,12 +58,13 @@ message SubscribeEntitiesRequest {
     repeated bytes hashed_keys = 1;
 }
 
-message SubscribeEventMessagesRequest {
-    repeated bytes hashed_keys = 1;
+message UnsubscribeEntitiesRequest {
+    uint64 subscription_id = 1;
 }
 
 message SubscribeEntityResponse {
-    types.Entity entity = 1;
+    uint64 subscription_id = 1;
+    types.Entity entity = 2;
 }
 
 message RetrieveEntitiesRequest {

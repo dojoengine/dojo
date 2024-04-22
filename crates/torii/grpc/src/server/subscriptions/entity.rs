@@ -7,8 +7,9 @@ use std::task::{Context, Poll};
 
 use futures::Stream;
 use futures_util::StreamExt;
+use rand::Rng;
 use sqlx::{Pool, Sqlite};
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::FieldElement;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use torii_core::cache::ModelCache;
@@ -31,7 +32,7 @@ pub struct EntitiesSubscriber {
 
 #[derive(Default)]
 pub struct EntityManager {
-    subscribers: RwLock<HashMap<FieldElement, EntitiesSubscriber>>,
+    subscribers: RwLock<HashMap<u64, EntitiesSubscriber>>,
 }
 
 impl EntityManager {
@@ -39,13 +40,8 @@ impl EntityManager {
         &self,
         hashed_keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        let id = poseidon_hash_many(&hashed_keys);
+        let id = rand::thread_rng().gen();
         let (sender, receiver) = channel(1);
-
-        // if subscriber already exists, return the receiver
-        if self.subscribers.read().await.contains_key(&id) {
-            return Ok(receiver);
-        }
 
         self.subscribers.write().await.insert(
             id,
@@ -55,7 +51,7 @@ impl EntityManager {
         Ok(receiver)
     }
 
-    pub async fn remove_subscriber(&self, id: FieldElement) {
+    pub async fn remove_subscriber(&self, id: u64) {
         self.subscribers.write().await.remove(&id);
     }
 }
@@ -121,6 +117,7 @@ impl Service {
                     .collect::<Result<Vec<_>, Error>>()?;
 
                 let resp = proto::world::SubscribeEntityResponse {
+                    subscription_id: *idx,
                     entity: Some(proto::types::Entity {
                         hashed_keys: hashed.to_bytes_be().to_vec(),
                         models,

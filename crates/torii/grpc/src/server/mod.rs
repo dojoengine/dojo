@@ -16,13 +16,14 @@ use futures::Stream;
 use proto::world::{
     MetadataRequest, MetadataResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     RetrieveEventsRequest, RetrieveEventsResponse, SubscribeModelsRequest, SubscribeModelsResponse,
+    UnsubscribeEntitiesRequest,
 };
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::FieldElement;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -493,8 +494,8 @@ impl DojoWorld {
         self.entity_manager.add_subscriber(hashed_keys).await
     }
 
-    async fn unsubscribe_entities(&self, hashed_keys: Vec<FieldElement>) {
-        self.entity_manager.remove_subscriber(poseidon_hash_many(&hashed_keys)).await;
+    async fn unsubscribe_entities(&self, id: u64) {
+        self.entity_manager.remove_subscriber(id).await;
     }
 
     async fn retrieve_entities(
@@ -572,6 +573,10 @@ impl DojoWorld {
         hashed_keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         self.event_message_manager.add_subscriber(hashed_keys).await
+    }
+
+    async fn unsubscribe_event_messages(&self, id: u64) {
+        self.event_message_manager.remove_subscriber(id).await;
     }
 
     async fn retrieve_event_messages(
@@ -742,19 +747,11 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn unsubscribe_entities(
         &self,
-        request: Request<SubscribeEntitiesRequest>,
+        request: Request<UnsubscribeEntitiesRequest>,
     ) -> ServiceResult<proto::world::Empty> {
-        let hashed_keys = request
-            .into_inner()
-            .hashed_keys
-            .iter()
-            .map(|id| {
-                FieldElement::from_byte_slice_be(id)
-                    .map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let id = request.into_inner().subscription_id;
 
-        self.unsubscribe_entities(hashed_keys).await;
+        self.unsubscribe_entities(id).await;
 
         Ok(Response::new(proto::world::Empty {}))
     }
@@ -796,19 +793,11 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn unsubscribe_event_messages(
         &self,
-        request: Request<SubscribeEntitiesRequest>,
+        request: Request<UnsubscribeEntitiesRequest>,
     ) -> ServiceResult<proto::world::Empty> {
-        let hashed_keys = request
-            .into_inner()
-            .hashed_keys
-            .iter()
-            .map(|id| {
-                FieldElement::from_byte_slice_be(id)
-                    .map_err(|e| Status::invalid_argument(e.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let id = request.into_inner().subscription_id;
 
-        self.unsubscribe_entities(hashed_keys).await;
+        self.unsubscribe_event_messages(id).await;
 
         Ok(Response::new(proto::world::Empty {}))
     }

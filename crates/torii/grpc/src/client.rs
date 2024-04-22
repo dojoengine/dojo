@@ -9,7 +9,7 @@ use starknet_crypto::FieldElement;
 use crate::proto::world::{
     world_client, MetadataRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
     SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeModelsRequest,
-    SubscribeModelsResponse,
+    SubscribeModelsResponse, UnsubscribeEntitiesRequest,
 };
 use crate::types::schema::Entity;
 use crate::types::{KeysClause, Query};
@@ -115,13 +115,9 @@ impl WorldClient {
     }
 
     /// Unsuscribe to entities updates of a World.
-    pub async fn unsubscribe_entities(
-        &mut self,
-        hashed_keys: Vec<FieldElement>,
-    ) -> Result<(), Error> {
-        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+    pub async fn unsubscribe_entities(&mut self, id: u64) -> Result<(), Error> {
         self.inner
-            .unsubscribe_entities(SubscribeEntitiesRequest { hashed_keys })
+            .unsubscribe_entities(UnsubscribeEntitiesRequest { subscription_id: id })
             .await
             .map_err(Error::Grpc)
             .map(|_| ())
@@ -147,13 +143,9 @@ impl WorldClient {
     }
 
     /// Unsuscribe to event messages of a World.
-    pub async fn unsubscribe_event_messages(
-        &mut self,
-        hashed_keys: Vec<FieldElement>,
-    ) -> Result<(), Error> {
-        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+    pub async fn unsubscribe_event_messages(&mut self, id: u64) -> Result<(), Error> {
         self.inner
-            .unsubscribe_event_messages(SubscribeEntitiesRequest { hashed_keys })
+            .unsubscribe_event_messages(UnsubscribeEntitiesRequest { subscription_id: id })
             .await
             .map_err(Error::Grpc)
             .map(|_| ())
