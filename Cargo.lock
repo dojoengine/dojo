@@ -3728,6 +3728,7 @@ dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-project",
  "cairo-lang-starknet",
+ "cairo-lang-starknet-classes",
  "camino",
  "convert_case 0.6.0",
  "dojo-lang",
@@ -3757,6 +3758,7 @@ name = "dojo-world-abigen"
 version = "0.6.1-alpha.2"
 dependencies = [
  "cairo-lang-starknet",
+ "cairo-lang-starknet-classes",
  "camino",
  "scarb",
  "scarb-ui",

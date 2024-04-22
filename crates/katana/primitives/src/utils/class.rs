@@ -10,6 +10,8 @@ use crate::class::{
 // TODO: this was taken from the current network limit
 // https://docs.starknet.io/documentation/tools/limits_and_triggers/.
 // We may want to make this configurable.
+// We also need this value into `dojo-world`.. which is not ideal as we don't want
+// primitives to depend on `dojo-world` or vice-versa.
 pub const MAX_BYTECODE_SIZE: usize = 81_290;
 
 pub fn parse_compiled_class(artifact: Value) -> Result<CompiledClass> {

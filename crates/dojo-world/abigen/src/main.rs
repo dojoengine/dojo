@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 
-use cairo_lang_starknet::contract_class::ContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass;
 use camino::Utf8PathBuf;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
