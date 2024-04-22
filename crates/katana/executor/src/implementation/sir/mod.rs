@@ -1,5 +1,4 @@
 mod error;
-mod output;
 mod state;
 pub mod utils;
 
@@ -17,12 +16,12 @@ use sir::state::cached_state;
 use sir::state::contract_class_cache::PermanentContractClassCache;
 use tracing::info;
 
-use self::output::receipt_from_exec_info;
 use self::state::CachedState;
 use crate::abstraction::{
     BlockExecutor, ExecutionOutput, ExecutorExt, ExecutorFactory, ExecutorResult, SimulationFlag,
     StateProviderDb,
 };
+use crate::utils::receipt_from_exec_info;
 use crate::{EntryPointCall, ExecutionError, ExecutionResult, ExecutionStats, ResultAndStates};
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::sir";
