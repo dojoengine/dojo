@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713760935135,
+  "lastUpdate": 1713804973576,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5965,6 +5965,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16688589,
             "range": "± 210067",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10f7f9fab14735012c6a0918e7965f64d6c94a8e",
+          "message": "feat(torii-client): expose grpc event messages (#1826)\n\n* feat(grpc): client event messages\r\n\r\n* feat: add event messages to torii client\r\n\r\n* fmt\r\n\r\n* feat: fix event message request\r\n\r\n* chore: types\r\n\r\n* chors:subscription\r\n\r\n* refactor: remove event messages types",
+          "timestamp": "2024-04-22T10:47:32-06:00",
+          "tree_id": "9079db40106421e3e8da4760fe31d04266deb6ce",
+          "url": "https://github.com/dojoengine/dojo/commit/10f7f9fab14735012c6a0918e7965f64d6c94a8e"
+        },
+        "date": 1713804972813,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16714405,
+            "range": "± 223032",
             "unit": "ns/iter"
           }
         ]
