@@ -30,8 +30,7 @@ pub struct TransactionOptions {
     pub receipt: bool,
 
     #[arg(short, long)]
-    #[arg(help = "Maximum raw value to be used for fees.")]
-    #[arg(long_help = "Maximum raw value to be used for fees. The value is expected to be in wei")]
+    #[arg(help = "Maximum raw value to be used for fees, in Wei.")]
     pub max_fee_raw: Option<FieldElement>,
 }
 
