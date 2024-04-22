@@ -743,7 +743,7 @@ impl proto::world::world_server::World for DojoWorld {
     async fn unsubscribe_entities(
         &self,
         request: Request<SubscribeEntitiesRequest>,
-    ) -> ServiceResult<proto::world::SubscribeEntityResponse> {
+    ) -> ServiceResult<proto::world::Empty> {
         let hashed_keys = request
             .into_inner()
             .hashed_keys
@@ -756,7 +756,7 @@ impl proto::world::world_server::World for DojoWorld {
 
         self.unsubscribe_entities(hashed_keys).await;
 
-        Ok(Response::new(SubscribeEntityResponse {}))
+        Ok(Response::new(proto::world::Empty {}))
     }
 
     async fn retrieve_entities(
@@ -792,6 +792,25 @@ impl proto::world::world_server::World for DojoWorld {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
+    }
+
+    async fn unsubscribe_event_messages(
+        &self,
+        request: Request<SubscribeEntitiesRequest>,
+    ) -> ServiceResult<proto::world::Empty> {
+        let hashed_keys = request
+            .into_inner()
+            .hashed_keys
+            .iter()
+            .map(|id| {
+                FieldElement::from_byte_slice_be(id)
+                    .map_err(|e| Status::invalid_argument(e.to_string()))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.unsubscribe_entities(hashed_keys).await;
+
+        Ok(Response::new(proto::world::Empty {}))
     }
 
     async fn retrieve_event_messages(

@@ -2,7 +2,6 @@ syntax = "proto3";
 package world;
 
 import "types.proto";
-import "google/protobuf/empty.proto";
 
 // The World service provides information about the world.
 service World {
@@ -16,7 +15,7 @@ service World {
     rpc SubscribeEntities (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
 
     // Unsuscribe to entity updates.
-    rpc UnsubscribeEntities (SubscribeEntitiesRequest) returns (google.protobuf.Empty);
+    rpc UnsubscribeEntities (SubscribeEntitiesRequest) returns (Empty);
 
     // Retrieve entities
     rpc RetrieveEntities (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
@@ -25,7 +24,7 @@ service World {
     rpc SubscribeEventMessages (SubscribeEntitiesRequest) returns (stream SubscribeEntityResponse);
 
     // Unsuscribe to entity updates.
-    rpc UnsubscribeEventMessages (SubscribeEntitiesRequest) returns (google.protobuf.Empty);
+    rpc UnsubscribeEventMessages (SubscribeEntitiesRequest) returns (Empty);
 
     // Retrieve entities
     rpc RetrieveEventMessages (RetrieveEntitiesRequest) returns (RetrieveEntitiesResponse);
@@ -84,4 +83,8 @@ message RetrieveEventsRequest {
 
 message RetrieveEventsResponse {
     repeated types.Event events = 1;
+}
+
+message Empty {
+
 }

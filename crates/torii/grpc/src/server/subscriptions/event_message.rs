@@ -9,7 +9,7 @@ use futures::Stream;
 use futures_util::StreamExt;
 use rand::Rng;
 use sqlx::{Pool, Sqlite};
-use starknet_crypto::FieldElement;
+use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::RwLock;
 use torii_core::cache::ModelCache;
@@ -31,7 +31,7 @@ pub struct EventMessagesSubscriber {
 
 #[derive(Default)]
 pub struct EventMessageManager {
-    subscribers: RwLock<HashMap<usize, EventMessagesSubscriber>>,
+    subscribers: RwLock<HashMap<FieldElement, EventMessagesSubscriber>>,
 }
 
 impl EventMessageManager {
@@ -39,8 +39,13 @@ impl EventMessageManager {
         &self,
         hashed_keys: Vec<FieldElement>,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        let id = rand::thread_rng().gen::<usize>();
+        let id = poseidon_hash_many(&hashed_keys);
         let (sender, receiver) = channel(1);
+
+        // if subscriber already exists, return the receiver
+        if self.subscribers.read().await.contains_key(&id) {
+            return Ok(receiver);
+        }
 
         self.subscribers.write().await.insert(
             id,
@@ -50,7 +55,7 @@ impl EventMessageManager {
         Ok(receiver)
     }
 
-    pub(super) async fn remove_subscriber(&self, id: usize) {
+    pub async fn remove_subscriber(&self, id: FieldElement) {
         self.subscribers.write().await.remove(&id);
     }
 }
