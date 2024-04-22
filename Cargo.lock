@@ -10559,6 +10559,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "scheduler"
+version = "0.6.1-alpha.4"
+dependencies = [
+ "katana-primitives",
+ "saya-core",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "schemars"
 version = "0.8.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
