@@ -6,6 +6,8 @@ use clap_complete::{generate, Shell};
 
 use crate::args::SozoArgs;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::completions";
+
 #[derive(Debug, Args)]
 pub struct CompletionsArgs {
     shell: Shell,

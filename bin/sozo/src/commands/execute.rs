@@ -10,6 +10,8 @@ use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::execute";
+
 #[derive(Debug, Args)]
 #[command(about = "Execute a system with the given calldata.")]
 pub struct ExecuteArgs {

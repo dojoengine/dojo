@@ -18,6 +18,8 @@ use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::migrate";
+
 #[derive(Debug, Args)]
 pub struct MigrateArgs {
     #[command(subcommand)]

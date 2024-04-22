@@ -1,6 +1,8 @@
 use clap::Args;
 use dojo_world::migration::TxnConfig;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::transaction";
+
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Transaction options")]
 pub struct TransactionOptions {

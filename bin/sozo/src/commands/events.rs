@@ -7,6 +7,8 @@ use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::events";
+
 #[derive(Debug, Args)]
 pub struct EventsArgs {
     #[arg(help = "List of specific events to be filtered")]

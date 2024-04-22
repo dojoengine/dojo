@@ -7,6 +7,8 @@ use anyhow::{ensure, Result};
 use clap::Args;
 use scarb::core::Config;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::init";
+
 #[derive(Debug, Args)]
 pub struct InitArgs {
     #[arg(help = "Target directory")]

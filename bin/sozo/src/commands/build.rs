@@ -8,6 +8,8 @@ use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::build";
+
 #[derive(Debug, Args)]
 pub struct BuildArgs {
     #[arg(long)]

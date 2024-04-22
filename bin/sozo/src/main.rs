@@ -9,16 +9,19 @@ use dojo_lang::plugin::CairoPluginRepository;
 use scarb::compiler::CompilerRepository;
 use scarb::core::Config;
 use scarb_ui::{OutputFormat, Ui};
-
+use tracing::trace;
 use crate::commands::Commands;
 
 mod args;
 mod commands;
 mod utils;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli";
 fn main() {
+    
     let args = SozoArgs::parse();
-
+    args.init_logging();
+    trace!(target: LOG_TARGET, command = ?args.command, "Sozo CLI command started.");
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
     if let Err(err) = cli_main(args) {
@@ -33,9 +36,12 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     match &args.command {
         Commands::Build(_) | Commands::Dev(_) | Commands::Migrate(_) => {
+            trace!(target: LOG_TARGET, "Adding DojoCompiler to compiler repository");
             compilers.add(Box::new(DojoCompiler)).unwrap()
         }
-        _ => {}
+        _ => {
+            trace!(target: LOG_TARGET, "No additional compiler required");
+        }
     }
 
     let manifest_path = scarb::ops::find_manifest_path(args.manifest_path.as_deref())?;
@@ -51,5 +57,11 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .compilers(compilers)
         .build()?;
 
-    commands::run(args.command, &config)
+    trace!(target: LOG_TARGET, "Configuration built successfully");
+
+    commands::run(args.command, &config);
+
+    trace!(target: LOG_TARGET, "Command execution completed");
+
+    Ok(())
 }

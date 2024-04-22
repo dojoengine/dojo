@@ -7,6 +7,8 @@ use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::call";
+
 #[derive(Debug, Args)]
 #[command(about = "Call a system with the given calldata.")]
 pub struct CallArgs {

@@ -6,6 +6,8 @@ use clap::Args;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
 use scarb::core::Config;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::clean";
+
 #[derive(Debug, Args)]
 pub struct CleanArgs {
     #[arg(short, long)]

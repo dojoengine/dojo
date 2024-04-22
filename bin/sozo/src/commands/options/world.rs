@@ -7,6 +7,8 @@ use starknet::core::types::FieldElement;
 
 use super::DOJO_WORLD_ADDRESS_ENV_VAR;
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::world";
+
 #[derive(Debug, Args)]
 #[command(next_help_heading = "World options")]
 pub struct WorldOptions {

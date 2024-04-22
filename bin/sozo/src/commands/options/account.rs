@@ -7,11 +7,14 @@ use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
+use tracing::trace;
 
 use super::{
     DOJO_ACCOUNT_ADDRESS_ENV_VAR, DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR,
     DOJO_PRIVATE_KEY_ENV_VAR,
 };
+
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::account";
 
 // INVARIANT:
 // - For commandline: we can either specify `private_key` or `keystore_path` along with
@@ -56,21 +59,34 @@ impl AccountOptions {
     where
         P: Provider + Send + Sync,
     {
+        trace!("Creating account with options: {:?}", self);
         let account_address = self.account_address(env_metadata)?;
+        trace!("Account address determined: {:?}", account_address);
+
         let signer = self.signer(env_metadata)?;
+        trace!("Signer obtained: {:?}", signer);
 
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
+        trace!("Chain ID obtained: {:?}", chain_id);
+        let encoding = if self.legacy { 
+            trace!("Using legacy encoding.");
+            ExecutionEncoding::Legacy 
+        } else { 
+            trace!("Using new encoding.");
+            ExecutionEncoding::New 
+        };
 
-        let encoding = if self.legacy { ExecutionEncoding::Legacy } else { ExecutionEncoding::New };
-
+        trace!("Creating SingleOwnerAccount with chain ID {:?} and encoding {:?}", chain_id, encoding);
         Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
     }
 
     fn signer(&self, env_metadata: Option<&Environment>) -> Result<LocalWallet> {
+        trace!("Determining signer for account options: {:?}", self);
         if let Some(private_key) =
             self.private_key.as_deref().or_else(|| env_metadata.and_then(|env| env.private_key()))
         {
+            trace!("Using private key for signing.");
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(private_key)?,
             )));
@@ -86,6 +102,7 @@ impl AccountOptions {
                 .as_deref()
                 .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
             {
+                trace!("Using keystore for signing.");
                 return Ok(LocalWallet::from_signing_key(SigningKey::from_keystore(
                     path, password,
                 )?));
@@ -101,9 +118,12 @@ impl AccountOptions {
     }
 
     fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
+        trace!("Determining account address.");
         if let Some(address) = self.account_address {
+            trace!("Account address: {:?}", address);
             Ok(address)
         } else if let Some(address) = env_metadata.and_then(|env| env.account_address()) {
+            trace!("Account address found in environment metadata: {:?}", address);
             Ok(FieldElement::from_str(address)?)
         } else {
             Err(anyhow!(

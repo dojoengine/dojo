@@ -32,6 +32,7 @@ use register::RegisterArgs;
 use test::TestArgs;
 
 #[derive(Subcommand)]
+#[derive(Debug)]
 pub enum Commands {
     #[command(about = "Build the world, generating the necessary artifacts for deployment")]
     Build(BuildArgs),
