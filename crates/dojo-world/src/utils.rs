@@ -363,6 +363,10 @@ where
             self = self.fee_estimate_multiplier(*fee_est_mul);
         }
 
+        if let TxnConfig { max_fee_raw: Some(max_fee_r), ..} = txn_config {
+            self = self.max_fee(*max_fee_r);
+        }
+
         self.send().await
     }
 }
@@ -379,6 +383,10 @@ where
     ) -> Result<Self::R, AccountError<T::SignError>> {
         if let TxnConfig { fee_estimate_multiplier: Some(fee_est_mul), .. } = txn_config {
             self = self.fee_estimate_multiplier(*fee_est_mul);
+        }
+
+        if let TxnConfig { max_fee_raw: Some(max_raw_f), ..} = txn_config {
+            self = self.max_fee(*max_raw_f);
         }
 
         self.send().await
