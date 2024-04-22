@@ -66,11 +66,7 @@ make -sC cairo/ send_msg_value_l1 value=2
 ```
 Then you've to wait the message to be sent to L1, Katana will display it:
 ```
-2023-12-15T15:16:18.435370Z  INFO messaging: Message sent to settlement layer:
-|     hash     | 0x62c7475daef517f6858a6f539bb4d2aa7eb1e23a7e8b1bc6a0834256d995e49d
-| from_address | 0x4231f608ea4a233136f6cdfcd10eaad2e46362bbc4e5d5aa88d0d574ea120d8
-|  to_address  | 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
-|   payload    | [0x2]
+2024-04-22T23:42:52.478200Z  INFO messaging: Message sent to settlement layer. hash=0xb5c9a1d3b8eb1c9d37ee5ffdacf09560a68d0c9e53fa4b1cc91d967095bc4ac7 from_address=0x609f8e7a76b6cc36f3ff86f09f6e5fdd0e6320f117d817e4344c1bf9fac7d67 to_address=0xe7f1725e7734ce288f8367e1bb143e90bb3f0512 payload=0x2
 ```
 ```
 # Consume the messag previously sent. You can try to call it once and see the second one reverting.
