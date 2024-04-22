@@ -11,7 +11,9 @@ use super::state_diff::state_updates_to_json_like;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by the prover.
-pub struct ProverInput {
+#[derive(Debug, Clone)]
+
+pub struct ProgramInput {
     pub prev_state_root: FieldElement,
     pub block_number: u64,
     pub block_hash: FieldElement,
@@ -96,7 +98,7 @@ pub fn extract_messages(
     (message_to_starknet_segment, message_to_appchain_segment)
 }
 
-impl ProverInput {
+impl ProgramInput {
     pub fn serialize(&self) -> anyhow::Result<String> {
         let message_to_starknet = self
             .message_to_starknet_segment
@@ -136,7 +138,7 @@ impl ProverInput {
         Ok(result)
     }
 
-    pub fn combine(mut self, other: ProverInput) -> ProverInput {
+    pub fn combine(mut self, other: ProgramInput) -> ProgramInput {
         self.message_to_appchain_segment.extend(other.message_to_appchain_segment);
         self.message_to_starknet_segment.extend(other.message_to_starknet_segment);
 
@@ -161,7 +163,7 @@ impl ProverInput {
         });
 
         // The block number is the one from the last block.
-        ProverInput {
+        ProgramInput {
             prev_state_root: self.prev_state_root,
             block_number: other.block_number,
             block_hash: other.block_hash,
@@ -174,6 +176,7 @@ impl ProverInput {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L16
+#[derive(Debug, Clone)]
 pub struct MessageToStarknet {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
@@ -190,6 +193,7 @@ impl MessageToStarknet {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L28
+#[derive(Debug, Clone)]
 pub struct MessageToAppchain {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
@@ -211,7 +215,7 @@ impl MessageToAppchain {
 fn test_program_input() -> anyhow::Result<()> {
     use std::str::FromStr;
 
-    let input = ProverInput {
+    let input = ProgramInput {
         prev_state_root: FieldElement::from_str("101")?,
         block_number: 102,
         block_hash: FieldElement::from_str("103")?,

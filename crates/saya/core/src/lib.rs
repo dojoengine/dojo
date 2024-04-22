@@ -17,7 +17,7 @@ use verifier::VerifierIdentifier;
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::{extract_messages, ProverInput};
+use crate::prover::{extract_messages, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -25,7 +25,6 @@ pub mod error;
 pub mod prover;
 pub mod starknet_os;
 pub mod verifier;
-
 pub(crate) const LOG_TARGET: &str = "saya::core";
 
 /// Saya's main configuration.
@@ -171,7 +170,7 @@ impl Saya {
         &mut self,
         block_number: BlockNumber,
         blocks: (SealedBlock, FieldElement, FieldElement),
-    ) -> SayaResult<Option<ProverInput>> {
+    ) -> SayaResult<Option<ProgramInput>> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
         let (block, prev_state_root, _genesis_state_hash) = blocks;
@@ -213,7 +212,7 @@ impl Saya {
         let (message_to_starknet_segment, message_to_appchain_segment) =
             extract_messages(&exec_infos, transactions);
 
-        let state_diff_prover_input = ProverInput {
+        let state_diff_prover_input = ProgramInput {
             prev_state_root,
             block_number,
             block_hash: block.block.header.hash,
