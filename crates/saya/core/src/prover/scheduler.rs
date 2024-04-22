@@ -5,7 +5,7 @@ use tracing::level_filters::STATIC_MAX_LEVEL;
 use tracing::{info, trace};
 
 // Imports from the parent module.
-use super::{ProverIdentifier, stone_image::prove_stone, ProgramInput};
+use super::{stone_image::prove_stone, ProgramInput, ProverIdentifier};
 type Proof = String;
 
 /// Asynchronously combines two proofs into a single proof.
