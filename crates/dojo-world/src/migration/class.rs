@@ -17,7 +17,11 @@ pub struct ClassDiff {
 
 impl StateDiff for ClassDiff {
     fn is_same(&self) -> bool {
-        if let Some(remote) = self.remote { self.local == remote } else { false }
+        if let Some(remote) = self.remote {
+            self.local == remote
+        } else {
+            false
+        }
     }
 }
 

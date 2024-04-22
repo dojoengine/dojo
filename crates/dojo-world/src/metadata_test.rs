@@ -130,23 +130,22 @@ async fn get_full_dojo_metadata_from_workspace() {
     assert!(env.rpc_url.unwrap().eq("http://localhost:5050/"));
 
     assert!(env.account_address.is_some());
-    assert!(
-        env.account_address
-            .unwrap()
-            .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03")
-    );
+    assert!(env
+        .account_address
+        .unwrap()
+        .eq("0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03"));
 
     assert!(env.private_key.is_some());
-    assert!(
-        env.private_key.unwrap().eq("0x1800000000300000180000000000030000000000003006001800006600")
-    );
+    assert!(env
+        .private_key
+        .unwrap()
+        .eq("0x1800000000300000180000000000030000000000003006001800006600"));
 
     assert!(env.world_address.is_some());
-    assert!(
-        env.world_address
-            .unwrap()
-            .eq("0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295")
-    );
+    assert!(env
+        .world_address
+        .unwrap()
+        .eq("0x1385f25d20a724edc9c7b3bd9636c59af64cbaf9fcd12f33b3af96b2452f295"));
 
     assert!(env.keystore_path.is_none());
     assert!(env.keystore_password.is_none());
