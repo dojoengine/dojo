@@ -605,8 +605,12 @@ impl BlockWriter for DbProvider {
             db_tx.put::<tables::Headers>(block_number, block_header)?;
             db_tx.put::<tables::BlockBodyIndices>(block_number, block_body_indices)?;
 
-            for (i, ((transaction, receipt), execution)) in
-                transactions.into_iter().zip(receipts).zip(executions).enumerate()
+            for (i, (transaction, receipt, execution)) in transactions
+                .into_iter()
+                .zip(receipts.into_iter())
+                .zip(executions.into_iter())
+                .map(|((transaction, receipt), execution)| (transaction, receipt, execution))
+                .enumerate()
             {
                 let tx_number = tx_offset + i as u64;
                 let tx_hash = transaction.hash;
