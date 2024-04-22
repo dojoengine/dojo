@@ -158,6 +158,13 @@ impl Client {
         Ok(stream)
     }
 
+    /// Unsuscribe to entities updates of a World.
+    pub async fn unsubscribe_entities(&self, ids: Vec<FieldElement>) -> Result<(), Error> {
+        let mut grpc_client = self.inner.write().await;
+        grpc_client.unsubscribe_entities(ids).await?;
+        Ok(())
+    }
+
     /// A direct stream to grpc subscribe event messages
     pub async fn on_event_message_updated(
         &self,
@@ -166,6 +173,13 @@ impl Client {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_event_messages(ids).await?;
         Ok(stream)
+    }
+
+    /// Unsuscribe to event messages updates of a World.
+    pub async fn unsubscribe_event_messages(&self, ids: Vec<FieldElement>) -> Result<(), Error> {
+        let mut grpc_client = self.inner.write().await;
+        grpc_client.unsubscribe_event_messages(ids).await?;
+        Ok(())
     }
 
     /// Returns the value of a model.

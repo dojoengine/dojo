@@ -114,6 +114,19 @@ impl WorldClient {
         }))))
     }
 
+    /// Unsuscribe to entities updates of a World.
+    pub async fn unsubscribe_entities(
+        &mut self,
+        hashed_keys: Vec<FieldElement>,
+    ) -> Result<(), Error> {
+        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+        self.inner
+            .unsubscribe_entities(SubscribeEntitiesRequest { hashed_keys })
+            .await
+            .map_err(Error::Grpc)
+            .map(|_| ())
+    }
+
     /// Subscribe to event messages of a World.
     pub async fn subscribe_event_messages(
         &mut self,
@@ -131,6 +144,19 @@ impl WorldClient {
             let entity = res.entity.expect("entity must exist");
             entity.try_into().expect("must able to serialize")
         }))))
+    }
+
+    /// Unsuscribe to event messages of a World.
+    pub async fn unsubscribe_event_messages(
+        &mut self,
+        hashed_keys: Vec<FieldElement>,
+    ) -> Result<(), Error> {
+        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+        self.inner
+            .unsubscribe_event_messages(SubscribeEntitiesRequest { hashed_keys })
+            .await
+            .map_err(Error::Grpc)
+            .map(|_| ())
     }
 
     /// Subscribe to the model diff for a set of models of a World.
