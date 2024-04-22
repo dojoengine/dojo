@@ -111,6 +111,12 @@ use core::traits::TryInto;
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
         ConfigEvent: Config::Event,
+        StateUpdated: StateUpdated
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StateUpdated {
+        da_hash: ClassHash,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -612,6 +618,7 @@ use core::traits::TryInto;
                 ).unwrap_syscall();
                 i += 2;
             }
+            EventEmitter::emit(ref self, StateUpgraded { da_hash: da_hash });
         }
     }
 
