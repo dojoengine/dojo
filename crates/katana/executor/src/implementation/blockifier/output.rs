@@ -92,7 +92,7 @@ fn l2_to_l1_messages_from_exec_info(info: &TxExecInfo) -> Vec<MessageToL1> {
         let mut messages = vec![];
 
         messages.extend(info.l2_to_l1_messages.iter().map(|m| MessageToL1 {
-            from_address: info.contract_address,
+            from_address: m.from_address,
             payload: m.payload.clone(),
             to_address: m.to_address,
         }));

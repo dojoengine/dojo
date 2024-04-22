@@ -526,12 +526,6 @@ pub fn to_exec_info(exec_info: TransactionExecutionInfo) -> TxExecInfo {
 }
 
 fn to_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
-    let message_to_l1_from_address = if let Some(a) = call_info.call.code_address {
-        to_address(a)
-    } else {
-        to_address(call_info.call.caller_address)
-    };
-
     katana_primitives::trace::CallInfo {
         contract_address: to_address(call_info.call.storage_address),
         caller_address: to_address(call_info.call.caller_address),
@@ -573,14 +567,11 @@ fn to_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
             .execution
             .l2_to_l1_messages
             .iter()
-            .map(|m| {
-                let to_address = starknet_api_ethaddr_to_felt(m.message.to_address);
-                katana_primitives::message::OrderedL2ToL1Message {
-                    order: m.order as u64,
-                    from_address: message_to_l1_from_address,
-                    to_address,
-                    payload: m.message.payload.0.iter().map(|f| (*f).into()).collect(),
-                }
+            .map(|m| katana_primitives::message::OrderedL2ToL1Message {
+                order: m.order as u64,
+                from_address: to_address(call_info.call.storage_address),
+                to_address: starknet_api_ethaddr_to_felt(m.message.to_address),
+                payload: m.message.payload.0.iter().map(|f| (*f).into()).collect(),
             })
             .collect(),
         storage_read_values: call_info.storage_read_values.into_iter().map(|f| f.into()).collect(),
