@@ -22,7 +22,7 @@ use sqlx::{Pool, Row, Sqlite};
 use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
+use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
@@ -493,6 +493,10 @@ impl DojoWorld {
         self.entity_manager.add_subscriber(hashed_keys).await
     }
 
+    async fn unsubscribe_entities(&self, hashed_keys: Vec<FieldElement>) {
+        self.entity_manager.remove_subscriber(poseidon_hash_many(&hashed_keys)).await;
+    }
+
     async fn retrieve_entities(
         &self,
         query: proto::types::Query,
@@ -734,6 +738,25 @@ impl proto::world::world_server::World for DojoWorld {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
+    }
+
+    async fn unsubscribe_entities(
+        &self,
+        request: Request<SubscribeEntitiesRequest>,
+    ) -> ServiceResult<proto::world::SubscribeEntityResponse> {
+        let hashed_keys = request
+            .into_inner()
+            .hashed_keys
+            .iter()
+            .map(|id| {
+                FieldElement::from_byte_slice_be(id)
+                    .map_err(|e| Status::invalid_argument(e.to_string()))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.unsubscribe_entities(hashed_keys).await;
+
+        Ok(Response::new(SubscribeEntityResponse {}))
     }
 
     async fn retrieve_entities(
