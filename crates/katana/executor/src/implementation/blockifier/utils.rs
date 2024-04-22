@@ -1,14 +1,13 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-use blockifier::block_context::{BlockContext, BlockInfo, ChainInfo, FeeTokenAddresses, GasPrices};
+use blockifier::block::{BlockInfo, GasPrices};
+use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses};
 use blockifier::execution::call_info::CallInfo;
 use blockifier::execution::common_hints::ExecutionMode;
 use blockifier::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
-use blockifier::execution::entry_point::{
-    CallEntryPoint, CallType, EntryPointExecutionContext, ExecutionResources,
-};
-use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_l1_gas_usages};
+use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
+use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_gas_vector};
 use blockifier::state::cached_state::{self};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
@@ -22,6 +21,7 @@ use blockifier::transaction::transactions::{
     L1HandlerTransaction,
 };
 use cairo_vm::types::errors::program_errors::ProgramError;
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
@@ -85,11 +85,13 @@ pub(super) fn transact<S: StateReader>(
         info.actual_fee.0
     };
 
-    let gas_consumed = calculate_tx_l1_gas_usages(&info.actual_resources, block_context)?.gas_usage;
+    let gas_consumed =
+        calculate_tx_gas_vector(&info.actual_resources, block_context.versioned_constants())?
+            .l1_gas;
 
     let (unit, gas_price) = match fee_type {
-        FeeType::Eth => (PriceUnit::Wei, block_context.block_info.gas_prices.eth_l1_gas_price),
-        FeeType::Strk => (PriceUnit::Fri, block_context.block_info.gas_prices.strk_l1_gas_price),
+        FeeType::Eth => (PriceUnit::Wei, block_context.block_info().gas_prices.eth_l1_gas_price),
+        FeeType::Strk => (PriceUnit::Fri, block_context.block_info().gas_prices.strk_l1_gas_price),
     };
 
     let fee = TxFeeInfo { gas_consumed, gas_price, unit, overall_fee };
@@ -337,20 +339,24 @@ pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) ->
         strk_l1_data_gas_price: 0,
     };
 
-    BlockContext {
-        block_info: BlockInfo {
-            gas_prices,
-            use_kzg_da: false,
-            block_number: BlockNumber(block_env.number),
-            block_timestamp: BlockTimestamp(block_env.timestamp),
-            sequencer_address: to_blk_address(block_env.sequencer_address),
-            max_recursion_depth: cfg_env.max_recursion_depth,
-            validate_max_n_steps: cfg_env.validate_max_n_steps,
-            invoke_tx_max_n_steps: cfg_env.invoke_tx_max_n_steps,
-            vm_resource_fee_cost: cfg_env.vm_resource_fee_cost.clone().into(),
-        },
-        chain_info: ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) },
-    }
+    let block_info = BlockInfo {
+        block_number: BlockNumber(block_env.number),
+        block_timestamp: BlockTimestamp(block_env.timestamp),
+        sequencer_address: to_blk_address(block_env.sequencer_address),
+        gas_prices,
+        use_kzg_da: false,
+    };
+
+    let chain_info = ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) };
+
+    let versioned_constants = VersionedConstants::new(
+        cfg_env.max_recursion_depth,
+        cfg_env.validate_max_n_steps,
+        cfg_env.invoke_tx_max_n_steps,
+        cfg_env.vm_resource_fee_cost.clone(),
+    );
+
+    BlockContext::new_unchecked(&block_info, &chain_info, &versioned_constants)
 }
 
 pub(super) fn state_update_from_cached_state<S: StateDb>(
