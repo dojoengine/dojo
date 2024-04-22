@@ -146,6 +146,7 @@ mod tests {
     use katana_primitives::genesis::Genesis;
     use katana_primitives::receipt::{InvokeTxReceipt, Receipt};
     use katana_primitives::state::StateUpdatesWithDeclaredClasses;
+    use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
     use katana_primitives::FieldElement;
     use katana_provider::providers::in_memory::InMemoryProvider;
@@ -154,7 +155,7 @@ mod tests {
         HeaderProvider,
     };
     use katana_provider::traits::state::StateFactoryProvider;
-    use katana_provider::traits::transaction::TransactionProvider;
+    use katana_provider::traits::transaction::{TransactionProvider, TransactionTraceProvider};
     use starknet::macros::felt;
 
     use super::Blockchain;
@@ -254,7 +255,7 @@ mod tests {
                     dummy_block.clone(),
                     StateUpdatesWithDeclaredClasses::default(),
                     vec![Receipt::Invoke(InvokeTxReceipt::default())],
-                    vec![],
+                    vec![TxExecInfo::default()],
                 )
                 .unwrap();
 
@@ -310,11 +311,14 @@ mod tests {
                 .unwrap();
 
             let tx = blockchain.provider().transaction_by_hash(dummy_tx.hash).unwrap().unwrap();
+            let tx_exec =
+                blockchain.provider().transaction_execution(dummy_tx.hash).unwrap().unwrap();
 
             assert_eq!(block_hash, dummy_block.block.header.hash);
             assert_eq!(block_number, dummy_block.block.header.header.number);
             assert_eq!(block, dummy_block.block.unseal());
             assert_eq!(tx, dummy_tx);
+            assert_eq!(tx_exec, TxExecInfo::default());
         }
     }
 }

@@ -53,7 +53,7 @@ impl BuildArgs {
         if self.stats {
             let target_dir = &compile_info.target_dir;
             let contracts_statistics = get_contract_statistics_for_dir(target_dir)
-                .context(format!("Error getting contracts stats"))?;
+                .context("Error getting contracts stats")?;
             let table = create_stats_table(contracts_statistics);
             table.printstd()
         }

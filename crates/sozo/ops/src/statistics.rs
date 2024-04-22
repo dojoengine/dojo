@@ -34,7 +34,7 @@ fn get_contract_statistics_for_file(
     sierra_json_file: File,
     contract_artifact: FlattenedSierraClass,
 ) -> Result<ContractStatistics> {
-    let file_size = get_file_size(&sierra_json_file).context(format!("Error getting file size"))?;
+    let file_size = get_file_size(&sierra_json_file).context("Error getting file size")?;
     let number_felts = get_sierra_byte_code_size(contract_artifact);
     Ok(ContractStatistics { file_size, contract_name, number_felts })
 }
@@ -136,7 +136,7 @@ mod tests {
         let target_dir = Utf8PathBuf::from(TEST_SIERRA_FOLDER_CONTRACTS);
 
         let contract_statistics = get_contract_statistics_for_dir(&target_dir)
-            .expect(format!("Error getting contracts in dir {target_dir}").as_str());
+            .unwrap_or_else(|_| panic!("Error getting contracts in dir {target_dir}"));
 
         assert_eq!(contract_statistics.len(), 1, "Mismatch number of contract statistics");
     }
@@ -148,7 +148,7 @@ mod tests {
         const EXPECTED_SIZE: u64 = 114925;
 
         let file_size = get_file_size(&sierra_json_file)
-            .expect(format!("Error getting file size for test file").as_str());
+            .unwrap_or_else(|_| panic!("Error getting file size for test file"));
 
         assert_eq!(file_size, EXPECTED_SIZE, "File size mismatch");
     }
