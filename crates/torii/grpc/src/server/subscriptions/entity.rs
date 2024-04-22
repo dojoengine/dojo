@@ -7,7 +7,6 @@ use std::task::{Context, Poll};
 
 use futures::Stream;
 use futures_util::StreamExt;
-use rand::Rng;
 use sqlx::{Pool, Sqlite};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
