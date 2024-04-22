@@ -7,6 +7,7 @@ use prettytable::{format, Cell, Row, Table};
 use scarb::core::{Config, TargetKind};
 use scarb::ops::CompileOpts;
 use sozo_ops::statistics::{get_contract_statistics_for_dir, ContractStatistics};
+use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::build";
 
@@ -38,6 +39,7 @@ impl BuildArgs {
             config,
             CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
         )?;
+        trace!(target: LOG_TARGET, "Compiled workspace: {:?}", compile_info);
 
         let mut builtin_plugins = vec![];
         if self.typescript {
@@ -55,8 +57,12 @@ impl BuildArgs {
         if self.stats {
             let target_dir = &compile_info.target_dir;
             let contracts_statistics = get_contract_statistics_for_dir(target_dir)
-                .context(format!("Error getting contracts stats"))?;
+                .context("Error getting contracts stats")?;
+            trace!(target: LOG_TARGET, "Contract statistics: {:?}", contracts_statistics);
+
             let table = create_stats_table(contracts_statistics);
+            trace!(target: LOG_TARGET, "Displaying contract statistics");
+
             table.printstd()
         }
 
@@ -71,11 +77,13 @@ impl BuildArgs {
             plugins: vec![],
             builtin_plugins,
         };
+        trace!(target: LOG_TARGET, "Generating bindings with PluginManager: {:?}", bindgen);
 
         tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(bindgen.generate())
             .expect("Error generating bindings");
+        trace!(target: LOG_TARGET, "Completed generating bindings");
 
         Ok(())
     }
@@ -91,13 +99,20 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
         Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
         Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
     ]));
+    trace!(target: LOG_TARGET, "Creating table for contract statistics");
 
     for contract_stats in contracts_statistics {
         // Add table rows
         let contract_name = contract_stats.contract_name;
         let number_felts = contract_stats.number_felts;
         let file_size = contract_stats.file_size;
-
+        trace!(
+            target: LOG_TARGET,
+            "Adding row to table: contract = {}, bytecode size (felts) = {}, class size (bytes) = {}",
+            contract_name,
+            number_felts,
+            file_size
+        );
         table.add_row(Row::new(vec![
             Cell::new_align(&contract_name, format::Alignment::LEFT),
             Cell::new_align(format!("{}", number_felts).as_str(), format::Alignment::RIGHT),
@@ -105,6 +120,7 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
         ]));
     }
 
+    trace!(target: LOG_TARGET, "Completed creating stats table");
     table
 }
 

@@ -143,7 +143,7 @@ impl DojoWorld {
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
         let query = r#"
             SELECT keys, data, transaction_hash
-            FROM events 
+            FROM events
             ORDER BY id DESC
             LIMIT ? OFFSET ?
          "#
@@ -262,12 +262,9 @@ impl DojoWorld {
             SELECT count(*)
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-            WHERE {model_relation_table}.model_id = '{}' and {table}.keys LIKE ?
+            WHERE {model_relation_table}.model_id = '{:#x}' and {table}.keys LIKE ?
         "#,
-            format!(
-                "{:#x}",
-                get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
-            ),
+            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
         );
 
         // total count of rows that matches keys_pattern without limit and offset
@@ -281,13 +278,10 @@ impl DojoWorld {
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             WHERE {table}.keys LIKE ?
             GROUP BY {table}.id
-            HAVING INSTR(model_ids, '{}') > 0
+            HAVING INSTR(model_ids, '{:#x}') > 0
             LIMIT 1
         "#,
-            format!(
-                "{:#x}",
-                get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
-            ),
+            get_selector_from_name(&keys_clause.model).map_err(ParseError::NonAsciiName)?
         );
         let (models_str,): (String,) =
             sqlx::query_as(&models_query).bind(&keys_pattern).fetch_one(&self.pool).await?;
@@ -394,13 +388,10 @@ impl DojoWorld {
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             GROUP BY {table}.id
-            HAVING INSTR(model_ids, '{}') > 0
+            HAVING INSTR(model_ids, '{:#x}') > 0
             LIMIT 1
         "#,
-            format!(
-                "{:#x}",
-                get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?
-            ),
+            get_selector_from_name(&member_clause.model).map_err(ParseError::NonAsciiName)?
         );
         let (models_str,): (String,) = sqlx::query_as(&models_query).fetch_one(&self.pool).await?;
 

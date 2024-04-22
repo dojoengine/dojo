@@ -25,7 +25,7 @@ impl StarknetOptions {
         env_metadata: Option<&Environment>,
     ) -> Result<JsonRpcClient<HttpTransport>> {
         let url = self.url(env_metadata)?;
-        trace!("Creating JsonRpcClient with given RPC URL: {}", url);
+        trace!(target: LOG_TARGET, "Creating JsonRpcClient with given RPC URL: {}", url);
         Ok(JsonRpcClient::new(HttpTransport::new(url)))
     }
 
@@ -33,15 +33,15 @@ impl StarknetOptions {
     // This function is made public because [`JsonRpcClient`] does not expose
     // the raw rpc url.
     pub fn url(&self, env_metadata: Option<&Environment>) -> Result<Url> {
-        trace!("Retrieving RPC URL for StarknetOptions.");
+        trace!(target: LOG_TARGET, "Retrieving RPC URL for StarknetOptions.");
         if let Some(url) = self.rpc_url.as_ref() {
-            trace!("Using RPC URL from command line: {}", url);
+            trace!(target: LOG_TARGET, "Using RPC URL from command line: {}", url);
             Ok(url.clone())
         } else if let Some(url) = env_metadata.and_then(|env| env.rpc_url()) {
-            trace!("Using RPC URL from environment metadata: {}", url);
+            trace!(target: LOG_TARGET, "Using RPC URL from environment metadata: {}", url);
             Ok(Url::parse(url)?)
         } else {
-            trace!("Using default RPC URL: {}", url);
+            trace!(target: LOG_TARGET, "Using default RPC URL: http://localhost:5050");
             Ok(Url::parse("http://localhost:5050").unwrap())
         }
     }

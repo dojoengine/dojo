@@ -9,6 +9,7 @@ use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
+use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::execute";
 
@@ -55,7 +56,19 @@ impl ExecuteArgs {
             .await
             .unwrap();
             let tx_config = self.transaction.into();
+            trace!(
+                target: LOG_TARGET,
+                "Transaction configuration initialized: {:?}",
+                tx_config
+            );
 
+            trace!(
+                target: LOG_TARGET,
+                "Executing: contract = {}, entrypoint = {}, calldata = {:?}",
+                self.contract,
+                self.entrypoint,
+                self.calldata
+            );
             execute::execute(self.contract, self.entrypoint, self.calldata, &world, &tx_config)
                 .await
         })

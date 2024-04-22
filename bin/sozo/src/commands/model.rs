@@ -8,8 +8,6 @@ use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::model";
-
 #[derive(Debug, Args)]
 pub struct ModelArgs {
     #[command(subcommand)]

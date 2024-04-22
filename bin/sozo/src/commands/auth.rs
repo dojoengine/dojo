@@ -3,6 +3,7 @@ use clap::{Args, Subcommand};
 use dojo_world::metadata::Environment;
 use scarb::core::Config;
 use sozo_ops::auth;
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
@@ -58,7 +59,10 @@ pub enum AuthCommand {
 
 impl AuthArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        trace!(target: LOG_TARGET, "Executing Auth command: {:?}", self.command);
+
         let env_metadata = utils::load_metadata_from_config(config)?;
+        trace!(target: LOG_TARGET, "Loaded environment metadata: {:?}", env_metadata);
 
         match self.command {
             AuthCommand::Grant { kind, world, starknet, account, transaction } => config
@@ -104,14 +108,25 @@ pub async fn grant(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
+    trace!(target: LOG_TARGET, "Executing 'Grant' command with kind: {:?}, world: {:?}, starknet: {:?}, account: {:?}, transaction: {:?}", kind, world, starknet, account, transaction);
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
 
     match kind {
         AuthKind::Writer { models_contracts } => {
+            trace!(
+                target: LOG_TARGET,
+                "Granting 'Writer' permissions for contract: {:?}",
+                models_contracts
+            );
             auth::grant_writer(&world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
+            trace!(
+                target: LOG_TARGET,
+                "Granting 'Owner' permissions for resources: {:?}",
+                owners_resources
+            );
             auth::grant_owner(&world, owners_resources, transaction.into()).await
         }
     }
@@ -125,13 +140,24 @@ pub async fn revoke(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
+    trace!(target: LOG_TARGET, "Executing 'Revoke' command with kind: {:?}, world: {:?}, starknet: {:?}, account: {:?}, transaction: {:?}", kind, world, starknet, account, transaction);
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
     match kind {
         AuthKind::Writer { models_contracts } => {
+            trace!(
+                target: LOG_TARGET,
+                "Revoking 'Writer' permissions for contracts: {:?}",
+                models_contracts
+            );
             auth::revoke_writer(&world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
+            trace!(
+                target: LOG_TARGET,
+                "Revoking 'Owner' permissions for resources: {:?}",
+                owners_resources
+            );
             auth::revoke_owner(&world, owners_resources, transaction.into()).await
         }
     }

@@ -5,6 +5,7 @@ use camino::Utf8PathBuf;
 use clap::Args;
 use dojo_lang::compiler::{ABIS_DIR, BASE_DIR, MANIFESTS_DIR};
 use scarb::core::Config;
+use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::clean";
 
@@ -23,11 +24,15 @@ impl CleanArgs {
     ///
     /// * `profile_dir` - The directory where the profile files are located.
     pub fn clean_manifests(&self, profile_dir: &Utf8PathBuf) -> Result<()> {
+        trace!(target: LOG_TARGET, "Cleaning manifests in directory: {:?}", profile_dir);
         let dirs = vec![profile_dir.join(BASE_DIR), profile_dir.join(ABIS_DIR).join(BASE_DIR)];
 
         for d in dirs {
             if d.exists() {
+                trace!(target: LOG_TARGET, "Removing directory: {:?}", d);
                 fs::remove_dir_all(d)?;
+            } else {
+                trace!(target: LOG_TARGET, "Directory does not exist: {:?}", d);
             }
         }
 
@@ -36,6 +41,7 @@ impl CleanArgs {
 
     pub fn run(self, config: &Config) -> Result<()> {
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        trace!(target: LOG_TARGET, "Workspace read successfully");
 
         let profile_name =
             ws.current_profile().expect("Scarb profile is expected at this point.").to_string();
@@ -47,11 +53,15 @@ impl CleanArgs {
         let profile_dir = manifest_dir.join(MANIFESTS_DIR).join(profile_name);
 
         // By default, this command cleans the build manifests and scarb artifacts.
+        trace!(target: LOG_TARGET, "Cleaning Scarb artifacts and build manifests");
         scarb::ops::clean(config)?;
         self.clean_manifests(&profile_dir)?;
 
         if self.all && profile_dir.exists() {
+            trace!(target: LOG_TARGET, "Removing entire profile directory: {:?}", profile_dir);
             fs::remove_dir_all(profile_dir)?;
+        } else {
+            trace!(target: LOG_TARGET, "Profile directory does not exist: {:?}", profile_dir);
         }
 
         Ok(())
@@ -107,13 +117,13 @@ mod tests {
         let manifest_toml = profile_manifests_dir.join("manifest").with_extension("toml");
         let manifest_json = profile_manifests_dir.join("manifest").with_extension("json");
 
-        assert!(fs::read_dir(&target_dev_dir).is_err(), "Expected 'target/dev' to be empty");
+        assert!(fs::read_dir(target_dev_dir).is_err(), "Expected 'target/dev' to be empty");
         assert!(
-            fs::read_dir(&manifests_dev_base_dir).is_err(),
+            fs::read_dir(manifests_dev_base_dir).is_err(),
             "Expected 'manifests/dev/base' to be empty"
         );
         assert!(
-            fs::read_dir(&manifests_dev_abis_base_dir).is_err(),
+            fs::read_dir(manifests_dev_abis_base_dir).is_err(),
             "Expected 'manifests/dev/abis/base' to be empty"
         );
         assert!(

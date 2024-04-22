@@ -1,5 +1,6 @@
 use clap::Args;
 use dojo_world::migration::TxnConfig;
+use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::transaction";
 
@@ -33,6 +34,13 @@ pub struct TransactionOptions {
 
 impl From<TransactionOptions> for TxnConfig {
     fn from(value: TransactionOptions) -> Self {
+        trace!(
+            target: LOG_TARGET,
+            "Converting TransactionOptions to TxnConfig. Multiplier: {:?}, Wait: {}, Receipt: {}",
+            value.fee_estimate_multiplier,
+            value.wait,
+            value.receipt,
+        );
         Self {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait,

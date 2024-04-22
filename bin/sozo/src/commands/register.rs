@@ -11,6 +11,7 @@ use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
+use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::register";
 
@@ -46,15 +47,18 @@ pub enum RegisterCommand {
 
 impl RegisterArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        trace!(target: LOG_TARGET, "Executing command: {:?}", self.command);
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         let (starknet, world, account, transaction, models) = match self.command {
             RegisterCommand::Model { starknet, world, account, transaction, models } => {
+                trace!(target: LOG_TARGET, "Registering models: {:?}", models);
                 (starknet, world, account, transaction, models)
             }
         };
 
         let world_address = world.world_address.unwrap_or_default();
+        trace!(target: LOG_TARGET, "Using world address: {:?}", world_address);
 
         config.tokio_handle().block_on(async {
             let world =
@@ -62,7 +66,8 @@ impl RegisterArgs {
             let provider = world.account.provider();
             let world_reader = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
-
+            trace!(target: LOG_TARGET, "WorldContractReader initialized with block tag Pending.");
+            
             register::model_register(
                 models,
                 &world,
