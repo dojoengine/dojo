@@ -65,16 +65,12 @@ impl MigrateArgs {
             return Err(anyhow!("Build project using `sozo build` first"));
         }
 
-        let MigrateArgs { mut name, world, starknet, account, .. } = self;
+        let MigrateArgs { name, world, starknet, account, .. } = self;
 
-        if name.is_none() {
-            if let Some(root_package) = ws.root_package() {
-                name = Some(root_package.id.name.to_string())
-            }
-        };
+        let name = name.unwrap_or_else(|| ws.root_package().unwrap().id.name.to_string());
 
         let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {
-            setup_env(&ws, account, starknet, world, name.as_ref(), env_metadata.as_ref()).await
+            setup_env(&ws, account, starknet, world, &name, env_metadata.as_ref()).await
         })?;
 
         match self.command {
@@ -84,7 +80,7 @@ impl MigrateArgs {
                     world_address,
                     rpc_url,
                     &account,
-                    name,
+                    &name,
                     true,
                     TxnConfig::default(),
                 )
@@ -93,7 +89,7 @@ impl MigrateArgs {
             MigrateCommand::Apply { transaction } => config.tokio_handle().block_on(async {
                 let txn_config: TxnConfig = transaction.into();
 
-                migration::migrate(&ws, world_address, rpc_url, &account, name, false, txn_config)
+                migration::migrate(&ws, world_address, rpc_url, &account, &name, false, txn_config)
                     .await
             }),
         }
@@ -105,7 +101,7 @@ pub async fn setup_env<'a>(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    name: Option<&'a String>,
+    name: &str,
     env: Option<&'a Environment>,
 ) -> Result<(
     Option<FieldElement>,
@@ -142,9 +138,7 @@ pub async fn setup_env<'a>(
 
         ui.print(format!("\nMigration account: {address:#x}"));
 
-        if let Some(name) = name {
-            ui.print(format!("\nWorld name: {name}"));
-        }
+        ui.print(format!("\nWorld name: {name}"));
 
         ui.print(format!("\nChain ID: {chain_id}\n"));
 

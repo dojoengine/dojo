@@ -15,7 +15,7 @@ use dojo_world::migration::contract::ContractMigration;
 use dojo_world::migration::strategy::{generate_salt, prepare_for_migration, MigrationStrategy};
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{
-    Declarable, Deployable, MigrationError, RegisterOutput, StateDiff, TxnConfig, Upgradable,
+    Declarable, Deployable, MigrationError, RegisterOutput, TxnConfig, Upgradable,
 };
 use dojo_world::utils::{TransactionExt, TransactionWaiter};
 use futures::future;
@@ -41,24 +41,13 @@ use super::{
 pub fn prepare_migration(
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
-    name: Option<String>,
+    name: &str,
     world_address: Option<FieldElement>,
     ui: &Ui,
 ) -> Result<MigrationStrategy> {
     ui.print_step(3, "📦", "Preparing for migration...");
 
-    if name.is_none() && !diff.world.is_same() {
-        bail!(
-            "World name is required when attempting to migrate the World contract. Please provide \
-             it using `--name`."
-        );
-    }
-
-    let name = if let Some(name) = name {
-        Some(cairo_short_string_to_felt(&name).with_context(|| "Failed to parse World name.")?)
-    } else {
-        None
-    };
+    let name = cairo_short_string_to_felt(&name).with_context(|| "Failed to parse World name.")?;
 
     let migration = prepare_for_migration(world_address, name, target_dir, diff)
         .with_context(|| "Problem preparing for migration.")?;
@@ -750,7 +739,7 @@ pub async fn update_manifests_and_abis(
     rpc_url: &str,
     world_address: FieldElement,
     migration_output: Option<MigrationOutput>,
-    salt: Option<&String>,
+    salt: &str,
 ) -> Result<()> {
     let ui = ws.config().ui();
     ui.print_step(5, "✨", "Updating manifests...");
@@ -771,9 +760,7 @@ pub async fn update_manifests_and_abis(
     };
 
     local_manifest.world.inner.address = Some(world_address);
-    if let Some(salt) = salt {
-        local_manifest.world.inner.seed = Some(salt.to_owned());
-    }
+    local_manifest.world.inner.seed = salt.to_owned();
 
     // when the migration has not been applied because in `plan` mode or because of an error,
     // the `migration_output` is empty.

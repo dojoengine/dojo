@@ -65,7 +65,7 @@ impl MigrationStrategy {
 /// evaluate which contracts/classes need to be declared/deployed
 pub fn prepare_for_migration(
     world_address: Option<FieldElement>,
-    seed: Option<FieldElement>,
+    seed: FieldElement,
     target_dir: &Utf8PathBuf,
     diff: WorldDiff,
 ) -> Result<MigrationStrategy> {
@@ -98,8 +98,7 @@ pub fn prepare_for_migration(
 
     // If world needs to be migrated, then we expect the `seed` to be provided.
     if let Some(world) = &mut world {
-        let salt =
-            seed.map(poseidon_hash_single).ok_or(anyhow!("Missing seed for World deployment."))?;
+        let salt = poseidon_hash_single(seed);
 
         world.salt = salt;
         let generated_world_address = get_contract_address(

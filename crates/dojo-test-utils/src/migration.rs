@@ -20,5 +20,5 @@ pub fn prepare_migration(
 
     let world = WorldDiff::compute(manifest, None);
 
-    prepare_for_migration(None, Some(felt!("0x12345")), &target_dir, world)
+    prepare_for_migration(None, felt!("0x12345"), &target_dir, world)
 }

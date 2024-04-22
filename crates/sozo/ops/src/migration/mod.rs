@@ -44,7 +44,7 @@ pub async fn migrate<P, S>(
     world_address: Option<FieldElement>,
     rpc_url: String,
     account: &SingleOwnerAccount<P, S>,
-    name: Option<String>,
+    name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
 ) -> Result<()>
@@ -88,7 +88,7 @@ where
         return Ok(());
     }
 
-    let mut strategy = prepare_migration(&target_dir, diff, name.clone(), world_address, &ui)?;
+    let mut strategy = prepare_migration(&target_dir, diff, &name, world_address, &ui)?;
     let world_address = strategy.world_address().expect("world address must exist");
 
     if dry_run {
@@ -102,7 +102,7 @@ where
             &rpc_url,
             world_address,
             None,
-            name.as_ref(),
+            &name,
         )
         .await?;
     } else {
@@ -118,7 +118,7 @@ where
                     &rpc_url,
                     world_address,
                     None,
-                    name.as_ref(),
+                    &name,
                 )
                 .await?;
                 return Err(e)?;

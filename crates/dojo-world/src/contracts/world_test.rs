@@ -47,7 +47,7 @@ pub async fn deploy_world(
 
     let strategy = prepare_for_migration(
         None,
-        Some(FieldElement::from_hex_be("0x12345").unwrap()),
+        FieldElement::from_hex_be("0x12345").unwrap(),
         target_dir,
         world,
     )

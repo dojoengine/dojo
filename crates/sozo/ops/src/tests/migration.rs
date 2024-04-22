@@ -105,20 +105,6 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     sequencer.stop().unwrap();
 }
 
-#[test]
-fn migrate_world_without_seed_will_fail() {
-    let profile_name = "dev";
-    let base = "../../../examples/spawn-and-move";
-    let target_dir = format!("{}/target/dev", base);
-    let manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
-    )
-    .unwrap();
-    let world = WorldDiff::compute(manifest, None);
-    let res = prepare_for_migration(None, None, &Utf8Path::new(&target_dir).to_path_buf(), world);
-    assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
-}
-
 #[tokio::test]
 async fn migration_from_remote() {
     let config = load_config();
@@ -151,7 +137,7 @@ async fn migration_from_remote() {
 
     let mut migration = prepare_for_migration(
         None,
-        Some(felt!("0x12345")),
+        felt!("0x12345"),
         &Utf8Path::new(&target_dir).to_path_buf(),
         world,
     )
