@@ -9,6 +9,8 @@ use tracing::trace;
 
 use super::{DOJO_KEYSTORE_PASSWORD_ENV_VAR, DOJO_KEYSTORE_PATH_ENV_VAR, DOJO_PRIVATE_KEY_ENV_VAR};
 
+pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::signer";
+
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Signer options")]
 // INVARIANT:
