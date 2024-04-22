@@ -30,19 +30,12 @@ trait IDojoModel<T> {
 /// # Arguments
 ///
 /// * `class_hash` - Class Hash of the model.
-fn deploy_and_get_name(salt: felt252, class_hash: starknet::ClassHash) -> SyscallResult<(starknet::ContractAddress, felt252)> {
-    let (address, _) = starknet::deploy_syscall(
-        class_hash,
-        salt,
-        array![].span(),
-        false,
-    )?;
+fn deploy_and_get_name(
+    salt: felt252, class_hash: starknet::ClassHash
+) -> SyscallResult<(starknet::ContractAddress, felt252)> {
+    let (address, _) = starknet::deploy_syscall(class_hash, salt, array![].span(), false,)?;
 
-    let name = *starknet::call_contract_syscall(
-        address,
-        selector!("name"),
-        array![].span()
-    )?[0];
+    let name = *starknet::call_contract_syscall(address, selector!("name"), array![].span())?[0];
 
     Result::Ok((address, name))
 }

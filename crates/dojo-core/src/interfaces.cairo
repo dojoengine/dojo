@@ -21,7 +21,9 @@ struct ProgramOutput {
 
 #[starknet::interface]
 trait IUpgradeableState<TContractState> {
-    fn upgrade_state(ref self: TContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput);
+    fn upgrade_state(
+        ref self: TContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput
+    );
 }
 
 #[starknet::interface]
