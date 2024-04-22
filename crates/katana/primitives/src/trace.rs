@@ -32,10 +32,13 @@ pub struct ExecutionResources {
     pub builtin_instance_counter: HashMap<String, u64>,
 }
 
+/// The call type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CallType {
+    /// Normal contract call.
     Call,
+    /// Library call.
     Delegate,
 }
 
@@ -55,6 +58,10 @@ pub struct CallInfo {
     /// The call type.
     pub call_type: CallType,
     /// The contract address.
+    ///
+    /// The contract address of the current call execution context. This would be the address of
+    /// the contract whose code is currently being executed, or in the case of library call, the
+    /// address of the contract where the library call is being initiated from.
     pub contract_address: ContractAddress,
     /// The address where the code is being executed.
     /// Optional, since there is no address to the code implementation in a delegate call.
