@@ -1428,9 +1428,10 @@ dependencies = [
 
 [[package]]
 name = "blockifier"
-version = "0.5.0-dev.0"
-source = "git+https://github.com/dojoengine/blockifier?rev=d38b979#d38b9790cf36261d06e1409d98f0105cbc09d8e2"
+version = "0.6.0-rc.2"
+source = "git+https://github.com/dojoengine/blockifier?rev=5f58be89#5f58be8961ddf84022dd739a8ab254e32c435075"
 dependencies = [
+ "anyhow",
  "ark-ec",
  "ark-ff 0.4.2",
  "ark-secp256k1",
@@ -1439,10 +1440,9 @@ dependencies = [
  "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-runner",
- "cairo-lang-starknet",
+ "cairo-lang-starknet-classes",
  "cairo-lang-utils",
  "cairo-vm",
- "ctor",
  "derive_more",
  "indexmap 2.2.5",
  "itertools 0.10.5",
@@ -1451,12 +1451,13 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits 0.2.18",
+ "once_cell",
  "phf",
  "serde",
  "serde_json",
  "sha3",
  "starknet-crypto 0.5.2",
- "starknet_api 0.7.0-dev.0",
+ "starknet_api",
  "strum 0.24.1",
  "strum_macros 0.24.3",
  "thiserror",
@@ -2370,6 +2371,7 @@ dependencies = [
  "log",
  "num-bigint",
  "num-traits 0.2.18",
+ "parity-scale-codec",
  "schemars",
  "serde",
  "time",
@@ -3135,16 +3137,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5efa2b3d7902f4b634a20cae3c9c4e6209dc4779feb6863329607560143efa70"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "ctor"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30d2b3721e861707777e3195b0158f950ae6dc4a27e4d02ff9f67e3eb3de199e"
-dependencies = [
- "quote",
- "syn 2.0.55",
 ]
 
 [[package]]
@@ -6642,7 +6634,7 @@ dependencies = [
  "katana-rpc-api",
  "serde_json",
  "shellexpand",
- "starknet_api 0.10.0",
+ "starknet_api",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -6707,7 +6699,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet 0.9.0",
- "starknet_api 0.10.0",
+ "starknet_api",
  "tempfile",
  "thiserror",
  "tokio",
@@ -6732,7 +6724,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet 0.9.0",
- "starknet_api 0.10.0",
+ "starknet_api",
  "tempfile",
  "thiserror",
 ]
@@ -6758,7 +6750,7 @@ dependencies = [
  "similar-asserts",
  "starknet 0.9.0",
  "starknet-types-core",
- "starknet_api 0.10.0",
+ "starknet_api",
  "thiserror",
  "tokio",
  "tracing",
@@ -6785,7 +6777,7 @@ dependencies = [
  "serde_with",
  "starknet 0.9.0",
  "starknet-crypto 0.6.1",
- "starknet_api 0.10.0",
+ "starknet_api",
  "strum 0.25.0",
  "strum_macros 0.25.3",
  "thiserror",
@@ -6843,7 +6835,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet 0.9.0",
- "starknet_api 0.10.0",
+ "starknet_api",
  "thiserror",
  "tokio",
  "tower",
@@ -10292,7 +10284,7 @@ dependencies = [
  "serde_with",
  "starknet 0.9.0",
  "starknet-types-core",
- "starknet_api 0.10.0",
+ "starknet_api",
  "thiserror",
  "tokio",
  "tracing",
@@ -10322,7 +10314,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet 0.9.0",
- "starknet_api 0.10.0",
+ "starknet_api",
  "thiserror",
  "tokio",
  "tracing",
@@ -11727,28 +11719,6 @@ dependencies = [
  "num-integer",
  "num-traits 0.2.18",
  "serde",
-]
-
-[[package]]
-name = "starknet_api"
-version = "0.7.0-dev.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88969610ab6ea9391e0e05a3e7c38acc49dc1cb49941b93ca52814075002b92f"
-dependencies = [
- "cairo-lang-starknet",
- "derive_more",
- "hex",
- "indexmap 2.2.5",
- "once_cell",
- "parity-scale-codec",
- "parity-scale-codec-derive",
- "primitive-types",
- "serde",
- "serde_json",
- "starknet-crypto 0.5.2",
- "strum 0.24.1",
- "strum_macros 0.24.3",
- "thiserror",
 ]
 
 [[package]]
