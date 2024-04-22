@@ -244,14 +244,8 @@ impl KatanaArgs {
             Some(genesis) => genesis,
             None => {
                 let gas_prices = GasPrices {
-                    eth: self
-                        .starknet
-                        .environment
-                        .l1_eth_gas_price,
-                    strk: self
-                        .starknet
-                        .environment
-                        .l1_strk_gas_price,
+                    eth: self.starknet.environment.l1_eth_gas_price,
+                    strk: self.starknet.environment.l1_strk_gas_price,
                 };
 
                 let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
@@ -277,14 +271,8 @@ impl KatanaArgs {
             fork_block_number: self.fork_block_number,
             env: Environment {
                 chain_id: self.starknet.environment.chain_id,
-                invoke_max_steps: self
-                    .starknet
-                    .environment
-                    .invoke_max_steps,
-                validate_max_steps: self
-                    .starknet
-                    .environment
-                    .validate_max_steps,
+                invoke_max_steps: self.starknet.environment.invoke_max_steps,
+                validate_max_steps: self.starknet.environment.validate_max_steps,
             },
             db_dir: self.db_dir.clone(),
             genesis,
