@@ -496,7 +496,7 @@ impl TransactionTraceProvider for DbProvider {
         let db_tx = self.0.tx()?;
         if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
             let execution = db_tx
-                .get::<katana_db::tables::TxTraces>(num)?
+                .get::<tables::TxTraces>(num)?
                 .ok_or(ProviderError::MissingTxExecution(num))?;
 
             db_tx.commit()?;
@@ -533,9 +533,8 @@ impl ReceiptProvider for DbProvider {
     fn receipt_by_hash(&self, hash: TxHash) -> ProviderResult<Option<Receipt>> {
         let db_tx = self.0.tx()?;
         if let Some(num) = db_tx.get::<tables::TxNumbers>(hash)? {
-            let receipt = db_tx
-                .get::<katana_db::tables::Receipts>(num)?
-                .ok_or(ProviderError::MissingTxReceipt(num))?;
+            let receipt =
+                db_tx.get::<tables::Receipts>(num)?.ok_or(ProviderError::MissingTxReceipt(num))?;
 
             db_tx.commit()?;
             Ok(Some(receipt))
