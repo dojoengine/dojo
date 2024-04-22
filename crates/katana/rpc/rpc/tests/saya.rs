@@ -23,7 +23,7 @@ mod common;
 async fn no_pending_support() {
     // Saya does not support the pending block and only work on sealed blocks.
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: None, no_mining: true, ..Default::default() },
+        SequencerConfig { no_mining: true, ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;
@@ -47,7 +47,7 @@ async fn no_pending_support() {
 async fn process_sealed_block_only() {
     // Saya does not support the pending block and only work on sealed blocks.
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: None, no_mining: true, ..Default::default() },
+        SequencerConfig { no_mining: true, ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;
@@ -118,7 +118,7 @@ async fn process_sealed_block_only() {
 #[tokio::test(flavor = "multi_thread")]
 async fn executions_chunks_logic_ok() {
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: None, no_mining: true, ..Default::default() },
+        SequencerConfig { no_mining: true, ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;
