@@ -3,6 +3,7 @@ use std::str;
 use camino::Utf8Path;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::compiler::build_full_test_config;
+use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
@@ -236,6 +237,24 @@ async fn migrate_with_metadata() {
         )
         .await;
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn migration_with_mismatching_world_address_and_seed() {
+    let base_dir = "../../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base_dir);
+
+    let result = prepare_migration_with_world_and_seed(
+        base_dir.into(),
+        target_dir.into(),
+        Some(felt!("0x1")),
+        "sozo_test",
+    );
+
+    assert!(result.is_err_and(|e| e.to_string().contains(
+        "Calculated world address doesn't match provided world address.\nIf you are deploying \
+         with custom seed make sure `world_address` is not configured in `Scarb.toml`"
+    )));
 }
 
 /// Get the hash from a IPFS URI

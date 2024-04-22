@@ -111,8 +111,9 @@ pub fn prepare_for_migration(
         if let Some(world_address) = world_address {
             if world_address != generated_world_address {
                 bail!(
-                    "Calculated world address doesn't match provided world address\n
-                    Make sure `seed/name` passed is correct.\n"
+                    "Calculated world address doesn't match provided world address.\nIf you are \
+                     deploying with custom seed make sure `world_address` is not configured in \
+                     `Scarb.toml`"
                 )
             }
         }

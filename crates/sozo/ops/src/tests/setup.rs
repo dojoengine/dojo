@@ -1,6 +1,6 @@
 use anyhow::Result;
 use dojo_test_utils::compiler::build_test_config;
-use dojo_test_utils::migration::prepare_migration;
+use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_test_utils::sequencer::TestSequencer;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::migration::strategy::MigrationStrategy;
@@ -47,7 +47,7 @@ pub fn setup_migration() -> Result<MigrationStrategy> {
     let base_dir = "../../../examples/spawn-and-move";
     let target_dir = format!("{}/target/dev", base_dir);
 
-    prepare_migration(base_dir.into(), target_dir.into())
+    prepare_migration_with_world_and_seed(base_dir.into(), target_dir.into(), None, "sozo_test")
 }
 
 /// Setups the project by migrating the full spawn-and-moves project.
