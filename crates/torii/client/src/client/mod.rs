@@ -159,9 +159,9 @@ impl Client {
     }
 
     /// Unsuscribe to entities updates of a World.
-    pub async fn unsubscribe_entities(&self, ids: Vec<FieldElement>) -> Result<(), Error> {
+    pub async fn unsubscribe_entities(&self, id: u64) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
-        grpc_client.unsubscribe_entities(ids).await?;
+        grpc_client.unsubscribe_entities(id).await?;
         Ok(())
     }
 
@@ -176,9 +176,9 @@ impl Client {
     }
 
     /// Unsuscribe to event messages updates of a World.
-    pub async fn unsubscribe_event_messages(&self, ids: Vec<FieldElement>) -> Result<(), Error> {
+    pub async fn unsubscribe_event_messages(&self, id: u64) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
-        grpc_client.unsubscribe_event_messages(ids).await?;
+        grpc_client.unsubscribe_event_messages(id).await?;
         Ok(())
     }
 
