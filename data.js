@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713733912203,
+  "lastUpdate": 1713760935135,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -5935,6 +5935,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16921801,
             "range": "± 277296",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f6510d5022969975dbc5fafe1c9aca41f3e0162a",
+          "message": "fix: ensure transaction executions are stored with fork and db providers (#1852)\n\n* fix: ensure transaction executions are stored with fork and db providers\r\n\r\n* feat: add implementation for TxExecutions into mdbx\r\n\r\n* fix: ensure tests now include TxExecInfo and add missing implementations\r\n\r\n* tests: add empty block testing\r\n\r\n* fix: rename TxExecutions to TxTraces\r\n\r\n* fix: use consistent naming to access tables\r\n\r\n* fix: use 0 as default transaction hash for empty testing\r\n\r\n* fix: enhance readability of iter with zip\r\n\r\n* fix: use `Range` implementation\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2024-04-21T22:34:01-06:00",
+          "tree_id": "52c058177a9b8c48eef8db48a50117e3823d17c0",
+          "url": "https://github.com/dojoengine/dojo/commit/f6510d5022969975dbc5fafe1c9aca41f3e0162a"
+        },
+        "date": 1713760934577,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16688589,
+            "range": "± 210067",
             "unit": "ns/iter"
           }
         ]
