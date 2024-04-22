@@ -617,3 +617,19 @@ fn test_set_facts_registry() {
 
     assert(facts_registry == contract_address_const::<0x875914875149357>(), 'invalid program hash');
 }
+
+#[test]
+#[available_gas(6000000)]
+fn test_emit_ProgramHashUpdate() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_facts_registry(contract_address_const::<0x875914875149357>());
+    let facts_registry = config.get_facts_registry();
+
+    assert(facts_registry == contract_address_const::<0x875914875149357>(), 'invalid program hash');
+}
+
+// Deploy Contract mock 
+//set program_output.world_da_hash to 0
+//set fact_registry.is_valid(fact) to always true

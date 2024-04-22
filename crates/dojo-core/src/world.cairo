@@ -113,7 +113,7 @@ mod world {
 
     #[derive(Drop, starknet::Event)]
     struct StateUpdated {
-        da_hash: ClassHash,
+        da_hash: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -605,7 +605,7 @@ mod world {
                 da_hasher = da_hasher.update(*new_state.at(i).value);
                 i += 1;
             };
-            let da_hash = da_hasher.finalize();
+            let da_hash= da_hasher.finalize();
             assert(da_hash == program_output.world_da_hash, 'wrong output hash');
 
             let mut program_output_array = array![];
@@ -633,7 +633,7 @@ mod world {
                 )
                     .unwrap_syscall();
                 i += 2;
-            }
+            };
             EventEmitter::emit(ref self, StateUpdated { da_hash: da_hash });
         }
     }
