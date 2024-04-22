@@ -514,7 +514,7 @@ impl TransactionTraceProvider for DbProvider {
             let db_tx = self.0.tx()?;
             let mut executions = Vec::with_capacity(indices.tx_count as usize);
 
-            let range = indices.tx_offset..indices.tx_offset + indices.tx_count;
+            let range = Range::from(indices);
             for i in range {
                 if let Some(execution) = db_tx.get::<tables::TxTraces>(i)? {
                     executions.push(execution);
