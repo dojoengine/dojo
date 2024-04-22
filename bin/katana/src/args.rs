@@ -175,20 +175,24 @@ pub struct EnvironmentOptions {
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
+    #[arg(default_value = format!("{:?}",DEFAULT_VALIDATE_MAX_STEPS))]
     pub validate_max_steps: Option<u32>,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account execution logic.")]
+    #[arg(default_value = format!("{:?}",DEFAULT_INVOKE_MAX_STEPS))]
     pub invoke_max_steps: Option<u32>,
 
     #[arg(long = "eth-gas-price")]
     #[arg(conflicts_with = "genesis")]
     #[arg(help = "The L1 ETH gas price.")]
+    #[arg(default_value = format!("{:?}",DEFAULT_ETH_L1_GAS_PRICE))]
     pub l1_eth_gas_price: Option<u128>,
 
     #[arg(long = "strk-gas-price")]
     #[arg(conflicts_with = "genesis")]
     #[arg(help = "The L1 STRK gas price.")]
+    #[arg(default_value = format!("{:?}",DEFAULT_STRK_L1_GAS_PRICE))]
     pub l1_strk_gas_price: Option<u128>,
 }
 
