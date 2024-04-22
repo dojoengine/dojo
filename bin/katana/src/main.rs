@@ -6,6 +6,7 @@ use clap::{CommandFactory, Parser};
 use clap_complete::{generate, Shell};
 use console::Style;
 use dojo_metrics::{metrics_process, prometheus_exporter};
+use katana_core::backend::config::StarknetConfig;
 use katana_core::constants::MAX_RECURSION_DEPTH;
 use katana_core::env::get_default_vm_resource_fee_cost;
 use katana_core::sequencer::KatanaSequencer;
@@ -113,6 +114,7 @@ fn print_completion(shell: Shell) {
 
 fn print_intro(args: &KatanaArgs, genesis: &Genesis, address: SocketAddr) {
     let mut accounts = genesis.accounts().peekable();
+    let starknet_config = args.starknet_config();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.starknet.seed;
 
@@ -143,6 +145,8 @@ fn print_intro(args: &KatanaArgs, genesis: &Genesis, address: SocketAddr) {
             )
         );
 
+        print_environment(&starknet_config, genesis);
+        print_forking(&starknet_config);
         print_genesis_contracts(genesis, account_class_hash);
         print_genesis_accounts(accounts);
 
@@ -161,6 +165,44 @@ ACCOUNTS SEED
         );
 
         println!("\n{addr}\n\n",);
+    }
+}
+
+fn print_environment(starknet_config: &StarknetConfig, genesis: &Genesis) {
+    println!(
+        r"
+ENVIRONMENT
+==================
+
+| Chain ID            | {}
+| Disable Fee         | {}
+| Disable Validate    | {}
+| Validate max steps  | {}
+| Invoke max steps    | {}
+| ETH Gas Price       | {}
+| STRK Gas Price      | {}",
+        starknet_config.env.chain_id,
+        starknet_config.disable_fee,
+        starknet_config.disable_validate,
+        starknet_config.env.validate_max_steps,
+        starknet_config.env.invoke_max_steps,
+        genesis.gas_prices.eth,
+        genesis.gas_prices.strk,
+    );
+}
+
+fn print_forking(starknet_config: &StarknetConfig) {
+    if let Some(fork_rpc_url) = &starknet_config.fork_rpc_url {
+        println!(
+            r"
+FORKING
+==================
+    "
+        );
+        println!(r"| Fork rpc url        | {fork_rpc_url}");
+    }
+    if let Some(fork_block_number) = starknet_config.fork_block_number {
+        println!(r"| Fork blocknumber    | {fork_block_number}");
     }
 }
 
