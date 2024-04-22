@@ -55,6 +55,10 @@ pub enum ProviderError {
     #[error("Missing transaction receipt for tx number {0}")]
     MissingTxReceipt(TxNumber),
 
+    /// Error when a transaction execution info is not found but the transaction exists.
+    #[error("Missing transaction execution for tx number {0}")]
+    MissingTxExecution(TxNumber),
+
     /// Error when a compiled class hash is not found but the class hash exists.
     #[error("Missing compiled class hash for class hash {0:#x}")]
     MissingCompiledClassHash(ClassHash),

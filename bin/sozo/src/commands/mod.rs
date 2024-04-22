@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{command, Subcommand};
 use scarb::core::Config;
 
+pub(crate) mod account;
 pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod call;
@@ -11,12 +12,14 @@ pub(crate) mod dev;
 pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod init;
+pub(crate) mod keystore;
 pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod register;
 pub(crate) mod test;
 
+use account::AccountArgs;
 use auth::AuthArgs;
 use build::BuildArgs;
 use call::CallArgs;
@@ -26,6 +29,7 @@ use dev::DevArgs;
 use events::EventsArgs;
 use execute::ExecuteArgs;
 use init::InitArgs;
+use keystore::KeystoreArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
 use register::RegisterArgs;
@@ -33,6 +37,10 @@ use test::TestArgs;
 
 #[derive(Subcommand)]
 pub enum Commands {
+    #[command(about = "Manage accounts")]
+    Account(AccountArgs),
+    #[command(about = "Manage keystore files")]
+    Keystore(KeystoreArgs),
     #[command(about = "Build the world, generating the necessary artifacts for deployment")]
     Build(BuildArgs),
     #[command(about = "Initialize a new project")]
@@ -64,6 +72,8 @@ pub enum Commands {
 
 pub fn run(command: Commands, config: &Config) -> Result<()> {
     match command {
+        Commands::Account(args) => args.run(config),
+        Commands::Keystore(args) => args.run(config),
         Commands::Init(args) => args.run(config),
         Commands::Clean(args) => args.run(config),
         Commands::Test(args) => args.run(config),

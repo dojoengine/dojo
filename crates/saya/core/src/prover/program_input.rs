@@ -44,21 +44,18 @@ fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
 }
 
 pub fn extract_messages(
-    exec_infos: &Vec<TxExecInfo>,
+    exec_infos: &[TxExecInfo],
     mut transactions: Vec<&L1HandlerTx>,
 ) -> (Vec<MessageToStarknet>, Vec<MessageToAppchain>) {
     let message_to_starknet_segment = exec_infos
         .iter()
-        .map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter()).chain(t.fee_transfer_call_info.iter())) // Take into account both validate and execute calls.
-        .flatten()
-        .map(get_messages_recursively)
-        .flatten()
+        .flat_map(|t| t.execute_call_info.iter().chain(t.validate_call_info.iter()).chain(t.fee_transfer_call_info.iter())) // Take into account both validate and execute calls.
+        .flat_map(get_messages_recursively)
         .collect();
 
     let message_to_appchain_segment = exec_infos
         .iter()
-        .map(|t| t.execute_call_info.iter())
-        .flatten()
+        .flat_map(|t| t.execute_call_info.iter())
         .filter(|c| c.entry_point_type == EntryPointType::L1Handler)
         .map(|c| {
             let message_hash =
@@ -73,10 +70,9 @@ pub fn extract_messages(
                         && c.contract_address == t.contract_address
                         && c.calldata == t.calldata
                 })
-                .expect(&format!(
-                    "No matching transaction found for message hash: {}",
-                    message_hash
-                ))
+                .unwrap_or_else(|| {
+                    panic!("No matching transaction found for message hash: {}", message_hash)
+                })
                 .0;
 
             // Removing, to have different nonces, even for the same message content.
@@ -131,7 +127,7 @@ impl ProverInput {
 
         result.push_str(&state_updates_to_json_like(&self.state_updates));
 
-        result.push_str(&format!("{}", "}"));
+        result.push('}');
 
         Ok(result)
     }
@@ -183,7 +179,7 @@ pub struct MessageToStarknet {
 impl MessageToStarknet {
     pub fn serialize(&self) -> anyhow::Result<Vec<FieldElement>> {
         let mut result = vec![*self.from_address, *self.to_address];
-        result.push(FieldElement::try_from(self.payload.len())?);
+        result.push(FieldElement::from(self.payload.len()));
         result.extend(self.payload.iter().cloned());
         Ok(result)
     }
@@ -201,7 +197,7 @@ pub struct MessageToAppchain {
 impl MessageToAppchain {
     pub fn serialize(&self) -> anyhow::Result<Vec<FieldElement>> {
         let mut result = vec![*self.from_address, *self.to_address, self.nonce, self.selector];
-        result.push(FieldElement::try_from(self.payload.len())?);
+        result.push(FieldElement::from(self.payload.len()));
         result.extend(self.payload.iter().cloned());
         Ok(result)
     }

@@ -456,7 +456,7 @@ impl BlockWriter for ForkedProvider {
         block: SealedBlockWithStatus,
         states: StateUpdatesWithDeclaredClasses,
         receipts: Vec<Receipt>,
-        _executions: Vec<TxExecInfo>,
+        executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
         let mut storage = self.storage.write();
 
@@ -494,6 +494,7 @@ impl BlockWriter for ForkedProvider {
         storage.transaction_numbers.extend(txs_num);
         storage.transaction_block.extend(txs_block);
         storage.receipts.extend(receipts);
+        storage.transactions_executions.extend(executions);
 
         storage.state_update.insert(block_number, states.state_updates.clone());
 
