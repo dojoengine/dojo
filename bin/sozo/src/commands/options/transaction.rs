@@ -1,5 +1,6 @@
 use clap::Args;
 use dojo_world::migration::TxnConfig;
+use starknet::core::types::FieldElement;
 
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Transaction options")]
@@ -40,7 +41,7 @@ impl From<TransactionOptions> for TxnConfig {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait,
             receipt: value.receipt,
-            raw_fee: value.max_fee_raw
+            max_fee_raw: value.max_fee_raw
         }
     }
 }
