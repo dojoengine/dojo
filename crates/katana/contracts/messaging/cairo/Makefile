@@ -10,7 +10,7 @@ sierra = .contract_class.json
 # ** L1 <-> L2 **
 #
 L1_CONTRACT_ADDR=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-C_MSG_L1_ADDR=0x04231f608ea4a233136f6cdfcd10eaad2e46362bbc4e5d5aa88d0d574ea120d8
+C_MSG_L1_ADDR=0x0609f8e7a76b6cc36f3ff86f09f6e5fdd0e6320f117d817e4344c1bf9fac7d67
 
 OPTS_L2 := --account katana-0 \
 	--rpc http://0.0.0.0:5050
