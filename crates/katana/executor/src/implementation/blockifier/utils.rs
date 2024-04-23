@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
+use std::num::NonZeroU128;
 use std::sync::Arc;
 
 use blockifier::block::{BlockInfo, GasPrices};
@@ -7,14 +8,17 @@ use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
 };
 use blockifier::execution::common_hints::ExecutionMode;
-use blockifier::execution::contract_class::{ContractClass, ContractClassV0, ContractClassV1};
+use blockifier::execution::contract_class::{
+    ClassInfo, ContractClass, ContractClassV0, ContractClassV1,
+};
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
 use blockifier::fee::fee_utils::{calculate_tx_fee, calculate_tx_gas_vector};
-use blockifier::state::cached_state::{self};
+use blockifier::state::cached_state::{self, GlobalContractCache};
 use blockifier::state::state_api::{State, StateReader};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{
-    DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo, TransactionInfo,
+    DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
+    TransactionInfo,
 };
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{
@@ -53,6 +57,7 @@ use starknet_api::transaction::{
 };
 
 use super::state::{CachedState, StateDb};
+use super::CACHE_SIZE;
 use crate::abstraction::{EntryPointCall, SimulationFlag};
 use crate::ExecutionError;
 
@@ -96,7 +101,7 @@ pub(super) fn transact<S: StateReader>(
         FeeType::Strk => (PriceUnit::Fri, block_context.block_info().gas_prices.strk_l1_gas_price),
     };
 
-    let fee = TxFeeInfo { gas_consumed, gas_price, unit, overall_fee };
+    let fee = TxFeeInfo { gas_consumed, gas_price: gas_price.into(), unit, overall_fee };
     Ok((info, fee))
 }
 
@@ -107,7 +112,7 @@ pub fn call<S: StateReader>(
     block_context: &BlockContext,
     initial_gas: u128,
 ) -> Result<Vec<FieldElement>, ExecutionError> {
-    let mut state = cached_state::CachedState::new(state, Default::default());
+    let mut state = cached_state::CachedState::new(state, GlobalContractCache::new(CACHE_SIZE));
 
     let call = CallEntryPoint {
         initial_gas: initial_gas as u64,
@@ -132,10 +137,10 @@ pub fn call<S: StateReader>(
         &mut state,
         &mut ExecutionResources::default(),
         &mut EntryPointExecutionContext::new(
-            TransactionContext {
-                block_context,
-                tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default())
-            },
+            Arc::new(TransactionContext {
+                block_context: block_context.clone(),
+                tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default()),
+            }),
             ExecutionMode::Execute,
             limit_steps_by_resources,
         )
@@ -337,11 +342,17 @@ pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) ->
         strk_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.strk),
     };
 
+    let eth_l1_gas_price =
+        NonZeroU128::new(block_env.l1_gas_prices.eth).expect("eth gas price must be non-zero");
+    let strk_l1_gas_price =
+        NonZeroU128::new(block_env.l1_gas_prices.strk).expect("strk gas price must be non-zero");
+
     let gas_prices = GasPrices {
-        eth_l1_gas_price: block_env.l1_gas_prices.eth,
-        strk_l1_gas_price: block_env.l1_gas_prices.strk,
-        eth_l1_data_gas_price: 0,
-        strk_l1_data_gas_price: 0,
+        eth_l1_gas_price,
+        strk_l1_gas_price,
+        // TODO: should those be the same value?
+        eth_l1_data_gas_price: eth_l1_gas_price,
+        strk_l1_data_gas_price: strk_l1_gas_price,
     };
 
     let block_info = BlockInfo {
@@ -354,12 +365,11 @@ pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) ->
 
     let chain_info = ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) };
 
-    let versioned_constants = VersionedConstants::new(
-        cfg_env.max_recursion_depth,
-        cfg_env.validate_max_n_steps,
-        cfg_env.invoke_tx_max_n_steps,
-        cfg_env.vm_resource_fee_cost.clone(),
-    );
+    let mut versioned_constants = VersionedConstants::default();
+    versioned_constants.max_recursion_depth = cfg_env.max_recursion_depth;
+    versioned_constants.validate_max_n_steps = cfg_env.validate_max_n_steps;
+    versioned_constants.invoke_tx_max_n_steps = cfg_env.invoke_tx_max_n_steps;
+    versioned_constants.vm_resource_fee_cost = cfg_env.vm_resource_fee_cost.clone().into();
 
     BlockContext::new_unchecked(&block_info, &chain_info, &versioned_constants)
 }
@@ -498,15 +508,24 @@ pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     }
 }
 
-pub fn to_class(
-    class: katana_primitives::class::CompiledClass,
-) -> Result<ContractClass, ProgramError> {
+pub fn to_class(class: katana_primitives::class::CompiledClass) -> Result<ClassInfo, ProgramError> {
+    // TODO: @kariy not sure of the variant that must be used in this case. Should we change the
+    // return type to include this case of error for contract class conversions?
     match class {
         katana_primitives::class::CompiledClass::Deprecated(class) => {
-            Ok(ContractClass::V0(ContractClassV0::try_from(class)?))
+            // For cairo 0, the sierra_program_length must be 0.
+            Ok(ClassInfo::new(&ContractClass::V0(ContractClassV0::try_from(class)?), 0, 0)
+                .map_err(|e| ProgramError::ConstWithoutValue(format!("{e}")))?)
         }
         katana_primitives::class::CompiledClass::Class(class) => {
-            Ok(ContractClass::V1(ContractClassV1::try_from(class.casm)?))
+            let sierra_program_len = class.sierra.program.statements.len();
+            // TODO: @kariy not sure from where the ABI length can be grasped.
+            Ok(ClassInfo::new(
+                &ContractClass::V1(ContractClassV1::try_from(class.casm)?),
+                sierra_program_len,
+                0,
+            )
+            .map_err(|e| ProgramError::ConstWithoutValue(format!("{e}")))?)
         }
     }
 }
@@ -545,10 +564,10 @@ fn to_call_info(call: CallInfo) -> trace::CallInfo {
     let calldata = call.call.calldata.0.iter().map(|f| (*f).into()).collect();
     let retdata = call.execution.retdata.0.into_iter().map(|f| f.into()).collect();
 
-    let builtin_counter = call.vm_resources.builtin_instance_counter;
+    let builtin_counter = call.resources.builtin_instance_counter;
     let execution_resources = trace::ExecutionResources {
-        n_steps: call.vm_resources.n_steps as u64,
-        n_memory_holes: call.vm_resources.n_memory_holes as u64,
+        n_steps: call.resources.n_steps as u64,
+        n_memory_holes: call.resources.n_memory_holes as u64,
         builtin_instance_counter: builtin_counter.into_iter().map(|(k, v)| (k, v as u64)).collect(),
     };
 

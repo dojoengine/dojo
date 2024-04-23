@@ -1442,7 +1442,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.6.0-rc.2"
-source = "git+https://github.com/dojoengine/blockifier?rev=5f58be89#5f58be8961ddf84022dd739a8ab254e32c435075"
+source = "git+https://github.com/dojoengine/blockifier?rev=6ab4b145#6ab4b14516dcf5d318839be8b6679d319edbe51c"
 dependencies = [
  "anyhow",
  "ark-ec",

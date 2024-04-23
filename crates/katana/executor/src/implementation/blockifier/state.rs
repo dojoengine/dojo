@@ -17,6 +17,7 @@ use starknet_api::patricia_key;
 use starknet_api::state::StorageKey;
 
 use super::utils::{self};
+use super::CACHE_SIZE;
 use crate::StateProviderDb;
 
 /// A helper trait to enforce that a type must implement both [StateProvider] and [StateReader].
@@ -62,7 +63,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
             let class =
                 utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
 
-            Ok(class)
+            Ok(class.contract_class())
         } else {
             Err(StateError::UndeclaredClassHash(class_hash))
         }
@@ -109,7 +110,8 @@ pub(super) struct CachedStateInner<S: StateReader> {
 impl<S: StateDb> CachedState<S> {
     pub(super) fn new(state: S) -> Self {
         let declared_classes = HashMap::new();
-        let cached_state = cached_state::CachedState::new(state, GlobalContractCache::default());
+        let cached_state =
+            cached_state::CachedState::new(state, GlobalContractCache::new(CACHE_SIZE));
         let inner = CachedStateInner { inner: cached_state, declared_classes };
         Self(Arc::new(RwLock::new(inner)))
     }
