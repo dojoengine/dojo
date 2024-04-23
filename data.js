@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713806640602,
+  "lastUpdate": 1713840098460,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6025,6 +6025,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16794509,
             "range": "± 487181",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "54eb048f096ef047a7bc1609bd260861ae790ba6",
+          "message": "fix(katana): wrong `from_address` value taken from the transaction trace (#1862)\n\nfix event/messages using wrong `from_address` value. \r\n\r\nwe use the contract address (or storage address on blockifier types) for the current call execution context as the `from_address`. `caller_address` will be zero if the call is a top level call (ie the first call in the transaction)\r\n\r\nref #1279",
+          "timestamp": "2024-04-23T10:33:31+08:00",
+          "tree_id": "a8288a0efa5d239f5af3ea1a2d8be2b5585e2c84",
+          "url": "https://github.com/dojoengine/dojo/commit/54eb048f096ef047a7bc1609bd260861ae790ba6"
+        },
+        "date": 1713840097864,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16781280,
+            "range": "± 258936",
             "unit": "ns/iter"
           }
         ]
