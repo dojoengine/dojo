@@ -128,7 +128,7 @@ impl<'a> StarknetVMProcessor<'a> {
         };
 
         self.block_context =
-            BlockContext::new_unchecked(&block_info, &chain_info, &versioned_constants);
+            BlockContext::new_unchecked(&block_info, chain_info, versioned_constants);
     }
 
     fn simulate_with<F, T>(

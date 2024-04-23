@@ -6840,6 +6840,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "cairo-lang-starknet",
+ "cairo-lang-starknet-classes",
  "dojo-metrics",
  "dojo-test-utils",
  "flate2",
