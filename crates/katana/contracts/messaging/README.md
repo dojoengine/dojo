@@ -40,7 +40,13 @@ How to run the scripts:
 
 -   Start Anvil in a terminal.
 -   Start Katana in an other terminal on default port 5050 with the messaging configuration that is inside the:
-    `katana --messaging ~/dojo/crates/katana/core/contracts/messaging/anvil.messaging.json`
+```bash
+    # From installed katana.
+    katana --messaging ~/dojo/crates/katana/contracts/messaging/anvil.messaging.json
+
+    # Dev mode
+    cargo run --bin katana -- --messaging ~/dojo/crates/katana/contracts/messaging/anvil.messaging.json
+```
 -   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
 Then you can then use pre-defined commands to interact with the contracts.
@@ -105,7 +111,15 @@ You can also use the Makefile to setup the chains, but the flow is the following
 How to run the scripts:
 
 -   Starts Katana (1) to simulate starknet on a new terminal with default port 5050.
--   Starts Katana (2) for your appchain on a new terminal with port 6060 and the configuration for messaging: `katana --messaging crates/katana/core/contracts/messaging/l3.messaging.json -p 6060`
+-   Starts Katana (2) for your appchain on a new terminal with port 6060 and the configuration for messaging:
+```bash
+   # From installed Katana.
+   katana --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060`
+
+   # Dev mode
+   cargo run --bin katana --features "starknet-messaging" -- --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060
+```
+
 -   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
 Then you can then use pre-defined commands to interact with the contracts.
@@ -135,3 +149,5 @@ make -sC ./cairo/ get_value_l2
 # Try to change the value to see the transaction error.
 make -sC cairo/ send_msg_l3 selector_str=msg_handler_value value=888
 ```
+
+It's important to note that Dojo will support settlement. Hence, messaging will be done during the state update of the appchain on the base layer, and not with this custom solution that was developped for the demo.
