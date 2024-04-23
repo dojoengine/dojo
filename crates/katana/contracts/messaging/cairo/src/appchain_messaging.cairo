@@ -322,7 +322,7 @@ mod appchain_messaging {
             );
 
             match starknet::call_contract_syscall(to_address, selector, payload) {
-                Result::Ok(span) => self
+                Result::Ok(_) => self
                     .emit(MessageExecuted { from_address, to_address, selector, payload, }),
                 Result::Err(e) => {
                     panic(e)
