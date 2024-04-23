@@ -14,7 +14,6 @@ pub async fn starknet_verify(
     serialized_proof: Vec<FieldElement>,
 ) -> anyhow::Result<String> {
     let txn_config = TxnConfig { fee_estimate_multiplier: Some(2.0), wait: true, receipt: false };
-    println!("before tx");
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: fact_registry_address,
@@ -24,7 +23,6 @@ pub async fn starknet_verify(
         .send_with_cfg(&txn_config)
         .await
         .unwrap();
-    println!("after tx");
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);
