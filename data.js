@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713840228435,
+  "lastUpdate": 1713840415989,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6085,6 +6085,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16710104,
             "range": "± 905571",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b22e2aa4fe516ac8b54703378690705f1ced2391",
+          "message": "test(katana-executor): test events/messages are extracted correctly from tx execution info (#1864)\n\n- add tests for functions extracting events and messages from the `TxExecInfo`.\r\n- remove blockifier's and sir's `output` [[1]](https://github.com/dojoengine/dojo/blob/v0.6.1-alpha.3/crates/katana/executor/src/implementation/blockifier/output.rs)[[2]](https://github.com/dojoengine/dojo/blob/v0.6.1-alpha.3/crates/katana/executor/src/implementation/sir/output.rs) module as they are pretty much the same exact code.",
+          "timestamp": "2024-04-23T10:38:31+08:00",
+          "tree_id": "6411ea19826decb7a43193b04b7e32b0205bde3e",
+          "url": "https://github.com/dojoengine/dojo/commit/b22e2aa4fe516ac8b54703378690705f1ced2391"
+        },
+        "date": 1713840414853,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16997264,
+            "range": "± 325624",
             "unit": "ns/iter"
           }
         ]
