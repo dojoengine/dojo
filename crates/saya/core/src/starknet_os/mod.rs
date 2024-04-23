@@ -10,6 +10,8 @@
 use std::time::Duration;
 
 use anyhow::bail;
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
 use itertools::chain;
 use starknet::accounts::ConnectedAccount;
 use starknet::accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount};
@@ -61,13 +63,14 @@ pub async fn starknet_apply_diffs(
     ]
     .collect::<Vec<FieldElement>>();
 
+    let txn_config = TxnConfig { fee_estimate_multiplier: Some(1000.0), wait: true, receipt: true };
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: world,
             selector: get_selector_from_name("upgrade_state").expect("invalid selector"),
             calldata,
         }])
-        .send()
+        .send_with_cfg(&txn_config)
         .await
         .unwrap();
 

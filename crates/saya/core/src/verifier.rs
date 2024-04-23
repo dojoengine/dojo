@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 use crate::starknet_os::STARKNET_ACCOUNT;
+use dojo_world::migration::TxnConfig;
+use dojo_world::utils::TransactionExt;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::{FieldElement, TransactionExecutionStatus, TransactionStatus};
 use starknet::core::utils::get_selector_from_name;
@@ -11,14 +13,18 @@ pub async fn starknet_verify(
     fact_registry_address: FieldElement,
     serialized_proof: Vec<FieldElement>,
 ) -> anyhow::Result<String> {
+    let txn_config = TxnConfig { fee_estimate_multiplier: Some(2.0), wait: true, receipt: false };
+    println!("before tx");
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: fact_registry_address,
             selector: get_selector_from_name("verify_and_register_fact").expect("invalid selector"),
             calldata: serialized_proof,
         }])
-        .send()
-        .await?;
+        .send_with_cfg(&txn_config)
+        .await
+        .unwrap();
+    println!("after tx");
 
     let start_fetching = std::time::Instant::now();
     let wait_for = Duration::from_secs(60);

@@ -19,7 +19,8 @@ use url::Url;
 use crate::blockchain::Blockchain;
 use crate::data_availability::{DataAvailabilityClient, DataAvailabilityConfig};
 use crate::error::SayaResult;
-use crate::prover::{extract_messages, parse_proof, prove_stone, ProgramInput};
+use crate::prover::client::http_prove;
+use crate::prover::{extract_messages, parse_proof, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
@@ -35,6 +36,8 @@ pub(crate) const LOG_TARGET: &str = "saya::core";
 pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
+    #[serde(deserialize_with = "url_deserializer")]
+    pub prover_rpc: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
@@ -200,7 +203,11 @@ impl Saya {
         trace!(target: LOG_TARGET, "World DA {world_da_printable:?}.");
 
         trace!(target: LOG_TARGET, "Proving block {block_number}.");
-        let proof = prove_stone(new_program_input.serialize(self.config.world_address)?).await?;
+        let proof = http_prove(
+            self.config.prover_rpc.to_owned(),
+            new_program_input.serialize(self.config.world_address)?,
+        )
+        .await?;
         info!(target: LOG_TARGET, block_number, "Block proven.");
 
         trace!(target: LOG_TARGET, "Verifying block {block_number}.");

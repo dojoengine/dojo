@@ -170,6 +170,7 @@ toml = "0.7.4"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.16", features = [ "env-filter", "json" ] }
 url = { version = "2.4.0", features = [ "serde" ] }
+reqwest = "0.12.4"
 
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
