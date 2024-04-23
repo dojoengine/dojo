@@ -50,7 +50,7 @@ pub struct TestArgs {
     #[arg(long, default_value_t = false)]
     ignored: bool,
     /// Should we run the profiler and with what mode.
-    #[arg(long, default_value = "None")]
+    #[arg(long, default_value = "none")]
     profiler_mode: ProfilerMode,
 }
 
