@@ -3,7 +3,7 @@ use starknet::ContractAddress;
 #[starknet::interface]
 trait IConfig<T> {
     /// Sets the information of the program that generates the
-    /// state transition trace (namely StarknetOS).
+    /// state transition trace (namely DojoOS).
     ///
     /// # Arguments
     ///
@@ -12,7 +12,7 @@ trait IConfig<T> {
     fn set_program_hash(ref self: T, program_hash: felt252);
 
     /// Gets the information of the program that generates the
-    /// state transition trace (namely StarknetOS).
+    /// state transition trace (namely DojoOS).
     ///
     /// # Returns
     ///

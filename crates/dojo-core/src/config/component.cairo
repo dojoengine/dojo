@@ -53,9 +53,7 @@ mod Config {
         fn set_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
             self.program_hash.write(program_hash);
-            EventEmitter::emit(ref self, ProgramHashUpdate { program_hash: program_hash }
-            );
-           
+            self.emit( ProgramHashUpdate { program_hash: program_hash });
         }
 
         fn get_program_hash(self: @ComponentState<TContractState>) -> felt252 {
@@ -65,7 +63,7 @@ mod Config {
         fn set_facts_registry(ref self: ComponentState<TContractState>, address: ContractAddress) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
             self.facts_registry.write(address);
-            EventEmitter::emit(ref self, FactsRegistryUpdate { address: address });
+            self.emit( FactsRegistryUpdate { address: address });
         }
 
         fn get_facts_registry(self: @ComponentState<TContractState>) -> ContractAddress {
