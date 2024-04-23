@@ -10562,6 +10562,8 @@ dependencies = [
 name = "scheduler"
 version = "0.6.1-alpha.4"
 dependencies = [
+ "clap",
+ "clap_complete",
  "katana-primitives",
  "saya-core",
  "serde",
