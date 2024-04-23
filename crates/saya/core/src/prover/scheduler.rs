@@ -57,32 +57,34 @@ pub fn prove_recursively(
     .boxed()
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::time::{Duration, Instant};
+ #[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
 
-//     use katana_primitives::FieldElement;
+    use katana_primitives::FieldElement;
 
-//     use super::*;
+    use super::*;
 
-//     /// Test case for a single input.
-//     #[tokio::test]
-//     async fn test_one() {
-//         let inputs = (0..1)
-//             .map(|i| ProgramInput {
-//                 prev_state_root: FieldElement::from(i),
-//                 block_number: i,
-//                 block_hash: FieldElement::from(i),
-//                 config_hash: FieldElement::from(i),
-//                 message_to_appchain_segment: Default::default(),
-//                 message_to_starknet_segment: Default::default(),
-//                 state_updates: Default::default(),
-//             })
-//             .collect::<Vec<_>>();
+    /// Test case for a single input.
+    #[tokio::test]
+    async fn test_one() {
+        let inputs = (0..1)
+            .map(|i| ProgramInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
 
-//         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
-//         assert_eq!(proof.0, "dummy 0");
-//     }
+        let proof = prove_recursively(inputs.clone(), ProverIdentifier::Stone).await.unwrap().0.pop().unwrap();
+        let expected = prove(inputs[0].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        assert_eq!(proof, expected);
+    }
+}
 
 //     //Test case for combined inputs.
 //     #[tokio::test]
