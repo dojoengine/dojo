@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713842904540,
+  "lastUpdate": 1713893942152,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6145,6 +6145,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 15472502,
             "range": "± 139222",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "64266194+princeibs@users.noreply.github.com",
+            "name": "princeibs",
+            "username": "princeibs"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2fabab785b6c275ec8fca5b1ab0191374fbedf7f",
+          "message": "feat: add raw max fee to `TransactionsOptions` (#1856)\n\n* feat: add raw max fee to\r\n\r\n* chore: change field to max_fee_raw\r\n\r\n* chore: update field name\r\n\r\n* chore: remove long help message for max-raw-fee\r\n\r\n* chore: add implementation for max_fee_raw\r\n\r\n* add clap restriction and comment\r\n\r\n---------\r\n\r\nCo-authored-by: lambda-0x <0xlambda@protonmail.com>",
+          "timestamp": "2024-04-23T23:00:42+05:30",
+          "tree_id": "ca02b24b6e2130b0ff716d11d17efb75b1b1dc0a",
+          "url": "https://github.com/dojoengine/dojo/commit/2fabab785b6c275ec8fca5b1ab0191374fbedf7f"
+        },
+        "date": 1713893941375,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16720345,
+            "range": "± 235426",
             "unit": "ns/iter"
           }
         ]
