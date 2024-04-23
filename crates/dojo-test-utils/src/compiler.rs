@@ -36,7 +36,7 @@ pub fn copy_build_project_temp(
         assert_fs::TempDir::new().unwrap().to_path_buf().to_string_lossy().to_string(),
     );
 
-    let temp_project_path = temp_project_dir.join(&"Scarb").with_extension("toml").to_string();
+    let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
 
     copy_project_temp(&source_project_dir, &temp_project_dir).unwrap();
 
@@ -66,13 +66,13 @@ pub fn copy_project_temp(
     source_dir: &Utf8PathBuf,
     destination_dir: &Utf8PathBuf,
 ) -> io::Result<()> {
-    let ignore_dirs = vec!["manifests", "target"];
+    let ignore_dirs = ["manifests", "target"];
 
     if !destination_dir.exists() {
-        fs::create_dir_all(&destination_dir)?;
+        fs::create_dir_all(destination_dir)?;
     }
 
-    for entry in fs::read_dir(&source_dir)? {
+    for entry in fs::read_dir(source_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir() {
@@ -99,7 +99,7 @@ pub fn copy_project_temp(
                 let mut contents = String::new();
                 File::open(&path)
                     .and_then(|mut file| file.read_to_string(&mut contents))
-                    .expect(&format!("Failed to read {file_name}"));
+                    .unwrap_or_else(|_| panic!("Failed to read {file_name}"));
 
                 let mut table = contents.parse::<Table>().expect("Failed to parse Scab.toml");
 
@@ -211,21 +211,21 @@ mod tests {
 
         // Create a file in the project directory
         let file_path = project_dir.join("file.txt");
-        let mut file = File::create(&file_path).unwrap();
+        let mut file = File::create(file_path).unwrap();
         writeln!(file, "Hello, world!").unwrap();
 
         // Create a subdirectory with a file in the project directory
         let sub_dir = project_dir.join("subdir");
         fs::create_dir(&sub_dir).unwrap();
         let sub_file_path = sub_dir.join("subfile.txt");
-        let mut sub_file = File::create(&sub_file_path).unwrap();
+        let mut sub_file = File::create(sub_file_path).unwrap();
         writeln!(sub_file, "Hello, from subdir!").unwrap();
 
         // Create a subdir that should be ignored
         let ignored_sub_dir = project_dir.join("manifests");
         fs::create_dir(&ignored_sub_dir).unwrap();
         let ignored_sub_file_path = ignored_sub_dir.join("ignored_file.txt");
-        let mut ignored_sub_file = File::create(&ignored_sub_file_path).unwrap();
+        let mut ignored_sub_file = File::create(ignored_sub_file_path).unwrap();
         writeln!(ignored_sub_file, "This should be ignored!").unwrap();
 
         // Perform the copy

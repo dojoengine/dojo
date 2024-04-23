@@ -83,6 +83,18 @@ impl WorldClient {
         self.inner.retrieve_entities(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
     }
 
+    pub async fn retrieve_event_messages(
+        &mut self,
+        query: Query,
+    ) -> Result<RetrieveEntitiesResponse, Error> {
+        let request = RetrieveEntitiesRequest { query: Some(query.into()) };
+        self.inner
+            .retrieve_event_messages(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
+    }
+
     /// Subscribe to entities updates of a World.
     pub async fn subscribe_entities(
         &mut self,
@@ -92,6 +104,25 @@ impl WorldClient {
         let stream = self
             .inner
             .subscribe_entities(SubscribeEntitiesRequest { hashed_keys })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?;
+
+        Ok(EntityUpdateStreaming(stream.map_ok(Box::new(|res| {
+            let entity = res.entity.expect("entity must exist");
+            entity.try_into().expect("must able to serialize")
+        }))))
+    }
+
+    /// Subscribe to event messages of a World.
+    pub async fn subscribe_event_messages(
+        &mut self,
+        hashed_keys: Vec<FieldElement>,
+    ) -> Result<EntityUpdateStreaming, Error> {
+        let hashed_keys = hashed_keys.iter().map(|hashed| hashed.to_bytes_be().to_vec()).collect();
+        let stream = self
+            .inner
+            .subscribe_event_messages(SubscribeEntitiesRequest { hashed_keys })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;

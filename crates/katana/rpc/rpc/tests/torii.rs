@@ -23,7 +23,7 @@ pub const ENOUGH_GAS: &str = "0x100000000000000000";
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_transactions() {
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: None, no_mining: true, ..Default::default() },
+        SequencerConfig { no_mining: true, ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;
@@ -176,7 +176,7 @@ async fn test_get_transactions() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_transactions_with_instant_mining() {
     let sequencer = TestSequencer::start(
-        SequencerConfig { block_time: None, no_mining: false, ..Default::default() },
+        SequencerConfig { no_mining: false, ..Default::default() },
         get_default_test_starknet_config(),
     )
     .await;

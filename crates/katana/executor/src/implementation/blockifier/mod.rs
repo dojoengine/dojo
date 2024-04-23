@@ -1,9 +1,8 @@
 mod error;
-mod output;
 mod state;
 mod utils;
 
-use blockifier::block_context::BlockContext;
+use blockifier::context::BlockContext;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::objects::TransactionExecutionInfo;
@@ -16,8 +15,8 @@ use katana_provider::traits::state::StateProvider;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use tracing::info;
 
-use self::output::receipt_from_exec_info;
 use self::state::CachedState;
+use crate::utils::receipt_from_exec_info;
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionError, ExecutionOutput, ExecutionResult,
     ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates, SimulationFlag,

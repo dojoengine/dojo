@@ -44,7 +44,7 @@ pub enum TableType {
     DupSort,
 }
 
-pub const NUM_TABLES: usize = 22;
+pub const NUM_TABLES: usize = 23;
 
 /// Macro to declare `libmdbx` tables.
 #[macro_export]
@@ -153,6 +153,7 @@ define_tables_enum! {[
     (TxNumbers, TableType::Table),
     (TxBlocks, TableType::Table),
     (TxHashes, TableType::Table),
+    (TxTraces, TableType::Table),
     (Transactions, TableType::Table),
     (Receipts, TableType::Table),
     (CompiledClassHashes, TableType::Table),
@@ -189,8 +190,8 @@ tables! {
     Transactions: (TxNumber) => Tx,
     /// Stores the block number of a transaction.
     TxBlocks: (TxNumber) => BlockNumber,
-    /// Stores the transaction's execution info.
-    TxExecutions: (TxNumber) => TxExecInfo,
+    /// Stores the transaction's traces.
+    TxTraces: (TxNumber) => TxExecInfo,
     /// Store transaction receipts
     Receipts: (TxNumber) => Receipt,
     /// Store compiled classes
@@ -242,20 +243,21 @@ mod tests {
         assert_eq!(Tables::ALL[5].name(), TxNumbers::NAME);
         assert_eq!(Tables::ALL[6].name(), TxBlocks::NAME);
         assert_eq!(Tables::ALL[7].name(), TxHashes::NAME);
-        assert_eq!(Tables::ALL[8].name(), Transactions::NAME);
-        assert_eq!(Tables::ALL[9].name(), Receipts::NAME);
-        assert_eq!(Tables::ALL[10].name(), CompiledClassHashes::NAME);
-        assert_eq!(Tables::ALL[11].name(), CompiledClasses::NAME);
-        assert_eq!(Tables::ALL[12].name(), SierraClasses::NAME);
-        assert_eq!(Tables::ALL[13].name(), ContractInfo::NAME);
-        assert_eq!(Tables::ALL[14].name(), ContractStorage::NAME);
-        assert_eq!(Tables::ALL[15].name(), ClassDeclarationBlock::NAME);
-        assert_eq!(Tables::ALL[16].name(), ClassDeclarations::NAME);
-        assert_eq!(Tables::ALL[17].name(), ContractInfoChangeSet::NAME);
-        assert_eq!(Tables::ALL[18].name(), NonceChangeHistory::NAME);
-        assert_eq!(Tables::ALL[19].name(), ClassChangeHistory::NAME);
-        assert_eq!(Tables::ALL[20].name(), StorageChangeHistory::NAME);
-        assert_eq!(Tables::ALL[21].name(), StorageChangeSet::NAME);
+        assert_eq!(Tables::ALL[8].name(), TxTraces::NAME);
+        assert_eq!(Tables::ALL[9].name(), Transactions::NAME);
+        assert_eq!(Tables::ALL[10].name(), Receipts::NAME);
+        assert_eq!(Tables::ALL[11].name(), CompiledClassHashes::NAME);
+        assert_eq!(Tables::ALL[12].name(), CompiledClasses::NAME);
+        assert_eq!(Tables::ALL[13].name(), SierraClasses::NAME);
+        assert_eq!(Tables::ALL[14].name(), ContractInfo::NAME);
+        assert_eq!(Tables::ALL[15].name(), ContractStorage::NAME);
+        assert_eq!(Tables::ALL[16].name(), ClassDeclarationBlock::NAME);
+        assert_eq!(Tables::ALL[17].name(), ClassDeclarations::NAME);
+        assert_eq!(Tables::ALL[18].name(), ContractInfoChangeSet::NAME);
+        assert_eq!(Tables::ALL[19].name(), NonceChangeHistory::NAME);
+        assert_eq!(Tables::ALL[20].name(), ClassChangeHistory::NAME);
+        assert_eq!(Tables::ALL[21].name(), StorageChangeHistory::NAME);
+        assert_eq!(Tables::ALL[22].name(), StorageChangeSet::NAME);
 
         assert_eq!(Tables::Headers.table_type(), TableType::Table);
         assert_eq!(Tables::BlockHashes.table_type(), TableType::Table);
@@ -265,6 +267,7 @@ mod tests {
         assert_eq!(Tables::TxNumbers.table_type(), TableType::Table);
         assert_eq!(Tables::TxBlocks.table_type(), TableType::Table);
         assert_eq!(Tables::TxHashes.table_type(), TableType::Table);
+        assert_eq!(Tables::TxTraces.table_type(), TableType::Table);
         assert_eq!(Tables::Transactions.table_type(), TableType::Table);
         assert_eq!(Tables::Receipts.table_type(), TableType::Table);
         assert_eq!(Tables::CompiledClassHashes.table_type(), TableType::Table);

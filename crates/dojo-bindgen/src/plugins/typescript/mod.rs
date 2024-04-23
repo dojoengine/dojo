@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use cainome::parser::tokens::{Composite, CompositeType, Function};
-use convert_case::Casing;
+use cainome::parser::tokens::{Composite, CompositeType, Function, Token};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -28,6 +27,7 @@ impl TypescriptPlugin {
             "u256" => "RecsType.BigInt".to_string(),
             "usize" => "RecsType.Number".to_string(),
             "felt252" => "RecsType.BigInt".to_string(),
+            "bytes31" => "RecsType.String".to_string(),
             "ClassHash" => "RecsType.BigInt".to_string(),
             "ContractAddress" => "RecsType.BigInt".to_string(),
 
@@ -211,6 +211,11 @@ export enum {} {{
             });
 
             for token in &structs {
+                if handled_tokens.iter().filter(|t| t.type_name() == token.type_name()).count() > 1
+                {
+                    continue;
+                }
+
                 // first index is our model struct
                 if token.type_name() == model.name {
                     models_structs.push(token.to_composite().unwrap().clone());
@@ -222,6 +227,10 @@ export enum {} {{
             }
 
             for token in &tokens.enums {
+                if handled_tokens.iter().filter(|t| t.type_name() == token.type_name()).count() > 1
+                {
+                    continue;
+                }
                 out += TypescriptPlugin::format_enum(token.to_composite().unwrap()).as_str();
             }
 
@@ -247,20 +256,22 @@ export function defineContractComponents(world: World) {
     // Handled tokens should be a list of all structs and enums used by the contract
     // Such as a set of referenced tokens from a model
     fn format_system(system: &Function, handled_tokens: &[Composite]) -> String {
+        fn map_type(token: &Token) -> String {
+            match token {
+                Token::CoreBasic(t) => TypescriptPlugin::map_type(&t.type_name())
+                .replace("RecsType.", "")
+                // types should be lowercased
+                .to_lowercase(),
+                Token::Composite(t) => format!("models.{}", t.type_name()),
+                Token::Array(t) => format!("{}[]", map_type(&t.inner)),
+                _ => panic!("Unsupported token type: {:?}", token),
+            }
+        }
+
         let args = system
             .inputs
             .iter()
-            .map(|arg| {
-                format!(
-                    "{}: {}",
-                    arg.0,
-                    if TypescriptPlugin::map_type(&arg.1.type_name()) == arg.1.type_name() {
-                        format!("models.{}", arg.1.type_name())
-                    } else {
-                        TypescriptPlugin::map_type(&arg.1.type_name()).replace("RecsType.", "")
-                    }
-                )
-            })
+            .map(|arg| format!("{}: {}", arg.0, map_type(&arg.1)))
             .collect::<Vec<String>>()
             .join(", ");
 
@@ -295,7 +306,7 @@ export function defineContractComponents(world: World) {
         format!(
             "
         // Call the `{system_name}` system with the specified Account and calldata
-        const {pretty_system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
+        const {system_name} = async (props: {{ account: Account{arg_sep}{args} }}) => {{
             try {{
                 return await provider.execute(
                     props.account,
@@ -311,10 +322,6 @@ export function defineContractComponents(world: World) {
             ",
             // selector for execute
             system_name = system.name,
-            // pretty system name
-            // snake case to camel case
-            // move_to -> moveTo
-            pretty_system_name = system.name.to_case(convert_case::Case::Camel),
             // add comma if we have args
             arg_sep = if !args.is_empty() { ", " } else { "" },
             // formatted args to use our mapped types
@@ -384,9 +391,7 @@ export function defineContractComponents(world: World) {
                 contract
                     .systems
                     .iter()
-                    .map(|system| {
-                        system.to_function().unwrap().name.to_case(convert_case::Case::Camel)
-                    })
+                    .map(|system| { system.to_function().unwrap().name.to_string() })
                     .collect::<Vec<String>>()
                     .join(", ")
             );

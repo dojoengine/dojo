@@ -134,7 +134,7 @@ pub trait Declarable {
 
         let DeclareTransactionResult { transaction_hash, class_hash } = account
             .declare(Arc::new(flattened_class), casm_class_hash)
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
@@ -204,7 +204,7 @@ pub trait Deployable: Declarable + Sync {
 
         let InvokeTransactionResult { transaction_hash } = account
             .execute(vec![call])
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
@@ -275,7 +275,7 @@ pub trait Deployable: Declarable + Sync {
         }]);
 
         let InvokeTransactionResult { transaction_hash } =
-            txn.send_with_cfg(&txn_config).await.map_err(MigrationError::Migrator)?;
+            txn.send_with_cfg(txn_config).await.map_err(MigrationError::Migrator)?;
 
         let receipt = TransactionWaiter::new(transaction_hash, account.provider()).await?;
         let block_number = get_block_number_from_receipt(receipt);
@@ -336,7 +336,7 @@ pub trait Upgradable: Deployable + Declarable + Sync {
 
         let InvokeTransactionResult { transaction_hash } = account
             .execute(vec![Call { calldata, selector: selector!("upgrade"), to: contract_address }])
-            .send_with_cfg(&txn_config)
+            .send_with_cfg(txn_config)
             .await
             .map_err(MigrationError::Migrator)?;
 
