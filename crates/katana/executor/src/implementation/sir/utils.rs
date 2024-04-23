@@ -560,12 +560,6 @@ pub fn to_exec_info(exec_info: &TransactionExecutionInfo) -> TxExecInfo {
 }
 
 fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo {
-    let message_to_l1_from_address = if let Some(ref a) = call_info.code_address {
-        to_address(a)
-    } else {
-        to_address(&call_info.caller_address)
-    };
-
     katana_primitives::trace::CallInfo {
         contract_address: to_address(&call_info.contract_address),
         caller_address: to_address(&call_info.caller_address),
@@ -616,7 +610,7 @@ fn from_sir_call_info(call_info: CallInfo) -> katana_primitives::trace::CallInfo
             .iter()
             .map(|m| katana_primitives::message::OrderedL2ToL1Message {
                 order: m.order as u64,
-                from_address: message_to_l1_from_address,
+                from_address: to_address(&call_info.contract_address),
                 to_address: *to_address(&m.to_address),
                 payload: m.payload.iter().map(to_felt).collect(),
             })
