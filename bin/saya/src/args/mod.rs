@@ -28,6 +28,13 @@ pub struct SayaArgs {
     #[arg(default_value = "http://localhost:5050")]
     pub rpc_url: Url,
 
+    /// Specify the Prover URL.
+    #[arg(long)]
+    #[arg(value_name = "PROVER URL")]
+    #[arg(help = "The Prover RPC URL to fetch data from.")]
+    #[arg(default_value = "http://localhost:3000/prove/state-diff-commitment")]
+    pub prover_url: Url,
+
     /// Enable JSON logging.
     #[arg(long)]
     #[arg(help = "Output logs in JSON format.")]
@@ -113,6 +120,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
+                prover_rpc: args.prover_url,
                 start_block: args.start_block,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
@@ -138,6 +146,7 @@ mod tests {
         let args = SayaArgs {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
+            prover_url: Url::parse("http://localhost:3000/prove/state-diff-commitment").unwrap(),
             json_log: false,
             start_block: 0,
             data_availability: DataAvailabilityOptions {

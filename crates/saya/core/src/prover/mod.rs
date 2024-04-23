@@ -6,6 +6,7 @@ use std::str::FromStr;
 use anyhow::bail;
 use async_trait::async_trait;
 
+pub mod client;
 mod program_input;
 mod serializer;
 pub mod state_diff;
