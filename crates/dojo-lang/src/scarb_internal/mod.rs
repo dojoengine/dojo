@@ -7,7 +7,7 @@
 use anyhow::Result;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
-use cairo_lang_filesystem::db::CrateSettings;
+use cairo_lang_filesystem::db::{CrateSettings, ExperimentalFeaturesConfig};
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_project::AllCratesConfig;
 use cairo_lang_starknet::starknet_plugin_suite;
@@ -38,7 +38,14 @@ pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCra
         .map(|component| {
             (
                 component.cairo_package_name(),
-                CrateSettings { edition: component.package.manifest.edition, ..Default::default() },
+                CrateSettings {
+                    edition: component.package.manifest.edition,
+                    experimental_features: ExperimentalFeaturesConfig {
+                        negative_impls: true,
+                        coupons: true,
+                    },
+                    ..Default::default()
+                },
             )
         })
         .collect();

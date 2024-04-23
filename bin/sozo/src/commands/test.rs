@@ -72,11 +72,15 @@ impl TestArgs {
             let unit = if let CompilationUnit::Cairo(unit) = unit {
                 unit
             } else {
-                return Err(anyhow::anyhow!("Cairo Compilation Unit is expected at this point."));
+                continue;
             };
 
             let props: Props = unit.target().props()?;
             let db = build_root_database(&unit)?;
+
+            if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
+                bail!("failed to compile");
+            }
 
             let mut main_crate_ids = collect_main_crate_ids(&unit, &db);
             let test_crate_ids = main_crate_ids.clone();
@@ -90,10 +94,6 @@ impl TestArgs {
                 main_crate_ids.extend(collect_external_crate_ids(&db, external_contracts));
             }
 
-            if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
-                bail!("failed to compile");
-            }
-
             let config = TestRunConfig {
                 filter: self.filter.clone(),
                 ignored: self.ignored,
@@ -102,6 +102,7 @@ impl TestArgs {
             };
 
             let compiler = TestCompiler { db, main_crate_ids, test_crate_ids, starknet: true };
+
             let runner = CompiledTestRunner { compiled: compiler.build()?, config };
 
             // Database should not be required here as [`TestCompiler`] is already initialized
@@ -118,7 +119,7 @@ impl TestArgs {
 pub(crate) fn build_root_database(unit: &CairoCompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
-    b.with_cfg(CfgSet::from_iter([Cfg::name("test")]));
+    b.with_cfg(CfgSet::from_iter([Cfg::name("test"), Cfg::kv("target", "test")]));
 
     b.with_plugin_suite(test_plugin_suite());
     b.with_plugin_suite(dojo_plugin_suite());
@@ -137,6 +138,7 @@ fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
 
     let corelib =
         unit.core_package_component().map(|c| Directory::Real(c.target.source_root().into()));
+
     let crates_config = crates_config_for_compilation_unit(unit);
 
     let content = ProjectConfigContent { crate_roots, crates_config };
