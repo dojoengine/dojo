@@ -3,7 +3,6 @@ use futures::future::BoxFuture;
 use futures::FutureExt;
 use tracing::level_filters::STATIC_MAX_LEVEL;
 use tracing::{info, trace};
-// Imports from the parent module.
 use super::{prove, stone_image::prove_stone, ProgramInput, ProverIdentifier};
 type Proof = String;
 use serde_json::Value;
@@ -62,6 +61,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use katana_primitives::FieldElement;
+    use serde::de::Expected;
 
     use super::*;
 
@@ -84,48 +84,58 @@ mod tests {
         let expected = prove(inputs[0].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
         assert_eq!(proof, expected);
     }
+
+    //Test case for combined inputs.
+    #[tokio::test]
+    async fn test_combined() {
+        let inputs = (0..2)
+            .map(|i| ProgramInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
+        let cloned_inputs = inputs.clone();
+        let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
+        let expected1 = prove(inputs[0].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected2 = prove(inputs[1].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        assert_eq!(proof.0[0], expected1);
+        assert_eq!(proof.0[1], expected2);
+        
+    }
+
+    /// Test case to verify recursive division and combination with many inputs.
+    #[tokio::test]
+    async fn test_many() {
+        let inputs = (0..4)
+            .map(|i| ProgramInput {
+                prev_state_root: FieldElement::from(i),
+                block_number: i,
+                block_hash: FieldElement::from(i),
+                config_hash: FieldElement::from(i),
+                message_to_appchain_segment: Default::default(),
+                message_to_starknet_segment: Default::default(),
+                state_updates: Default::default(),
+            })
+            .collect::<Vec<_>>();
+
+        let cloned_inputs = inputs.clone();
+        let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
+        let expected1 = prove(inputs[0].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected2 = prove(inputs[1].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected3 = prove(inputs[2].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected4 = prove(inputs[3].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        assert_eq!(proof.0[0], expected1);
+        assert_eq!(proof.0[1], expected2);
+        assert_eq!(proof.0[2], expected3);
+        assert_eq!(proof.0[3], expected4);
+
+    }
 }
-
-//     //Test case for combined inputs.
-//     #[tokio::test]
-//     async fn test_combined() {
-//         let inputs = (0..2)
-//             .map(|i| ProverInput {
-//                 prev_state_root: FieldElement::from(i),
-//                 block_number: i,
-//                 block_hash: FieldElement::from(i),
-//                 config_hash: FieldElement::from(i),
-//                 message_to_appchain_segment: Default::default(),
-//                 message_to_starknet_segment: Default::default(),
-//                 state_updates: Default::default(),
-//             })
-//             .collect::<Vec<_>>();
-
-//         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
-//         assert_eq!(proof.0, "dummy 0 & dummy 1");
-//     }
-
-//     /// Test case to verify recursive division and combination with many inputs.
-//     #[tokio::test]
-//     async fn test_many() {
-//         let inputs = (0..8)
-//             .map(|i| ProverInput {
-//                 prev_state_root: FieldElement::from(i),
-//                 block_number: i,
-//                 block_hash: FieldElement::from(i),
-//                 config_hash: FieldElement::from(i),
-//                 message_to_appchain_segment: Default::default(),
-//                 message_to_starknet_segment: Default::default(),
-//                 state_updates: Default::default(),
-//             })
-//             .collect::<Vec<_>>();
-
-//         let proof = prove_recursively(inputs, ProverIdentifier::Dummy).await.unwrap();
-//         let expected =
-//             "dummy 0 & dummy 1 & dummy 2 & dummy 3 & dummy 4 & dummy 5 & dummy 6 & dummy 7";
-//         assert_eq!(proof.0, expected);
-//     }
-
 //     /// Test to measure the time taken for a large number of proofs.
 //     #[tokio::test]
 //     async fn time_test() {
