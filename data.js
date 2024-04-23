@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713840098460,
+  "lastUpdate": 1713840228435,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6055,6 +6055,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16781280,
             "range": "± 258936",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "263cd5a330e7ae6e8d5582d74d77fbe73d15a6f4",
+          "message": "test(katana-executor): test tx execution info conversion (#1863)\n\nadd test for tx execution info conversion from `blockifier` type to `katana-primitives` counterpart.",
+          "timestamp": "2024-04-23T10:35:46+08:00",
+          "tree_id": "2b9b6cdb1a572161ffff2fb58e58f1139ef402bc",
+          "url": "https://github.com/dojoengine/dojo/commit/263cd5a330e7ae6e8d5582d74d77fbe73d15a6f4"
+        },
+        "date": 1713840227928,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16710104,
+            "range": "± 905571",
             "unit": "ns/iter"
           }
         ]
