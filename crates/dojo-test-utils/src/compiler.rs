@@ -8,7 +8,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use dojo_lang::compiler::DojoCompiler;
 use dojo_lang::plugin::CairoPluginRepository;
 use dojo_lang::scarb_internal::{compile_workspace, CompileInfo};
-use scarb::compiler::CompilerRepository;
+use scarb::compiler::{CompilationUnit, CompilerRepository};
 use scarb::core::{Config, TargetKind};
 use scarb::ops;
 use scarb::ops::CompileOpts;
@@ -183,12 +183,12 @@ pub fn corelib() -> PathBuf {
     let ws = ops::read_workspace(config.manifest_path(), &config).unwrap();
     let resolve = ops::resolve_workspace(&ws).unwrap();
     let compilation_units = ops::generate_compilation_units(&resolve, &ws).unwrap();
-    compilation_units[0]
-        .core_package_component()
-        .expect("should have component")
-        .target
-        .source_root()
-        .into()
+
+    if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
+        unit.core_package_component().expect("should have component").target.source_root().into()
+    } else {
+        panic!("should have cairo compilation unit")
+    }
 }
 
 #[cfg(test)]

@@ -136,6 +136,7 @@ Block(
                         ExprFunctionCall {
                             function: core::array::ArrayImpl::<core::felt252>::new,
                             args: [],
+                            coupon_arg: None,
                             ty: core::array::Array::<core::felt252>,
                         },
                     ),
@@ -161,6 +162,7 @@ Block(
                                     LocalVarId(test::__get_macro_keys__),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: (),
                         },
                     ),
@@ -186,6 +188,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: core::array::Span::<core::felt252>,
                         },
                     ),
@@ -200,6 +203,7 @@ Block(
                         ExprFunctionCall {
                             function: core::array::ArrayImpl::<core::integer::u8>::new,
                             args: [],
+                            coupon_arg: None,
                             ty: core::array::Array::<core::integer::u8>,
                         },
                     ),
@@ -215,6 +219,7 @@ Block(
                                     LocalVarId(test::__Health_layout__),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: (),
                         },
                     ),
@@ -240,6 +245,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: core::array::Array::<core::integer::u8>,
                         },
                     ),
@@ -265,6 +271,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: core::array::Span::<core::integer::u8>,
                         },
                     ),
@@ -290,6 +297,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: core::array::Span::<core::integer::u8>,
                         },
                     ),
@@ -328,6 +336,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: core::array::Span::<core::felt252>,
                         },
                     ),
@@ -342,6 +351,7 @@ Block(
                         ExprFunctionCall {
                             function: core::array::ArrayImpl::<core::felt252>::new,
                             args: [],
+                            coupon_arg: None,
                             ty: core::array::Array::<core::felt252>,
                         },
                     ),
@@ -362,6 +372,7 @@ Block(
                                     LocalVarId(test::__Health_model__),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: (),
                         },
                     ),
@@ -382,6 +393,7 @@ Block(
                                     LocalVarId(test::__Health_model__),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: (),
                         },
                     ),
@@ -407,6 +419,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: core::array::Span::<core::felt252>,
                         },
                     ),
@@ -425,6 +438,7 @@ Block(
                                     LocalVarId(test::__Health_model_span__),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: core::option::Option::<test::Health>,
                         },
                     ),
@@ -434,23 +448,26 @@ Block(
                 StatementExpr {
                     expr: If(
                         ExprIf {
-                            condition: FunctionCall(
-                                ExprFunctionCall {
-                                    function: core::option::OptionTraitImpl::<test::Health>::is_none,
-                                    args: [
-                                        Value(
-                                            Snapshot(
-                                                ExprSnapshot {
-                                                    inner: Var(
-                                                        LocalVarId(test::__Health),
-                                                    ),
-                                                    ty: @core::option::Option::<test::Health>,
-                                                },
+                            condition: BoolExpr(
+                                FunctionCall(
+                                    ExprFunctionCall {
+                                        function: core::option::OptionTraitImpl::<test::Health>::is_none,
+                                        args: [
+                                            Value(
+                                                Snapshot(
+                                                    ExprSnapshot {
+                                                        inner: Var(
+                                                            LocalVarId(test::__Health),
+                                                        ),
+                                                        ty: @core::option::Option::<test::Health>,
+                                                    },
+                                                ),
                                             ),
-                                        ),
-                                    ],
-                                    ty: core::bool,
-                                },
+                                        ],
+                                        coupon_arg: None,
+                                        ty: core::bool,
+                                    },
+                                ),
                             ),
                             if_block: Block(
                                 ExprBlock {
@@ -469,6 +486,7 @@ Block(
                                                                         ExprFunctionCall {
                                                                             function: core::fmt::FormatterDefault::default,
                                                                             args: [],
+                                                                            coupon_arg: None,
                                                                             ty: core::fmt::Formatter,
                                                                         },
                                                                     ),
@@ -510,6 +528,7 @@ Block(
                                                                                                                         ),
                                                                                                                     ),
                                                                                                                 ],
+                                                                                                                coupon_arg: None,
                                                                                                                 ty: (),
                                                                                                             },
                                                                                                         ),
@@ -541,6 +560,7 @@ Block(
                                                                                                                         ),
                                                                                                                     ),
                                                                                                                 ],
+                                                                                                                coupon_arg: None,
                                                                                                                 ty: (),
                                                                                                             },
                                                                                                         ),
@@ -572,6 +592,7 @@ Block(
                                                                                                                         ),
                                                                                                                     ),
                                                                                                                 ],
+                                                                                                                coupon_arg: None,
                                                                                                                 ty: (),
                                                                                                             },
                                                                                                         ),
@@ -603,6 +624,7 @@ Block(
                                                                                                                         ),
                                                                                                                     ),
                                                                                                                 ],
+                                                                                                                coupon_arg: None,
                                                                                                                 ty: (),
                                                                                                             },
                                                                                                         ),
@@ -634,6 +656,7 @@ Block(
                                                                                                                         ),
                                                                                                                     ),
                                                                                                                 ],
+                                                                                                                coupon_arg: None,
                                                                                                                 ty: (),
                                                                                                             },
                                                                                                         ),
@@ -643,12 +666,7 @@ Block(
                                                                                             tail: Some(
                                                                                                 EnumVariantCtor(
                                                                                                     ExprEnumVariantCtor {
-                                                                                                        variant: ConcreteVariant {
-                                                                                                            concrete_enum_id: core::result::Result::<(), core::fmt::Error>,
-                                                                                                            id: VariantId(core::result::Ok),
-                                                                                                            ty: (),
-                                                                                                            idx: 0,
-                                                                                                        },
+                                                                                                        variant: Result::Ok,
                                                                                                         value_expr: Tuple(
                                                                                                             ExprTuple {
                                                                                                                 items: [],
@@ -664,6 +682,7 @@ Block(
                                                                                     ),
                                                                                 ),
                                                                             ],
+                                                                            coupon_arg: None,
                                                                             ty: (),
                                                                         },
                                                                     ),
@@ -693,6 +712,7 @@ Block(
                                                                             ),
                                                                         ),
                                                                     ],
+                                                                    coupon_arg: None,
                                                                     ty: core::never,
                                                                 },
                                                             ),
@@ -728,6 +748,7 @@ Block(
                                     ),
                                 ),
                             ],
+                            coupon_arg: None,
                             ty: test::Health,
                         },
                     ),
