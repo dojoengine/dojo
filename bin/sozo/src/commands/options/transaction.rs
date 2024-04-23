@@ -1,6 +1,7 @@
 use clap::Args;
 use dojo_world::migration::TxnConfig;
 use tracing::trace;
+use starknet::core::types::FieldElement;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::transaction";
 
@@ -13,7 +14,13 @@ pub struct TransactionOptions {
     #[arg(long_help = "The multiplier to use for the fee estimate. This value will be used on \
                        the estimated fee which will be used as the max fee for the transaction. \
                        (max_fee = estimated_fee * multiplier)")]
+    #[arg(conflicts_with = "max_fee_raw")]
     pub fee_estimate_multiplier: Option<f64>,
+
+    #[arg(short, long)]
+    #[arg(help = "Maximum raw value to be used for fees, in Wei.")]
+    #[arg(conflicts_with = "fee_estimate_multiplier")]
+    pub max_fee_raw: Option<FieldElement>,
 
     #[arg(short, long)]
     #[arg(help = "Wait until the transaction is accepted by the sequencer, returning the status \
@@ -45,6 +52,7 @@ impl From<TransactionOptions> for TxnConfig {
             fee_estimate_multiplier: value.fee_estimate_multiplier,
             wait: value.wait,
             receipt: value.receipt,
+            max_fee_raw: value.max_fee_raw,
         }
     }
 }

@@ -97,7 +97,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
             &ws,
             &mut migration,
             &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
+            TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
         )
         .await
         .is_err()
