@@ -4,7 +4,7 @@ use katana_primitives::state::StateUpdates;
 use katana_primitives::{contract::ContractAddress, FieldElement};
 use saya_core::prover::{scheduler::prove_recursively, ProgramInput, ProverIdentifier};
 use saya_core::prover::{MessageToAppchain, MessageToStarknet};
-use serde_json::{Error, Value};
+use serde_json::{Error, Value, Map};
 use std::collections::HashMap;
 use std::fs;
 use std::str::FromStr;
@@ -78,16 +78,21 @@ fn program_input_from_jsn(json_data: Value) -> ProgramInput {
 }
 
 // Asynchronous function to write results to a JSON file.
-async fn prove_to_jsn(result: Vec<String>) {
+// Function to write results to a JSON file, with results labeled by file number.
+async fn prove_to_json(result: Vec<String>) {
     let mut file = File::create("result.json").await.expect("Failed to create file");
 
-    // Create and serialize a JSON array from result strings.
-    let mut json_array = Vec::new();
-    for elem in result.iter() {
+    // Create a JSON map to hold results with specific keys.
+    let mut json_map = Map::new();
+    for (index, elem) in result.iter().enumerate() {
         let v: Value = serde_json::from_str(elem).expect("Failed to parse JSON");
-        json_array.push(v);
+        json_map.insert(format!("proof {}", index + 1), v); // Labels start from "proof 1", "proof 2", ...
     }
-    let serialized = serde_json::to_string_pretty(&json_array).expect("Failed to serialize result");
+
+    // Convert the map into a JSON Value, and then serialize it into a pretty JSON string.
+    let serialized = serde_json::to_string_pretty(&json_map).expect("Failed to serialize result");
+
+    // Write the serialized string to the file.
     file.write_all(serialized.as_bytes()).await.expect("Failed to write to file");
 }
 
@@ -116,5 +121,5 @@ async fn main() {
 
     // Perform recursive proof generation and write results to a file.
     let result = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
-    prove_to_jsn(result).await;
+    prove_to_json(result).await;
 }
