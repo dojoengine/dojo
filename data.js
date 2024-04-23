@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713840415989,
+  "lastUpdate": 1713842904540,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6115,6 +6115,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16997264,
             "range": "± 325624",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1000fcd6aea4436af7a6e8e93eac865ffd3c2adf",
+          "message": "fix: messaging tutorial data (#1869)\n\n* fix: ensure correct subdmodule path and rev for solidity forge-std\r\n\r\n* fix: adjust messaging guide for L1-L2 messaging\r\n\r\n* fix: adjust messaging guide for L1-L3 messaging",
+          "timestamp": "2024-04-22T21:20:45-06:00",
+          "tree_id": "fa1eb5e47a68c0931b06274e86bf32ce3d9015c4",
+          "url": "https://github.com/dojoengine/dojo/commit/1000fcd6aea4436af7a6e8e93eac865ffd3c2adf"
+        },
+        "date": 1713842903991,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 15472502,
+            "range": "± 139222",
             "unit": "ns/iter"
           }
         ]
