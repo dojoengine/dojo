@@ -57,17 +57,8 @@ fn events_from_exec_info(info: &TxExecInfo) -> Vec<Event> {
     fn get_events_recursively(call_info: &CallInfo) -> Vec<Event> {
         let mut events: Vec<Event> = vec![];
 
-        // By default, `from_address` must correspond to the contract address that
-        // is sending the message. In the case of library calls, `code_address` is `None`,
-        // we then use the `caller_address` instead (which can also be an account).
-        let from_address = if let Some(code_address) = call_info.code_address {
-            code_address
-        } else {
-            call_info.caller_address
-        };
-
         events.extend(call_info.events.iter().map(|e| Event {
-            from_address,
+            from_address: call_info.contract_address,
             data: e.data.clone(),
             keys: e.keys.clone(),
         }));
@@ -100,17 +91,8 @@ fn l2_to_l1_messages_from_exec_info(info: &TxExecInfo) -> Vec<MessageToL1> {
     fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToL1> {
         let mut messages = vec![];
 
-        // By default, `from_address` must correspond to the contract address that
-        // is sending the message. In the case of library calls, `code_address` is `None`,
-        // we then use the `caller_address` instead (which can also be an account).
-        let from_address = if let Some(code_address) = info.code_address {
-            code_address
-        } else {
-            info.caller_address
-        };
-
         messages.extend(info.l2_to_l1_messages.iter().map(|m| MessageToL1 {
-            from_address,
+            from_address: m.from_address,
             to_address: m.to_address,
             payload: m.payload.clone(),
         }));
