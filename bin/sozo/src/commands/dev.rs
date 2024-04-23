@@ -16,7 +16,7 @@ use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
-use scarb::compiler::CompilationUnit;
+use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::{Config, Workspace};
 use sozo_ops::migration::{self, prepare_migration};
 use starknet::accounts::SingleOwnerAccount;
@@ -179,7 +179,7 @@ fn handle_event(event: &DebouncedEvent) -> DevAction {
 
 struct DevContext<'a> {
     pub db: RootDatabase,
-    pub unit: CompilationUnit,
+    pub unit: CairoCompilationUnit,
     pub ws: Workspace<'a>,
 }
 
@@ -189,14 +189,17 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
     let resolve = scarb::ops::resolve_workspace(&ws)?;
     let compilation_units = scarb::ops::generate_compilation_units(&resolve, &ws)?
         .into_iter()
-        .filter(|cu| packages.contains(&cu.main_package_id))
+        .filter(|cu| packages.contains(&cu.main_package_id()))
         .collect::<Vec<_>>();
 
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
-    let unit = compilation_units.first().unwrap();
-    let db = build_scarb_root_database(unit).unwrap();
-    Ok(DevContext { db, unit: unit.clone(), ws })
+    if let CompilationUnit::Cairo(unit) = compilation_units.first().unwrap() {
+        let db = build_scarb_root_database(unit).unwrap();
+        Ok(DevContext { db, unit: unit.clone(), ws })
+    } else {
+        Err(anyhow!("Cairo Compilation Unit is expected at this point."))
+    }
 }
 
 fn build(context: &mut DevContext<'_>) -> Result<()> {

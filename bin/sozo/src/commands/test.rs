@@ -7,18 +7,35 @@ use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
 use cairo_lang_filesystem::ids::Directory;
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_plugin_suite;
-use cairo_lang_test_runner::{CompiledTestRunner, TestCompiler, TestRunConfig};
+use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler, TestRunConfig};
 use clap::Args;
 use dojo_lang::compiler::{collect_core_crate_ids, collect_external_crate_ids, Props};
 use dojo_lang::plugin::dojo_plugin_suite;
 use dojo_lang::scarb_internal::crates_config_for_compilation_unit;
 use scarb::compiler::helpers::collect_main_crate_ids;
-use scarb::compiler::CompilationUnit;
+use scarb::compiler::{CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes};
 use scarb::core::Config;
 use scarb::ops;
 use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::test";
+
+#[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
+pub enum ProfilerMode {
+    None,
+    Cairo,
+    Sierra,
+}
+
+impl From<ProfilerMode> for RunProfilerConfig {
+    fn from(mode: ProfilerMode) -> Self {
+        match mode {
+            ProfilerMode::None => RunProfilerConfig::None,
+            ProfilerMode::Cairo => RunProfilerConfig::Cairo,
+            ProfilerMode::Sierra => RunProfilerConfig::Sierra,
+        }
+    }
+}
 
 /// Execute all unit tests of a local package.
 #[derive(Debug, Args)]
@@ -32,9 +49,9 @@ pub struct TestArgs {
     /// Should we run only the ignored tests.
     #[arg(long, default_value_t = false)]
     ignored: bool,
-    /// Should we run the profiler.
-    #[arg(long, default_value_t = false)]
-    run_profiler: bool,
+    /// Should we run the profiler and with what mode.
+    #[arg(long, default_value = "None")]
+    profiler_mode: ProfilerMode,
 }
 
 impl TestArgs {
@@ -48,10 +65,16 @@ impl TestArgs {
         // TODO: Compute all compilation units and remove duplicates, could be unnecessary in future
         // version of Scarb.
         let mut compilation_units = ops::generate_compilation_units(&resolve, &ws)?;
-        compilation_units.sort_by_key(|unit| unit.main_package_id);
-        compilation_units.dedup_by_key(|unit| unit.main_package_id);
+        compilation_units.sort_by_key(|unit| unit.main_package_id());
+        compilation_units.dedup_by_key(|unit| unit.main_package_id());
 
         for unit in compilation_units {
+            let unit = if let CompilationUnit::Cairo(unit) = unit {
+                unit
+            } else {
+                return Err(anyhow::anyhow!("Cairo Compilation Unit is expected at this point."));
+            };
+
             let props: Props = unit.target().props()?;
             let db = build_root_database(&unit)?;
 
@@ -75,12 +98,15 @@ impl TestArgs {
                 filter: self.filter.clone(),
                 ignored: self.ignored,
                 include_ignored: self.include_ignored,
-                run_profiler: self.run_profiler,
+                run_profiler: self.profiler_mode.clone().into(),
             };
 
             let compiler = TestCompiler { db, main_crate_ids, test_crate_ids, starknet: true };
             let runner = CompiledTestRunner { compiled: compiler.build()?, config };
-            runner.run()?;
+
+            // Database should not be required here as [`TestCompiler`] is already initialized
+            // with it.
+            runner.run(None)?;
 
             println!();
         }
@@ -89,7 +115,7 @@ impl TestArgs {
     }
 }
 
-pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase> {
+pub(crate) fn build_root_database(unit: &CairoCompilationUnit) -> Result<RootDatabase> {
     let mut b = RootDatabase::builder();
     b.with_project_config(build_project_config(unit)?);
     b.with_cfg(CfgSet::from_iter([Cfg::name("test")]));
@@ -101,7 +127,7 @@ pub(crate) fn build_root_database(unit: &CompilationUnit) -> Result<RootDatabase
     b.build()
 }
 
-fn build_project_config(unit: &CompilationUnit) -> Result<ProjectConfig> {
+fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
     let crate_roots = unit
         .components
         .iter()
