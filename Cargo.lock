@@ -1442,7 +1442,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.6.0-rc.2"
-source = "git+https://github.com/dojoengine/blockifier?rev=6ab4b145#6ab4b14516dcf5d318839be8b6679d319edbe51c"
+source = "git+https://github.com/dojoengine/blockifier?rev=4cd26e53#4cd26e5310e2db05074961b722585fcf985ce0eb"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -5739,7 +5739,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.5",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",

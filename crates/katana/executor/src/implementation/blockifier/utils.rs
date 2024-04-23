@@ -733,10 +733,10 @@ mod tests {
         let expected_retdata: Vec<FieldElement> =
             call.execution.retdata.0.iter().map(|f| (*f).into()).collect();
 
-        let builtin_counter = call.vm_resources.builtin_instance_counter.clone();
+        let builtin_counter = call.resources.builtin_instance_counter.clone();
         let expected_execution_resources = trace::ExecutionResources {
-            n_steps: call.vm_resources.n_steps as u64,
-            n_memory_holes: call.vm_resources.n_memory_holes as u64,
+            n_steps: call.resources.n_steps as u64,
+            n_memory_holes: call.resources.n_memory_holes as u64,
             builtin_instance_counter: builtin_counter
                 .into_iter()
                 .map(|(k, v)| (k, v as u64))
