@@ -3,20 +3,20 @@ use futures::future::BoxFuture;
 use futures::FutureExt;
 use tracing::level_filters::STATIC_MAX_LEVEL;
 use tracing::{info, trace};
-
 // Imports from the parent module.
-use super::{stone_image::prove_stone, ProgramInput, ProverIdentifier};
+use super::{stone_image::prove_stone, ProgramInput, ProverIdentifier,prove};
 type Proof = String;
+use serde_json::Value;
 
 /// Asynchronously combines two proofs into a single proof.
 /// It simulates a delay to mimic a time-consuming process and combines the proofs.
 async fn combine_proofs(
-    first: Proof,
-    second: Proof,
+    first: Vec<String>,
+    second: Vec<String>,
     _input: &ProgramInput,
-) -> anyhow::Result<Proof> {
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    Ok(first + " & " + &second)
+) -> anyhow::Result<Vec<String>> {
+    return Ok(first.into_iter().chain(second.into_iter()).collect());
+    //extendowanie wektorow
 }
 
 /// Simulates the proving process with a placeholder function.
@@ -27,16 +27,18 @@ async fn combine_proofs(
 pub fn prove_recursively(
     mut inputs: Vec<ProgramInput>,
     prover: ProverIdentifier,
-) -> BoxFuture<'static, anyhow::Result<(Proof, ProgramInput)>> {
+) -> BoxFuture<'static, anyhow::Result<(Vec<String>, ProgramInput)>> {
     async move {
         if inputs.len() == 1 {
             let input = inputs.pop().unwrap();
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
             //let proof = prove(input.serialize()?,prover).await?;
-            let proof = prove_stone(input.serialize()?).await?;
+            let proof = prove(input.serialize()?,ProverIdentifier::Stone).await?;
             info!(target: "saya_core", block_number, "Block proven");
-            Ok((proof, input))
+            //niech zwraca jednoelementową tablice            
+            let result = vec![proof];
+            Ok((result, input))
         } else {
             let mid = inputs.len() / 2;
             let last = inputs.split_off(mid);
