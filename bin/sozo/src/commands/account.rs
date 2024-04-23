@@ -86,22 +86,20 @@ pub enum AccountCommand {
 
 impl AccountArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, "AccountArgs command: {:?}", self.command);
+        trace!(target: LOG_TARGET, command=?self.command, "Executing command.");
         let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!(target: LOG_TARGET, "Fetched environment metadata");
 
         config.tokio_handle().block_on(async {
             match self.command {
                 AccountCommand::New { signer, force, file } => {
                     trace!(
                         target: LOG_TARGET,
-                        "Executing New command with signer: {:?}, force: {}, file: {:?}",
-                        signer,
+                        ?signer,
                         force,
-                        file
+                        ?file,
+                        "Executing New command"
                     );
                     let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
-                    trace!(target: LOG_TARGET, "Initialized LocalWallet for command");
                     account::new(signer, force, file).await
                 }
                 AccountCommand::Deploy {
@@ -116,21 +114,19 @@ impl AccountArgs {
                 } => {
                     trace!(
                         target: LOG_TARGET,
-                        "Executing Deploy command with starknet: {:?}, signer: {:?}, fee: {:?}, simulate: {}, nonce: {:?}, poll_interval: {}, file: {:?}, no_confirmation: {}",
-                        starknet,
-                        signer,
-                        fee,
+                        ?starknet,
+                        ?signer,
+                        ?fee,
                         simulate,
-                        nonce,
+                        ?nonce,
                         poll_interval,
-                        file,
-                        no_confirmation
+                        ?file,
+                        no_confirmation,
+                        "Executing Deploy command."
                     );
                     let provider = starknet.provider(env_metadata.as_ref())?;
-                    let signer = signer.signer(env_metadata.as_ref(), false)?;
-                    trace!(target: LOG_TARGET, "Initialized LocalWallet and Provider for 'Deploy' command");
+                    let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
                     let fee_setting = fee.into_setting()?;
-                    trace!(target: LOG_TARGET, "Converted FeeOptions to FeeSetting");
                     account::deploy(
                         provider,
                         signer,
@@ -146,14 +142,13 @@ impl AccountArgs {
                 AccountCommand::Fetch { starknet, force, output, address } => {
                     trace!(
                         target: LOG_TARGET,
-                        "Executing Fetch command with starknet: {:?}, force: {}, output: {:?}, address: {:?}",
-                        starknet,
+                        ?starknet,
                         force,
-                        output,
-                        address
+                        ?output,
+                        ?address,
+                        "Executing Fetch command."
                     );
                     let provider = starknet.provider(env_metadata.as_ref())?;
-                    trace!(target: LOG_TARGET, "Initialized Provider for Fetch command");
                     account::fetch(provider, force, output, address).await
                 }
             }

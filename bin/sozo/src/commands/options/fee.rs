@@ -26,22 +26,21 @@ impl FeeOptions {
     pub fn into_setting(self) -> Result<FeeSetting> {
         trace!(
             target: LOG_TARGET, 
-            "FeeOptions: max_fee = {:?}, max_fee_raw = {:?}, estimate_only = {}",
-            self.max_fee,
-            self.max_fee_raw,
-            self.estimate_only
+            max_fee=?self.max_fee,
+            max_fee_raw=?self.max_fee_raw,
+            estimate_only=self.estimate_only,
+            "Converting FeeOptions into FeeSetting."
         );
         match (self.max_fee, self.max_fee_raw, self.estimate_only) {
             (Some(max_fee), None, false) => {
-                trace!("Using max_fee: {:?}", max_fee);
                 let max_fee_felt = bigdecimal_to_felt(&max_fee, 18)?;
 
                 // The user is most likely making a mistake for using a max fee higher than 1 ETH
                 if max_fee_felt > felt!("1000000000000000000") {
                     trace!(
                         target: LOG_TARGET, 
-                        "Max fee in Ether is higher than 1 ETH ({}), suggesting an error.",
-                        max_fee_felt
+                        ?max_fee_felt,
+                        "Max fee in Ether is higher than 1 ETH."
                     );
                     anyhow::bail!(
                         "the --max-fee value is too large. --max-fee expects a value in Ether (18 \
@@ -52,15 +51,15 @@ impl FeeOptions {
                 Ok(FeeSetting::Manual(max_fee_felt))
             }
             (None, Some(max_fee_raw), false) => {
-                trace!(target: LOG_TARGET, "Using raw max_fee in Wei: {:?}", max_fee_raw);
+                trace!(target: LOG_TARGET, ?max_fee_raw, "Using raw max_fee in Wei.");
                 Ok(FeeSetting::Manual(max_fee_raw))
             }
             (None, None, true) => {
-                trace!(target: LOG_TARGET, "Only estimating the fee");
+                trace!(target: LOG_TARGET, "Only estimating the fee.");
                 Ok(FeeSetting::EstimateOnly)
             }
             (None, None, false) => {
-                trace!(target: LOG_TARGET, "No fee options specified");
+                trace!(target: LOG_TARGET, "No fee options specified.");
                 Ok(FeeSetting::None)
             }
             _ => Err(anyhow::anyhow!(
@@ -81,26 +80,23 @@ where
     // Scale the bigint part up or down
     let (bigint, exponent) = dec.as_bigint_and_exponent();
 
-    trace!(target: LOG_TARGET, "BigDecimal: bigint = {:?}, exponent = {}", bigint, exponent);
     let mut biguint = match bigint.to_biguint() {
         Some(value) => value,
         None => {
-            trace!(target: LOG_TARGET, "Could not convert bigint to biguint, too many decimal places");
+            trace!(target: LOG_TARGET, "Could not convert bigint to biguint, too many decimal places.");
             anyhow::bail!("too many decimal places")
         }
     };
 
     if exponent < decimals {
-        trace!(target: LOG_TARGET, "Scaling up bigint for conversion");
         for _ in 0..(decimals - exponent) {
             biguint *= 10u32;
         }
     } else if exponent > decimals {
-        trace!(target: LOG_TARGET, "Scaling down bigint for conversion");
         for _ in 0..(exponent - decimals) {
             let (quotient, remainder) = biguint.div_rem(&10u32.into());
             if !remainder.is_zero() {
-                trace!(target: LOG_TARGET, "Found non-zero remainder during scaling down");
+                trace!(target: LOG_TARGET, "Found non-zero remainder during scaling down.");
                 anyhow::bail!("too many decimal places")
             }
             biguint = quotient;

@@ -70,7 +70,7 @@ pub enum MigrateCommand {
 
 impl MigrateArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, "Executing command: {:?}", self.command);
+        trace!(target: LOG_TARGET, command=?self.command, "Executing command");
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         let env_metadata = if config.manifest_path().exists() {
@@ -90,7 +90,7 @@ impl MigrateArgs {
                 if name.is_none() {
                     if let Some(root_package) = ws.root_package() {
                         name = Some(root_package.id.name.to_string());
-                        trace!(target: LOG_TARGET, "Root package name set to: {:?}", name);
+                        trace!(target: LOG_TARGET, name, "Setting Root package name.");
                     }
                 };
 
@@ -119,13 +119,13 @@ impl MigrateArgs {
                 })
             }
             MigrateCommand::Apply { mut name, world, starknet, account, transaction } => {
-                trace!(target: LOG_TARGET, "Applying migration with name: {:?}", name);
+                trace!(target: LOG_TARGET, name, "Applying migration.");
                 let txn_config: TxnConfig = transaction.into();
 
                 if name.is_none() {
                     if let Some(root_package) = ws.root_package() {
                         name = Some(root_package.id.name.to_string());
-                        trace!(target: LOG_TARGET, "Root package name set to: {:?}", name);
+                        trace!(target: LOG_TARGET, name, "Setting Root package.");
                     }
                 };
 
@@ -174,14 +174,14 @@ pub async fn setup_env<'a>(
     let ui = ws.config().ui();
 
     let world_address = world.address(env).ok();
-    trace!(target: LOG_TARGET, "World address: {:?}", world_address);
+    trace!(target: LOG_TARGET, ?world_address);
 
     let (account, chain_id, rpc_url) = {
         let provider = starknet.provider(env)?;
         trace!(target: LOG_TARGET, "Provider initialized.");
 
         let spec_version = provider.spec_version().await?;
-        trace!(target: LOG_TARGET, "RPC Spec Version: {}", spec_version);
+        trace!(target: LOG_TARGET, spec_version);
 
         if spec_version != RPC_SPEC_VERSION {
             return Err(anyhow!(
@@ -192,12 +192,12 @@ pub async fn setup_env<'a>(
         }
 
         let rpc_url = starknet.url(env)?;
-        trace!(target: LOG_TARGET, "RPC URL: {}", rpc_url);
+        trace!(target: LOG_TARGET, ?rpc_url);
 
         let chain_id = provider.chain_id().await?;
         let chain_id = parse_cairo_short_string(&chain_id)
             .with_context(|| "Cannot parse chain_id as string")?;
-        trace!(target: LOG_TARGET, "Chain ID: {}", chain_id);
+        trace!(target: LOG_TARGET, chain_id);
 
         let mut account = account.account(provider, env).await?;
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -210,10 +210,7 @@ pub async fn setup_env<'a>(
         }
 
         match account.provider().get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-            Ok(_) => {
-                trace!(target: LOG_TARGET, "Account is valid and exists.");
-                Ok((account, chain_id, rpc_url))
-            }
+            Ok(_) => Ok((account, chain_id, rpc_url)),
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
                 Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()))
             }

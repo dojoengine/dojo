@@ -36,10 +36,10 @@ impl From<TransactionOptions> for TxnConfig {
     fn from(value: TransactionOptions) -> Self {
         trace!(
             target: LOG_TARGET,
-            "Converting TransactionOptions to TxnConfig. Multiplier: {:?}, Wait: {}, Receipt: {}",
-            value.fee_estimate_multiplier,
-            value.wait,
-            value.receipt,
+            fee_estimate_multiplier=value.fee_estimate_multiplier,
+            wait=value.wait,
+            receipt=value.receipt,
+            "Converting TransactionOptions to TxnConfig."
         );
         Self {
             fee_estimate_multiplier: value.fee_estimate_multiplier,

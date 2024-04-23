@@ -46,16 +46,16 @@ pub struct EventsArgs {
 impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!(target: LOG_TARGET, "Fetched metadata from config");
+        trace!(target: LOG_TARGET, "Fetched metadata from config.");
 
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        trace!(target: LOG_TARGET, "Loaded workspace with {} members", ws.members().count());
+        trace!(target: LOG_TARGET, ws_members_count=ws.members().count(), "Fetched workspace.");
 
         let manifest_dir = ws.manifest_path().parent().unwrap().to_path_buf();
-        trace!(target: LOG_TARGET, "manifest directory: {}", manifest_dir);
+        trace!(target: LOG_TARGET, ?manifest_dir, "Fetched manifest directory.");
 
         let provider = self.starknet.provider(env_metadata.as_ref())?;
-        trace!(target: LOG_TARGET, "Provider: {:?}", provider);
+        trace!(target: LOG_TARGET, ?provider, "Starknet RPC client provider");
 
         let event_filter = events::get_event_filter(
             self.from_block,
@@ -65,14 +65,15 @@ impl EventsArgs {
         );
         trace!(
             target: LOG_TARGET,
-            "Created event filter with from_block = {:?}, to_block = {:?}",
-            self.from_block,
-            self.to_block
+            from_block=self.from_block,
+            to_block=self.to_block,
+            chunk_size=self.chunk_size,
+            "Created event filter"
         );
         
         let profile_name =
             ws.current_profile().expect("Scarb profile expected at this point.").to_string();
-        trace!(target: LOG_TARGET, "Current profile: {}", profile_name);
+        trace!(target: LOG_TARGET, profile_name, "Fetched profile name");
 
         config.tokio_handle().block_on(async {
             trace!(target: LOG_TARGET, "Starting async event parsing");

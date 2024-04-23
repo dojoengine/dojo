@@ -43,16 +43,16 @@ impl AccountOptions {
     where
         P: Provider + Send + Sync,
     {
-        trace!(target: LOG_TARGET, "Creating account with options: {:?}", self);
+        trace!(target: LOG_TARGET, account_options=?self, "Creating account.", );
         let account_address = self.account_address(env_metadata)?;
-        trace!(target: LOG_TARGET, "Account address determined: {:?}", account_address);
+        trace!(target: LOG_TARGET, ?account_address, "Account address determined.");
 
         let signer = self.signer.signer(env_metadata, false)?;
-        trace!(target: LOG_TARGET, "Signer obtained: {:?}", signer);
+        trace!(target: LOG_TARGET, ?signer, "Signer obtained.");
 
         let chain_id =
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
-        trace!(target: LOG_TARGET, "Chain ID obtained: {:?}", chain_id);
+        trace!(target: LOG_TARGET, ?chain_id, "Chain ID obtained.");
         let encoding = if self.legacy { 
             trace!(target: LOG_TARGET, "Using legacy encoding.");
             ExecutionEncoding::Legacy 
@@ -61,17 +61,17 @@ impl AccountOptions {
             ExecutionEncoding::New 
         };
 
-        trace!(target: LOG_TARGET, "Creating SingleOwnerAccount with chain ID {:?} and encoding {:?}", chain_id, encoding);
+        trace!(target: LOG_TARGET, ?chain_id, ?encoding, "Creating SingleOwnerAccount.");
         Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
     }
 
     fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         trace!(target: LOG_TARGET, "Determining account address.");
         if let Some(address) = self.account_address {
-            trace!(target: LOG_TARGET, "Account address: {:?}", address);
+            trace!(target: LOG_TARGET, ?address, "Account address found.");
             Ok(address)
         } else if let Some(address) = env_metadata.and_then(|env| env.account_address()) {
-            trace!(target: LOG_TARGET, "Account address found in environment metadata: {:?}", address);
+            trace!(target: LOG_TARGET, address, "Account address found in environment metadata.");
             Ok(FieldElement::from_str(address)?)
         } else {
             Err(anyhow!(

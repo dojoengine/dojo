@@ -57,7 +57,7 @@ impl SozoArgs {
     }
 
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,forked_backend=trace,server=debug,\
+        const DEFAULT_LOG_FILTER: &str = "info,server=debug,\
                                           blockifier=off,jsonrpsee_server=off,\
                                           hyper=off,messaging=debug,node=error";
 

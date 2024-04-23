@@ -45,12 +45,8 @@ impl SignerOptions {
         {
             trace!(
                 target: LOG_TARGET, 
-                "Using private key from: {:?}",
-                if self.private_key.is_some() {
-                    "command-line argument"
-                } else {
-                    "environment metadata"
-                }
+                private_key,
+                "Signing using private key."
             );
             return Ok(LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(private_key)?,
@@ -68,12 +64,11 @@ impl SignerOptions {
                     .as_deref()
                     .or_else(|| env_metadata.and_then(|env| env.keystore_password()))
                 {
-                    trace!(target: LOG_TARGET, "Using keystore password from: {:?}", if self.keystore_password.is_some() { "command-line argument" } else { "environment metadata" });
                     password.to_owned()
                 } else if no_wait {
                     return Err(anyhow!("Could not find password. Please specify the password."));
                 } else {
-                    trace!(target: LOG_TARGET, "Prompting user for keystore password");
+                    trace!(target: LOG_TARGET, "Prompting user for keystore password.");
                     rpassword::prompt_password("Enter password: ")?
                 }
             };

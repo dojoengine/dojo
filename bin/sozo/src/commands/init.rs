@@ -24,18 +24,18 @@ impl InitArgs {
         let target_dir = match self.path {
             Some(path) => {
                 if path.is_absolute() {
-                    trace!(target: LOG_TARGET, "Using absolute path: {:?}", path);
+                    trace!(target: LOG_TARGET, ?path);
                     path
                 } else {
                     let mut current_path = current_dir().unwrap();
                     current_path.push(path);
-                    trace!(target: LOG_TARGET, "Using relative path, resolved to: {:?}", current_path);
+                    trace!(target: LOG_TARGET, ?current_path);
                     current_path
                 }
             }
             None => {
                 let dir = current_dir().unwrap();
-                trace!(target: LOG_TARGET, "Using current directory: {:?}", dir);
+                trace!(target: LOG_TARGET, ?dir);
                 dir
             }
         };
@@ -55,11 +55,11 @@ impl InitArgs {
 
         let template = self.template;
         let repo_url = if template.starts_with("https://") {
-            trace!(target: LOG_TARGET, "Using Git URL: {}", template);
+            trace!(target: LOG_TARGET, template=%template);
             template
         } else {
             let url = "https://github.com/".to_string() + &template;
-            trace!(target: LOG_TARGET, "Constructed Git URL: {}", url);
+            trace!(target: LOG_TARGET, url, "Constructed Git URL.");
             url
         };
 
@@ -68,7 +68,7 @@ impl InitArgs {
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
         set_current_dir(&target_dir)?;
-        trace!(target: LOG_TARGET, "Set current directory to: {:?}", target_dir);
+        trace!(target: LOG_TARGET, ?target_dir);
 
         // Modify the git history.
         modify_git_history(&repo_url)?;
@@ -76,7 +76,7 @@ impl InitArgs {
         config.ui().print("\n🎉 Successfully created a new ⛩️ Dojo project!");
 
         // Navigate back.
-        trace!(target: LOG_TARGET, "Returned to initial directory: {:?}", initial_dir);
+        trace!(target: LOG_TARGET, ?initial_dir, "Returned to initial directory.");
         set_current_dir(initial_dir)?;
 
         config.ui().print(
@@ -84,7 +84,7 @@ impl InitArgs {
              `sozo build`",
         );
 
-        trace!(target: LOG_TARGET, "Project initialization complete");
+        trace!(target: LOG_TARGET, "Project initialization completed.");
 
         Ok(())
     }
@@ -93,18 +93,17 @@ impl InitArgs {
 fn clone_repo(url: &str, path: &Path, config: &Config) -> Result<()> {
     config.ui().print(format!("Cloning project template from {}...", url));
     Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
-    trace!(target: LOG_TARGET, "Repository cloned successfully");
+    trace!(target: LOG_TARGET, "Repository cloned successfully.");
     Ok(())
 }
 
 fn modify_git_history(url: &str) -> Result<()> {
-    trace!(target: LOG_TARGET, "Modifying Git history");
+    trace!(target: LOG_TARGET, "Modifying Git history.");
     let git_output = Command::new("git").args(["rev-parse", "--short", "HEAD"]).output()?.stdout;
     let commit_hash = String::from_utf8(git_output)?;
     trace!(
         target: LOG_TARGET,
-        "Current commit hash: {}",
-        commit_hash.trim()
+        commit_hash=commit_hash.trim()
     );
 
     fs::remove_dir_all(".git")?;
@@ -115,6 +114,6 @@ fn modify_git_history(url: &str) -> Result<()> {
     let commit_msg = format!("chore: init from {} at {}", url, commit_hash.trim());
     Command::new("git").args(["commit", "-m", &commit_msg]).output()?;
 
-    trace!(target: LOG_TARGET, "Git history modified");
+    trace!(target: LOG_TARGET, "Git history modified.");
     Ok(())
 }

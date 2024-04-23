@@ -59,10 +59,10 @@ pub enum AuthCommand {
 
 impl AuthArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, "Executing Auth command: {:?}", self.command);
+        trace!(target: LOG_TARGET, command=?self.command, "Executing Auth command.", );
 
         let env_metadata = utils::load_metadata_from_config(config)?;
-        trace!(target: LOG_TARGET, "Loaded environment metadata: {:?}", env_metadata);
+        trace!(target: LOG_TARGET, metadata=?env_metadata, "Loaded environment.");
 
         match self.command {
             AuthCommand::Grant { kind, world, starknet, account, transaction } => config
@@ -108,7 +108,7 @@ pub async fn grant(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
-    trace!(target: LOG_TARGET, "Executing 'Grant' command with kind: {:?}, world: {:?}, starknet: {:?}, account: {:?}, transaction: {:?}", kind, world, starknet, account, transaction);
+    trace!(target: LOG_TARGET, ?kind, ?world, ?starknet, ?account, ?transaction, "Executing 'Grant' command.");
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
 
@@ -116,16 +116,16 @@ pub async fn grant(
         AuthKind::Writer { models_contracts } => {
             trace!(
                 target: LOG_TARGET,
-                "Granting 'Writer' permissions for contract: {:?}",
-                models_contracts
+                contracts=?models_contracts,
+                "Granting 'Writer' permissions."
             );
             auth::grant_writer(&world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
             trace!(
                 target: LOG_TARGET,
-                "Granting 'Owner' permissions for resources: {:?}",
-                owners_resources
+                resources=?owners_resources,
+                "Granting 'Owner' permissions."
             );
             auth::grant_owner(&world, owners_resources, transaction.into()).await
         }
@@ -140,23 +140,23 @@ pub async fn revoke(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
-    trace!(target: LOG_TARGET, "Executing 'Revoke' command with kind: {:?}, world: {:?}, starknet: {:?}, account: {:?}, transaction: {:?}", kind, world, starknet, account, transaction);
+    trace!(target: LOG_TARGET, ?kind, ?world, ?starknet, ?account, ?transaction, "Executing 'Revoke' command.");
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
     match kind {
         AuthKind::Writer { models_contracts } => {
             trace!(
                 target: LOG_TARGET,
-                "Revoking 'Writer' permissions for contracts: {:?}",
-                models_contracts
+                contracts=?models_contracts,
+                "Revoking 'Writer' permissions."
             );
             auth::revoke_writer(&world, models_contracts, transaction.into()).await
         }
         AuthKind::Owner { owners_resources } => {
             trace!(
                 target: LOG_TARGET,
-                "Revoking 'Owner' permissions for resources: {:?}",
-                owners_resources
+                resources=?owners_resources,
+                "Revoking 'Owner' permissions."
             );
             auth::revoke_owner(&world, owners_resources, transaction.into()).await
         }

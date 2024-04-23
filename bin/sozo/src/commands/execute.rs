@@ -58,16 +58,17 @@ impl ExecuteArgs {
             let tx_config = self.transaction.into();
             trace!(
                 target: LOG_TARGET,
-                "Transaction configuration initialized: {:?}",
-                tx_config
+                ?tx_config,
+                "Transaction configuration initialized.",
+                
             );
 
             trace!(
                 target: LOG_TARGET,
-                "Executing: contract = {}, entrypoint = {}, calldata = {:?}",
-                self.contract,
-                self.entrypoint,
-                self.calldata
+                contract=?self.contract,
+                entrypoint=self.entrypoint,
+                calldata=?self.calldata,
+                "Executing command."
             );
             execute::execute(self.contract, self.entrypoint, self.calldata, &world, &tx_config)
                 .await

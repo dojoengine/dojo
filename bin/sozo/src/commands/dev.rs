@@ -53,20 +53,16 @@ impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         let env_metadata = if config.manifest_path().exists() {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
-            trace!(target: LOG_TARGET, "Loaded workspace");
             dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
-            trace!(target: LOG_TARGET, "Manifest path does not exist");
+            trace!(target: LOG_TARGET, "Manifest path does not exist.");
             None
         };
 
         let mut context = load_context(config)?;
-        trace!(target: LOG_TARGET, "Loaded context");
 
         let (tx, rx) = channel();
         let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx)?;
-        trace!(target: LOG_TARGET, "Set up debouncer");
 
         debouncer.watcher().watch(
             config.manifest_path().parent().unwrap().as_std_path(),
@@ -90,7 +86,7 @@ impl DevArgs {
             ))
             .ok()
         else {
-            return Err(anyhow!("Failed to setup environment"));
+            return Err(anyhow!("Failed to setup environment."));
         };
 
         match context.ws.config().tokio_handle().block_on(migrate(
@@ -179,7 +175,7 @@ fn handle_event(event: &DebouncedEvent) -> DevAction {
         _ => DevAction::None,
     };
 
-    trace!(target: LOG_TARGET, "Determined action: {:?}", action);
+    trace!(target: LOG_TARGET, ?action, "Determined action.");
     action
 }
 
@@ -190,7 +186,6 @@ struct DevContext<'a> {
 }
 
 fn load_context(config: &Config) -> Result<DevContext<'_>> {
-    trace!(target: LOG_TARGET, "Loading context");
     let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
     let packages: Vec<scarb::core::PackageId> = ws.members().map(|p| p.id).collect();
     let resolve = scarb::ops::resolve_workspace(&ws)?;
@@ -201,7 +196,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
 
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
-    trace!(target: LOG_TARGET, "Generated compilation units: {:?}", compilation_units.len());
+    trace!(target: LOG_TARGET, units=compilation_units.len(), "Generated compilation.");
     let unit = compilation_units.first().unwrap();
     let db = build_scarb_root_database(unit).unwrap();
     Ok(DevContext { db, unit: unit.clone(), ws })
@@ -217,7 +212,7 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
         anyhow!("could not compile `{package_name}` due to previous error")
     })?;
     ws.config().ui().print("📦 Rebuild done");
-    trace!(target: LOG_TARGET, "Build completed for package `{}`", package_name);
+    trace!(target: LOG_TARGET, ?package_name, "Build completed.");
     Ok(())
 }
 
@@ -274,7 +269,7 @@ where
 }
 
 fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAction {
-    trace!(target: LOG_TARGET, "Processing event {:?}", event);
+    trace!(target: LOG_TARGET, event=?event, "Processing event.");
     let action = handle_event(event);
     match &action {
         DevAction::None => {}
@@ -284,7 +279,7 @@ fn process_event(event: &DebouncedEvent, context: &mut DevContext<'_>) -> DevAct
         }
     }
 
-    trace!(target: LOG_TARGET, "Processed action: {:?}", action);
+    trace!(target: LOG_TARGET, action=?action, "Processed action.");
     action
 }
 
@@ -301,10 +296,10 @@ fn handle_build_action(path: &Path, context: &mut DevContext<'_>) {
 }
 
 fn handle_reload_action(context: &mut DevContext<'_>) {
-    trace!(target: LOG_TARGET, "Reloading context");
+    trace!(target: LOG_TARGET, "Reloading context.");
     let config = context.ws.config();
     config.ui().print("Reloading project");
     let new_context = load_context(config).expect("Failed to load context");
     let _ = mem::replace(context, new_context);
-    trace!(target: LOG_TARGET, "Context reloaded");
+    trace!(target: LOG_TARGET, "Context reloaded.");
 }

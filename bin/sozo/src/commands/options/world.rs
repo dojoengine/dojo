@@ -22,15 +22,15 @@ impl WorldOptions {
     pub fn address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
         trace!(
             target: LOG_TARGET,
-            "Fetching World address. Given: {:?}, Env Metadata: {:?}",
-            self.world_address,
-            env_metadata
+            world_address=?self.world_address,
+            ?env_metadata,
+            "Fetching World address."
         );
         if let Some(world_address) = self.world_address {
-            trace!(target: LOG_TARGET, "world_address: {:?}", world_address);
+            trace!(target: LOG_TARGET, ?world_address, "Fetched world_address.");
             Ok(world_address)
         } else if let Some(world_address) = env_metadata.and_then(|env| env.world_address()) {
-            trace!(target: LOG_TARGET, "world_address from env metadata: {}", world_address);
+            trace!(target: LOG_TARGET, world_address, "Fetched world_address from env metadata.");
             Ok(FieldElement::from_str(world_address)?)
         } else {
             Err(anyhow!(
