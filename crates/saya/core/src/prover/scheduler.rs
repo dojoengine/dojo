@@ -4,7 +4,7 @@ use futures::FutureExt;
 use tracing::level_filters::STATIC_MAX_LEVEL;
 use tracing::{info, trace};
 // Imports from the parent module.
-use super::{stone_image::prove_stone, ProgramInput, ProverIdentifier,prove};
+use super::{prove, stone_image::prove_stone, ProgramInput, ProverIdentifier};
 type Proof = String;
 use serde_json::Value;
 
@@ -34,9 +34,9 @@ pub fn prove_recursively(
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
             //let proof = prove(input.serialize()?,prover).await?;
-            let proof = prove(input.serialize()?,ProverIdentifier::Stone).await?;
+            let proof = prove(input.serialize()?, ProverIdentifier::Stone).await?;
             info!(target: "saya_core", block_number, "Block proven");
-            //niech zwraca jednoelementową tablice            
+            //niech zwraca jednoelementową tablice
             let result = vec![proof];
             Ok((result, input))
         } else {
