@@ -20,7 +20,7 @@ pub(crate) const LOG_TARGET: &str = "sozo::cli";
 fn main() {
     
     let args = SozoArgs::parse();
-    args.init_logging();
+    let _ = args.init_logging();
     trace!(target: LOG_TARGET, command = ?args.command, "Sozo CLI command started.");
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
@@ -59,7 +59,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     trace!(target: LOG_TARGET, "Configuration built successfully");
 
-    commands::run(args.command, &config);
+    let _ = commands::run(args.command, &config);
 
     trace!(target: LOG_TARGET, "Command execution completed");
 
