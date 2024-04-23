@@ -341,8 +341,10 @@ where
 {
     type R;
 
-    /// Sets `fee_estimate_multiplier` from `TxnConfig` if its present before calling `send` method
-    /// on the respective type.
+    /// Sets `fee_estimate_multiplier` and `max_fee_raw` from `TxnConfig` if its present before
+    /// calling `send` method on the respective type.
+    /// NOTE: If both are specified `max_fee_raw` will take precedence and `fee_estimate_multiplier`
+    /// will be ignored by `starknet-rs`
     async fn send_with_cfg(
         self,
         txn_config: &TxnConfig,
@@ -363,7 +365,7 @@ where
             self = self.fee_estimate_multiplier(*fee_est_mul);
         }
 
-        if let TxnConfig { max_fee_raw: Some(max_fee_r), ..} = txn_config {
+        if let TxnConfig { max_fee_raw: Some(max_fee_r), .. } = txn_config {
             self = self.max_fee(*max_fee_r);
         }
 
@@ -385,7 +387,7 @@ where
             self = self.fee_estimate_multiplier(*fee_est_mul);
         }
 
-        if let TxnConfig { max_fee_raw: Some(max_raw_f), ..} = txn_config {
+        if let TxnConfig { max_fee_raw: Some(max_raw_f), .. } = txn_config {
             self = self.max_fee(*max_raw_f);
         }
 
