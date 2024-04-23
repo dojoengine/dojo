@@ -1,9 +1,14 @@
 use std::fs::{self};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
+use dojo_test_utils::anvil::TestAnvil;
 use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
+use ethers::{contract::ContractFactory, types::H160};
+use ethers_solc::{Artifact, Project, ProjectPathsConfig};
 use katana_core::sequencer::SequencerConfig;
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
@@ -173,4 +178,43 @@ async fn test_send_declare_and_deploy_legacy_contract() {
     );
 
     sequencer.stop().expect("failed to stop sequencer");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_anvil_deploy_contract() {
+    let root =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("test_data").join("solidity");
+    let paths = ProjectPathsConfig::builder().root(&root).sources(&root).build().unwrap();
+
+    // get the solc project instance using the paths above
+    let project = Project::builder().paths(paths).ephemeral().no_artifacts().build().unwrap();
+
+    // compile the project and get the artifacts
+    let output = project.compile().context("Error compiling project").unwrap();
+    output.assert_success();
+
+    let contract = output
+        .find_first("StarknetMessagingLocal")
+        .context("Could not find contract")
+        .unwrap()
+        .clone();
+
+    let (abi, bytecode, _) = contract.into_parts();
+
+    let anvil: TestAnvil = TestAnvil::start().await;
+
+    let account = Arc::new(anvil.account());
+
+    let factory = ContractFactory::new(abi.clone().unwrap(), bytecode.unwrap(), account.clone());
+
+    // Deploy contract
+    let contract =
+        factory.deploy(()).expect("Failing deploying").send().await.expect("Failing sending");
+
+    assert_eq!(
+        contract.address(),
+        H160::from_str("0x5fbdb2315678afecb367f032d93f642f64180aa3").unwrap()
+    );
+
+    anvil.stop();
 }

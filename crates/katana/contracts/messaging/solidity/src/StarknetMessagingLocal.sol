@@ -9,9 +9,7 @@ import "starknet/StarknetMessaging.sol";
 interface IStarknetMessagingLocal {
     function addMessageHashesFromL2(
         uint256[] calldata msgHashes
-    )
-        external
-        payable;
+    ) external payable;
 }
 
 /**
@@ -28,13 +26,10 @@ interface IStarknetMessagingLocal {
    The purpose of this contract is for local development only.
 */
 contract StarknetMessagingLocal is StarknetMessaging, IStarknetMessagingLocal {
-
     /**
        @notice Hashes were added.
     */
-    event MessageHashesAddedFromL2(
-        uint256[] hashes
-    );
+    event MessageHashesAddedFromL2(uint256[] hashes);
 
     /**
        @notice Adds the hashes of messages from L2.
@@ -43,10 +38,7 @@ contract StarknetMessagingLocal is StarknetMessaging, IStarknetMessagingLocal {
     */
     function addMessageHashesFromL2(
         uint256[] calldata msgHashes
-    )
-        external
-        payable
-    {
+    ) external payable override {
         // TODO: You can add here a whitelist of senders if you wish.
         for (uint256 i = 0; i < msgHashes.length; i++) {
             bytes32 hash = bytes32(msgHashes[i]);
@@ -55,5 +47,4 @@ contract StarknetMessagingLocal is StarknetMessaging, IStarknetMessagingLocal {
 
         emit MessageHashesAddedFromL2(msgHashes);
     }
-
 }

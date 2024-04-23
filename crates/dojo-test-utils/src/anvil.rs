@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use ethers::middleware::SignerMiddleware;
 use ethers::providers::{Http, Provider};
-use ethers::signers::LocalWallet;
+use ethers::signers::{LocalWallet, Signer};
 use ethers::utils::AnvilInstance;
 use ethers_core::utils::Anvil;
 
@@ -27,10 +27,15 @@ impl TestAnvil {
     }
 
     pub fn account(&self) -> SignerMiddleware<Provider<Http>, LocalWallet> {
-        SignerMiddleware::new(self.provider(), self.anvil.keys()[0].clone().into())
+        SignerMiddleware::new(self.provider(), self.wallet().with_chain_id(self.anvil.chain_id()))
     }
 
-    pub fn url(&self) -> String {
+    pub fn wallet(&self) -> LocalWallet {
+        let wallet: LocalWallet = self.anvil.keys()[0].clone().into();
+        return wallet;
+    }
+
+    pub fn url(self) -> String {
         self.url.clone()
     }
 
