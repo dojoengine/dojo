@@ -13,7 +13,8 @@ pub async fn starknet_verify(
     fact_registry_address: FieldElement,
     serialized_proof: Vec<FieldElement>,
 ) -> anyhow::Result<String> {
-    let txn_config = TxnConfig { fee_estimate_multiplier: Some(2.0), wait: true, receipt: false };
+    let txn_config =
+        TxnConfig { fee_estimate_multiplier: None, wait: true, receipt: true, max_fee_raw: None };
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: fact_registry_address,

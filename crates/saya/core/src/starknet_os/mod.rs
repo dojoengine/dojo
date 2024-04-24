@@ -56,14 +56,14 @@ pub async fn starknet_apply_diffs(
     program_output: Vec<FieldElement>,
 ) -> anyhow::Result<String> {
     let calldata = chain![
-        vec![FieldElement::from_dec_str(&new_state.len().to_string()).unwrap()].into_iter(),
+        vec![FieldElement::from_dec_str(&(new_state.len() / 2).to_string()).unwrap()].into_iter(),
         new_state.clone().into_iter(),
-        vec![FieldElement::from_dec_str(&program_output.len().to_string()).unwrap()].into_iter(),
         program_output.into_iter()
     ]
     .collect::<Vec<FieldElement>>();
 
-    let txn_config = TxnConfig { fee_estimate_multiplier: Some(1000.0), wait: true, receipt: true };
+    let txn_config =
+        TxnConfig { fee_estimate_multiplier: None, wait: true, receipt: true, max_fee_raw: None };
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: world,
