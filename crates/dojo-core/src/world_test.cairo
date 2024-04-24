@@ -14,7 +14,8 @@ use dojo::world::{
 };
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
-use dojo::benchmarks::{Character, end};
+use dojo::benchmarks::{Character, GasCounterImpl};
+
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -477,15 +478,14 @@ fn bench_execute() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    bar_contract.set_foo(1337, 1337);
-    end(gas, 'foo set call');
+    let gas = GasCounterImpl::start();
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    bar_contract.set_foo(1337, 1337);
+    gas.end( "foo set call");
+
+    let gas = GasCounterImpl::start();
     let data = get!(world, alice, Foo);
-    end(gas, 'foo get macro');
+    gas.end("foo get macro");
 
     assert(data.a == 1337, 'data not stored');
 }
@@ -501,15 +501,15 @@ fn bench_execute_complex() {
     let alice = starknet::contract_address_const::<0x1337>();
     starknet::testing::set_contract_address(alice);
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
-    bar_contract.set_char(1337, 1337);
-    end(gas, 'char set call');
+    let gas = GasCounterImpl::start();
 
-    let gas = testing::get_available_gas();
-    gas::withdraw_gas().unwrap();
+    bar_contract.set_char(1337, 1337);
+    gas.end( "char set call");
+
+    let gas = GasCounterImpl::start();
+
     let data = get!(world, alice, Character);
-    end(gas, 'char get macro');
+    gas.end("char get macro");
 
     assert(data.heigth == 1337, 'data not stored');
 }
