@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713990116960,
+  "lastUpdate": 1713999291601,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6265,6 +6265,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16702271,
             "range": "± 106718",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ac81cf6fa61a5d922427ed72eb16c91a5513b24",
+          "message": "refactor(sozo): migration logic to be more robust and testable (#1848)\n\n* refactor: move `load_world_manifest` to utils\r\n\r\n* add class_hash suffix\r\n\r\n* refactor: clean up MigrateArgs\r\n\r\n* fix: enforce seed matches the provided world_address\r\n\r\n* refactor: print chain_id inside `setup_env` instead of passing it around\r\n\r\n* move functions to migrate.rs\r\n\r\n* refactor: some function names\r\n\r\n* refactor!: don't mutate `MigrationStrategy` use the `MigrationOutput` instead\r\n\r\n* move update_manifests_and_abi function to migration\r\n\r\n* refactor: make `name/seed` non optional\r\n\r\n* remove duplicate test file\r\n\r\n* add test for seed issue\r\n\r\n* fix clippy lints\r\n\r\n* fix formatting\r\n\r\n* make suggested improvements\r\n\r\n* fix err string in test\r\n\r\n* fix formatting\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2024-04-24T16:46:44-06:00",
+          "tree_id": "f1a4414c1e90496b059c4bd952b1488a3f5aea97",
+          "url": "https://github.com/dojoengine/dojo/commit/0ac81cf6fa61a5d922427ed72eb16c91a5513b24"
+        },
+        "date": 1713999290873,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16716034,
+            "range": "± 97378",
             "unit": "ns/iter"
           }
         ]
