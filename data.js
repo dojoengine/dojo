@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713893942152,
+  "lastUpdate": 1713924341208,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6175,6 +6175,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16720345,
             "range": "± 235426",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "77df165a7dafdccd4a59274f0c4e5ee5cc33972c",
+          "message": "Bump `katana` database version (#1833)\n\nbump database version to `1` for the next release due to breaking changes introduced in #1773, #1774, #1775",
+          "timestamp": "2024-04-24T09:57:22+08:00",
+          "tree_id": "bf615a96a3d43ea25c52d583342497f5ff477e42",
+          "url": "https://github.com/dojoengine/dojo/commit/77df165a7dafdccd4a59274f0c4e5ee5cc33972c"
+        },
+        "date": 1713924340448,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16917762,
+            "range": "± 254462",
             "unit": "ns/iter"
           }
         ]
