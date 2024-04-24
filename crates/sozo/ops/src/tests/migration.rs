@@ -93,16 +93,14 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         ExecutionEncoding::New,
     );
 
-    assert!(
-        execute_strategy(
-            &ws,
-            &migration,
-            &account,
-            TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
-        )
-        .await
-        .is_err()
-    );
+    assert!(execute_strategy(
+        &ws,
+        &migration,
+        &account,
+        TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
+    )
+    .await
+    .is_err());
     sequencer.stop().unwrap();
 }
 
@@ -251,8 +249,9 @@ async fn migration_with_mismatching_world_address_and_seed() {
     );
 
     assert!(result.is_err_and(|e| e.to_string().contains(
-        "Calculated world address doesn't match provided world address.\nIf you are deploying \
-         with custom seed make sure `world_address` is not configured in `Scarb.toml`"
+        "Calculated world address doesn't match provided world address.\nIf you are \
+          deploying with custom seed make sure `world_address` is correctly configured \
+          (or not set) `Scarb.toml`"
     )));
 }
 
