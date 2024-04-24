@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use crate::starknet_os::STARKNET_ACCOUNT;
 use dojo_world::migration::TxnConfig;
 use dojo_world::utils::TransactionExt;
 use starknet::accounts::{Account, Call, ConnectedAccount};
@@ -8,6 +7,8 @@ use starknet::core::types::{FieldElement, TransactionExecutionStatus, Transactio
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
+
+use crate::starknet_os::STARKNET_ACCOUNT;
 
 pub async fn starknet_verify(
     fact_registry_address: FieldElement,

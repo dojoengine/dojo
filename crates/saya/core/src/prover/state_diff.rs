@@ -1,4 +1,5 @@
-use katana_primitives::{contract::ContractAddress, state::StateUpdates};
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::state::StateUpdates;
 use starknet::core::types::FieldElement;
 
 pub struct ProvedStateDiff {
