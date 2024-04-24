@@ -18,7 +18,6 @@ impl CompletionsArgs {
     pub fn run(self) -> Result<()> {
         let mut command = SozoArgs::command();
         let name = command.get_name().to_string();
-        trace!(target: LOG_TARGET, name, "Executing Command.");
         generate(self.shell, &mut command, name, &mut io::stdout());
         Ok(())
     }

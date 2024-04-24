@@ -68,7 +68,7 @@ impl ExecuteArgs {
                 contract=?self.contract,
                 entrypoint=self.entrypoint,
                 calldata=?self.calldata,
-                "Executing command."
+                "Executing Execute command."
             );
             execute::execute(self.contract, self.entrypoint, self.calldata, &world, &tx_config)
                 .await

@@ -196,7 +196,7 @@ fn load_context(config: &Config) -> Result<DevContext<'_>> {
 
     // we have only 1 unit in projects
     // TODO: double check if we always have one with the new version and the order if many.
-    trace!(target: LOG_TARGET, units=compilation_units.len(), "Generated compilation.");
+    trace!(target: LOG_TARGET, unit_count=compilation_units.len(), "Gathering compilation units.");
     let unit = compilation_units.first().unwrap();
     let db = build_scarb_root_database(unit).unwrap();
     Ok(DevContext { db, unit: unit.clone(), ws })

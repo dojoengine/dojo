@@ -47,7 +47,7 @@ pub enum RegisterCommand {
 
 impl RegisterArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, command=?self.command, "Executing command.");
+        trace!(target: LOG_TARGET, command=?self.command, "Executing Register command.");
         let env_metadata = utils::load_metadata_from_config(config)?;
 
         let (starknet, world, account, transaction, models) = match self.command {

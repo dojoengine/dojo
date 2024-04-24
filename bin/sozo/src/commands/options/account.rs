@@ -54,19 +54,16 @@ impl AccountOptions {
             provider.chain_id().await.with_context(|| "Failed to retrieve network chain id.")?;
         trace!(target: LOG_TARGET, ?chain_id, "Chain ID obtained.");
         let encoding = if self.legacy { 
-            trace!(target: LOG_TARGET, "Using legacy encoding.");
             ExecutionEncoding::Legacy 
         } else { 
-            trace!(target: LOG_TARGET, "Using new encoding.");
             ExecutionEncoding::New 
         };
 
-        trace!(target: LOG_TARGET, ?chain_id, ?encoding, "Creating SingleOwnerAccount.");
+        trace!(target: LOG_TARGET, ?encoding, "Creating SingleOwnerAccount.");
         Ok(SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding))
     }
 
     fn account_address(&self, env_metadata: Option<&Environment>) -> Result<FieldElement> {
-        trace!(target: LOG_TARGET, "Determining account address.");
         if let Some(address) = self.account_address {
             trace!(target: LOG_TARGET, ?address, "Account address found.");
             Ok(address)

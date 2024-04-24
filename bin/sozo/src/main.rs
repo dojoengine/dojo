@@ -40,7 +40,6 @@ fn cli_main(args: SozoArgs) -> Result<()> {
             compilers.add(Box::new(DojoCompiler)).unwrap()
         }
         _ => {
-            trace!(target: LOG_TARGET, "No additional compiler required");
         }
     }
 
@@ -57,11 +56,10 @@ fn cli_main(args: SozoArgs) -> Result<()> {
         .compilers(compilers)
         .build()?;
 
-    trace!(target: LOG_TARGET, "Configuration built successfully");
+    trace!(target: LOG_TARGET, "Configuration built successfully.");
 
     let _ = commands::run(args.command, &config);
 
-    trace!(target: LOG_TARGET, "Command execution completed");
 
     Ok(())
 }

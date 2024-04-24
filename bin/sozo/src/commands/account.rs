@@ -97,7 +97,7 @@ impl AccountArgs {
                         ?signer,
                         force,
                         ?file,
-                        "Executing New command"
+                        "Executing New command."
                     );
                     let signer: LocalWallet = signer.signer(env_metadata.as_ref(), false)?;
                     account::new(signer, force, file).await

@@ -108,7 +108,7 @@ pub async fn grant(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
-    trace!(target: LOG_TARGET, ?kind, ?world, ?starknet, ?account, ?transaction, "Executing 'Grant' command.");
+    trace!(target: LOG_TARGET, ?kind, ?world, ?starknet, ?account, ?transaction, "Executing Grant command.");
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
 
@@ -117,7 +117,7 @@ pub async fn grant(
             trace!(
                 target: LOG_TARGET,
                 contracts=?models_contracts,
-                "Granting 'Writer' permissions."
+                "Granting Writer permissions."
             );
             auth::grant_writer(&world, models_contracts, transaction.into()).await
         }
@@ -125,7 +125,7 @@ pub async fn grant(
             trace!(
                 target: LOG_TARGET,
                 resources=?owners_resources,
-                "Granting 'Owner' permissions."
+                "Granting Owner permissions."
             );
             auth::grant_owner(&world, owners_resources, transaction.into()).await
         }
@@ -140,7 +140,7 @@ pub async fn revoke(
     kind: AuthKind,
     transaction: TransactionOptions,
 ) -> Result<()> {
-    trace!(target: LOG_TARGET, ?kind, ?world, ?starknet, ?account, ?transaction, "Executing 'Revoke' command.");
+    trace!(target: LOG_TARGET, ?kind, ?world, ?starknet, ?account, ?transaction, "Executing Revoke command.");
     let world =
         utils::world_from_env_metadata(world, account, starknet, &env_metadata).await.unwrap();
     match kind {
@@ -148,7 +148,7 @@ pub async fn revoke(
             trace!(
                 target: LOG_TARGET,
                 contracts=?models_contracts,
-                "Revoking 'Writer' permissions."
+                "Revoking Writer permissions."
             );
             auth::revoke_writer(&world, models_contracts, transaction.into()).await
         }
@@ -156,7 +156,7 @@ pub async fn revoke(
             trace!(
                 target: LOG_TARGET,
                 resources=?owners_resources,
-                "Revoking 'Owner' permissions."
+                "Revoking Owner permissions."
             );
             auth::revoke_owner(&world, owners_resources, transaction.into()).await
         }

@@ -81,7 +81,6 @@ impl BuildArgs {
             .unwrap()
             .block_on(bindgen.generate())
             .expect("Error generating bindings");
-        trace!(target: LOG_TARGET, "Completed generating bindings.");
 
         Ok(())
     }

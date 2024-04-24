@@ -55,7 +55,6 @@ impl InitArgs {
 
         let template = self.template;
         let repo_url = if template.starts_with("https://") {
-            trace!(target: LOG_TARGET, template=%template);
             template
         } else {
             let url = "https://github.com/".to_string() + &template;

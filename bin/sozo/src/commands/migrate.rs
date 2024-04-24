@@ -70,7 +70,7 @@ pub enum MigrateCommand {
 
 impl MigrateArgs {
     pub fn run(self, config: &Config) -> Result<()> {
-        trace!(target: LOG_TARGET, command=?self.command, "Executing command");
+        trace!(target: LOG_TARGET, command=?self.command, "Executing Migrate command");
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         let env_metadata = if config.manifest_path().exists() {

@@ -55,7 +55,7 @@ impl EventsArgs {
         trace!(target: LOG_TARGET, ?manifest_dir, "Fetched manifest directory.");
 
         let provider = self.starknet.provider(env_metadata.as_ref())?;
-        trace!(target: LOG_TARGET, ?provider, "Starknet RPC client provider");
+        trace!(target: LOG_TARGET, ?provider, "Starknet RPC client provider.");
 
         let event_filter = events::get_event_filter(
             self.from_block,
@@ -68,15 +68,15 @@ impl EventsArgs {
             from_block=self.from_block,
             to_block=self.to_block,
             chunk_size=self.chunk_size,
-            "Created event filter"
+            "Created event filter."
         );
         
         let profile_name =
             ws.current_profile().expect("Scarb profile expected at this point.").to_string();
-        trace!(target: LOG_TARGET, profile_name, "Fetched profile name");
+        trace!(target: LOG_TARGET, profile_name, "Fetched profile name.");
 
         config.tokio_handle().block_on(async {
-            trace!(target: LOG_TARGET, "Starting async event parsing");
+            trace!(target: LOG_TARGET, "Starting async event parsing.");
             events::parse(
                 self.chunk_size,
                 provider,

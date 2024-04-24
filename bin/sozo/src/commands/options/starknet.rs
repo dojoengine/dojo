@@ -41,7 +41,7 @@ impl StarknetOptions {
             trace!(target: LOG_TARGET, url, "Using RPC URL from environment metadata.");
             Ok(Url::parse(url)?)
         } else {
-            trace!(target: LOG_TARGET, "Using default RPC URL: http://localhost:5050");
+            trace!(target: LOG_TARGET, "Using default RPC URL: http://localhost:5050.");
             Ok(Url::parse("http://localhost:5050").unwrap())
         }
     }
