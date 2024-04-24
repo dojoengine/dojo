@@ -6,6 +6,7 @@ use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::FieldElement;
+use starknet::macros::felt;
 
 use crate::contracts::model::ModelReader;
 use crate::contracts::world::test::deploy_world;
@@ -63,10 +64,7 @@ async fn test_model() {
 
     assert_eq!(
         position.class_hash(),
-        FieldElement::from_hex_be(
-            "0x00b33ae053213ccb2a57967ffc4411901f3efab24781ca867adcd0b90f2fece5"
-        )
-        .unwrap()
+        felt!("0x0151d4e1655053bc12c41f2e46ff6cb740c024320f129d92331cb1d2e59e4aa3")
     );
 
     let moves = world.model_reader("Moves").await.unwrap();
