@@ -6688,7 +6688,6 @@ dependencies = [
  "katana-rpc-api",
  "serde_json",
  "shellexpand",
- "starknet 0.9.0",
  "starknet_api",
  "tokio",
  "tracing",
