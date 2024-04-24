@@ -114,7 +114,7 @@ pub fn state_updates_to_json_like(state_updates: &StateUpdates, world: FieldElem
 
 /// We need custom implementation because of dynamic keys in json
 impl ProvedStateDiff {
-    pub fn serialize(&self) -> String {
+    pub fn serialize(&self, world: Option<FieldElement>) -> String {
         let mut result = String::from('{');
         result.push_str(&format!(r#""genesis_state_hash":{}"#, self.genesis_state_hash));
         result.push_str(&format!(r#","prev_state_hash":{}"#, self.prev_state_hash));

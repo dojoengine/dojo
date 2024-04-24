@@ -8,6 +8,7 @@ use starknet::{contract_address_const, ContractAddress, ClassHash, get_caller_ad
 use starknet::syscalls::deploy_syscall;
 
 use dojo::benchmarks;
+use dojo::config::interface::{IConfigDispatcher, IConfigDispatcherImpl};
 use dojo::world::{
     IWorldDispatcher, IWorldDispatcherTrait, world, IUpgradeableWorld, IUpgradeableWorldDispatcher,
     IUpgradeableWorldDispatcherTrait, ResourceMetadata
@@ -15,6 +16,7 @@ use dojo::world::{
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
+use dojo::config::component::Config::{ProgramHashUpdate,FactsRegistryUpdate};
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -270,7 +272,11 @@ fn deploy_world() -> IWorldDispatcher {
 fn test_set_metadata_world() {
     let world = deploy_world();
 
-    let metadata = ResourceMetadata { resource_id: 0, metadata_uri: array_cap!(3, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json')).span() };
+    let metadata = ResourceMetadata {
+        resource_id: 0,
+        metadata_uri: array_cap!(3, ('ipfs:world_with_a_long_uri_that', 'need_two_felts/1.json'))
+            .span()
+    };
 
     world.set_metadata(metadata.clone());
 
@@ -294,7 +300,9 @@ fn test_set_metadata_model_writer() {
 
     bar_contract.set_foo(1337, 1337);
 
-    let metadata = ResourceMetadata { resource_id: 'Foo', metadata_uri: array_cap!(3, ('ipfs:bob',)).span(), };
+    let metadata = ResourceMetadata {
+        resource_id: 'Foo', metadata_uri: array_cap!(3, ('ipfs:bob',)).span(),
+    };
 
     // A system that has write access on a model should be able to update the metadata.
     // This follows conventional ACL model.
@@ -309,7 +317,8 @@ fn test_set_metadata_same_model_rules() {
     let world = deploy_world();
 
     let metadata = ResourceMetadata { // World metadata.
-    resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:bob',)).span(), };
+        resource_id: 0, metadata_uri: array_cap!(10, ('ipfs:bob',)).span(),
+    };
 
     let bob = starknet::contract_address_const::<0xb0b>();
     starknet::testing::set_contract_address(bob);
@@ -528,7 +537,7 @@ mod worldupgrade {
     struct Storage {
         world: IWorldDispatcher,
     }
-    
+
     #[abi(embed_v0)]
     impl IWorldUpgradeImpl of super::IWorldUpgrade<ContractState> {
         fn hello(self: @ContractState) -> felt252 {
@@ -584,4 +593,51 @@ fn test_upgradeable_world_from_non_owner() {
         contract_address: world.contract_address
     };
     upgradeable_world_dispatcher.upgrade(worldupgrade::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_set_program_hash() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_program_hash(98758347158781475198374598718743);
+    let program_hash = config.get_program_hash();
+
+    assert(program_hash == 98758347158781475198374598718743, 'invalid program hash');
+}
+
+#[test]
+#[available_gas(6000000)]
+fn test_set_facts_registry() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_facts_registry(contract_address_const::<0x875914875149357>());
+    let facts_registry = config.get_facts_registry();
+
+    assert(facts_registry == contract_address_const::<0x875914875149357>(), 'invalid program hash');
+}
+
+
+#[test]
+#[available_gas(6000000)]
+fn test_program_hash_event_emit() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_program_hash(program_hash: 98758347158781475198374598718743);
+    assert_eq!(starknet::testing::pop_log(world.contract_address),
+        Option::Some(ProgramHashUpdate { program_hash: 98758347158781475198374598718743 }));
+}
+#[test]
+#[available_gas(6000000)]
+fn test_facts_registry_event_emit() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_facts_registry(contract_address_const::<0x12>());
+
+    assert_eq!(starknet::testing::pop_log(world.contract_address),
+        Option::Some(FactsRegistryUpdate{ address: contract_address_const::<0x12>()}));
 }

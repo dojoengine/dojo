@@ -2,7 +2,9 @@ use debug::PrintTrait;
 use option::OptionTrait;
 use starknet::ClassHash;
 use traits::TryInto;
-
+use core::array::ArrayTrait;
+use core::array::SpanTrait;
+use core::traits::Into;
 use dojo::base::base;
 use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use dojo::test_utils::{spawn_test_world};
@@ -150,3 +152,4 @@ fn test_deploy_from_world_invalid_model_world() {
     let world = deploy_world();
     world.register_model(invalid_model_world::TEST_CLASS_HASH.try_into().unwrap());
 }
+

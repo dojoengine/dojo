@@ -13,15 +13,9 @@ trait IWorld<T> {
     fn upgrade_contract(ref self: T, address: ContractAddress, class_hash: ClassHash) -> ClassHash;
     fn uuid(ref self: T) -> usize;
     fn emit(self: @T, keys: Array<felt252>, values: Span<felt252>);
-    fn entity(
-        self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>
-    ) -> Span<felt252>;
+    fn entity(self: @T, model: felt252, keys: Span<felt252>, layout: Span<u8>) -> Span<felt252>;
     fn set_entity(
-        ref self: T,
-        model: felt252,
-        keys: Span<felt252>,
-        values: Span<felt252>,
-        layout: Span<u8>
+        ref self: T, model: felt252, keys: Span<felt252>, values: Span<felt252>, layout: Span<u8>
     );
     fn base(self: @T) -> ClassHash;
     fn delete_entity(ref self: T, model: felt252, keys: Span<felt252>, layout: Span<u8>);
@@ -60,8 +54,9 @@ mod Errors {
 
 #[starknet::contract]
 mod world {
+    use dojo::config::interface::IConfig;
     use core::to_byte_array::FormatAsByteArray;
-use core::traits::TryInto;
+    use core::traits::TryInto;
     use array::{ArrayTrait, SpanTrait};
     use traits::Into;
     use option::OptionTrait;
@@ -80,8 +75,12 @@ use core::traits::TryInto;
     use dojo::database;
     use dojo::database::introspect::Introspect;
     use dojo::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+    use dojo::config::component::Config;
     use dojo::model::Model;
-    use dojo::interfaces::{IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl, StorageUpdate, ProgramOutput};
+    use dojo::interfaces::{
+        IUpgradeableState, IFactRegistryDispatcher, IFactRegistryDispatcherImpl, StorageUpdate,
+        ProgramOutput
+    };
     use dojo::world::{IWorldDispatcher, IWorld, IUpgradeableWorld};
     use dojo::resource_metadata;
     use dojo::resource_metadata::{ResourceMetadata, RESOURCE_METADATA_MODEL};
@@ -89,6 +88,11 @@ use core::traits::TryInto;
     use super::Errors;
 
     const WORLD: felt252 = 0;
+
+    component!(path: Config, storage: config, event: ConfigEvent);
+
+    #[abi(embed_v0)]
+    impl ConfigImpl = Config::ConfigImpl<ContractState>;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -103,6 +107,13 @@ use core::traits::TryInto;
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
+        ConfigEvent: Config::Event,
+        StateUpdated: StateUpdated
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct StateUpdated {
+        da_hash: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -180,6 +191,8 @@ use core::traits::TryInto;
         deployed_contracts: LegacyMap::<felt252, ClassHash>,
         owners: LegacyMap::<(felt252, ContractAddress), bool>,
         writers: LegacyMap::<(felt252, ContractAddress), bool>,
+        #[substorage(v0)]
+        config: Config::Storage,
     }
 
     #[constructor]
@@ -187,10 +200,12 @@ use core::traits::TryInto;
         let creator = starknet::get_tx_info().unbox().account_contract_address;
         self.contract_base.write(contract_base);
         self.owners.write((WORLD, creator), true);
-        self.models.write(
-            RESOURCE_METADATA_MODEL,
-            (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
-        );
+        self
+            .models
+            .write(
+                RESOURCE_METADATA_MODEL,
+                (resource_metadata::initial_class_hash(), resource_metadata::initial_address())
+            );
 
         EventEmitter::emit(ref self, WorldSpawned { address: get_contract_address(), creator });
     }
@@ -233,7 +248,10 @@ use core::traits::TryInto;
             let key = poseidon::poseidon_hash_span(keys);
             database::set(model, key, values, layout);
 
-            EventEmitter::emit(ref self, MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri });
+            EventEmitter::emit(
+                ref self,
+                MetadataUpdate { resource: metadata.resource_id, uri: metadata.metadata_uri }
+            );
         }
 
         /// Checks if the provided account is an owner of the resource.
@@ -259,7 +277,9 @@ use core::traits::TryInto;
         /// * `resource` - The resource.
         fn grant_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
+            assert(
+                self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER
+            );
             self.owners.write((resource, address), true);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: true });
@@ -274,7 +294,9 @@ use core::traits::TryInto;
         /// * `resource` - The resource.
         fn revoke_owner(ref self: ContractState, address: ContractAddress, resource: felt252) {
             let caller = get_caller_address();
-            assert(self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER);
+            assert(
+                self.is_owner(caller, resource) || self.is_owner(caller, WORLD), Errors::NOT_OWNER
+            );
             self.owners.write((resource, address), false);
 
             EventEmitter::emit(ref self, OwnerUpdated { address, resource, value: false });
@@ -305,7 +327,8 @@ use core::traits::TryInto;
             let caller = get_caller_address();
 
             assert(
-                self.is_owner(caller, model) || self.is_owner(caller, WORLD), Errors::NOT_OWNER_WRITER
+                self.is_owner(caller, model) || self.is_owner(caller, WORLD),
+                Errors::NOT_OWNER_WRITER
             );
             self.writers.write((model, system), true);
 
@@ -343,7 +366,8 @@ use core::traits::TryInto;
             let caller = get_caller_address();
 
             let salt = self.models_count.read();
-            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash).unwrap_syscall();
+            let (address, name) = dojo::model::deploy_and_get_name(salt.into(), class_hash)
+                .unwrap_syscall();
             self.models_count.write(salt + 1);
 
             let (mut prev_class_hash, mut prev_address) = (
@@ -368,7 +392,10 @@ use core::traits::TryInto;
             };
 
             self.models.write(name, (class_hash, address));
-            EventEmitter::emit(ref self, ModelRegistered { name, prev_address, address, class_hash, prev_class_hash });
+            EventEmitter::emit(
+                ref self,
+                ModelRegistered { name, prev_address, address, class_hash, prev_class_hash }
+            );
         }
 
         /// Gets the class hash of a registered model.
@@ -524,10 +551,7 @@ use core::traits::TryInto;
         ///
         /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
         fn entity(
-            self: @ContractState,
-            model: felt252,
-            keys: Span<felt252>,
-            layout: Span<u8>
+            self: @ContractState, model: felt252, keys: Span<felt252>, layout: Span<u8>
         ) -> Span<felt252> {
             let key = poseidon::poseidon_hash_span(keys);
             database::get(model, key, layout)
@@ -568,8 +592,9 @@ use core::traits::TryInto;
 
     #[abi(embed_v0)]
     impl UpgradeableState of IUpgradeableState<ContractState> {
-        fn upgrade_state(ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput) {
-            let program_hash = 18468145346606952491117791430885172818429658569709932865894865254677766952;
+        fn upgrade_state(
+            ref self: ContractState, new_state: Span<StorageUpdate>, program_output: ProgramOutput
+        ) {
             let mut da_hasher = PedersenImpl::new(0);
             let mut i = 0;
             loop {
@@ -580,20 +605,22 @@ use core::traits::TryInto;
                 da_hasher = da_hasher.update(*new_state.at(i).value);
                 i += 1;
             };
-            let da_hash = da_hasher.finalize();
+            let da_hash= da_hasher.finalize();
             assert(da_hash == program_output.world_da_hash, 'wrong output hash');
 
             let mut program_output_array = array![];
             program_output.serialize(ref program_output_array);
             let program_output_hash = poseidon::poseidon_hash_span(program_output_array.span());
 
-            let fact = poseidon::PoseidonImpl::new().update(program_hash).update(program_output_hash).finalize();
-            assert(
-                IFactRegistryDispatcher {
-                    contract_address: contract_address_const::<0x217746a5f74c2e5b6fa92c97e902d8cd78b1fabf1e8081c4aa0d2fe159bc0eb>()
-                }.is_valid(fact),
-                'no state transition proof'
-            );
+            let program_hash = self.config.get_program_hash();
+            let fact = poseidon::PoseidonImpl::new()
+                .update(program_hash)
+                .update(program_output_hash)
+                .finalize();
+            let fact_registry = IFactRegistryDispatcher {
+                contract_address: self.config.get_facts_registry()
+            };
+            assert(fact_registry.is_valid(fact), 'no state transition proof');
 
             let mut i = 0;
             loop {
@@ -603,9 +630,11 @@ use core::traits::TryInto;
                 let base = starknet::storage_base_address_from_felt252(*new_state.at(i).key);
                 starknet::storage_write_syscall(
                     0, starknet::storage_address_from_base(base), *new_state.at(i).value
-                ).unwrap_syscall();
+                )
+                    .unwrap_syscall();
                 i += 2;
-            }
+            };
+            EventEmitter::emit(ref self, StateUpdated { da_hash: da_hash });
         }
     }
 
