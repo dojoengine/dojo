@@ -143,7 +143,8 @@ impl DojoWorld {
         limit: u32,
         offset: u32,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        self.query_by_hashed_keys("entities", "entity_model", None, limit, offset).await
+        self.query_by_hashed_keys("entities", "entity_model", "entity_id", None, limit, offset)
+            .await
     }
 
     async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
@@ -164,6 +165,7 @@ impl DojoWorld {
         &self,
         table: &str,
         model_relation_table: &str,
+        entity_relation_column: &str,
         hashed_keys: Option<proto::types::HashedKeysClause>,
         limit: u32,
         offset: u32,
@@ -218,7 +220,10 @@ impl DojoWorld {
             let model_ids: Vec<&str> = models_str.split(',').collect();
             let schemas = self.model_cache.schemas(model_ids).await?;
 
-            let entity_query = format!("{} WHERE {table}.id = ?", build_sql_query(&schemas)?);
+            let entity_query = format!(
+                "{} WHERE {table}.id = ?",
+                build_sql_query(&schemas, table, entity_relation_column)?
+            );
             let row = sqlx::query(&entity_query).bind(&entity_id).fetch_one(&self.pool).await?;
 
             let models = schemas
@@ -245,6 +250,7 @@ impl DojoWorld {
         &self,
         table: &str,
         model_relation_table: &str,
+        entity_relation_column: &str,
         keys_clause: proto::types::KeysClause,
         limit: u32,
         offset: u32,
@@ -302,7 +308,7 @@ impl DojoWorld {
         // query to filter with limit and offset
         let entities_query = format!(
             "{} WHERE {table}.keys LIKE ? ORDER BY {table}.event_id DESC LIMIT ? OFFSET ?",
-            build_sql_query(&schemas)?
+            build_sql_query(&schemas, table, entity_relation_column)?
         );
         let db_entities = sqlx::query(&entities_query)
             .bind(&keys_pattern)
@@ -361,6 +367,7 @@ impl DojoWorld {
         &self,
         table: &str,
         model_relation_table: &str,
+        entity_relation_column: &str,
         member_clause: proto::types::MemberClause,
         _limit: u32,
         _offset: u32,
@@ -408,7 +415,7 @@ impl DojoWorld {
         let column_name = format!("external_{}", member_clause.member);
         let member_query = format!(
             "{} WHERE {table_name}.{column_name} {comparison_operator} ?",
-            build_sql_query(&schemas)?
+            build_sql_query(&schemas, table, entity_relation_column)?
         );
 
         let db_entities =
@@ -518,6 +525,7 @@ impl DojoWorld {
                         self.query_by_hashed_keys(
                             "entities",
                             "entity_model",
+                            "entity_id",
                             Some(hashed_keys),
                             query.limit,
                             query.offset,
@@ -536,6 +544,7 @@ impl DojoWorld {
                         self.query_by_keys(
                             "entities",
                             "entity_model",
+                            "entity_id",
                             keys,
                             query.limit,
                             query.offset,
@@ -546,6 +555,7 @@ impl DojoWorld {
                         self.query_by_member(
                             "entities",
                             "entity_model",
+                            "entity_id",
                             member,
                             query.limit,
                             query.offset,
@@ -595,6 +605,7 @@ impl DojoWorld {
                         self.query_by_hashed_keys(
                             "event_messages",
                             "event_model",
+                            "event_message_id",
                             Some(hashed_keys),
                             query.limit,
                             query.offset,
@@ -613,6 +624,7 @@ impl DojoWorld {
                         self.query_by_keys(
                             "event_messages",
                             "event_model",
+                            "event_message_id",
                             keys,
                             query.limit,
                             query.offset,
@@ -623,6 +635,7 @@ impl DojoWorld {
                         self.query_by_member(
                             "event_messages",
                             "event_model",
+                            "event_message_id",
                             member,
                             query.limit,
                             query.offset,
