@@ -173,7 +173,11 @@ pub fn parse_sql_model_members(model: &str, model_members_all: &[SqlModelMember]
 }
 
 /// Creates a query that fetches all models and their nested data.
-pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
+pub fn build_sql_query(
+    model_schemas: &Vec<Ty>,
+    entities_table: &str,
+    entity_relation_column: &str,
+) -> Result<String, Error> {
     fn parse_struct(
         path: &str,
         schema: &Struct,
@@ -223,11 +227,16 @@ pub fn build_sql_query(model_schemas: &Vec<Ty>) -> Result<String, Error> {
     let selections_clause = global_selections.join(", ");
     let join_clause = global_tables
         .into_iter()
-        .map(|table| format!(" JOIN {table} ON entities.id = {table}.entity_id"))
+        .map(|table| {
+            format!(" JOIN {table} ON {entities_table}.id = {table}.{entity_relation_column}")
+        })
         .collect::<Vec<_>>()
         .join(" ");
 
-    Ok(format!("SELECT entities.id, entities.keys, {selections_clause} FROM entities{join_clause}"))
+    Ok(format!(
+        "SELECT {entities_table}.id, {entities_table}.keys, {selections_clause} FROM \
+         {entities_table}{join_clause}"
+    ))
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.
@@ -528,7 +537,7 @@ mod tests {
             ],
         });
 
-        let query = build_sql_query(&vec![ty]).unwrap();
+        let query = build_sql_query(&vec![ty], "entities", "entity_id").unwrap();
         assert_eq!(
             query,
             r#"SELECT entities.id, entities.keys, Position.external_name AS "Position.name", Position.external_age AS "Position.age", Position$vec.external_x AS "Position$vec.x", Position$vec.external_y AS "Position$vec.y" FROM entities JOIN Position ON entities.id = Position.entity_id  JOIN Position$vec ON entities.id = Position$vec.entity_id"#

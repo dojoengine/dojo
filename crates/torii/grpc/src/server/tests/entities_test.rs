@@ -89,6 +89,7 @@ async fn test_entities_queries() {
         .query_by_keys(
             "entities",
             "entity_model",
+            "entity_id",
             KeysClause { model: "Moves".to_string(), keys: vec![account.address()] }.into(),
             1,
             0,
