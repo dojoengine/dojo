@@ -14,13 +14,13 @@ pub struct TransactionOptions {
     #[arg(global = true)]
     pub fee_estimate_multiplier: Option<f64>,
 
-    #[arg(short, long)]
+    #[arg(long)]
     #[arg(help = "Maximum raw value to be used for fees, in Wei.")]
     #[arg(conflicts_with = "fee_estimate_multiplier")]
     #[arg(global = true)]
     pub max_fee_raw: Option<FieldElement>,
 
-    #[arg(short, long)]
+    #[arg(long)]
     #[arg(help = "Wait until the transaction is accepted by the sequencer, returning the status \
                   and hash.")]
     #[arg(long_help = "Wait until the transaction is accepted by the sequencer, returning the \
@@ -29,7 +29,7 @@ pub struct TransactionOptions {
     #[arg(global = true)]
     pub wait: bool,
 
-    #[arg(short, long)]
+    #[arg(long)]
     #[arg(
         help = "If --wait is set, returns the full transaction receipt. Otherwise, it is a no-op."
     )]
