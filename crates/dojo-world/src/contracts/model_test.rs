@@ -5,7 +5,6 @@ use dojo_test_utils::sequencer::{
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::accounts::ConnectedAccount;
-use starknet::core::types::FieldElement;
 use starknet::macros::felt;
 
 use crate::contracts::model::ModelReader;

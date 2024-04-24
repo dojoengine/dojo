@@ -1,6 +1,6 @@
 kind = "DojoModel"
-class_hash = "0x4e92336e21ac7970b9bd9f4e294705f7864c0b29f53fdbf42ff7a9d7f0a53f3"
-original_class_hash = "0x4e92336e21ac7970b9bd9f4e294705f7864c0b29f53fdbf42ff7a9d7f0a53f3"
+class_hash = "0x4506e429af30252d09a8f0401997a04db0753e247312d33cfe1252fddc4efc0"
+original_class_hash = "0x4506e429af30252d09a8f0401997a04db0753e247312d33cfe1252fddc4efc0"
 abi = "manifests/dev/abis/base/models/types_test_models_record_sibling.json"
 name = "types_test::models::record_sibling"
 
