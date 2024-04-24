@@ -627,6 +627,10 @@ fn test_program_hash_event_emit() {
     let config = IConfigDispatcher { contract_address: world.contract_address };
 
     config.set_program_hash(program_hash: 98758347158781475198374598718743);
+
+    // pop value from the logs for the assertion to pass
+    let _: Option<ProgramHashUpdate> = starknet::testing::pop_log(world.contract_address);
+
     assert_eq!(starknet::testing::pop_log(world.contract_address),
         Option::Some(ProgramHashUpdate { program_hash: 98758347158781475198374598718743 }));
 }
@@ -637,6 +641,9 @@ fn test_facts_registry_event_emit() {
     let config = IConfigDispatcher { contract_address: world.contract_address };
 
     config.set_facts_registry(contract_address_const::<0x12>());
+
+    // pop value from the logs for the assertion to pass
+    let _: Option<FactsRegistryUpdate> = starknet::testing::pop_log(world.contract_address);
 
     assert_eq!(starknet::testing::pop_log(world.contract_address),
         Option::Some(FactsRegistryUpdate{ address: contract_address_const::<0x12>()}));
