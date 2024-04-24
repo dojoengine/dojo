@@ -96,20 +96,12 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
         Cell::new_align("Bytecode size (felts)", format::Alignment::CENTER),
         Cell::new_align("Class size (bytes)", format::Alignment::CENTER),
     ]));
-    trace!(target: LOG_TARGET, "Creating table for contract statistics.");
 
     for contract_stats in contracts_statistics {
         // Add table rows
         let contract_name = contract_stats.contract_name;
         let number_felts = contract_stats.number_felts;
         let file_size = contract_stats.file_size;
-        trace!(
-            target: LOG_TARGET,
-            contract_name,
-            number_felts,
-            file_size,
-            "Adding row to table."
-        );
         table.add_row(Row::new(vec![
             Cell::new_align(&contract_name, format::Alignment::LEFT),
             Cell::new_align(format!("{}", number_felts).as_str(), format::Alignment::RIGHT),
@@ -117,7 +109,6 @@ fn create_stats_table(contracts_statistics: Vec<ContractStatistics>) -> Table {
         ]));
     }
 
-    trace!(target: LOG_TARGET, "Completed creating stats table.");
     table
 }
 

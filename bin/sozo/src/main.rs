@@ -21,7 +21,6 @@ fn main() {
     
     let args = SozoArgs::parse();
     let _ = args.init_logging();
-    trace!(target: LOG_TARGET, command = ?args.command, "Sozo CLI command started.");
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
     if let Err(err) = cli_main(args) {

@@ -66,7 +66,6 @@ impl RegisterArgs {
             let provider = world.account.provider();
             let world_reader = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
-            trace!(target: LOG_TARGET, ?world_address, "WorldContractReader initialized with block tag Pending.");
             
             register::model_register(
                 models,

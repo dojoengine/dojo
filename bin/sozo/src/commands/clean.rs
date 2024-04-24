@@ -31,8 +31,6 @@ impl CleanArgs {
             if d.exists() {
                 trace!(target: LOG_TARGET, directory=?d, "Removing directory.");
                 fs::remove_dir_all(d)?;
-            } else {
-                trace!(target: LOG_TARGET, directory=?d, "Directory does not exist.");
             }
         }
 
@@ -60,8 +58,6 @@ impl CleanArgs {
         if self.all && profile_dir.exists() {
             trace!(target: LOG_TARGET, ?profile_dir, "Removing entire profile directory.");
             fs::remove_dir_all(profile_dir)?;
-        } else {
-            trace!(target: LOG_TARGET, ?profile_dir, "Profile directory does not exist.");
         }
 
         Ok(())

@@ -56,12 +56,6 @@ impl ExecuteArgs {
             .await
             .unwrap();
             let tx_config = self.transaction.into();
-            trace!(
-                target: LOG_TARGET,
-                ?tx_config,
-                "Transaction configuration initialized.",
-                
-            );
 
             trace!(
                 target: LOG_TARGET,

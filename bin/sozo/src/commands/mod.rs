@@ -36,7 +36,7 @@ use register::RegisterArgs;
 use test::TestArgs;
 
 #[derive(Subcommand)]
-#[derive(Debug)]
+#[derive(Debug, Subcommand)]
 pub enum Commands {
     #[command(about = "Manage accounts")]
     Account(AccountArgs),

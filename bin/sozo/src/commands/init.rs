@@ -40,9 +40,6 @@ impl InitArgs {
                 fs::read_dir(&target_dir)?.next().is_none(),
                 io::Error::new(io::ErrorKind::Other, "Target directory is not empty",)
             );
-            trace!(target: LOG_TARGET, "Target directory is empty.");
-        } else {
-            trace!(target: LOG_TARGET, "Target directory does not exist.");
         }
 
         config.ui().print("\n\n ⛩️ ====== STARTING ====== ⛩️ \n");
@@ -62,7 +59,6 @@ impl InitArgs {
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
         set_current_dir(&target_dir)?;
-        trace!(target: LOG_TARGET, ?target_dir, "Navigating to newly cloned repo.");
 
         // Modify the git history.
         modify_git_history(&repo_url)?;
@@ -70,7 +66,6 @@ impl InitArgs {
         config.ui().print("\n🎉 Successfully created a new ⛩️ Dojo project!");
 
         // Navigate back.
-        trace!(target: LOG_TARGET, ?initial_dir, "Returned to initial directory.");
         set_current_dir(initial_dir)?;
 
         config.ui().print(
