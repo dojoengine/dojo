@@ -140,6 +140,14 @@ impl Client {
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
+    /// Similary to entities, this function retrieves event messages matching the query parameter.
+    pub async fn event_messages(&self, query: Query) -> Result<Vec<Entity>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let RetrieveEntitiesResponse { entities, total_count: _ } =
+            grpc_client.retrieve_event_messages(query).await?;
+        Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
+    }
+
     /// A direct stream to grpc subscribe entities
     pub async fn on_entity_updated(
         &self,
@@ -147,6 +155,16 @@ impl Client {
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
         let stream = grpc_client.subscribe_entities(ids).await?;
+        Ok(stream)
+    }
+
+    /// A direct stream to grpc subscribe event messages
+    pub async fn on_event_message_updated(
+        &self,
+        ids: Vec<FieldElement>,
+    ) -> Result<EntityUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_event_messages(ids).await?;
         Ok(stream)
     }
 

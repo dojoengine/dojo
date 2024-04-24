@@ -1,5 +1,5 @@
 use alloy_primitives::U256;
-use katana_core::backend::config::{Environment, StarknetConfig};
+use katana_core::backend::config::StarknetConfig;
 use katana_core::sequencer::{KatanaSequencer, SequencerConfig};
 use katana_executor::implementation::noop::NoopExecutorFactory;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
@@ -17,13 +17,8 @@ fn create_test_sequencer_config() -> (SequencerConfig, StarknetConfig) {
     genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
 
     (
-        SequencerConfig { block_time: None, ..Default::default() },
-        StarknetConfig {
-            genesis,
-            disable_fee: true,
-            env: Environment::default(),
-            ..Default::default()
-        },
+        SequencerConfig::default(),
+        StarknetConfig { genesis, disable_fee: true, ..Default::default() },
     )
 }
 

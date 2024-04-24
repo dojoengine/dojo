@@ -40,7 +40,13 @@ How to run the scripts:
 
 -   Start Anvil in a terminal.
 -   Start Katana in an other terminal on default port 5050 with the messaging configuration that is inside the:
-    `katana --messaging ~/dojo/crates/katana/core/contracts/messaging/anvil.messaging.json`
+```bash
+    # From installed katana.
+    katana --messaging ~/dojo/crates/katana/contracts/messaging/anvil.messaging.json
+
+    # Dev mode
+    cargo run --bin katana -- --messaging ~/dojo/crates/katana/contracts/messaging/anvil.messaging.json
+```
 -   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
 Then you can then use pre-defined commands to interact with the contracts.
@@ -66,11 +72,7 @@ make -sC cairo/ send_msg_value_l1 value=2
 ```
 Then you've to wait the message to be sent to L1, Katana will display it:
 ```
-2023-12-15T15:16:18.435370Z  INFO messaging: Message sent to settlement layer:
-|     hash     | 0x62c7475daef517f6858a6f539bb4d2aa7eb1e23a7e8b1bc6a0834256d995e49d
-| from_address | 0x4231f608ea4a233136f6cdfcd10eaad2e46362bbc4e5d5aa88d0d574ea120d8
-|  to_address  | 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
-|   payload    | [0x2]
+2024-04-22T23:42:52.478200Z  INFO messaging: Message sent to settlement layer. hash=0xb5c9a1d3b8eb1c9d37ee5ffdacf09560a68d0c9e53fa4b1cc91d967095bc4ac7 from_address=0x609f8e7a76b6cc36f3ff86f09f6e5fdd0e6320f117d817e4344c1bf9fac7d67 to_address=0xe7f1725e7734ce288f8367e1bb143e90bb3f0512 payload=0x2
 ```
 ```
 # Consume the messag previously sent. You can try to call it once and see the second one reverting.
@@ -109,7 +111,15 @@ You can also use the Makefile to setup the chains, but the flow is the following
 How to run the scripts:
 
 -   Starts Katana (1) to simulate starknet on a new terminal with default port 5050.
--   Starts Katana (2) for your appchain on a new terminal with port 6060 and the configuration for messaging: `katana --messaging crates/katana/core/contracts/messaging/l3.messaging.json -p 6060`
+-   Starts Katana (2) for your appchain on a new terminal with port 6060 and the configuration for messaging:
+```bash
+   # From installed Katana.
+   katana --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060`
+
+   # Dev mode
+   cargo run --bin katana --features "starknet-messaging" -- --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060
+```
+
 -   Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
 
 Then you can then use pre-defined commands to interact with the contracts.
@@ -139,3 +149,5 @@ make -sC ./cairo/ get_value_l2
 # Try to change the value to see the transaction error.
 make -sC cairo/ send_msg_l3 selector_str=msg_handler_value value=888
 ```
+
+It's important to note that Dojo will support settlement. Hence, messaging will be done during the state update of the appchain on the base layer, and not with this custom solution that was developped for the demo.
