@@ -112,8 +112,8 @@ pub fn prepare_for_migration(
             if world_address != generated_world_address {
                 bail!(
                     "Calculated world address doesn't match provided world address.\nIf you are \
-                     deploying with custom seed make sure `world_address` is not configured in \
-                     `Scarb.toml`"
+                     deploying with custom seed make sure `world_address` is correctly configured \
+                     (or not set) `Scarb.toml`"
                 )
             }
         }

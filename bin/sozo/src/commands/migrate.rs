@@ -26,7 +26,8 @@ pub struct MigrateArgs {
     #[arg(long, global = true)]
     #[arg(help = "Name of the World.")]
     #[arg(long_help = "Name of the World. It's hash will be used as a salt when deploying the \
-                       contract to avoid address conflicts.")]
+                       contract to avoid address conflicts. If not provided root package's name \
+                       will be used.")]
     name: Option<String>,
 
     #[command(flatten)]
@@ -67,7 +68,9 @@ impl MigrateArgs {
 
         let MigrateArgs { name, world, starknet, account, .. } = self;
 
-        let name = name.unwrap_or_else(|| ws.root_package().unwrap().id.name.to_string());
+        let name = name.unwrap_or_else(|| {
+            ws.root_package().expect("Root package to be present").id.name.to_string()
+        });
 
         let (world_address, account, rpc_url) = config.tokio_handle().block_on(async {
             setup_env(&ws, account, starknet, world, &name, env_metadata.as_ref()).await
