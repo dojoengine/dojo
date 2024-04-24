@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713924341208,
+  "lastUpdate": 1713980811005,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6205,6 +6205,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16917762,
             "range": "± 254462",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6fde452e6103b98a36285206c752702f8a3682fc",
+          "message": "feat: spawn event message subscription service (#1876)\n\n* feat: spawn event message service\r\n\r\n* fmt\r\n\r\n* refactor: grpc event message subscriptions and queries\r\n\r\n* refactor: global consts\r\n\r\n* fmt",
+          "timestamp": "2024-04-24T11:38:32-06:00",
+          "tree_id": "0e35feebacb593cc22e6163e1554d9247b13e972",
+          "url": "https://github.com/dojoengine/dojo/commit/6fde452e6103b98a36285206c752702f8a3682fc"
+        },
+        "date": 1713980810146,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16745880,
+            "range": "± 190738",
             "unit": "ns/iter"
           }
         ]
