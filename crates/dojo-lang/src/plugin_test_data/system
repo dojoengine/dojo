@@ -94,6 +94,20 @@ trait IFaultyTrait {
     fn do_with_attrs(p1: u8) -> u16;
 }
 
+#[starknet::interface]
+trait IAllowedRefSelf<T> {
+    fn spawn(ref self: T);
+}
+
+#[dojo::contract(allow_ref_self)]
+mod ContractAllowedRefSelf {
+    #[abi(embed_v0)]
+    impl AllowedImpl of IAllowedRefSelf<ContractState> {
+        fn spawn(ref self: ContractState) {
+        }
+    }
+}
+
 #[dojo::interface]
 trait INominalTrait {
     fn do_no_param();
@@ -320,32 +334,32 @@ error: Functions of dojo::interface cannot have `ref self` parameter.
     ^***************************************^
 
 error: Functions of dojo::contract cannot have 'ref self' parameter.
- --> test_src/lib.cairo:119:9
+ --> test_src/lib.cairo:133:9
         fn do_with_ref_self(ref self: ContractState) -> felt252 {
         ^*******************************************************^
 
 error: Only one parameter of type IWorldDispatcher is allowed.
- --> test_src/lib.cairo:123:9
+ --> test_src/lib.cairo:137:9
         fn do_with_several_world_dispatchers(
         ^***********************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:131:42
+ --> test_src/lib.cairo:145:42
         fn do_with_world_not_named_world(another_world: IWorldDispatcher) -> felt252 {
                                          ^*****************************^
 
 error: The IWorldDispatcher parameter must be named 'world'.
- --> test_src/lib.cairo:135:73
+ --> test_src/lib.cairo:149:73
         fn do_with_self_and_world_not_named_world(self: @ContractState, another_world: IWorldDispatcher) -> felt252 {
                                                                         ^*****************************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:139:47
+ --> test_src/lib.cairo:153:47
         fn do_with_world_not_first(vec: Vec2, world: IWorldDispatcher) -> felt252 {
                                               ^*********************^
 
 error: The IWorldDispatcher parameter must be the first parameter of the function (self excluded).
- --> test_src/lib.cairo:143:78
+ --> test_src/lib.cairo:157:78
         fn do_with_self_and_world_not_first(self: @ContractState, vec: Vec2, world: IWorldDispatcher) -> felt252 {
                                                                              ^*********************^
 
@@ -378,6 +392,11 @@ error: Unsupported attribute.
  --> test_src/lib.cairo:87:5
     #[my_attr]
     ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:2:17
+                #[starknet::contract]
+                ^*******************^
 
 error: Unsupported attribute.
  --> test_src/lib.cairo[MyFaultyContract]:2:17
@@ -600,6 +619,46 @@ error: Unsupported attribute.
                         ^*****^
 
 error: Unknown inline item macro: 'component'.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:10:21
+                    component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
+                    ^**********************************************************************************************************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:12:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:19:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:26:21
+                    #[abi(embed_v0)]
+                    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo:98:5
+    #[abi(embed_v0)]
+    ^**************^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:35:13
+            #[event]
+            ^******^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:41:13
+            #[storage]
+            ^********^
+
+error: Unsupported attribute.
+ --> test_src/lib.cairo[ContractAllowedRefSelf]:44:17
+                #[substorage(v0)]
+                ^***************^
+
+error: Unknown inline item macro: 'component'.
  --> test_src/lib.cairo[MyFaultyContract]:10:21
                     component!(path: dojo::components::upgradeable::upgradeable, storage: upgradeable, event: UpgradeableEvent);
                     ^**********************************************************************************************************^
@@ -620,7 +679,7 @@ error: Unsupported attribute.
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:117:5
+ --> test_src/lib.cairo:131:5
     #[abi(embed_v0)]
     ^**************^
 
@@ -660,7 +719,7 @@ error: Unsupported attribute.
                     ^**************^
 
 error: Unsupported attribute.
- --> test_src/lib.cairo:158:5
+ --> test_src/lib.cairo:172:5
     #[abi(embed_v0)]
     ^**************^
 
@@ -691,6 +750,11 @@ mod testcomponent1 {
 mod testcomponent2 {
     #[storage]
     struct Storage {}
+}
+
+#[starknet::interface]
+trait IAllowedRefSelf<T> {
+    fn spawn(ref self: T);
 }
 
                 #[starknet::contract]
@@ -942,6 +1006,53 @@ impl EventDrop of core::traits::Drop::<Event>;
     #[my_attr]
     fn do_with_attrs(self: @TContractState, p1: u8) -> u16;
 
+                }
+
+                #[starknet::contract]
+                mod ContractAllowedRefSelf {
+                    use dojo::world;
+                    use dojo::world::IWorldDispatcher;
+                    use dojo::world::IWorldDispatcherTrait;
+                    use dojo::world::IWorldProvider;
+                    use dojo::world::IDojoResourceProvider;
+
+                    #[abi(embed_v0)]
+                    impl DojoResourceProviderImpl of IDojoResourceProvider<ContractState> {
+                        fn dojo_resource(self: @ContractState) -> felt252 {
+                            'ContractAllowedRefSelf'
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl WorldProviderImpl of IWorldProvider<ContractState> {
+                        fn world(self: @ContractState) -> IWorldDispatcher {
+                            self.world_dispatcher.read()
+                        }
+                    }
+
+                    #[abi(embed_v0)]
+                    impl UpgradableImpl = dojo::components::upgradeable::upgradeable::UpgradableImpl<ContractState>;
+
+                        #[abi(embed_v0)]
+    impl AllowedImpl of IAllowedRefSelf<ContractState> {
+        fn spawn(ref self: ContractState) {
+        }
+    }
+
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                UpgradeableEvent: dojo::components::upgradeable::upgradeable::Event,
+            }
+            
+            #[storage]
+            struct Storage {
+                world_dispatcher: IWorldDispatcher,
+                #[substorage(v0)]
+                upgradeable: dojo::components::upgradeable::upgradeable::Storage,
+            }
+impl EventDrop of core::traits::Drop::<Event>;
+            
                 }
 
                 #[starknet::interface]
