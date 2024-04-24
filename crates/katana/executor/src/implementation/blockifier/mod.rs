@@ -100,10 +100,8 @@ impl<'a> StarknetVMProcessor<'a> {
 
         // TODO: should we enforce the gas price to not be 0,
         // as there's a flag to disable gas uasge instead?
-        let eth_l1_gas_price =
-            NonZeroU128::new(header.gas_prices.eth).expect("ETH L1 gas price cannot be zero");
-        let strk_l1_gas_price =
-            NonZeroU128::new(header.gas_prices.strk).expect("STRK L1 gas price cannot be zero");
+        let eth_l1_gas_price = unsafe { NonZeroU128::new_unchecked(header.gas_prices.eth) };
+        let strk_l1_gas_price = unsafe { NonZeroU128::new_unchecked(header.gas_prices.strk) };
 
         // TODO: which values is correct for those one?
         let eth_l1_data_gas_price = eth_l1_gas_price;

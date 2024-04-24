@@ -342,10 +342,8 @@ pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) ->
         strk_fee_token_address: to_blk_address(cfg_env.fee_token_addresses.strk),
     };
 
-    let eth_l1_gas_price =
-        NonZeroU128::new(block_env.l1_gas_prices.eth).expect("eth gas price must be non-zero");
-    let strk_l1_gas_price =
-        NonZeroU128::new(block_env.l1_gas_prices.strk).expect("strk gas price must be non-zero");
+    let eth_l1_gas_price = unsafe { NonZeroU128::new_unchecked(block_env.l1_gas_prices.eth) };
+    let strk_l1_gas_price = unsafe { NonZeroU128::new_unchecked(block_env.l1_gas_prices.strk) };
 
     let gas_prices = GasPrices {
         eth_l1_gas_price,
