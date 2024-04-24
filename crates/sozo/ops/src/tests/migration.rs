@@ -3,6 +3,7 @@ use std::str;
 use camino::Utf8Path;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
 use dojo_test_utils::compiler::build_full_test_config;
+use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
 use dojo_test_utils::sequencer::{
     get_default_test_starknet_config, SequencerConfig, StarknetConfig, TestSequencer,
 };
@@ -36,7 +37,7 @@ async fn migrate_with_auto_mine() {
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -44,7 +45,7 @@ async fn migrate_with_auto_mine() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     sequencer.stop().unwrap();
 }
@@ -54,7 +55,7 @@ async fn migrate_with_block_time() {
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer = TestSequencer::start(
         SequencerConfig { block_time: Some(1000), ..Default::default() },
@@ -65,7 +66,7 @@ async fn migrate_with_block_time() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
     sequencer.stop().unwrap();
 }
 
@@ -74,7 +75,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let config = load_config();
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer = TestSequencer::start(
         Default::default(),
@@ -95,7 +96,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     assert!(
         execute_strategy(
             &ws,
-            &mut migration,
+            &migration,
             &account,
             TxnConfig { fee_estimate_multiplier: Some(0.2f64), ..Default::default() },
         )
@@ -103,20 +104,6 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
         .is_err()
     );
     sequencer.stop().unwrap();
-}
-
-#[test]
-fn migrate_world_without_seed_will_fail() {
-    let profile_name = "dev";
-    let base = "../../../examples/spawn-and-move";
-    let target_dir = format!("{}/target/dev", base);
-    let manifest = BaseManifest::load_from_path(
-        &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),
-    )
-    .unwrap();
-    let world = WorldDiff::compute(manifest, None);
-    let res = prepare_for_migration(None, None, &Utf8Path::new(&target_dir).to_path_buf(), world);
-    assert!(res.is_err_and(|e| e.to_string().contains("Missing seed for World deployment.")))
 }
 
 #[tokio::test]
@@ -149,15 +136,15 @@ async fn migration_from_remote() {
 
     let world = WorldDiff::compute(manifest, None);
 
-    let mut migration = prepare_for_migration(
+    let migration = prepare_for_migration(
         None,
-        Some(felt!("0x12345")),
+        felt!("0x12345"),
         &Utf8Path::new(&target_dir).to_path_buf(),
         world,
     )
     .unwrap();
 
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     let local_manifest = BaseManifest::load_from_path(
         &Utf8Path::new(base).to_path_buf().join(MANIFESTS_DIR).join(&profile_name).join(BASE_DIR),
@@ -183,7 +170,7 @@ async fn migrate_with_metadata() {
         .unwrap_or_else(|c| panic!("Error loading config: {c:?}"));
     let ws = setup_ws(&config);
 
-    let mut migration = setup_migration().unwrap();
+    let migration = setup_migration().unwrap();
 
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
@@ -191,8 +178,7 @@ async fn migrate_with_metadata() {
     let mut account = sequencer.account();
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
-    let output =
-        execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    let output = execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
 
     let res = upload_metadata(&ws, &account, output.clone(), TxnConfig::default()).await;
     assert!(res.is_ok());
@@ -250,6 +236,25 @@ async fn migrate_with_metadata() {
         )
         .await;
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn migration_with_mismatching_world_address_and_seed() {
+    let base_dir = "../../../examples/spawn-and-move";
+    let target_dir = format!("{}/target/dev", base_dir);
+
+    let result = prepare_migration_with_world_and_seed(
+        base_dir.into(),
+        target_dir.into(),
+        Some(felt!("0x1")),
+        "sozo_test",
+    );
+
+    assert!(result.is_err_and(|e| e.to_string().contains(
+        "Calculated world address doesn't match provided world address.\nIf you are deploying \
+         with custom seed make sure `world_address` is correctly configured (or not set) \
+         `Scarb.toml`"
+    )));
 }
 
 /// Get the hash from a IPFS URI

@@ -36,7 +36,7 @@ async fn test_entities_queries() {
     sqlx::migrate!("../migrations").run(&pool).await.unwrap();
     let base_path = "../../../examples/spawn-and-move";
     let target_path = format!("{}/target/dev", base_path);
-    let mut migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
+    let migration = prepare_migration(base_path.into(), target_path.into()).unwrap();
     let sequencer =
         TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
@@ -48,12 +48,21 @@ async fn test_entities_queries() {
     let config = build_test_config("../../../examples/spawn-and-move/Scarb.toml").unwrap();
     let ws = ops::read_workspace(config.manifest_path(), &config)
         .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-    execute_strategy(&ws, &mut migration, &account, TxnConfig::default()).await.unwrap();
+    let migration_output =
+        execute_strategy(&ws, &migration, &account, TxnConfig::default()).await.unwrap();
+
+    let world_address = migration_output.world_address;
 
     // spawn
     let tx = account
         .execute(vec![Call {
-            to: migration.contracts.first().unwrap().contract_address,
+            to: migration_output
+                .contracts
+                .first()
+                .expect("shouldn't be empty")
+                .as_ref()
+                .expect("should be deployed")
+                .contract_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
         }])
@@ -63,7 +72,7 @@ async fn test_entities_queries() {
 
     TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
 
-    let db = Sql::new(pool.clone(), migration.world_address().unwrap()).await.unwrap();
+    let db = Sql::new(pool.clone(), world_address).await.unwrap();
 
     let (shutdown_tx, _) = broadcast::channel(1);
     let mut engine = Engine::new(
@@ -82,8 +91,7 @@ async fn test_entities_queries() {
     let _ = engine.sync_to_head(0).await.unwrap();
 
     let (_, receiver) = tokio::sync::mpsc::channel(1);
-    let grpc =
-        DojoWorld::new(db.pool, receiver, migration.world_address().unwrap(), provider.clone());
+    let grpc = DojoWorld::new(db.pool, receiver, world_address, provider.clone());
 
     let entities = grpc
         .query_by_keys(
