@@ -49,9 +49,7 @@ impl InitArgs {
         let repo_url = if template.starts_with("https://") {
             template
         } else {
-            let url = "https://github.com/".to_string() + &template;
-            trace!(target: LOG_TARGET, url, "Constructed Git URL.");
-            url
+            "https://github.com/".to_string() + &template
         };
 
         clone_repo(&repo_url, &target_dir, config)?;
