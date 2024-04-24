@@ -365,7 +365,7 @@ pub(crate) fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) ->
 
     let chain_info = ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) };
 
-    let mut versioned_constants = VersionedConstants::default();
+    let mut versioned_constants = VersionedConstants::latest_constants().clone();
     versioned_constants.max_recursion_depth = cfg_env.max_recursion_depth;
     versioned_constants.validate_max_n_steps = cfg_env.validate_max_n_steps;
     versioned_constants.invoke_tx_max_n_steps = cfg_env.invoke_tx_max_n_steps;
