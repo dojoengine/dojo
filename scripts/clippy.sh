@@ -15,4 +15,5 @@ run_clippy --all-features --workspace --exclude katana --exclude katana-executor
 
 run_clippy -p katana-executor --all
 run_clippy -p katana
-run_clippy -p katana --no-default-features --features sir
+# TODO(kariy): uncomment this line when the `sir` support Cairo 2.6.3
+# run_clippy -p katana --no-default-features --features sir
