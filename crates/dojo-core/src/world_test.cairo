@@ -16,6 +16,7 @@ use dojo::world::{
 use dojo::database::introspect::Introspect;
 use dojo::test_utils::{spawn_test_world, deploy_with_world_address};
 use dojo::benchmarks::{Character, end};
+use dojo::config::component::Config::{ProgramHashUpdate,FactsRegistryUpdate};
 
 #[derive(Model, Copy, Drop, Serde)]
 struct Foo {
@@ -616,4 +617,27 @@ fn test_set_facts_registry() {
     let facts_registry = config.get_facts_registry();
 
     assert(facts_registry == contract_address_const::<0x875914875149357>(), 'invalid program hash');
+}
+
+
+#[test]
+#[available_gas(6000000)]
+fn test_program_hash_event_emit() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_program_hash(program_hash: 98758347158781475198374598718743);
+    assert_eq!(starknet::testing::pop_log(world.contract_address),
+        Option::Some(ProgramHashUpdate { program_hash: 98758347158781475198374598718743 }));
+}
+#[test]
+#[available_gas(6000000)]
+fn test_facts_registry_event_emit() {
+    let world = deploy_world();
+    let config = IConfigDispatcher { contract_address: world.contract_address };
+
+    config.set_facts_registry(contract_address_const::<0x12>());
+
+    assert_eq!(starknet::testing::pop_log(world.contract_address),
+        Option::Some(FactsRegistryUpdate{ address: contract_address_const::<0x12>()}));
 }

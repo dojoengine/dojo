@@ -13,19 +13,19 @@ mod Config {
     use starknet::event::EventEmitter;
 
     #[event]
-    #[derive(Drop, starknet::Event)]
-    enum Event {
+    #[derive(Drop, starknet::Event,Debug, PartialEq)]
+    pub enum Event {
         ProgramHashUpdate: ProgramHashUpdate,
         FactsRegistryUpdate: FactsRegistryUpdate
     }
 
-    #[derive(Drop, starknet::Event)]
-    struct ProgramHashUpdate {
+    #[derive(Drop, starknet::Event,Debug, PartialEq)]
+    pub struct ProgramHashUpdate {
         program_hash: felt252
     }
 
-    #[derive(Drop, starknet::Event)]
-    struct FactsRegistryUpdate {
+    #[derive(Drop, starknet::Event,Debug, PartialEq)]
+    pub struct FactsRegistryUpdate {
         address: ContractAddress
     }
 
