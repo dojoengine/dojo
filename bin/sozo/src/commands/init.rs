@@ -24,21 +24,16 @@ impl InitArgs {
         let target_dir = match self.path {
             Some(path) => {
                 if path.is_absolute() {
-                    trace!(target: LOG_TARGET, ?path);
                     path
                 } else {
                     let mut current_path = current_dir().unwrap();
                     current_path.push(path);
-                    trace!(target: LOG_TARGET, ?current_path);
                     current_path
                 }
             }
-            None => {
-                let dir = current_dir().unwrap();
-                trace!(target: LOG_TARGET, ?dir);
-                dir
-            }
+            None => current_dir().unwrap(),
         };
+        trace!(target: LOG_TARGET, ?target_dir, "Executing Init command.");
 
         if target_dir.exists() {
             ensure!(
@@ -67,7 +62,7 @@ impl InitArgs {
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
         set_current_dir(&target_dir)?;
-        trace!(target: LOG_TARGET, ?target_dir);
+        trace!(target: LOG_TARGET, ?target_dir, "Navigating to newly cloned repo.");
 
         // Modify the git history.
         modify_git_history(&repo_url)?;

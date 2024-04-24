@@ -52,7 +52,7 @@ impl RegisterArgs {
 
         let (starknet, world, account, transaction, models) = match self.command {
             RegisterCommand::Model { starknet, world, account, transaction, models } => {
-                trace!(target: LOG_TARGET, models=?models, "Registering models.");
+                trace!(target: LOG_TARGET, ?models, "Registering models.");
                 (starknet, world, account, transaction, models)
             }
         };
@@ -66,7 +66,7 @@ impl RegisterArgs {
             let provider = world.account.provider();
             let world_reader = WorldContractReader::new(world_address, &provider)
                 .with_block(BlockId::Tag(BlockTag::Pending));
-            trace!(target: LOG_TARGET, "WorldContractReader initialized with block tag Pending.");
+            trace!(target: LOG_TARGET, ?world_address, "WorldContractReader initialized with block tag Pending.");
             
             register::model_register(
                 models,
