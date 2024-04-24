@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713980811005,
+  "lastUpdate": 1713990116960,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6235,6 +6235,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16745880,
             "range": "± 190738",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "0xlambda@protonmail.com",
+            "name": "lambda-0x",
+            "username": "lambda-0x"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a57319814005d370ff76d0f0b42c73be78fa26f3",
+          "message": "feat: enable global flag for all `commands/options` (#1875)\n\n* feat: enable global flag for TransactionOptions\r\n\r\n* set global flag on all options\r\n\r\n* remove short from args",
+          "timestamp": "2024-04-24T14:13:29-06:00",
+          "tree_id": "ce0ccd9c431492c6457752841f1385a036cc3f87",
+          "url": "https://github.com/dojoengine/dojo/commit/a57319814005d370ff76d0f0b42c73be78fa26f3"
+        },
+        "date": 1713990115748,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16702271,
+            "range": "± 106718",
             "unit": "ns/iter"
           }
         ]
