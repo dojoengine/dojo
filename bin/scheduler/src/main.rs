@@ -23,16 +23,17 @@ pub struct CliInput {
 fn read_json_file(file_path: &str) -> Value {
     let data = fs::read_to_string(file_path).expect("Unable to read file");
     serde_json::from_str(&data).expect("Unable to parse JSON")
+    
 }
 
 // Function to construct a ProgramInput from JSON data.
-fn program_input_from_jsn(json_data: Value) -> ProgramInput {
+fn program_input_from_json(json_data: Value) -> ProgramInput {
     ProgramInput {
         // Convert JSON fields to appropriate Rust data types.
-        prev_state_root: FieldElement::from(json_data["prev_state_root"].as_u64().unwrap()),
+        prev_state_root: FieldElement::from_str(&json_data["prev_state_root"].to_string()).unwrap(),
         block_number: json_data["block_number"].as_u64().unwrap(),
-        block_hash: FieldElement::from(json_data["block_hash"].as_u64().unwrap()),
-        config_hash: FieldElement::from(json_data["config_hash"].as_u64().unwrap()),
+        block_hash: FieldElement::from_str(&json_data["block_hash"].to_string()).unwrap(),
+        config_hash: FieldElement::from_str(&json_data["config_hash"].to_string()).unwrap(),
         message_to_starknet_segment: vec![MessageToStarknet {
             from_address: ContractAddress::from(
                 FieldElement::from_str(&json_data["message_to_starknet_segment"][0].to_string())
@@ -69,10 +70,10 @@ fn program_input_from_jsn(json_data: Value) -> ProgramInput {
         }],
         // Initialize empty state updates, assuming updates are managed elsewhere or not needed initially.
         state_updates: StateUpdates {
-            nonce_updates: HashMap::new(),
-            storage_updates: HashMap::new(),
-            contract_updates: HashMap::new(),
-            declared_classes: HashMap::new(),
+            nonce_updates: HashMap::default(),
+            storage_updates: HashMap::default(),
+            contract_updates: HashMap::default(),
+            declared_classes: HashMap::default(),
         },
     }
 }
@@ -112,12 +113,12 @@ async fn main() {
     }
 
     // Process each file, converting JSON data to ProgramInput.
-    let mut inputs: Vec<ProgramInput> = vec![];
-    for file in args.files.iter() {
+    let inputs: Vec<ProgramInput> = args.files.iter()
+    .map(|file| {
         let json_data = read_json_file(file.to_str().unwrap());
-        let program_input = program_input_from_jsn(json_data);
-        inputs.push(program_input);
-    }
+        program_input_from_json(json_data)
+    })
+    .collect();
 
     // Perform recursive proof generation and write results to a file.
     let result = prove_recursively(inputs, ProverIdentifier::Stone).await.unwrap().0;
