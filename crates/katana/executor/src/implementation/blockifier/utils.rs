@@ -35,7 +35,7 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx,
 };
-use katana_primitives::{event, message, trace, FieldElement};
+use katana_primitives::{class, event, message, trace, FieldElement};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::types::PriceUnit;
 use starknet::core::utils::parse_cairo_short_string;
@@ -508,16 +508,17 @@ pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     }
 }
 
-pub fn to_class(class: katana_primitives::class::CompiledClass) -> Result<ClassInfo, ProgramError> {
+pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
     // TODO: @kariy not sure of the variant that must be used in this case. Should we change the
     // return type to include this case of error for contract class conversions?
     match class {
-        katana_primitives::class::CompiledClass::Deprecated(class) => {
+        class::CompiledClass::Deprecated(class) => {
             // For cairo 0, the sierra_program_length must be 0.
             Ok(ClassInfo::new(&ContractClass::V0(ContractClassV0::try_from(class)?), 0, 0)
                 .map_err(|e| ProgramError::ConstWithoutValue(format!("{e}")))?)
         }
-        katana_primitives::class::CompiledClass::Class(class) => {
+
+        class::CompiledClass::Class(class) => {
             let sierra_program_len = class.sierra.program.statements.len();
             // TODO: @kariy not sure from where the ABI length can be grasped.
             Ok(ClassInfo::new(

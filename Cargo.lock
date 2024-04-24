@@ -1442,7 +1442,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.6.0-rc.2"
-source = "git+https://github.com/dojoengine/blockifier?rev=4cd26e53#4cd26e5310e2db05074961b722585fcf985ce0eb"
+source = "git+https://github.com/dojoengine/blockifier?rev=935292bb#935292bb37843e4deb69f0da075dec0e5a15378b"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -1466,6 +1466,7 @@ dependencies = [
  "num-traits 0.2.18",
  "once_cell",
  "phf",
+ "rstest 0.17.0",
  "serde",
  "serde_json",
  "sha3",
@@ -6761,7 +6762,6 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "blockifier",
- "cairo-lang-sierra",
  "cairo-vm",
  "convert_case 0.6.0",
  "futures",
@@ -6769,12 +6769,11 @@ dependencies = [
  "katana-provider",
  "katana-rpc-types",
  "parking_lot 0.12.1",
- "rstest",
+ "rstest 0.18.2",
  "rstest_reuse",
  "serde_json",
  "similar-asserts",
  "starknet 0.9.0",
- "starknet-types-core",
  "starknet_api",
  "thiserror",
  "tokio",
@@ -6822,7 +6821,7 @@ dependencies = [
  "lazy_static",
  "parking_lot 0.12.1",
  "rand",
- "rstest",
+ "rstest 0.18.2",
  "rstest_reuse",
  "serde_json",
  "starknet 0.9.0",
@@ -6894,7 +6893,7 @@ dependencies = [
  "katana-executor",
  "katana-primitives",
  "katana-provider",
- "rstest",
+ "rstest 0.18.2",
  "serde",
  "serde_json",
  "serde_with",
@@ -7033,26 +7032,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "lambdaworks-crypto"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d4c222d5b2fdc0faf702d3ab361d14589b097f40eac9dc550e27083483edc65"
-dependencies = [
- "lambdaworks-math",
- "serde",
- "sha2 0.10.8",
- "sha3",
-]
-
-[[package]]
 name = "lambdaworks-math"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ee7dcab3968c71896b8ee4dc829147acc918cffe897af6265b1894527fe3add"
-dependencies = [
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "lazy_static"
@@ -9938,14 +9921,40 @@ dependencies = [
 
 [[package]]
 name = "rstest"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de1bb486a691878cd320c2f0d319ba91eeaa2e894066d8b5f8f117c000e9d962"
+dependencies = [
+ "futures",
+ "futures-timer",
+ "rstest_macros 0.17.0",
+ "rustc_version 0.4.0",
+]
+
+[[package]]
+name = "rstest"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97eeab2f3c0a199bc4be135c36c924b6590b88c377d416494288c14f2db30199"
 dependencies = [
  "futures",
  "futures-timer",
- "rstest_macros",
+ "rstest_macros 0.18.2",
  "rustc_version 0.4.0",
+]
+
+[[package]]
+name = "rstest_macros"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "290ca1a1c8ca7edb7c3283bd44dc35dd54fdec6253a3912e201ba1072018fca8"
+dependencies = [
+ "cfg-if",
+ "proc-macro2",
+ "quote",
+ "rustc_version 0.4.0",
+ "syn 1.0.109",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -11766,7 +11775,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d53160556d1f23425100f42b3230df747ea05763efee685a2cd939dfb640701"
 dependencies = [
  "bitvec",
- "lambdaworks-crypto",
  "lambdaworks-math",
  "lazy_static",
  "num-bigint",

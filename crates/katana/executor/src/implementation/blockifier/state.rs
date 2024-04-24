@@ -321,11 +321,11 @@ mod tests {
         assert_eq!(actual_compiled_hash.0, felt!("0x456").into());
         assert_eq!(
             actual_class,
-            utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap()
+            utils::to_class(DEFAULT_OZ_ACCOUNT_CONTRACT_CASM.clone()).unwrap().contract_class()
         );
         assert_eq!(
             actual_legacy_class,
-            utils::to_class(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()).unwrap()
+            utils::to_class(DEFAULT_LEGACY_ERC20_CONTRACT_CASM.clone()).unwrap().contract_class()
         );
 
         Ok(())
@@ -381,10 +381,12 @@ mod tests {
             let storage_key = StorageKey(patricia_key!(new_storage_key));
             let storage_value = new_storage_value.into();
             let class_hash = ClassHash(new_class_hash.into());
-            let class = utils::to_class(new_compiled_sierra_class.clone()).unwrap();
+            let class =
+                utils::to_class(new_compiled_sierra_class.clone()).unwrap().contract_class();
             let compiled_hash = CompiledClassHash(new_compiled_hash.into());
             let legacy_class_hash = ClassHash(new_legacy_class_hash.into());
-            let legacy_class = utils::to_class(DEFAULT_LEGACY_UDC_CASM.clone()).unwrap();
+            let legacy_class =
+                utils::to_class(DEFAULT_LEGACY_UDC_CASM.clone()).unwrap().contract_class();
             let legacy_compiled_hash = CompiledClassHash(new_legacy_compiled_hash.into());
 
             blk_state.increment_nonce(address)?;
