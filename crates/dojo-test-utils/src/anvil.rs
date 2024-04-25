@@ -1,3 +1,4 @@
+use std::net::TcpListener;
 use std::time::Duration;
 
 use ethers::middleware::SignerMiddleware;
@@ -13,7 +14,11 @@ pub struct TestAnvil {
 
 impl TestAnvil {
     pub async fn start() -> Self {
-        let port = 8545u16;
+        let socket = TcpListener::bind("127.0.0.1:0").unwrap();
+        // Steals Port
+        let port = socket.local_addr().unwrap().port();
+        drop(socket);
+
         let anvil = Anvil::new().port(port).spawn();
 
         let url = anvil.endpoint();

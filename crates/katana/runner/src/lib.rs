@@ -1,7 +1,6 @@
 mod logs;
 mod prefunded;
 mod utils;
-
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self};
@@ -9,6 +8,11 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use ethers::middleware::SignerMiddleware;
+use ethers::providers::{Http, Middleware, Provider as EthProvider};
+use ethers::signers::{LocalWallet as EthLocalWallet, Signer};
+use hyper::http::request;
+use hyper::{Client, Response, StatusCode};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
 use katana_primitives::FieldElement;
@@ -16,6 +20,7 @@ pub use runner_macro::{katana_test, runner};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tokio::sync::Mutex;
+use tokio::time;
 use url::Url;
 use utils::find_free_port;
 
@@ -156,4 +161,88 @@ impl Drop for KatanaRunner {
             eprintln!("Failed to wait for katana subprocess: {}", e);
         }
     }
+}
+
+pub struct AnvilRunner {
+    process: Child,
+    endpoint: String,
+}
+
+impl AnvilRunner {
+    pub async fn new() -> Result<Self> {
+        let port = find_free_port();
+        let mut command = Command::new("Anvil");
+        command
+            .args(["-p", &port.to_string()])
+            .args(["--silent"])
+            .args(["--disable-block-gas-limit"])
+            .spawn()
+            .expect("Error executing Anvil");
+
+        let endpoint = format!("http://127.0.0.1:{port}");
+
+        if !is_anvil_up(&endpoint).await {
+            panic!("Error bringing up Anvil")
+        }
+
+        let process =
+            command.stdout(Stdio::piped()).spawn().context("failed to start subprocess")?;
+        return Ok(AnvilRunner { process, endpoint });
+    }
+
+    fn provider(&self) -> EthProvider<Http> {
+        return EthProvider::<Http>::try_from(&self.endpoint)
+            .expect("Error getting provider")
+            .interval(Duration::from_millis(10u64));
+    }
+
+    pub async fn account(&self) -> SignerMiddleware<EthProvider<Http>, EthLocalWallet> {
+        let provider = self.provider();
+        let wallet: EthLocalWallet =
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".parse().unwrap();
+        let chain_id: ethers::types::U256 =
+            provider.get_chainid().await.expect("Error getting chain id");
+        return SignerMiddleware::new(provider, wallet.with_chain_id(chain_id.as_u32()));
+    }
+
+    pub fn endpoint(self) -> String {
+        self.endpoint.clone()
+    }
+}
+
+impl Drop for AnvilRunner {
+    fn drop(&mut self) {
+        self.process.kill().expect("Cannot kill process");
+    }
+}
+
+async fn post_dummy_request(url: &String) -> Result<Response<hyper::Body>, hyper::Error> {
+    let req = request::Request::post(url)
+        .header("content-type", "application/json")
+        .body(hyper::Body::from(
+            serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": "eth_blockNumberfuiorhgorueh",
+                "params": [],
+                "id": "1"
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    Client::new().request(req).await
+}
+
+async fn is_anvil_up(endpoint: &String) -> bool {
+    let mut retries = 0;
+    let max_retries = 10;
+    while retries < max_retries {
+        if let Ok(anvil_block_rsp) = post_dummy_request(&endpoint).await {
+            assert_eq!(anvil_block_rsp.status(), StatusCode::OK);
+            return true;
+        }
+        retries += 1;
+        tokio::time::sleep(time::Duration::from_millis(500)).await;
+    }
+    false
 }

@@ -7,8 +7,10 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+ethers-contract = "2.0.14"
 ethers-solc = "2.0.14"
 ethers = "2.0.4"
+dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 dojo-metrics.workspace = true
 katana-core.workspace = true
 katana-executor.workspace = true
@@ -43,4 +45,5 @@ cairo-lang-starknet.workspace = true
 dojo-test-utils.workspace = true
 jsonrpsee = { workspace = true, features = [ "client" ] }
 katana-rpc-api = { workspace = true, features = [ "client" ] }
+katana-runner.workspace = true
 url.workspace = true

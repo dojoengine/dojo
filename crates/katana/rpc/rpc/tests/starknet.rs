@@ -5,11 +5,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
-use dojo_test_utils::anvil::TestAnvil;
-use dojo_test_utils::sequencer::{get_default_test_starknet_config, TestSequencer};
-use ethers::{contract::ContractFactory, types::H160};
+use dojo_world::utils::TransactionWaiter;
+use ethers::contract::ContractFactory;
+use ethers::types::H160;
 use ethers_solc::{Artifact, Project, ProjectPathsConfig};
-use katana_core::sequencer::SequencerConfig;
+use katana_runner::{AnvilRunner, KatanaRunner};
 use starknet::accounts::{Account, Call, ConnectedAccount};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
@@ -18,16 +18,14 @@ use starknet::core::types::{
 };
 use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::Provider;
-
 mod common;
 
 const WAIT_TX_DELAY_MILLIS: u64 = 1000;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_declare_and_deploy_contract() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
-    let account = sequencer.account();
+    let katana_runner = KatanaRunner::new().unwrap();
+    let account = katana_runner.account(0);
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo1_contract.json");
     let (contract, compiled_class_hash) =
@@ -98,14 +96,13 @@ async fn test_send_declare_and_deploy_contract() {
         class_hash
     );
 
-    sequencer.stop().expect("failed to stop sequencer");
+    drop(katana_runner);
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_declare_and_deploy_legacy_contract() {
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
-    let account = sequencer.account();
+    let katana_runner = KatanaRunner::new().unwrap();
+    let account = katana_runner.account(0);
 
     let path = PathBuf::from("tests/test_data/cairo0_contract.json");
 
@@ -177,44 +174,38 @@ async fn test_send_declare_and_deploy_legacy_contract() {
         class_hash
     );
 
-    sequencer.stop().expect("failed to stop sequencer");
+    drop(katana_runner)
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn test_messaging_L1_L2() {
+async fn test_messaging_l1_l2() {
+    // Prepare Anvil + Messaging Contracts
     let root =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("test_data").join("solidity");
     let paths = ProjectPathsConfig::builder().root(&root).sources(&root).build().unwrap();
 
-    // get the solc project instance using the paths above
     let project = Project::builder().paths(paths).ephemeral().no_artifacts().build().unwrap();
 
-    // compile the project and get the artifacts
     let output = project.compile().context("Error compiling project").unwrap();
     output.assert_success();
 
-    //Get both contracts
     let contract_starknet_messaging_local =
         output.find_first("StarknetMessagingLocal").expect("could not find contract").clone();
-
     let (abi_cstrk, bytecode_cstrk, _) = contract_starknet_messaging_local.into_parts();
 
     let contract_1 = output.find_first("Contract1").expect("could not find contract").clone();
-
     let (abi_c1, bytecode_c1, _) = contract_1.into_parts();
 
-    let anvil: TestAnvil = TestAnvil::start().await;
+    let anvil_runner = AnvilRunner::new().await.unwrap();
 
-    let account = Arc::new(anvil.account());
+    let account = Arc::new(anvil_runner.account().await);
 
-    // Factories to deploy the contracts
     let factory_cstrk =
         ContractFactory::new(abi_cstrk.clone().unwrap(), bytecode_cstrk.unwrap(), account.clone());
-
     let factory_c1 =
         ContractFactory::new(abi_c1.clone().unwrap(), bytecode_c1.unwrap(), account.clone());
 
-    //Deploy to local node (anvil)
+    // Deploy to local node (anvil)
     let contract_strk =
         factory_cstrk.deploy(()).expect("Failing deploying").send().await.expect("Failing sending");
 
@@ -235,11 +226,9 @@ async fn test_messaging_L1_L2() {
         H160::from_str("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512").unwrap()
     );
 
-    // -----------------------------------------------------------------------------------------------------------------------------
-
-    let sequencer =
-        TestSequencer::start(SequencerConfig::default(), get_default_test_starknet_config()).await;
-    let account = sequencer.account();
+    // Prepare Katana + Messaging Contract
+    let katana_runner = KatanaRunner::new().unwrap();
+    let account = katana_runner.account(0);
 
     let path: PathBuf = PathBuf::from("tests/test_data/cairo_l1_msg_contract.json");
     let (contract, compiled_class_hash) =
@@ -248,19 +237,12 @@ async fn test_messaging_L1_L2() {
     let class_hash = contract.class_hash();
     let res = account.declare(Arc::new(contract), compiled_class_hash).send().await.unwrap();
 
-    // wait for the tx to be mined
-    tokio::time::sleep(Duration::from_millis(WAIT_TX_DELAY_MILLIS)).await;
+    let receipt = TransactionWaiter::new(res.transaction_hash, account.provider())
+        .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
+        .await
+        .expect("Invalid tx receipt");
 
-    let receipt = account.provider().get_transaction_receipt(res.transaction_hash).await.unwrap();
-
-    match receipt {
-        MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Declare(
-            DeclareTransactionReceipt { finality_status, .. },
-        )) => {
-            assert_eq!(finality_status, TransactionFinalityStatus::AcceptedOnL2);
-        }
-        _ => panic!("invalid tx receipt"),
-    }
+    assert_eq!(receipt.finality_status(), &TransactionFinalityStatus::AcceptedOnL2);
 
     assert!(account.provider().get_class(BlockId::Tag(BlockTag::Latest), class_hash).await.is_ok());
 
@@ -281,8 +263,6 @@ async fn test_messaging_L1_L2() {
         .unwrap()
     );
 
-    //TODO Messaging between Layers
-
-    sequencer.stop().expect("failed to stop sequencer");
-    anvil.stop();
+    drop(katana_runner);
+    drop(anvil_runner);
 }
