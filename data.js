@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714026557411,
+  "lastUpdate": 1714026901289,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6355,6 +6355,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16483892,
             "range": "± 274490",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dbdd5f3ca91a270e2cdf2f09e3b012f0a2e12fdf",
+          "message": "docs(katana): update DB er diagram (#1874)\n\nupdate db er diagram",
+          "timestamp": "2024-04-25T14:26:46+08:00",
+          "tree_id": "ab8fe7fe73026dd2c1a37ba0e29c60c4b7534678",
+          "url": "https://github.com/dojoengine/dojo/commit/dbdd5f3ca91a270e2cdf2f09e3b012f0a2e12fdf"
+        },
+        "date": 1714026900458,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16696862,
+            "range": "± 203472",
             "unit": "ns/iter"
           }
         ]
