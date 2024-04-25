@@ -2,15 +2,9 @@
 version = 1
 
 [[package]]
-name = "cairo_verifier"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cairo-verifier#a10777d640f32a5071d3276f0dece2a22b44bd2d"
-
-[[package]]
 name = "dojo"
-version = "0.6.0"
+version = "0.4.4"
 dependencies = [
- "cairo_verifier",
  "dojo_plugin",
 ]
 
