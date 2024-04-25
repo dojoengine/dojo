@@ -200,7 +200,7 @@ impl Saya {
 
         let world_da = new_program_input.da_as_calldata(self.config.world_address);
         let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
-        trace!(target: LOG_TARGET, "World DA {world_da_printable:?}.");
+        trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.")
 
         trace!(target: LOG_TARGET, "Proving block {block_number}.");
         let proof = http_prove(
@@ -210,7 +210,7 @@ impl Saya {
         .await?;
         info!(target: LOG_TARGET, block_number, "Block proven.");
 
-        trace!(target: LOG_TARGET, "Verifying block {block_number}.");
+        trace!(target: LOG_TARGET, block_number, "Verifying block.");
         let serialized_proof = parse_proof(&proof).unwrap();
         let transaction_hash =
             verifier::starknet_verify(self.config.fact_registry_address, serialized_proof).await?;
