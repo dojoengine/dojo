@@ -13,18 +13,18 @@ mod Config {
     use starknet::event::EventEmitter;
 
     #[event]
-    #[derive(Drop, starknet::Event,Debug, PartialEq)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub enum Event {
         ProgramHashUpdate: ProgramHashUpdate,
         FactsRegistryUpdate: FactsRegistryUpdate
     }
 
-    #[derive(Drop, starknet::Event,Debug, PartialEq)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct ProgramHashUpdate {
         program_hash: felt252
     }
 
-    #[derive(Drop, starknet::Event,Debug, PartialEq)]
+    #[derive(Drop, starknet::Event, Debug, PartialEq)]
     pub struct FactsRegistryUpdate {
         address: ContractAddress
     }
@@ -53,7 +53,7 @@ mod Config {
         fn set_program_hash(ref self: ComponentState<TContractState>, program_hash: felt252) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
             self.program_hash.write(program_hash);
-            self.emit( ProgramHashUpdate { program_hash: program_hash });
+            self.emit(ProgramHashUpdate { program_hash: program_hash });
         }
 
         fn get_program_hash(self: @ComponentState<TContractState>) -> felt252 {
@@ -63,7 +63,7 @@ mod Config {
         fn set_facts_registry(ref self: ComponentState<TContractState>, address: ContractAddress) {
             assert(get_caller_address() == self.owner.read(), errors::INVALID_CALLER);
             self.facts_registry.write(address);
-            self.emit( FactsRegistryUpdate { address: address });
+            self.emit(FactsRegistryUpdate { address: address });
         }
 
         fn get_facts_registry(self: @ComponentState<TContractState>) -> ContractAddress {

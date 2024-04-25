@@ -53,9 +53,8 @@ mod contract_1 {
             // Will revert in case of failure if the message is not registered
             // as consumable.
             let _msg_hash = messaging.consume_message_from_appchain(from_address, payload,);
-
-            // msg successfully consumed, we can proceed and process the data
-            // in the payload.
+        // msg successfully consumed, we can proceed and process the data
+        // in the payload.
         }
 
         /// An example function to test how appchain contract can trigger

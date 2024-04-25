@@ -82,7 +82,6 @@ impl DepthIntoFelt252 of Into<Depth, felt252> {
         }
     }
 }
-
 // takes a long time to deploy, uncomment for now
 // #[derive(Model, Copy, Drop, Serde)]
 // struct FatModel {
@@ -345,3 +344,5 @@ impl DepthIntoFelt252 of Into<Depth, felt252> {
 //     a254: u256,
 //     a255: u256,
 // }
+
+

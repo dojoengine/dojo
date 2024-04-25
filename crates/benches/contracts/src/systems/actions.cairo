@@ -168,7 +168,8 @@ mod actions {
             get!(world, player, Alias);
         }
 
-        fn bench_primitive_pass_many(self: @ContractState,
+        fn bench_primitive_pass_many(
+            self: @ContractState,
             first: felt252,
             second: felt252,
             third: felt252,
@@ -192,82 +193,80 @@ mod actions {
             }
         }
 
-        fn bench_primitive_hash(self: @ContractState, a: felt252, b: felt252, c: felt252) { 
+        fn bench_primitive_hash(self: @ContractState, a: felt252, b: felt252, c: felt252) {
             let hash = poseidon_hash_span(array![a, b, c].span());
         }
 
-        
+
         fn bench_complex_set_default(self: @ContractState) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
 
-            set!(world, Character {
-                caller: get_caller_address(),
-                heigth: 170,
-                abilities: Abilities {
-                    strength: 8,
-                    dexterity: 8,
-                    constitution: 8,
-                    intelligence: 8,
-                    wisdom: 8,
-                    charisma: 8,
-                },
-                stats: Stats {
-                    kills: 0,
-                    deaths: 0,
-                    rests: 0,
-                    hits: 0,
-                    blocks: 0,
-                    walked: 0,
-                    runned: 0,
-                    finished: false,
-                    romances: 0,
-                },
-                weapon: Weapon::Fists((
-                    Sword {
-                        swordsmith: get_caller_address(),
-                        damage: 10,
+            set!(
+                world,
+                Character {
+                    caller: get_caller_address(),
+                    heigth: 170,
+                    abilities: Abilities {
+                        strength: 8,
+                        dexterity: 8,
+                        constitution: 8,
+                        intelligence: 8,
+                        wisdom: 8,
+                        charisma: 8,
                     },
-                    Sword {
-                        swordsmith: get_caller_address(),
-                        damage: 10,
+                    stats: Stats {
+                        kills: 0,
+                        deaths: 0,
+                        rests: 0,
+                        hits: 0,
+                        blocks: 0,
+                        walked: 0,
+                        runned: 0,
+                        finished: false,
+                        romances: 0,
                     },
-                )),
-                gold: 0,
-            });
+                    weapon: Weapon::Fists(
+                        (
+                            Sword { swordsmith: get_caller_address(), damage: 10, },
+                            Sword { swordsmith: get_caller_address(), damage: 10, },
+                        )
+                    ),
+                    gold: 0,
+                }
+            );
         }
 
         fn bench_complex_set_with_smaller(self: @ContractState, abilities: Abilities) {
             let world = self.world_dispatcher.read();
             let caller = get_caller_address();
 
-            set!(world, Character {
-                caller: get_caller_address(),
-                heigth: 170,
-                abilities,
-                stats: Stats {
-                    kills: 0,
-                    deaths: 0,
-                    rests: 0,
-                    hits: 0,
-                    blocks: 0,
-                    walked: 0,
-                    runned: 0,
-                    finished: false,
-                    romances: 0,
-                },
-                weapon: Weapon::Fists((
-                    Sword {
-                        swordsmith: get_caller_address(),
-                        damage: 10,
+            set!(
+                world,
+                Character {
+                    caller: get_caller_address(),
+                    heigth: 170,
+                    abilities,
+                    stats: Stats {
+                        kills: 0,
+                        deaths: 0,
+                        rests: 0,
+                        hits: 0,
+                        blocks: 0,
+                        walked: 0,
+                        runned: 0,
+                        finished: false,
+                        romances: 0,
                     },
-                    Sword {
-                        swordsmith: get_caller_address(),
-                        damage: 10,
-                    },
-                )),
-                gold: 0,
-            });
+                    weapon: Weapon::Fists(
+                        (
+                            Sword { swordsmith: get_caller_address(), damage: 10, },
+                            Sword { swordsmith: get_caller_address(), damage: 10, },
+                        )
+                    ),
+                    gold: 0,
+                }
+            );
         }
 
         fn bench_complex_update_minimal(self: @ContractState, earned: u32) {
@@ -276,14 +275,17 @@ mod actions {
 
             let char = get!(world, caller, Character);
 
-            set!(world, Character {
-                caller: get_caller_address(),
-                heigth: char.heigth,
-                abilities: char.abilities,
-                stats: char.stats,
-                weapon: char.weapon,
-                gold: char.gold + earned,
-            });
+            set!(
+                world,
+                Character {
+                    caller: get_caller_address(),
+                    heigth: char.heigth,
+                    abilities: char.abilities,
+                    stats: char.stats,
+                    weapon: char.weapon,
+                    gold: char.gold + earned,
+                }
+            );
         }
 
         fn bench_complex_update_minimal_nested(self: @ContractState, which: u8) {
@@ -293,35 +295,74 @@ mod actions {
             let char = get!(world, caller, Character);
 
             let stats = Stats {
-                kills: char.stats.kills + if which == 0 { 0 } else { 1 },
-                deaths: char.stats.deaths + if which == 1 { 0 } else { 1 },
-                rests: char.stats.rests + if which == 2 { 0 } else { 1 },
-                hits: char.stats.hits + if which == 3 { 0 } else { 1 },
-                blocks: char.stats.blocks + if which == 4 { 0 } else { 1 },
-                walked: char.stats.walked + if which == 5 { 0 } else { 1 },
-                runned: char.stats.runned + if which == 6 { 0 } else { 1 },
-                finished: char.stats.finished || if which == 7 { false } else { true },
-                romances: char.stats.romances + if which == 8 { 0 } else { 1 },
+                kills: char.stats.kills + if which == 0 {
+                    0
+                } else {
+                    1
+                },
+                deaths: char.stats.deaths + if which == 1 {
+                    0
+                } else {
+                    1
+                },
+                rests: char.stats.rests + if which == 2 {
+                    0
+                } else {
+                    1
+                },
+                hits: char.stats.hits + if which == 3 {
+                    0
+                } else {
+                    1
+                },
+                blocks: char.stats.blocks + if which == 4 {
+                    0
+                } else {
+                    1
+                },
+                walked: char.stats.walked + if which == 5 {
+                    0
+                } else {
+                    1
+                },
+                runned: char.stats.runned + if which == 6 {
+                    0
+                } else {
+                    1
+                },
+                finished: char.stats.finished || if which == 7 {
+                    false
+                } else {
+                    true
+                },
+                romances: char.stats.romances + if which == 8 {
+                    0
+                } else {
+                    1
+                },
             };
 
-            set!(world, Character {
-                caller: get_caller_address(),
-                heigth: char.heigth,
-                abilities: char.abilities,
-                stats: Stats {
-                    kills: char.stats.kills + 1,
-                    deaths: char.stats.deaths,
-                    rests: char.stats.rests,
-                    hits: char.stats.hits,
-                    blocks: char.stats.blocks,
-                    walked: char.stats.walked,
-                    runned: char.stats.runned,
-                    finished: char.stats.finished,
-                    romances: char.stats.romances,
-                },
-                weapon: char.weapon,
-                gold: char.gold,
-            });
+            set!(
+                world,
+                Character {
+                    caller: get_caller_address(),
+                    heigth: char.heigth,
+                    abilities: char.abilities,
+                    stats: Stats {
+                        kills: char.stats.kills + 1,
+                        deaths: char.stats.deaths,
+                        rests: char.stats.rests,
+                        hits: char.stats.hits,
+                        blocks: char.stats.blocks,
+                        walked: char.stats.walked,
+                        runned: char.stats.runned,
+                        finished: char.stats.finished,
+                        romances: char.stats.romances,
+                    },
+                    weapon: char.weapon,
+                    gold: char.gold,
+                }
+            );
         }
 
         fn bench_complex_get(self: @ContractState) {
@@ -343,22 +384,22 @@ mod actions {
             let caller = get_caller_address();
 
             let char = get!(world, caller, Character);
-            let points = if ability == 0 { 
+            let points = if ability == 0 {
                 char.abilities.strength
-            } else if ability == 1 { 
+            } else if ability == 1 {
                 char.abilities.dexterity
-            } else if ability == 2 { 
+            } else if ability == 2 {
                 char.abilities.constitution
-            } else if ability == 3 { 
+            } else if ability == 3 {
                 char.abilities.intelligence
-            } else if ability == 4 { 
+            } else if ability == 4 {
                 char.abilities.wisdom
-            } else if ability == 5 { 
+            } else if ability == 5 {
                 char.abilities.charisma
-            } else { 
-                0 
+            } else {
+                0
             };
-            
+
             points >= threshold
         }
 
