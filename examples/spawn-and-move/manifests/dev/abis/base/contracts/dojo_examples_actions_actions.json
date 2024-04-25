@@ -55,32 +55,124 @@
   },
   {
     "type": "impl",
-    "name": "RecordsImpl",
-    "interface_name": "types_test::contracts::IRecords"
+    "name": "ActionsComputedImpl",
+    "interface_name": "dojo_examples::actions::IActionsComputed"
+  },
+  {
+    "type": "struct",
+    "name": "dojo_examples::models::Vec2",
+    "members": [
+      {
+        "name": "x",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "y",
+        "type": "core::integer::u32"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "dojo_examples::models::Position",
+    "members": [
+      {
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "vec",
+        "type": "dojo_examples::models::Vec2"
+      }
+    ]
   },
   {
     "type": "interface",
-    "name": "types_test::contracts::IRecords",
+    "name": "dojo_examples::actions::IActionsComputed",
     "items": [
       {
         "type": "function",
-        "name": "create",
+        "name": "tile_terrain",
         "inputs": [
           {
-            "name": "num_records",
+            "name": "vec",
+            "type": "dojo_examples::models::Vec2"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "quadrant",
+        "inputs": [
+          {
+            "name": "pos",
+            "type": "dojo_examples::models::Position"
+          }
+        ],
+        "outputs": [
+          {
             "type": "core::integer::u8"
           }
         ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "ActionsImpl",
+    "interface_name": "dojo_examples::actions::IActions"
+  },
+  {
+    "type": "enum",
+    "name": "dojo_examples::models::Direction",
+    "variants": [
+      {
+        "name": "None",
+        "type": "()"
+      },
+      {
+        "name": "Left",
+        "type": "()"
+      },
+      {
+        "name": "Right",
+        "type": "()"
+      },
+      {
+        "name": "Up",
+        "type": "()"
+      },
+      {
+        "name": "Down",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "dojo_examples::actions::IActions",
+    "items": [
+      {
+        "type": "function",
+        "name": "spawn",
+        "inputs": [],
         "outputs": [],
         "state_mutability": "view"
       },
       {
         "type": "function",
-        "name": "delete",
+        "name": "move",
         "inputs": [
           {
-            "name": "record_id",
-            "type": "core::integer::u32"
+            "name": "direction",
+            "type": "dojo_examples::models::Direction"
           }
         ],
         "outputs": [],
@@ -137,44 +229,12 @@
   },
   {
     "type": "event",
-    "name": "types_test::contracts::records::RecordLogged",
-    "kind": "struct",
-    "members": [
-      {
-        "name": "record_id",
-        "type": "core::integer::u32",
-        "kind": "key"
-      },
-      {
-        "name": "type_u8",
-        "type": "core::integer::u8",
-        "kind": "key"
-      },
-      {
-        "name": "type_felt",
-        "type": "core::felt252",
-        "kind": "data"
-      },
-      {
-        "name": "random_u128",
-        "type": "core::integer::u128",
-        "kind": "data"
-      }
-    ]
-  },
-  {
-    "type": "event",
-    "name": "types_test::contracts::records::Event",
+    "name": "dojo_examples::actions::actions::Event",
     "kind": "enum",
     "variants": [
       {
         "name": "UpgradeableEvent",
         "type": "dojo::components::upgradeable::upgradeable::Event",
-        "kind": "nested"
-      },
-      {
-        "name": "RecordLogged",
-        "type": "types_test::contracts::records::RecordLogged",
         "kind": "nested"
       }
     ]
