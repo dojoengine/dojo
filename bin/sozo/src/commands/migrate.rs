@@ -82,7 +82,7 @@ impl MigrateArgs {
                     &ws,
                     world_address,
                     rpc_url,
-                    &account,
+                    account,
                     &name,
                     true,
                     TxnConfig::default(),
@@ -92,7 +92,7 @@ impl MigrateArgs {
             MigrateCommand::Apply { transaction } => config.tokio_handle().block_on(async {
                 let txn_config: TxnConfig = transaction.into();
 
-                migration::migrate(&ws, world_address, rpc_url, &account, &name, false, txn_config)
+                migration::migrate(&ws, world_address, rpc_url, account, &name, false, txn_config)
                     .await
             }),
         }

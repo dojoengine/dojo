@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use dojo_lang::compiler::MANIFESTS_DIR;
+use dojo_world::contracts::WorldContract;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::{DeployOutput, TxnConfig, UpgradeOutput};
 use scarb::core::Workspace;
@@ -14,7 +15,8 @@ mod utils;
 
 use self::migrate::update_manifests_and_abis;
 pub use self::migrate::{
-    apply_diff, execute_strategy, prepare_migration, print_strategy, upload_metadata,
+    apply_diff, auto_authorize, execute_strategy, prepare_migration, print_strategy,
+    upload_metadata,
 };
 use self::ui::MigrationUi;
 
@@ -43,7 +45,7 @@ pub async fn migrate<P, S>(
     ws: &Workspace<'_>,
     world_address: Option<FieldElement>,
     rpc_url: String,
-    account: &SingleOwnerAccount<P, S>,
+    account: SingleOwnerAccount<P, S>,
     name: &str,
     dry_run: bool,
     txn_config: TxnConfig,
@@ -66,7 +68,7 @@ where
 
     // Load local and remote World manifests.
     let (local_manifest, remote_manifest) =
-        utils::load_world_manifests(&profile_dir, account, world_address, &ui).await.map_err(
+        utils::load_world_manifests(&profile_dir, &account, world_address, &ui).await.map_err(
             |e| {
                 ui.error(e.to_string());
                 anyhow!(
@@ -107,7 +109,7 @@ where
         .await?;
     } else {
         // Migrate according to the diff.
-        let migration_output = match apply_diff(ws, account, txn_config, &mut strategy).await {
+        let migration_output = match apply_diff(ws, &account, txn_config, &mut strategy).await {
             Ok(migration_output) => Some(migration_output),
             Err(e) => {
                 update_manifests_and_abis(
@@ -139,7 +141,9 @@ where
 
         if let Some(migration_output) = migration_output {
             if !ws.config().offline() {
-                upload_metadata(ws, account, migration_output, txn_config).await?;
+                upload_metadata(ws, &account, migration_output.clone(), txn_config).await?;
+                let world = WorldContract::new(world_address, account);
+                auto_authorize(ws, &world, &txn_config, &local_manifest, &migration_output).await?;
             }
         }
     };
