@@ -16,6 +16,7 @@ pub struct StarknetOptions {
     #[arg(long, env = STARKNET_RPC_URL_ENV_VAR)]
     #[arg(value_name = "URL")]
     #[arg(help = "The Starknet RPC endpoint.")]
+    #[arg(global = true)]
     pub rpc_url: Option<Url>,
 }
 

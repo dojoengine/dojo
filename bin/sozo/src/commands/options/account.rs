@@ -23,6 +23,7 @@ pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::account";
 #[command(next_help_heading = "Account options")]
 pub struct AccountOptions {
     #[arg(long, env = DOJO_ACCOUNT_ADDRESS_ENV_VAR)]
+    #[arg(global = true)]
     pub account_address: Option<FieldElement>,
 
     #[command(flatten)]
@@ -31,6 +32,7 @@ pub struct AccountOptions {
 
     #[arg(long)]
     #[arg(help = "Use legacy account (cairo0 account)")]
+    #[arg(global = true)]
     pub legacy: bool,
 }
 

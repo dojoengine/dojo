@@ -2,7 +2,6 @@ CREATE TABLE event_messages (
     id TEXT NOT NULL PRIMARY KEY,
     keys TEXT,
     event_id TEXT NOT NULL,
-    model_names TEXT,
     executed_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

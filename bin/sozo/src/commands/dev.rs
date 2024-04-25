@@ -18,7 +18,7 @@ use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEvent, DebouncedEventKind};
 use scarb::compiler::CompilationUnit;
 use scarb::core::{Config, Workspace};
-use sozo_ops::migration::{self, prepare_migration};
+use sozo_ops::migration;
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::Provider;
@@ -51,8 +51,9 @@ pub struct DevArgs {
 
 impl DevArgs {
     pub fn run(self, config: &Config) -> Result<()> {
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+
         let env_metadata = if config.manifest_path().exists() {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
             dojo_metadata_from_workspace(&ws).env().cloned()
         } else {
             trace!(target: LOG_TARGET, "Manifest path does not exist.");
@@ -68,11 +69,13 @@ impl DevArgs {
             config.manifest_path().parent().unwrap().as_std_path(),
             RecursiveMode::Recursive,
         )?;
-        let name = self.name.clone();
+
+        let name = self.name.unwrap_or_else(|| ws.root_package().unwrap().id.name.to_string());
+
         let mut previous_manifest: Option<DeploymentManifest> = Option::None;
         let result = build(&mut context);
 
-        let Some((mut world_address, account, _, _)) = context
+        let Some((mut world_address, account, _)) = context
             .ws
             .config()
             .tokio_handle()
@@ -81,7 +84,7 @@ impl DevArgs {
                 self.account,
                 self.starknet,
                 self.world,
-                name.as_ref(),
+                &name,
                 env_metadata.as_ref(),
             ))
             .ok()
@@ -92,7 +95,7 @@ impl DevArgs {
         match context.ws.config().tokio_handle().block_on(migrate(
             world_address,
             &account,
-            name.clone(),
+            &name,
             &context.ws,
             previous_manifest.clone(),
         )) {
@@ -127,7 +130,7 @@ impl DevArgs {
                 match context.ws.config().tokio_handle().block_on(migrate(
                     world_address,
                     &account,
-                    name.clone(),
+                    &name,
                     &context.ws,
                     previous_manifest.clone(),
                 )) {
@@ -219,7 +222,7 @@ fn build(context: &mut DevContext<'_>) -> Result<()> {
 async fn migrate<P, S>(
     mut world_address: Option<FieldElement>,
     account: &SingleOwnerAccount<P, S>,
-    name: Option<String>,
+    name: &str,
     ws: &Workspace<'_>,
     previous_manifest: Option<DeploymentManifest>,
 ) -> Result<(DeploymentManifest, Option<FieldElement>)>
@@ -249,7 +252,7 @@ where
     }
 
     let ui = ws.config().ui();
-    let mut strategy = prepare_migration(&target_dir, diff, name, world_address, &ui)?;
+    let mut strategy = migration::prepare_migration(&target_dir, diff, name, world_address, &ui)?;
 
     match migration::apply_diff(ws, account, TxnConfig::default(), &mut strategy).await {
         Ok(migration_output) => {

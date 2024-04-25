@@ -128,7 +128,7 @@ pub struct WorldContract {
     #[serde_as(as = "Option<UfeHex>")]
     pub transaction_hash: Option<FieldElement>,
     pub block_number: Option<u64>,
-    pub seed: Option<String>,
+    pub seed: String,
     pub metadata: Option<WorldMetadata>,
 }
 

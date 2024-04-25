@@ -13,12 +13,15 @@ pub(crate) const LOG_TARGET: &str = "sozo::cli::commands::options::fee";
 #[command(next_help_heading = "Fee options")]
 pub struct FeeOptions {
     #[clap(long, help = "Maximum transaction fee in Ether (18 decimals)")]
+    #[arg(global = true)]
     max_fee: Option<BigDecimal>,
 
     #[clap(long, help = "Maximum transaction fee in Wei")]
+    #[arg(global = true)]
     max_fee_raw: Option<FieldElement>,
 
     #[clap(long, help = "Only estimate transaction fee without sending transaction")]
+    #[arg(global = true)]
     estimate_only: bool,
 }
 
