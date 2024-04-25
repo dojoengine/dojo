@@ -175,21 +175,25 @@ pub struct EnvironmentOptions {
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account validation logic.")]
-    pub validate_max_steps: Option<u32>,
+    #[arg(default_value_t = DEFAULT_VALIDATE_MAX_STEPS)]
+    pub validate_max_steps: u32,
 
     #[arg(long)]
     #[arg(help = "The maximum number of steps available for the account execution logic.")]
-    pub invoke_max_steps: Option<u32>,
+    #[arg(default_value_t = DEFAULT_INVOKE_MAX_STEPS)]
+    pub invoke_max_steps: u32,
 
     #[arg(long = "eth-gas-price")]
     #[arg(conflicts_with = "genesis")]
-    #[arg(help = "The L1 ETH gas price.")]
-    pub l1_eth_gas_price: Option<u128>,
+    #[arg(help = "The L1 ETH gas price. (denominated in wei)")]
+    #[arg(default_value_t = DEFAULT_ETH_L1_GAS_PRICE)]
+    pub l1_eth_gas_price: u128,
 
     #[arg(long = "strk-gas-price")]
     #[arg(conflicts_with = "genesis")]
-    #[arg(help = "The L1 STRK gas price.")]
-    pub l1_strk_gas_price: Option<u128>,
+    #[arg(help = "The L1 STRK gas price. (denominated in fri)")]
+    #[arg(default_value_t = DEFAULT_STRK_L1_GAS_PRICE)]
+    pub l1_strk_gas_price: u128,
 }
 
 impl KatanaArgs {
@@ -240,16 +244,8 @@ impl KatanaArgs {
             Some(genesis) => genesis,
             None => {
                 let gas_prices = GasPrices {
-                    eth: self
-                        .starknet
-                        .environment
-                        .l1_eth_gas_price
-                        .unwrap_or(DEFAULT_ETH_L1_GAS_PRICE),
-                    strk: self
-                        .starknet
-                        .environment
-                        .l1_strk_gas_price
-                        .unwrap_or(DEFAULT_STRK_L1_GAS_PRICE),
+                    eth: self.starknet.environment.l1_eth_gas_price,
+                    strk: self.starknet.environment.l1_strk_gas_price,
                 };
 
                 let accounts = DevAllocationsGenerator::new(self.starknet.total_accounts)
@@ -275,16 +271,8 @@ impl KatanaArgs {
             fork_block_number: self.fork_block_number,
             env: Environment {
                 chain_id: self.starknet.environment.chain_id,
-                invoke_max_steps: self
-                    .starknet
-                    .environment
-                    .invoke_max_steps
-                    .unwrap_or(DEFAULT_INVOKE_MAX_STEPS),
-                validate_max_steps: self
-                    .starknet
-                    .environment
-                    .validate_max_steps
-                    .unwrap_or(DEFAULT_VALIDATE_MAX_STEPS),
+                invoke_max_steps: self.starknet.environment.invoke_max_steps,
+                validate_max_steps: self.starknet.environment.validate_max_steps,
             },
             db_dir: self.db_dir.clone(),
             genesis,
