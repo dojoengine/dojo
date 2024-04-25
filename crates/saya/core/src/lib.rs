@@ -200,9 +200,9 @@ impl Saya {
 
         let world_da = new_program_input.da_as_calldata(self.config.world_address);
         let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
-        trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.")
+        trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.");
 
-        trace!(target: LOG_TARGET, "Proving block {block_number}.");
+        trace!(target: LOG_TARGET, block_number, "Proving block.");
         let proof = http_prove(
             self.config.prover_url.to_owned(),
             new_program_input.serialize(self.config.world_address)?,
@@ -224,7 +224,7 @@ impl Saya {
 
         sleep(Duration::from_millis(5000));
 
-        trace!(target: LOG_TARGET, "Applying diffs {block_number}.");
+        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
         let ExtractOutputResult { program_output, program_output_hash: _ } =
             extract_output(&proof)?;
         let transaction_hash =
