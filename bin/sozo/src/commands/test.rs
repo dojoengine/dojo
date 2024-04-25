@@ -101,13 +101,12 @@ impl TestArgs {
                 run_profiler: self.profiler_mode.clone().into(),
             };
 
-            let compiler = TestCompiler { db, main_crate_ids, test_crate_ids, starknet: true };
+            let compiler = TestCompiler { db: db.snapshot(), main_crate_ids, test_crate_ids, starknet: true };
 
             let runner = CompiledTestRunner { compiled: compiler.build()?, config };
 
-            // Database should not be required here as [`TestCompiler`] is already initialized
-            // with it.
-            runner.run(None)?;
+            // Database is required here for the profiler to work.
+            runner.run(Some(&db))?;
 
             println!();
         }
