@@ -8,7 +8,7 @@ use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use tokio::time::sleep;
 
-use crate::starknet_os::STARKNET_ACCOUNT;
+use crate::dojo_os::STARKNET_ACCOUNT;
 
 pub async fn starknet_verify(
     fact_registry_address: FieldElement,

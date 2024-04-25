@@ -26,7 +26,7 @@ pub mod blockchain;
 pub mod data_availability;
 pub mod error;
 pub mod prover;
-pub mod starknet_os;
+pub mod dojo_os;
 pub mod verifier;
 
 pub(crate) const LOG_TARGET: &str = "saya::core";
@@ -228,7 +228,7 @@ impl Saya {
         let ExtractOutputResult { program_output, program_output_hash: _ } =
             extract_output(&proof)?;
         let transaction_hash =
-            starknet_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
+            dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
                 .await?;
         info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
         Ok(())
