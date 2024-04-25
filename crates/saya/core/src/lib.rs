@@ -37,7 +37,7 @@ pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
     #[serde(deserialize_with = "url_deserializer")]
-    pub prover_rpc: Url,
+    pub prover_url: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
     pub world_address: FieldElement,
@@ -204,7 +204,7 @@ impl Saya {
 
         trace!(target: LOG_TARGET, "Proving block {block_number}.");
         let proof = http_prove(
-            self.config.prover_rpc.to_owned(),
+            self.config.prover_url.to_owned(),
             new_program_input.serialize(self.config.world_address)?,
         )
         .await?;

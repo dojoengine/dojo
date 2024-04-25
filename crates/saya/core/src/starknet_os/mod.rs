@@ -60,8 +60,7 @@ pub async fn starknet_apply_diffs(
     ]
     .collect::<Vec<FieldElement>>();
 
-    let txn_config =
-        TxnConfig { fee_estimate_multiplier: None, wait: true, receipt: true, max_fee_raw: None };
+    let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: world,
