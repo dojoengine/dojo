@@ -98,15 +98,7 @@ impl EthereumMessaging {
             .await?
             .into_iter()
             .filter(|log| log.block_number.is_some())
-            .map(|log| {
-                (
-                    log.block_number
-                        .unwrap()
-                        .try_into()
-                        .expect("Block number couldn't be converted to u64."),
-                    log,
-                )
-            })
+            .map(|log| (log.block_number.unwrap(), log))
             .for_each(|(block_num, log)| {
                 block_to_logs
                     .entry(block_num)
@@ -284,17 +276,22 @@ mod tests {
             felt!("0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b");
 
         let log = Log {
-            address: Address::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
-            topics: vec![
-                B256::from_str(
-                    "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
+            inner: alloy_primitives::Log::<LogData> {
+                address: Address::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
+                data: LogData::new(
+                    vec![
+                        B256::from_str(
+                            "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
+                        )
+                        .unwrap(),
+                        B256::from_str(from_address).unwrap(),
+                        B256::from_str(to_address).unwrap(),
+                        B256::from_str(selector).unwrap(),
+                    ],
+                    payload_buf.into(),
                 )
-                .unwrap(),
-                B256::from_str(from_address).unwrap(),
-                B256::from_str(to_address).unwrap(),
-                B256::from_str(selector).unwrap(),
-            ],
-            data: payload_buf.into(),
+                .expect("Failed to load log data"),
+            },
             ..Default::default()
         };
 
