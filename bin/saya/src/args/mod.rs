@@ -31,7 +31,7 @@ pub struct SayaArgs {
     /// Specify the Prover URL.
     #[arg(long)]
     #[arg(value_name = "PROVER URL")]
-    #[arg(help = "The Prover RPC URL to fetch data from.")]
+    #[arg(help = "The Prover URL for remote proving.")]
     #[arg(default_value = "http://localhost:3000/prove/state-diff-commitment")]
     pub prover_url: Url,
 
