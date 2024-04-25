@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713999314621,
+  "lastUpdate": 1714026557411,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -6325,6 +6325,36 @@ window.BENCHMARK_DATA = {
             "name": "decompress world contract",
             "value": 16582593,
             "range": "± 249121",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61f511d0353aea71fbda24eddb1183638edfbf84",
+          "message": "katana: default cli values for environment options (#1861)",
+          "timestamp": "2024-04-25T14:20:59+08:00",
+          "tree_id": "d2f115532c81095e9daeca738c6f61faa20ab35b",
+          "url": "https://github.com/dojoengine/dojo/commit/61f511d0353aea71fbda24eddb1183638edfbf84"
+        },
+        "date": 1714026556263,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 16483892,
+            "range": "± 274490",
             "unit": "ns/iter"
           }
         ]
