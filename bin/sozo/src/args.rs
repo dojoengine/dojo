@@ -36,10 +36,6 @@ pub struct SozoArgs {
     #[arg(help = "Run without accessing the network.")]
     pub offline: bool,
 
-    #[arg(long)]
-    #[arg(help = "Output logs in JSON format.")]
-    pub json_log: bool,
-
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -63,11 +59,7 @@ impl SozoArgs {
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
         );
 
-        let subscriber: Box<dyn Subscriber + Send + Sync> = if self.json_log {
-            Box::new(builder.json().finish())
-        } else {
-            Box::new(builder.finish())
-        };
+        let subscriber: Box<dyn Subscriber + Send + Sync> = Box::new(builder.finish());
 
         Ok(tracing::subscriber::set_global_default(subscriber)?)
     }
