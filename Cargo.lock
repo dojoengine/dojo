@@ -2362,7 +2362,7 @@ dependencies = [
 [[package]]
 name = "cairo-proof-parser"
 version = "0.3.0"
-source = "git+https://github.com/cartridge-gg/cairo-proof-parser?rev=9e8922780f064d194b45caef36a72cc211f8348d#9e8922780f064d194b45caef36a72cc211f8348d"
+source = "git+https://github.com/cartridge-gg/cairo-proof-parser?tag=v0.3.0#1cd7af307609d0f6a602a59d124d5044e56cc7b4"
 dependencies = [
  "anyhow",
  "clap",
