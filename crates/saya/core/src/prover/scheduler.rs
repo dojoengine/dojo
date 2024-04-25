@@ -1,9 +1,9 @@
 // Required modules and traits for future and async handling.
+use super::{prove, stone_image::prove_stone, ProgramInput, ProverIdentifier};
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use tracing::level_filters::STATIC_MAX_LEVEL;
 use tracing::{info, trace};
-use super::{prove, stone_image::prove_stone, ProgramInput, ProverIdentifier};
 type Proof = String;
 use serde_json::Value;
 
@@ -32,10 +32,8 @@ pub fn prove_recursively(
             let input = inputs.pop().unwrap();
             let block_number = input.block_number;
             trace!(target: "saya_core", "Proving block {block_number}");
-            //let proof = prove(input.serialize()?,prover).await?;
-            let proof = prove(input.serialize()?, ProverIdentifier::Stone).await?;
+            let proof = prove(serde_json::to_string(&input)?, ProverIdentifier::Stone).await?;
             info!(target: "saya_core", block_number, "Block proven");
-            //niech zwraca jednoelementową tablice
             let result = vec![proof];
             Ok((result, input))
         } else {
@@ -56,7 +54,7 @@ pub fn prove_recursively(
     .boxed()
 }
 
- #[cfg(test)]
+#[cfg(test)]
 mod tests {
     use std::time::{Duration, Instant};
 
@@ -80,8 +78,14 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let proof = prove_recursively(inputs.clone(), ProverIdentifier::Stone).await.unwrap().0.pop().unwrap();
-        let expected = prove(inputs[0].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let proof = prove_recursively(inputs.clone(), ProverIdentifier::Stone)
+            .await
+            .unwrap()
+            .0
+            .pop()
+            .unwrap();
+        let expected =
+            prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
         assert_eq!(proof, expected);
     }
 
@@ -101,11 +105,14 @@ mod tests {
             .collect::<Vec<_>>();
         let cloned_inputs = inputs.clone();
         let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
-        let expected1 = prove(inputs[0].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
-        let expected2 = prove(inputs[1].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected1 = prove(serde_json::to_string(&inputs[0]).unwrap(), ProverIdentifier::Stone)
+            .await
+            .unwrap();
+        let expected2 = prove(serde_json::to_string(&inputs[1]).unwrap(), ProverIdentifier::Stone)
+            .await
+            .unwrap();
         assert_eq!(proof.0[0], expected1);
         assert_eq!(proof.0[1], expected2);
-        
     }
 
     /// Test case to verify recursive division and combination with many inputs.
@@ -125,15 +132,18 @@ mod tests {
 
         let cloned_inputs = inputs.clone();
         let proof = prove_recursively(cloned_inputs, ProverIdentifier::Stone).await.unwrap();
-        let expected1 = prove(inputs[0].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
-        let expected2 = prove(inputs[1].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
-        let expected3 = prove(inputs[2].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
-        let expected4 = prove(inputs[3].serialize().unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected1 =
+            prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected2 =
+            prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected3 =
+            prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
+        let expected4 =
+            prove(serde_json::to_string(&inputs).unwrap(), ProverIdentifier::Stone).await.unwrap();
         assert_eq!(proof.0[0], expected1);
         assert_eq!(proof.0[1], expected2);
         assert_eq!(proof.0[2], expected3);
         assert_eq!(proof.0[3], expected4);
-
     }
 }
 //     /// Test to measure the time taken for a large number of proofs.

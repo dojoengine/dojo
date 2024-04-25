@@ -10371,6 +10371,7 @@ dependencies = [
  "katana-rpc-types",
  "lazy_static",
  "num-bigint",
+ "num-traits 0.2.18",
  "parking_lot 0.12.1",
  "rand",
  "saya-provider",

@@ -262,7 +262,7 @@ impl Saya {
 
         trace!(target: LOG_TARGET, "Processed block {block_number}.");
 
-        println!("Program input: {}", state_diff_prover_input.serialize()?);
+        println!("Program input: {}", serde_json::to_string(&state_diff_prover_input).unwrap());
 
         // let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
 

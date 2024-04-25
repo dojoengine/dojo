@@ -1,28 +1,65 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
+use super::state_diff::state_updates_to_json_like;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::state::StateUpdates;
 use katana_primitives::trace::{CallInfo, EntryPointType, TxExecInfo};
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l1_message_hash;
+use num_traits::cast::ToPrimitive;
+use serde::{
+    de::Error as DeError, de::SeqAccess, de::Visitor, ser::SerializeSeq, ser::Serializer,
+    Deserializer,
+};
+use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-
-use super::state_diff::state_updates_to_json_like;
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/snos_output.cairo#L19-L20
 /// With the new state root computed by the prover.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 
 pub struct ProgramInput {
+    #[serde(serialize_with = "serialize_field_element_as_u64")]
+    #[serde(deserialize_with = "deserialize_field_element_from_u64")]
     pub prev_state_root: FieldElement,
     pub block_number: u64,
+    #[serde(serialize_with = "serialize_field_element_as_u64")]
+    #[serde(deserialize_with = "deserialize_field_element_from_u64")]
     pub block_hash: FieldElement,
+    #[serde(serialize_with = "serialize_field_element_as_u64")]
+    #[serde(deserialize_with = "deserialize_field_element_from_u64")]
     pub config_hash: FieldElement,
+    #[serde(serialize_with = "MessageToStarknet::serialize_message_to_starknet")]
+    #[serde(deserialize_with = "MessageToStarknet::deserialize_message_to_starknet")]
     pub message_to_starknet_segment: Vec<MessageToStarknet>,
+    #[serde(serialize_with = "MessageToAppchain::serialize_message_to_appchain")]
+    #[serde(deserialize_with = "MessageToAppchain::deserialize_message_to_appchain")]
     pub message_to_appchain_segment: Vec<MessageToAppchain>,
+    #[serde(flatten)]
     pub state_updates: StateUpdates,
 }
 
+fn serialize_field_element_as_u64<S>(
+    element: &FieldElement,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let decimal = element.to_big_decimal(0); // Convert with no decimal places
+    let num = decimal
+        .to_u64()
+        .ok_or_else(|| serde::ser::Error::custom("FieldElement conversion to u64 failed"))?;
+    serializer.serialize_u64(num)
+}
+fn deserialize_field_element_from_u64<'de, D>(deserializer: D) -> Result<FieldElement, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let num = u64::deserialize(deserializer)?;
+    FieldElement::from_dec_str(&num.to_string()).map_err(DeError::custom)
+}
 fn get_messages_recursively(info: &CallInfo) -> Vec<MessageToStarknet> {
     let mut messages = vec![];
 
@@ -95,44 +132,43 @@ pub fn extract_messages(
 }
 
 impl ProgramInput {
-    pub fn serialize(&self, world: FieldElement) -> anyhow::Result<String> {
-        let message_to_starknet = self
-            .message_to_starknet_segment
-            .iter()
-            .map(MessageToStarknet::serialize)
-            .collect::<anyhow::Result<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .map(|e| format!("{}", e))
-            .collect::<Vec<_>>()
-            .join(",");
+    // pub fn serialize(&self) -> anyhow::Result<String>{
+    //     let message_to_starknet = self
+    //         .message_to_starknet_segment
+    //         .iter()
+    //         .map(MessageToStarknet::serialize)
+    //         .collect::<anyhow::Result<Vec<_>>>()?
+    //         .into_iter()
+    //         .flatten()
+    //         .map(|e| format!("{}", e))
+    //         .collect::<Vec<_>>()
+    //         .join(",");
+    //     let message_to_appchain = self
+    //         .message_to_appchain_segment
+    //         .iter()
+    //         .map(|m| m.serialize())
+    //         .collect::<anyhow::Result<Vec<_>>>()?
+    //         .into_iter()
+    //         .flatten()
+    //         .map(|e| format!("{}", e))
+    //         .collect::<Vec<_>>()
+    //         .join(",");
 
-        let message_to_appchain = self
-            .message_to_appchain_segment
-            .iter()
-            .map(|m| m.serialize())
-            .collect::<anyhow::Result<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .map(|e| format!("{}", e))
-            .collect::<Vec<_>>()
-            .join(",");
+    //     let mut result = String::from('{');
+    //     result.push_str(&format!(r#""prev_state_root":{},"#, self.prev_state_root));
+    //     result.push_str(&format!(r#""block_number":{},"#, self.block_number));
+    //     result.push_str(&format!(r#""block_hash":{},"#, self.block_hash));
+    //     result.push_str(&format!(r#""config_hash":{},"#, self.config_hash));
 
-        let mut result = String::from('{');
-        result.push_str(&format!(r#""prev_state_root":{},"#, self.prev_state_root));
-        result.push_str(&format!(r#""block_number":{},"#, self.block_number));
-        result.push_str(&format!(r#""block_hash":{},"#, self.block_hash));
-        result.push_str(&format!(r#""config_hash":{},"#, self.config_hash));
+    //     result.push_str(&format!(r#""message_to_starknet_segment":[{}],"#, message_to_starknet));
+    //     result.push_str(&format!(r#""message_to_appchain_segment":[{}],"#, message_to_appchain));
 
-        result.push_str(&format!(r#""message_to_starknet_segment":[{}],"#, message_to_starknet));
-        result.push_str(&format!(r#""message_to_appchain_segment":[{}],"#, message_to_appchain));
+    //     result.push_str(&state_updates_to_json_like(&self.state_updates));
 
-        result.push_str(&state_updates_to_json_like(&self.state_updates, world));
+    //     result.push_str(&format!("{}", "}"));
 
-        result.push('}');
-
-        Ok(result)
-    }
+    //     Ok(result)
+    // }
 
     pub fn da_as_calldata(&self, world: FieldElement) -> Vec<FieldElement> {
         let updates = self
@@ -186,7 +222,7 @@ impl ProgramInput {
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L16
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MessageToStarknet {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
@@ -194,16 +230,88 @@ pub struct MessageToStarknet {
 }
 
 impl MessageToStarknet {
+    pub fn serialize_message_to_starknet<S>(
+        messages: &[MessageToStarknet],
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(messages.len()))?;
+        for message in messages {
+            let serialized = message.serialize().unwrap();
+            // Instead of adding serialized as an array, add each element individually
+            for field_element in serialized {
+                let decimal = field_element.to_big_decimal(0); // Assuming no decimal places for simplicity
+                let num = decimal.to_u64().ok_or_else(|| {
+                    serde::ser::Error::custom("Failed to convert BigDecimal to u64")
+                })?;
+                seq.serialize_element(&num)?;
+            }
+        }
+        seq.end()
+    }
     pub fn serialize(&self) -> anyhow::Result<Vec<FieldElement>> {
         let mut result = vec![*self.from_address, *self.to_address];
         result.push(FieldElement::from(self.payload.len()));
         result.extend(self.payload.iter().cloned());
         Ok(result)
     }
+
+    fn deserialize_message_to_starknet<'de, D>(
+        deserializer: D,
+    ) -> Result<Vec<MessageToStarknet>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct MessageToStarknetVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for MessageToStarknetVisitor {
+            type Value = Vec<MessageToStarknet>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a flat list of integers for MessageToStarknet")
+            }
+
+            fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
+            where
+                V: serde::de::SeqAccess<'de>,
+            {
+                let mut messages = Vec::new();
+                while let Some(from_address) = seq
+                    .next_element::<u64>()?
+                    .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                {
+                    let to_address = seq
+                        .next_element::<u64>()?
+                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .unwrap_or_default();
+                    let payload_length = seq.next_element::<usize>()?.unwrap_or_default();
+                    let mut payload = Vec::new();
+                    for _ in 0..payload_length {
+                        if let Some(element) = seq
+                            .next_element::<u64>()?
+                            .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        {
+                            payload.push(element);
+                        }
+                    }
+                    messages.push(MessageToStarknet {
+                        from_address: ContractAddress::from(from_address),
+                        to_address: ContractAddress::from(to_address),
+                        payload,
+                    });
+                }
+                Ok(messages)
+            }
+        }
+
+        deserializer.deserialize_seq(MessageToStarknetVisitor)
+    }
 }
 
 /// Based on https://github.com/cartridge-gg/piltover/blob/2be9d46f00c9c71e2217ab74341f77b09f034c81/src/messaging/output_process.cairo#L28
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MessageToAppchain {
     pub from_address: ContractAddress,
     pub to_address: ContractAddress,
@@ -213,11 +321,92 @@ pub struct MessageToAppchain {
 }
 
 impl MessageToAppchain {
+    pub fn serialize_message_to_appchain<S>(
+        messages: &[MessageToAppchain],
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(messages.len()))?;
+        for message in messages {
+            let serialized = message.serialize().unwrap();
+            for field_element in serialized {
+                let decimal = field_element.to_big_decimal(0); // Assuming no decimal places for simplicity
+                let num = decimal.to_u64().ok_or_else(|| {
+                    serde::ser::Error::custom("Failed to convert BigDecimal to u64")
+                })?;
+                seq.serialize_element(&num)?;
+            }
+        }
+        seq.end()
+    }
     pub fn serialize(&self) -> anyhow::Result<Vec<FieldElement>> {
         let mut result = vec![*self.from_address, *self.to_address, self.nonce, self.selector];
         result.push(FieldElement::from(self.payload.len()));
         result.extend(self.payload.iter().cloned());
         Ok(result)
+    }
+
+    fn deserialize_message_to_appchain<'de, D>(
+        deserializer: D,
+    ) -> Result<Vec<MessageToAppchain>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct MessageToAppchainVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for MessageToAppchainVisitor {
+            type Value = Vec<MessageToAppchain>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a flat list of integers for MessageToAppchain")
+            }
+
+            fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
+            where
+                V: serde::de::SeqAccess<'de>,
+            {
+                let mut messages = Vec::new();
+                while let Some(from_address) = seq
+                    .next_element::<u64>()?
+                    .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                {
+                    let to_address = seq
+                        .next_element::<u64>()?
+                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .unwrap_or_default();
+                    let nonce = seq
+                        .next_element::<u64>()?
+                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .unwrap_or_default();
+                    let selector = seq
+                        .next_element::<u64>()?
+                        .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        .unwrap_or_default();
+                    let payload_length = seq.next_element::<usize>()?.unwrap_or_default();
+                    let mut payload = Vec::new();
+                    for _ in 0..payload_length {
+                        if let Some(element) = seq
+                            .next_element::<u64>()?
+                            .map(|num| FieldElement::from_str(&num.to_string()).unwrap())
+                        {
+                            payload.push(element);
+                        }
+                    }
+                    messages.push(MessageToAppchain {
+                        from_address: ContractAddress::from(from_address),
+                        to_address: ContractAddress::from(to_address),
+                        nonce,
+                        selector,
+                        payload,
+                    });
+                }
+                Ok(messages)
+            }
+        }
+
+        deserializer.deserialize_seq(MessageToAppchainVisitor)
     }
 }
 
