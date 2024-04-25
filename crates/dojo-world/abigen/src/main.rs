@@ -108,8 +108,6 @@ name = "dojo"
 version = "0.4.4"
 
 [dependencies]
-cairo_verifier = {{ git = "https://github.com/cartridge-gg/cairo-verifier" }}
-dojo_plugin = {{ git = "https://github.com/dojoengine/dojo", tag = "v0.3.11" }}
 starknet = "2.4.0"
 
 [[target.starknet-contract]]
