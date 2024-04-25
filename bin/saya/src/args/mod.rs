@@ -120,7 +120,7 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
-                prover_rpc: args.prover_url,
+                prover_url: args.prover_url,
                 start_block: args.start_block,
                 data_availability: da_config,
                 world_address: args.proof.world_address,
