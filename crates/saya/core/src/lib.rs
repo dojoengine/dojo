@@ -24,9 +24,9 @@ use crate::prover::{extract_messages, parse_proof, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
+pub mod dojo_os;
 pub mod error;
 pub mod prover;
-pub mod dojo_os;
 pub mod verifier;
 
 pub(crate) const LOG_TARGET: &str = "saya::core";

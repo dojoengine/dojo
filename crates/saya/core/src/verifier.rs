@@ -14,8 +14,7 @@ pub async fn starknet_verify(
     fact_registry_address: FieldElement,
     serialized_proof: Vec<FieldElement>,
 ) -> anyhow::Result<String> {
-    let txn_config =
-        TxnConfig { wait: true, receipt: true, ..Default::default() };
+    let txn_config = TxnConfig { wait: true, receipt: true, ..Default::default() };
     let tx = STARKNET_ACCOUNT
         .execute(vec![Call {
             to: fact_registry_address,
