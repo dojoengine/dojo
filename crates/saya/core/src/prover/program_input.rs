@@ -137,8 +137,7 @@ impl ProgramInput {
             .get(&ContractAddress::from(world))
             .unwrap_or(&std::collections::HashMap::new())
             .iter()
-            .map(|(k, v)| vec![*k, *v])
-            .flatten()
+            .flat_map(|(k, v)| vec![*k, *v])
             .collect::<Vec<_>>();
 
         updates
