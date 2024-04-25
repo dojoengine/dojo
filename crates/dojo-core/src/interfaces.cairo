@@ -1,4 +1,3 @@
-use cairo_verifier::StarkProofWithSerde;
 use starknet::ContractAddress;
 
 #[derive(Drop, Serde)]
