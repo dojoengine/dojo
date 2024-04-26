@@ -5,6 +5,7 @@ Saya executable runs Saya service with CLI configurations.
 Currently, Saya fetches some Katana blocks, and can publish the state update on a Celestia node.
 
 Example:
+
 ```bash
 cargo run --bin saya -- \
     --rpc-url http://localhost:5050 \

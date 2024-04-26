@@ -7,7 +7,7 @@ erDiagram
 
 Headers {
     KEY BlockNumber
-    VALUE Header 
+    VALUE Header
 }
 
 BlockHashes {

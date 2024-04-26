@@ -55,7 +55,7 @@ jobs:
   cairofmt:
     runs-on: ubuntu-latest
     steps:
-        uses: software-mansion/setup-scarb@v1
+      - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "2.6.3"
       - run: |

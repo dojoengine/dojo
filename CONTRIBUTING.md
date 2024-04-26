@@ -8,28 +8,30 @@ Following these guidelines helps to communicate that you respect the time of the
 
 ### Check the Issues
 
-Before you start contributing, please check the [Issue Tracker](https://github.com/dojoengine/dojo/issues) to see if there are any existing issues that match what you're intending to do. If the issue doesn't exist, please create it. 
+Before you start contributing, please check the [Issue Tracker](https://github.com/dojoengine/dojo/issues) to see if there are any existing issues that match what you're intending to do. If the issue doesn't exist, please create it.
 
 If you're creating a new issue, please provide a descriptive title and detailed description. If possible, include a code sample or an executable test case demonstrating the expected behavior that is not occurring.
 
 ### Fork and Clone the Repository
 
-Once you've found an issue to work on, the next step is to fork the Dojo repo and clone it to your local machine. This is necessary because you probably won't have push access to the main repo. 
+Once you've found an issue to work on, the next step is to fork the Dojo repo and clone it to your local machine. This is necessary because you probably won't have push access to the main repo.
 
 ## Architecture
 
 At the top level, dojo is composed of different folders:
-* [`crates`](crates/): This folder contains the source code of the different crates (which are libraries) that make up Dojo.
-* [`bin`](bin/): This folder contains the source code of the different binaries that make up Dojo.
-* [`examples`](examples/): This folder contains the source code of simple Dojo projects that can be used as a starting point for new projects and also useful for testing.
-* [`scripts`](scripts/): A set of useful scripts for developers and CI.
+
+- [`crates`](crates/): This folder contains the source code of the different crates (which are libraries) that make up Dojo.
+- [`bin`](bin/): This folder contains the source code of the different binaries that make up Dojo.
+- [`examples`](examples/): This folder contains the source code of simple Dojo projects that can be used as a starting point for new projects and also useful for testing.
+- [`scripts`](scripts/): A set of useful scripts for developers and CI.
 
 Inside `bin` and `crates` you will find source code related to Dojo stack components:
-* `katana`: The Starknet sequencer tailored for gaming.
-* `sozo`: The contract manager and Dojo compiler.
-* `torii`: The indexer that store the state of your World.
-* `dojo-core`: The core contract of Dojo written in Cairo.
-* `dojo-lang`: The Dojo plugin for the Cairo compiler.
+
+- `katana`: The Starknet sequencer tailored for gaming.
+- `sozo`: The contract manager and Dojo compiler.
+- `torii`: The indexer that store the state of your World.
+- `dojo-core`: The core contract of Dojo written in Cairo.
+- `dojo-lang`: The Dojo plugin for the Cairo compiler.
 
 It is important to note that `bin` should only contain applications that gathers user inputs and delegates the work to the libraries present into the crates.
 
@@ -66,6 +68,7 @@ cargo nextest run --all-features -p sozo-ops
 ```
 
 If you have to modify `dojo-core` or `dojo-lang` crates you must:
+
 ```bash
 # First spin up a **fresh** Katana instance on default port.
 cargo run --bin katana

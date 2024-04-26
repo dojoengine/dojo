@@ -37,7 +37,7 @@ See our [Environment setup](https://book.dojoengine.org/getting-started) for mor
 
 Dojo core smart contracts have been audited:
 
-* feb-24: [Nethermind security](https://github.com/NethermindEth/PublicAuditReports/blob/main/NM0159-FINAL_DOJO.pdf)
+- feb-24: [Nethermind security](https://github.com/NethermindEth/PublicAuditReports/blob/main/NM0159-FINAL_DOJO.pdf)
 
 ## Releasing
 
