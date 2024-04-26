@@ -1,8 +1,11 @@
 //! Saya core library.
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use cairo_proof_parser::output::{extract_output, ExtractOutputResult};
 use cairo_proof_parser::parse;
+use cairo_proof_parser::program::{extract_program, ExtractProgramResult};
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
@@ -11,6 +14,8 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
+use starknet_crypto::poseidon_hash_many;
+use tokio::time::sleep;
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -198,13 +203,9 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
-        println!("Program input: {}", new_program_input.serialize(self.config.world_address)?);
-
-        // let to_prove = ProvedStateDiff {
-        //     genesis_state_hash,
-        //     prev_state_hash: prev_block.header.header.state_root,
-        //     state_updates: state_updates_to_prove,
-        // };
+        let world_da = new_program_input.da_as_calldata(self.config.world_address);
+        let world_da_printable: Vec<String> = world_da.iter().map(|x| x.to_string()).collect();
+        trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.");
 
         trace!(target: LOG_TARGET, "Proving block {block_number}.");
         let proof = prover::prove(new_program_input.serialize(self.config.world_address)?, ProverIdentifier::Http(self.config.prover_url.clone())).await?;
@@ -212,9 +213,24 @@ impl Saya {
 
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
 
-        trace!(target: LOG_TARGET, "Verifying block {block_number}.");
-        let transaction_hash = verifier::verify(VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address), serialized_proof).await?;
+        trace!(target: LOG_TARGET, block_number, "Verifying block.");
+        let transaction_hash =
+            verifier::verify(VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address), serialized_proof).await?;
         info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
+
+        let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
+        let ExtractOutputResult { program_output, program_output_hash } =
+            extract_output(&proof)?;
+        let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
+        info!(target: LOG_TARGET, expected_fact, "Expected fact.");
+
+        sleep(Duration::from_millis(5000)).await;
+
+        trace!(target: LOG_TARGET, block_number, "Applying diffs.");
+        let transaction_hash =
+            dojo_os::starknet_apply_diffs(self.config.world_address, world_da, program_output)
+                .await?;
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Diffs applied.");
 
         Ok(())
     }

@@ -30,6 +30,7 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 starknet-types-core = { version = "0.0.9", default-features = false, features = [ "curve", "num-traits", "serde" ] }
+starknet-crypto.workspace = true
 starknet.workspace = true
 starknet_api.workspace = true
 thiserror.workspace = true
