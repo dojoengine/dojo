@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, TransactionReceipt};
+use starknet::core::types::{Event, MaybePendingTransactionReceipt};
 use starknet::providers::Provider;
 use tracing::info;
 
@@ -42,7 +42,7 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        _transaction_receipt: &TransactionReceipt,
+        _transaction_receipt: &MaybePendingTransactionReceipt,
         event_id: &str,
         event: &Event,
     ) -> Result<(), Error> {

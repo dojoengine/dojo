@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use alloy_network::Ethereum;
 use alloy_primitives::{Address, LogData, U256};
-use alloy_provider::{HttpProvider, Provider};
+use alloy_provider::{Provider, ReqwestProvider};
 use alloy_rpc_types::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet, Log, Topic};
 use alloy_sol_types::{sol, SolEvent};
 use anyhow::Result;
@@ -41,14 +41,14 @@ sol! {
 }
 
 pub struct EthereumMessaging {
-    provider: Arc<HttpProvider<Ethereum>>,
+    provider: Arc<ReqwestProvider<Ethereum>>,
     messaging_contract_address: Address,
 }
 
 impl EthereumMessaging {
     pub async fn new(config: MessagingConfig) -> Result<EthereumMessaging> {
         Ok(EthereumMessaging {
-            provider: Arc::new(HttpProvider::<Ethereum>::new_http(reqwest::Url::parse(
+            provider: Arc::new(ReqwestProvider::<Ethereum>::new_http(reqwest::Url::parse(
                 &config.rpc_url,
             )?)),
             messaging_contract_address: config.contract_address.parse::<Address>()?,
@@ -98,15 +98,7 @@ impl EthereumMessaging {
             .await?
             .into_iter()
             .filter(|log| log.block_number.is_some())
-            .map(|log| {
-                (
-                    log.block_number
-                        .unwrap()
-                        .try_into()
-                        .expect("Block number couldn't be converted to u64."),
-                    log,
-                )
-            })
+            .map(|log| (log.block_number.unwrap(), log))
             .for_each(|(block_num, log)| {
                 block_to_logs
                     .entry(block_num)
@@ -200,7 +192,12 @@ impl Messenger for EthereumMessaging {
 
 fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
     let parsed_log = LogMessageToL2::LogMessageToL2Event::decode_log(
-        &alloy_primitives::Log::<LogData>::new(log.address, log.topics, log.data).unwrap(),
+        &alloy_primitives::Log::<LogData>::new(
+            log.address(),
+            log.topics().into(),
+            log.data().clone().data,
+        )
+        .unwrap(),
         false,
     )
     .unwrap();
@@ -279,17 +276,22 @@ mod tests {
             felt!("0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b");
 
         let log = Log {
-            address: Address::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
-            topics: vec![
-                B256::from_str(
-                    "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
+            inner: alloy_primitives::Log::<LogData> {
+                address: Address::from_str("0xde29d060D45901Fb19ED6C6e959EB22d8626708e").unwrap(),
+                data: LogData::new(
+                    vec![
+                        B256::from_str(
+                            "0xdb80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b",
+                        )
+                        .unwrap(),
+                        B256::from_str(from_address).unwrap(),
+                        B256::from_str(to_address).unwrap(),
+                        B256::from_str(selector).unwrap(),
+                    ],
+                    payload_buf.into(),
                 )
-                .unwrap(),
-                B256::from_str(from_address).unwrap(),
-                B256::from_str(to_address).unwrap(),
-                B256::from_str(selector).unwrap(),
-            ],
-            data: payload_buf.into(),
+                .expect("Failed to load log data"),
+            },
             ..Default::default()
         };
 
