@@ -38,7 +38,8 @@ pub fn load_config() -> Config {
     let temp_project_path = temp_project_dir.join("Scarb").with_extension("toml").to_string();
 
     // Copy all the files, including manifests. As we will not re-build, mostly only migrate.
-    compiler::copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &[]).unwrap();
+    compiler::copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &[])
+        .unwrap();
 
     compiler::build_test_config(&temp_project_path)
         .unwrap_or_else(|c| panic!("Error loading config: {c:?}"))

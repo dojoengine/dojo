@@ -9,8 +9,8 @@ const DEFAULT_BLOCK_TIME: u64 = 3000;
 /// # Arguments
 ///
 /// * `metadata` - The metadata string to parse. The string is expected to be in the format of
-///   `n_accounts,executable,block_time` where `block_time` is either a number (time block is ms)
-///    or a boolean with `false` to use instand mining, and `true` to use the default block time.
+///   `n_accounts,executable,block_time` where `block_time` is either a number (time block is ms) or
+///   a boolean with `false` to use instand mining, and `true` to use the default block time.
 ///
 /// # Returns
 ///
@@ -27,17 +27,11 @@ fn parse_metadata(metadata: String) -> (u16, Option<String>, Option<u64>) {
     // if set to `true`, we use a default block time.
     let block_time = if args.len() >= 2 {
         if let Ok(b) = args[1].trim().parse::<bool>() {
-            if !b {
-                None
-            } else {
-                Some(DEFAULT_BLOCK_TIME)
-            }
+            if !b { None } else { Some(DEFAULT_BLOCK_TIME) }
+        } else if let Ok(block_time_ms) = args[1].trim().parse::<u64>() {
+            Some(block_time_ms)
         } else {
-            if let Ok(block_time_ms) = args[1].trim().parse::<u64>() {
-                Some(block_time_ms)
-            } else {
-                None
-            }
+            None
         }
     } else {
         None

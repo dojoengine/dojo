@@ -2,8 +2,8 @@ use std::io::Write;
 
 use camino::Utf8PathBuf;
 use dojo_lang::compiler::{BASE_DIR, MANIFESTS_DIR};
-use dojo_test_utils::rpc::MockJsonRpcTransport;
 use dojo_test_utils::compiler;
+use dojo_test_utils::rpc::MockJsonRpcTransport;
 use katana_runner::KatanaRunner;
 use serde_json::json;
 use starknet::accounts::ConnectedAccount;
@@ -375,13 +375,14 @@ fn fetch_remote_manifest() {
     let profile_name = "dev";
 
     // Build a completely new project in it's own directory.
-    let (temp_project_dir, config, _) = compiler::copy_build_project_temp(source_project, dojo_core_path, true);
+    let (temp_project_dir, config, _) =
+        compiler::copy_build_project_temp(source_project, dojo_core_path, true);
 
     let artifacts_path = temp_project_dir.join(format!("target/{profile_name}"));
 
-    let world_address = config.tokio_handle().block_on(async {
-        deploy_world(&runner, &temp_project_dir, &artifacts_path).await
-    });
+    let world_address = config
+        .tokio_handle()
+        .block_on(async { deploy_world(&runner, &temp_project_dir, &artifacts_path).await });
 
     let local_manifest = BaseManifest::load_from_path(
         &temp_project_dir.join(MANIFESTS_DIR).join(profile_name).join(BASE_DIR),

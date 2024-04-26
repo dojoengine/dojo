@@ -42,7 +42,8 @@ pub fn copy_build_project_temp(
     let dojo_core_path = Utf8PathBuf::from(dojo_core_path);
     let ignore_dirs = ["manifests", "target"];
 
-    copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &ignore_dirs).unwrap();
+    copy_project_temp(&source_project_dir, &temp_project_dir, &dojo_core_path, &ignore_dirs)
+        .unwrap();
 
     let config = build_test_config(&temp_project_path).unwrap();
 
@@ -92,8 +93,8 @@ pub fn copy_project_temp(
             copy_project_temp(
                 &Utf8PathBuf::from_path_buf(path).unwrap(),
                 &destination_dir.join(dir_name),
-                &dojo_core_path,
-                &ignore_dirs,
+                dojo_core_path,
+                ignore_dirs,
             )?;
         } else {
             let file_name = entry.file_name().to_string_lossy().to_string();

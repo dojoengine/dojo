@@ -8,8 +8,8 @@ use std::sync::mpsc::{self};
 use std::thread;
 use std::time::Duration;
 
-use assert_fs::TempDir;
 use anyhow::{Context, Result};
+use assert_fs::TempDir;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, DevGenesisAccount};
 use katana_primitives::FieldElement;
@@ -78,9 +78,9 @@ impl KatanaRunner {
     /// * `config` - The configuration for the katana runner.
     fn setup_and_start(config: &KatanaRunnerConfig) -> Result<Self> {
         println!("config: {:?}", config);
-        let program = config.program_name.clone().unwrap_or_else(|| determine_default_program_path());
+        let program = config.program_name.clone().unwrap_or_else(determine_default_program_path);
 
-        let port = config.port.unwrap_or_else(|| find_free_port());
+        let port = config.port.unwrap_or_else(find_free_port);
         let n_accounts = config.n_accounts;
 
         let mut command = Command::new(program);
@@ -105,8 +105,10 @@ impl KatanaRunner {
 
         let log_dir = TempDir::new().unwrap();
 
-        let log_filename =
-            PathBuf::from(format!("katana-{}.log", config.run_name.clone().unwrap_or_else(|| port.to_string())));
+        let log_filename = PathBuf::from(format!(
+            "katana-{}.log",
+            config.run_name.clone().unwrap_or_else(|| port.to_string())
+        ));
 
         let log_file_path = log_dir.join(log_filename);
         let log_file_path_sent = log_file_path.clone();
@@ -185,15 +187,17 @@ impl Drop for KatanaRunner {
 ///
 /// If the CI environment variable is set, the default program path is "katana" to
 /// use the devcontainer version of katana.
-/// Otherwise, the default program path is determined by the KATANA_RUNNER_BIN environment variable that must be set by the developer.
+/// Otherwise, the default program path is determined by the KATANA_RUNNER_BIN environment variable
+/// that must be set by the developer.
 fn determine_default_program_path() -> String {
     // GITHUB should define "CI". If not, we may use "GITHUB_ACTION".
     match std::env::var("CI") {
         Ok(_) => "katana".to_string(),
-        Err(_) => {
-            std::env::var("KATANA_RUNNER_BIN").unwrap_or_else(|_| {
-                panic!("KATANA_RUNNER_BIN environment variable is not set and required when not running in CI.")
-            })
-        }
+        Err(_) => std::env::var("KATANA_RUNNER_BIN").unwrap_or_else(|_| {
+            panic!(
+                "KATANA_RUNNER_BIN environment variable is not set and required when not running \
+                 in CI."
+            )
+        }),
     }
 }

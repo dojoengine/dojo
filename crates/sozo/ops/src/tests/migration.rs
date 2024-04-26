@@ -11,9 +11,9 @@ use dojo_world::metadata::{
 use dojo_world::migration::strategy::prepare_for_migration;
 use dojo_world::migration::world::WorldDiff;
 use dojo_world::migration::TxnConfig;
-use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{HyperBackend, IpfsApi, IpfsClient, TryFromUri};
+use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::macros::felt;
@@ -50,7 +50,8 @@ async fn migrate_with_block_time() {
     let sequencer = KatanaRunner::new_with_config(&KatanaRunnerConfig {
         block_time: Some(1000),
         ..Default::default()
-    }).expect("Fail to start runner");
+    })
+    .expect("Fail to start runner");
 
     let mut account = sequencer.account(0);
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -69,18 +70,21 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
     let sequencer = KatanaRunner::new_with_config(&KatanaRunnerConfig {
         disable_fee: true,
         ..Default::default()
-    }).expect("Fail to start runner");
+    })
+    .expect("Fail to start runner");
 
     let account = sequencer.account(0);
 
-    assert!(execute_strategy(
-        &ws,
-        &mut migration,
-        &account,
-        TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
-    )
-    .await
-    .is_err());
+    assert!(
+        execute_strategy(
+            &ws,
+            &mut migration,
+            &account,
+            TxnConfig { fee_estimate_multiplier: Some(0.2f64), wait: false, receipt: false },
+        )
+        .await
+        .is_err()
+    );
 }
 
 #[test]

@@ -11,7 +11,8 @@ fn test_compiler_cairo_features() {
     let compile_info = scarb_internal::compile_workspace(
         &config,
         CompileOpts { include_targets: vec![], exclude_targets: vec![TargetKind::TEST] },
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_eq!(compile_info.compile_error_units, Vec::<String>::default());
 }
