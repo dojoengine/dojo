@@ -12,7 +12,9 @@ fn get(address_domain: u32, keys: Span<felt252>) -> felt252 {
         .unwrap_syscall()
 }
 
-fn get_many(address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>) -> SyscallResult<Span<felt252>> {
+fn get_many(
+    address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>
+) -> SyscallResult<Span<felt252>> {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     let base_address = starknet::storage_address_from_base(base);
 
@@ -28,11 +30,12 @@ fn get_many(address_domain: u32, keys: Span<felt252>, mut layout: Span<u8>) -> S
     let mut packed_span = loop {
         let value =
             match starknet::syscalls::storage_read_syscall(
-                address_domain, starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk)
+                address_domain,
+                starknet::storage_address_from_base_and_offset(chunk_base, index_in_chunk)
             ) {
-                Result::Ok(value) => value,
-                Result::Err(err) => { break SyscallResult::<Span<felt252>>::Err(err); },
-            };
+            Result::Ok(value) => value,
+            Result::Err(err) => { break SyscallResult::<Span<felt252>>::Err(err); },
+        };
 
         packed.append(value);
 
@@ -65,10 +68,13 @@ fn set(address_domain: u32, keys: Span<felt252>, value: felt252) {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     starknet::storage_write_syscall(
         address_domain, starknet::storage_address_from_base(base), value
-    ).unwrap_syscall();
+    )
+        .unwrap_syscall();
 }
 
-fn set_many(address_domain: u32, keys: Span<felt252>, mut unpacked: Span<felt252>, mut layout: Span<u8>) -> SyscallResult<()> {
+fn set_many(
+    address_domain: u32, keys: Span<felt252>, mut unpacked: Span<felt252>, mut layout: Span<u8>
+) -> SyscallResult<()> {
     let base = starknet::storage_base_address_from_felt252(poseidon_hash_span(keys));
     let base_address = starknet::storage_address_from_base(base);
 
@@ -102,7 +108,6 @@ fn set_many(address_domain: u32, keys: Span<felt252>, mut unpacked: Span<felt252
                 chunk += 1;
                 chunk_base = chunk_segment_pointer(base_address, chunk);
                 0
-
             },
         };
     }
