@@ -99,9 +99,7 @@ impl Saya {
         let poll_interval_secs = 1;
         let mut block = self.config.start_block.max(1); // Genesis block is not proven. We advance to block 1
 
-        let (genesis_block, block_before_the_first) =
-            join(self.provider.fetch_block(0), self.provider.fetch_block(block - 1)).await;
-        let genesis_state_hash = genesis_block?.header.header.state_root;
+        let block_before_the_first = self.provider.fetch_block(block - 1).await;
         let mut previous_block = block_before_the_first?;
 
         loop {
@@ -122,7 +120,7 @@ impl Saya {
 
             let fetched_block = self.provider.fetch_block(block).await?;
 
-            self.process_block(block, (&fetched_block, previous_block, genesis_state_hash)).await?;
+            self.process_block(block, (&fetched_block, previous_block)).await?;
 
             previous_block = fetched_block;
             block += 1;
@@ -150,11 +148,11 @@ impl Saya {
     async fn process_block(
         &mut self,
         block_number: BlockNumber,
-        blocks: (&SealedBlock, SealedBlock, FieldElement),
+        blocks: (&SealedBlock, SealedBlock),
     ) -> SayaResult<()> {
         trace!(target: LOG_TARGET, block_number = %block_number, "Processing block.");
 
-        let (block, prev_block, _genesis_state_hash) = blocks;
+        let (block, prev_block) = blocks;
 
         let (state_updates, da_state_update) =
             self.provider.fetch_state_updates(block_number).await?;
