@@ -3755,6 +3755,7 @@ dependencies = [
  "futures",
  "http",
  "ipfs-api-backend-hyper",
+ "katana-runner",
  "scarb",
  "serde",
  "serde_json",
@@ -6918,6 +6919,7 @@ name = "katana-runner"
 version = "0.6.1-alpha.3"
 dependencies = [
  "anyhow",
+ "assert_fs",
  "chrono",
  "home",
  "katana-core",

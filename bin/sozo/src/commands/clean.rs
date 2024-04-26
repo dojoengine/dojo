@@ -68,9 +68,10 @@ mod tests {
     #[test]
     fn test_clean() {
         let source_project = "../../examples/spawn-and-move/Scarb.toml";
+        let dojo_core_path = "../../crates/dojo-core";
 
         // Build a completely new project in it's own directory.
-        let (temp_project_dir, config, _) = compiler::copy_build_project_temp(source_project, true);
+        let (temp_project_dir, config, _) = compiler::copy_build_project_temp(source_project, dojo_core_path, true);
 
         let runner = KatanaRunner::new().expect("Fail to set runner");
 
