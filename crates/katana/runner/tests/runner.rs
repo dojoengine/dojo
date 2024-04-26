@@ -5,7 +5,7 @@ use starknet::providers::Provider;
 async fn test_run() {
     for i in 0..10 {
         let logname = format!("katana-test_run-{}", i);
-        let runner = KatanaRunner::new_with_config(&KatanaRunnerConfig {
+        let runner = KatanaRunner::new_with_config(KatanaRunnerConfig {
             run_name: Some(logname),
             ..Default::default()
         })

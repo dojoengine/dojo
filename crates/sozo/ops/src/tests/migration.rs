@@ -48,7 +48,7 @@ async fn migrate_with_block_time() {
 
     let migration = setup::setup_migration(&config).unwrap();
 
-    let sequencer = KatanaRunner::new_with_config(&KatanaRunnerConfig {
+    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         block_time: Some(1000),
         ..Default::default()
     })
@@ -68,7 +68,7 @@ async fn migrate_with_small_fee_multiplier_will_fail() {
 
     let migration = setup::setup_migration(&config).unwrap();
 
-    let sequencer = KatanaRunner::new_with_config(&KatanaRunnerConfig {
+    let sequencer = KatanaRunner::new_with_config(KatanaRunnerConfig {
         disable_fee: true,
         ..Default::default()
     })

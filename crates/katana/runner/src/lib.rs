@@ -63,11 +63,11 @@ impl Default for KatanaRunnerConfig {
 impl KatanaRunner {
     /// Creates a new KatanaRunner with default values.
     pub fn new() -> Result<Self> {
-        Self::setup_and_start(&KatanaRunnerConfig::default())
+        Self::setup_and_start(KatanaRunnerConfig::default())
     }
 
     /// Creates a new KatanaRunner with the given configuration.
-    pub fn new_with_config(config: &KatanaRunnerConfig) -> Result<Self> {
+    pub fn new_with_config(config: KatanaRunnerConfig) -> Result<Self> {
         Self::setup_and_start(config)
     }
 
@@ -76,8 +76,7 @@ impl KatanaRunner {
     /// # Arguments
     ///
     /// * `config` - The configuration for the katana runner.
-    fn setup_and_start(config: &KatanaRunnerConfig) -> Result<Self> {
-        println!("config: {:?}", config);
+    fn setup_and_start(config: KatanaRunnerConfig) -> Result<Self> {
         let program = config.program_name.clone().unwrap_or_else(determine_default_program_path);
 
         let port = config.port.unwrap_or_else(find_free_port);

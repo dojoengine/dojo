@@ -2,7 +2,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, parse_quote, Stmt};
 
-const DEFAULT_BLOCK_TIME: u64 = 3000;
+/// Default runner block interval
+const DEFAULT_BLOCK_TIME: u64 = 3000; // 3 seconds
 
 /// Parses the metadata string into the number of accounts and the block time.
 ///
@@ -63,7 +64,7 @@ pub fn katana_test(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let header: Stmt = parse_quote! {
         let runner =
             katana_runner::KatanaRunner::new_with_config(
-                &katana_runner::KatanaRunnerConfig {
+                katana_runner::KatanaRunnerConfig {
                     program_name: #program_name,
                     run_name: Some(String::from(#function_name)),
                     block_time: #block_time,
@@ -105,7 +106,7 @@ pub fn runner(metadata: TokenStream) -> TokenStream {
         lazy_static::lazy_static! {
             pub static ref RUNNER: std::sync::Arc<katana_runner::KatanaRunner> = std::sync::Arc::new(
                 katana_runner::KatanaRunner::new_with_config(
-                    &katana_runner::KatanaRunnerConfig {
+                    katana_runner::KatanaRunnerConfig {
                         program_name: #program_name,
                         run_name: Some(String::from(#function_name)),
                         block_time: #block_time,
