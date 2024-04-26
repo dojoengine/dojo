@@ -7,8 +7,8 @@
 //! an interface to query the on-chain verifier, but also
 //! submitting facts and proofs.
 
-use serde::{Deserialize, Serialize};
 use ::starknet::core::types::FieldElement;
+use serde::{Deserialize, Serialize};
 
 mod starknet;
 
@@ -20,12 +20,17 @@ pub enum VerifierIdentifier {
     StarkwareEthereum,
 }
 
-pub async fn verify(verifier: VerifierIdentifier, serialized_proof: Vec<FieldElement>) -> anyhow::Result<String> {
+pub async fn verify(
+    verifier: VerifierIdentifier,
+    serialized_proof: Vec<FieldElement>,
+) -> anyhow::Result<String> {
     match verifier {
         VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address) => {
             starknet::starknet_verify(fact_registry_address, serialized_proof).await
         }
         VerifierIdentifier::StoneLocal => unimplemented!("Stone Verifier not yet supported"),
-        VerifierIdentifier::StarkwareEthereum => unimplemented!("Herodotus Starknet not yet supported"),
+        VerifierIdentifier::StarkwareEthereum => {
+            unimplemented!("Herodotus Starknet not yet supported")
+        }
     }
 }

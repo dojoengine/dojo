@@ -157,7 +157,10 @@ mod tests {
                     celestia_namespace: None,
                 },
             },
-            proof: ProofOptions { world_address: Default::default(), fact_registry_address: Default::default() },
+            proof: ProofOptions {
+                world_address: Default::default(),
+                fact_registry_address: Default::default(),
+            },
         };
 
         let config: SayaConfig = args.try_into().unwrap();

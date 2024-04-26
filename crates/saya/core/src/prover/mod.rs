@@ -34,7 +34,7 @@ pub async fn prove(input: String, prover: ProverIdentifier) -> anyhow::Result<St
         ProverIdentifier::Sharp => todo!(),
         ProverIdentifier::Stone => todo!(),
         ProverIdentifier::Platinum => todo!(),
-        ProverIdentifier::Http(prover_url) => http_prove(prover_url, input).await
+        ProverIdentifier::Http(prover_url) => http_prove(prover_url, input).await,
     }
 }
 

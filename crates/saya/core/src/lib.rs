@@ -26,9 +26,9 @@ use crate::prover::{extract_messages, ProgramInput};
 
 pub mod blockchain;
 pub mod data_availability;
+pub mod dojo_os;
 pub mod error;
 pub mod prover;
-pub mod dojo_os;
 pub mod verifier;
 
 pub(crate) const LOG_TARGET: &str = "saya::core";
@@ -205,19 +205,25 @@ impl Saya {
         trace!(target: LOG_TARGET, world_da = ?world_da_printable, "World DA computed.");
 
         trace!(target: LOG_TARGET, "Proving block {block_number}.");
-        let proof = prover::prove(new_program_input.serialize(self.config.world_address)?, ProverIdentifier::Http(self.config.prover_url.clone())).await?;
+        let proof = prover::prove(
+            new_program_input.serialize(self.config.world_address)?,
+            ProverIdentifier::Http(self.config.prover_url.clone()),
+        )
+        .await?;
         info!(target: LOG_TARGET, block_number, "Block proven.");
 
         let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
 
         trace!(target: LOG_TARGET, block_number, "Verifying block.");
-        let transaction_hash =
-            verifier::verify(VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address), serialized_proof).await?;
+        let transaction_hash = verifier::verify(
+            VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address),
+            serialized_proof,
+        )
+        .await?;
         info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
 
         let ExtractProgramResult { program: _, program_hash } = extract_program(&proof)?;
-        let ExtractOutputResult { program_output, program_output_hash } =
-            extract_output(&proof)?;
+        let ExtractOutputResult { program_output, program_output_hash } = extract_output(&proof)?;
         let expected_fact = poseidon_hash_many(&[program_hash, program_output_hash]).to_string();
         info!(target: LOG_TARGET, expected_fact, "Expected fact.");
 
