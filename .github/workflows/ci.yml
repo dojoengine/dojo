@@ -59,8 +59,8 @@ jobs:
         with:
           scarb-version: "2.6.3"
       - run: |
-          cd ./examples/spawn-and-move/Scarb.toml && scarb fmt --check
-          cd ./crates/dojo-core/Scarb.toml fmt && scarb fmt --check
+          cd ./examples/spawn-and-move && scarb fmt --check
+          cd ./crates/dojo-core fmt && scarb fmt --check
 
   dojo-core-test:
     runs-on: ubuntu-latest
