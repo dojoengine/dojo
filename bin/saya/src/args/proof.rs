@@ -5,6 +5,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use clap::builder::PossibleValue;
 use clap::{Args, ValueEnum};
+use katana_primitives::FieldElement;
 use saya_core::prover::ProverIdentifier;
 use saya_core::verifier::VerifierIdentifier;
 
@@ -21,30 +22,30 @@ impl From<Prover> for ProverIdentifier {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Verifier {
     StoneLocal,
-    HerodotusStarknetSepolia,
+    HerodotusStarknetSepolia(FieldElement),
 }
 
 impl From<Verifier> for VerifierIdentifier {
     fn from(p: Verifier) -> Self {
         match p {
             Verifier::StoneLocal => VerifierIdentifier::StoneLocal,
-            Verifier::HerodotusStarknetSepolia => VerifierIdentifier::HerodotusStarknetSepolia,
+            Verifier::HerodotusStarknetSepolia(fact_registry_address) => VerifierIdentifier::HerodotusStarknetSepolia(fact_registry_address),
         }
     }
 }
 
 #[derive(Debug, Args, Clone)]
 pub struct ProofOptions {
-    #[arg(long)]
-    #[arg(help = "Prover to generated the proof from the provable program.")]
-    pub prover: Prover,
+    #[arg(help = "The address of the World contract.")]
+    #[arg(long = "world")]
+    pub world_address: FieldElement,
 
-    #[arg(long)]
-    #[arg(help = "Verifier on which the proof should be sent to.")]
-    pub verifier: Verifier,
+    #[arg(help = "The address of the Fact Registry contract.")]
+    #[arg(long = "registry")]
+    pub fact_registry_address: FieldElement,
 }
 
 // -- Prover.
@@ -129,7 +130,7 @@ impl Display for Verifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Verifier::StoneLocal => write!(f, "local-stone"),
-            Verifier::HerodotusStarknetSepolia => write!(f, "herodotus-starknet-sepolia"),
+            Verifier::HerodotusStarknetSepolia(_) => write!(f, "herodotus-starknet-sepolia"),
         }
     }
 }

@@ -28,6 +28,13 @@ pub struct SayaArgs {
     #[arg(default_value = "http://localhost:5050")]
     pub rpc_url: Url,
 
+    /// Specify the Prover URL.
+    #[arg(long)]
+    #[arg(value_name = "PROVER URL")]
+    #[arg(help = "The Prover URL for remote proving.")]
+    #[arg(default_value = "http://prover.visoft.dev:3618/prove/state-diff-commitment")]
+    pub prover_url: Url,
+
     /// Enable JSON logging.
     #[arg(long)]
     #[arg(help = "Output logs in JSON format.")]
@@ -55,7 +62,7 @@ pub struct SayaArgs {
 
 impl SayaArgs {
     pub fn init_logging(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const DEFAULT_LOG_FILTER: &str = "info,saya_core=trace,blockchain=trace,provider=trace";
+        const DEFAULT_LOG_FILTER: &str = "info,saya::core=trace,blockchain=trace,provider=trace";
 
         let builder = fmt::Subscriber::builder().with_env_filter(
             EnvFilter::try_from_default_env().or(EnvFilter::try_new(DEFAULT_LOG_FILTER))?,
@@ -113,10 +120,11 @@ impl TryFrom<SayaArgs> for SayaConfig {
 
             Ok(SayaConfig {
                 katana_rpc: args.rpc_url,
+                prover_url: args.prover_url,
                 start_block: args.start_block,
                 data_availability: da_config,
-                prover: args.proof.prover.into(),
-                verifier: args.proof.verifier.into(),
+                world_address: args.proof.world_address,
+                fact_registry_address: args.proof.fact_registry_address,
             })
         }
     }
@@ -138,6 +146,7 @@ mod tests {
         let args = SayaArgs {
             config_file: Some(config_file_path.clone()),
             rpc_url: Url::parse("http://localhost:5050").unwrap(),
+            prover_url: Url::parse("http://localhost:5050").unwrap(),
             json_log: false,
             start_block: 0,
             data_availability: DataAvailabilityOptions {
@@ -148,7 +157,7 @@ mod tests {
                     celestia_namespace: None,
                 },
             },
-            proof: ProofOptions { prover: Default::default(), verifier: Default::default() },
+            proof: ProofOptions { world_address: Default::default(), fact_registry_address: Default::default() },
         };
 
         let config: SayaConfig = args.try_into().unwrap();

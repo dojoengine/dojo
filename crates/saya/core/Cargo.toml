@@ -19,8 +19,10 @@ async-trait.workspace = true
 cairo-proof-parser.workspace = true
 cairo-vm.workspace = true
 convert_case.workspace = true
+dojo-world = { workspace = true, features = [ "contracts", "metadata", "migration" ] }
 flate2.workspace = true
 futures.workspace = true
+itertools.workspace = true
 lazy_static.workspace = true
 parking_lot.workspace = true
 rand = { version = "0.8.5", features = [ "small_rng" ] }
@@ -34,6 +36,7 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
+reqwest.workspace = true
 
 # TODO: use features for each possible DA.
 celestia-rpc = "0.1.1"

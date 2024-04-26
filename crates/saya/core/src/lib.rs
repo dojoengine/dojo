@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use cairo_proof_parser::parse;
 use futures::future::join;
 use katana_primitives::block::{BlockNumber, FinalityStatus, SealedBlock, SealedBlockWithStatus};
 use katana_primitives::transaction::Tx;
@@ -10,7 +11,6 @@ use prover::ProverIdentifier;
 use saya_provider::rpc::JsonRpcProvider;
 use saya_provider::Provider as SayaProvider;
 use serde::{Deserialize, Serialize};
-use tokio::io::AsyncWriteExt;
 use tracing::{error, info, trace};
 use url::Url;
 use verifier::VerifierIdentifier;
@@ -24,7 +24,7 @@ pub mod blockchain;
 pub mod data_availability;
 pub mod error;
 pub mod prover;
-pub mod starknet_os;
+pub mod dojo_os;
 pub mod verifier;
 
 pub(crate) const LOG_TARGET: &str = "saya::core";
@@ -34,10 +34,12 @@ pub(crate) const LOG_TARGET: &str = "saya::core";
 pub struct SayaConfig {
     #[serde(deserialize_with = "url_deserializer")]
     pub katana_rpc: Url,
+    #[serde(deserialize_with = "url_deserializer")]
+    pub prover_url: Url,
     pub start_block: u64,
     pub data_availability: Option<DataAvailabilityConfig>,
-    pub prover: ProverIdentifier,
-    pub verifier: VerifierIdentifier,
+    pub world_address: FieldElement,
+    pub fact_registry_address: FieldElement,
 }
 
 fn url_deserializer<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -169,7 +171,7 @@ impl Saya {
         let exec_infos = self.provider.fetch_transactions_executions(block_number).await?;
 
         if exec_infos.is_empty() {
-            trace!(target: "saya_core", block_number, "Skipping empty block.");
+            trace!(target: LOG_TARGET, block_number, "Skipping empty block.");
             return Ok(());
         }
 
@@ -196,7 +198,7 @@ impl Saya {
             state_updates: state_updates_to_prove,
         };
 
-        println!("Program input: {}", new_program_input.serialize()?);
+        println!("Program input: {}", new_program_input.serialize(self.config.world_address)?);
 
         // let to_prove = ProvedStateDiff {
         //     genesis_state_hash,
@@ -204,21 +206,15 @@ impl Saya {
         //     state_updates: state_updates_to_prove,
         // };
 
-        trace!(target: "saya_core", "Proving block {block_number}.");
-        let proof = prover::prove(new_program_input.serialize()?, self.config.prover).await?;
-        info!(target: "saya_core", block_number, "Block proven.");
+        trace!(target: LOG_TARGET, "Proving block {block_number}.");
+        let proof = prover::prove(new_program_input.serialize(self.config.world_address)?, ProverIdentifier::Http(self.config.prover_url.clone())).await?;
+        info!(target: LOG_TARGET, block_number, "Block proven.");
 
-        // save proof to file
-        tokio::fs::File::create(format!("proof_{}.json", block_number))
-            .await
-            .unwrap()
-            .write_all(proof.as_bytes())
-            .await
-            .unwrap();
+        let serialized_proof: Vec<FieldElement> = parse(&proof)?.into();
 
-        trace!(target: "saya_core", "Verifying block {block_number}.");
-        let transaction_hash = verifier::verify(proof, self.config.verifier).await?;
-        info!(target: "saya_core", block_number, transaction_hash, "Block verified.");
+        trace!(target: LOG_TARGET, "Verifying block {block_number}.");
+        let transaction_hash = verifier::verify(VerifierIdentifier::HerodotusStarknetSepolia(self.config.fact_registry_address), serialized_proof).await?;
+        info!(target: LOG_TARGET, block_number, transaction_hash, "Block verified.");
 
         Ok(())
     }
