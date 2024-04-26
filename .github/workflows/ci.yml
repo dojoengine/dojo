@@ -52,17 +52,15 @@ jobs:
           repo-token: ${{ secrets.github_token }}
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
-  # cairofmt:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions-rs/toolchain@v1
-  #       with:
-  #         profile: minimal
-  #         toolchain: nightly-2022-11-03
-  #     - uses: Swatinem/rust-cache@v2
-  #     - run: cargo install cairo-lang-formatter
-  #     - run: scripts/cairo_fmt.sh --check
+  cairofmt:
+    runs-on: ubuntu-latest
+    steps:
+        uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.6.3"
+      - run: |
+          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
+          scarb --manifest-path crates/dojo-core/Scarb.toml fmt --check
 
   dojo-core-test:
     runs-on: ubuntu-latest
